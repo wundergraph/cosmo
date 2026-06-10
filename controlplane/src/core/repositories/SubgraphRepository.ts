@@ -1122,10 +1122,10 @@ export class SubgraphRepository {
     while (uniqueNames.length > 0) {
       const chunkOfNames = uniqueNames.splice(0, 100);
       const conditions: (SQL<unknown> | undefined)[] = [
-        eq(schema.targets.organizationId, this.organizationId),
-        eq(schema.targets.namespaceId, namespaceId),
-        eq(schema.targets.type, 'subgraph'),
-        inArray(schema.targets.name, chunkOfNames),
+        eq(targets.organizationId, this.organizationId),
+        eq(targets.namespaceId, namespaceId),
+        eq(targets.type, 'subgraph'),
+        inArray(targets.name, chunkOfNames),
       ];
 
       subgraphs.push(...(await this.getSubgraphsMatching({ conditions })));
@@ -1162,7 +1162,13 @@ export class SubgraphRepository {
         })
         .from(targets)
         .innerJoin(subgraphs, eq(subgraphs.targetId, targets.id))
-        .where(and(eq(targets.type, 'subgraph'), inArray(subgraphs.id, chunkOfIds)))
+        .where(
+          and(
+            eq(targets.organizationId, this.organizationId),
+            eq(targets.type, 'subgraph'),
+            inArray(subgraphs.id, chunkOfIds),
+          ),
+        )
         .execute();
 
       for (const subgraph of chunkOfSubgraphNames) {
