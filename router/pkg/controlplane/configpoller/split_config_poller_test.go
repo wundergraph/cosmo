@@ -486,9 +486,13 @@ func TestSplitSubscribe_SkipMissingFeatureFlag_ExcludedFromChangesAndKnownHashes
 	assert.NotContains(t, received.Config.FeatureFlagConfigs.ConfigByFeatureFlagName, "missing-add",
 		"skipped new flag must not be assembled into the config")
 
-	assert.Len(t, received.Hashes, 2)
+	assert.Len(t, received.Hashes, 3)
 	assert.Equal(t, routerconfig.HashInfo{OldHash: "hash-base", NewHash: "hash-base"}, received.Hashes[""])
 	assert.Equal(t, routerconfig.HashInfo{OldHash: "hash-keep-old", NewHash: "hash-keep-new"}, received.Hashes["keep"])
+
+	// a config, which failed to get updated should keep it's old hash
+	assert.Equal(t, routerconfig.HashInfo{OldHash: "hash-missing-chg-old", NewHash: "hash-missing-chg-old"},
+		received.Hashes["missing-chg"])
 }
 
 // ---- Subscribe / polling tests ----

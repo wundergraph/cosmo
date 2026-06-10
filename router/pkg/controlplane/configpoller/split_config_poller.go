@@ -271,7 +271,19 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 					delete(mapperGraphs, name)
 					delete(changes.ChangedConfigs, name)
 					delete(changes.AddedConfigs, name)
-					delete(hashes, name)
+
+					hashInfo := hashes[name]
+					if hashInfo.OldHash == "" {
+						// config is new and was never applied by the router but fetch from CDN failed.
+						// We don't want such cases in the hash list.
+						delete(hashes, name)
+					} else {
+						// config has changed but fetch from CDN failed.
+						// Keep it in hash list but set newHash to oldHash because that's
+						// the hash the router will keep using.
+						hashInfo.NewHash = hashInfo.OldHash
+						hashes[name] = hashInfo
+					}
 
 					continue
 				}
