@@ -81,6 +81,17 @@ import {
   UNION_UPPER,
   URL_LOWER,
   WEIGHT,
+  CACHE_INVALIDATE,
+  CACHE_POPULATE,
+  ENTITY_CACHE,
+  INCLUDE_HEADERS,
+  IS,
+  MAX_AGE,
+  NEGATIVE_CACHE_TTL,
+  PARTIAL_CACHE_LOAD,
+  QUERY_CACHE,
+  REQUEST_SCOPED,
+  SHADOW_MODE,
 } from '../utils/string-constants';
 import {
   AUTHENTICATED_DEFINITION,
@@ -115,8 +126,18 @@ import {
   SPECIFIED_BY_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
   TAG_DEFINITION,
+  CACHE_INVALIDATE_DEFINITION,
+  CACHE_POPULATE_DEFINITION,
+  ENTITY_CACHE_DEFINITION,
+  IS_DEFINITION,
+  QUERY_CACHE_DEFINITION,
+  REQUEST_SCOPED_DEFINITION,
 } from '../v1/constants/directive-definitions';
-import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from '../v1/constants/type-nodes';
+import {
+  REQUIRED_FIELDSET_TYPE_NODE,
+  REQUIRED_INT_TYPE_NODE,
+  REQUIRED_STRING_TYPE_NODE,
+} from '../v1/constants/type-nodes';
 import { type ArgumentName, type DirectiveLocation } from '../types/types';
 import { newDirectiveArgumentData, newDirectiveDefinitionData } from './utils';
 import { type DirectiveArgumentData, DirectiveDefinitionData } from './types/types';
@@ -944,4 +965,163 @@ export const TAG_DEFINITION_DATA = newDirectiveDefinitionData({
   name: TAG,
   node: TAG_DEFINITION,
   requiredArgumentNames: new Set<ArgumentName>([NAME]),
+});
+
+export const CACHE_INVALIDATE_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>(),
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: CACHE_INVALIDATE,
+  node: CACHE_INVALIDATE_DEFINITION,
+});
+
+export const CACHE_POPULATE_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      MAX_AGE,
+      newDirectiveArgumentData({
+        directive: `@${CACHE_POPULATE}`,
+        name: MAX_AGE,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(INT_SCALAR),
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: CACHE_POPULATE,
+  node: CACHE_POPULATE_DEFINITION,
+  optionalArgumentNames: new Set<ArgumentName>([MAX_AGE]),
+});
+
+export const ENTITY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      MAX_AGE,
+      newDirectiveArgumentData({
+        directive: `@${ENTITY_CACHE}`,
+        name: MAX_AGE,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_INT_TYPE_NODE,
+      }),
+    ],
+    [
+      NEGATIVE_CACHE_TTL,
+      newDirectiveArgumentData({
+        directive: `@${ENTITY_CACHE}`,
+        defaultValue: { kind: Kind.INT, value: '0' },
+        name: NEGATIVE_CACHE_TTL,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(INT_SCALAR),
+      }),
+    ],
+    [
+      INCLUDE_HEADERS,
+      newDirectiveArgumentData({
+        directive: `@${ENTITY_CACHE}`,
+        defaultValue: { kind: Kind.BOOLEAN, value: false },
+        name: INCLUDE_HEADERS,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      }),
+    ],
+    [
+      PARTIAL_CACHE_LOAD,
+      newDirectiveArgumentData({
+        directive: `@${ENTITY_CACHE}`,
+        defaultValue: { kind: Kind.BOOLEAN, value: false },
+        name: PARTIAL_CACHE_LOAD,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      }),
+    ],
+    [
+      SHADOW_MODE,
+      newDirectiveArgumentData({
+        directive: `@${ENTITY_CACHE}`,
+        defaultValue: { kind: Kind.BOOLEAN, value: false },
+        name: SHADOW_MODE,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([OBJECT_UPPER]),
+  name: ENTITY_CACHE,
+  node: ENTITY_CACHE_DEFINITION,
+  optionalArgumentNames: new Set<ArgumentName>([NEGATIVE_CACHE_TTL, INCLUDE_HEADERS, PARTIAL_CACHE_LOAD, SHADOW_MODE]),
+  requiredArgumentNames: new Set<ArgumentName>([MAX_AGE]),
+});
+
+export const IS_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      FIELDS,
+      newDirectiveArgumentData({
+        directive: `@${IS}`,
+        name: FIELDS,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([ARGUMENT_DEFINITION_UPPER]),
+  name: IS,
+  node: IS_DEFINITION,
+  requiredArgumentNames: new Set<ArgumentName>([FIELDS]),
+});
+
+export const QUERY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      MAX_AGE,
+      newDirectiveArgumentData({
+        directive: `@${QUERY_CACHE}`,
+        name: MAX_AGE,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_INT_TYPE_NODE,
+      }),
+    ],
+    [
+      INCLUDE_HEADERS,
+      newDirectiveArgumentData({
+        directive: `@${QUERY_CACHE}`,
+        defaultValue: { kind: Kind.BOOLEAN, value: false },
+        name: INCLUDE_HEADERS,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      }),
+    ],
+    [
+      SHADOW_MODE,
+      newDirectiveArgumentData({
+        directive: `@${QUERY_CACHE}`,
+        defaultValue: { kind: Kind.BOOLEAN, value: false },
+        name: SHADOW_MODE,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: QUERY_CACHE,
+  node: QUERY_CACHE_DEFINITION,
+  optionalArgumentNames: new Set<ArgumentName>([INCLUDE_HEADERS, SHADOW_MODE]),
+  requiredArgumentNames: new Set<ArgumentName>([MAX_AGE]),
+});
+
+export const REQUEST_SCOPED_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      KEY,
+      newDirectiveArgumentData({
+        directive: `@${REQUEST_SCOPED}`,
+        name: KEY,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: REQUEST_SCOPED,
+  node: REQUEST_SCOPED_DEFINITION,
+  requiredArgumentNames: new Set<ArgumentName>([KEY]),
 });

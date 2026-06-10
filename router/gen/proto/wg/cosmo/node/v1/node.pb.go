@@ -1070,8 +1070,15 @@ type DataSourceConfiguration struct {
 	EntityInterfaces           []*EntityInterfaceConfiguration `protobuf:"bytes,14,rep,name=entity_interfaces,json=entityInterfaces,proto3" json:"entity_interfaces,omitempty"`
 	InterfaceObjects           []*EntityInterfaceConfiguration `protobuf:"bytes,15,rep,name=interface_objects,json=interfaceObjects,proto3" json:"interface_objects,omitempty"`
 	CostConfiguration          *CostConfiguration              `protobuf:"bytes,16,opt,name=cost_configuration,json=costConfiguration,proto3" json:"cost_configuration,omitempty"`
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
+	// Entity caching configurations (from composition directives)
+	EntityCacheConfigurations     []*EntityCacheConfiguration     `protobuf:"bytes,17,rep,name=entity_cache_configurations,json=entityCacheConfigurations,proto3" json:"entity_cache_configurations,omitempty"`
+	RootFieldCacheConfigurations  []*RootFieldCacheConfiguration  `protobuf:"bytes,18,rep,name=root_field_cache_configurations,json=rootFieldCacheConfigurations,proto3" json:"root_field_cache_configurations,omitempty"`
+	CachePopulateConfigurations   []*CachePopulateConfiguration   `protobuf:"bytes,19,rep,name=cache_populate_configurations,json=cachePopulateConfigurations,proto3" json:"cache_populate_configurations,omitempty"`
+	CacheInvalidateConfigurations []*CacheInvalidateConfiguration `protobuf:"bytes,20,rep,name=cache_invalidate_configurations,json=cacheInvalidateConfigurations,proto3" json:"cache_invalidate_configurations,omitempty"`
+	// Request-scoped field configurations (from @openfed__requestScoped directive)
+	RequestScopedFields []*RequestScopedFieldConfiguration `protobuf:"bytes,21,rep,name=request_scoped_fields,json=requestScopedFields,proto3" json:"request_scoped_fields,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *DataSourceConfiguration) Reset() {
@@ -1216,6 +1223,525 @@ func (x *DataSourceConfiguration) GetCostConfiguration() *CostConfiguration {
 	return nil
 }
 
+func (x *DataSourceConfiguration) GetEntityCacheConfigurations() []*EntityCacheConfiguration {
+	if x != nil {
+		return x.EntityCacheConfigurations
+	}
+	return nil
+}
+
+func (x *DataSourceConfiguration) GetRootFieldCacheConfigurations() []*RootFieldCacheConfiguration {
+	if x != nil {
+		return x.RootFieldCacheConfigurations
+	}
+	return nil
+}
+
+func (x *DataSourceConfiguration) GetCachePopulateConfigurations() []*CachePopulateConfiguration {
+	if x != nil {
+		return x.CachePopulateConfigurations
+	}
+	return nil
+}
+
+func (x *DataSourceConfiguration) GetCacheInvalidateConfigurations() []*CacheInvalidateConfiguration {
+	if x != nil {
+		return x.CacheInvalidateConfigurations
+	}
+	return nil
+}
+
+func (x *DataSourceConfiguration) GetRequestScopedFields() []*RequestScopedFieldConfiguration {
+	if x != nil {
+		return x.RequestScopedFields
+	}
+	return nil
+}
+
+// Per-field declaration for @openfed__requestScoped. All fields in the same subgraph declaring
+// @openfed__requestScoped(key: "X") share L1 key "{subgraphName}.X". The first field to resolve
+// populates L1; subsequent fields with the same key inject from L1 and can skip their
+// fetch when all required sub-fields are present.
+type RequestScopedFieldConfiguration struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FieldName     string                 `protobuf:"bytes,1,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
+	TypeName      string                 `protobuf:"bytes,2,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
+	L1Key         string                 `protobuf:"bytes,3,opt,name=l1_key,json=l1Key,proto3" json:"l1_key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestScopedFieldConfiguration) Reset() {
+	*x = RequestScopedFieldConfiguration{}
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestScopedFieldConfiguration) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestScopedFieldConfiguration) ProtoMessage() {}
+
+func (x *RequestScopedFieldConfiguration) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestScopedFieldConfiguration.ProtoReflect.Descriptor instead.
+func (*RequestScopedFieldConfiguration) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *RequestScopedFieldConfiguration) GetFieldName() string {
+	if x != nil {
+		return x.FieldName
+	}
+	return ""
+}
+
+func (x *RequestScopedFieldConfiguration) GetTypeName() string {
+	if x != nil {
+		return x.TypeName
+	}
+	return ""
+}
+
+func (x *RequestScopedFieldConfiguration) GetL1Key() string {
+	if x != nil {
+		return x.L1Key
+	}
+	return ""
+}
+
+type EntityCacheConfiguration struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TypeName string                 `protobuf:"bytes,1,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
+	// TTL for cached entity values. Required: composition rejects values <= 0,
+	// so omit (zero) does not occur in practice. Interpreted in seconds.
+	MaxAgeSeconds    int64 `protobuf:"varint,2,opt,name=max_age_seconds,json=maxAgeSeconds,proto3" json:"max_age_seconds,omitempty"`
+	IncludeHeaders   bool  `protobuf:"varint,3,opt,name=include_headers,json=includeHeaders,proto3" json:"include_headers,omitempty"`
+	PartialCacheLoad bool  `protobuf:"varint,4,opt,name=partial_cache_load,json=partialCacheLoad,proto3" json:"partial_cache_load,omitempty"`
+	ShadowMode       bool  `protobuf:"varint,5,opt,name=shadow_mode,json=shadowMode,proto3" json:"shadow_mode,omitempty"`
+	// TTL for caching "not found" entity responses (entity returned null from
+	// _entities without errors). Omit or 0 disables negative caching and null
+	// responses are not cached. Positive values are seconds. Composition rejects
+	// negative values at schema validation time.
+	NotFoundCacheTtlSeconds int64 `protobuf:"varint,6,opt,name=not_found_cache_ttl_seconds,json=notFoundCacheTtlSeconds,proto3" json:"not_found_cache_ttl_seconds,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *EntityCacheConfiguration) Reset() {
+	*x = EntityCacheConfiguration{}
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EntityCacheConfiguration) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EntityCacheConfiguration) ProtoMessage() {}
+
+func (x *EntityCacheConfiguration) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EntityCacheConfiguration.ProtoReflect.Descriptor instead.
+func (*EntityCacheConfiguration) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *EntityCacheConfiguration) GetTypeName() string {
+	if x != nil {
+		return x.TypeName
+	}
+	return ""
+}
+
+func (x *EntityCacheConfiguration) GetMaxAgeSeconds() int64 {
+	if x != nil {
+		return x.MaxAgeSeconds
+	}
+	return 0
+}
+
+func (x *EntityCacheConfiguration) GetIncludeHeaders() bool {
+	if x != nil {
+		return x.IncludeHeaders
+	}
+	return false
+}
+
+func (x *EntityCacheConfiguration) GetPartialCacheLoad() bool {
+	if x != nil {
+		return x.PartialCacheLoad
+	}
+	return false
+}
+
+func (x *EntityCacheConfiguration) GetShadowMode() bool {
+	if x != nil {
+		return x.ShadowMode
+	}
+	return false
+}
+
+func (x *EntityCacheConfiguration) GetNotFoundCacheTtlSeconds() int64 {
+	if x != nil {
+		return x.NotFoundCacheTtlSeconds
+	}
+	return 0
+}
+
+type RootFieldCacheConfiguration struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	FieldName string                 `protobuf:"bytes,1,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
+	// TTL for cached root-field responses. Required: composition rejects values
+	// <= 0. Interpreted in seconds.
+	MaxAgeSeconds     int64               `protobuf:"varint,2,opt,name=max_age_seconds,json=maxAgeSeconds,proto3" json:"max_age_seconds,omitempty"`
+	IncludeHeaders    bool                `protobuf:"varint,3,opt,name=include_headers,json=includeHeaders,proto3" json:"include_headers,omitempty"`
+	ShadowMode        bool                `protobuf:"varint,4,opt,name=shadow_mode,json=shadowMode,proto3" json:"shadow_mode,omitempty"`
+	EntityTypeName    string              `protobuf:"bytes,5,opt,name=entity_type_name,json=entityTypeName,proto3" json:"entity_type_name,omitempty"`
+	EntityKeyMappings []*EntityKeyMapping `protobuf:"bytes,6,rep,name=entity_key_mappings,json=entityKeyMappings,proto3" json:"entity_key_mappings,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *RootFieldCacheConfiguration) Reset() {
+	*x = RootFieldCacheConfiguration{}
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RootFieldCacheConfiguration) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RootFieldCacheConfiguration) ProtoMessage() {}
+
+func (x *RootFieldCacheConfiguration) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RootFieldCacheConfiguration.ProtoReflect.Descriptor instead.
+func (*RootFieldCacheConfiguration) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *RootFieldCacheConfiguration) GetFieldName() string {
+	if x != nil {
+		return x.FieldName
+	}
+	return ""
+}
+
+func (x *RootFieldCacheConfiguration) GetMaxAgeSeconds() int64 {
+	if x != nil {
+		return x.MaxAgeSeconds
+	}
+	return 0
+}
+
+func (x *RootFieldCacheConfiguration) GetIncludeHeaders() bool {
+	if x != nil {
+		return x.IncludeHeaders
+	}
+	return false
+}
+
+func (x *RootFieldCacheConfiguration) GetShadowMode() bool {
+	if x != nil {
+		return x.ShadowMode
+	}
+	return false
+}
+
+func (x *RootFieldCacheConfiguration) GetEntityTypeName() string {
+	if x != nil {
+		return x.EntityTypeName
+	}
+	return ""
+}
+
+func (x *RootFieldCacheConfiguration) GetEntityKeyMappings() []*EntityKeyMapping {
+	if x != nil {
+		return x.EntityKeyMappings
+	}
+	return nil
+}
+
+type EntityKeyMapping struct {
+	state          protoimpl.MessageState     `protogen:"open.v1"`
+	EntityTypeName string                     `protobuf:"bytes,1,opt,name=entity_type_name,json=entityTypeName,proto3" json:"entity_type_name,omitempty"`
+	FieldMappings  []*EntityCacheFieldMapping `protobuf:"bytes,2,rep,name=field_mappings,json=fieldMappings,proto3" json:"field_mappings,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *EntityKeyMapping) Reset() {
+	*x = EntityKeyMapping{}
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EntityKeyMapping) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EntityKeyMapping) ProtoMessage() {}
+
+func (x *EntityKeyMapping) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EntityKeyMapping.ProtoReflect.Descriptor instead.
+func (*EntityKeyMapping) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *EntityKeyMapping) GetEntityTypeName() string {
+	if x != nil {
+		return x.EntityTypeName
+	}
+	return ""
+}
+
+func (x *EntityKeyMapping) GetFieldMappings() []*EntityCacheFieldMapping {
+	if x != nil {
+		return x.FieldMappings
+	}
+	return nil
+}
+
+type EntityCacheFieldMapping struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	EntityKeyField string                 `protobuf:"bytes,1,opt,name=entity_key_field,json=entityKeyField,proto3" json:"entity_key_field,omitempty"`
+	ArgumentPath   []string               `protobuf:"bytes,2,rep,name=argument_path,json=argumentPath,proto3" json:"argument_path,omitempty"`
+	IsBatch        bool                   `protobuf:"varint,3,opt,name=is_batch,json=isBatch,proto3" json:"is_batch,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *EntityCacheFieldMapping) Reset() {
+	*x = EntityCacheFieldMapping{}
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EntityCacheFieldMapping) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EntityCacheFieldMapping) ProtoMessage() {}
+
+func (x *EntityCacheFieldMapping) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EntityCacheFieldMapping.ProtoReflect.Descriptor instead.
+func (*EntityCacheFieldMapping) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *EntityCacheFieldMapping) GetEntityKeyField() string {
+	if x != nil {
+		return x.EntityKeyField
+	}
+	return ""
+}
+
+func (x *EntityCacheFieldMapping) GetArgumentPath() []string {
+	if x != nil {
+		return x.ArgumentPath
+	}
+	return nil
+}
+
+func (x *EntityCacheFieldMapping) GetIsBatch() bool {
+	if x != nil {
+		return x.IsBatch
+	}
+	return false
+}
+
+type CachePopulateConfiguration struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FieldName     string                 `protobuf:"bytes,1,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
+	OperationType string                 `protobuf:"bytes,2,opt,name=operation_type,json=operationType,proto3" json:"operation_type,omitempty"`
+	// Optional override TTL for mutation/subscription populate writes. When omit,
+	// falls back to the target entity's max_age_seconds (for subscriptions) or
+	// the cache's default TTL (for mutations). Zero is treated as "no override".
+	// Composition rejects negative values.
+	MaxAgeSeconds  *int64 `protobuf:"varint,3,opt,name=max_age_seconds,json=maxAgeSeconds,proto3,oneof" json:"max_age_seconds,omitempty"`
+	EntityTypeName string `protobuf:"bytes,4,opt,name=entity_type_name,json=entityTypeName,proto3" json:"entity_type_name,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CachePopulateConfiguration) Reset() {
+	*x = CachePopulateConfiguration{}
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CachePopulateConfiguration) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CachePopulateConfiguration) ProtoMessage() {}
+
+func (x *CachePopulateConfiguration) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CachePopulateConfiguration.ProtoReflect.Descriptor instead.
+func (*CachePopulateConfiguration) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *CachePopulateConfiguration) GetFieldName() string {
+	if x != nil {
+		return x.FieldName
+	}
+	return ""
+}
+
+func (x *CachePopulateConfiguration) GetOperationType() string {
+	if x != nil {
+		return x.OperationType
+	}
+	return ""
+}
+
+func (x *CachePopulateConfiguration) GetMaxAgeSeconds() int64 {
+	if x != nil && x.MaxAgeSeconds != nil {
+		return *x.MaxAgeSeconds
+	}
+	return 0
+}
+
+func (x *CachePopulateConfiguration) GetEntityTypeName() string {
+	if x != nil {
+		return x.EntityTypeName
+	}
+	return ""
+}
+
+type CacheInvalidateConfiguration struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	FieldName      string                 `protobuf:"bytes,1,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
+	OperationType  string                 `protobuf:"bytes,2,opt,name=operation_type,json=operationType,proto3" json:"operation_type,omitempty"`
+	EntityTypeName string                 `protobuf:"bytes,3,opt,name=entity_type_name,json=entityTypeName,proto3" json:"entity_type_name,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CacheInvalidateConfiguration) Reset() {
+	*x = CacheInvalidateConfiguration{}
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CacheInvalidateConfiguration) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CacheInvalidateConfiguration) ProtoMessage() {}
+
+func (x *CacheInvalidateConfiguration) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CacheInvalidateConfiguration.ProtoReflect.Descriptor instead.
+func (*CacheInvalidateConfiguration) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *CacheInvalidateConfiguration) GetFieldName() string {
+	if x != nil {
+		return x.FieldName
+	}
+	return ""
+}
+
+func (x *CacheInvalidateConfiguration) GetOperationType() string {
+	if x != nil {
+		return x.OperationType
+	}
+	return ""
+}
+
+func (x *CacheInvalidateConfiguration) GetEntityTypeName() string {
+	if x != nil {
+		return x.EntityTypeName
+	}
+	return ""
+}
+
 type CostConfiguration struct {
 	state                    protoimpl.MessageState        `protogen:"open.v1"`
 	FieldWeights             []*FieldWeightConfiguration   `protobuf:"bytes,1,rep,name=field_weights,json=fieldWeights,proto3" json:"field_weights,omitempty"`
@@ -1228,7 +1754,7 @@ type CostConfiguration struct {
 
 func (x *CostConfiguration) Reset() {
 	*x = CostConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[12]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1240,7 +1766,7 @@ func (x *CostConfiguration) String() string {
 func (*CostConfiguration) ProtoMessage() {}
 
 func (x *CostConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[12]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1253,7 +1779,7 @@ func (x *CostConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CostConfiguration.ProtoReflect.Descriptor instead.
 func (*CostConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{12}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *CostConfiguration) GetFieldWeights() []*FieldWeightConfiguration {
@@ -1297,7 +1823,7 @@ type FieldWeightConfiguration struct {
 
 func (x *FieldWeightConfiguration) Reset() {
 	*x = FieldWeightConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[13]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1309,7 +1835,7 @@ func (x *FieldWeightConfiguration) String() string {
 func (*FieldWeightConfiguration) ProtoMessage() {}
 
 func (x *FieldWeightConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[13]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1322,7 +1848,7 @@ func (x *FieldWeightConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldWeightConfiguration.ProtoReflect.Descriptor instead.
 func (*FieldWeightConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{13}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *FieldWeightConfiguration) GetTypeName() string {
@@ -1374,7 +1900,7 @@ type FieldListSizeConfiguration struct {
 
 func (x *FieldListSizeConfiguration) Reset() {
 	*x = FieldListSizeConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[14]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1386,7 +1912,7 @@ func (x *FieldListSizeConfiguration) String() string {
 func (*FieldListSizeConfiguration) ProtoMessage() {}
 
 func (x *FieldListSizeConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[14]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1399,7 +1925,7 @@ func (x *FieldListSizeConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldListSizeConfiguration.ProtoReflect.Descriptor instead.
 func (*FieldListSizeConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{14}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *FieldListSizeConfiguration) GetTypeName() string {
@@ -1454,7 +1980,7 @@ type ArgumentConfiguration struct {
 
 func (x *ArgumentConfiguration) Reset() {
 	*x = ArgumentConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[15]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1466,7 +1992,7 @@ func (x *ArgumentConfiguration) String() string {
 func (*ArgumentConfiguration) ProtoMessage() {}
 
 func (x *ArgumentConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[15]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1479,7 +2005,7 @@ func (x *ArgumentConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArgumentConfiguration.ProtoReflect.Descriptor instead.
 func (*ArgumentConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{15}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ArgumentConfiguration) GetName() string {
@@ -1505,7 +2031,7 @@ type Scopes struct {
 
 func (x *Scopes) Reset() {
 	*x = Scopes{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[16]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1517,7 +2043,7 @@ func (x *Scopes) String() string {
 func (*Scopes) ProtoMessage() {}
 
 func (x *Scopes) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[16]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1530,7 +2056,7 @@ func (x *Scopes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Scopes.ProtoReflect.Descriptor instead.
 func (*Scopes) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{16}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *Scopes) GetRequiredAndScopes() []string {
@@ -1551,7 +2077,7 @@ type AuthorizationConfiguration struct {
 
 func (x *AuthorizationConfiguration) Reset() {
 	*x = AuthorizationConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[17]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1563,7 +2089,7 @@ func (x *AuthorizationConfiguration) String() string {
 func (*AuthorizationConfiguration) ProtoMessage() {}
 
 func (x *AuthorizationConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[17]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1576,7 +2102,7 @@ func (x *AuthorizationConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuthorizationConfiguration.ProtoReflect.Descriptor instead.
 func (*AuthorizationConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{17}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *AuthorizationConfiguration) GetRequiresAuthentication() bool {
@@ -1613,7 +2139,7 @@ type FieldConfiguration struct {
 
 func (x *FieldConfiguration) Reset() {
 	*x = FieldConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[18]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1625,7 +2151,7 @@ func (x *FieldConfiguration) String() string {
 func (*FieldConfiguration) ProtoMessage() {}
 
 func (x *FieldConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[18]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1638,7 +2164,7 @@ func (x *FieldConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldConfiguration.ProtoReflect.Descriptor instead.
 func (*FieldConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{18}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *FieldConfiguration) GetTypeName() string {
@@ -1686,7 +2212,7 @@ type TypeConfiguration struct {
 
 func (x *TypeConfiguration) Reset() {
 	*x = TypeConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[19]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1698,7 +2224,7 @@ func (x *TypeConfiguration) String() string {
 func (*TypeConfiguration) ProtoMessage() {}
 
 func (x *TypeConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[19]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1711,7 +2237,7 @@ func (x *TypeConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TypeConfiguration.ProtoReflect.Descriptor instead.
 func (*TypeConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{19}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *TypeConfiguration) GetTypeName() string {
@@ -1740,7 +2266,7 @@ type TypeField struct {
 
 func (x *TypeField) Reset() {
 	*x = TypeField{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[20]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1752,7 +2278,7 @@ func (x *TypeField) String() string {
 func (*TypeField) ProtoMessage() {}
 
 func (x *TypeField) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[20]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1765,7 +2291,7 @@ func (x *TypeField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TypeField.ProtoReflect.Descriptor instead.
 func (*TypeField) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{20}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *TypeField) GetTypeName() string {
@@ -1806,7 +2332,7 @@ type FieldCoordinates struct {
 
 func (x *FieldCoordinates) Reset() {
 	*x = FieldCoordinates{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[21]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1818,7 +2344,7 @@ func (x *FieldCoordinates) String() string {
 func (*FieldCoordinates) ProtoMessage() {}
 
 func (x *FieldCoordinates) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[21]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1831,7 +2357,7 @@ func (x *FieldCoordinates) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldCoordinates.ProtoReflect.Descriptor instead.
 func (*FieldCoordinates) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{21}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *FieldCoordinates) GetFieldName() string {
@@ -1858,7 +2384,7 @@ type FieldSetCondition struct {
 
 func (x *FieldSetCondition) Reset() {
 	*x = FieldSetCondition{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[22]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1870,7 +2396,7 @@ func (x *FieldSetCondition) String() string {
 func (*FieldSetCondition) ProtoMessage() {}
 
 func (x *FieldSetCondition) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[22]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1883,7 +2409,7 @@ func (x *FieldSetCondition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldSetCondition.ProtoReflect.Descriptor instead.
 func (*FieldSetCondition) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{22}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *FieldSetCondition) GetFieldCoordinatesPath() []*FieldCoordinates {
@@ -1913,7 +2439,7 @@ type RequiredField struct {
 
 func (x *RequiredField) Reset() {
 	*x = RequiredField{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[23]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1925,7 +2451,7 @@ func (x *RequiredField) String() string {
 func (*RequiredField) ProtoMessage() {}
 
 func (x *RequiredField) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[23]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1938,7 +2464,7 @@ func (x *RequiredField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequiredField.ProtoReflect.Descriptor instead.
 func (*RequiredField) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{23}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *RequiredField) GetTypeName() string {
@@ -1986,7 +2512,7 @@ type EntityInterfaceConfiguration struct {
 
 func (x *EntityInterfaceConfiguration) Reset() {
 	*x = EntityInterfaceConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[24]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1998,7 +2524,7 @@ func (x *EntityInterfaceConfiguration) String() string {
 func (*EntityInterfaceConfiguration) ProtoMessage() {}
 
 func (x *EntityInterfaceConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[24]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2011,7 +2537,7 @@ func (x *EntityInterfaceConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityInterfaceConfiguration.ProtoReflect.Descriptor instead.
 func (*EntityInterfaceConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{24}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *EntityInterfaceConfiguration) GetInterfaceTypeName() string {
@@ -2054,7 +2580,7 @@ type FetchConfiguration struct {
 
 func (x *FetchConfiguration) Reset() {
 	*x = FetchConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[25]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2066,7 +2592,7 @@ func (x *FetchConfiguration) String() string {
 func (*FetchConfiguration) ProtoMessage() {}
 
 func (x *FetchConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[25]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2079,7 +2605,7 @@ func (x *FetchConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FetchConfiguration.ProtoReflect.Descriptor instead.
 func (*FetchConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{25}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *FetchConfiguration) GetUrl() *ConfigurationVariable {
@@ -2163,7 +2689,7 @@ type StatusCodeTypeMapping struct {
 
 func (x *StatusCodeTypeMapping) Reset() {
 	*x = StatusCodeTypeMapping{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[26]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2175,7 +2701,7 @@ func (x *StatusCodeTypeMapping) String() string {
 func (*StatusCodeTypeMapping) ProtoMessage() {}
 
 func (x *StatusCodeTypeMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[26]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2188,7 +2714,7 @@ func (x *StatusCodeTypeMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusCodeTypeMapping.ProtoReflect.Descriptor instead.
 func (*StatusCodeTypeMapping) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{26}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *StatusCodeTypeMapping) GetStatusCode() int64 {
@@ -2226,7 +2752,7 @@ type DataSourceCustom_GraphQL struct {
 
 func (x *DataSourceCustom_GraphQL) Reset() {
 	*x = DataSourceCustom_GraphQL{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[27]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2238,7 +2764,7 @@ func (x *DataSourceCustom_GraphQL) String() string {
 func (*DataSourceCustom_GraphQL) ProtoMessage() {}
 
 func (x *DataSourceCustom_GraphQL) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[27]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2251,7 +2777,7 @@ func (x *DataSourceCustom_GraphQL) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DataSourceCustom_GraphQL.ProtoReflect.Descriptor instead.
 func (*DataSourceCustom_GraphQL) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{27}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *DataSourceCustom_GraphQL) GetFetch() *FetchConfiguration {
@@ -2307,7 +2833,7 @@ type GRPCConfiguration struct {
 
 func (x *GRPCConfiguration) Reset() {
 	*x = GRPCConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[28]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2319,7 +2845,7 @@ func (x *GRPCConfiguration) String() string {
 func (*GRPCConfiguration) ProtoMessage() {}
 
 func (x *GRPCConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[28]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2332,7 +2858,7 @@ func (x *GRPCConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GRPCConfiguration.ProtoReflect.Descriptor instead.
 func (*GRPCConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{28}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *GRPCConfiguration) GetMapping() *GRPCMapping {
@@ -2366,7 +2892,7 @@ type ImageReference struct {
 
 func (x *ImageReference) Reset() {
 	*x = ImageReference{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[29]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2378,7 +2904,7 @@ func (x *ImageReference) String() string {
 func (*ImageReference) ProtoMessage() {}
 
 func (x *ImageReference) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[29]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2391,7 +2917,7 @@ func (x *ImageReference) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImageReference.ProtoReflect.Descriptor instead.
 func (*ImageReference) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{29}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ImageReference) GetRepository() string {
@@ -2421,7 +2947,7 @@ type PluginConfiguration struct {
 
 func (x *PluginConfiguration) Reset() {
 	*x = PluginConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[30]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2433,7 +2959,7 @@ func (x *PluginConfiguration) String() string {
 func (*PluginConfiguration) ProtoMessage() {}
 
 func (x *PluginConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[30]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2446,7 +2972,7 @@ func (x *PluginConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PluginConfiguration.ProtoReflect.Descriptor instead.
 func (*PluginConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{30}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *PluginConfiguration) GetName() string {
@@ -2480,7 +3006,7 @@ type SSLConfiguration struct {
 
 func (x *SSLConfiguration) Reset() {
 	*x = SSLConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[31]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2492,7 +3018,7 @@ func (x *SSLConfiguration) String() string {
 func (*SSLConfiguration) ProtoMessage() {}
 
 func (x *SSLConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[31]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2505,7 +3031,7 @@ func (x *SSLConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SSLConfiguration.ProtoReflect.Descriptor instead.
 func (*SSLConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{31}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *SSLConfiguration) GetEnabled() bool {
@@ -2538,7 +3064,7 @@ type GRPCMapping struct {
 
 func (x *GRPCMapping) Reset() {
 	*x = GRPCMapping{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[32]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2550,7 +3076,7 @@ func (x *GRPCMapping) String() string {
 func (*GRPCMapping) ProtoMessage() {}
 
 func (x *GRPCMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[32]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2563,7 +3089,7 @@ func (x *GRPCMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GRPCMapping.ProtoReflect.Descriptor instead.
 func (*GRPCMapping) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{32}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *GRPCMapping) GetVersion() int32 {
@@ -2634,7 +3160,7 @@ type LookupMapping struct {
 
 func (x *LookupMapping) Reset() {
 	*x = LookupMapping{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[33]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2646,7 +3172,7 @@ func (x *LookupMapping) String() string {
 func (*LookupMapping) ProtoMessage() {}
 
 func (x *LookupMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[33]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2659,7 +3185,7 @@ func (x *LookupMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LookupMapping.ProtoReflect.Descriptor instead.
 func (*LookupMapping) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{33}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *LookupMapping) GetType() LookupType {
@@ -2710,7 +3236,7 @@ type LookupFieldMapping struct {
 
 func (x *LookupFieldMapping) Reset() {
 	*x = LookupFieldMapping{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[34]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2722,7 +3248,7 @@ func (x *LookupFieldMapping) String() string {
 func (*LookupFieldMapping) ProtoMessage() {}
 
 func (x *LookupFieldMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[34]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2735,7 +3261,7 @@ func (x *LookupFieldMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LookupFieldMapping.ProtoReflect.Descriptor instead.
 func (*LookupFieldMapping) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{34}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *LookupFieldMapping) GetType() string {
@@ -2771,7 +3297,7 @@ type OperationMapping struct {
 
 func (x *OperationMapping) Reset() {
 	*x = OperationMapping{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[35]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2783,7 +3309,7 @@ func (x *OperationMapping) String() string {
 func (*OperationMapping) ProtoMessage() {}
 
 func (x *OperationMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[35]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2796,7 +3322,7 @@ func (x *OperationMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OperationMapping.ProtoReflect.Descriptor instead.
 func (*OperationMapping) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{35}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *OperationMapping) GetType() OperationType {
@@ -2857,7 +3383,7 @@ type EntityMapping struct {
 
 func (x *EntityMapping) Reset() {
 	*x = EntityMapping{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[36]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2869,7 +3395,7 @@ func (x *EntityMapping) String() string {
 func (*EntityMapping) ProtoMessage() {}
 
 func (x *EntityMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[36]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2882,7 +3408,7 @@ func (x *EntityMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityMapping.ProtoReflect.Descriptor instead.
 func (*EntityMapping) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{36}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *EntityMapping) GetTypeName() string {
@@ -2950,7 +3476,7 @@ type RequiredFieldMapping struct {
 
 func (x *RequiredFieldMapping) Reset() {
 	*x = RequiredFieldMapping{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[37]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2962,7 +3488,7 @@ func (x *RequiredFieldMapping) String() string {
 func (*RequiredFieldMapping) ProtoMessage() {}
 
 func (x *RequiredFieldMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[37]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2975,7 +3501,7 @@ func (x *RequiredFieldMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequiredFieldMapping.ProtoReflect.Descriptor instead.
 func (*RequiredFieldMapping) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{37}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *RequiredFieldMapping) GetFieldMapping() *FieldMapping {
@@ -3019,7 +3545,7 @@ type TypeFieldMapping struct {
 
 func (x *TypeFieldMapping) Reset() {
 	*x = TypeFieldMapping{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[38]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3031,7 +3557,7 @@ func (x *TypeFieldMapping) String() string {
 func (*TypeFieldMapping) ProtoMessage() {}
 
 func (x *TypeFieldMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[38]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3044,7 +3570,7 @@ func (x *TypeFieldMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TypeFieldMapping.ProtoReflect.Descriptor instead.
 func (*TypeFieldMapping) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{38}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *TypeFieldMapping) GetType() string {
@@ -3076,7 +3602,7 @@ type FieldMapping struct {
 
 func (x *FieldMapping) Reset() {
 	*x = FieldMapping{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[39]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3088,7 +3614,7 @@ func (x *FieldMapping) String() string {
 func (*FieldMapping) ProtoMessage() {}
 
 func (x *FieldMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[39]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3101,7 +3627,7 @@ func (x *FieldMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldMapping.ProtoReflect.Descriptor instead.
 func (*FieldMapping) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{39}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *FieldMapping) GetOriginal() string {
@@ -3138,7 +3664,7 @@ type ArgumentMapping struct {
 
 func (x *ArgumentMapping) Reset() {
 	*x = ArgumentMapping{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[40]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3150,7 +3676,7 @@ func (x *ArgumentMapping) String() string {
 func (*ArgumentMapping) ProtoMessage() {}
 
 func (x *ArgumentMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[40]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3163,7 +3689,7 @@ func (x *ArgumentMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArgumentMapping.ProtoReflect.Descriptor instead.
 func (*ArgumentMapping) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{40}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ArgumentMapping) GetOriginal() string {
@@ -3190,7 +3716,7 @@ type EnumMapping struct {
 
 func (x *EnumMapping) Reset() {
 	*x = EnumMapping{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[41]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3202,7 +3728,7 @@ func (x *EnumMapping) String() string {
 func (*EnumMapping) ProtoMessage() {}
 
 func (x *EnumMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[41]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3215,7 +3741,7 @@ func (x *EnumMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnumMapping.ProtoReflect.Descriptor instead.
 func (*EnumMapping) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{41}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *EnumMapping) GetType() string {
@@ -3242,7 +3768,7 @@ type EnumValueMapping struct {
 
 func (x *EnumValueMapping) Reset() {
 	*x = EnumValueMapping{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[42]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3254,7 +3780,7 @@ func (x *EnumValueMapping) String() string {
 func (*EnumValueMapping) ProtoMessage() {}
 
 func (x *EnumValueMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[42]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3267,7 +3793,7 @@ func (x *EnumValueMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnumValueMapping.ProtoReflect.Descriptor instead.
 func (*EnumValueMapping) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{42}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *EnumValueMapping) GetOriginal() string {
@@ -3295,7 +3821,7 @@ type NatsStreamConfiguration struct {
 
 func (x *NatsStreamConfiguration) Reset() {
 	*x = NatsStreamConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[43]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3307,7 +3833,7 @@ func (x *NatsStreamConfiguration) String() string {
 func (*NatsStreamConfiguration) ProtoMessage() {}
 
 func (x *NatsStreamConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[43]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3320,7 +3846,7 @@ func (x *NatsStreamConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NatsStreamConfiguration.ProtoReflect.Descriptor instead.
 func (*NatsStreamConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{43}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *NatsStreamConfiguration) GetConsumerName() string {
@@ -3355,7 +3881,7 @@ type NatsEventConfiguration struct {
 
 func (x *NatsEventConfiguration) Reset() {
 	*x = NatsEventConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[44]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3367,7 +3893,7 @@ func (x *NatsEventConfiguration) String() string {
 func (*NatsEventConfiguration) ProtoMessage() {}
 
 func (x *NatsEventConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[44]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3380,7 +3906,7 @@ func (x *NatsEventConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NatsEventConfiguration.ProtoReflect.Descriptor instead.
 func (*NatsEventConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{44}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *NatsEventConfiguration) GetEngineEventConfiguration() *EngineEventConfiguration {
@@ -3414,7 +3940,7 @@ type KafkaEventConfiguration struct {
 
 func (x *KafkaEventConfiguration) Reset() {
 	*x = KafkaEventConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[45]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3426,7 +3952,7 @@ func (x *KafkaEventConfiguration) String() string {
 func (*KafkaEventConfiguration) ProtoMessage() {}
 
 func (x *KafkaEventConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[45]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3439,7 +3965,7 @@ func (x *KafkaEventConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KafkaEventConfiguration.ProtoReflect.Descriptor instead.
 func (*KafkaEventConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{45}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *KafkaEventConfiguration) GetEngineEventConfiguration() *EngineEventConfiguration {
@@ -3466,7 +3992,7 @@ type RedisEventConfiguration struct {
 
 func (x *RedisEventConfiguration) Reset() {
 	*x = RedisEventConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[46]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3478,7 +4004,7 @@ func (x *RedisEventConfiguration) String() string {
 func (*RedisEventConfiguration) ProtoMessage() {}
 
 func (x *RedisEventConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[46]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3491,7 +4017,7 @@ func (x *RedisEventConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedisEventConfiguration.ProtoReflect.Descriptor instead.
 func (*RedisEventConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{46}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *RedisEventConfiguration) GetEngineEventConfiguration() *EngineEventConfiguration {
@@ -3520,7 +4046,7 @@ type EngineEventConfiguration struct {
 
 func (x *EngineEventConfiguration) Reset() {
 	*x = EngineEventConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[47]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3532,7 +4058,7 @@ func (x *EngineEventConfiguration) String() string {
 func (*EngineEventConfiguration) ProtoMessage() {}
 
 func (x *EngineEventConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[47]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3545,7 +4071,7 @@ func (x *EngineEventConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EngineEventConfiguration.ProtoReflect.Descriptor instead.
 func (*EngineEventConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{47}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *EngineEventConfiguration) GetProviderId() string {
@@ -3587,7 +4113,7 @@ type DataSourceCustomEvents struct {
 
 func (x *DataSourceCustomEvents) Reset() {
 	*x = DataSourceCustomEvents{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[48]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3599,7 +4125,7 @@ func (x *DataSourceCustomEvents) String() string {
 func (*DataSourceCustomEvents) ProtoMessage() {}
 
 func (x *DataSourceCustomEvents) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[48]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3612,7 +4138,7 @@ func (x *DataSourceCustomEvents) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DataSourceCustomEvents.ProtoReflect.Descriptor instead.
 func (*DataSourceCustomEvents) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{48}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *DataSourceCustomEvents) GetNats() []*NatsEventConfiguration {
@@ -3645,7 +4171,7 @@ type DataSourceCustom_Static struct {
 
 func (x *DataSourceCustom_Static) Reset() {
 	*x = DataSourceCustom_Static{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[49]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3657,7 +4183,7 @@ func (x *DataSourceCustom_Static) String() string {
 func (*DataSourceCustom_Static) ProtoMessage() {}
 
 func (x *DataSourceCustom_Static) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[49]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3670,7 +4196,7 @@ func (x *DataSourceCustom_Static) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DataSourceCustom_Static.ProtoReflect.Descriptor instead.
 func (*DataSourceCustom_Static) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{49}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *DataSourceCustom_Static) GetData() *ConfigurationVariable {
@@ -3693,7 +4219,7 @@ type ConfigurationVariable struct {
 
 func (x *ConfigurationVariable) Reset() {
 	*x = ConfigurationVariable{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[50]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3705,7 +4231,7 @@ func (x *ConfigurationVariable) String() string {
 func (*ConfigurationVariable) ProtoMessage() {}
 
 func (x *ConfigurationVariable) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[50]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3718,7 +4244,7 @@ func (x *ConfigurationVariable) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigurationVariable.ProtoReflect.Descriptor instead.
 func (*ConfigurationVariable) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{50}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *ConfigurationVariable) GetKind() ConfigurationVariableKind {
@@ -3766,7 +4292,7 @@ type DirectiveConfiguration struct {
 
 func (x *DirectiveConfiguration) Reset() {
 	*x = DirectiveConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[51]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3778,7 +4304,7 @@ func (x *DirectiveConfiguration) String() string {
 func (*DirectiveConfiguration) ProtoMessage() {}
 
 func (x *DirectiveConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[51]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3791,7 +4317,7 @@ func (x *DirectiveConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DirectiveConfiguration.ProtoReflect.Descriptor instead.
 func (*DirectiveConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{51}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *DirectiveConfiguration) GetDirectiveName() string {
@@ -3818,7 +4344,7 @@ type URLQueryConfiguration struct {
 
 func (x *URLQueryConfiguration) Reset() {
 	*x = URLQueryConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[52]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3830,7 +4356,7 @@ func (x *URLQueryConfiguration) String() string {
 func (*URLQueryConfiguration) ProtoMessage() {}
 
 func (x *URLQueryConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[52]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3843,7 +4369,7 @@ func (x *URLQueryConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use URLQueryConfiguration.ProtoReflect.Descriptor instead.
 func (*URLQueryConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{52}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *URLQueryConfiguration) GetName() string {
@@ -3869,7 +4395,7 @@ type HTTPHeader struct {
 
 func (x *HTTPHeader) Reset() {
 	*x = HTTPHeader{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[53]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3881,7 +4407,7 @@ func (x *HTTPHeader) String() string {
 func (*HTTPHeader) ProtoMessage() {}
 
 func (x *HTTPHeader) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[53]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3894,7 +4420,7 @@ func (x *HTTPHeader) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HTTPHeader.ProtoReflect.Descriptor instead.
 func (*HTTPHeader) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{53}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *HTTPHeader) GetValues() []*ConfigurationVariable {
@@ -3915,7 +4441,7 @@ type MTLSConfiguration struct {
 
 func (x *MTLSConfiguration) Reset() {
 	*x = MTLSConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[54]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3927,7 +4453,7 @@ func (x *MTLSConfiguration) String() string {
 func (*MTLSConfiguration) ProtoMessage() {}
 
 func (x *MTLSConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[54]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3940,7 +4466,7 @@ func (x *MTLSConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MTLSConfiguration.ProtoReflect.Descriptor instead.
 func (*MTLSConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{54}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *MTLSConfiguration) GetKey() *ConfigurationVariable {
@@ -3978,7 +4504,7 @@ type GraphQLSubscriptionConfiguration struct {
 
 func (x *GraphQLSubscriptionConfiguration) Reset() {
 	*x = GraphQLSubscriptionConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[55]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3990,7 +4516,7 @@ func (x *GraphQLSubscriptionConfiguration) String() string {
 func (*GraphQLSubscriptionConfiguration) ProtoMessage() {}
 
 func (x *GraphQLSubscriptionConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[55]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4003,7 +4529,7 @@ func (x *GraphQLSubscriptionConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphQLSubscriptionConfiguration.ProtoReflect.Descriptor instead.
 func (*GraphQLSubscriptionConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{55}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *GraphQLSubscriptionConfiguration) GetEnabled() bool {
@@ -4051,7 +4577,7 @@ type GraphQLFederationConfiguration struct {
 
 func (x *GraphQLFederationConfiguration) Reset() {
 	*x = GraphQLFederationConfiguration{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[56]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4063,7 +4589,7 @@ func (x *GraphQLFederationConfiguration) String() string {
 func (*GraphQLFederationConfiguration) ProtoMessage() {}
 
 func (x *GraphQLFederationConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[56]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4076,7 +4602,7 @@ func (x *GraphQLFederationConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphQLFederationConfiguration.ProtoReflect.Descriptor instead.
 func (*GraphQLFederationConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{56}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *GraphQLFederationConfiguration) GetEnabled() bool {
@@ -4103,7 +4629,7 @@ type InternedString struct {
 
 func (x *InternedString) Reset() {
 	*x = InternedString{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[57]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4115,7 +4641,7 @@ func (x *InternedString) String() string {
 func (*InternedString) ProtoMessage() {}
 
 func (x *InternedString) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[57]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4128,7 +4654,7 @@ func (x *InternedString) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InternedString.ProtoReflect.Descriptor instead.
 func (*InternedString) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{57}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *InternedString) GetKey() string {
@@ -4148,7 +4674,7 @@ type SingleTypeField struct {
 
 func (x *SingleTypeField) Reset() {
 	*x = SingleTypeField{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[58]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4160,7 +4686,7 @@ func (x *SingleTypeField) String() string {
 func (*SingleTypeField) ProtoMessage() {}
 
 func (x *SingleTypeField) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[58]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4173,7 +4699,7 @@ func (x *SingleTypeField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SingleTypeField.ProtoReflect.Descriptor instead.
 func (*SingleTypeField) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{58}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *SingleTypeField) GetTypeName() string {
@@ -4200,7 +4726,7 @@ type SubscriptionFieldCondition struct {
 
 func (x *SubscriptionFieldCondition) Reset() {
 	*x = SubscriptionFieldCondition{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[59]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4212,7 +4738,7 @@ func (x *SubscriptionFieldCondition) String() string {
 func (*SubscriptionFieldCondition) ProtoMessage() {}
 
 func (x *SubscriptionFieldCondition) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[59]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4225,7 +4751,7 @@ func (x *SubscriptionFieldCondition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscriptionFieldCondition.ProtoReflect.Descriptor instead.
 func (*SubscriptionFieldCondition) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{59}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *SubscriptionFieldCondition) GetFieldPath() []string {
@@ -4254,7 +4780,7 @@ type SubscriptionFilterCondition struct {
 
 func (x *SubscriptionFilterCondition) Reset() {
 	*x = SubscriptionFilterCondition{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[60]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4266,7 +4792,7 @@ func (x *SubscriptionFilterCondition) String() string {
 func (*SubscriptionFilterCondition) ProtoMessage() {}
 
 func (x *SubscriptionFilterCondition) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[60]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4279,7 +4805,7 @@ func (x *SubscriptionFilterCondition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscriptionFilterCondition.ProtoReflect.Descriptor instead.
 func (*SubscriptionFilterCondition) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{60}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *SubscriptionFilterCondition) GetAnd() []*SubscriptionFilterCondition {
@@ -4319,7 +4845,7 @@ type CacheWarmerOperations struct {
 
 func (x *CacheWarmerOperations) Reset() {
 	*x = CacheWarmerOperations{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[61]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4331,7 +4857,7 @@ func (x *CacheWarmerOperations) String() string {
 func (*CacheWarmerOperations) ProtoMessage() {}
 
 func (x *CacheWarmerOperations) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[61]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4344,7 +4870,7 @@ func (x *CacheWarmerOperations) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CacheWarmerOperations.ProtoReflect.Descriptor instead.
 func (*CacheWarmerOperations) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{61}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *CacheWarmerOperations) GetOperations() []*Operation {
@@ -4364,7 +4890,7 @@ type Operation struct {
 
 func (x *Operation) Reset() {
 	*x = Operation{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[62]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4376,7 +4902,7 @@ func (x *Operation) String() string {
 func (*Operation) ProtoMessage() {}
 
 func (x *Operation) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[62]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4389,7 +4915,7 @@ func (x *Operation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Operation.ProtoReflect.Descriptor instead.
 func (*Operation) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{62}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *Operation) GetRequest() *OperationRequest {
@@ -4417,7 +4943,7 @@ type OperationRequest struct {
 
 func (x *OperationRequest) Reset() {
 	*x = OperationRequest{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[63]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4429,7 +4955,7 @@ func (x *OperationRequest) String() string {
 func (*OperationRequest) ProtoMessage() {}
 
 func (x *OperationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[63]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4442,7 +4968,7 @@ func (x *OperationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OperationRequest.ProtoReflect.Descriptor instead.
 func (*OperationRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{63}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *OperationRequest) GetOperationName() string {
@@ -4475,7 +5001,7 @@ type Extension struct {
 
 func (x *Extension) Reset() {
 	*x = Extension{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[64]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4487,7 +5013,7 @@ func (x *Extension) String() string {
 func (*Extension) ProtoMessage() {}
 
 func (x *Extension) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[64]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4500,7 +5026,7 @@ func (x *Extension) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Extension.ProtoReflect.Descriptor instead.
 func (*Extension) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{64}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *Extension) GetPersistedQuery() *PersistedQuery {
@@ -4520,7 +5046,7 @@ type PersistedQuery struct {
 
 func (x *PersistedQuery) Reset() {
 	*x = PersistedQuery{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[65]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4532,7 +5058,7 @@ func (x *PersistedQuery) String() string {
 func (*PersistedQuery) ProtoMessage() {}
 
 func (x *PersistedQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[65]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4545,7 +5071,7 @@ func (x *PersistedQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PersistedQuery.ProtoReflect.Descriptor instead.
 func (*PersistedQuery) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{65}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *PersistedQuery) GetSha256Hash() string {
@@ -4572,7 +5098,7 @@ type ClientInfo struct {
 
 func (x *ClientInfo) Reset() {
 	*x = ClientInfo{}
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[66]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4584,7 +5110,7 @@ func (x *ClientInfo) String() string {
 func (*ClientInfo) ProtoMessage() {}
 
 func (x *ClientInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[66]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4597,7 +5123,7 @@ func (x *ClientInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClientInfo.ProtoReflect.Descriptor instead.
 func (*ClientInfo) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{66}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *ClientInfo) GetName() string {
@@ -4669,7 +5195,7 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\x12StringStorageEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x18\n" +
-	"\x16_graphql_client_schema\"\xce\b\n" +
+	"\x16_graphql_client_schema\"\x81\r\n" +
 	"\x17DataSourceConfiguration\x124\n" +
 	"\x04kind\x18\x01 \x01(\x0e2 .wg.cosmo.node.v1.DataSourceKindR\x04kind\x12:\n" +
 	"\n" +
@@ -4691,7 +5217,53 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\rcustom_events\x18\r \x01(\v2(.wg.cosmo.node.v1.DataSourceCustomEventsR\fcustomEvents\x12[\n" +
 	"\x11entity_interfaces\x18\x0e \x03(\v2..wg.cosmo.node.v1.EntityInterfaceConfigurationR\x10entityInterfaces\x12[\n" +
 	"\x11interface_objects\x18\x0f \x03(\v2..wg.cosmo.node.v1.EntityInterfaceConfigurationR\x10interfaceObjects\x12R\n" +
-	"\x12cost_configuration\x18\x10 \x01(\v2#.wg.cosmo.node.v1.CostConfigurationR\x11costConfiguration\"\x98\x04\n" +
+	"\x12cost_configuration\x18\x10 \x01(\v2#.wg.cosmo.node.v1.CostConfigurationR\x11costConfiguration\x12j\n" +
+	"\x1bentity_cache_configurations\x18\x11 \x03(\v2*.wg.cosmo.node.v1.EntityCacheConfigurationR\x19entityCacheConfigurations\x12t\n" +
+	"\x1froot_field_cache_configurations\x18\x12 \x03(\v2-.wg.cosmo.node.v1.RootFieldCacheConfigurationR\x1crootFieldCacheConfigurations\x12p\n" +
+	"\x1dcache_populate_configurations\x18\x13 \x03(\v2,.wg.cosmo.node.v1.CachePopulateConfigurationR\x1bcachePopulateConfigurations\x12v\n" +
+	"\x1fcache_invalidate_configurations\x18\x14 \x03(\v2..wg.cosmo.node.v1.CacheInvalidateConfigurationR\x1dcacheInvalidateConfigurations\x12e\n" +
+	"\x15request_scoped_fields\x18\x15 \x03(\v21.wg.cosmo.node.v1.RequestScopedFieldConfigurationR\x13requestScopedFields\"\x88\x01\n" +
+	"\x1fRequestScopedFieldConfiguration\x12\x1d\n" +
+	"\n" +
+	"field_name\x18\x01 \x01(\tR\tfieldName\x12\x1b\n" +
+	"\ttype_name\x18\x02 \x01(\tR\btypeName\x12\x15\n" +
+	"\x06l1_key\x18\x03 \x01(\tR\x05l1KeyJ\x04\b\x04\x10\x05R\fresolve_from\"\xb1\x02\n" +
+	"\x18EntityCacheConfiguration\x12\x1b\n" +
+	"\ttype_name\x18\x01 \x01(\tR\btypeName\x12&\n" +
+	"\x0fmax_age_seconds\x18\x02 \x01(\x03R\rmaxAgeSeconds\x12'\n" +
+	"\x0finclude_headers\x18\x03 \x01(\bR\x0eincludeHeaders\x12,\n" +
+	"\x12partial_cache_load\x18\x04 \x01(\bR\x10partialCacheLoad\x12\x1f\n" +
+	"\vshadow_mode\x18\x05 \x01(\bR\n" +
+	"shadowMode\x12<\n" +
+	"\x1bnot_found_cache_ttl_seconds\x18\x06 \x01(\x03R\x17notFoundCacheTtlSecondsR\x1anegative_cache_ttl_seconds\"\xac\x02\n" +
+	"\x1bRootFieldCacheConfiguration\x12\x1d\n" +
+	"\n" +
+	"field_name\x18\x01 \x01(\tR\tfieldName\x12&\n" +
+	"\x0fmax_age_seconds\x18\x02 \x01(\x03R\rmaxAgeSeconds\x12'\n" +
+	"\x0finclude_headers\x18\x03 \x01(\bR\x0eincludeHeaders\x12\x1f\n" +
+	"\vshadow_mode\x18\x04 \x01(\bR\n" +
+	"shadowMode\x12(\n" +
+	"\x10entity_type_name\x18\x05 \x01(\tR\x0eentityTypeName\x12R\n" +
+	"\x13entity_key_mappings\x18\x06 \x03(\v2\".wg.cosmo.node.v1.EntityKeyMappingR\x11entityKeyMappings\"\x8e\x01\n" +
+	"\x10EntityKeyMapping\x12(\n" +
+	"\x10entity_type_name\x18\x01 \x01(\tR\x0eentityTypeName\x12P\n" +
+	"\x0efield_mappings\x18\x02 \x03(\v2).wg.cosmo.node.v1.EntityCacheFieldMappingR\rfieldMappings\"\x83\x01\n" +
+	"\x17EntityCacheFieldMapping\x12(\n" +
+	"\x10entity_key_field\x18\x01 \x01(\tR\x0eentityKeyField\x12#\n" +
+	"\rargument_path\x18\x02 \x03(\tR\fargumentPath\x12\x19\n" +
+	"\bis_batch\x18\x03 \x01(\bR\aisBatch\"\xcd\x01\n" +
+	"\x1aCachePopulateConfiguration\x12\x1d\n" +
+	"\n" +
+	"field_name\x18\x01 \x01(\tR\tfieldName\x12%\n" +
+	"\x0eoperation_type\x18\x02 \x01(\tR\roperationType\x12+\n" +
+	"\x0fmax_age_seconds\x18\x03 \x01(\x03H\x00R\rmaxAgeSeconds\x88\x01\x01\x12(\n" +
+	"\x10entity_type_name\x18\x04 \x01(\tR\x0eentityTypeNameB\x12\n" +
+	"\x10_max_age_seconds\"\x8e\x01\n" +
+	"\x1cCacheInvalidateConfiguration\x12\x1d\n" +
+	"\n" +
+	"field_name\x18\x01 \x01(\tR\tfieldName\x12%\n" +
+	"\x0eoperation_type\x18\x02 \x01(\tR\roperationType\x12(\n" +
+	"\x10entity_type_name\x18\x03 \x01(\tR\x0eentityTypeName\"\x98\x04\n" +
 	"\x11CostConfiguration\x12O\n" +
 	"\rfield_weights\x18\x01 \x03(\v2*.wg.cosmo.node.v1.FieldWeightConfigurationR\ffieldWeights\x12K\n" +
 	"\n" +
@@ -5030,7 +5602,7 @@ func file_wg_cosmo_node_v1_node_proto_rawDescGZIP() []byte {
 }
 
 var file_wg_cosmo_node_v1_node_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_wg_cosmo_node_v1_node_proto_msgTypes = make([]protoimpl.MessageInfo, 74)
+var file_wg_cosmo_node_v1_node_proto_msgTypes = make([]protoimpl.MessageInfo, 81)
 var file_wg_cosmo_node_v1_node_proto_goTypes = []any{
 	(ArgumentRenderConfiguration)(0),          // 0: wg.cosmo.node.v1.ArgumentRenderConfiguration
 	(ArgumentSource)(0),                       // 1: wg.cosmo.node.v1.ArgumentSource
@@ -5052,180 +5624,194 @@ var file_wg_cosmo_node_v1_node_proto_goTypes = []any{
 	(*SelfRegisterResponse)(nil),              // 17: wg.cosmo.node.v1.SelfRegisterResponse
 	(*EngineConfiguration)(nil),               // 18: wg.cosmo.node.v1.EngineConfiguration
 	(*DataSourceConfiguration)(nil),           // 19: wg.cosmo.node.v1.DataSourceConfiguration
-	(*CostConfiguration)(nil),                 // 20: wg.cosmo.node.v1.CostConfiguration
-	(*FieldWeightConfiguration)(nil),          // 21: wg.cosmo.node.v1.FieldWeightConfiguration
-	(*FieldListSizeConfiguration)(nil),        // 22: wg.cosmo.node.v1.FieldListSizeConfiguration
-	(*ArgumentConfiguration)(nil),             // 23: wg.cosmo.node.v1.ArgumentConfiguration
-	(*Scopes)(nil),                            // 24: wg.cosmo.node.v1.Scopes
-	(*AuthorizationConfiguration)(nil),        // 25: wg.cosmo.node.v1.AuthorizationConfiguration
-	(*FieldConfiguration)(nil),                // 26: wg.cosmo.node.v1.FieldConfiguration
-	(*TypeConfiguration)(nil),                 // 27: wg.cosmo.node.v1.TypeConfiguration
-	(*TypeField)(nil),                         // 28: wg.cosmo.node.v1.TypeField
-	(*FieldCoordinates)(nil),                  // 29: wg.cosmo.node.v1.FieldCoordinates
-	(*FieldSetCondition)(nil),                 // 30: wg.cosmo.node.v1.FieldSetCondition
-	(*RequiredField)(nil),                     // 31: wg.cosmo.node.v1.RequiredField
-	(*EntityInterfaceConfiguration)(nil),      // 32: wg.cosmo.node.v1.EntityInterfaceConfiguration
-	(*FetchConfiguration)(nil),                // 33: wg.cosmo.node.v1.FetchConfiguration
-	(*StatusCodeTypeMapping)(nil),             // 34: wg.cosmo.node.v1.StatusCodeTypeMapping
-	(*DataSourceCustom_GraphQL)(nil),          // 35: wg.cosmo.node.v1.DataSourceCustom_GraphQL
-	(*GRPCConfiguration)(nil),                 // 36: wg.cosmo.node.v1.GRPCConfiguration
-	(*ImageReference)(nil),                    // 37: wg.cosmo.node.v1.ImageReference
-	(*PluginConfiguration)(nil),               // 38: wg.cosmo.node.v1.PluginConfiguration
-	(*SSLConfiguration)(nil),                  // 39: wg.cosmo.node.v1.SSLConfiguration
-	(*GRPCMapping)(nil),                       // 40: wg.cosmo.node.v1.GRPCMapping
-	(*LookupMapping)(nil),                     // 41: wg.cosmo.node.v1.LookupMapping
-	(*LookupFieldMapping)(nil),                // 42: wg.cosmo.node.v1.LookupFieldMapping
-	(*OperationMapping)(nil),                  // 43: wg.cosmo.node.v1.OperationMapping
-	(*EntityMapping)(nil),                     // 44: wg.cosmo.node.v1.EntityMapping
-	(*RequiredFieldMapping)(nil),              // 45: wg.cosmo.node.v1.RequiredFieldMapping
-	(*TypeFieldMapping)(nil),                  // 46: wg.cosmo.node.v1.TypeFieldMapping
-	(*FieldMapping)(nil),                      // 47: wg.cosmo.node.v1.FieldMapping
-	(*ArgumentMapping)(nil),                   // 48: wg.cosmo.node.v1.ArgumentMapping
-	(*EnumMapping)(nil),                       // 49: wg.cosmo.node.v1.EnumMapping
-	(*EnumValueMapping)(nil),                  // 50: wg.cosmo.node.v1.EnumValueMapping
-	(*NatsStreamConfiguration)(nil),           // 51: wg.cosmo.node.v1.NatsStreamConfiguration
-	(*NatsEventConfiguration)(nil),            // 52: wg.cosmo.node.v1.NatsEventConfiguration
-	(*KafkaEventConfiguration)(nil),           // 53: wg.cosmo.node.v1.KafkaEventConfiguration
-	(*RedisEventConfiguration)(nil),           // 54: wg.cosmo.node.v1.RedisEventConfiguration
-	(*EngineEventConfiguration)(nil),          // 55: wg.cosmo.node.v1.EngineEventConfiguration
-	(*DataSourceCustomEvents)(nil),            // 56: wg.cosmo.node.v1.DataSourceCustomEvents
-	(*DataSourceCustom_Static)(nil),           // 57: wg.cosmo.node.v1.DataSourceCustom_Static
-	(*ConfigurationVariable)(nil),             // 58: wg.cosmo.node.v1.ConfigurationVariable
-	(*DirectiveConfiguration)(nil),            // 59: wg.cosmo.node.v1.DirectiveConfiguration
-	(*URLQueryConfiguration)(nil),             // 60: wg.cosmo.node.v1.URLQueryConfiguration
-	(*HTTPHeader)(nil),                        // 61: wg.cosmo.node.v1.HTTPHeader
-	(*MTLSConfiguration)(nil),                 // 62: wg.cosmo.node.v1.MTLSConfiguration
-	(*GraphQLSubscriptionConfiguration)(nil),  // 63: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration
-	(*GraphQLFederationConfiguration)(nil),    // 64: wg.cosmo.node.v1.GraphQLFederationConfiguration
-	(*InternedString)(nil),                    // 65: wg.cosmo.node.v1.InternedString
-	(*SingleTypeField)(nil),                   // 66: wg.cosmo.node.v1.SingleTypeField
-	(*SubscriptionFieldCondition)(nil),        // 67: wg.cosmo.node.v1.SubscriptionFieldCondition
-	(*SubscriptionFilterCondition)(nil),       // 68: wg.cosmo.node.v1.SubscriptionFilterCondition
-	(*CacheWarmerOperations)(nil),             // 69: wg.cosmo.node.v1.CacheWarmerOperations
-	(*Operation)(nil),                         // 70: wg.cosmo.node.v1.Operation
-	(*OperationRequest)(nil),                  // 71: wg.cosmo.node.v1.OperationRequest
-	(*Extension)(nil),                         // 72: wg.cosmo.node.v1.Extension
-	(*PersistedQuery)(nil),                    // 73: wg.cosmo.node.v1.PersistedQuery
-	(*ClientInfo)(nil),                        // 74: wg.cosmo.node.v1.ClientInfo
-	nil,                                       // 75: wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs.ConfigByFeatureFlagNameEntry
-	nil,                                       // 76: wg.cosmo.node.v1.EngineConfiguration.StringStorageEntry
-	nil,                                       // 77: wg.cosmo.node.v1.CostConfiguration.TypeWeightsEntry
-	nil,                                       // 78: wg.cosmo.node.v1.CostConfiguration.DirectiveArgumentWeightsEntry
-	nil,                                       // 79: wg.cosmo.node.v1.FieldWeightConfiguration.ArgumentWeightsEntry
-	nil,                                       // 80: wg.cosmo.node.v1.FieldWeightConfiguration.DirectiveArgumentWeightsEntry
-	nil,                                       // 81: wg.cosmo.node.v1.FetchConfiguration.HeaderEntry
-	(common.EnumStatusCode)(0),                // 82: wg.cosmo.common.EnumStatusCode
-	(common.GraphQLSubscriptionProtocol)(0),   // 83: wg.cosmo.common.GraphQLSubscriptionProtocol
-	(common.GraphQLWebsocketSubprotocol)(0),   // 84: wg.cosmo.common.GraphQLWebsocketSubprotocol
+	(*RequestScopedFieldConfiguration)(nil),   // 20: wg.cosmo.node.v1.RequestScopedFieldConfiguration
+	(*EntityCacheConfiguration)(nil),          // 21: wg.cosmo.node.v1.EntityCacheConfiguration
+	(*RootFieldCacheConfiguration)(nil),       // 22: wg.cosmo.node.v1.RootFieldCacheConfiguration
+	(*EntityKeyMapping)(nil),                  // 23: wg.cosmo.node.v1.EntityKeyMapping
+	(*EntityCacheFieldMapping)(nil),           // 24: wg.cosmo.node.v1.EntityCacheFieldMapping
+	(*CachePopulateConfiguration)(nil),        // 25: wg.cosmo.node.v1.CachePopulateConfiguration
+	(*CacheInvalidateConfiguration)(nil),      // 26: wg.cosmo.node.v1.CacheInvalidateConfiguration
+	(*CostConfiguration)(nil),                 // 27: wg.cosmo.node.v1.CostConfiguration
+	(*FieldWeightConfiguration)(nil),          // 28: wg.cosmo.node.v1.FieldWeightConfiguration
+	(*FieldListSizeConfiguration)(nil),        // 29: wg.cosmo.node.v1.FieldListSizeConfiguration
+	(*ArgumentConfiguration)(nil),             // 30: wg.cosmo.node.v1.ArgumentConfiguration
+	(*Scopes)(nil),                            // 31: wg.cosmo.node.v1.Scopes
+	(*AuthorizationConfiguration)(nil),        // 32: wg.cosmo.node.v1.AuthorizationConfiguration
+	(*FieldConfiguration)(nil),                // 33: wg.cosmo.node.v1.FieldConfiguration
+	(*TypeConfiguration)(nil),                 // 34: wg.cosmo.node.v1.TypeConfiguration
+	(*TypeField)(nil),                         // 35: wg.cosmo.node.v1.TypeField
+	(*FieldCoordinates)(nil),                  // 36: wg.cosmo.node.v1.FieldCoordinates
+	(*FieldSetCondition)(nil),                 // 37: wg.cosmo.node.v1.FieldSetCondition
+	(*RequiredField)(nil),                     // 38: wg.cosmo.node.v1.RequiredField
+	(*EntityInterfaceConfiguration)(nil),      // 39: wg.cosmo.node.v1.EntityInterfaceConfiguration
+	(*FetchConfiguration)(nil),                // 40: wg.cosmo.node.v1.FetchConfiguration
+	(*StatusCodeTypeMapping)(nil),             // 41: wg.cosmo.node.v1.StatusCodeTypeMapping
+	(*DataSourceCustom_GraphQL)(nil),          // 42: wg.cosmo.node.v1.DataSourceCustom_GraphQL
+	(*GRPCConfiguration)(nil),                 // 43: wg.cosmo.node.v1.GRPCConfiguration
+	(*ImageReference)(nil),                    // 44: wg.cosmo.node.v1.ImageReference
+	(*PluginConfiguration)(nil),               // 45: wg.cosmo.node.v1.PluginConfiguration
+	(*SSLConfiguration)(nil),                  // 46: wg.cosmo.node.v1.SSLConfiguration
+	(*GRPCMapping)(nil),                       // 47: wg.cosmo.node.v1.GRPCMapping
+	(*LookupMapping)(nil),                     // 48: wg.cosmo.node.v1.LookupMapping
+	(*LookupFieldMapping)(nil),                // 49: wg.cosmo.node.v1.LookupFieldMapping
+	(*OperationMapping)(nil),                  // 50: wg.cosmo.node.v1.OperationMapping
+	(*EntityMapping)(nil),                     // 51: wg.cosmo.node.v1.EntityMapping
+	(*RequiredFieldMapping)(nil),              // 52: wg.cosmo.node.v1.RequiredFieldMapping
+	(*TypeFieldMapping)(nil),                  // 53: wg.cosmo.node.v1.TypeFieldMapping
+	(*FieldMapping)(nil),                      // 54: wg.cosmo.node.v1.FieldMapping
+	(*ArgumentMapping)(nil),                   // 55: wg.cosmo.node.v1.ArgumentMapping
+	(*EnumMapping)(nil),                       // 56: wg.cosmo.node.v1.EnumMapping
+	(*EnumValueMapping)(nil),                  // 57: wg.cosmo.node.v1.EnumValueMapping
+	(*NatsStreamConfiguration)(nil),           // 58: wg.cosmo.node.v1.NatsStreamConfiguration
+	(*NatsEventConfiguration)(nil),            // 59: wg.cosmo.node.v1.NatsEventConfiguration
+	(*KafkaEventConfiguration)(nil),           // 60: wg.cosmo.node.v1.KafkaEventConfiguration
+	(*RedisEventConfiguration)(nil),           // 61: wg.cosmo.node.v1.RedisEventConfiguration
+	(*EngineEventConfiguration)(nil),          // 62: wg.cosmo.node.v1.EngineEventConfiguration
+	(*DataSourceCustomEvents)(nil),            // 63: wg.cosmo.node.v1.DataSourceCustomEvents
+	(*DataSourceCustom_Static)(nil),           // 64: wg.cosmo.node.v1.DataSourceCustom_Static
+	(*ConfigurationVariable)(nil),             // 65: wg.cosmo.node.v1.ConfigurationVariable
+	(*DirectiveConfiguration)(nil),            // 66: wg.cosmo.node.v1.DirectiveConfiguration
+	(*URLQueryConfiguration)(nil),             // 67: wg.cosmo.node.v1.URLQueryConfiguration
+	(*HTTPHeader)(nil),                        // 68: wg.cosmo.node.v1.HTTPHeader
+	(*MTLSConfiguration)(nil),                 // 69: wg.cosmo.node.v1.MTLSConfiguration
+	(*GraphQLSubscriptionConfiguration)(nil),  // 70: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration
+	(*GraphQLFederationConfiguration)(nil),    // 71: wg.cosmo.node.v1.GraphQLFederationConfiguration
+	(*InternedString)(nil),                    // 72: wg.cosmo.node.v1.InternedString
+	(*SingleTypeField)(nil),                   // 73: wg.cosmo.node.v1.SingleTypeField
+	(*SubscriptionFieldCondition)(nil),        // 74: wg.cosmo.node.v1.SubscriptionFieldCondition
+	(*SubscriptionFilterCondition)(nil),       // 75: wg.cosmo.node.v1.SubscriptionFilterCondition
+	(*CacheWarmerOperations)(nil),             // 76: wg.cosmo.node.v1.CacheWarmerOperations
+	(*Operation)(nil),                         // 77: wg.cosmo.node.v1.Operation
+	(*OperationRequest)(nil),                  // 78: wg.cosmo.node.v1.OperationRequest
+	(*Extension)(nil),                         // 79: wg.cosmo.node.v1.Extension
+	(*PersistedQuery)(nil),                    // 80: wg.cosmo.node.v1.PersistedQuery
+	(*ClientInfo)(nil),                        // 81: wg.cosmo.node.v1.ClientInfo
+	nil,                                       // 82: wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs.ConfigByFeatureFlagNameEntry
+	nil,                                       // 83: wg.cosmo.node.v1.EngineConfiguration.StringStorageEntry
+	nil,                                       // 84: wg.cosmo.node.v1.CostConfiguration.TypeWeightsEntry
+	nil,                                       // 85: wg.cosmo.node.v1.CostConfiguration.DirectiveArgumentWeightsEntry
+	nil,                                       // 86: wg.cosmo.node.v1.FieldWeightConfiguration.ArgumentWeightsEntry
+	nil,                                       // 87: wg.cosmo.node.v1.FieldWeightConfiguration.DirectiveArgumentWeightsEntry
+	nil,                                       // 88: wg.cosmo.node.v1.FetchConfiguration.HeaderEntry
+	(common.EnumStatusCode)(0),                // 89: wg.cosmo.common.EnumStatusCode
+	(common.GraphQLSubscriptionProtocol)(0),   // 90: wg.cosmo.common.GraphQLSubscriptionProtocol
+	(common.GraphQLWebsocketSubprotocol)(0),   // 91: wg.cosmo.common.GraphQLWebsocketSubprotocol
 }
 var file_wg_cosmo_node_v1_node_proto_depIdxs = []int32{
-	75,  // 0: wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs.config_by_feature_flag_name:type_name -> wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs.ConfigByFeatureFlagNameEntry
+	82,  // 0: wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs.config_by_feature_flag_name:type_name -> wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs.ConfigByFeatureFlagNameEntry
 	18,  // 1: wg.cosmo.node.v1.FeatureFlagRouterExecutionConfig.engine_config:type_name -> wg.cosmo.node.v1.EngineConfiguration
 	8,   // 2: wg.cosmo.node.v1.FeatureFlagRouterExecutionConfig.subgraphs:type_name -> wg.cosmo.node.v1.Subgraph
 	18,  // 3: wg.cosmo.node.v1.RouterConfig.engine_config:type_name -> wg.cosmo.node.v1.EngineConfiguration
 	8,   // 4: wg.cosmo.node.v1.RouterConfig.subgraphs:type_name -> wg.cosmo.node.v1.Subgraph
 	9,   // 5: wg.cosmo.node.v1.RouterConfig.feature_flag_configs:type_name -> wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs
-	82,  // 6: wg.cosmo.node.v1.Response.code:type_name -> wg.cosmo.common.EnumStatusCode
+	89,  // 6: wg.cosmo.node.v1.Response.code:type_name -> wg.cosmo.common.EnumStatusCode
 	15,  // 7: wg.cosmo.node.v1.RegistrationInfo.account_limits:type_name -> wg.cosmo.node.v1.AccountLimits
 	12,  // 8: wg.cosmo.node.v1.SelfRegisterResponse.response:type_name -> wg.cosmo.node.v1.Response
 	14,  // 9: wg.cosmo.node.v1.SelfRegisterResponse.registrationInfo:type_name -> wg.cosmo.node.v1.RegistrationInfo
 	19,  // 10: wg.cosmo.node.v1.EngineConfiguration.datasource_configurations:type_name -> wg.cosmo.node.v1.DataSourceConfiguration
-	26,  // 11: wg.cosmo.node.v1.EngineConfiguration.field_configurations:type_name -> wg.cosmo.node.v1.FieldConfiguration
-	27,  // 12: wg.cosmo.node.v1.EngineConfiguration.type_configurations:type_name -> wg.cosmo.node.v1.TypeConfiguration
-	76,  // 13: wg.cosmo.node.v1.EngineConfiguration.string_storage:type_name -> wg.cosmo.node.v1.EngineConfiguration.StringStorageEntry
+	33,  // 11: wg.cosmo.node.v1.EngineConfiguration.field_configurations:type_name -> wg.cosmo.node.v1.FieldConfiguration
+	34,  // 12: wg.cosmo.node.v1.EngineConfiguration.type_configurations:type_name -> wg.cosmo.node.v1.TypeConfiguration
+	83,  // 13: wg.cosmo.node.v1.EngineConfiguration.string_storage:type_name -> wg.cosmo.node.v1.EngineConfiguration.StringStorageEntry
 	2,   // 14: wg.cosmo.node.v1.DataSourceConfiguration.kind:type_name -> wg.cosmo.node.v1.DataSourceKind
-	28,  // 15: wg.cosmo.node.v1.DataSourceConfiguration.root_nodes:type_name -> wg.cosmo.node.v1.TypeField
-	28,  // 16: wg.cosmo.node.v1.DataSourceConfiguration.child_nodes:type_name -> wg.cosmo.node.v1.TypeField
-	35,  // 17: wg.cosmo.node.v1.DataSourceConfiguration.custom_graphql:type_name -> wg.cosmo.node.v1.DataSourceCustom_GraphQL
-	57,  // 18: wg.cosmo.node.v1.DataSourceConfiguration.custom_static:type_name -> wg.cosmo.node.v1.DataSourceCustom_Static
-	59,  // 19: wg.cosmo.node.v1.DataSourceConfiguration.directives:type_name -> wg.cosmo.node.v1.DirectiveConfiguration
-	31,  // 20: wg.cosmo.node.v1.DataSourceConfiguration.keys:type_name -> wg.cosmo.node.v1.RequiredField
-	31,  // 21: wg.cosmo.node.v1.DataSourceConfiguration.provides:type_name -> wg.cosmo.node.v1.RequiredField
-	31,  // 22: wg.cosmo.node.v1.DataSourceConfiguration.requires:type_name -> wg.cosmo.node.v1.RequiredField
-	56,  // 23: wg.cosmo.node.v1.DataSourceConfiguration.custom_events:type_name -> wg.cosmo.node.v1.DataSourceCustomEvents
-	32,  // 24: wg.cosmo.node.v1.DataSourceConfiguration.entity_interfaces:type_name -> wg.cosmo.node.v1.EntityInterfaceConfiguration
-	32,  // 25: wg.cosmo.node.v1.DataSourceConfiguration.interface_objects:type_name -> wg.cosmo.node.v1.EntityInterfaceConfiguration
-	20,  // 26: wg.cosmo.node.v1.DataSourceConfiguration.cost_configuration:type_name -> wg.cosmo.node.v1.CostConfiguration
-	21,  // 27: wg.cosmo.node.v1.CostConfiguration.field_weights:type_name -> wg.cosmo.node.v1.FieldWeightConfiguration
-	22,  // 28: wg.cosmo.node.v1.CostConfiguration.list_sizes:type_name -> wg.cosmo.node.v1.FieldListSizeConfiguration
-	77,  // 29: wg.cosmo.node.v1.CostConfiguration.type_weights:type_name -> wg.cosmo.node.v1.CostConfiguration.TypeWeightsEntry
-	78,  // 30: wg.cosmo.node.v1.CostConfiguration.directive_argument_weights:type_name -> wg.cosmo.node.v1.CostConfiguration.DirectiveArgumentWeightsEntry
-	79,  // 31: wg.cosmo.node.v1.FieldWeightConfiguration.argument_weights:type_name -> wg.cosmo.node.v1.FieldWeightConfiguration.ArgumentWeightsEntry
-	80,  // 32: wg.cosmo.node.v1.FieldWeightConfiguration.directive_argument_weights:type_name -> wg.cosmo.node.v1.FieldWeightConfiguration.DirectiveArgumentWeightsEntry
-	1,   // 33: wg.cosmo.node.v1.ArgumentConfiguration.source_type:type_name -> wg.cosmo.node.v1.ArgumentSource
-	24,  // 34: wg.cosmo.node.v1.AuthorizationConfiguration.required_or_scopes:type_name -> wg.cosmo.node.v1.Scopes
-	24,  // 35: wg.cosmo.node.v1.AuthorizationConfiguration.required_or_scopes_by_or:type_name -> wg.cosmo.node.v1.Scopes
-	23,  // 36: wg.cosmo.node.v1.FieldConfiguration.arguments_configuration:type_name -> wg.cosmo.node.v1.ArgumentConfiguration
-	25,  // 37: wg.cosmo.node.v1.FieldConfiguration.authorization_configuration:type_name -> wg.cosmo.node.v1.AuthorizationConfiguration
-	68,  // 38: wg.cosmo.node.v1.FieldConfiguration.subscription_filter_condition:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
-	29,  // 39: wg.cosmo.node.v1.FieldSetCondition.field_coordinates_path:type_name -> wg.cosmo.node.v1.FieldCoordinates
-	30,  // 40: wg.cosmo.node.v1.RequiredField.conditions:type_name -> wg.cosmo.node.v1.FieldSetCondition
-	58,  // 41: wg.cosmo.node.v1.FetchConfiguration.url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	7,   // 42: wg.cosmo.node.v1.FetchConfiguration.method:type_name -> wg.cosmo.node.v1.HTTPMethod
-	81,  // 43: wg.cosmo.node.v1.FetchConfiguration.header:type_name -> wg.cosmo.node.v1.FetchConfiguration.HeaderEntry
-	58,  // 44: wg.cosmo.node.v1.FetchConfiguration.body:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	60,  // 45: wg.cosmo.node.v1.FetchConfiguration.query:type_name -> wg.cosmo.node.v1.URLQueryConfiguration
-	62,  // 46: wg.cosmo.node.v1.FetchConfiguration.mtls:type_name -> wg.cosmo.node.v1.MTLSConfiguration
-	58,  // 47: wg.cosmo.node.v1.FetchConfiguration.base_url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	58,  // 48: wg.cosmo.node.v1.FetchConfiguration.path:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	58,  // 49: wg.cosmo.node.v1.FetchConfiguration.http_proxy_url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	33,  // 50: wg.cosmo.node.v1.DataSourceCustom_GraphQL.fetch:type_name -> wg.cosmo.node.v1.FetchConfiguration
-	63,  // 51: wg.cosmo.node.v1.DataSourceCustom_GraphQL.subscription:type_name -> wg.cosmo.node.v1.GraphQLSubscriptionConfiguration
-	64,  // 52: wg.cosmo.node.v1.DataSourceCustom_GraphQL.federation:type_name -> wg.cosmo.node.v1.GraphQLFederationConfiguration
-	65,  // 53: wg.cosmo.node.v1.DataSourceCustom_GraphQL.upstream_schema:type_name -> wg.cosmo.node.v1.InternedString
-	66,  // 54: wg.cosmo.node.v1.DataSourceCustom_GraphQL.custom_scalar_type_fields:type_name -> wg.cosmo.node.v1.SingleTypeField
-	36,  // 55: wg.cosmo.node.v1.DataSourceCustom_GraphQL.grpc:type_name -> wg.cosmo.node.v1.GRPCConfiguration
-	40,  // 56: wg.cosmo.node.v1.GRPCConfiguration.mapping:type_name -> wg.cosmo.node.v1.GRPCMapping
-	38,  // 57: wg.cosmo.node.v1.GRPCConfiguration.plugin:type_name -> wg.cosmo.node.v1.PluginConfiguration
-	37,  // 58: wg.cosmo.node.v1.PluginConfiguration.image_reference:type_name -> wg.cosmo.node.v1.ImageReference
-	43,  // 59: wg.cosmo.node.v1.GRPCMapping.operation_mappings:type_name -> wg.cosmo.node.v1.OperationMapping
-	44,  // 60: wg.cosmo.node.v1.GRPCMapping.entity_mappings:type_name -> wg.cosmo.node.v1.EntityMapping
-	46,  // 61: wg.cosmo.node.v1.GRPCMapping.type_field_mappings:type_name -> wg.cosmo.node.v1.TypeFieldMapping
-	49,  // 62: wg.cosmo.node.v1.GRPCMapping.enum_mappings:type_name -> wg.cosmo.node.v1.EnumMapping
-	41,  // 63: wg.cosmo.node.v1.GRPCMapping.resolve_mappings:type_name -> wg.cosmo.node.v1.LookupMapping
-	3,   // 64: wg.cosmo.node.v1.LookupMapping.type:type_name -> wg.cosmo.node.v1.LookupType
-	42,  // 65: wg.cosmo.node.v1.LookupMapping.lookup_mapping:type_name -> wg.cosmo.node.v1.LookupFieldMapping
-	47,  // 66: wg.cosmo.node.v1.LookupFieldMapping.field_mapping:type_name -> wg.cosmo.node.v1.FieldMapping
-	4,   // 67: wg.cosmo.node.v1.OperationMapping.type:type_name -> wg.cosmo.node.v1.OperationType
-	45,  // 68: wg.cosmo.node.v1.EntityMapping.required_field_mappings:type_name -> wg.cosmo.node.v1.RequiredFieldMapping
-	47,  // 69: wg.cosmo.node.v1.RequiredFieldMapping.field_mapping:type_name -> wg.cosmo.node.v1.FieldMapping
-	47,  // 70: wg.cosmo.node.v1.TypeFieldMapping.field_mappings:type_name -> wg.cosmo.node.v1.FieldMapping
-	48,  // 71: wg.cosmo.node.v1.FieldMapping.argument_mappings:type_name -> wg.cosmo.node.v1.ArgumentMapping
-	50,  // 72: wg.cosmo.node.v1.EnumMapping.values:type_name -> wg.cosmo.node.v1.EnumValueMapping
-	55,  // 73: wg.cosmo.node.v1.NatsEventConfiguration.engine_event_configuration:type_name -> wg.cosmo.node.v1.EngineEventConfiguration
-	51,  // 74: wg.cosmo.node.v1.NatsEventConfiguration.stream_configuration:type_name -> wg.cosmo.node.v1.NatsStreamConfiguration
-	55,  // 75: wg.cosmo.node.v1.KafkaEventConfiguration.engine_event_configuration:type_name -> wg.cosmo.node.v1.EngineEventConfiguration
-	55,  // 76: wg.cosmo.node.v1.RedisEventConfiguration.engine_event_configuration:type_name -> wg.cosmo.node.v1.EngineEventConfiguration
-	5,   // 77: wg.cosmo.node.v1.EngineEventConfiguration.type:type_name -> wg.cosmo.node.v1.EventType
-	52,  // 78: wg.cosmo.node.v1.DataSourceCustomEvents.nats:type_name -> wg.cosmo.node.v1.NatsEventConfiguration
-	53,  // 79: wg.cosmo.node.v1.DataSourceCustomEvents.kafka:type_name -> wg.cosmo.node.v1.KafkaEventConfiguration
-	54,  // 80: wg.cosmo.node.v1.DataSourceCustomEvents.redis:type_name -> wg.cosmo.node.v1.RedisEventConfiguration
-	58,  // 81: wg.cosmo.node.v1.DataSourceCustom_Static.data:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	6,   // 82: wg.cosmo.node.v1.ConfigurationVariable.kind:type_name -> wg.cosmo.node.v1.ConfigurationVariableKind
-	58,  // 83: wg.cosmo.node.v1.HTTPHeader.values:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	58,  // 84: wg.cosmo.node.v1.MTLSConfiguration.key:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	58,  // 85: wg.cosmo.node.v1.MTLSConfiguration.cert:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	58,  // 86: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	83,  // 87: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
-	84,  // 88: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.websocketSubprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
-	68,  // 89: wg.cosmo.node.v1.SubscriptionFilterCondition.and:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
-	67,  // 90: wg.cosmo.node.v1.SubscriptionFilterCondition.in:type_name -> wg.cosmo.node.v1.SubscriptionFieldCondition
-	68,  // 91: wg.cosmo.node.v1.SubscriptionFilterCondition.not:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
-	68,  // 92: wg.cosmo.node.v1.SubscriptionFilterCondition.or:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
-	70,  // 93: wg.cosmo.node.v1.CacheWarmerOperations.operations:type_name -> wg.cosmo.node.v1.Operation
-	71,  // 94: wg.cosmo.node.v1.Operation.request:type_name -> wg.cosmo.node.v1.OperationRequest
-	74,  // 95: wg.cosmo.node.v1.Operation.client:type_name -> wg.cosmo.node.v1.ClientInfo
-	72,  // 96: wg.cosmo.node.v1.OperationRequest.extensions:type_name -> wg.cosmo.node.v1.Extension
-	73,  // 97: wg.cosmo.node.v1.Extension.persisted_query:type_name -> wg.cosmo.node.v1.PersistedQuery
-	10,  // 98: wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs.ConfigByFeatureFlagNameEntry.value:type_name -> wg.cosmo.node.v1.FeatureFlagRouterExecutionConfig
-	61,  // 99: wg.cosmo.node.v1.FetchConfiguration.HeaderEntry.value:type_name -> wg.cosmo.node.v1.HTTPHeader
-	16,  // 100: wg.cosmo.node.v1.NodeService.SelfRegister:input_type -> wg.cosmo.node.v1.SelfRegisterRequest
-	17,  // 101: wg.cosmo.node.v1.NodeService.SelfRegister:output_type -> wg.cosmo.node.v1.SelfRegisterResponse
-	101, // [101:102] is the sub-list for method output_type
-	100, // [100:101] is the sub-list for method input_type
-	100, // [100:100] is the sub-list for extension type_name
-	100, // [100:100] is the sub-list for extension extendee
-	0,   // [0:100] is the sub-list for field type_name
+	35,  // 15: wg.cosmo.node.v1.DataSourceConfiguration.root_nodes:type_name -> wg.cosmo.node.v1.TypeField
+	35,  // 16: wg.cosmo.node.v1.DataSourceConfiguration.child_nodes:type_name -> wg.cosmo.node.v1.TypeField
+	42,  // 17: wg.cosmo.node.v1.DataSourceConfiguration.custom_graphql:type_name -> wg.cosmo.node.v1.DataSourceCustom_GraphQL
+	64,  // 18: wg.cosmo.node.v1.DataSourceConfiguration.custom_static:type_name -> wg.cosmo.node.v1.DataSourceCustom_Static
+	66,  // 19: wg.cosmo.node.v1.DataSourceConfiguration.directives:type_name -> wg.cosmo.node.v1.DirectiveConfiguration
+	38,  // 20: wg.cosmo.node.v1.DataSourceConfiguration.keys:type_name -> wg.cosmo.node.v1.RequiredField
+	38,  // 21: wg.cosmo.node.v1.DataSourceConfiguration.provides:type_name -> wg.cosmo.node.v1.RequiredField
+	38,  // 22: wg.cosmo.node.v1.DataSourceConfiguration.requires:type_name -> wg.cosmo.node.v1.RequiredField
+	63,  // 23: wg.cosmo.node.v1.DataSourceConfiguration.custom_events:type_name -> wg.cosmo.node.v1.DataSourceCustomEvents
+	39,  // 24: wg.cosmo.node.v1.DataSourceConfiguration.entity_interfaces:type_name -> wg.cosmo.node.v1.EntityInterfaceConfiguration
+	39,  // 25: wg.cosmo.node.v1.DataSourceConfiguration.interface_objects:type_name -> wg.cosmo.node.v1.EntityInterfaceConfiguration
+	27,  // 26: wg.cosmo.node.v1.DataSourceConfiguration.cost_configuration:type_name -> wg.cosmo.node.v1.CostConfiguration
+	21,  // 27: wg.cosmo.node.v1.DataSourceConfiguration.entity_cache_configurations:type_name -> wg.cosmo.node.v1.EntityCacheConfiguration
+	22,  // 28: wg.cosmo.node.v1.DataSourceConfiguration.root_field_cache_configurations:type_name -> wg.cosmo.node.v1.RootFieldCacheConfiguration
+	25,  // 29: wg.cosmo.node.v1.DataSourceConfiguration.cache_populate_configurations:type_name -> wg.cosmo.node.v1.CachePopulateConfiguration
+	26,  // 30: wg.cosmo.node.v1.DataSourceConfiguration.cache_invalidate_configurations:type_name -> wg.cosmo.node.v1.CacheInvalidateConfiguration
+	20,  // 31: wg.cosmo.node.v1.DataSourceConfiguration.request_scoped_fields:type_name -> wg.cosmo.node.v1.RequestScopedFieldConfiguration
+	23,  // 32: wg.cosmo.node.v1.RootFieldCacheConfiguration.entity_key_mappings:type_name -> wg.cosmo.node.v1.EntityKeyMapping
+	24,  // 33: wg.cosmo.node.v1.EntityKeyMapping.field_mappings:type_name -> wg.cosmo.node.v1.EntityCacheFieldMapping
+	28,  // 34: wg.cosmo.node.v1.CostConfiguration.field_weights:type_name -> wg.cosmo.node.v1.FieldWeightConfiguration
+	29,  // 35: wg.cosmo.node.v1.CostConfiguration.list_sizes:type_name -> wg.cosmo.node.v1.FieldListSizeConfiguration
+	84,  // 36: wg.cosmo.node.v1.CostConfiguration.type_weights:type_name -> wg.cosmo.node.v1.CostConfiguration.TypeWeightsEntry
+	85,  // 37: wg.cosmo.node.v1.CostConfiguration.directive_argument_weights:type_name -> wg.cosmo.node.v1.CostConfiguration.DirectiveArgumentWeightsEntry
+	86,  // 38: wg.cosmo.node.v1.FieldWeightConfiguration.argument_weights:type_name -> wg.cosmo.node.v1.FieldWeightConfiguration.ArgumentWeightsEntry
+	87,  // 39: wg.cosmo.node.v1.FieldWeightConfiguration.directive_argument_weights:type_name -> wg.cosmo.node.v1.FieldWeightConfiguration.DirectiveArgumentWeightsEntry
+	1,   // 40: wg.cosmo.node.v1.ArgumentConfiguration.source_type:type_name -> wg.cosmo.node.v1.ArgumentSource
+	31,  // 41: wg.cosmo.node.v1.AuthorizationConfiguration.required_or_scopes:type_name -> wg.cosmo.node.v1.Scopes
+	31,  // 42: wg.cosmo.node.v1.AuthorizationConfiguration.required_or_scopes_by_or:type_name -> wg.cosmo.node.v1.Scopes
+	30,  // 43: wg.cosmo.node.v1.FieldConfiguration.arguments_configuration:type_name -> wg.cosmo.node.v1.ArgumentConfiguration
+	32,  // 44: wg.cosmo.node.v1.FieldConfiguration.authorization_configuration:type_name -> wg.cosmo.node.v1.AuthorizationConfiguration
+	75,  // 45: wg.cosmo.node.v1.FieldConfiguration.subscription_filter_condition:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
+	36,  // 46: wg.cosmo.node.v1.FieldSetCondition.field_coordinates_path:type_name -> wg.cosmo.node.v1.FieldCoordinates
+	37,  // 47: wg.cosmo.node.v1.RequiredField.conditions:type_name -> wg.cosmo.node.v1.FieldSetCondition
+	65,  // 48: wg.cosmo.node.v1.FetchConfiguration.url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	7,   // 49: wg.cosmo.node.v1.FetchConfiguration.method:type_name -> wg.cosmo.node.v1.HTTPMethod
+	88,  // 50: wg.cosmo.node.v1.FetchConfiguration.header:type_name -> wg.cosmo.node.v1.FetchConfiguration.HeaderEntry
+	65,  // 51: wg.cosmo.node.v1.FetchConfiguration.body:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	67,  // 52: wg.cosmo.node.v1.FetchConfiguration.query:type_name -> wg.cosmo.node.v1.URLQueryConfiguration
+	69,  // 53: wg.cosmo.node.v1.FetchConfiguration.mtls:type_name -> wg.cosmo.node.v1.MTLSConfiguration
+	65,  // 54: wg.cosmo.node.v1.FetchConfiguration.base_url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	65,  // 55: wg.cosmo.node.v1.FetchConfiguration.path:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	65,  // 56: wg.cosmo.node.v1.FetchConfiguration.http_proxy_url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	40,  // 57: wg.cosmo.node.v1.DataSourceCustom_GraphQL.fetch:type_name -> wg.cosmo.node.v1.FetchConfiguration
+	70,  // 58: wg.cosmo.node.v1.DataSourceCustom_GraphQL.subscription:type_name -> wg.cosmo.node.v1.GraphQLSubscriptionConfiguration
+	71,  // 59: wg.cosmo.node.v1.DataSourceCustom_GraphQL.federation:type_name -> wg.cosmo.node.v1.GraphQLFederationConfiguration
+	72,  // 60: wg.cosmo.node.v1.DataSourceCustom_GraphQL.upstream_schema:type_name -> wg.cosmo.node.v1.InternedString
+	73,  // 61: wg.cosmo.node.v1.DataSourceCustom_GraphQL.custom_scalar_type_fields:type_name -> wg.cosmo.node.v1.SingleTypeField
+	43,  // 62: wg.cosmo.node.v1.DataSourceCustom_GraphQL.grpc:type_name -> wg.cosmo.node.v1.GRPCConfiguration
+	47,  // 63: wg.cosmo.node.v1.GRPCConfiguration.mapping:type_name -> wg.cosmo.node.v1.GRPCMapping
+	45,  // 64: wg.cosmo.node.v1.GRPCConfiguration.plugin:type_name -> wg.cosmo.node.v1.PluginConfiguration
+	44,  // 65: wg.cosmo.node.v1.PluginConfiguration.image_reference:type_name -> wg.cosmo.node.v1.ImageReference
+	50,  // 66: wg.cosmo.node.v1.GRPCMapping.operation_mappings:type_name -> wg.cosmo.node.v1.OperationMapping
+	51,  // 67: wg.cosmo.node.v1.GRPCMapping.entity_mappings:type_name -> wg.cosmo.node.v1.EntityMapping
+	53,  // 68: wg.cosmo.node.v1.GRPCMapping.type_field_mappings:type_name -> wg.cosmo.node.v1.TypeFieldMapping
+	56,  // 69: wg.cosmo.node.v1.GRPCMapping.enum_mappings:type_name -> wg.cosmo.node.v1.EnumMapping
+	48,  // 70: wg.cosmo.node.v1.GRPCMapping.resolve_mappings:type_name -> wg.cosmo.node.v1.LookupMapping
+	3,   // 71: wg.cosmo.node.v1.LookupMapping.type:type_name -> wg.cosmo.node.v1.LookupType
+	49,  // 72: wg.cosmo.node.v1.LookupMapping.lookup_mapping:type_name -> wg.cosmo.node.v1.LookupFieldMapping
+	54,  // 73: wg.cosmo.node.v1.LookupFieldMapping.field_mapping:type_name -> wg.cosmo.node.v1.FieldMapping
+	4,   // 74: wg.cosmo.node.v1.OperationMapping.type:type_name -> wg.cosmo.node.v1.OperationType
+	52,  // 75: wg.cosmo.node.v1.EntityMapping.required_field_mappings:type_name -> wg.cosmo.node.v1.RequiredFieldMapping
+	54,  // 76: wg.cosmo.node.v1.RequiredFieldMapping.field_mapping:type_name -> wg.cosmo.node.v1.FieldMapping
+	54,  // 77: wg.cosmo.node.v1.TypeFieldMapping.field_mappings:type_name -> wg.cosmo.node.v1.FieldMapping
+	55,  // 78: wg.cosmo.node.v1.FieldMapping.argument_mappings:type_name -> wg.cosmo.node.v1.ArgumentMapping
+	57,  // 79: wg.cosmo.node.v1.EnumMapping.values:type_name -> wg.cosmo.node.v1.EnumValueMapping
+	62,  // 80: wg.cosmo.node.v1.NatsEventConfiguration.engine_event_configuration:type_name -> wg.cosmo.node.v1.EngineEventConfiguration
+	58,  // 81: wg.cosmo.node.v1.NatsEventConfiguration.stream_configuration:type_name -> wg.cosmo.node.v1.NatsStreamConfiguration
+	62,  // 82: wg.cosmo.node.v1.KafkaEventConfiguration.engine_event_configuration:type_name -> wg.cosmo.node.v1.EngineEventConfiguration
+	62,  // 83: wg.cosmo.node.v1.RedisEventConfiguration.engine_event_configuration:type_name -> wg.cosmo.node.v1.EngineEventConfiguration
+	5,   // 84: wg.cosmo.node.v1.EngineEventConfiguration.type:type_name -> wg.cosmo.node.v1.EventType
+	59,  // 85: wg.cosmo.node.v1.DataSourceCustomEvents.nats:type_name -> wg.cosmo.node.v1.NatsEventConfiguration
+	60,  // 86: wg.cosmo.node.v1.DataSourceCustomEvents.kafka:type_name -> wg.cosmo.node.v1.KafkaEventConfiguration
+	61,  // 87: wg.cosmo.node.v1.DataSourceCustomEvents.redis:type_name -> wg.cosmo.node.v1.RedisEventConfiguration
+	65,  // 88: wg.cosmo.node.v1.DataSourceCustom_Static.data:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	6,   // 89: wg.cosmo.node.v1.ConfigurationVariable.kind:type_name -> wg.cosmo.node.v1.ConfigurationVariableKind
+	65,  // 90: wg.cosmo.node.v1.HTTPHeader.values:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	65,  // 91: wg.cosmo.node.v1.MTLSConfiguration.key:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	65,  // 92: wg.cosmo.node.v1.MTLSConfiguration.cert:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	65,  // 93: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	90,  // 94: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
+	91,  // 95: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.websocketSubprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
+	75,  // 96: wg.cosmo.node.v1.SubscriptionFilterCondition.and:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
+	74,  // 97: wg.cosmo.node.v1.SubscriptionFilterCondition.in:type_name -> wg.cosmo.node.v1.SubscriptionFieldCondition
+	75,  // 98: wg.cosmo.node.v1.SubscriptionFilterCondition.not:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
+	75,  // 99: wg.cosmo.node.v1.SubscriptionFilterCondition.or:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
+	77,  // 100: wg.cosmo.node.v1.CacheWarmerOperations.operations:type_name -> wg.cosmo.node.v1.Operation
+	78,  // 101: wg.cosmo.node.v1.Operation.request:type_name -> wg.cosmo.node.v1.OperationRequest
+	81,  // 102: wg.cosmo.node.v1.Operation.client:type_name -> wg.cosmo.node.v1.ClientInfo
+	79,  // 103: wg.cosmo.node.v1.OperationRequest.extensions:type_name -> wg.cosmo.node.v1.Extension
+	80,  // 104: wg.cosmo.node.v1.Extension.persisted_query:type_name -> wg.cosmo.node.v1.PersistedQuery
+	10,  // 105: wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs.ConfigByFeatureFlagNameEntry.value:type_name -> wg.cosmo.node.v1.FeatureFlagRouterExecutionConfig
+	68,  // 106: wg.cosmo.node.v1.FetchConfiguration.HeaderEntry.value:type_name -> wg.cosmo.node.v1.HTTPHeader
+	16,  // 107: wg.cosmo.node.v1.NodeService.SelfRegister:input_type -> wg.cosmo.node.v1.SelfRegisterRequest
+	17,  // 108: wg.cosmo.node.v1.NodeService.SelfRegister:output_type -> wg.cosmo.node.v1.SelfRegisterResponse
+	108, // [108:109] is the sub-list for method output_type
+	107, // [107:108] is the sub-list for method input_type
+	107, // [107:107] is the sub-list for extension type_name
+	107, // [107:107] is the sub-list for extension extendee
+	0,   // [0:107] is the sub-list for field type_name
 }
 
 func init() { file_wg_cosmo_node_v1_node_proto_init() }
@@ -5237,20 +5823,21 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 	file_wg_cosmo_node_v1_node_proto_msgTypes[4].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[9].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[10].OneofWrappers = []any{}
-	file_wg_cosmo_node_v1_node_proto_msgTypes[13].OneofWrappers = []any{}
-	file_wg_cosmo_node_v1_node_proto_msgTypes[14].OneofWrappers = []any{}
-	file_wg_cosmo_node_v1_node_proto_msgTypes[18].OneofWrappers = []any{}
+	file_wg_cosmo_node_v1_node_proto_msgTypes[17].OneofWrappers = []any{}
+	file_wg_cosmo_node_v1_node_proto_msgTypes[20].OneofWrappers = []any{}
+	file_wg_cosmo_node_v1_node_proto_msgTypes[21].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[25].OneofWrappers = []any{}
-	file_wg_cosmo_node_v1_node_proto_msgTypes[30].OneofWrappers = []any{}
-	file_wg_cosmo_node_v1_node_proto_msgTypes[55].OneofWrappers = []any{}
-	file_wg_cosmo_node_v1_node_proto_msgTypes[60].OneofWrappers = []any{}
+	file_wg_cosmo_node_v1_node_proto_msgTypes[32].OneofWrappers = []any{}
+	file_wg_cosmo_node_v1_node_proto_msgTypes[37].OneofWrappers = []any{}
+	file_wg_cosmo_node_v1_node_proto_msgTypes[62].OneofWrappers = []any{}
+	file_wg_cosmo_node_v1_node_proto_msgTypes[67].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wg_cosmo_node_v1_node_proto_rawDesc), len(file_wg_cosmo_node_v1_node_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   74,
+			NumMessages:   81,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

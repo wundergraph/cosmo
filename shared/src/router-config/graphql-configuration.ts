@@ -3,9 +3,14 @@ import {
   ArgumentConfiguration,
   ArgumentSource,
   AuthorizationConfiguration,
+  CacheInvalidateConfiguration,
+  CachePopulateConfiguration,
   DataSourceCustomEvents,
   EngineEventConfiguration,
+  EntityCacheConfiguration,
+  EntityCacheFieldMapping,
   EntityInterfaceConfiguration,
+  EntityKeyMapping,
   EventType,
   FieldConfiguration,
   FieldCoordinates,
@@ -14,7 +19,9 @@ import {
   NatsEventConfiguration,
   NatsStreamConfiguration,
   RedisEventConfiguration,
+  RequestScopedFieldConfiguration,
   RequiredField,
+  RootFieldCacheConfiguration,
   Scopes,
   SubscriptionFieldCondition,
   SubscriptionFilterCondition,
@@ -27,6 +34,7 @@ import {
   PROVIDER_TYPE_KAFKA,
   PROVIDER_TYPE_NATS,
   PROVIDER_TYPE_REDIS,
+  RequestScopedFieldConfig,
   RequiredFieldConfiguration,
   SubscriptionCondition,
   TypeName,
@@ -41,6 +49,11 @@ export type DataSourceConfiguration = {
   requires: RequiredField[];
   entityInterfaces: EntityInterfaceConfiguration[];
   interfaceObjects: EntityInterfaceConfiguration[];
+  requestScopedFields: RequestScopedFieldConfiguration[];
+  entityCacheConfigurations: EntityCacheConfiguration[];
+  rootFieldCacheConfigurations: RootFieldCacheConfiguration[];
+  cachePopulateConfigurations: CachePopulateConfiguration[];
+  cacheInvalidateConfigurations: CacheInvalidateConfiguration[];
 };
 
 function generateFieldSetConditions(requiredField: RequiredFieldConfiguration): Array<FieldSetCondition> | undefined {
@@ -122,6 +135,11 @@ export function configurationDatasToDataSourceConfiguration(
     requires: [],
     entityInterfaces: [],
     interfaceObjects: [],
+    requestScopedFields: [],
+    entityCacheConfigurations: [],
+    rootFieldCacheConfigurations: [],
+    cachePopulateConfigurations: [],
+    cacheInvalidateConfigurations: [],
   };
   for (const data of dataByTypeName.values()) {
     const typeName = data.typeName;
@@ -214,6 +232,81 @@ export function configurationDatasToDataSourceConfiguration(
     output.events.nats.push(...natsEventConfigurations);
     output.events.kafka.push(...kafkaEventConfigurations);
     output.events.redis.push(...redisEventConfigurations);
+    if (data.entityCacheConfigurations) {
+      for (const ec of data.entityCacheConfigurations) {
+        output.entityCacheConfigurations.push(
+          new EntityCacheConfiguration({
+            typeName: ec.typeName,
+            maxAgeSeconds: BigInt(ec.maxAgeSeconds),
+            notFoundCacheTtlSeconds: BigInt(ec.notFoundCacheTtlSeconds),
+            includeHeaders: ec.includeHeaders,
+            partialCacheLoad: ec.partialCacheLoad,
+            shadowMode: ec.shadowMode,
+          }),
+        );
+      }
+    }
+    if (data.rootFieldCacheConfigurations) {
+      for (const rfc of data.rootFieldCacheConfigurations) {
+        output.rootFieldCacheConfigurations.push(
+          new RootFieldCacheConfiguration({
+            fieldName: rfc.fieldName,
+            maxAgeSeconds: BigInt(rfc.maxAgeSeconds),
+            includeHeaders: rfc.includeHeaders,
+            shadowMode: rfc.shadowMode,
+            entityTypeName: rfc.entityTypeName,
+            entityKeyMappings: rfc.entityKeyMappings.map(
+              (m) =>
+                new EntityKeyMapping({
+                  entityTypeName: m.entityTypeName,
+                  fieldMappings: m.fieldMappings.map(
+                    (fm) =>
+                      new EntityCacheFieldMapping({
+                        entityKeyField: fm.entityKeyField,
+                        argumentPath: fm.argumentPath,
+                        isBatch: fm.isBatch || false,
+                      }),
+                  ),
+                }),
+            ),
+          }),
+        );
+      }
+    }
+    if (data.cachePopulateConfigurations) {
+      for (const cp of data.cachePopulateConfigurations) {
+        output.cachePopulateConfigurations.push(
+          new CachePopulateConfiguration({
+            fieldName: cp.fieldName,
+            operationType: cp.operationType,
+            entityTypeName: cp.entityTypeName,
+            maxAgeSeconds: cp.maxAgeSeconds == null ? undefined : BigInt(cp.maxAgeSeconds),
+          }),
+        );
+      }
+    }
+    if (data.cacheInvalidateConfigurations) {
+      for (const ci of data.cacheInvalidateConfigurations) {
+        output.cacheInvalidateConfigurations.push(
+          new CacheInvalidateConfiguration({
+            fieldName: ci.fieldName,
+            operationType: ci.operationType,
+            entityTypeName: ci.entityTypeName,
+          }),
+        );
+      }
+    }
+    if (data.requestScopedFields) {
+      for (const field of data.requestScopedFields) {
+        output.requestScopedFields.push(
+          new RequestScopedFieldConfiguration({
+            fieldName: field.fieldName,
+            typeName: field.typeName,
+            l1Key: field.l1Key,
+          }),
+        );
+      }
+    }
   }
   return output;
 }
