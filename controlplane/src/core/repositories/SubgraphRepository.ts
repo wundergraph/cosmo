@@ -259,7 +259,6 @@ export class SubgraphRepository {
       subgraphChanged: boolean;
     }
   > {
-    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
@@ -286,8 +285,8 @@ export class SubgraphRepository {
         };
       }
 
-    // Resolve the affected feature flag DTOs.
-    const affectedFeatureFlags = await this.resolveFeatureFlags(this.db, data.namespaceId, affectedFeatureFlagIds);
+      // Resolve the affected feature flag DTOs.
+      const affectedFeatureFlags = await this.resolveFeatureFlags(this.db, data.namespaceId, affectedFeatureFlagIds);
       if (affectedFederatedGraphById.size === 0 && affectedFeatureFlags.length === 0) {
         return {
           compositionErrors,
@@ -298,28 +297,28 @@ export class SubgraphRepository {
         };
       }
 
-    updatedFederatedGraphs.push(...affectedFederatedGraphById.values());
-    const result = await compositionService.recomposeAndDeployAffected({
-      actorId: data.updatedBy,
-      affectedFederatedGraphs: [...affectedFederatedGraphById.values()],
-      affectedFeatureFlags,
-      isFeatureSubgraph: subgraph.isFeatureSubgraph,
-    });
+      updatedFederatedGraphs.push(...affectedFederatedGraphById.values());
+      const result = await compositionService.recomposeAndDeployAffected({
+        actorId: data.updatedBy,
+        affectedFederatedGraphs: [...affectedFederatedGraphById.values()],
+        affectedFeatureFlags,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
+      });
 
-    deploymentErrors.push(...result.deploymentErrors);
-    compositionErrors.push(...result.compositionErrors);
-    compositionWarnings.push(...result.compositionWarnings);
+      deploymentErrors.push(...result.deploymentErrors);
+      compositionErrors.push(...result.compositionErrors);
+      compositionWarnings.push(...result.compositionWarnings);
 
-    // Re-fetch the federated graphs to get the updated composedSchemaVersionId
-    const refreshedGraphs = await Promise.all(
-      [...affectedFederatedGraphById.keys()].map((id) => fedGraphRepo.byId(id)),
-    );
-    for (let i = 0; i < updatedFederatedGraphs.length; i++) {
-      const refreshedGraph = refreshedGraphs[i];
-      if (refreshedGraph) {
-        updatedFederatedGraphs[i] = refreshedGraph;
+      // Re-fetch the federated graphs to get the updated composedSchemaVersionId
+      const refreshedGraphs = await Promise.all(
+        [...affectedFederatedGraphById.keys()].map((id) => fedGraphRepo.byId(id)),
+      );
+      for (let i = 0; i < updatedFederatedGraphs.length; i++) {
+        const refreshedGraph = refreshedGraphs[i];
+        if (refreshedGraph) {
+          updatedFederatedGraphs[i] = refreshedGraph;
+        }
       }
-    }
     });
 
     return {
