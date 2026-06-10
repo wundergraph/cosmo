@@ -40,6 +40,12 @@ export const useOnboardingNavigation = () => {
       if (!enabled) {
         return;
       }
+      // Do not redirect if user initiated invitation accept from the initial
+      // screen. In this case, the user is being re-directed to target organization
+      if (Router.query['redirected-to-invited-org'] === 'true') {
+        return;
+      }
+
       // Wait for the onboarding metadata query to resolve
       // Do not initiate redirect if we fail to fetch onboarding metadata. Fail silently in background.
       if (initialLoadSuccess === null || !initialLoadSuccess) {
