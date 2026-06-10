@@ -12,7 +12,7 @@ For subsystem-specific details, see the per-package `CLAUDE.md` files and the
 | `shared/` | TypeScript package that serializes `ConfigurationData` into the router config proto (`graphql-configuration.ts`). |
 | `proto/wg/cosmo/node/v1/node.proto` | Wire format for router configuration. Regenerate Go + TS bindings via `make generate-go` (TS proto lives in `connect/src/wg/cosmo/node/v1/node_pb.ts`). |
 | `router/` | Go router binary. Entity caching + resolver wiring lives in `router/core/factoryresolver.go`. |
-| `router-tests/` | Integration tests. The entity caching suite is in `router-tests/entitycaching/` with a `make compose` target that regenerates `testdata/config.json` via `wgc router compose` (input: `graph.yaml`). |
+| `router-tests/` | Integration tests. The entity caching suite is in `router-tests/entitycaching/`; regenerate `testdata/config.json` with `cd demo && make compose-cachetest` (wgc, input: `demo/graph-cachetest.yaml`). |
 | `playground/` | React GraphiQL-based playground. Built with `pnpm build:router` to embed into the router binary via `router/internal/graphiql/graphiql.html`. |
 | `demo/` | Standalone demo subgraphs + cache-only runner. See `demo/cmd/cache-demo/main.go`. Recompose demo config with `make compose-cache` from `demo/`. |
 | `docs/` | Developer docs. Entity caching + `@requestScoped` live here. |
@@ -30,7 +30,7 @@ Skipping any step makes the change invisible to downstream consumers, often sile
   ```bash
   cd composition && pnpm build \
     && cd ../shared && pnpm build \
-    && cd ../router-tests/entitycaching && make compose
+    && cd ../demo && make compose-cachetest
   ```
   wgc consumes composition's built `dist/`, so a stale build silently composes
   with old logic — always rebuild before composing.
@@ -90,7 +90,7 @@ through the entire stack, in order:
    edit when removing fields if no TS regen script is handy)
 6. `shared/src/router-config/graphql-configuration.ts` — proto serialization
 7. `router/core/factoryresolver.go` — proto → planner metadata mapping
-8. `router-tests/entitycaching && make compose` — regenerate integration test config
+8. `cd demo && make compose-cachetest` — regenerate integration test config
    (runs `wgc router compose` from the workspace; composition + shared must be built first)
 
 Missing any step causes the field to silently drop from the final config JSON.
@@ -280,7 +280,7 @@ cd shared && pnpm build
 make generate-go
 
 # Router tests
-cd router-tests/entitycaching && make compose       # regenerate testdata/config.json via wgc
+cd demo && make compose-cachetest                   # regenerate entitycaching testdata/config.json via wgc
 cd router-tests/entitycaching && go test -run "TestEntityCaching" -count=1 .
 
 # graphql-go-tools (in the local sibling clone)

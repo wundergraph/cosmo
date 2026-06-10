@@ -13,7 +13,7 @@ Companion docs: [README.md](./README.md) (public contract),
 
 ## 1. Package layout
 
-```
+```text
 composition/src/
 ├── index.ts                      # public exports — minimal, additive
 ├── buildASTSchema/               # schema construction helpers

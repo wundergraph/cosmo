@@ -8,7 +8,7 @@ When modifying entity caching logic, understand these invariants:
 
 The flow from @key to router cache config is:
 
-```
+```graphql
 @key(fields: "...") on entity type
     ↓
 extractKeyFieldSets() → KeyFieldSetData { documentNode, normalizedFieldSet, isUnresolvable }
