@@ -1,0 +1,58 @@
+version: "1"
+
+# Connected to the local control plane — no execution_config.file.
+# graph.token injected via GRAPH_API_TOKEN env var.
+
+storage_providers:
+  redis:
+    - id: "default"
+      urls:
+        - "redis://localhost:6379/2"
+      cluster_enabled: false
+
+entity_caching:
+  enabled: true
+  l1:
+    enabled: true
+    max_size: "100MB"
+  l2:
+    enabled: true
+    storage:
+      provider_id: "default"
+      key_prefix: "cosmo_entity_cache"
+    circuit_breaker:
+      enabled: false
+
+headers:
+  subgraphs:
+    cachegraph:
+      request:
+        - op: propagate
+          named: Authorization
+        - op: propagate
+          named: X-Artificial-Latency
+    cachegraph-ext:
+      request:
+        - op: propagate
+          named: X-Artificial-Latency
+    viewer:
+      request:
+        - op: propagate
+          named: Authorization
+        - op: propagate
+          named: X-Artificial-Latency
+
+# Needed because the demo cachegraph subgraphs use a non-standard header to inject
+# synthetic latency for visible cache effect. All WG-standard headers (X-WG-Trace,
+# X-WG-Token, X-WG-Disable-Entity-Cache*, etc.) are appended to AllowHeaders by the
+# router automatically, so they do not need to be listed here.
+cors:
+  allow_headers:
+    - X-Artificial-Latency
+
+log_level: debug
+dev_mode: true
+listen_addr: "localhost:3002"
+playground:
+  enabled: true
+  path: "/"
