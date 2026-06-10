@@ -99,6 +99,36 @@ func DefaultExporter(cfg *Config) *ExporterConfig {
 	return nil
 }
 
+// HasNonDefaultExporter reports whether at least one enabled exporter in cfg
+// points at a host other than the Cosmo Cloud default endpoint. Used to decide
+// whether to install a real recording tracer provider: if the only exporter is
+// the auto-inserted default one pointing at the Cosmo Cloud endpoint — and no
+// graph token authorizes that export — recording spans is pure overhead.
+func HasNonDefaultExporter(cfg *Config) bool {
+	if cfg == nil {
+		return false
+	}
+	defaultURL, err := url.Parse(otelconfig.DefaultEndpoint())
+	if err != nil {
+		// If we can't parse the default endpoint, err on the side of installing a
+		// real provider rather than silently dropping a user's tracing config.
+		return len(cfg.Exporters) > 0
+	}
+	for _, exporter := range cfg.Exporters {
+		if exporter == nil || exporter.Disabled {
+			continue
+		}
+		u, err := url.Parse(exporter.Endpoint)
+		if err != nil {
+			continue
+		}
+		if u.Host != defaultURL.Host {
+			return true
+		}
+	}
+	return false
+}
+
 // DefaultConfig returns the default config.
 func DefaultConfig(serviceVersion string) *Config {
 	return &Config{

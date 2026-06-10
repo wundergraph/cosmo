@@ -1,0 +1,8 @@
+query UserProfileHeaderSensitive($id: ID!) {
+  userProfile(id: $id) {
+    id
+    username
+    role
+    email
+  }
+}

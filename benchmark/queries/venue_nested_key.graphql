@@ -1,0 +1,10 @@
+query VenueNestedKey($location: VenueLocationKey!) {
+  venue(location: $location) {
+    address {
+      id
+    }
+    name
+    capacity
+    city
+  }
+}
