@@ -88,6 +88,10 @@ func (s *PubSubSubscriptionDataSource[C]) SetHooks(hooks Hooks) {
 	s.hooks = hooks
 }
 
+func (s *PubSubSubscriptionDataSource[C]) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	return s.uniqueRequestID(ctx, input, xxh)
+}
+
 var _ SubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
 var _ resolve.HookableSubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
 
