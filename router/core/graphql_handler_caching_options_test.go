@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 )
 
 func newCachingOptionsHandler(entity EntityCachingHandlerOptions) *GraphQLHandler {
@@ -169,4 +171,17 @@ func TestGraphQLHandler_cachingOptions_CacheKeyPrefixReplacesEmptyGlobal(t *test
 		GlobalCacheKeyPrefix:  "standalone",
 		L2CacheKeyInterceptor: nil,
 	}, opts)
+}
+
+func TestGraphQLHandler_cachingOptions_MetricsEnablesAnalytics(t *testing.T) {
+	t.Parallel()
+	h := newCachingOptionsHandler(EntityCachingHandlerOptions{
+		L1Enabled: true,
+		L2Enabled: true,
+		Metrics:   []*rmetric.EntityCacheMetrics{nil}, // just non-empty slice
+	})
+	reqCtx := newCachingOptionsReqCtx(t, false, nil)
+
+	opts := h.cachingOptions(reqCtx)
+	require.True(t, opts.EnableCacheAnalytics)
 }

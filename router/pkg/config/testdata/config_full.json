@@ -62,6 +62,7 @@
         "RouterRuntime": true,
         "GraphqlCache": true,
         "ConnectionStats": true,
+        "EntityCachingStats": true,
         "EngineStats": {
           "Subscriptions": true
         },
@@ -98,6 +99,7 @@
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": true,
         "ConnectionStats": true,
+        "EntityCachingStats": true,
         "Streams": false,
         "EngineStats": {
           "Subscriptions": true

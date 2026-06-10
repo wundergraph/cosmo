@@ -1537,6 +1537,11 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
+                "entity_caching_stats": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of entity cache metrics. The default value is false."
+                },
                 "streams": {
                   "type": "boolean",
                   "default": false,
@@ -1692,6 +1697,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
+                },
+                "entity_caching_stats": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of entity cache metrics. The default value is false."
                 },
                 "streams": {
                   "type": "boolean",
