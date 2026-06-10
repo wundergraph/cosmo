@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.232.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.231.0...controlplane@0.232.0) (2026-06-08)
+
+### Bug Fixes
+
+* serve latest feature flag schema version after republishing a feature subgraph ([#2930](https://github.com/wundergraph/cosmo/issues/2930)) ([111e98f](https://github.com/wundergraph/cosmo/commit/111e98f4dee089cabf3a4b59ed786fbe4099b1c3)) (@JivusAyrus)
+
+### Features
+
+* implement early stop for feature flag updates with no changes ([#2932](https://github.com/wundergraph/cosmo/issues/2932)) ([ccbcb76](https://github.com/wundergraph/cosmo/commit/ccbcb76839c0c5f37af19fddd0b7c872332fb275)) (@JivusAyrus)
+
 # [0.231.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.230.0...controlplane@0.231.0) (2026-06-06)
 
 ### Features

@@ -22609,6 +22609,7 @@ type UpdateFeatureFlagResponse struct {
 	CompositionErrors   []*CompositionError    `protobuf:"bytes,2,rep,name=composition_errors,json=compositionErrors,proto3" json:"composition_errors,omitempty"`
 	DeploymentErrors    []*DeploymentError     `protobuf:"bytes,3,rep,name=deployment_errors,json=deploymentErrors,proto3" json:"deployment_errors,omitempty"`
 	CompositionWarnings []*CompositionWarning  `protobuf:"bytes,4,rep,name=compositionWarnings,proto3" json:"compositionWarnings,omitempty"`
+	HasChanged          *bool                  `protobuf:"varint,5,opt,name=has_changed,json=hasChanged,proto3,oneof" json:"has_changed,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -22669,6 +22670,13 @@ func (x *UpdateFeatureFlagResponse) GetCompositionWarnings() []*CompositionWarni
 		return x.CompositionWarnings
 	}
 	return nil
+}
+
+func (x *UpdateFeatureFlagResponse) GetHasChanged() bool {
+	if x != nil && x.HasChanged != nil {
+		return *x.HasChanged
+	}
+	return false
 }
 
 type EnableFeatureFlagRequest struct {
@@ -34943,12 +34951,15 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x16feature_subgraph_names\x18\x04 \x03(\tR\x14featureSubgraphNames\x12!\n" +
 	"\funset_labels\x18\x05 \x01(\bR\vunsetLabels\x12M\n" +
 	" disable_resolvability_validation\x18\x06 \x01(\bH\x00R\x1edisableResolvabilityValidation\x88\x01\x01B#\n" +
-	"!_disable_resolvability_validation\"\xde\x02\n" +
+	"!_disable_resolvability_validation\"\x94\x03\n" +
 	"\x19UpdateFeatureFlagResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12U\n" +
 	"\x12composition_errors\x18\x02 \x03(\v2&.wg.cosmo.platform.v1.CompositionErrorR\x11compositionErrors\x12R\n" +
 	"\x11deployment_errors\x18\x03 \x03(\v2%.wg.cosmo.platform.v1.DeploymentErrorR\x10deploymentErrors\x12Z\n" +
-	"\x13compositionWarnings\x18\x04 \x03(\v2(.wg.cosmo.platform.v1.CompositionWarningR\x13compositionWarnings\"\xda\x01\n" +
+	"\x13compositionWarnings\x18\x04 \x03(\v2(.wg.cosmo.platform.v1.CompositionWarningR\x13compositionWarnings\x12$\n" +
+	"\vhas_changed\x18\x05 \x01(\bH\x00R\n" +
+	"hasChanged\x88\x01\x01B\x0e\n" +
+	"\f_has_changed\"\xda\x01\n" +
 	"\x18EnableFeatureFlagRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x18\n" +
@@ -37489,6 +37500,7 @@ func file_wg_cosmo_platform_v1_platform_proto_init() {
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[333].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[339].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[341].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[342].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[343].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[344].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[345].OneofWrappers = []any{}
