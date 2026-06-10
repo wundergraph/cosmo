@@ -49,6 +49,7 @@ import {
   SubgraphListFilterOptions,
   SubgraphMemberDTO,
   ComposeAndDeployResult,
+  Feature,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
@@ -99,6 +100,7 @@ export type UpdateSubgraphSchemaData = {
   isV2Graph?: boolean;
   readme?: string;
   proto?: ProtoSubgraph;
+  subgraph?: SubgraphDTO;
 };
 
 /**
@@ -257,65 +259,67 @@ export class SubgraphRepository {
       subgraphChanged: boolean;
     }
   > {
-    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
-
-    // The collection of federated graphs that will be potentially re-composed
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
     let subgraphChanged = false;
     let labelChanged = false;
 
-    const collected = await this.writeSchemaAndCollectAffected(this.db, data);
-    const { subgraph, affectedFederatedGraphById, affectedFeatureFlagIds } = collected;
-    subgraphChanged = collected.subgraphChanged;
-    labelChanged = collected.labelChanged;
+    await this.db.transaction(async (tx) => {
+      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
 
-    if (!subgraph) {
-      return {
-        compositionErrors,
-        compositionWarnings,
-        updatedFederatedGraphs,
-        deploymentErrors,
-        subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
-      };
-    }
+      // The collection of federated graphs that will be potentially re-composed
+      const collected = await this.writeSchemaAndCollectAffected(tx, data);
+      const { subgraph, affectedFederatedGraphById, affectedFeatureFlagIds } = collected;
+      subgraphChanged = collected.subgraphChanged;
+      labelChanged = collected.labelChanged;
 
-    // Resolve the affected feature flag DTOs.
-    const affectedFeatureFlags = await this.resolveFeatureFlags(this.db, data.namespaceId, affectedFeatureFlagIds);
-    if (affectedFederatedGraphById.size === 0 && affectedFeatureFlags.length === 0) {
-      return {
-        compositionErrors,
-        compositionWarnings,
-        updatedFederatedGraphs,
-        deploymentErrors,
-        subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
-      };
-    }
-
-    updatedFederatedGraphs.push(...affectedFederatedGraphById.values());
-    const result = await compositionService.recomposeAndDeployAffected({
-      actorId: data.updatedBy,
-      affectedFederatedGraphs: [...affectedFederatedGraphById.values()],
-      affectedFeatureFlags,
-      isFeatureSubgraph: subgraph.isFeatureSubgraph,
-    });
-
-    deploymentErrors.push(...result.deploymentErrors);
-    compositionErrors.push(...result.compositionErrors);
-    compositionWarnings.push(...result.compositionWarnings);
-
-    // Re-fetch the federated graphs to get the updated composedSchemaVersionId
-    const refreshedGraphs = await Promise.all(
-      [...affectedFederatedGraphById.keys()].map((id) => fedGraphRepo.byId(id)),
-    );
-    for (let i = 0; i < updatedFederatedGraphs.length; i++) {
-      const refreshedGraph = refreshedGraphs[i];
-      if (refreshedGraph) {
-        updatedFederatedGraphs[i] = refreshedGraph;
+      if (!subgraph) {
+        return {
+          compositionErrors,
+          compositionWarnings,
+          updatedFederatedGraphs,
+          deploymentErrors,
+          subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
+        };
       }
-    }
+
+      // Resolve the affected feature flag DTOs.
+      const affectedFeatureFlags = await this.resolveFeatureFlags(this.db, data.namespaceId, affectedFeatureFlagIds);
+      if (affectedFederatedGraphById.size === 0 && affectedFeatureFlags.length === 0) {
+        return {
+          compositionErrors,
+          compositionWarnings,
+          updatedFederatedGraphs,
+          deploymentErrors,
+          subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
+        };
+      }
+
+      updatedFederatedGraphs.push(...affectedFederatedGraphById.values());
+      const result = await compositionService.recomposeAndDeployAffected({
+        actorId: data.updatedBy,
+        affectedFederatedGraphs: [...affectedFederatedGraphById.values()],
+        affectedFeatureFlags,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
+      });
+
+      deploymentErrors.push(...result.deploymentErrors);
+      compositionErrors.push(...result.compositionErrors);
+      compositionWarnings.push(...result.compositionWarnings);
+
+      // Re-fetch the federated graphs to get the updated composedSchemaVersionId
+      const refreshedGraphs = await Promise.all(
+        [...affectedFederatedGraphById.keys()].map((id) => fedGraphRepo.byId(id)),
+      );
+      for (let i = 0; i < updatedFederatedGraphs.length; i++) {
+        const refreshedGraph = refreshedGraphs[i];
+        if (refreshedGraph) {
+          updatedFederatedGraphs[i] = refreshedGraph;
+        }
+      }
+    });
 
     return {
       compositionErrors,
@@ -365,6 +369,7 @@ export class SubgraphRepository {
   private async writeSchemaAndCollectAffected(
     tx: PostgresJsDatabase<typeof schema>,
     data: UpdateSubgraphSchemaData,
+    splitConfigFeature?: Feature,
   ): Promise<{
     subgraph: SubgraphDTO | undefined;
     affectedFederatedGraphById: Map<string, FederatedGraphDTO>;
@@ -391,18 +396,18 @@ export class SubgraphRepository {
     const featureFlagRepo = new FeatureFlagRepository(this.logger, tx, this.organizationId);
     const orgRepo = new OrganizationRepository(this.logger, tx);
 
-    const splitConfigFeature = await orgRepo.getFeature({
+    splitConfigFeature ??= await orgRepo.getFeature({
       organizationId: this.organizationId,
       featureId: 'split-config-loading',
     });
 
-    const subgraph = await subgraphRepo.byTargetId(data.targetId);
+    const subgraph = data.subgraph ?? (await subgraphRepo.byTargetId(data.targetId));
     if (!subgraph) {
       return { subgraph: undefined, affectedFederatedGraphById, affectedFeatureFlagIds, subgraphChanged, labelChanged };
     }
 
     // TODO: avoid downloading the schema use hash instead
-    if (data.schemaSDL && (subgraph.type === 'grpc_plugin' || data.schemaSDL !== subgraph.schemaSDL)) {
+    if (data.schemaSDL && (subgraph.type === 'grpc_plugin' || data.schemaSDL !== subgraph.schemaSDL.trimEnd())) {
       subgraphChanged = true;
       const updatedSubgraph = await subgraphRepo.addSchemaVersion({
         targetId: subgraph.targetId,
@@ -552,7 +557,8 @@ export class SubgraphRepository {
         .from(featureSubgraphsToBaseSubgraphs)
         .innerJoin(subgraphs, eq(subgraphs.id, featureSubgraphsToBaseSubgraphs.baseSubgraphId))
         .innerJoin(targets, eq(targets.id, subgraphs.targetId))
-        .where(eq(featureSubgraphsToBaseSubgraphs.featureSubgraphId, subgraph.id));
+        .where(eq(featureSubgraphsToBaseSubgraphs.featureSubgraphId, subgraph.id))
+        .execute();
 
       if (baseSubgraph.length > 0) {
         // Retrieve the federated graphs that match the labels for the base graph of the feature graph
@@ -660,14 +666,23 @@ export class SubgraphRepository {
 
     const namespaceId = items[0].namespaceId;
 
+    const orgRepo = new OrganizationRepository(this.logger, this.db, this.organizationId);
+    const splitConfigFeature = await orgRepo.getFeature({
+      organizationId: this.organizationId,
+      featureId: 'split-config-loading',
+    });
+
     await this.db.transaction(async (tx) => {
       // Write every schema version and collect the affected graphs/flags. NO composition happens here.
-      for (const item of items) {
-        const { subgraph, affectedFederatedGraphById, affectedFeatureFlagIds, subgraphChanged, labelChanged } =
-          await this.writeSchemaAndCollectAffected(tx, item);
+      const results = await Promise.all(
+        items.map((item) => this.writeSchemaAndCollectAffected(tx, item, splitConfigFeature)),
+      );
+
+      for (const [index, result] of results.entries()) {
+        const { subgraph, affectedFederatedGraphById, affectedFeatureFlagIds, subgraphChanged, labelChanged } = result;
 
         if (subgraph && (subgraphChanged || labelChanged)) {
-          changedSubgraphNames.push(item.name);
+          changedSubgraphNames.push(items[index].name);
         }
 
         // Merge via union only — never delete, so one subgraph's old/new label reconciliation cannot drop a
@@ -1099,6 +1114,25 @@ export class SubgraphRepository {
     });
   }
 
+  public async getSubgraphsByNames(names: string[], namespaceId: string): Promise<SubgraphDTO[]> {
+    const uniqueNames = [...new Set(names)];
+
+    const subgraphs: SubgraphDTO[] = [];
+    while (uniqueNames.length > 0) {
+      const chunkOfNames = uniqueNames.splice(0, 100);
+      const conditions: (SQL<unknown> | undefined)[] = [
+        eq(targets.organizationId, this.organizationId),
+        eq(targets.namespaceId, namespaceId),
+        eq(targets.type, 'subgraph'),
+        inArray(targets.name, chunkOfNames),
+      ];
+
+      subgraphs.push(...(await this.getSubgraphsMatching({ conditions })));
+    }
+
+    return subgraphs;
+  }
+
   public getSubgraphsByTargetIds(ids: string[], rbac?: RBACEvaluator): Promise<SubgraphDTO[]> {
     const conditions: (SQL<unknown> | undefined)[] = [
       eq(schema.targets.organizationId, this.organizationId),
@@ -1127,7 +1161,13 @@ export class SubgraphRepository {
         })
         .from(targets)
         .innerJoin(subgraphs, eq(subgraphs.targetId, targets.id))
-        .where(and(eq(targets.type, 'subgraph'), inArray(subgraphs.id, chunkOfIds)))
+        .where(
+          and(
+            eq(targets.organizationId, this.organizationId),
+            eq(targets.type, 'subgraph'),
+            inArray(subgraphs.id, chunkOfIds),
+          ),
+        )
         .execute();
 
       for (const subgraph of chunkOfSubgraphNames) {
@@ -1218,52 +1258,61 @@ export class SubgraphRepository {
       .execute();
 
     // Transform the selected subgraphs into SubgraphDTO objects
-    return subgraphs.map((sg) => {
-      let proto: ProtoSubgraph | undefined;
-      if (sg.type === 'grpc_plugin' || sg.type === 'grpc_service') {
-        if (!sg.protoSchema) {
-          this.logger.warn(
-            `Missing protobuf schema for ${sg.type} subgraph with schemaVersionId: ${sg.schemaVersionId}`,
-          );
-        }
+    return (
+      subgraphs
+        /**
+         * Because a subgraph can be part of multiple federated graphs in the same namespace, we need to filter out
+         * duplicates. This have not been an issue so far because the method was called for a specific federated graph
+         * or with specific target ids.
+         */
+        .filter((sg, index, self) => self.findIndex((x) => x.targetId === sg.targetId) === index)
+        .map((sg) => {
+          let proto: ProtoSubgraph | undefined;
+          if (sg.type === 'grpc_plugin' || sg.type === 'grpc_service') {
+            if (!sg.protoSchema) {
+              this.logger.warn(
+                `Missing protobuf schema for ${sg.type} subgraph with schemaVersionId: ${sg.schemaVersionId}`,
+              );
+            }
 
-        proto = {
-          schema: sg.protoSchema ?? '',
-          mappings: sg.protoMappings ?? '',
-          lock: sg.protoLock ?? '',
-        };
+            proto = {
+              schema: sg.protoSchema ?? '',
+              mappings: sg.protoMappings ?? '',
+              lock: sg.protoLock ?? '',
+            };
 
-        if (sg.type === 'grpc_plugin') {
-          proto.pluginData = {
-            platforms: sg.pluginDataPlatforms ?? [],
-            version: sg.pluginDataVersion ?? 'v1',
+            if (sg.type === 'grpc_plugin') {
+              proto.pluginData = {
+                platforms: sg.pluginDataPlatforms ?? [],
+                version: sg.pluginDataVersion ?? 'v1',
+              };
+            }
+          }
+
+          return {
+            id: sg.id,
+            targetId: sg.targetId,
+            routingUrl: sg.routingUrl,
+            readme: sg.readme || undefined,
+            subscriptionUrl: sg.subscriptionUrl || '',
+            subscriptionProtocol: sg.subscriptionProtocol ?? 'ws',
+            websocketSubprotocol: sg.websocketSubprotocol || undefined,
+            name: sg.name,
+            schemaSDL: sg.svSchemaSDL ?? '',
+            schemaVersionId: sg.schemaVersionId || '',
+            lastUpdatedAt: sg.svLastUpdated?.toISOString() ?? '',
+            labels: sg.labels?.map?.((l) => splitLabel(l)) ?? [],
+            creatorUserId: sg.createdBy || undefined,
+            namespace: sg.namespaceName,
+            namespaceId: sg.namespaceId,
+            isEventDrivenGraph: sg.isEventDrivenGraph,
+            isV2Graph: sg.svIsV2Graph || undefined,
+            isFeatureSubgraph: sg.isFeatureSubgraph,
+            type: sg.type,
+            proto,
           };
-        }
-      }
-
-      return {
-        id: sg.id,
-        targetId: sg.targetId,
-        routingUrl: sg.routingUrl,
-        readme: sg.readme || undefined,
-        subscriptionUrl: sg.subscriptionUrl || '',
-        subscriptionProtocol: sg.subscriptionProtocol ?? 'ws',
-        websocketSubprotocol: sg.websocketSubprotocol || undefined,
-        name: sg.name,
-        schemaSDL: sg.svSchemaSDL ?? '',
-        schemaVersionId: sg.schemaVersionId || '',
-        lastUpdatedAt: sg.svLastUpdated?.toISOString() ?? '',
-        labels: sg.labels?.map?.((l) => splitLabel(l)) ?? [],
-        creatorUserId: sg.createdBy || undefined,
-        namespace: sg.namespaceName,
-        namespaceId: sg.namespaceId,
-        isEventDrivenGraph: sg.isEventDrivenGraph,
-        isV2Graph: sg.svIsV2Graph || undefined,
-        isFeatureSubgraph: sg.isFeatureSubgraph,
-        type: sg.type,
-        proto,
-      };
-    });
+        })
+    );
   }
 
   private async getSubgraph(conditions: SQL<unknown>[]): Promise<SubgraphDTO | undefined> {

@@ -1,12 +1,5 @@
 /* eslint-disable no-labels */
-import { KeyObject, randomUUID } from 'node:crypto';
-import { PlainMessage } from '@bufbuild/protobuf';
-import { FeatureFlagRouterExecutionConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import {
-  CompositionError,
-  CompositionWarning,
-  DeploymentError,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { KeyObject } from 'node:crypto';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import {
   and,
@@ -28,10 +21,9 @@ import {
 } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { parse } from 'graphql';
 import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { uid } from 'uid/secure';
-import { CompositionOptions, Warning } from '@wundergraph/composition';
+import type { Warning } from '@wundergraph/composition';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
@@ -55,35 +47,18 @@ import {
   RouterRequestKeysDTO,
   ComposeAndDeployResult,
 } from '../../types/index.js';
-import { BlobStorage } from '../blobstorage/index.js';
-import {
-  BaseCompositionData,
-  CompositionSubgraphRecord,
-  Composer,
-  ContractBaseCompositionData,
-  routerConfigToFeatureFlagExecutionConfig,
-  RouterConfigUploadError,
-} from '../composition/composer.js';
-import {
-  composeGraphsInWorker,
-  deserializeComposedGraphArtifact,
-  deserializeRouterExecutionConfig,
-} from '../composition/composeGraphs.pool.js';
+import { CompositionSubgraphRecord } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
-import { AdmissionError } from '../services/AdmissionWebhookController.js';
 import {
   applyIdpNamespaceGate,
   checkIfLabelMatchersChanged,
   normalizeLabelMatchers,
   normalizeLabels,
 } from '../util.js';
-import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
-import { ClickHouseClient } from '../clickhouse/index.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { traced } from '../tracing.js';
 import type { CompositionService } from '../services/CompositionService.js';
 import { ContractRepository } from './ContractRepository.js';
-import { FeatureFlagRepository, SubgraphsToCompose } from './FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -710,7 +685,7 @@ export class FederatedGraphRepository {
    * the schema version is not composable the errors are stored in the compositionErrors
    * but the composedSchemaVersionId is not updated.
    */
-  public async addSchemaVersion({
+  public addSchemaVersion({
     targetId,
     composedSDL,
     clientSchema,
@@ -733,84 +708,86 @@ export class FederatedGraphRepository {
     isFeatureFlagComposition: boolean;
     featureFlagId: string;
   }) {
-    const compositionRepo = new GraphCompositionRepository(this.logger, this.db);
-    const [federatedGraph] = await this.db
-      .select({
-        targetId: targets.id,
-        id: federatedGraphs.id,
-        composedSchemaVersionId: federatedGraphs.composedSchemaVersionId,
-        routerCompatibilityVersion: federatedGraphs.routerCompatibilityVersion,
-      })
-      .from(targets)
-      .innerJoin(federatedGraphs, eq(federatedGraphs.targetId, targetId))
-      .where(
-        and(eq(targets.type, 'federated'), eq(targets.organizationId, this.organizationId), eq(targets.id, targetId)),
-      )
-      .execute();
-
-    if (federatedGraph === undefined) {
-      return undefined;
-    }
-
-    let compositionErrorString = '';
-    let compositionWarningString = '';
-
-    if (compositionErrors && compositionErrors.length > 0) {
-      compositionErrorString = compositionErrors.map((e) => e.toString()).join('\n');
-    }
-
-    if (compositionWarnings && compositionWarnings.length > 0) {
-      compositionWarningString = compositionWarnings.map((w) => w.toString()).join('\n');
-    }
-
-    const insertedVersion = await this.db
-      .insert(schemaVersion)
-      .values({
-        id: schemaVersionId,
-        organizationId: this.organizationId,
-        targetId: federatedGraph.targetId,
-        schemaSDL: composedSDL,
-        clientSchema,
-      })
-      .returning({
-        insertedId: schemaVersion.id,
-      });
-
-    // Always update the federated schema after composing, even if the schema is not composable.
-    // That allows us to display the latest schema version in the UI. The router will only fetch
-    // the latest composable schema version.
-    if (isFeatureFlagComposition) {
-      await this.db.insert(federatedGraphsToFeatureFlagSchemaVersions).values({
-        composedSchemaVersionId: schemaVersionId,
-        federatedGraphId: federatedGraph.id,
-        baseCompositionSchemaVersionId: federatedGraph.composedSchemaVersionId!,
-        featureFlagId,
-      });
-    } else {
-      await this.db
-        .update(federatedGraphs)
-        .set({
-          composedSchemaVersionId: insertedVersion[0].insertedId,
+    return this.db.transaction(async (tx) => {
+      const compositionRepo = new GraphCompositionRepository(this.logger, tx);
+      const [federatedGraph] = await tx
+        .select({
+          targetId: targets.id,
+          id: federatedGraphs.id,
+          composedSchemaVersionId: federatedGraphs.composedSchemaVersionId,
+          routerCompatibilityVersion: federatedGraphs.routerCompatibilityVersion,
         })
-        .where(eq(federatedGraphs.id, federatedGraph.id));
-    }
+        .from(targets)
+        .innerJoin(federatedGraphs, eq(federatedGraphs.targetId, targetId))
+        .where(
+          and(eq(targets.type, 'federated'), eq(targets.organizationId, this.organizationId), eq(targets.id, targetId)),
+        )
+        .execute();
 
-    // adding the composition entry and the relation between fedGraph schema version and subgraph schema version
-    await compositionRepo.addComposition({
-      fedGraphTargetId: federatedGraph.targetId,
-      fedGraphSchemaVersionId: insertedVersion[0].insertedId,
-      composedSubgraphs,
-      compositionErrorString,
-      compositionWarningString,
-      composedById,
-      isFeatureFlagComposition,
-      routerCompatibilityVersion: federatedGraph.routerCompatibilityVersion,
+      if (federatedGraph === undefined) {
+        return undefined;
+      }
+
+      let compositionErrorString = '';
+      let compositionWarningString = '';
+
+      if (compositionErrors && compositionErrors.length > 0) {
+        compositionErrorString = compositionErrors.map((e) => e.toString()).join('\n');
+      }
+
+      if (compositionWarnings && compositionWarnings.length > 0) {
+        compositionWarningString = compositionWarnings.map((w) => w.toString()).join('\n');
+      }
+
+      const insertedVersion = await tx
+        .insert(schemaVersion)
+        .values({
+          id: schemaVersionId,
+          organizationId: this.organizationId,
+          targetId: federatedGraph.targetId,
+          schemaSDL: composedSDL,
+          clientSchema,
+        })
+        .returning({
+          insertedId: schemaVersion.id,
+        });
+
+      // Always update the federated schema after composing, even if the schema is not composable.
+      // That allows us to display the latest schema version in the UI. The router will only fetch
+      // the latest composable schema version.
+      if (isFeatureFlagComposition) {
+        await tx.insert(federatedGraphsToFeatureFlagSchemaVersions).values({
+          composedSchemaVersionId: schemaVersionId,
+          federatedGraphId: federatedGraph.id,
+          baseCompositionSchemaVersionId: federatedGraph.composedSchemaVersionId!,
+          featureFlagId,
+        });
+      } else {
+        await tx
+          .update(federatedGraphs)
+          .set({
+            composedSchemaVersionId: insertedVersion[0].insertedId,
+          })
+          .where(eq(federatedGraphs.id, federatedGraph.id));
+      }
+
+      // adding the composition entry and the relation between fedGraph schema version and subgraph schema version
+      await compositionRepo.addComposition({
+        fedGraphTargetId: federatedGraph.targetId,
+        fedGraphSchemaVersionId: insertedVersion[0].insertedId,
+        composedSubgraphs,
+        compositionErrorString,
+        compositionWarningString,
+        composedById,
+        isFeatureFlagComposition,
+        routerCompatibilityVersion: federatedGraph.routerCompatibilityVersion,
+      });
+
+      return {
+        composedSchemaVersionId: insertedVersion[0].insertedId,
+        routerCompatibilityVersion: federatedGraph.routerCompatibilityVersion,
+      };
     });
-
-    return {
-      composedSchemaVersionId: insertedVersion[0].insertedId,
-      routerCompatibilityVersion: federatedGraph.routerCompatibilityVersion,
-    };
   }
 
   public async isLatestValidSchemaVersion(targetId: string, schemaVersionId: string): Promise<boolean> {
