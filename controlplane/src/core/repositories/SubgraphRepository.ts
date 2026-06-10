@@ -257,6 +257,7 @@ export class SubgraphRepository {
       subgraphChanged: boolean;
     }
   > {
+    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
@@ -273,38 +274,50 @@ export class SubgraphRepository {
       subgraphChanged = collected.subgraphChanged;
       labelChanged = collected.labelChanged;
 
-      if (!subgraph) {
-        return;
-      }
+    if (!subgraph) {
+      return {
+        compositionErrors,
+        compositionWarnings,
+        updatedFederatedGraphs,
+        deploymentErrors,
+        subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
+      };
+    }
 
-      // Resolve the affected feature flag DTOs.
-      const affectedFeatureFlags = await this.resolveFeatureFlags(tx, data.namespaceId, affectedFeatureFlagIds);
+    // Resolve the affected feature flag DTOs.
+    const affectedFeatureFlags = await this.resolveFeatureFlags(this.db, data.namespaceId, affectedFeatureFlagIds);
       if (affectedFederatedGraphById.size === 0 && affectedFeatureFlags.length === 0) {
-        return;
+        return{
+        compositionErrors,
+        compositionWarnings,
+        updatedFederatedGraphs,
+        deploymentErrors,
+        subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
+      };
+    }
+
+    updatedFederatedGraphs.push(...affectedFederatedGraphById.values());
+    const result = await compositionService.recomposeAndDeployAffected({
+      actorId: data.updatedBy,
+      affectedFederatedGraphs: [...affectedFederatedGraphById.values()],
+      affectedFeatureFlags,
+      isFeatureSubgraph: subgraph.isFeatureSubgraph,
+    });
+
+    deploymentErrors.push(...result.deploymentErrors);
+    compositionErrors.push(...result.compositionErrors);
+    compositionWarnings.push(...result.compositionWarnings);
+
+    // Re-fetch the federated graphs to get the updated composedSchemaVersionId
+    const refreshedGraphs = await Promise.all(
+      [...affectedFederatedGraphById.keys()].map((id) => fedGraphRepo.byId(id)),
+    );
+    for (let i = 0; i < updatedFederatedGraphs.length; i++) {
+      const refreshedGraph = refreshedGraphs[i];
+      if (refreshedGraph) {
+        updatedFederatedGraphs[i] = refreshedGraph;
       }
-
-      updatedFederatedGraphs.push(...affectedFederatedGraphById.values());
-      const result = await compositionService.recomposeAndDeployAffected({
-        actorId: data.updatedBy,
-        affectedFederatedGraphs: [...affectedFederatedGraphById.values()],
-        affectedFeatureFlags,
-        isFeatureSubgraph: subgraph.isFeatureSubgraph,
-      });
-
-      deploymentErrors.push(...result.deploymentErrors);
-      compositionErrors.push(...result.compositionErrors);
-      compositionWarnings.push(...result.compositionWarnings);
-
-      // Re-fetch the federated graphs to get the updated composedSchemaVersionId
-      const refreshedGraphs = await Promise.all(
-        [...affectedFederatedGraphById.keys()].map((id) => fedGraphRepo.byId(id)),
-      );
-      for (let i = 0; i < updatedFederatedGraphs.length; i++) {
-        const refreshedGraph = refreshedGraphs[i];
-        if (refreshedGraph) {
-          updatedFederatedGraphs[i] = refreshedGraph;
-        }
-      }
+    }
     });
 
     return {
@@ -1120,6 +1133,37 @@ export class SubgraphRepository {
       : Promise.resolve([]);
   }
 
+  public async getSubgraphNameByIds(subgraphIds: string[]): Promise<Record<string, string>> {
+    const results: Record<string, string> = {};
+    if (subgraphIds.length === 0) {
+      return results;
+    }
+
+    const pendingIds = [...new Set(subgraphIds)];
+    while (pendingIds.length > 0) {
+      const chunkOfIds = pendingIds.splice(0, 100);
+      const chunkOfSubgraphNames = await this.db
+        .select({
+          id: subgraphs.id,
+          name: targets.name,
+        })
+        .from(targets)
+        .innerJoin(subgraphs, eq(subgraphs.targetId, targets.id))
+        .where(and(eq(targets.type, 'subgraph'), inArray(subgraphs.id, chunkOfIds)))
+        .execute();
+
+      for (const subgraph of chunkOfSubgraphNames) {
+        results[subgraph.id] = subgraph.name;
+      }
+
+      if (chunkOfIds.length < 100) {
+        break;
+      }
+    }
+
+    return results;
+  }
+
   private async getSubgraphsMatching({
     conditions,
     published,
@@ -1154,7 +1198,7 @@ export class SubgraphRepository {
         svSchemaSDL: schema.schemaVersion.schemaSDL,
         svIsV2Graph: schema.schemaVersion.isV2Graph,
         // Proto
-        protoSchemaVersion: schema.protobufSchemaVersions.protoSchema,
+        protoSchema: schema.protobufSchemaVersions.protoSchema,
         protoMappings: schema.protobufSchemaVersions.protoMappings,
         protoLock: schema.protobufSchemaVersions.protoLock,
         // Plugin Data
@@ -1201,14 +1245,14 @@ export class SubgraphRepository {
       .map((sg) => {
       let proto: ProtoSubgraph | undefined;
       if (sg.type === 'grpc_plugin' || sg.type === 'grpc_service') {
-        if (!sg.protoSchemaVersion) {
+        if (!sg.protoSchema) {
           this.logger.warn(
             `Missing protobuf schema for ${sg.type} subgraph with schemaVersionId: ${sg.schemaVersionId}`,
           );
         }
 
         proto = {
-          schema: sg.protoSchemaVersion ?? '',
+          schema: sg.protoSchema ?? '',
           mappings: sg.protoMappings ?? '',
           lock: sg.protoLock ?? '',
         };
