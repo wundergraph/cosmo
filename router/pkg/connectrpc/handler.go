@@ -506,29 +506,31 @@ func (h *RPCHandler) addProtoEnumPrefixesRecursive(data any, messageDesc protore
 // both scalar and repeated enums), nested messages recurse with their own descriptor, and any other
 // value passes through unchanged.
 func (h *RPCHandler) addProtoEnumPrefixToValue(value any, fieldDesc protoreflect.FieldDescriptor) any {
-	if fieldDesc != nil {
-		if enumDesc := getEnumType(fieldDesc); enumDesc != nil {
-			switch v := value.(type) {
-			case []any: // repeated enum
-				result := make([]any, len(v))
-				for i, item := range v {
-					result[i] = h.addProtoEnumPrefixToValue(item, fieldDesc)
-				}
-				return result
-			case string:
-				return h.mapGraphQLEnumToProtoValue(v, enumDesc)
-			case nil:
-				// A null/absent enum maps to the proto zero value (*_UNSPECIFIED), the inverse
-				// of the request path stripping *_UNSPECIFIED to "".
-				return h.unspecifiedEnumValueName(enumDesc)
-			default:
-				return value
-			}
-		}
+	if fieldDesc == nil {
+		return value
+	}
 
-		if msgDesc := getMessageType(fieldDesc); msgDesc != nil {
-			return h.addProtoEnumPrefixesRecursive(value, msgDesc)
+	if enumDesc := getEnumType(fieldDesc); enumDesc != nil {
+		switch v := value.(type) {
+		case []any: // repeated enum
+			result := make([]any, len(v))
+			for i, item := range v {
+				result[i] = h.addProtoEnumPrefixToValue(item, fieldDesc)
+			}
+			return result
+		case string:
+			return h.mapGraphQLEnumToProtoValue(v, enumDesc)
+		case nil:
+			// A null/absent enum maps to the proto zero value (*_UNSPECIFIED), the inverse
+			// of the request path stripping *_UNSPECIFIED to "".
+			return h.unspecifiedEnumValueName(enumDesc)
+		default:
+			return value
 		}
+	}
+
+	if msgDesc := getMessageType(fieldDesc); msgDesc != nil {
+		return h.addProtoEnumPrefixesRecursive(value, msgDesc)
 	}
 
 	return value

@@ -184,7 +184,11 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 // value and silently drops the enum field on the binary wire / falls back to *_UNSPECIFIED on
 // the JSON wire. Regression test for https://github.com/wundergraph/cosmo/issues/2924.
 func TestConvertGraphQLResponseToProtoJSON(t *testing.T) {
+	t.Parallel()
+
 	t.Run("re-adds proto enum prefix to response enum value", func(t *testing.T) {
+		t.Parallel()
+
 		handler := setupHandlerWithSchema(t)
 
 		// GetEmployeeResponse has fields { string name; Mood mood; } where Mood.MOOD_HAPPY = 1.
@@ -202,6 +206,8 @@ func TestConvertGraphQLResponseToProtoJSON(t *testing.T) {
 	})
 
 	t.Run("maps null enum to the proto zero value (_UNSPECIFIED)", func(t *testing.T) {
+		t.Parallel()
+
 		handler := setupHandlerWithSchema(t)
 
 		// A nullable GraphQL enum that resolved to null must become the proto zero value,
@@ -217,6 +223,8 @@ func TestConvertGraphQLResponseToProtoJSON(t *testing.T) {
 	})
 
 	t.Run("re-adds prefix to repeated enum values", func(t *testing.T) {
+		t.Parallel()
+
 		handler := setupHandlerWithSchema(t)
 
 		// GetDocumentResponse.moods is `repeated Mood`.
@@ -231,6 +239,8 @@ func TestConvertGraphQLResponseToProtoJSON(t *testing.T) {
 	})
 
 	t.Run("re-adds prefix to enum nested in a message", func(t *testing.T) {
+		t.Parallel()
+
 		handler := setupHandlerWithSchema(t)
 
 		// GetDocumentResponse.document is a nested Document message holding a DocumentStatus enum.
@@ -247,6 +257,8 @@ func TestConvertGraphQLResponseToProtoJSON(t *testing.T) {
 	})
 
 	t.Run("preserves original case of the enum value segment", func(t *testing.T) {
+		t.Parallel()
+
 		handler := setupHandlerWithSchema(t)
 
 		// protographic keeps the value's original case: DOCUMENT_STATUS_active, NOT
@@ -263,6 +275,8 @@ func TestConvertGraphQLResponseToProtoJSON(t *testing.T) {
 	})
 
 	t.Run("returns unknown enum value unchanged so the transcoder surfaces the error", func(t *testing.T) {
+		t.Parallel()
+
 		handler := setupHandlerWithSchema(t)
 
 		// A value with no matching proto enum is left as-is; the downstream proto3-JSON parse
