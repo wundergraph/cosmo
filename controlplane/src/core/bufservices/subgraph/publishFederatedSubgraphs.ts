@@ -114,15 +114,17 @@ export function publishFederatedSubgraphs(
     }
 
     // Resolve every requested subgraph; all of them must already exist.
+    let now = performance.now();
     const resolved: { subgraph: SubgraphDTO; schema: string }[] = [];
     const notFound: string[] = [];
     const typeErrors: string[] = [];
-    for (const entry of requestedEntries) {
-      const subgraph = await subgraphRepo.byName(entry.name, req.namespace);
-      if (!subgraph) {
-        notFound.push(entry.name);
-        continue;
-      }
+    // for (const entry of requestedEntries) {
+    for (const subgraph of await subgraphRepo.getSubgraphsByNames(requestedEntries.map((e) => e.name), namespace.id)) {
+      // const subgraph = await subgraphRepo.byName(entry.name, req.namespace);
+      // if (!subgraph) {
+      //   notFound.push(entry.name);
+      //   continue;
+      // }
 
       if (subgraph.type === 'grpc_plugin') {
         typeErrors.push(
@@ -137,8 +139,12 @@ export function publishFederatedSubgraphs(
         continue;
       }
 
-      resolved.push({ subgraph, schema: entry.schema });
+      const schema = requestedEntries.find((re) => re.name === subgraph.name)!.schema;
+      // const schema = entry.schema;
+      resolved.push({ subgraph, schema });
     }
+
+    console.log('load subgraphs: ' + (performance.now() - now));
 
     if (notFound.length > 0) {
       return {
@@ -166,29 +172,30 @@ export function publishFederatedSubgraphs(
       };
     }
 
-    // The user must be authorized to publish each of the subgraphs.
+    now = performance.now();
     for (const { subgraph } of resolved) {
-      await opts.authorizer.authorize({
-        db: opts.db,
-        graph: {
-          targetId: subgraph.targetId,
-          targetType: 'subgraph',
-        },
-        headers: ctx.requestHeader,
-        authContext,
-      });
+      if (!authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
+        throw new UnauthorizedError();
+      }
     }
 
+    console.log('authorization: ' + (performance.now() - now));
+
     // Validate every schema as a subgraph SDL before writing anything.
+    now = performance.now();
+
     const schemaErrors: string[] = [];
     const items: (UpdateSubgraphSchemaData & { name: string })[] = [];
-    for (const { subgraph, schema } of resolved) {
-      const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
-        labels: subgraph.labels,
-        namespaceId: namespace.id,
-      });
-      const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
 
+    /**
+     * @TODO:
+     *
+     * As of 2026-06-10 we only support v1, so instead of loading the federated graphs just to get that value we are
+     * going to pass no federated graphs to this method which will return the latest supported version. In the future,
+     * when we support different versions, we need to revisit this.
+     */
+    const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion([]);
+    for (const { subgraph, schema } of resolved) {
       let isEventDrivenGraph = false;
       let isV2Graph: boolean | undefined;
       try {
@@ -226,6 +233,7 @@ export function publishFederatedSubgraphs(
       });
     }
 
+    console.log('load federated graphs: ' + (performance.now() - now));
     if (schemaErrors.length > 0) {
       return {
         response: {
@@ -241,12 +249,17 @@ export function publishFederatedSubgraphs(
 
     // Phase 1: persist all schema versions and collect the deduplicated union of affected graphs/flags in a single
     // short transaction.
+    now = performance.now();
     const { affectedFederatedGraphs, affectedFeatureFlags, changedSubgraphNames } =
       await subgraphRepo.batchWriteAndCollect(items);
+    console.log('batch write and collect: ' + (performance.now() - now));
+    console.log('affected federated graphs: ' + affectedFederatedGraphs.length);
+    console.log('affected feature flags: ' + affectedFeatureFlags.length);
 
     // Phase 2: compose and deploy the affected graphs OUTSIDE the transaction. Composition is long-running (worker
     // composition, blob uploads, admission webhooks); holding a DB transaction open across it — for the whole batch —
     // would tie up a connection and risk timeouts and lock contention.
+    now = performance.now();
     const compositionService = new CompositionService(
       opts.db,
       authContext.organizationId,
@@ -265,6 +278,8 @@ export function publishFederatedSubgraphs(
         affectedFeatureFlags,
         isFeatureSubgraph: false,
       });
+
+    console.log('composition: ' + (performance.now() - now));
 
     // Re-fetch the affected federated graphs to pick up the updated composedSchemaVersionId for the webhook payloads.
     const updatedFederatedGraphs = (
@@ -299,6 +314,7 @@ export function publishFederatedSubgraphs(
     }
 
     // Audit log per subgraph that actually changed.
+    now = performance.now();
     const changedSet = new Set(changedSubgraphNames);
     for (const { subgraph } of resolved) {
       if (!changedSet.has(subgraph.name)) {
@@ -319,6 +335,7 @@ export function publishFederatedSubgraphs(
         targetNamespaceDisplayName: subgraph.namespace,
       });
     }
+    console.log('audit logs: ' + (performance.now() - now));
 
     const boundedLimit = req.limit === undefined ? maxRowLimitForChecks : clamp(req.limit, 1, maxRowLimitForChecks);
 

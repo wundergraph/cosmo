@@ -7,7 +7,6 @@ import {
   graphCompositionSubgraphs,
   schemaVersion,
   subgraphs,
-  targets,
   users,
 } from '../../db/schema.js';
 import { DateRange, GraphCompositionDTO } from '../../types/index.js';
@@ -56,7 +55,6 @@ export class GraphCompositionRepository {
       }
 
       const subgraphSchemaVersionIds = composedSubgraphs.map((subgraph) => subgraph.schemaVersionId);
-
       const previousComposition = (
         await tx
           .select({
@@ -126,8 +124,7 @@ export class GraphCompositionRepository {
         const updatedSubgraphs = composedSubgraphs.filter((subgraph) => {
           const prevSubgraph = prevCompositionSubgraphs.find((prevSubgraph) => prevSubgraph.id === subgraph.id);
           return (
-            prevSubgraph &&
-            prevSubgraph.schemaVersionId !== subgraphSchemaVersionIds[composedSubgraphs.indexOf(subgraph)]
+            prevSubgraph && prevSubgraph.schemaVersionId !== subgraphSchemaVersionIds[composedSubgraphs.indexOf(subgraph)]
           );
         });
 

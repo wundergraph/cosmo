@@ -260,8 +260,6 @@ export class SubgraphRepository {
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
-
-    // The collection of federated graphs that will be potentially re-composed
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
     let subgraphChanged = false;
     let labelChanged = false;
@@ -269,6 +267,7 @@ export class SubgraphRepository {
     await this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
 
+      // The collection of federated graphs that will be potentially re-composed
       const collected = await this.writeSchemaAndCollectAffected(tx, data);
       const { subgraph, affectedFederatedGraphById, affectedFeatureFlagIds } = collected;
       subgraphChanged = collected.subgraphChanged;
@@ -280,7 +279,6 @@ export class SubgraphRepository {
 
       // Resolve the affected feature flag DTOs.
       const affectedFeatureFlags = await this.resolveFeatureFlags(tx, data.namespaceId, affectedFeatureFlagIds);
-
       if (affectedFederatedGraphById.size === 0 && affectedFeatureFlags.length === 0) {
         return;
       }
@@ -1091,6 +1089,25 @@ export class SubgraphRepository {
     });
   }
 
+  public async getSubgraphsByNames(names: string[], namespaceId: string): Promise<SubgraphDTO[]> {
+    const uniqueNames = [...new Set(names)];
+
+    const subgraphs: SubgraphDTO[] = [];
+    while (uniqueNames.length > 0) {
+      const chunkOfNames = uniqueNames.splice(0, 100);
+      const conditions: (SQL<unknown> | undefined)[] = [
+        eq(schema.targets.organizationId, this.organizationId),
+        eq(schema.targets.namespaceId, namespaceId),
+        eq(schema.targets.type, 'subgraph'),
+        inArray(schema.targets.name, chunkOfNames),
+      ];
+
+      subgraphs.push(...(await this.getSubgraphsMatching({ conditions })));
+    }
+
+    return subgraphs;
+  }
+
   public getSubgraphsByTargetIds(ids: string[], rbac?: RBACEvaluator): Promise<SubgraphDTO[]> {
     const conditions: (SQL<unknown> | undefined)[] = [
       eq(schema.targets.organizationId, this.organizationId),
@@ -1179,7 +1196,9 @@ export class SubgraphRepository {
       .execute();
 
     // Transform the selected subgraphs into SubgraphDTO objects
-    return subgraphs.map((sg) => {
+    return subgraphs
+      .filter((sg, index, self) => self.findIndex((x) => x.targetId === sg.targetId) === index)
+      .map((sg) => {
       let proto: ProtoSubgraph | undefined;
       if (sg.type === 'grpc_plugin' || sg.type === 'grpc_service') {
         if (!sg.protoSchemaVersion) {

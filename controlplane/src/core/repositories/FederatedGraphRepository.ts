@@ -1,12 +1,5 @@
 /* eslint-disable no-labels */
-import { KeyObject, randomUUID } from 'node:crypto';
-import { PlainMessage } from '@bufbuild/protobuf';
-import { FeatureFlagRouterExecutionConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import {
-  CompositionError,
-  CompositionWarning,
-  DeploymentError,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { KeyObject } from 'node:crypto';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import {
   and,
@@ -28,10 +21,9 @@ import {
 } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { parse } from 'graphql';
 import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { uid } from 'uid/secure';
-import { CompositionOptions, Warning } from '@wundergraph/composition';
+import type { Warning } from '@wundergraph/composition';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
@@ -55,35 +47,20 @@ import {
   RouterRequestKeysDTO,
   ComposeAndDeployResult,
 } from '../../types/index.js';
-import { BlobStorage } from '../blobstorage/index.js';
 import {
-  BaseCompositionData,
   CompositionSubgraphRecord,
-  Composer,
-  ContractBaseCompositionData,
-  routerConfigToFeatureFlagExecutionConfig,
-  RouterConfigUploadError,
 } from '../composition/composer.js';
-import {
-  composeGraphsInWorker,
-  deserializeComposedGraphArtifact,
-  deserializeRouterExecutionConfig,
-} from '../composition/composeGraphs.pool.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
-import { AdmissionError } from '../services/AdmissionWebhookController.js';
 import {
   applyIdpNamespaceGate,
   checkIfLabelMatchersChanged,
   normalizeLabelMatchers,
   normalizeLabels,
 } from '../util.js';
-import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
-import { ClickHouseClient } from '../clickhouse/index.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { traced } from '../tracing.js';
 import type { CompositionService } from '../services/CompositionService.js';
 import { ContractRepository } from './ContractRepository.js';
-import { FeatureFlagRepository, SubgraphsToCompose } from './FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
