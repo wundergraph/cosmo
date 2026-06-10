@@ -1,0 +1,42 @@
+version: '1'
+
+execution_config:
+  file:
+    path: '/etc/cosmo/config.json'
+
+storage_providers:
+  redis:
+    - id: 'default'
+      urls:
+        - 'redis://redis:6379/0'
+      cluster_enabled: false
+
+entity_caching:
+  enabled: true
+  l1:
+    enabled: true
+    max_size: '100MB'
+  l2:
+    enabled: true
+    storage:
+      provider_id: 'default'
+      key_prefix: 'cosmo_entity_cache_pre_release'
+    circuit_breaker:
+      enabled: false
+
+headers:
+  subgraphs:
+    products:
+      request:
+        - op: propagate
+          named: Authorization
+
+graph:
+  token: ''
+
+log_level: debug
+dev_mode: true
+listen_addr: '0.0.0.0:3002'
+playground:
+  enabled: true
+  path: '/'

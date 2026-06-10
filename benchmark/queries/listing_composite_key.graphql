@@ -1,0 +1,10 @@
+query ListingCompositeKey($key: ListingKey!) {
+  listing(key: $key) {
+    sellerId
+    sku
+    title
+    price
+    currency
+    inStock
+  }
+}

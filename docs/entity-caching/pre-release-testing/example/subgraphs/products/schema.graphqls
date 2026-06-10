@@ -1,0 +1,37 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@key"])
+
+directive @openfed__entityCache(
+  maxAge: Int!
+  includeHeaders: Boolean = false
+  partialCacheLoad: Boolean = false
+  shadowMode: Boolean = false
+) on OBJECT
+
+directive @openfed__queryCache(
+  maxAge: Int!
+  includeHeaders: Boolean = false
+  shadowMode: Boolean = false
+) on FIELD_DEFINITION
+
+directive @openfed__cacheInvalidate on FIELD_DEFINITION
+
+directive @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
+
+directive @openfed__is(fields: String!) on ARGUMENT_DEFINITION
+
+type Query {
+  product(id: ID!): Product @openfed__queryCache(maxAge: 120)
+  productBySku(productSku: String! @openfed__is(fields: "sku")): Product @openfed__queryCache(maxAge: 120)
+  products(ids: [ID!]! @openfed__is(fields: "id")): [Product!]! @openfed__queryCache(maxAge: 120)
+}
+
+type Mutation {
+  updateProduct(id: ID!, name: String!): Product @openfed__cacheInvalidate
+  upsertProduct(id: ID!, sku: String!, name: String!): Product @openfed__cachePopulate(maxAge: 60)
+}
+
+type Product @key(fields: "id") @key(fields: "sku") @openfed__entityCache(maxAge: 120, partialCacheLoad: true) {
+  id: ID!
+  sku: String!
+  name: String!
+}
