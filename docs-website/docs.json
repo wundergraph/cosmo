@@ -192,6 +192,7 @@
                 "pages": [
                   "router/metrics-and-monitoring",
                   "router/metrics-and-monitoring/span-error-status",
+                  "router/metrics-and-monitoring/exemplars",
                   "router/metrics-and-monitoring/prometheus-metric-reference",
                   "router/metrics-and-monitoring/grafana"
                 ]

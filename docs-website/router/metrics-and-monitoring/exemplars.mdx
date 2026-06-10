@@ -1,0 +1,39 @@
+---
+title: "Exemplars"
+description: "Link aggregated metrics back to the traces that produced them by recording OpenTelemetry exemplars."
+sidebarTitle: "Exemplars"
+icon: "crosshairs"
+---
+
+Exemplars are example data points that the OpenTelemetry SDK attaches to aggregated metrics. Each exemplar records a single measurement together with the trace ID and span ID that were active when the measurement was taken. This links an aggregated metric value back to a concrete trace. A latency spike on a histogram can be traced to the exact request that produced it.
+
+See the [OpenTelemetry metrics SDK specification](https://opentelemetry.io/docs/specs/otel/metrics/sdk/#exemplar) for the full definition.
+
+## Exemplar filter
+
+An exemplar filter decides which measurements are eligible to record an exemplar. The router exposes the filter as `exemplar_filter`. It is configured independently for OTLP metrics and Prometheus metrics. The values follow the [OpenTelemetry exemplar filter specification](https://opentelemetry.io/docs/specs/otel/metrics/sdk/#exemplarfilter).
+
+| Filter | Description |
+|-|-|
+| `always_off` | Records no exemplars. This is the default. |
+| `trace_based` | Records exemplars only for measurements taken within the context of a sampled trace. |
+| `always_on` | Records exemplars for all measurements, regardless of trace context. |
+
+`trace_based` is the recommended setting for correlating metrics with traces. Every recorded exemplar points to a trace that was sampled and stored, so the link from a metric to its trace always resolves. `always_on` records exemplars even when no sampled trace is present, which produces exemplars with empty or unsampled trace context.
+
+## Configuration
+
+Exemplars are disabled by default (`always_off`). Set the filter under the OTLP and Prometheus metrics sections as needed.
+
+<CodeGroup>
+  ```yaml config.yaml
+  telemetry:
+    metrics:
+      otlp:
+        exemplar_filter: trace_based
+      prometheus:
+        exemplar_filter: trace_based
+  ```
+</CodeGroup>
+
+The filter can also be set through environment variables: `METRICS_OTLP_EXEMPLAR_FILTER` for OTLP and `PROMETHEUS_EXEMPLAR_FILTER` for Prometheus. See the [router configuration reference](/router/configuration#metrics) for all metric options.
