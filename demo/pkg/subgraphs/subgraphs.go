@@ -12,7 +12,10 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph_ext"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/viewer"
 	"github.com/wundergraph/cosmo/router/core"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
@@ -51,15 +54,18 @@ const (
 )
 
 type Ports struct {
-	Employees    int
-	Family       int
-	Hobbies      int
-	Products     int
-	ProductsFG   int
-	Test1        int
-	Availability int
-	Mood         int
-	Countries    int
+	Employees     int
+	Family        int
+	Hobbies       int
+	Products      int
+	ProductsFG    int
+	Test1         int
+	Availability  int
+	Mood          int
+	Countries     int
+	CacheGraph    int
+	CacheGraphExt int
+	Viewer        int
 }
 
 func (p *Ports) AsArray() []int {
@@ -73,6 +79,9 @@ func (p *Ports) AsArray() []int {
 		p.Availability,
 		p.Mood,
 		p.Countries,
+		p.CacheGraph,
+		p.CacheGraphExt,
+		p.Viewer,
 	}
 }
 
@@ -152,7 +161,7 @@ func newServer(name string, enableDebug bool, port int, schema graphql.Executabl
 	}))
 	return &http.Server{
 		Addr:    ":" + strconv.Itoa(port),
-		Handler: injector.HTTP(mux),
+		Handler: injector.Latency(injector.HTTP(mux)),
 	}
 }
 
@@ -160,7 +169,7 @@ func subgraphHandler(schema graphql.ExecutableSchema) http.Handler {
 	srv := NewDemoServer(schema)
 	mux := http.NewServeMux()
 	mux.Handle("/graphql", srv)
-	return injector.HTTP(mux)
+	return injector.Latency(injector.HTTP(mux))
 }
 
 type SubgraphOptions struct {
@@ -278,6 +287,18 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	}
 	if srv := newServer("countries", config.EnableDebug, config.Ports.Countries, countries.NewSchema(natsPubSubByProviderID)); srv != nil {
 		servers = append(servers, srv)
+	}
+	if srv := newServer("cachegraph", config.EnableDebug, config.Ports.CacheGraph, cachegraph.NewSchema()); srv != nil {
+		servers = append(servers, srv)
+	}
+	if srv := newServer("cachegraph-ext", config.EnableDebug, config.Ports.CacheGraphExt, cachegraph_ext.NewSchema()); srv != nil {
+		servers = append(servers, srv)
+	}
+	if config.Ports.Viewer != 0 {
+		servers = append(servers, &http.Server{
+			Addr:    ":" + strconv.Itoa(config.Ports.Viewer),
+			Handler: injector.Latency(injector.HTTP(viewer.NewHandler())),
+		})
 	}
 	return &Subgraphs{
 		servers: servers,
