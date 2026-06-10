@@ -14,6 +14,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function setGraphRouterCompatibilityVersion(
   opts: RouterOptions,
@@ -112,6 +113,16 @@ export function setGraphRouterCompatibilityVersion(
       };
     }
 
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
       await fedGraphRepo.updateRouterCompatibilityVersion(federatedGraph.id, version);
@@ -136,8 +147,7 @@ export function setGraphRouterCompatibilityVersion(
         tx,
         authContext.organizationId,
         logger,
-        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-        opts.blobStorage,
+        cbsq,
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
@@ -145,6 +155,8 @@ export function setGraphRouterCompatibilityVersion(
 
       return await compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph });
     });
+
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     return {
       response: {

@@ -23,13 +23,11 @@ import {
   OrganizationFeatures,
   SPLIT_CONFIG_LOADING_FEATURE_ID,
 } from '../../types/index.js';
-import { BlobStorage } from '../blobstorage/index.js';
 import {
   BaseCompositionData,
   Composer,
   ContractBaseCompositionData,
   routerConfigToFeatureFlagExecutionConfig,
-  RouterConfigUploadError,
 } from '../composition/composer.js';
 import {
   composeGraphsInWorker,
@@ -43,11 +41,10 @@ import { traced } from '../tracing.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { ComposeGraphsTaskResultItem, SerializedContractTagOptions } from '../composition/composeGraphs.types.js';
-import { AdmissionError } from './AdmissionWebhookController.js';
 import { ContractRepository } from './../repositories/ContractRepository.js';
 import { FeatureFlagRepository, SubgraphsToCompose } from './../repositories/FeatureFlagRepository.js';
-import { GraphCompositionRepository } from './../repositories/GraphCompositionRepository.js';
 import { SubgraphRepository } from './../repositories/SubgraphRepository.js';
+import { CompositionBlobStorageQueue } from './CompositionBlobStorageQueue.js';
 
 @traced
 export class CompositionService {
@@ -55,11 +52,7 @@ export class CompositionService {
     private db: PostgresJsDatabase<typeof schema>,
     private organizationId: string,
     private logger: FastifyBaseLogger,
-    private admissionConfig: {
-      webhookJWTSecret: string;
-      cdnBaseUrl: string;
-    },
-    private blobStorage: BlobStorage,
+    private blobStorageQueue: CompositionBlobStorageQueue,
     private chClient: ClickHouseClient | undefined,
     private webhookProxyUrl: string | undefined,
     private disableResolvabilityValidation: boolean | undefined,
@@ -563,7 +556,7 @@ export class CompositionService {
     const signatureSha256 = createHash('sha256').update(mapperVersion).update(mapperContent).digest('hex');
 
     // Upload the mapper file to the CDN
-    await this.blobStorage.putObject({
+    this.blobStorageQueue.enqueueBlobUpload({
       key: `${this.getManifestBasePath(federatedGraphId)}/mapper.json`,
       body: Buffer.from(mapperContent, 'utf8'),
       contentType: 'application/json; charset=utf-8',
@@ -600,21 +593,12 @@ export class CompositionService {
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     await Promise.all(
       federatedGraphs.map(async (graph) => {
-        try {
-          await this.blobStorage.deleteObject({
-            key: `${this.getManifestBasePath(graph.id)}/feature-flags/${featureFlag.name}.json`,
-          });
+        this.blobStorageQueue.enqueueBlobDeletion(
+          graph,
+          `${this.getManifestBasePath(graph.id)}/feature-flags/${featureFlag.name}.json`,
+        );
 
-          await this.updateMapperForFederatedGraph(graph.id);
-        } catch (err) {
-          if (err instanceof Error) {
-            deploymentErrors.push({
-              message: err.message,
-              namespace: graph.namespace,
-              federatedGraphName: graph.name,
-            });
-          }
-        }
+        await this.updateMapperForFederatedGraph(graph.id);
       }),
     );
 
@@ -754,16 +738,7 @@ export class CompositionService {
     splitConfig?: boolean;
   }): Promise<void> {
     const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
-    const composer = new Composer(
-      this.logger,
-      this.db,
-      fedGraphRepo,
-      new SubgraphRepository(this.logger, this.db, this.organizationId),
-      new ContractRepository(this.logger, this.db, this.organizationId),
-      new GraphCompositionRepository(this.logger, this.db),
-      this.chClient,
-      this.webhookProxyUrl,
-    );
+    const composer = new Composer(this.logger, this.db, this.organizationId, this.chClient, this.webhookProxyUrl);
 
     parentLoop: for (const { federatedGraph, results } of graphAndCompositionResults) {
       /*
@@ -912,8 +887,6 @@ export class CompositionService {
           actorId,
           graph,
           baseCompositionData.featureFlagRouterExecutionConfigByFeatureFlagName,
-          composer,
-          result,
         );
       } else {
         if (!baseCompositionData.routerExecutionConfig) {
@@ -935,7 +908,6 @@ export class CompositionService {
           schemaVersionId: baseCompositionData.schemaVersionId,
           featureFlagRouterExecutionConfigByFeatureFlagName:
             baseCompositionData.featureFlagRouterExecutionConfigByFeatureFlagName,
-          composer,
           result,
           splitConfig,
         });
@@ -961,7 +933,6 @@ export class CompositionService {
           graph: contractDTO,
           schemaVersionId,
           featureFlagRouterExecutionConfigByFeatureFlagName,
-          composer,
           result,
           splitConfig,
         });
@@ -979,7 +950,6 @@ export class CompositionService {
     graph,
     schemaVersionId,
     featureFlagRouterExecutionConfigByFeatureFlagName,
-    composer,
     result,
     splitConfig,
   }: {
@@ -988,21 +958,15 @@ export class CompositionService {
     graph: FederatedGraphDTO;
     schemaVersionId: string;
     featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
-    composer: Composer;
     result: ComposeAndDeployResult;
     splitConfig: boolean;
   }) {
     const manifestBasePath = this.getManifestBasePath(graph.id);
     const readyPathOverride = this.getLatestPath(graph);
     if (readyPathOverride) {
-      const { errors: uploadErrors } = await composer.composeAndUploadRouterConfig({
-        admissionConfig: {
-          cdnBaseUrl: this.admissionConfig.cdnBaseUrl,
-          jwtSecret: this.admissionConfig.webhookJWTSecret,
-        },
+      this.blobStorageQueue.enqueueRouterConfigUpload(graph, {
         baseCompositionRouterExecutionConfig: routerExecutionConfig,
         baseCompositionSchemaVersionId: schemaVersionId,
-        blobStorage: this.blobStorage,
         featureFlagRouterExecutionConfigByFeatureFlagName: splitConfig
           ? new Map<string, FeatureFlagRouterExecutionConfig>() // Do not populate feature flags when the router config is being split
           : featureFlagRouterExecutionConfigByFeatureFlagName,
@@ -1022,16 +986,6 @@ export class CompositionService {
       if (splitConfig) {
         await this.saveRouterConfigHash(graph.id, undefined, routerExecutionConfig);
       }
-
-      result.deploymentErrors.push(
-        ...uploadErrors
-          .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-          .map((e) => ({
-            federatedGraphName: graph.name,
-            namespace: graph.namespace,
-            message: e.message ?? '',
-          })),
-      );
     } else {
       result.deploymentErrors.push({
         message: `Invalid router compatibility version "${graph.routerCompatibilityVersion}".`,
@@ -1041,13 +995,7 @@ export class CompositionService {
     }
 
     if (splitConfig && featureFlagRouterExecutionConfigByFeatureFlagName.size > 0) {
-      await this.deployFeatureFlags(
-        actorId,
-        graph,
-        featureFlagRouterExecutionConfigByFeatureFlagName,
-        composer,
-        result,
-      );
+      await this.deployFeatureFlags(actorId, graph, featureFlagRouterExecutionConfigByFeatureFlagName);
     }
   }
 
@@ -1055,8 +1003,6 @@ export class CompositionService {
     actorId: string,
     graph: FederatedGraphDTO,
     featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>,
-    composer: Composer,
-    result: ComposeAndDeployResult,
   ): Promise<void> {
     const baseManifestPath = this.getManifestBasePath(graph.id);
     for (const [
@@ -1068,14 +1014,9 @@ export class CompositionService {
         compatibilityVersion: graph.routerCompatibilityVersion,
       });
 
-      const { errors: uploadErrors } = await composer.composeAndUploadRouterConfig({
-        admissionConfig: {
-          cdnBaseUrl: this.admissionConfig.cdnBaseUrl,
-          jwtSecret: this.admissionConfig.webhookJWTSecret,
-        },
+      this.blobStorageQueue.enqueueRouterConfigUpload(graph, {
         baseCompositionRouterExecutionConfig: routerExecutionConfig,
-        baseCompositionSchemaVersionId: '',
-        blobStorage: this.blobStorage,
+        baseCompositionSchemaVersionId: graph.composedSchemaVersionId || '',
         featureFlagRouterExecutionConfigByFeatureFlagName: new Map(),
         federatedGraphId: graph.id,
         organizationId: this.organizationId,
@@ -1089,15 +1030,6 @@ export class CompositionService {
       });
 
       await this.saveRouterConfigHash(graph.id, featureFlagName, routerExecutionConfig);
-      result.deploymentErrors.push(
-        ...uploadErrors
-          .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-          .map((e) => ({
-            federatedGraphName: graph.name,
-            namespace: graph.namespace,
-            message: e.message ?? '',
-          })),
-      );
     }
   }
 

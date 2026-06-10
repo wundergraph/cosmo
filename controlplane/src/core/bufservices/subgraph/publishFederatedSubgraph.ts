@@ -37,6 +37,7 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function publishFederatedSubgraph(
   opts: RouterOptions,
@@ -562,6 +563,16 @@ export function publishFederatedSubgraph(
       }
     }
 
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs, subgraphChanged } =
       await opts.db.transaction((tx) => {
         const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
@@ -569,8 +580,7 @@ export function publishFederatedSubgraph(
           tx,
           authContext.organizationId,
           logger,
-          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-          opts.blobStorage,
+          cbsq,
           opts.chClient,
           opts.webhookProxyUrl,
           req.disableResolvabilityValidation,
@@ -607,6 +617,8 @@ export function publishFederatedSubgraph(
           compositionService,
         );
       });
+
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     // if this subgraph is part of a proposal, mark the proposal subgraph as published
     // and if all proposal subgraphs are published, collect proposal details for the webhook

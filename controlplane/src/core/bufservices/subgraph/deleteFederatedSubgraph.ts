@@ -18,6 +18,7 @@ import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookSe
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function deleteFederatedSubgraph(
   opts: RouterOptions,
@@ -125,6 +126,16 @@ export function deleteFederatedSubgraph(
       }
     }
 
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
     const { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
         const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
@@ -194,8 +205,7 @@ export function deleteFederatedSubgraph(
           tx,
           authContext.organizationId,
           logger,
-          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-          opts.blobStorage,
+          cbsq,
           opts.chClient,
           opts.webhookProxyUrl,
           req.disableResolvabilityValidation,
@@ -228,6 +238,8 @@ export function deleteFederatedSubgraph(
 
         return { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings };
       });
+
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     // if this subgraph is part of a proposal, mark the proposal subgraph as published
     // and if all proposal subgraphs are published, collect proposal details for the webhook

@@ -14,9 +14,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
-import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
@@ -452,19 +450,8 @@ export function updateProposal(
       const schemaLintRepo = new SchemaLintRepository(opts.db);
       const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
       const schemaCheckRepo = new SchemaCheckRepository(opts.db);
-      const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
-      const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
       const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
-      const composer = new Composer(
-        logger,
-        opts.db,
-        fedGraphRepo,
-        subgraphRepo,
-        contractRepo,
-        graphCompostionRepo,
-        opts.chClient,
-        opts.webhookProxyUrl,
-      );
+      const composer = new Composer(logger, opts.db, authContext.organizationId, opts.chClient, opts.webhookProxyUrl);
 
       const {
         response,

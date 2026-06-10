@@ -2328,16 +2328,7 @@ export class SubgraphRepository {
       schemaCheckSubgraphId,
     });
 
-    const composer = new Composer(
-      this.logger,
-      this.db,
-      fedGraphRepo,
-      subgraphRepo,
-      contractRepo,
-      graphCompostionRepo,
-      chClient,
-      webhookProxyUrl,
-    );
+    const composer = new Composer(this.logger, this.db, this.organizationId, chClient, webhookProxyUrl);
 
     const checkSubgraphs = new Map<string, CheckSubgraph>();
     checkSubgraphs.set(subgraphName, {

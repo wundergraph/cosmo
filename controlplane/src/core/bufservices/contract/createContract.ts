@@ -13,6 +13,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidGraphName, isValidSchemaTags } from '../../util.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function createContract(
   opts: RouterOptions,
@@ -182,12 +183,21 @@ export function createContract(
         targetNamespaceDisplayName: contractGraph.namespace,
       });
 
+      const cbsq = new CompositionBlobStorageQueue(
+        logger,
+        tx,
+        opts.blobStorage,
+        authContext.organizationId,
+        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+        opts.chClient,
+        opts.webhookProxyUrl,
+      );
+
       const compositionService = new CompositionService(
         tx,
         authContext.organizationId,
         logger,
-        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-        opts.blobStorage,
+        cbsq,
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
@@ -198,6 +208,8 @@ export function createContract(
           actorId: authContext.userId,
           federatedGraph: { ...contractGraph, contract },
         });
+
+      deploymentErrors.push(...(await cbsq.drainQueue()));
 
       return {
         response: {

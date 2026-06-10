@@ -12,6 +12,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function deleteFeatureFlag(
   opts: RouterOptions,
@@ -66,21 +67,28 @@ export function deleteFeatureFlag(
       throw new UnauthorizedError();
     }
 
-    const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction(async (tx) => {
-      const auditLogRepo = new AuditLogRepository(tx);
-      const featureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
+    const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction((tx) => {
       const compositionService = new CompositionService(
         tx,
         authContext.organizationId,
         logger,
-        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-        opts.blobStorage,
+        cbsq,
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
       );
 
-      const result = await compositionService.deleteFeatureFlag({
+      return compositionService.deleteFeatureFlag({
         actorId: authContext.userId,
         featureFlag,
         authorize(graph) {
@@ -92,23 +100,24 @@ export function deleteFeatureFlag(
           });
         },
       });
+    });
 
-      await auditLogRepo.addAuditLog({
-        organizationId: authContext.organizationId,
-        organizationSlug: authContext.organizationSlug,
-        auditAction: 'feature_flag.deleted',
-        action: 'deleted',
-        actorId: authContext.userId,
-        auditableType: 'feature_flag',
-        auditableDisplayName: featureFlag.name,
-        apiKeyName: authContext.apiKeyName,
-        actorDisplayName: authContext.userDisplayName,
-        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-        targetNamespaceId: namespace.id,
-        targetNamespaceDisplayName: namespace.name,
-      });
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
-      return result;
+    const auditLogRepo = new AuditLogRepository(opts.db);
+    await auditLogRepo.addAuditLog({
+      organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
+      auditAction: 'feature_flag.deleted',
+      action: 'deleted',
+      actorId: authContext.userId,
+      auditableType: 'feature_flag',
+      auditableDisplayName: featureFlag.name,
+      apiKeyName: authContext.apiKeyName,
+      actorDisplayName: authContext.userDisplayName,
+      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+      targetNamespaceId: namespace.id,
+      targetNamespaceDisplayName: namespace.name,
     });
 
     return {

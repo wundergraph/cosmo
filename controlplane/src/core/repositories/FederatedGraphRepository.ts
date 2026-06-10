@@ -1453,17 +1453,7 @@ export class FederatedGraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
       const featureFlagRepo = new FeatureFlagRepository(this.logger, tx, this.organizationId);
-      const graphCompositionRepo = new GraphCompositionRepository(this.logger, tx);
-      const composer = new Composer(
-        this.logger,
-        this.db,
-        fedGraphRepo,
-        subgraphRepo,
-        contractRepo,
-        graphCompositionRepo,
-        chClient,
-        webhookProxyUrl,
-      );
+      const composer = new Composer(this.logger, this.db, this.organizationId, chClient, webhookProxyUrl);
 
       const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
       const allCompositionErrors: PlainMessage<CompositionError>[] = [];

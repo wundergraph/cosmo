@@ -24,6 +24,7 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 /**
  * PublishFederatedSubgraphs publishes the schemas of multiple existing subgraphs (and feature subgraphs) in a single
@@ -247,12 +248,21 @@ export function publishFederatedSubgraphs(
     // Phase 2: compose and deploy the affected graphs OUTSIDE the transaction. Composition is long-running (worker
     // composition, blob uploads, admission webhooks); holding a DB transaction open across it — for the whole batch —
     // would tie up a connection and risk timeouts and lock contention.
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
     const compositionService = new CompositionService(
       opts.db,
       authContext.organizationId,
       logger,
-      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-      opts.blobStorage,
+      cbsq,
       opts.chClient,
       opts.webhookProxyUrl,
       req.disableResolvabilityValidation,
@@ -265,6 +275,8 @@ export function publishFederatedSubgraphs(
         affectedFeatureFlags,
         isFeatureSubgraph: false,
       });
+
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     // Re-fetch the affected federated graphs to pick up the updated composedSchemaVersionId for the webhook payloads.
     const updatedFederatedGraphs = (

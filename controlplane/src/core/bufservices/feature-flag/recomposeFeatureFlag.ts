@@ -14,6 +14,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { maxRowLimitForChecks } from '../../constants.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function recomposeFeatureFlag(
   opts: RouterOptions,
@@ -89,14 +90,23 @@ export function recomposeFeatureFlag(
       throw new UnauthorizedError();
     }
 
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
     // Compose and deploy the feature flag
     const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction((tx) => {
       const compositionService = new CompositionService(
         tx,
         authContext.organizationId,
         logger,
-        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-        opts.blobStorage,
+        cbsq,
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
@@ -107,6 +117,8 @@ export function recomposeFeatureFlag(
         featureFlag,
       });
     });
+
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     const auditLogRepo = new AuditLogRepository(opts.db);
     await auditLogRepo.addAuditLog({
