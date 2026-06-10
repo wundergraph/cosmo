@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.175.0](https://github.com/wundergraph/cosmo/compare/studio@0.174.2...studio@0.175.0) (2026-06-10)
+
+### Features
+
+* new post-signup screen for accepting & joining an org ([#2897](https://github.com/wundergraph/cosmo/issues/2897)) ([4bd4346](https://github.com/wundergraph/cosmo/commit/4bd43465c25b7e03b11da6080f8fc7187ed9d327)) (@comatory)
+
+## [0.174.2](https://github.com/wundergraph/cosmo/compare/studio@0.174.1...studio@0.174.2) (2026-06-08)
+
+**Note:** Version bump only for package studio
+
+## [0.174.1](https://github.com/wundergraph/cosmo/compare/studio@0.174.0...studio@0.174.1) (2026-06-06)
+
+### Bug Fixes
+
+* resolve high severity vulnerabilities ([#2914](https://github.com/wundergraph/cosmo/issues/2914)) ([9fa886b](https://github.com/wundergraph/cosmo/commit/9fa886b1eba9c22cea103b8fcee8828030f9f54f)) (@pepol)
+
 # [0.174.0](https://github.com/wundergraph/cosmo/compare/studio@0.173.0...studio@0.174.0) (2026-06-01)
 
 ### Features
