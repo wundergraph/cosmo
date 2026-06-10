@@ -341,6 +341,15 @@ type RequestHeaderRule struct {
 	Expression string `yaml:"expression"`
 	// ValueFrom is deprecated in favor of Expression. Use Expression instead.
 	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
+	// FromFile sources the header value from a file's contents. The file is
+	// loaded into memory and refreshed at RefreshInterval, so reads on the
+	// request hot path do not touch disk.
+	FromFile *FileHeaderSource `yaml:"from_file,omitempty"`
+}
+
+type FileHeaderSource struct {
+	Path            string        `yaml:"path"`
+	RefreshInterval time.Duration `yaml:"refresh_interval,omitempty"`
 }
 
 func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {
