@@ -188,7 +188,17 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 		return nil, fmt.Errorf("failed to execute GraphQL query: %w", err)
 	}
 
-	return responseJSON, nil
+	// Convert the GraphQL response back to proto JSON. This is the inverse of the request-path
+	// transform: the subgraph emits bare GraphQL enum values (e.g. "HAPPY"), but the Vanguard
+	// transcoder parses this JSON against the method's output descriptor, which only knows the
+	// proto-prefixed value names (e.g. "MOOD_HAPPY"). Without re-adding the prefix the enum is
+	// dropped on the binary/gRPC wire and falls back to *_UNSPECIFIED on the JSON wire.
+	protoResponseJSON, err := h.convertGraphQLResponseToProtoJSON(serviceName, methodName, responseJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert GraphQL response to proto JSON: %w", err)
+	}
+
+	return protoResponseJSON, nil
 }
 
 // convertProtoJSONToGraphQLVariables processes proto JSON for GraphQL compatibility.
@@ -410,6 +420,159 @@ func toUpperSnakeCase(s string) string {
 		result.WriteRune(r)
 	}
 	return strings.ToUpper(result.String())
+}
+
+// convertGraphQLResponseToProtoJSON is the inverse of convertProtoJSONToGraphQLVariables on the
+// response path. It walks the GraphQL response data tree using the method's OUTPUT message
+// descriptor and re-adds the proto enum type prefix to every bare GraphQL enum value so the
+// downstream Vanguard transcoder can map it to the correct proto enum value
+// (e.g. "HAPPY" -> "MOOD_HAPPY").
+//
+// Why only enums: every other GraphQL scalar already round-trips as valid proto3-JSON. Enums are
+// the only type whose GraphQL representation (bare name) differs from the proto3-JSON canonical
+// form (prefixed name) AND which the parser strictly rejects on mismatch.
+//
+// Like the request path, this is a no-op when the proto schema isn't available (e.g. in tests
+// without a loaded descriptor) so behavior degrades gracefully to passthrough.
+func (h *RPCHandler) convertGraphQLResponseToProtoJSON(serviceName, methodName string, responseJSON json.RawMessage) (json.RawMessage, error) {
+	if len(responseJSON) == 0 {
+		return json.RawMessage("{}"), nil
+	}
+
+	var responseData any
+	if err := json.Unmarshal(responseJSON, &responseData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal GraphQL response JSON: %w", err)
+	}
+
+	// Without a proto schema we can't know which fields are enums, so return as-is.
+	if h.protoLoader == nil {
+		return responseJSON, nil
+	}
+
+	method, err := h.protoLoader.GetMethod(serviceName, methodName)
+	if err != nil {
+		h.logger.Debug("method not found in proto loader, skipping response transformations",
+			zap.String("service", serviceName),
+			zap.String("method", methodName),
+			zap.Error(err))
+		return responseJSON, nil
+	}
+
+	messageDesc := method.OutputMessageDescriptor
+	if messageDesc == nil {
+		h.logger.Warn("output message descriptor is nil, skipping response transformations",
+			zap.String("service", serviceName),
+			zap.String("method", methodName))
+		return responseJSON, nil
+	}
+
+	converted := h.addProtoEnumPrefixesRecursive(responseData, messageDesc)
+
+	protoJSON, err := json.Marshal(converted)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal proto JSON response: %w", err)
+	}
+
+	return protoJSON, nil
+}
+
+// addProtoEnumPrefixesRecursive walks a decoded JSON value against a message descriptor and
+// rewrites enum fields to their proto-prefixed value names. Field names are preserved as-is:
+// protographic emits proto3-JSON camelCase that already matches the descriptor's JSON names.
+func (h *RPCHandler) addProtoEnumPrefixesRecursive(data any, messageDesc protoreflect.MessageDescriptor) any {
+	switch v := data.(type) {
+	case map[string]any:
+		result := make(map[string]any, len(v))
+		for key, value := range v {
+			var fieldDesc protoreflect.FieldDescriptor
+			if messageDesc != nil {
+				fieldDesc = getFieldByJSONName(messageDesc, key)
+			}
+			result[key] = h.addProtoEnumPrefixToValue(value, fieldDesc)
+		}
+		return result
+	case []any:
+		result := make([]any, len(v))
+		for i, item := range v {
+			result[i] = h.addProtoEnumPrefixesRecursive(item, messageDesc)
+		}
+		return result
+	default:
+		return data
+	}
+}
+
+// addProtoEnumPrefixToValue handles a single field value: enums get the prefix re-added (handling
+// both scalar and repeated enums), nested messages recurse with their own descriptor, and any other
+// value passes through unchanged.
+func (h *RPCHandler) addProtoEnumPrefixToValue(value any, fieldDesc protoreflect.FieldDescriptor) any {
+	if fieldDesc == nil {
+		return value
+	}
+
+	if enumDesc := getEnumType(fieldDesc); enumDesc != nil {
+		switch v := value.(type) {
+		case []any: // repeated enum
+			result := make([]any, len(v))
+			for i, item := range v {
+				result[i] = h.addProtoEnumPrefixToValue(item, fieldDesc)
+			}
+			return result
+		case string:
+			return h.mapGraphQLEnumToProtoValue(v, enumDesc)
+		case nil:
+			// A null/absent enum maps to the proto zero value (*_UNSPECIFIED), the inverse
+			// of the request path stripping *_UNSPECIFIED to "".
+			return h.unspecifiedEnumValueName(enumDesc)
+		default:
+			return value
+		}
+	}
+
+	if msgDesc := getMessageType(fieldDesc); msgDesc != nil {
+		return h.addProtoEnumPrefixesRecursive(value, msgDesc)
+	}
+
+	return value
+}
+
+// mapGraphQLEnumToProtoValue re-adds the proto enum type prefix to a bare GraphQL enum value.
+//
+// It is descriptor-driven: it iterates the enum's declared values and strips each one's prefix
+// with the same stripEnumPrefixWithType used on the request path, then matches against the GraphQL
+// value. Driving the match off the descriptor (rather than recomputing the prefix from the value)
+// keeps request and response paths symmetric and sidesteps any case-conversion mismatch between
+// protographic's value naming and the router's toUpperSnakeCase.
+//
+// On a lookup miss the value is returned unchanged. The downstream proto3-JSON parse then rejects
+// the unknown enum name with a hard error, which is the desired outcome - far better than silently
+// substituting a wrong value or dropping the field.
+func (h *RPCHandler) mapGraphQLEnumToProtoValue(graphqlValue string, enumDesc protoreflect.EnumDescriptor) string {
+	if graphqlValue == "" {
+		return h.unspecifiedEnumValueName(enumDesc)
+	}
+
+	enumTypeName := string(enumDesc.Name())
+	values := enumDesc.Values()
+	for i := 0; i < values.Len(); i++ {
+		protoName := string(values.Get(i).Name())
+		if stripEnumPrefixWithType(protoName, enumTypeName) == graphqlValue {
+			return protoName
+		}
+	}
+
+	h.logger.Warn("no proto enum value matched GraphQL response enum value",
+		zap.String("enum", enumTypeName),
+		zap.String("graphql_value", graphqlValue))
+	return graphqlValue
+}
+
+// unspecifiedEnumValueName returns the name of the enum's zero value (proto convention: *_UNSPECIFIED).
+func (h *RPCHandler) unspecifiedEnumValueName(enumDesc protoreflect.EnumDescriptor) string {
+	if zero := enumDesc.Values().ByNumber(0); zero != nil {
+		return string(zero.Name())
+	}
+	return ""
 }
 
 // makeCriticalGraphQLError creates a Connect error for GraphQL errors with no data (complete failure).
