@@ -19,7 +19,7 @@ func TestOverrideURLConfig(t *testing.T) {
 			},
 		}),
 	}
-	router, err := NewRouter(options...)
+	router, err := NewRouter(t.Context(), options...)
 	assert.Nil(t, err)
 
 	routerConfig := &nodev1.RouterConfig{
@@ -83,7 +83,7 @@ func TestApqAndSafelistErrors(t *testing.T) {
 			},
 		}),
 	}
-	_, err := NewRouter(options...)
+	_, err := NewRouter(t.Context(), options...)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "automatic persisted queries and safelist cannot be enabled at the same time (as APQ would permit queries that are not in the safelist)")
 }
@@ -101,7 +101,7 @@ func TestOverridesConfig(t *testing.T) {
 			},
 		}),
 	}
-	router, err := NewRouter(options...)
+	router, err := NewRouter(t.Context(), options...)
 	assert.Nil(t, err)
 
 	routerConfig := &nodev1.RouterConfig{
@@ -174,7 +174,7 @@ func TestOverridesPriority(t *testing.T) {
 			},
 		}),
 	}
-	router, err := NewRouter(options...)
+	router, err := NewRouter(t.Context(), options...)
 	assert.Nil(t, err)
 
 	routerConfig := &nodev1.RouterConfig{
@@ -240,7 +240,7 @@ func TestTrafficShapingRules(t *testing.T) {
 		options := []Option{
 			WithSubgraphTransportOptions(NewSubgraphTransportOptions(config)),
 		}
-		router, err := NewRouter(options...)
+		router, err := NewRouter(t.Context(), options...)
 		assert.Nil(t, err)
 
 		// Assert that configs are properly loaded from defaults when empty
@@ -287,7 +287,7 @@ func TestTrafficShapingRules(t *testing.T) {
 			WithSubgraphTransportOptions(NewSubgraphTransportOptions(config)),
 		}
 
-		router, err := NewRouter(options...)
+		router, err := NewRouter(t.Context(), options...)
 		assert.Nil(t, err)
 
 		// Assert that configs are properly loaded over defaults when populated
@@ -317,7 +317,7 @@ func TestTrafficShapingRules(t *testing.T) {
 		options := []Option{
 			WithSubgraphTransportOptions(NewSubgraphTransportOptions(config)),
 		}
-		router, err := NewRouter(options...)
+		router, err := NewRouter(t.Context(), options...)
 		assert.Nil(t, err)
 
 		// Loads the populated value
@@ -362,7 +362,7 @@ func TestTrafficShapingRules(t *testing.T) {
 		options := []Option{
 			WithSubgraphTransportOptions(NewSubgraphTransportOptions(config)),
 		}
-		router, err := NewRouter(options...)
+		router, err := NewRouter(t.Context(), options...)
 		assert.Nil(t, err)
 
 		// Assert that configs are loaded for real, zero and absent values.
