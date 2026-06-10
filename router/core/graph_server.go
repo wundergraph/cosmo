@@ -100,20 +100,22 @@ type (
 		inFlightRequests *atomic.Uint64
 		// graphMuxList contains all graph muxes of this graph server.
 		// It's keyed by mux name (feature flag name or empty string for base graph).
-		graphMuxList               map[string]*graphMux
-		graphMuxListLock           sync.Mutex
-		runtimeMetrics             *rmetric.RuntimeMetrics
-		otlpEngineMetrics          *rmetric.EngineMetrics
-		prometheusEngineMetrics    *rmetric.EngineMetrics
-		connectionMetrics          *rmetric.ConnectionMetrics
-		instanceData               InstanceData
-		pubSubProviders            []datasource.Provider
-		traceDialer                *TraceDialer
-		connector                  *grpcconnector.Connector
-		circuitBreakerManager      *circuit.Manager
-		headerPropagation          *HeaderPropagation
-		entityCacheInstances       map[string]resolve.LoaderCache
-		entityCacheKeyInterceptors []EntityCacheKeyInterceptor
+		graphMuxList                 map[string]*graphMux
+		graphMuxListLock             sync.Mutex
+		runtimeMetrics               *rmetric.RuntimeMetrics
+		otlpEngineMetrics            *rmetric.EngineMetrics
+		prometheusEngineMetrics      *rmetric.EngineMetrics
+		connectionMetrics            *rmetric.ConnectionMetrics
+		otlpEntityCacheMetrics       *rmetric.EntityCacheMetrics
+		prometheusEntityCacheMetrics *rmetric.EntityCacheMetrics
+		instanceData                 InstanceData
+		pubSubProviders              []datasource.Provider
+		traceDialer                  *TraceDialer
+		connector                    *grpcconnector.Connector
+		circuitBreakerManager        *circuit.Manager
+		headerPropagation            *HeaderPropagation
+		entityCacheInstances         map[string]resolve.LoaderCache
+		entityCacheKeyInterceptors   []EntityCacheKeyInterceptor
 	}
 )
 
@@ -301,6 +303,10 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 
 	if err := s.setupEngineStatistics(mappedMetricAttributes); err != nil {
 		return nil, fmt.Errorf("failed to setup engine statistics: %w", err)
+	}
+
+	if err := s.setupEntityCacheMetrics(mappedMetricAttributes); err != nil {
+		return nil, fmt.Errorf("failed to setup entity cache metrics: %w", err)
 	}
 
 	if s.registrationInfo != nil {
@@ -725,6 +731,30 @@ func (s *graphServer) logEntityCacheOverrideIssues(
 			}
 		}
 	}
+}
+
+func (s *graphServer) setupEntityCacheMetrics(baseAttributes []attribute.KeyValue) error {
+	if !s.entityCachingConfig.Enabled {
+		return nil
+	}
+
+	if s.metricConfig.OpenTelemetry.EntityCachingStats {
+		var err error
+		s.otlpEntityCacheMetrics, err = rmetric.NewEntityCacheMetrics(s.logger, baseAttributes, s.otlpMeterProvider)
+		if err != nil {
+			return fmt.Errorf("failed to create entity cache metrics for OTLP: %w", err)
+		}
+	}
+
+	if s.metricConfig.Prometheus.EntityCachingStats {
+		var err error
+		s.prometheusEntityCacheMetrics, err = rmetric.NewEntityCacheMetrics(s.logger, baseAttributes, s.promMeterProvider)
+		if err != nil {
+			return fmt.Errorf("failed to create entity cache metrics for Prometheus: %w", err)
+		}
+	}
+
+	return nil
 }
 
 type graphMux struct {
@@ -1893,6 +1923,12 @@ func (s *graphServer) buildGraphMux(
 			GlobalKeyPrefix: s.entityCachingConfig.GlobalCacheKeyPrefix,
 			KeyInterceptors: s.entityCacheKeyInterceptors,
 		}
+
+		for _, m := range []*rmetric.EntityCacheMetrics{s.otlpEntityCacheMetrics, s.prometheusEntityCacheMetrics} {
+			if m != nil {
+				handlerOpts.EntityCaching.Metrics = append(handlerOpts.EntityCaching.Metrics, m)
+			}
+		}
 		// TODO: Add entity analytics exporter to handler options here once analytics pipeline is implemented (see ENTITY_CACHE_ANALYTICS.md).
 	}
 
@@ -2293,7 +2329,21 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	if s.otlpEntityCacheMetrics != nil {
+		if err := s.otlpEntityCacheMetrics.Shutdown(); err != nil {
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.prometheusEntityCacheMetrics != nil {
+		if err := s.prometheusEntityCacheMetrics.Shutdown(); err != nil {
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
 	// Shutdown graphs muxes, which are not reused by the next graph server, to release resources
+
+	// Shutdown all graphs muxes to release resources
 	// e.g. planner cache
 	s.graphMuxListLock.Lock()
 	defer s.graphMuxListLock.Unlock()
