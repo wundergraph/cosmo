@@ -24,6 +24,7 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { withSpan } from '../../tracing.js';
 
 /**
  * PublishFederatedSubgraphs publishes the schemas of multiple existing subgraphs (and feature subgraphs) in a single
@@ -114,18 +115,12 @@ export function publishFederatedSubgraphs(
     }
 
     // Resolve every requested subgraph; all of them must already exist.
-    let now = performance.now();
     const resolved: { subgraph: SubgraphDTO; schema: string }[] = [];
-    const notFound: string[] = [];
     const typeErrors: string[] = [];
-    // for (const entry of requestedEntries) {
-    for (const subgraph of await subgraphRepo.getSubgraphsByNames(requestedEntries.map((e) => e.name), namespace.id)) {
-      // const subgraph = await subgraphRepo.byName(entry.name, req.namespace);
-      // if (!subgraph) {
-      //   notFound.push(entry.name);
-      //   continue;
-      // }
-
+    for (const subgraph of await subgraphRepo.getSubgraphsByNames(
+      requestedEntries.map((e) => e.name),
+      namespace.id,
+    )) {
       if (subgraph.type === 'grpc_plugin') {
         typeErrors.push(
           `Subgraph "${subgraph.name}" is a plugin. Please use the 'wgc router plugin publish' command to publish it.`,
@@ -139,18 +134,22 @@ export function publishFederatedSubgraphs(
         continue;
       }
 
-      const schema = requestedEntries.find((re) => re.name === subgraph.name)!.schema;
-      // const schema = entry.schema;
+      const schema = requestedEntries
+        .find((re) => re.name.toLowerCase() === subgraph.name.toLowerCase())!
+        .schema.trimEnd();
+
       resolved.push({ subgraph, schema });
     }
 
-    console.log('load subgraphs: ' + (performance.now() - now));
+    const resolvedSubgraphNames = new Set(resolved.map((re) => re.subgraph.name));
+    const requestedSubgraphNames = new Set(requestedEntries.map((re) => re.name));
+    const notFoundSubgraphNames = [...requestedSubgraphNames.difference(resolvedSubgraphNames)];
 
-    if (notFound.length > 0) {
+    if (notFoundSubgraphNames.length > 0) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `The following subgraphs do not exist in the namespace "${req.namespace}": ${notFound.join(', ')}`,
+          details: `The following subgraphs do not exist in the namespace "${req.namespace}": ${notFoundSubgraphNames.join(', ')}`,
         },
         compositionErrors: [],
         deploymentErrors: [],
@@ -172,18 +171,15 @@ export function publishFederatedSubgraphs(
       };
     }
 
-    now = performance.now();
-    for (const { subgraph } of resolved) {
-      if (!authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
-        throw new UnauthorizedError();
+    withSpan('RBACEvaluator.hasSubGraphWriteAccess', () => {
+      for (const { subgraph } of resolved) {
+        if (!authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
+          throw new UnauthorizedError();
+        }
       }
-    }
-
-    console.log('authorization: ' + (performance.now() - now));
+    });
 
     // Validate every schema as a subgraph SDL before writing anything.
-    now = performance.now();
-
     const schemaErrors: string[] = [];
     const items: (UpdateSubgraphSchemaData & { name: string })[] = [];
 
@@ -230,10 +226,10 @@ export function publishFederatedSubgraphs(
         updatedBy: authContext.userId,
         namespaceId: namespace.id,
         isV2Graph,
+        subgraph,
       });
     }
 
-    console.log('load federated graphs: ' + (performance.now() - now));
     if (schemaErrors.length > 0) {
       return {
         response: {
@@ -249,17 +245,12 @@ export function publishFederatedSubgraphs(
 
     // Phase 1: persist all schema versions and collect the deduplicated union of affected graphs/flags in a single
     // short transaction.
-    now = performance.now();
     const { affectedFederatedGraphs, affectedFeatureFlags, changedSubgraphNames } =
       await subgraphRepo.batchWriteAndCollect(items);
-    console.log('batch write and collect: ' + (performance.now() - now));
-    console.log('affected federated graphs: ' + affectedFederatedGraphs.length);
-    console.log('affected feature flags: ' + affectedFeatureFlags.length);
 
     // Phase 2: compose and deploy the affected graphs OUTSIDE the transaction. Composition is long-running (worker
     // composition, blob uploads, admission webhooks); holding a DB transaction open across it — for the whole batch —
     // would tie up a connection and risk timeouts and lock contention.
-    now = performance.now();
     const compositionService = new CompositionService(
       opts.db,
       authContext.organizationId,
@@ -278,8 +269,6 @@ export function publishFederatedSubgraphs(
         affectedFeatureFlags,
         isFeatureSubgraph: false,
       });
-
-    console.log('composition: ' + (performance.now() - now));
 
     // Re-fetch the affected federated graphs to pick up the updated composedSchemaVersionId for the webhook payloads.
     const updatedFederatedGraphs = (
@@ -314,7 +303,6 @@ export function publishFederatedSubgraphs(
     }
 
     // Audit log per subgraph that actually changed.
-    now = performance.now();
     const changedSet = new Set(changedSubgraphNames);
     for (const { subgraph } of resolved) {
       if (!changedSet.has(subgraph.name)) {
@@ -335,7 +323,6 @@ export function publishFederatedSubgraphs(
         targetNamespaceDisplayName: subgraph.namespace,
       });
     }
-    console.log('audit logs: ' + (performance.now() - now));
 
     const boundedLimit = req.limit === undefined ? maxRowLimitForChecks : clamp(req.limit, 1, maxRowLimitForChecks);
 

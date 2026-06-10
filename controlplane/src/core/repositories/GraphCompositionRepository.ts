@@ -2,13 +2,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { SQL, and, count, desc, eq, gt, lt, not } from 'drizzle-orm';
 import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
-import {
-  graphCompositions,
-  graphCompositionSubgraphs,
-  schemaVersion,
-  subgraphs,
-  users,
-} from '../../db/schema.js';
+import { graphCompositions, graphCompositionSubgraphs, schemaVersion, subgraphs, users } from '../../db/schema.js';
 import { DateRange, GraphCompositionDTO } from '../../types/index.js';
 import { CompositionSubgraphRecord } from '../composition/composer.js';
 import { traced } from '../tracing.js';
@@ -53,9 +47,9 @@ export class GraphCompositionRepository {
       throw new Error(`Could not find actor ${composedById}`);
     }
 
-      const subgraphSchemaVersionIds = composedSubgraphs.map((subgraph) => subgraph.schemaVersionId);
-      const previousComposition = (
-        await this.db
+    const subgraphSchemaVersionIds = composedSubgraphs.map((subgraph) => subgraph.schemaVersionId);
+    const previousComposition = (
+      await this.db
         .select({
           id: graphCompositions.id,
         })

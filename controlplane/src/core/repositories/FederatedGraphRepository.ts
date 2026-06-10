@@ -47,9 +47,7 @@ import {
   RouterRequestKeysDTO,
   ComposeAndDeployResult,
 } from '../../types/index.js';
-import {
-  CompositionSubgraphRecord,
-} from '../composition/composer.js';
+import { CompositionSubgraphRecord } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import {
   applyIdpNamespaceGate,
