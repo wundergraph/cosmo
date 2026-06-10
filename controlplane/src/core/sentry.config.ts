@@ -1,3 +1,4 @@
+import os from 'node:os';
 import process from 'node:process';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
@@ -32,6 +33,8 @@ if (SENTRY_ENABLED && SENTRY_DSN) {
     enableLogs: SENTRY_ENABLE_LOGS,
     spotlight: process.env.NODE_ENV !== 'production',
   });
+
+  Sentry.setTag('hostname', os.hostname());
 
   if (process.env.NODE_ENV !== 'production') {
     console.log('Sentry is initialized.');
