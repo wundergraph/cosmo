@@ -348,7 +348,6 @@ export class SubgraphRepository {
       const featureFlag = await featureFlagRepo.getFeatureFlagById({
         namespaceId,
         featureFlagId,
-        includeSubgraphs: false,
       });
 
       if (!featureFlag) {
