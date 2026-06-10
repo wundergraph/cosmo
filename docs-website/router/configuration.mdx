@@ -1038,16 +1038,19 @@ headers:
 
 Apply to requests to specific Subgraphs.
 
-| Environment Variable | YAML       | Required                                      | Description                                                                                                                                              | Default Value |
-| -------------------- | ---------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-|                      | op         | <Icon icon="square-check" iconType="solid" /> | oneof=propagate, set                                                                                                                                     |               |
-|                      | matching   | <Icon icon="square" />                        | matching is the regex to match the header name against                                                                                                   |               |
-|                      | named      | <Icon icon="square" />                        | named is the exact header name to match                                                                                                                  |               |
-|                      | rename     | <Icon icon="square" />                        | renames the header's key to the provided value                                                                                                           |               |
-|                      | default    | <Icon icon="square" />                        | default is the default value to set if the header is not present                                                                                         |               |
-|                      | name       | <Icon icon="square" />                        | If `op` is `set`, `name` is the name of the desired header to set                                                                                        |               |
-|                      | value      | <Icon icon="square" />                        | If `op` is `set`, `value` is the value of the desired header to set                                                                                      |               |
-|                      | expression | <Icon icon="square" />                        | If `op` is `set`, `expression` is the [expression](/router/configuration/template-expressions) to evaluate to get the value of the desired header to set |               |
+| Environment Variable | YAML                       | Required                                      | Description                                                                                                                                                                       | Default Value |
+| -------------------- | -------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+|                      | op                         | <Icon icon="square-check" iconType="solid" /> | oneof=propagate, set                                                                                                                                                              |               |
+|                      | matching                   | <Icon icon="square" />                        | matching is the regex to match the header name against                                                                                                                            |               |
+|                      | named                      | <Icon icon="square" />                        | named is the exact header name to match                                                                                                                                           |               |
+|                      | rename                     | <Icon icon="square" />                        | renames the header's key to the provided value                                                                                                                                    |               |
+|                      | default                    | <Icon icon="square" />                        | default is the default value to set if the header is not present                                                                                                                  |               |
+|                      | name                       | <Icon icon="square" />                        | If `op` is `set`, `name` is the name of the desired header to set                                                                                                                 |               |
+|                      | value                      | <Icon icon="square" />                        | If `op` is `set`, `value` is the value of the desired header to set                                                                                                               |               |
+|                      | expression                 | <Icon icon="square" />                        | If `op` is `set`, `expression` is the [expression](/router/configuration/template-expressions) to evaluate to get the value of the desired header to set                          |               |
+|                      | from_file                  | <Icon icon="square" />                        | If `op` is `set`, sources the header value from a file's contents. The file is loaded into memory and refreshed on a polling interval, so request-time reads do not touch disk. Request rules only. |               |
+|                      | from_file.path             | <Icon icon="square-check" iconType="solid" /> | Absolute path to the file whose contents become the header value.                                                                                                                 |               |
+|                      | from_file.refresh_interval | <Icon icon="square-check" iconType="solid" /> | Determines how often the file is checked for changes and re-read into memory. The minimum value is `100ms`.                                                                       | `1m`          |
 
 ### Example YAML config:
 
@@ -1065,7 +1068,19 @@ headers:
         - op: "set"
           name: "X-API-Key"
           value: "my-secret-value"
+        # Read the value from a file. The file is loaded once at startup and
+        # re-read every refresh_interval. Useful for mounted secrets that
+        # rotate (e.g. Kubernetes Secrets, Vault Agent sidecars).
+        - op: "set"
+          name: "X-Service-Token"
+          from_file:
+            path: "/etc/secrets/service-token"
+            refresh_interval: "1m"
 ```
+
+<Note>
+  `from_file` is request-only. It cannot be used in response header rules.
+</Note>
 
 ### Response Header Rule
 
