@@ -258,6 +258,70 @@ func TestSplitGetRouterConfig_SkipMissingFeatureFlag_FileNotFoundSkipped(t *test
 	assert.NotContains(t, resp.Config.FeatureFlagConfigs.ConfigByFeatureFlagName, "missing")
 }
 
+// TestSplitGetRouterConfig_SkipMissingFF_NotRetainedInKnownHashesOrVersion verifies
+// that a feature flag skipped during the initial fetch is not stored in knownHashes
+// and does not contribute to latestVersion. If either were true, a subsequent poll
+// where the flag becomes available with the same mapper hash would either exit early
+// (newVersion == latestVersion) or silently skip the flag (treated as unchanged in
+// knownHashes), preventing the router from ever applying a new engine config.
+func TestSplitGetRouterConfig_SkipMissingFF_NotRetainedInKnownHashesOrVersion(t *testing.T) {
+	baseCfg := makeRouterConfig("v1")
+	missingCfg := makeRouterConfig("missing-v1")
+
+	mock := &mockSplitFetcher{
+		mapperResult: map[string]string{
+			"":        "hash-base",
+			"missing": "hash-missing",
+		},
+		configResults: map[string]*nodev1.RouterConfig{
+			"": baseCfg,
+		},
+		configErrors: map[string]error{
+			"missing": errs.ErrFileNotFound,
+		},
+	}
+
+	p := newTestPoller(mock)
+	p.configRules = ConfigRules{SkipMissingFeatureFlags: true}
+
+	_, err := p.GetRouterConfig(context.Background())
+	require.NoError(t, err)
+
+	// The skipped flag must not appear in knownHashes; otherwise a subsequent poll
+	// with the same mapper hash would see it as "unchanged" and never retry the fetch.
+	assert.NotContains(t, p.knownHashes, "missing",
+		"skipped flag must not be recorded in knownHashes")
+
+	// latestVersion must not factor in the skipped flag's hash; otherwise the poll
+	// exits early when the mapper still reports the same hash.
+	assert.Equal(t, computeCompositeVersion(map[string]string{"": "hash-base"}), p.latestVersion,
+		"latestVersion must only reflect actually-assembled graphs")
+
+	// Simulate the flag becoming available on the CDN with the same hash as before.
+	// Reset mapperResult explicitly: the fix may delete skipped flags from activeGraphs
+	// in-place, and since the mock returns that map by reference, it could be mutated.
+	mock.mapperResult = map[string]string{
+		"":        "hash-base",
+		"missing": "hash-missing",
+	}
+	delete(mock.configErrors, "missing")
+	mock.configResults["missing"] = missingCfg
+	mock.fetchConfigCalls = nil
+
+	var received *routerconfig.Response
+	pollOnce(p, func(resp *routerconfig.Response) error {
+		received = resp
+		return nil
+	})
+
+	require.NotNil(t, received, "handler must be called when a previously-skipped flag becomes available")
+	require.NotNil(t, received.Config.FeatureFlagConfigs)
+	assert.Contains(t, received.Config.FeatureFlagConfigs.ConfigByFeatureFlagName, "missing",
+		"previously-skipped flag must be assembled into the config once it is available")
+	assert.Contains(t, mock.fetchConfigCalls, "missing",
+		"previously-skipped flag must be fetched in the first poll after it becomes available")
+}
+
 func TestSplitGetRouterConfig_SkipMissingFeatureFlag_DisabledByDefault(t *testing.T) {
 	baseCfg := makeRouterConfig("v1")
 	mock := &mockSplitFetcher{

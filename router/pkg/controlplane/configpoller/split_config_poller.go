@@ -128,6 +128,7 @@ func (p *splitConfigPoller) fetchAndAssembleAll(ctx context.Context, activeGraph
 		if hasIgnoredFeatureFlags {
 			if _, ok := p.configRules.IgnoredFeatureFlags[name]; ok {
 				p.logger.Info("Feature flag is ignored, skipping", zap.String("feature_flag", name))
+				delete(activeGraphs, name)
 				continue
 			}
 		}
@@ -136,6 +137,7 @@ func (p *splitConfigPoller) fetchAndAssembleAll(ctx context.Context, activeGraph
 		if err != nil {
 			if p.shouldIgnoreMissingFeatureFlag(err) {
 				p.logger.Warn("Feature flag config not found, skipping", zap.String("feature_flag", name))
+				delete(activeGraphs, name)
 				continue
 			}
 			return nil, fmt.Errorf("failed to fetch config for feature flag %q: %w", name, err)
