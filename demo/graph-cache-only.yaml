@@ -1,0 +1,14 @@
+version: 1
+subgraphs:
+  - name: cachegraph
+    routing_url: http://localhost:4012/graphql
+    schema:
+      file: ./pkg/subgraphs/cachegraph/subgraph/schema.graphqls
+  - name: cachegraph-ext
+    routing_url: http://localhost:4013/graphql
+    schema:
+      file: ./pkg/subgraphs/cachegraph_ext/subgraph/schema.graphqls
+  - name: viewer
+    routing_url: http://localhost:4014/graphql
+    schema:
+      file: ./pkg/subgraphs/viewer/subgraph/schema.graphqls
