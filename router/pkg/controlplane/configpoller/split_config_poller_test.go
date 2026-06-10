@@ -83,6 +83,9 @@ func TestSplitGetRouterConfig_BaseOnly(t *testing.T) {
 	assert.Nil(t, resp.Config.FeatureFlagConfigs)
 	assert.Equal(t, "hash-base", p.knownHashes[""])
 	assert.Contains(t, p.latestVersion, "split-")
+
+	require.Len(t, resp.Hashes, 1)
+	assert.Equal(t, routerconfig.HashInfo{NewHash: "hash-base"}, resp.Hashes[""])
 }
 
 func TestSplitGetRouterConfig_MissingBaseGraph(t *testing.T) {
@@ -125,6 +128,10 @@ func TestSplitGetRouterConfig_WithFeatureFlags(t *testing.T) {
 
 	assert.Equal(t, "hash-base", p.knownHashes[""])
 	assert.Equal(t, "hash-ff1", p.knownHashes["ff1"])
+
+	require.Len(t, resp.Hashes, 2)
+	assert.Equal(t, routerconfig.HashInfo{NewHash: "hash-base"}, resp.Hashes[""])
+	assert.Equal(t, routerconfig.HashInfo{NewHash: "hash-ff1"}, resp.Hashes["ff1"])
 }
 
 func TestSplitGetRouterConfig_MapperError(t *testing.T) {
