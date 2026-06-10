@@ -233,7 +233,7 @@ as **factory functions**.
   when the fix is non-obvious (PR #2456).
   Treat errors as documentation for people hitting them.
 - **Multi-line error formatting** is intentional.
-  Keep `\n` and indentation as written — `composition-go/index.global.js` bundles
+  Keep `\n` and indentation as written — downstream consumers bundle
   literal strings and diffs against them (PR #2456).
 - When a warning receives a collection that the caller may mutate later, pass a
   **shallow copy** (`[...arr]`) to decouple the reference (PR #2449).
@@ -391,9 +391,9 @@ Summary of the steps **every** config-type change must touch:
 5. `connect/src/wg/cosmo/node/v1/node_pb.ts` — generated TS proto class.
 6. `shared/src/router-config/graphql-configuration.ts` — proto serialization.
 7. `router/core/factoryresolver.go` — proto → planner metadata.
-8. `composition-go/generate.sh` — rebuild JS bundle (rebuild `composition` +
+8. rebuild `composition` + `shared` dists (wgc composes from dist) — (rebuild `composition` +
    `shared` first).
-9. `router-tests/entity_caching && make compose` — regenerate integration config.
+9. `router-tests/entitycaching && make compose` — regenerate integration config.
 
 **If a field appears in composition output but is missing from the router config
 JSON, check the shared-package serializer first.**

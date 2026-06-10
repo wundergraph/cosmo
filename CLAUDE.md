@@ -9,11 +9,10 @@ For subsystem-specific details, see the per-package `CLAUDE.md` files and the
 | Path | What it is |
 |------|------------|
 | `composition/` | TypeScript library that normalizes subgraph SDL and produces `ConfigurationData` consumed by the router. See `composition/CLAUDE.md`. |
-| `composition-go/` | Go wrapper around the composition TypeScript bundle. Used by router-tests and demo tooling. Regenerate the bundle with `composition-go/generate.sh`. |
 | `shared/` | TypeScript package that serializes `ConfigurationData` into the router config proto (`graphql-configuration.ts`). |
 | `proto/wg/cosmo/node/v1/node.proto` | Wire format for router configuration. Regenerate Go + TS bindings via `make generate-go` (TS proto lives in `connect/src/wg/cosmo/node/v1/node_pb.ts`). |
 | `router/` | Go router binary. Entity caching + resolver wiring lives in `router/core/factoryresolver.go`. |
-| `router-tests/` | Integration tests. The entity caching suite is in `router-tests/entity_caching/` with a `make compose` target to regenerate `testdata/config.json` via `cmd/compose/main.go`. |
+| `router-tests/` | Integration tests. The entity caching suite is in `router-tests/entitycaching/` with a `make compose` target that regenerates `testdata/config.json` via `wgc router compose` (input: `graph.yaml`). |
 | `playground/` | React GraphiQL-based playground. Built with `pnpm build:router` to embed into the router binary via `router/internal/graphiql/graphiql.html`. |
 | `demo/` | Standalone demo subgraphs + cache-only runner. See `demo/cmd/cache-demo/main.go`. Recompose demo config with `make compose-cache` from `demo/`. |
 | `docs/` | Developer docs. Entity caching + `@requestScoped` live here. |
@@ -27,15 +26,14 @@ clone. Changes to resolver/planner code happen in that repo, not here.
 These three rebuild chains are non-optional.
 Skipping any step makes the change invisible to downstream consumers, often silently.
 
-- **Change anything under `composition/`**: rebuild composition, shared, and the composition-go bundle, then recompose router-test configs.
+- **Change anything under `composition/`**: rebuild composition and shared, then recompose router-test configs.
   ```bash
   cd composition && pnpm build \
     && cd ../shared && pnpm build \
-    && cd ../composition-go && bash generate.sh \
-    && cd ../router-tests/entity_caching && make compose
+    && cd ../router-tests/entitycaching && make compose
   ```
-  Order matters — `composition-go/generate.sh` pulls in both composition and shared builds,
-  so both must be fresh first.
+  wgc consumes composition's built `dist/`, so a stale build silently composes
+  with old logic — always rebuild before composing.
   See "Pipeline: composition → router" below for the full 9-step wiring when the change also touches proto types.
 
 - **Change anything under `proto/wg/cosmo/node/`**: regenerate Go and Connect bindings.
@@ -92,9 +90,8 @@ through the entire stack, in order:
    edit when removing fields if no TS regen script is handy)
 6. `shared/src/router-config/graphql-configuration.ts` — proto serialization
 7. `router/core/factoryresolver.go` — proto → planner metadata mapping
-8. `composition-go/generate.sh` — rebuild JS bundle (pulls in composition + shared
-   builds; must rebuild both TS packages first)
-9. `router-tests/entity_caching && make compose` — regenerate integration test config
+8. `router-tests/entitycaching && make compose` — regenerate integration test config
+   (runs `wgc router compose` from the workspace; composition + shared must be built first)
 
 Missing any step causes the field to silently drop from the final config JSON.
 When a field is present in composition output but missing in the final config.json,
@@ -109,8 +106,7 @@ in the final `config.json`:
    does the composition test see the field?
 2. Inline inspect the shared serializer with a quick test — does it write the field?
 3. Check if the proto generated TS class has the field (`connect/src/.../node_pb.ts`)
-4. Check if composition-go bundle is stale — `cd composition-go && bash generate.sh`
-5. Check if shared package is stale — `cd shared && pnpm build`
+4. Check if composition or shared dist is stale — `cd composition && pnpm build && cd ../shared && pnpm build`
 
 ## Per-request cache control headers (dev only)
 
@@ -277,16 +273,15 @@ cd composition && npx vitest run                    # all composition tests
 cd composition && npx tsc --noEmit                  # type check
 cd composition && pnpm build                        # build
 
-# Shared + composition-go bundle rebuild after composition changes
+# Shared rebuild after composition changes (wgc composes from built dist)
 cd shared && pnpm build
-cd composition-go && bash generate.sh
 
 # Proto regeneration
 make generate-go
 
 # Router tests
-cd router-tests/entity_caching && make compose      # regenerate testdata/config.json
-cd router-tests/entity_caching && go test -run "TestEntityCaching" -count=1 .
+cd router-tests/entitycaching && make compose       # regenerate testdata/config.json via wgc
+cd router-tests/entitycaching && go test -run "TestEntityCaching" -count=1 .
 
 # graphql-go-tools (in the local sibling clone)
 cd v2 && go test ./pkg/engine/resolve/ ./pkg/engine/plan/ ./pkg/engine/datasource/graphql_datasource/ -count=1
