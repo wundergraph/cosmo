@@ -114,7 +114,7 @@ export class FeatureFlagRepository {
     });
   }
 
-  public async updateFeatureFlag({
+  public updateFeatureFlag({
     featureFlag,
     labels,
     featureSubgraphIds,
@@ -126,31 +126,33 @@ export class FeatureFlagRepository {
     unsetLabels: boolean;
   }) {
     const uniqueLabels = normalizeLabels(labels);
-    if (labels.length > 0 || unsetLabels) {
-      const newLabels = unsetLabels ? [] : uniqueLabels;
-      await this.db
-        .update(featureFlags)
-        .set({
-          labels: newLabels.map((ul) => joinLabel(ul)),
-        })
-        .where(and(eq(featureFlags.id, featureFlag.id), eq(featureFlags.organizationId, this.organizationId)))
-        .execute();
-    }
+    return this.db.transaction(async (tx) => {
+      if (labels.length > 0 || unsetLabels) {
+        const newLabels = unsetLabels ? [] : uniqueLabels;
+        await tx
+          .update(featureFlags)
+          .set({
+            labels: newLabels.map((ul) => joinLabel(ul)),
+          })
+          .where(and(eq(featureFlags.id, featureFlag.id), eq(featureFlags.organizationId, this.organizationId)))
+          .execute();
+      }
 
-    if (featureSubgraphIds.length > 0) {
-      // delete all the feature subgraphs of the feature flag
-      await this.db
-        .delete(featureFlagToFeatureSubgraphs)
-        .where(eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlag.id))
-        .execute();
+      if (featureSubgraphIds.length > 0) {
+        // delete all the feature subgraphs of the feature flag
+        await tx
+          .delete(featureFlagToFeatureSubgraphs)
+          .where(eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlag.id))
+          .execute();
 
-      await this.db.insert(featureFlagToFeatureSubgraphs).values(
-        featureSubgraphIds.map((featureSubgraphId) => ({
-          featureFlagId: featureFlag.id,
-          featureSubgraphId,
-        })),
-      );
-    }
+        await tx.insert(featureFlagToFeatureSubgraphs).values(
+          featureSubgraphIds.map((featureSubgraphId) => ({
+            featureFlagId: featureFlag.id,
+            featureSubgraphId,
+          })),
+        );
+      }
+    });
   }
 
   public async enableFeatureFlag({
