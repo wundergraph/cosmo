@@ -271,6 +271,7 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 					delete(mapperGraphs, name)
 					delete(changes.ChangedConfigs, name)
 					delete(changes.AddedConfigs, name)
+					delete(hashes, name)
 
 					continue
 				}

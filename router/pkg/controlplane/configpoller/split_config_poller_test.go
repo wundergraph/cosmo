@@ -256,6 +256,9 @@ func TestSplitGetRouterConfig_SkipMissingFeatureFlag_FileNotFoundSkipped(t *test
 	require.NotNil(t, resp.Config.FeatureFlagConfigs)
 	assert.Contains(t, resp.Config.FeatureFlagConfigs.ConfigByFeatureFlagName, "available")
 	assert.NotContains(t, resp.Config.FeatureFlagConfigs.ConfigByFeatureFlagName, "missing")
+	assert.Len(t, resp.Hashes, 2)
+	assert.Empty(t, resp.Hashes["missing"])
+	assert.NotEmpty(t, resp.Hashes["available"])
 }
 
 // TestSplitGetRouterConfig_SkipMissingFF_NotRetainedInKnownHashesOrVersion verifies
@@ -482,6 +485,10 @@ func TestSplitSubscribe_SkipMissingFeatureFlag_ExcludedFromChangesAndKnownHashes
 		"skipped changed flag must keep its previous engine config")
 	assert.NotContains(t, received.Config.FeatureFlagConfigs.ConfigByFeatureFlagName, "missing-add",
 		"skipped new flag must not be assembled into the config")
+
+	assert.Len(t, received.Hashes, 2)
+	assert.Equal(t, routerconfig.HashInfo{OldHash: "hash-base", NewHash: "hash-base"}, received.Hashes[""])
+	assert.Equal(t, routerconfig.HashInfo{OldHash: "hash-keep-old", NewHash: "hash-keep-new"}, received.Hashes["keep"])
 }
 
 // ---- Subscribe / polling tests ----
