@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/expr"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
@@ -210,7 +211,7 @@ func getCustomDynamicAttributeValue(
 	attribute *config.CustomDynamicAttribute,
 	reqContext *requestContext,
 	err any,
-) interface{} {
+) any {
 	if attribute == nil || attribute.ContextField == "" {
 		return ""
 	}
