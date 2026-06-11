@@ -71,3 +71,4 @@ High cardinality is the main risk. Every additional attribute value creates new 
 - Keep trace sampling at a moderate rate. The exemplar cost under `trace_based` follows the sampling rate.
 - Reserve `always_on` for low-throughput or debugging scenarios. It records exemplars even when no sampled trace exists, which raises overhead and produces exemplars with empty or unsampled trace context.
 - Control metric cardinality. Use [exclude_metric_labels](/router/metrics-and-monitoring#exclude-certain-metrics-and-labels) and the [cardinality limit](/router/configuration#metrics) to cap the number of metric streams, which directly caps exemplar memory.
+
