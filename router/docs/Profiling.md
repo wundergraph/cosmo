@@ -107,7 +107,7 @@ allocated, line by line, in a function.
 You can also run a profile for an amount of time (for example, 5 seconds), by running:
 
 ```
-go tool pprof ‘http://localhost:6060/debug/pprof/profile?seconds=5’
+go tool pprof 'http://localhost:6060/debug/pprof/profile?seconds=5'
 ```
 
 ## Pyroscope
