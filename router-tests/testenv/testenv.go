@@ -1371,6 +1371,12 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
+		// Initialized from the environment so the whole suite re-runs per engine
+		// mode without code changes (test harness only — production config is
+		// constructor-injected). ModifyEngineExecutionConfiguration still
+		// overrides per test.
+		EnableDataflowExecution:           os.Getenv("ENGINE_ENABLE_DATAFLOW") == "true",
+		EnableExecutionPlanScheduling:     os.Getenv("ENGINE_ENABLE_SCHEDULE_TREE") == "true",
 		EnableNetPoll:                     true,
 		EnableSingleFlight:                true,
 		EnableInboundRequestDeduplication: false,
