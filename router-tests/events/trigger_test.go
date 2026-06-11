@@ -1,4 +1,4 @@
-package events
+package events_test
 
 import (
 	"sync"
@@ -78,6 +78,92 @@ func TestEDFSTriggerDeduplication(t *testing.T) {
 					ID:      "1",
 					Type:    "subscribe",
 					Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`),
+				})
+				require.NoError(t, err)
+
+				var msg testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &msg)
+				require.NoError(t, err)
+				require.Equal(t, "next", msg.Type)
+				require.Equal(t, "1", msg.ID)
+
+				err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{ID: "1", Type: "complete"})
+				require.NoError(t, err)
+
+				var complete testenv.WebSocketMessage
+				err = conn.SetReadDeadline(time.Now().Add(time.Second))
+				require.NoError(t, err)
+				err = testenv.WSReadJSON(t, conn, &complete)
+				require.NoError(t, err)
+				require.Equal(t, "complete", complete.Type)
+				require.Equal(t, "1", complete.ID)
+			}()
+
+			done.Wait()
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+
+	// Two subscriptions with the same query but different initial_payload (headers) should
+	// still share a single NATS trigger because the trigger ID is based on the NATS subject,
+	// not on connection-level metadata like headers.
+	t.Run("same subject different initial payload shares one trigger", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var done sync.WaitGroup
+			done.Add(2)
+
+			go func() {
+				xEnv.WaitForSubscriptionCount(2, time.Second*10)
+				xEnv.WaitForTriggerCount(1, time.Second*10)
+				xEnv.RequireTriggerCount(1)
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename":"Employee"}`), 2, time.Second*10)
+			}()
+
+			// Subscription 1: sends Authorization header A in connection_init.
+			go func() {
+				defer done.Done()
+				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"headers":{"Authorization":"Bearer token-a"}}`))
+				defer conn.Close()
+
+				err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id } }"}`),
+				})
+				require.NoError(t, err)
+
+				var msg testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &msg)
+				require.NoError(t, err)
+				require.Equal(t, "next", msg.Type)
+				require.Equal(t, "1", msg.ID)
+
+				err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{ID: "1", Type: "complete"})
+				require.NoError(t, err)
+
+				var complete testenv.WebSocketMessage
+				err = conn.SetReadDeadline(time.Now().Add(time.Second))
+				require.NoError(t, err)
+				err = testenv.WSReadJSON(t, conn, &complete)
+				require.NoError(t, err)
+				require.Equal(t, "complete", complete.Type)
+				require.Equal(t, "1", complete.ID)
+			}()
+
+			// Subscription 2: sends a different Authorization header in connection_init.
+			go func() {
+				defer done.Done()
+				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"headers":{"Authorization":"Bearer token-b"}}`))
+				defer conn.Close()
+
+				err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id } }"}`),
 				})
 				require.NoError(t, err)
 
