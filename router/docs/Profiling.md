@@ -1,68 +1,78 @@
 # Profiling
 
-The router is set up with pprof, so users can run the router with `pprof` running, and get a thorough understanding of the active performance. 
+The router is set up with pprof, so users can run the router with `pprof` running, and get a
+thorough understanding of the active performance.
 
-> **We recommend that before adding a new feature, users should profile it to make sure that there aren't any surprise resource drains from the feature.**  
+> **We recommend that before adding a new feature, users should profile it to make sure that there
+aren't any surprise resource drains from the feature.**
 
 ## Running the router with pprof
-To run the router with pprof, follow the steps in [Contributing.md](../../CONTRIBUTING.md) (Local Development) to set up a local development environment, aside from running `make start-router`.
+
+To run the router with pprof, follow the steps in [Contributing.md](../../CONTRIBUTING.md) (Local
+Development) to set up a local development environment, aside from running `make start-router`.
 
 In the `router` directory, run the following command:
+
 ```shell
 go run cmd/router/main.go -pprof-addr=":6060"
 ```
 
 This will start the router with pprof running on port 6060.
 
-To run a solid workflow and get a sense of the routers performance, you can use [k6](https://grafana.com/docs/k6/latest/).
+To run a solid workflow and get a sense of the routers performance, you can
+use [k6](https://grafana.com/docs/k6/latest/).
 To do so, run:
+
 ```shell
 brew install k6
 k6 run bench.js
 ```
 
 This will run a benchmark on the router, and you can see the results in the terminal.
+
 ```
-     ✓ is status 200
+    ✓ is status 200
 
-     checks.........................: 100.00% 40978 out of 40978
-     data_received..................: 294 MB  5.8 MB/s
-     data_sent......................: 114 MB  2.3 MB/s
-     http_req_blocked...............: avg=7.01µs  min=2µs    med=5µs     max=2.19ms   p(90)=6µs     p(95)=7µs
-     http_req_connecting............: avg=1.57µs  min=0s     med=0s      max=1.06ms   p(90)=0s      p(95)=0s
-     http_req_duration..............: avg=52.54ms min=8.68ms med=48.33ms max=235.82ms p(90)=93.36ms p(95)=106.39ms
-       { expected_response:true }...: avg=52.54ms min=8.68ms med=48.33ms max=235.82ms p(90)=93.36ms p(95)=106.39ms
-     http_req_failed................: 0.00%   0 out of 40978
-     http_req_receiving.............: avg=1.88ms  min=32µs   med=318µs   max=153.15ms p(90)=4.24ms  p(95)=6.37ms
-     http_req_sending...............: avg=24.66µs min=9µs    med=19µs    max=7.72ms   p(90)=29µs    p(95)=34µs
-     http_req_tls_handshaking.......: avg=0s      min=0s     med=0s      max=0s       p(90)=0s      p(95)=0s
-     http_req_waiting...............: avg=50.62ms min=8.42ms med=46.39ms max=230.97ms p(90)=90.72ms p(95)=103.53ms
-     http_reqs......................: 40978   816.55677/s
-     iteration_duration.............: avg=52.83ms min=8.95ms med=48.62ms max=236.13ms p(90)=93.65ms p(95)=106.71ms
-     iterations.....................: 40978   816.55677/s
-     vus............................: 99      min=2              max=99
-     vus_max........................: 100     min=100            max=100
+    HTTP
+    http_req_duration..............: avg=2.04ms min=192µs    med=1.82ms max=27.02ms p(90)=3.5ms  p(95)=4.05ms
+      { expected_response:true }...: avg=2.04ms min=192µs    med=1.82ms max=27.02ms p(90)=3.5ms  p(95)=4.05ms
+    http_req_failed................: 0.00%   0 out of 1014298
+    http_reqs......................: 1014298 20284.858532/s
 
+    EXECUTION
+    iteration_duration.............: avg=2.12ms min=240.62µs med=1.89ms max=27.13ms p(90)=3.58ms p(95)=4.13ms
+    iterations.....................: 1014298 20284.858532/s
+    vus............................: 99      min=2            max=99
+    vus_max........................: 100     min=100          max=100
 
-running (0m50.2s), 000/100 VUs, 40978 complete and 0 interrupted iterations
-default ✓ [======================================] 000/100 VUs  50s
+    NETWORK
+    data_received..................: 7.3 GB  145 MB/s
+    data_sent......................: 2.8 GB  56 MB/s
 ```
 
-This can show you, for example, how many requests were sent, how long it took, and it can help us diagnose the proper configuration of the router for users. 
+This can show you, for example, how many requests were sent, how long it took, and it can help us
+diagnose the proper configuration of the router for users.
 
 ## Profiling the router
-There are many different things you can use pprof for, and we recommend reading the [pprof documentation](https://pkg.go.dev/net/http/pprof) to get a better understanding of what you can do with it.
+
+There are many different things you can use pprof for, and we recommend reading
+the [pprof documentation](https://pkg.go.dev/net/http/pprof) to get a better understanding of what
+you can do with it.
 
 As an example, to look at heap and memory usage, you can run the following commands:
 In a terminal, as the router is running, run:
+
 ```shell
 go tool pprof http://localhost:6060/debug/pprof/heap
 # or
 go tool pprof -http 127.0.0.1:6060 heap.out
 ```
 
-That will open a `pprof` shell, and in it, you can explore commands. Some useful ones are: `web` (which depends on graphviz, `brew install graphviz`), `top`, and `pdf`, which will give you different ways to look at the heap allocations.
+That will open a `pprof` shell, and in it, you can explore commands. Some useful ones are: `web` (
+which depends on graphviz, `brew install graphviz`), `top`, and `pdf`, which will give you different
+ways to look at the heap allocations.
 For example, `top20` will return:
+
 ```
 (pprof) top20
 Showing nodes accounting for 13458.23kB, 100% of 13458.23kB total
@@ -91,13 +101,13 @@ Showing top 20 nodes out of 69
 (pprof) 
 ```
 
-Then, you can also do `list <function>` to get a better understanding of where the memory is being allocated, line by line, in a function.
-
-In addition, we can also see how allocs work by running 
+Then, you can also do `list <function>` to get a better understanding of where the memory is being
+allocated, line by line, in a function.
 
 You can also run a profile for an amount of time (for example, 5 seconds), by running:
+
 ```
-go tool pprof ‘http://localhost:6060/debug/pprof/profile?seconds=5’
+go tool pprof 'http://localhost:6060/debug/pprof/profile?seconds=5'
 ```
 
 ## Pyroscope
@@ -105,6 +115,8 @@ go tool pprof ‘http://localhost:6060/debug/pprof/profile?seconds=5’
 To use Pyroscope for continuous profiling of the router:
 
 1. Raise the infra-debug stack with `make infra-debug-up`
-2. Run the router with either `PYROSCOPE_ADDR=http://localhost:4040` or `-pyroscope-addr http://localhost:4040` to enable sending continuous profiling data to Pyroscope. You can view this data in Grafana.
+2. Run the router with either `PYROSCOPE_ADDR=http://localhost:4040` or
+   `-pyroscope-addr http://localhost:4040` to enable sending continuous profiling data to Pyroscope.
+   You can view this data in Grafana.
 3. Visit the drilldown profiles section in Grafana at `http://localhost:9300`
 4. Select the router from the service dropdown
