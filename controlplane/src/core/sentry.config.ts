@@ -24,19 +24,22 @@ const {
 const ALWAYS_SAMPLE_PATHS = ['/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraphs'];
 
 const publishAwareTracesSampler: NonNullable<Sentry.NodeOptions['tracesSampler']> = (ctx) => {
-  // Keep distributed traces intact: honor an upstream sampling decision when present.
-  if (typeof ctx.parentSampled === 'boolean') {
-    return ctx.parentSampled ? 1 : SENTRY_TRACES_SAMPLE_RATE;
-  }
-
   const attrs = ctx.attributes ?? {};
   const target = [ctx.name, attrs['http.route'], attrs['http.target'], attrs['url.path'], attrs['url.full']]
     .filter(Boolean)
     .join(' ');
 
+  // Batch publishes are always traced, regardless of the base rate or any upstream decision.
   if (ALWAYS_SAMPLE_PATHS.some((path) => target.includes(path))) {
     return 1;
   }
+
+  // Otherwise honor an upstream sampling decision exactly so distributed traces stay intact:
+  // a parent that opted out (parentSampled === false) must not leave orphaned child spans.
+  if (typeof ctx.parentSampled === 'boolean') {
+    return ctx.parentSampled ? 1 : 0;
+  }
+
   return SENTRY_TRACES_SAMPLE_RATE;
 };
 
