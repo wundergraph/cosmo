@@ -17,6 +17,29 @@ const {
   SENTRY_ENABLE_LOGS,
 } = sentryEnvVariables.parse(process.env);
 
+// RPC paths we always trace at 100%, regardless of SENTRY_TRACES_SAMPLE_RATE. Batch
+// subgraph publishes are rare, slow, and frequently hit the request timeout — we want a
+// trace for every one so their end-to-end composition cost can be tracked. Child spans
+// (e.g. ComposeGraphsWorker.composeGraphsInWorker) inherit the parent's sampling decision.
+const ALWAYS_SAMPLE_PATHS = ['/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraphs'];
+
+const publishAwareTracesSampler: NonNullable<Sentry.NodeOptions['tracesSampler']> = (ctx) => {
+  // Keep distributed traces intact: honor an upstream sampling decision when present.
+  if (typeof ctx.parentSampled === 'boolean') {
+    return ctx.parentSampled ? 1 : SENTRY_TRACES_SAMPLE_RATE;
+  }
+
+  const attrs = ctx.attributes ?? {};
+  const target = [ctx.name, attrs['http.route'], attrs['http.target'], attrs['url.path'], attrs['url.full']]
+    .filter(Boolean)
+    .join(' ');
+
+  if (ALWAYS_SAMPLE_PATHS.some((path) => target.includes(path))) {
+    return 1;
+  }
+  return SENTRY_TRACES_SAMPLE_RATE;
+};
+
 if (SENTRY_ENABLED && SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
@@ -28,7 +51,9 @@ if (SENTRY_ENABLED && SENTRY_DSN) {
     ],
     profileSessionSampleRate: SENTRY_PROFILE_SESSION_SAMPLE_RATE,
     sendDefaultPii: SENTRY_SEND_DEFAULT_PII,
-    tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
+    // tracesSampler takes precedence over tracesSampleRate; the sampler falls back to
+    // SENTRY_TRACES_SAMPLE_RATE for everything that isn't in ALWAYS_SAMPLE_PATHS.
+    tracesSampler: publishAwareTracesSampler,
     profileLifecycle: SENTRY_PROFILE_LIFECYCLE,
     enableLogs: SENTRY_ENABLE_LOGS,
     spotlight: process.env.NODE_ENV !== 'production',
