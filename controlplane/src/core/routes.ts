@@ -21,7 +21,7 @@ import { DeactivateOrganizationQueue } from './workers/DeactivateOrganizationWor
 import { DeleteUserQueue } from './workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from './workers/ReactivateOrganizationWorker.js';
 import { DeleteOrganizationAuditLogsQueue } from './workers/DeleteOrganizationAuditLogsWorker.js';
-import { DeleteBatchPublishJobDetailsQueue } from "./workers/DeleteBatchPublishJobDetailsWorker.js";
+import { DeleteBatchPublishJobDetailsQueue } from './workers/DeleteBatchPublishJobDetailsWorker.js';
 
 export interface RouterOptions {
   db: PostgresJsDatabase<typeof schema>;

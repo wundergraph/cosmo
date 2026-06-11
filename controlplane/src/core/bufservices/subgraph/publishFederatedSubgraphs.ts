@@ -242,8 +242,6 @@ export function publishFederatedSubgraphs(
       logger,
       authContext,
       disableResolvabilityValidation: req.disableResolvabilityValidation,
-      subgraphRepo,
-      resolved,
       items,
     };
 
@@ -260,7 +258,10 @@ export function publishFederatedSubgraphs(
         logger.error(err, 'Failed to add job to delete batch publish job details queue');
 
         return {
-          response: { code: EnumStatusCode.ERR, details: 'Failed to add job to delete batch publish job details queue' },
+          response: {
+            code: EnumStatusCode.ERR,
+            details: 'Failed to add job to delete batch publish job details queue',
+          },
           deploymentErrors: [],
           compositionErrors: [],
           compositionWarnings: [],
@@ -287,7 +288,11 @@ export function publishFederatedSubgraphs(
         },
         async () => {
           try {
-            const result = await runBatchPublish(runBatchPublishParams);
+            const result = await batchPublishJobDetailsRepo.withNamespaceLock(namespace.id, jobId, async () => {
+              await batchPublishJobDetailsRepo.update(jobId, { status: 'processing' });
+              return runBatchPublish({ ...runBatchPublishParams, shouldRefreshSubgraphs: true });
+            });
+
             await batchPublishJobDetailsRepo.update(jobId, {
               status: 'completed',
               compositionResult: {
@@ -357,9 +362,8 @@ type RunBatchPublishParams = {
   logger: FastifyBaseLogger;
   authContext: AuthContext;
   disableResolvabilityValidation: boolean | undefined;
-  subgraphRepo: SubgraphRepository;
-  resolved: { subgraph: SubgraphDTO; schema: string }[];
   items: (UpdateSubgraphSchemaData & { name: string })[];
+  shouldRefreshSubgraphs?: boolean;
 };
 
 async function runBatchPublish({
@@ -367,11 +371,11 @@ async function runBatchPublish({
   logger,
   authContext,
   disableResolvabilityValidation,
-  subgraphRepo,
-  resolved,
   items,
+  shouldRefreshSubgraphs,
 }: RunBatchPublishParams) {
   const auditLogRepo = new AuditLogRepository(opts.db);
+  const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
   const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
   const orgWebhooks = new OrganizationWebhookService(
     opts.db,
@@ -381,14 +385,45 @@ async function runBatchPublish({
     opts.webhookProxyUrl,
   );
 
-  // Phase 1: persist all schema versions and collect the deduplicated union of affected graphs/flags in a single
-  // short transaction.
+  if (shouldRefreshSubgraphs) {
+    /**
+     * Because the subgraphs can be updated by a job that started before this one, we need to ensure that we
+     * have the latest version of the subgraph before running the composition
+     */
+    const updatedSubgraphs = await subgraphRepo.getSubgraphsByTargetIds(
+      items.filter((item) => item.subgraph).map((item) => item.subgraph!.targetId),
+    );
+
+    for (const currentItem of items) {
+      if (!currentItem.subgraph) {
+        continue;
+      }
+
+      const updatedSubgraph = updatedSubgraphs.find((subgraph) => subgraph.targetId === currentItem.subgraph?.targetId);
+      if (!updatedSubgraph) {
+        throw new Error(`Updated subgraph "${currentItem.subgraph.name}" not found`);
+      }
+
+      currentItem.subgraph = updatedSubgraph;
+      currentItem.labels = updatedSubgraph.labels;
+    }
+  }
+
+  /**
+   * Phase 1: persist all schema versions and collect the deduplicated union of affected graphs/flags in a single
+   * short transaction.
+   */
   const { affectedFederatedGraphs, affectedFeatureFlags, changedSubgraphNames } =
     await subgraphRepo.batchWriteAndCollect(items);
 
-  // Phase 2: compose and deploy the affected graphs OUTSIDE the transaction. Composition is long-running (worker
-  // composition, blob uploads, admission webhooks); holding a DB transaction open across it — for the whole batch —
-  // would tie up a connection and risk timeouts and lock contention.
+  /**
+   * Phase 2: compose and deploy the affected graphs OUTSIDE the transaction. Composition is long-running (worker
+   * composition, blob uploads, admission webhooks); holding a DB transaction open across it — for the whole batch —
+   * would tie up a connection and risk timeouts and lock contention.
+   *
+   * This comment is true only for when we are not using async composition as to guarantee that the compositions are
+   * processed in the correct order, we need to have a transaction lock.
+   */
   const compositionService = new CompositionService(
     opts.db,
     authContext.organizationId,
@@ -442,10 +477,11 @@ async function runBatchPublish({
 
   // Audit log per subgraph that actually changed.
   const changedSet = new Set(changedSubgraphNames);
-  for (const { subgraph } of resolved) {
-    if (!changedSet.has(subgraph.name)) {
+  for (const { subgraph } of items) {
+    if (!subgraph || !changedSet.has(subgraph.name)) {
       continue;
     }
+
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,

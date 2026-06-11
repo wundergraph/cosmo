@@ -1,5 +1,5 @@
 {
-  "id": "e99e959f-0105-4cb3-afa7-63835d8a44ff",
+  "id": "6734cb20-856c-4ded-8802-16b7990d4e5f",
   "prevId": "cf701524-2af6-40c6-b864-aa8b9a3a95aa",
   "version": "7",
   "dialect": "postgresql",
@@ -512,7 +512,7 @@
           "name": "created_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "now()"
         },
         "updated_at": {
@@ -540,6 +540,96 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "public.batch_publish_job_details_job_locks": {
+      "name": "batch_publish_job_details_job_locks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "namespace_id": {
+          "name": "namespace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "job_id": {
+          "name": "job_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expiresAt": {
+          "name": "expiresAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "batch_publish_job_details_job_locks_organization_id_organizations_id_fk": {
+          "name": "batch_publish_job_details_job_locks_organization_id_organizations_id_fk",
+          "tableFrom": "batch_publish_job_details_job_locks",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "batch_publish_job_details_job_locks_namespace_id_namespaces_id_fk": {
+          "name": "batch_publish_job_details_job_locks_namespace_id_namespaces_id_fk",
+          "tableFrom": "batch_publish_job_details_job_locks",
+          "tableTo": "namespaces",
+          "columnsFrom": [
+            "namespace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "batch_publish_job_details_job_locks_job_id_batch_publish_job_details_id_fk": {
+          "name": "batch_publish_job_details_job_locks_job_id_batch_publish_job_details_id_fk",
+          "tableFrom": "batch_publish_job_details_job_locks",
+          "tableTo": "batch_publish_job_details",
+          "columnsFrom": [
+            "job_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "batch_publish_job_details_job_locks_namespace_id_key": {
+          "name": "batch_publish_job_details_job_locks_namespace_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "namespace_id"
+          ]
+        }
+      },
       "checkConstraints": {}
     },
     "public.billing_plans": {
@@ -9231,6 +9321,7 @@
       "schema": "public",
       "values": [
         "pending",
+        "processing",
         "failed",
         "completed"
       ]

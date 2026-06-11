@@ -63,7 +63,10 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
-import { createDeleteBatchPublishJobDetailsWorker, DeleteBatchPublishJobDetailsQueue, } from './workers/DeleteBatchPublishJobDetailsWorker.js';
+import {
+  createDeleteBatchPublishJobDetailsWorker,
+  DeleteBatchPublishJobDetailsQueue,
+} from './workers/DeleteBatchPublishJobDetailsWorker.js';
 import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composition/composeGraphs.pool.js';
 
 export interface BuildConfig {
@@ -480,11 +483,13 @@ export default async function build(opts: BuildConfig) {
   );
 
   const deleteBatchPublishJobDetailsQueue = new DeleteBatchPublishJobDetailsQueue(logger, fastify.redisForQueue);
-  bullWorkers.push(createDeleteBatchPublishJobDetailsWorker({
-    redisConnection: fastify.redisForWorker,
-    db: fastify.db,
-    logger,
-  }));
+  bullWorkers.push(
+    createDeleteBatchPublishJobDetailsWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+    }),
+  );
 
   // required to verify webhook payloads
   await fastify.register(import('fastify-raw-body'), {
