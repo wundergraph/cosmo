@@ -40,4 +40,16 @@ export class BatchPublishJobDetailsRepository {
       )
       .execute();
   }
+
+  public delete(jobId: string) {
+    return this.db
+      .delete(schema.batchPublishJobDetails)
+      .where(
+        and(
+          eq(schema.batchPublishJobDetails.organizationId, this.organizationId),
+          eq(schema.batchPublishJobDetails.id, jobId),
+        ),
+      )
+      .execute();
+  }
 }

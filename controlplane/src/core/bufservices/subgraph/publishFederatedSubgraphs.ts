@@ -250,6 +250,28 @@ export function publishFederatedSubgraphs(
     if (req.async) {
       const batchPublishJobDetailsRepo = new BatchPublishJobDetailsRepository(opts.db, authContext.organizationId);
       const jobId = await batchPublishJobDetailsRepo.create();
+      try {
+        await opts.queues.deleteBatchPublishJobDetailsQueue.addJob({
+          jobId,
+          organizationId: authContext.organizationId,
+        });
+      } catch (err) {
+        await batchPublishJobDetailsRepo.delete(jobId);
+        logger.error(err, 'Failed to add job to delete batch publish job details queue');
+
+        return {
+          response: { code: EnumStatusCode.ERR, details: 'Failed to add job to delete batch publish job details queue' },
+          deploymentErrors: [],
+          compositionErrors: [],
+          compositionWarnings: [],
+          counts: {
+            compositionErrors: 0,
+            compositionWarnings: 0,
+            deploymentErrors: 0,
+          },
+          updatedSubgraphNames: [],
+        };
+      }
 
       Sentry.startSpan(
         {
