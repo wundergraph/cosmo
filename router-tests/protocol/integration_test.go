@@ -1580,6 +1580,7 @@ func BenchmarkSequentialBig(b *testing.B) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: bigEmployeesQuery,
 			})
+			// Not worth stopping the timer.
 			if len(res.Body) < 3000 {
 				b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
 			}
@@ -1593,7 +1594,8 @@ func BenchmarkSequentialBigCostControl(b *testing.B) {
 			cfg.CostControl = &config.CostControl{
 				Enabled:           true,
 				Mode:              config.CostControlModeMeasure,
-				EstimatedListSize: 15,
+				EstimatedListSize: 5,
+				ExposeHeaders:     true,
 			}
 		},
 	}, func(b *testing.B, xEnv *testenv.Environment) {
@@ -1603,9 +1605,76 @@ func BenchmarkSequentialBigCostControl(b *testing.B) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: bigEmployeesQuery,
 			})
+			b.StopTimer()
 			if len(res.Body) < 3000 {
 				b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
 			}
+			estimated := res.Response.Header.Get(core.CostEstimatedHeader)
+			require.Equal(b, "4650", estimated)
+			actual := res.Response.Header.Get(core.CostActualHeader)
+			require.Equal(b, "189", actual)
+			b.StartTimer()
+		}
+	})
+}
+
+func BenchmarkSequentialBigNotCached(b *testing.B) {
+	testenv.Bench(b, &testenv.Config{
+		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+			cfg.EnableNormalizationCache = false
+			cfg.EnableValidationCache = false
+			cfg.EnablePersistedOperationsCache = false
+			cfg.ExecutionPlanCacheSize = 0
+			cfg.OperationHashCacheSize = 0
+		},
+	}, func(b *testing.B, xEnv *testenv.Environment) {
+		b.SetBytes(int64(len(bigEmployeesResponse)))
+		b.ReportAllocs()
+		for b.Loop() {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: bigEmployeesQuery,
+			})
+			// Not worth stopping the timer.
+			if len(res.Body) < 3000 {
+				b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
+			}
+		}
+	})
+}
+
+func BenchmarkSequentialBigNotCachedCostControl(b *testing.B) {
+	testenv.Bench(b, &testenv.Config{
+		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+			cfg.EnableNormalizationCache = false
+			cfg.EnableValidationCache = false
+			cfg.EnablePersistedOperationsCache = false
+			cfg.ExecutionPlanCacheSize = 0
+			cfg.OperationHashCacheSize = 0
+		},
+		ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
+			cfg.CostControl = &config.CostControl{
+				Enabled:           true,
+				Mode:              config.CostControlModeMeasure,
+				EstimatedListSize: 5,
+				ExposeHeaders:     true,
+			}
+		},
+	}, func(b *testing.B, xEnv *testenv.Environment) {
+		b.SetBytes(int64(len(bigEmployeesResponse)))
+		b.ReportAllocs()
+		for b.Loop() {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: bigEmployeesQuery,
+			})
+			b.StopTimer()
+			if len(res.Body) < 3000 {
+				b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
+			}
+			estimated := res.Response.Header.Get(core.CostEstimatedHeader)
+			require.Equal(b, "4650", estimated)
+			actual := res.Response.Header.Get(core.CostActualHeader)
+			require.Equal(b, "189", actual)
+			b.StartTimer()
 		}
 	})
 }
