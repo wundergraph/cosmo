@@ -24,6 +24,7 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { withSpan } from '../../tracing.js';
 
 /**
  * PublishFederatedSubgraphs publishes the schemas of multiple existing subgraphs (and feature subgraphs) in a single
@@ -115,15 +116,11 @@ export function publishFederatedSubgraphs(
 
     // Resolve every requested subgraph; all of them must already exist.
     const resolved: { subgraph: SubgraphDTO; schema: string }[] = [];
-    const notFound: string[] = [];
     const typeErrors: string[] = [];
-    for (const entry of requestedEntries) {
-      const subgraph = await subgraphRepo.byName(entry.name, req.namespace);
-      if (!subgraph) {
-        notFound.push(entry.name);
-        continue;
-      }
-
+    for (const subgraph of await subgraphRepo.getSubgraphsByNames(
+      requestedEntries.map((e) => e.name),
+      namespace.id,
+    )) {
       if (subgraph.type === 'grpc_plugin') {
         typeErrors.push(
           `Subgraph "${subgraph.name}" is a plugin. Please use the 'wgc router plugin publish' command to publish it.`,
@@ -137,14 +134,22 @@ export function publishFederatedSubgraphs(
         continue;
       }
 
-      resolved.push({ subgraph, schema: entry.schema });
+      const schema = requestedEntries
+        .find((re) => re.name.toLowerCase() === subgraph.name.toLowerCase())!
+        .schema.trimEnd();
+
+      resolved.push({ subgraph, schema });
     }
 
-    if (notFound.length > 0) {
+    const resolvedSubgraphNames = new Set(resolved.map((re) => re.subgraph.name));
+    const requestedSubgraphNames = new Set(requestedEntries.map((re) => re.name));
+    const notFoundSubgraphNames = [...requestedSubgraphNames.difference(resolvedSubgraphNames)];
+
+    if (notFoundSubgraphNames.length > 0) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `The following subgraphs do not exist in the namespace "${req.namespace}": ${notFound.join(', ')}`,
+          details: `The following subgraphs do not exist in the namespace "${req.namespace}": ${notFoundSubgraphNames.join(', ')}`,
         },
         compositionErrors: [],
         deploymentErrors: [],
@@ -166,29 +171,27 @@ export function publishFederatedSubgraphs(
       };
     }
 
-    // The user must be authorized to publish each of the subgraphs.
-    for (const { subgraph } of resolved) {
-      await opts.authorizer.authorize({
-        db: opts.db,
-        graph: {
-          targetId: subgraph.targetId,
-          targetType: 'subgraph',
-        },
-        headers: ctx.requestHeader,
-        authContext,
-      });
-    }
+    withSpan('RBACEvaluator.hasSubGraphWriteAccess', () => {
+      for (const { subgraph } of resolved) {
+        if (!authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
+          throw new UnauthorizedError();
+        }
+      }
+    });
 
     // Validate every schema as a subgraph SDL before writing anything.
     const schemaErrors: string[] = [];
     const items: (UpdateSubgraphSchemaData & { name: string })[] = [];
-    for (const { subgraph, schema } of resolved) {
-      const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
-        labels: subgraph.labels,
-        namespaceId: namespace.id,
-      });
-      const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
 
+    /**
+     * @TODO:
+     *
+     * As of 2026-06-10 we only support v1, so instead of loading the federated graphs just to get that value we are
+     * going to pass no federated graphs to this method which will return the latest supported version. In the future,
+     * when we support different versions, we need to revisit this.
+     */
+    const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion([]);
+    for (const { subgraph, schema } of resolved) {
       let isEventDrivenGraph = false;
       let isV2Graph: boolean | undefined;
       try {
@@ -223,6 +226,7 @@ export function publishFederatedSubgraphs(
         updatedBy: authContext.userId,
         namespaceId: namespace.id,
         isV2Graph,
+        subgraph,
       });
     }
 

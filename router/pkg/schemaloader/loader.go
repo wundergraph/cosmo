@@ -12,6 +12,7 @@ import (
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
@@ -79,6 +80,18 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 		if err != nil {
 			l.Logger.Error("Failed to parse MCP operation", zap.String("file", path), zap.Error(err))
 			return nil
+		}
+
+		// If the operation carries September-2025-spec executable descriptions
+		// (operation/variable/fragment), re-print without them so the string
+		// forwarded to upstream GraphQL servers stays valid for servers that
+		// don't yet support the new spec. Otherwise reuse the raw file content.
+		if HasExecutableDescriptions(&opDoc) {
+			operationString, err = PrintOperationWithoutDescriptions(&opDoc)
+			if err != nil {
+				l.Logger.Error("Failed to print MCP operation", zap.String("file", path), zap.Error(err))
+				return nil
+			}
 		}
 
 		// Extract the operation name and type
@@ -201,4 +214,73 @@ func extractOperationDescription(doc *ast.Document) string {
 		}
 	}
 	return ""
+}
+
+// HasExecutableDescriptions reports whether the document contains any
+// description on an executable definition (operation, variable, fragment) —
+// the descriptions added by the September 2025 GraphQL spec that older upstream
+// servers will reject.
+func HasExecutableDescriptions(doc *ast.Document) bool {
+	for i := range doc.OperationDefinitions {
+		if doc.OperationDefinitions[i].Description.IsDefined {
+			return true
+		}
+	}
+	for i := range doc.VariableDefinitions {
+		if doc.VariableDefinitions[i].Description.IsDefined {
+			return true
+		}
+	}
+	for i := range doc.FragmentDefinitions {
+		if doc.FragmentDefinitions[i].Description.IsDefined {
+			return true
+		}
+	}
+	return false
+}
+
+// PrintOperationWithoutDescriptions re-prints an executable GraphQL document
+// with all executable-definition descriptions hidden, so the result is safe to
+// forward to upstream GraphQL servers that don't yet support the September 2025
+// spec. The document's description fields are restored before returning so
+// other consumers (e.g. MCP JSON schema generation) still see them.
+//
+// Callers should gate this on HasExecutableDescriptions and reuse the original
+// source string when no descriptions are present — re-printing reformats the
+// document.
+func PrintOperationWithoutDescriptions(doc *ast.Document) (string, error) {
+	hiddenOps := make([]int, 0, len(doc.OperationDefinitions))
+	for i := range doc.OperationDefinitions {
+		if doc.OperationDefinitions[i].Description.IsDefined {
+			doc.OperationDefinitions[i].Description.IsDefined = false
+			hiddenOps = append(hiddenOps, i)
+		}
+	}
+	hiddenVars := make([]int, 0, len(doc.VariableDefinitions))
+	for i := range doc.VariableDefinitions {
+		if doc.VariableDefinitions[i].Description.IsDefined {
+			doc.VariableDefinitions[i].Description.IsDefined = false
+			hiddenVars = append(hiddenVars, i)
+		}
+	}
+	hiddenFrags := make([]int, 0, len(doc.FragmentDefinitions))
+	for i := range doc.FragmentDefinitions {
+		if doc.FragmentDefinitions[i].Description.IsDefined {
+			doc.FragmentDefinitions[i].Description.IsDefined = false
+			hiddenFrags = append(hiddenFrags, i)
+		}
+	}
+	defer func() {
+		for _, ref := range hiddenOps {
+			doc.OperationDefinitions[ref].Description.IsDefined = true
+		}
+		for _, ref := range hiddenVars {
+			doc.VariableDefinitions[ref].Description.IsDefined = true
+		}
+		for _, ref := range hiddenFrags {
+			doc.FragmentDefinitions[ref].Description.IsDefined = true
+		}
+	}()
+
+	return astprinter.PrintString(doc)
 }
