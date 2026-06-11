@@ -27,10 +27,11 @@ printf 'FROM alpine:3.20\nRUN apk add --no-cache ca-certificates\nWORKDIR /app\n
 docker build -t bench-cosmo:local /tmp/bench-router
 ```
 
-2. Subgraphs image: the Rust subgraphs from
-   [the hive gateways-benchmark](https://github.com/graphql-hive/gateways-benchmark)
-   (accounts/products/reviews/inventory on one port, 4200), built as
-   `bench-subgraphs:latest`.
+2. Subgraphs image: any implementation of the standard federation example
+   subgraphs (accounts/products/reviews/inventory on one port, 4200), built as
+   `bench-subgraphs:latest`. The reference dataset used for the acceptance
+   numbers is the one from the graphql-hive/gateways-benchmark repository
+   (workload source only — this suite benchmarks no other gateways).
    The canonical federated query (`QUERY_FILE`) is the benchmark's `MyQuery`;
    against this dataset the full response is exactly 87,599 bytes
    (`EXPECTED_BYTES`).

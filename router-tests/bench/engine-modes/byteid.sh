@@ -81,6 +81,11 @@ HELPER
   hashes=$(shasum -a 256 "$outdir"/*.json | awk '{print $1}' | sort -u)
   bytes=$(wc -c < "$outdir/seq_1.json" | tr -d ' ')
   nfiles=$(ls "$outdir"/*.json | wc -l | tr -d ' ')
+  # The gate is 25 sequential + 25 concurrent; a partial concurrent batch
+  # (xargs failure, curl errors) must not pass silently.
+  if [ "$nfiles" != 50 ]; then
+    echo "BYTEID FAIL [$mode]: expected 50 response files, got $nfiles"; FAIL=1; return
+  fi
   local nhashes; nhashes=$(echo "$hashes" | grep -c .)
   if [ "$nhashes" != 1 ]; then
     echo "BYTEID FAIL [$mode]: $nhashes distinct hashes within mode ($nfiles files)"; FAIL=1; return

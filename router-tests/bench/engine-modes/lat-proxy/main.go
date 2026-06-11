@@ -1,7 +1,6 @@
 // lat-proxy injects a per-subgraph artificial latency in front of a single
-// upstream that serves all subgraphs on distinct path prefixes (the hive
-// gateways-benchmark subgraph container: /accounts /products /reviews
-// /inventory). The delay is applied to the RESPONSE (after the upstream call
+// upstream that serves all subgraphs on distinct path prefixes
+// (/accounts /products /reviews /inventory). The delay is applied to the RESPONSE (after the upstream call
 // returns), matching the semantics of netem egress delay on the subgraph
 // container used by the uniform benchmark.
 //
