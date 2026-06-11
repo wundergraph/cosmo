@@ -17,14 +17,9 @@ const {
   SENTRY_ENABLE_LOGS,
 } = sentryEnvVariables.parse(process.env);
 
-// RPC paths we always trace at 100%, regardless of SENTRY_TRACES_SAMPLE_RATE. Batch
-// subgraph publishes are rare, slow, and frequently hit the request timeout — we want a
-// trace for every one so their end-to-end composition cost can be tracked. Child spans
-// (e.g. ComposeGraphsWorker.composeGraphsInWorker) inherit the parent's sampling decision.
+// RPC paths we always trace at 100%, regardless of SENTRY_TRACES_SAMPLE_RATE.
 const ALWAYS_SAMPLE_PATHS = ['/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraphs'];
 
-// This runs for every span, so it must stay allocation-free on the common path: no array
-// building, no string joining — just direct substring checks that short-circuit on the first hit.
 const matchesAlwaysSample = (value: unknown): boolean => {
   if (typeof value !== 'string') {
     return false;
@@ -40,7 +35,7 @@ const matchesAlwaysSample = (value: unknown): boolean => {
 const publishAwareTracesSampler: NonNullable<Sentry.NodeOptions['tracesSampler']> = (ctx) => {
   const attrs = ctx.attributes;
 
-  // Batch publishes are always traced, regardless of the base rate or any upstream decision.
+  // Some paths are always traced
   if (
     matchesAlwaysSample(ctx.name) ||
     (attrs &&
