@@ -1636,7 +1636,9 @@ type PublishFederatedSubgraphsRequest struct {
 	Subgraphs                      []*PublishSubgraph `protobuf:"bytes,2,rep,name=subgraphs,proto3" json:"subgraphs,omitempty"`
 	DisableResolvabilityValidation *bool              `protobuf:"varint,3,opt,name=disable_resolvability_validation,json=disableResolvabilityValidation,proto3,oneof" json:"disable_resolvability_validation,omitempty"`
 	// Optional limit for the number of errors/warnings returned.
-	Limit         *int32 `protobuf:"varint,4,opt,name=limit,proto3,oneof" json:"limit,omitempty"`
+	Limit *int32 `protobuf:"varint,4,opt,name=limit,proto3,oneof" json:"limit,omitempty"`
+	// Optional value indicating whether the batch publish should occur asynchronously or wait for completion before returning.
+	Async         *bool `protobuf:"varint,5,opt,name=async,proto3,oneof" json:"async,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1699,6 +1701,13 @@ func (x *PublishFederatedSubgraphsRequest) GetLimit() int32 {
 	return 0
 }
 
+func (x *PublishFederatedSubgraphsRequest) GetAsync() bool {
+	if x != nil && x.Async != nil {
+		return *x.Async
+	}
+	return false
+}
+
 type PublishFederatedSubgraphsResponse struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	Response            *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
@@ -1708,8 +1717,10 @@ type PublishFederatedSubgraphsResponse struct {
 	Counts              *SubgraphPublishStats  `protobuf:"bytes,5,opt,name=counts,proto3,oneof" json:"counts,omitempty"`
 	// The names of the subgraphs whose schema actually changed as a result of this batch publish.
 	UpdatedSubgraphNames []string `protobuf:"bytes,6,rep,name=updatedSubgraphNames,proto3" json:"updatedSubgraphNames,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// The job identifier the client can use to obtain details about the status of the enqueued job
+	JobId         *string `protobuf:"bytes,7,opt,name=jobId,proto3,oneof" json:"jobId,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PublishFederatedSubgraphsResponse) Reset() {
@@ -1782,6 +1793,13 @@ func (x *PublishFederatedSubgraphsResponse) GetUpdatedSubgraphNames() []string {
 		return x.UpdatedSubgraphNames
 	}
 	return nil
+}
+
+func (x *PublishFederatedSubgraphsResponse) GetJobId() string {
+	if x != nil && x.JobId != nil {
+		return *x.JobId
+	}
+	return ""
 }
 
 type GitInfo struct {
@@ -33015,22 +33033,26 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x10deploymentErrors\x18\x03 \x01(\x05R\x10deploymentErrors\"=\n" +
 	"\x0fPublishSubgraph\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
-	"\x06schema\x18\x02 \x01(\tR\x06schema\"\x9e\x02\n" +
+	"\x06schema\x18\x02 \x01(\tR\x06schema\"\xc3\x02\n" +
 	" PublishFederatedSubgraphsRequest\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12C\n" +
 	"\tsubgraphs\x18\x02 \x03(\v2%.wg.cosmo.platform.v1.PublishSubgraphR\tsubgraphs\x12M\n" +
 	" disable_resolvability_validation\x18\x03 \x01(\bH\x00R\x1edisableResolvabilityValidation\x88\x01\x01\x12\x19\n" +
-	"\x05limit\x18\x04 \x01(\x05H\x01R\x05limit\x88\x01\x01B#\n" +
+	"\x05limit\x18\x04 \x01(\x05H\x01R\x05limit\x88\x01\x01\x12\x19\n" +
+	"\x05async\x18\x05 \x01(\bH\x02R\x05async\x88\x01\x01B#\n" +
 	"!_disable_resolvability_validationB\b\n" +
-	"\x06_limit\"\xec\x03\n" +
+	"\x06_limitB\b\n" +
+	"\x06_async\"\x91\x04\n" +
 	"!PublishFederatedSubgraphsResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12T\n" +
 	"\x11compositionErrors\x18\x02 \x03(\v2&.wg.cosmo.platform.v1.CompositionErrorR\x11compositionErrors\x12Q\n" +
 	"\x10deploymentErrors\x18\x03 \x03(\v2%.wg.cosmo.platform.v1.DeploymentErrorR\x10deploymentErrors\x12Z\n" +
 	"\x13compositionWarnings\x18\x04 \x03(\v2(.wg.cosmo.platform.v1.CompositionWarningR\x13compositionWarnings\x12G\n" +
 	"\x06counts\x18\x05 \x01(\v2*.wg.cosmo.platform.v1.SubgraphPublishStatsH\x00R\x06counts\x88\x01\x01\x122\n" +
-	"\x14updatedSubgraphNames\x18\x06 \x03(\tR\x14updatedSubgraphNamesB\t\n" +
-	"\a_counts\"\x8f\x01\n" +
+	"\x14updatedSubgraphNames\x18\x06 \x03(\tR\x14updatedSubgraphNames\x12\x19\n" +
+	"\x05jobId\x18\a \x01(\tH\x01R\x05jobId\x88\x01\x01B\t\n" +
+	"\a_countsB\b\n" +
+	"\x06_jobId\"\x8f\x01\n" +
 	"\aGitInfo\x12\x1d\n" +
 	"\n" +
 	"commit_sha\x18\x01 \x01(\tR\tcommitSha\x12\x1d\n" +

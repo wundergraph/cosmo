@@ -1146,6 +1146,13 @@ export class PublishFederatedSubgraphsRequest extends Message<PublishFederatedSu
    */
   limit?: number;
 
+  /**
+   * Optional value indicating whether the batch publish should occur asynchronously or wait for completion before returning.
+   *
+   * @generated from field: optional bool async = 5;
+   */
+  async?: boolean;
+
   constructor(data?: PartialMessage<PublishFederatedSubgraphsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1158,6 +1165,7 @@ export class PublishFederatedSubgraphsRequest extends Message<PublishFederatedSu
     { no: 2, name: "subgraphs", kind: "message", T: PublishSubgraph, repeated: true },
     { no: 3, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 5, name: "async", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphsRequest {
@@ -1213,6 +1221,13 @@ export class PublishFederatedSubgraphsResponse extends Message<PublishFederatedS
    */
   updatedSubgraphNames: string[] = [];
 
+  /**
+   * The job identifier the client can use to obtain details about the status of the enqueued job
+   *
+   * @generated from field: optional string jobId = 7;
+   */
+  jobId?: string;
+
   constructor(data?: PartialMessage<PublishFederatedSubgraphsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1227,6 +1242,7 @@ export class PublishFederatedSubgraphsResponse extends Message<PublishFederatedS
     { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
     { no: 5, name: "counts", kind: "message", T: SubgraphPublishStats, opt: true },
     { no: 6, name: "updatedSubgraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "jobId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphsResponse {

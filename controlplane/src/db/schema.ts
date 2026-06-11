@@ -16,8 +16,13 @@ import {
   json,
   real,
 } from 'drizzle-orm/pg-core';
-import type { JSONContent } from '@tiptap/core';
 import { AxiosHeaderValue } from 'axios';
+import type { PlainMessage } from '@bufbuild/protobuf';
+import type {
+  CompositionError,
+  CompositionWarning,
+  DeploymentError,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FeatureIds } from '../types/index.js';
 import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction } from './models.js';
 
@@ -2755,3 +2760,26 @@ export const onboarding = pgTable(
     };
   },
 );
+
+export const batchPublishJobStatusEnum = pgEnum('batch_publish_job_status', [
+  'pending',
+  'failed',
+  'completed',
+] as const);
+
+export const batchPublishJobDetails = pgTable('batch_publish_job_details', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  status: batchPublishJobStatusEnum('status').notNull(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  failureReason: text('failure_reason'),
+  compositionResult: json('composition_result').$type<{
+    deploymentErrors: PlainMessage<DeploymentError>[];
+    compositionWarnings: PlainMessage<CompositionWarning>[];
+    compositionErrors: PlainMessage<CompositionError>[];
+    updatedSubgraphNames: string[];
+  }>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+});

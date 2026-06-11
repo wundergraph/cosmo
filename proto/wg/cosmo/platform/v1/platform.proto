@@ -102,6 +102,8 @@ message PublishFederatedSubgraphsRequest {
   optional bool disable_resolvability_validation = 3;
   // Optional limit for the number of errors/warnings returned.
   optional int32 limit = 4;
+  // Optional value indicating whether the batch publish should occur asynchronously or wait for completion before returning.
+  optional bool async = 5;
 }
 
 message PublishFederatedSubgraphsResponse {
@@ -112,6 +114,8 @@ message PublishFederatedSubgraphsResponse {
   optional SubgraphPublishStats counts = 5;
   // The names of the subgraphs whose schema actually changed as a result of this batch publish.
   repeated string updatedSubgraphNames = 6;
+  // The job identifier the client can use to obtain details about the status of the enqueued job
+  optional string jobId = 7;
 }
 
 message GitInfo {
