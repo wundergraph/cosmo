@@ -113,6 +113,7 @@ overrides:
   backslash: <0.2.1
   qs: 6.14.1
   mdast-util-to-hast: '>=13.2.1'
+  msgpackr: 1.12.1
   js-yaml: '>=4.1.1'
   fast-uri: 3.1.2
   fast-xml-parser: 5.8.0
@@ -11706,8 +11707,8 @@ packages:
     resolution: {integrity: sha512-SdzXp4kD/Qf8agZ9+iTu6eql0m3kWm1A2y1hkpTeVNENutaB0BwHlSvAIaMxwntmRUAUjon2V4L8Z/njd0Ct8A==}
     hasBin: true
 
-  msgpackr@1.10.1:
-    resolution: {integrity: sha512-r5VRLv9qouXuLiIBrLpl2d5ZvPt8svdQTl5/vMvE4nzDMyEX4sgW5yWhuBBj5UmgwOTWj8CIdSXn5sAfsHAWIQ==}
+  msgpackr@1.12.1:
+    resolution: {integrity: sha512-4EUH9tQHnMmEgzW/MdAP0KIfa1T9AF+htl0ffe2n5vb2EKn9y2co8ccpgWko6S52Jy1PQZKwRnx5/KkYjtd9MQ==}
 
   msw@2.2.11:
     resolution: {integrity: sha512-XtIoewF7XWLT0a39Ftkazt9PprBA1bxHZ4CSlomN74sCBJOJU2w5VwLmGlswwsOBhGoF7jovt6bxrSIESxA1KA==}
@@ -23171,7 +23172,7 @@ snapshots:
     dependencies:
       cron-parser: 4.9.0
       ioredis: 5.4.1
-      msgpackr: 1.10.1
+      msgpackr: 1.12.1
       node-abort-controller: 3.1.1
       semver: 7.7.1
       tslib: 2.6.2
@@ -27213,7 +27214,7 @@ snapshots:
       '@msgpackr-extract/msgpackr-extract-win32-x64': 3.0.2
     optional: true
 
-  msgpackr@1.10.1:
+  msgpackr@1.12.1:
     optionalDependencies:
       msgpackr-extract: 3.0.2
 
