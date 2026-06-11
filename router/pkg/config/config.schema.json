@@ -3861,6 +3861,16 @@
           "default": false,
           "description": "Enables sending the \"fetch_reasons\" extension to upstream subgraphs (only) that explains why each field (marked with @openfed__requireFetchReasons) was requested. This flag does not expose the data to clients."
         },
+        "enable_dataflow_execution": {
+          "type": "boolean",
+          "default": false,
+          "description": "Experimental. Executes query plans with the dataflow executor: per-fetch dependency gating instead of the per-wave barrier. Reduces latency under skewed subgraph latency. Response bytes are identical on the success path."
+        },
+        "enable_execution_plan_scheduling": {
+          "type": "boolean",
+          "default": false,
+          "description": "Experimental. Replaces the wave-based fetch grouping with a dominance-based schedule tree computed at plan time. Reduces latency under skewed subgraph latency. Changes the query plan shape reported in extensions and ART."
+        },
         "subscription_fetch_timeout": {
           "type": "string",
           "format": "go-duration",

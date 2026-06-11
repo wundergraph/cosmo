@@ -37,6 +37,11 @@ type OperationPlanner struct {
 	// planningDurationOverride, when set, replaces the measured planning duration.
 	// This is used in tests to simulate slow queries.
 	planningDurationOverride func(content string) time.Duration
+
+	// enableExecutionPlanScheduling plans operations through the dominance-based
+	// schedule-tree scheduler (postprocess.WithBuildScheduleTree). Static per
+	// router process; config reload rebuilds the mux.
+	enableExecutionPlanScheduling bool
 }
 
 type operationPlannerOpts struct {
@@ -59,13 +64,15 @@ func NewOperationPlanner(
 	planCache ExecutionPlanCache[uint64, *planWithMetaData],
 	fallbackCache *slowplancache.Cache[*planWithMetaData],
 	planningDurationOverride func(content string) time.Duration,
+	enableExecutionPlanScheduling bool,
 ) *OperationPlanner {
 	return &OperationPlanner{
-		planCache:                planCache,
-		executor:                 executor,
-		trackUsageInfo:           executor.TrackUsageInfo,
-		slowPlanCache:            fallbackCache,
-		planningDurationOverride: planningDurationOverride,
+		planCache:                     planCache,
+		executor:                      executor,
+		trackUsageInfo:                executor.TrackUsageInfo,
+		slowPlanCache:                 fallbackCache,
+		planningDurationOverride:      planningDurationOverride,
+		enableExecutionPlanScheduling: enableExecutionPlanScheduling,
 	}
 }
 
@@ -90,7 +97,15 @@ func (p *OperationPlanner) planOperation(content string, name string, includeQue
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
-	post := postprocess.NewProcessor(postprocess.CollectDataSourceInfo())
+	postOpts := []postprocess.ProcessorOption{postprocess.CollectDataSourceInfo()}
+	if p.enableExecutionPlanScheduling {
+		// Experimental: dominance-based plan-time scheduler. Replaces the legacy
+		// orderSequenceByDependencies+createParallelNodes wave grouping with a nested
+		// Parallel(Sequence...) schedule tree that is provably never slower under any
+		// per-fetch duration vector (see graphql-go-tools docs/adr/0001-query-plan-scheduler.md).
+		postOpts = append(postOpts, postprocess.WithBuildScheduleTree())
+	}
+	post := postprocess.NewProcessor(postOpts...)
 	post.Process(preparedPlan)
 
 	return &planWithMetaData{

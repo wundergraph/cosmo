@@ -1542,7 +1542,8 @@ func (s *graphServer) buildGraphMux(
 		}
 	}
 
-	operationPlanner := NewOperationPlanner(executor, gm.planCache, gm.planFallbackCache, s.planningDurationOverride)
+	operationPlanner := NewOperationPlanner(executor, gm.planCache, gm.planFallbackCache, s.planningDurationOverride,
+		s.engineExecutionConfiguration.EnableExecutionPlanScheduling)
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {

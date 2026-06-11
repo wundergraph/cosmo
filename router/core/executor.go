@@ -90,7 +90,22 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		PropagateFetchReasons:                  opts.RouterEngineConfig.Execution.EnableRequireFetchReasons,
 		ValidateRequiredExternalFields:         opts.RouterEngineConfig.Execution.ValidateRequiredExternalFields,
 		SetDeduplicationShardCountToGOMAXPROCS: true,
+		EnableDataflowExecution:                opts.RouterEngineConfig.Execution.EnableDataflowExecution,
 		AllowCustomExtensionProperties:         opts.RouterEngineConfig.SubgraphExtensionPropagation.Enabled,
+	}
+
+	if opts.RouterEngineConfig.Execution.EnableDataflowExecution {
+		b.logger.Info("experimental dataflow executor enabled (ENGINE_ENABLE_DATAFLOW)")
+		if opts.RouterEngineConfig.Execution.EnableExecutionPlanScheduling {
+			// Informational only: the single source of truth for both-flags behavior is
+			// the engine-level structural guard (the dataflow executor rejects nested
+			// schedule-tree plans and falls back to the schedule-tree executor).
+			b.logger.Warn("ENGINE_ENABLE_DATAFLOW and ENGINE_ENABLE_SCHEDULE_TREE are both set: " +
+				"nested schedule-tree plans run the schedule-tree executor; dataflow applies only to plans that remain flat")
+		}
+	}
+	if opts.RouterEngineConfig.Execution.EnableExecutionPlanScheduling {
+		b.logger.Info("experimental schedule-tree planner enabled (ENGINE_ENABLE_SCHEDULE_TREE)")
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
