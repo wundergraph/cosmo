@@ -81,7 +81,9 @@ export function getFeatureFlagsInLatestCompositionByFederatedGraph(
             namespaceId: namespace.id,
             includeSubgraphs: false,
           });
-          if (flag) {
+          // A disabled feature flag is no longer served in the latest composition (its router config is
+          // removed without recomposing), so exclude it even though its schema version rows still exist.
+          if (flag && flag.isEnabled) {
             featureFlags.push(flag);
           }
         }

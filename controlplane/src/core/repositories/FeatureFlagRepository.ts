@@ -19,6 +19,8 @@ import {
   subgraphsToFederatedGraph,
   targets,
   users,
+  protobufSchemaVersions,
+  pluginImageVersions,
 } from '../../db/schema.js';
 import {
   FeatureFlagCompositionDTO,
@@ -908,8 +910,7 @@ export class FeatureFlagRepository {
     featureFlagId: string;
     namespaceId: string;
   }): Promise<FeatureSubgraphDTO[]> {
-    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
-    const fgs = await this.db
+    const featureSubgraphs = await this.db
       .select({
         name: targets.name,
         labels: targets.labels,
@@ -929,6 +930,18 @@ export class FeatureFlagRepository {
         isEventDrivenGraph: subgraphs.isEventDrivenGraph,
         isFeatureSubgraph: subgraphs.isFeatureSubgraph,
         type: subgraphs.type,
+        // Schema Version
+        svId: schemaVersion.id,
+        svLastUpdated: schemaVersion.createdAt,
+        svSchemaSDL: schemaVersion.schemaSDL,
+        svIsV2Graph: schemaVersion.isV2Graph,
+        // Proto
+        protoSchema: protobufSchemaVersions.protoSchema,
+        protoMappings: protobufSchemaVersions.protoMappings,
+        protoLock: protobufSchemaVersions.protoLock,
+        // Plugin Data
+        pluginDataPlatforms: pluginImageVersions.platform,
+        pluginDataVersion: pluginImageVersions.version,
       })
       .from(featureFlagToFeatureSubgraphs)
       .innerJoin(
@@ -938,6 +951,18 @@ export class FeatureFlagRepository {
       .innerJoin(subgraphs, eq(subgraphs.id, featureSubgraphsToBaseSubgraphs.featureSubgraphId))
       .innerJoin(targets, eq(subgraphs.targetId, targets.id))
       .innerJoin(namespaces, eq(namespaces.id, targets.namespaceId))
+      .leftJoin(schemaVersion, eq(schemaVersion.id, subgraphs.schemaVersionId))
+      .leftJoin(
+        protobufSchemaVersions,
+        and(
+          inArray(schema.subgraphs.type, ['grpc_plugin', 'grpc_service']),
+          eq(protobufSchemaVersions.schemaVersionId, subgraphs.schemaVersionId),
+        ),
+      )
+      .leftJoin(
+        pluginImageVersions,
+        and(eq(subgraphs.type, 'grpc_plugin'), eq(pluginImageVersions.schemaVersionId, subgraphs.schemaVersionId)),
+      )
       .where(
         and(
           eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlagId),
@@ -948,77 +973,64 @@ export class FeatureFlagRepository {
       )
       .execute();
 
-    const featureGraphsByFlag = [];
+    if (featureSubgraphs.length === 0) {
+      return [];
+    }
 
-    for (const fg of fgs) {
-      let lastUpdatedAt = '';
-      let schemaSDL = '';
-      let schemaVersionId = '';
-      let isV2Graph: boolean | undefined;
+    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
+    const baseSubgraphNameById = await subgraphRepo.getSubgraphNameByIds(
+      featureSubgraphs.map((fg) => fg.baseSubgraphId),
+    );
+
+    const featureGraphsByFlag: FeatureSubgraphDTO[] = [];
+    for (const graph of featureSubgraphs) {
       let proto: ProtoSubgraph | undefined;
+      if (graph.schemaVersionId !== null && (graph.type === 'grpc_plugin' || graph.type === 'grpc_service')) {
+        if (!graph.protoSchema) {
+          this.logger.warn(
+            `Missing protobuf schema for ${graph.type} subgraph with schemaVersionId: ${graph.schemaVersionId}`,
+          );
+        }
 
-      if (fg.schemaVersionId !== null) {
-        const sv = await this.db.query.schemaVersion.findFirst({
-          where: eq(schemaVersion.id, fg.schemaVersionId),
-        });
-        lastUpdatedAt = sv?.createdAt?.toISOString() ?? '';
-        schemaSDL = sv?.schemaSDL ?? '';
-        schemaVersionId = sv?.id ?? '';
-        isV2Graph = sv?.isV2Graph || undefined;
-        if (fg.type === 'grpc_plugin' || fg.type === 'grpc_service') {
-          const protobufSchemaVersion = await this.db.query.protobufSchemaVersions.findFirst({
-            where: eq(schema.protobufSchemaVersions.schemaVersionId, fg.schemaVersionId),
-          });
+        proto = {
+          schema: graph.protoSchema ?? '',
+          mappings: graph.protoMappings ?? '',
+          lock: graph.protoLock ?? '',
+        };
 
-          if (!protobufSchemaVersion) {
+        if (graph.type === 'grpc_plugin') {
+          if (!graph.pluginDataVersion) {
             this.logger.warn(
-              `Missing protobuf schema for ${fg.type} subgraph with schemaVersionId: ${fg.schemaVersionId}`,
+              `Missing plugin image version for ${graph.type} subgraph with schemaVersionId: ${graph.schemaVersionId}`,
             );
           }
 
-          proto = {
-            schema: protobufSchemaVersion?.protoSchema ?? '',
-            mappings: protobufSchemaVersion?.protoMappings ?? '',
-            lock: protobufSchemaVersion?.protoLock ?? '',
+          proto.pluginData = {
+            platforms: graph.pluginDataPlatforms ?? [],
+            version: graph.pluginDataVersion ?? 'v1',
           };
-
-          if (fg.type === 'grpc_plugin') {
-            const pluginImageVersion = await this.db.query.pluginImageVersions.findFirst({
-              where: eq(schema.pluginImageVersions.schemaVersionId, fg.schemaVersionId),
-            });
-
-            if (!pluginImageVersion) {
-              this.logger.warn(
-                `Missing plugin image version for ${fg.type} subgraph with schemaVersionId: ${fg.schemaVersionId}`,
-              );
-            }
-
-            proto.pluginData = {
-              platforms: pluginImageVersion?.platform ?? [],
-              version: pluginImageVersion?.version ?? 'v1',
-            };
-          }
         }
       }
 
-      const baseSubgraph = await subgraphRepo.byId(fg.baseSubgraphId);
-      if (!baseSubgraph) {
+      const baseSubgraphName = baseSubgraphNameById[graph.baseSubgraphId];
+      if (!baseSubgraphName) {
         continue;
       }
+
       featureGraphsByFlag.push({
-        ...fg,
-        readme: fg.readme || undefined,
-        subscriptionUrl: fg.subscriptionUrl ?? '',
-        subscriptionProtocol: fg.subscriptionProtocol ?? 'ws',
-        websocketSubprotocol: fg.websocketSubprotocol || undefined,
-        creatorUserId: fg.createdBy || undefined,
-        labels: fg.labels?.map?.((l) => splitLabel(l)) ?? [],
-        namespace: fg.namespaceName,
-        schemaVersionId,
-        schemaSDL,
-        lastUpdatedAt,
-        baseSubgraphName: baseSubgraph.name,
-        isV2Graph,
+        ...graph,
+        readme: graph.readme || undefined,
+        subscriptionUrl: graph.subscriptionUrl ?? '',
+        subscriptionProtocol: graph.subscriptionProtocol ?? 'ws',
+        websocketSubprotocol: graph.websocketSubprotocol || undefined,
+        creatorUserId: graph.createdBy || undefined,
+        labels: graph.labels?.map?.((l) => splitLabel(l)) ?? [],
+        namespace: graph.namespaceName,
+        schemaVersionId: graph.svId ?? '',
+        schemaSDL: graph.svSchemaSDL ?? '',
+        lastUpdatedAt: graph.svLastUpdated?.toISOString() ?? '',
+        baseSubgraphName,
+        isV2Graph: graph.svIsV2Graph ?? undefined,
         proto,
       });
     }
@@ -1307,13 +1319,21 @@ export class FeatureFlagRepository {
   }: {
     baseSchemaVersionId: string;
   }) {
+    // A feature flag can have multiple composed schema versions against the same base schema version
+    // (e.g. recomposing the feature flag recomposes it against the unchanged base, so rows accumulate).
+    // Deduplicate by feature flag, keeping the latest composed version, so callers get one entry per flag.
     const ffSchemaVersions = await this.db
-      .select({
+      .selectDistinctOn([federatedGraphsToFeatureFlagSchemaVersions.featureFlagId], {
         id: federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
         featureFlagId: federatedGraphsToFeatureFlagSchemaVersions.featureFlagId,
       })
       .from(federatedGraphsToFeatureFlagSchemaVersions)
+      .innerJoin(
+        schemaVersion,
+        eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
+      )
       .where(eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId))
+      .orderBy(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, desc(schemaVersion.createdAt))
       .execute();
 
     if (ffSchemaVersions.length === 0) {
