@@ -2913,6 +2913,15 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 	}
 }
 
+// RequireTriggerCount asserts that the current trigger count equals desiredCount exactly.
+// Call this after WaitForSubscriptionCount has confirmed all subscriptions are active;
+// trigger creation is synchronous with subscription registration so no additional waiting is needed.
+func (e *Environment) RequireTriggerCount(desiredCount uint64) {
+	e.t.Helper()
+	report := e.syncReporter().GetReport()
+	require.Equal(e.t, desiredCount, report.Triggers, "expected exactly %d triggers, got %d", desiredCount, report.Triggers)
+}
+
 // NATSPublishUntilMinMessagesSent publishes a NATS message repeatedly until the
 // total MessagesSent count reaches minCount. This handles fan-out scenarios where
 // multiple subscriptions must all receive the message: if some consumers aren't
