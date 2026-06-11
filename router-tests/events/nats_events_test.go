@@ -1098,6 +1098,10 @@ func TestNatsEvents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		env.WaitForSubscriptionCount(1, EventWaitTimeout)
+		// Make sure to wait for the trigger count because we might already have the
+		// subscription count incremented before the trigger was actually created.
+		// In that case we wouldn't yet have a durable consumer on the NATS server.
+		env.WaitForTriggerCount(1, EventWaitTimeout)
 
 		// Verify the durable consumer was created on the stream
 		stream, err := js.Stream(env.Context, streamName)
@@ -1155,6 +1159,11 @@ func TestNatsEvents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		env.WaitForSubscriptionCount(1, EventWaitTimeout)
+		// SubscriptionCount is incremented before the engine starts the trigger, so the
+		// durable consumer may not exist on the NATS server yet. The trigger count is only
+		// incremented after Source.Start (and thus createOrUpdateDurableConsumer) returns,
+		// so wait for it before asserting on the consumer.
+		env.WaitForTriggerCount(1, EventWaitTimeout)
 
 		// Verify the durable consumer was created on the stream
 		stream, err := js.Stream(env.Context, streamName)
