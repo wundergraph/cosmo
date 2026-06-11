@@ -54,7 +54,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, true, true)
 
 		ctx, _ := setupTestContext(t, tp)
 
@@ -84,7 +84,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, true, true)
 
 		ctx, _ := setupTestContext(t, tp)
 
@@ -111,7 +111,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, true, true)
 
 		ctx, _ := setupTestContext(t, tp)
 

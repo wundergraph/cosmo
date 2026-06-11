@@ -1726,6 +1726,8 @@ func (s *graphServer) buildGraphMux(
 		metricAttExpressions,
 		exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
 		s.headerPropagation,
+		s.traceConfig != nil && s.traceConfig.Enabled,
+		s.metricConfig != nil && s.metricConfig.IsEnabled(),
 	)
 
 	handlerOpts := HandlerOptions{

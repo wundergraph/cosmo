@@ -920,8 +920,9 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 	}
 
 	return &requestContext{
-		logger:         opts.requestLogger,
-		keys:           map[string]any{},
+		logger: opts.requestLogger,
+		// keys is lazily allocated on first Set (see Set) to avoid a per-request map
+		// allocation for the common case where no custom context keys are written.
 		responseWriter: opts.w,
 		request:        opts.r,
 		operation:      opts.operationContext,
