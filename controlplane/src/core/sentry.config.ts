@@ -23,14 +23,31 @@ const {
 // (e.g. ComposeGraphsWorker.composeGraphsInWorker) inherit the parent's sampling decision.
 const ALWAYS_SAMPLE_PATHS = ['/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraphs'];
 
+// This runs for every span, so it must stay allocation-free on the common path: no array
+// building, no string joining — just direct substring checks that short-circuit on the first hit.
+const matchesAlwaysSample = (value: unknown): boolean => {
+  if (typeof value !== 'string') {
+    return false;
+  }
+  for (const path of ALWAYS_SAMPLE_PATHS) {
+    if (value.includes(path)) {
+      return true;
+    }
+  }
+  return false;
+};
+
 const publishAwareTracesSampler: NonNullable<Sentry.NodeOptions['tracesSampler']> = (ctx) => {
-  const attrs = ctx.attributes ?? {};
-  const target = [ctx.name, attrs['http.route'], attrs['http.target'], attrs['url.path'], attrs['url.full']]
-    .filter(Boolean)
-    .join(' ');
+  const attrs = ctx.attributes;
 
   // Batch publishes are always traced, regardless of the base rate or any upstream decision.
-  if (ALWAYS_SAMPLE_PATHS.some((path) => target.includes(path))) {
+  if (
+    matchesAlwaysSample(ctx.name) ||
+    (attrs &&
+      [attrs['http.route'], attrs['http.target'], attrs['url.path'], attrs['url.full']].some((value) =>
+        matchesAlwaysSample(value),
+      ))
+  ) {
     return 1;
   }
 
