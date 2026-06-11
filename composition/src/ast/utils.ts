@@ -282,6 +282,20 @@ export function safeParse(value: string, noLocation = true): ParseResult {
   }
 }
 
+export function safeParseFieldSet(rawFieldSet: string): ParseResult {
+  const result = safeParse('{' + rawFieldSet + '}');
+  if (result.error || !result.documentNode) {
+    return result;
+  }
+  /* A raw field set that escapes its wrapping braces (e.g. through a comment) can parse into additional
+   * definitions beyond the single expected operation definition. Such field sets are invalid. */
+  const definitions = result.documentNode.definitions;
+  if (definitions.length !== 1 || definitions[0].kind !== Kind.OPERATION_DEFINITION) {
+    return { error: new Error('A field set must define exactly one selection set.') };
+  }
+  return result;
+}
+
 export type EnumTypeNode = EnumTypeDefinitionNode | EnumTypeExtensionNode;
 export type InputObjectTypeNode = InputObjectTypeDefinitionNode | InputObjectTypeExtensionNode;
 export type InterfaceTypeNode = InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode;
