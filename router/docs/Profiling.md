@@ -25,7 +25,7 @@ To do so, run:
 
 ```shell
 brew install k6
-k6 run bench.js
+k6 run bench/bench.js
 ```
 
 This will run a benchmark on the router, and you can see the results in the terminal.
