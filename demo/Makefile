@@ -44,6 +44,9 @@ plugin-build-ci: plugin-build-ci-go-binary plugin-build-ci-bun-binary
 	cp -a pkg/subgraphs/projects/bin/* ../router/plugins/projects/bin/
 	cp -a pkg/subgraphs/courses/bin/* ../router/plugins/courses/bin/
 
+compose-cache:
+	$(wgc_router_ci) compose -i ./graph-cache-only.yaml -o ./config-cache-only.json
+
 standalone-compose:
 	$(wgc_router) compose -i ./graph-with-standalone.yaml -o ./configWithStandalone.json
 	pnpx prettier ./configWithStandalone.json -w
@@ -57,3 +60,18 @@ build-manifest:
 
 build-manifest-integration:
 	python3 build_manifest.py --router-config ./config.json --out ../router-tests/testenv/testdata/manifest --cleanup
+
+# Composes the entity caching integration test config consumed (go:embed) by
+# router-tests/entitycaching. jq pretty-prints so regeneration diffs stay reviewable.
+compose-cachetest:
+	$(wgc_router_ci) compose -i ./graph-cachetest.yaml -o ../router-tests/entitycaching/testdata/config.json
+	jq . ../router-tests/entitycaching/testdata/config.json > ../router-tests/entitycaching/testdata/config.json.tmp
+	mv ../router-tests/entitycaching/testdata/config.json.tmp ../router-tests/entitycaching/testdata/config.json
+
+generate-cachetest:
+	cd pkg/subgraphs/cachetest/items && go run github.com/99designs/gqlgen generate
+	cd pkg/subgraphs/cachetest/details && go run github.com/99designs/gqlgen generate
+	cd pkg/subgraphs/cachetest/inventory && go run github.com/99designs/gqlgen generate
+	cd pkg/subgraphs/cachetest/viewer && go run github.com/99designs/gqlgen generate
+	cd pkg/subgraphs/cachetest/articles && go run github.com/99designs/gqlgen generate
+	cd pkg/subgraphs/cachetest/articlesmeta && go run github.com/99designs/gqlgen generate
