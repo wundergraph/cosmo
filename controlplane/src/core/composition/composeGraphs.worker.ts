@@ -359,6 +359,6 @@ export default async function composeGraphsInWorkerActual(
   try {
     return composeGraphsInWorker(task);
   } finally {
-    await Sentry.flush();
+    await Sentry.flush(2000);
   }
 }

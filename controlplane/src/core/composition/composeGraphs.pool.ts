@@ -155,6 +155,9 @@ export function composeGraphsInWorker(
       const traceData = Sentry.getTraceData();
       const pool = getComposeGraphsPool();
       span.setAttribute('pool.queueSize', pool.queueSize);
+      span.setAttribute('pool.threads', pool.threads.length);
+      Sentry.setMeasurement('pool.queueSize', pool.queueSize, 'none');
+      Sentry.setMeasurement('pool.threads', pool.threads.length, 'none');
 
       return pool.run({
         ...fullTask,
