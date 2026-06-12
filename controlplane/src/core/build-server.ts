@@ -661,10 +661,6 @@ export default async function build(opts: BuildConfig) {
 
     fastify.log.debug('Bull workers shut down');
 
-    fastify.log.debug('Shutting down lock adapter');
-    await fastify.lockAdapter.disconnect();
-    fastify.log.debug('Lock adapter shut down');
-
     fastify.log.debug('Shutting down composition worker pool');
 
     await destroyComposeGraphsPool();

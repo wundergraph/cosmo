@@ -4,13 +4,13 @@ import path from 'node:path';
 import fp from 'fastify-plugin';
 import IORedis from 'ioredis';
 import { ConnectionOptions } from 'bullmq';
-import { BaseAdapter, IoredisAdapter } from 'redlock-universal';
+import Redlock from 'redlock';
 
 declare module 'fastify' {
   interface FastifyInstance {
     redisForWorker: ConnectionOptions;
     redisForQueue: ConnectionOptions;
-    lockAdapter: BaseAdapter;
+    lockAdapter: Redlock;
     redisConnect(): Promise<void>;
   }
 }
@@ -84,32 +84,31 @@ export const createRedisConnections = async (opts: RedisPluginOptions) => {
     lazyConnect: true,
   });
 
-  const lockAdapter = new IoredisAdapter(
-    new IORedis.Redis({
-      ...connectionConfig,
-      enableOfflineQueue: false,
-      lazyConnect: true,
-    }),
-    { keyPrefix: 'controlplane' },
-  );
+  const redisLock = new IORedis.Redis({
+    ...connectionConfig,
+    enableOfflineQueue: false,
+    lazyConnect: true,
+  });
 
-  return { redisQueue, redisWorker, lockAdapter };
+  const lockAdapter = new Redlock([redisLock]);
+
+  return { redisQueue, redisWorker, lockAdapter, redisLock };
 };
 
 export default fp<RedisPluginOptions>(async function (fastify, opts) {
-  const { redisQueue, redisWorker, lockAdapter } = await createRedisConnections(opts);
+  const { redisQueue, redisWorker, lockAdapter, redisLock } = await createRedisConnections(opts);
 
   fastify.decorate('redisConnect', async () => {
     try {
       // Wait explicitly for the connection to be established.
       await redisQueue.connect();
       await redisWorker.connect();
-      await lockAdapter.getClient().connect();
+      await redisLock.connect();
 
       // Healthcheck.
       await redisWorker.ping();
       await redisQueue.ping();
-      await lockAdapter.ping();
+      await redisLock.ping();
 
       fastify.log.debug('Redis connection healthcheck succeeded');
     } catch (error) {
@@ -122,5 +121,5 @@ export default fp<RedisPluginOptions>(async function (fastify, opts) {
 
   fastify.decorate<IORedis.Redis>('redisForWorker', redisWorker);
   fastify.decorate<IORedis.Redis>('redisForQueue', redisQueue);
-  fastify.decorate<BaseAdapter>('lockAdapter', lockAdapter);
+  fastify.decorate<Redlock>('lockAdapter', lockAdapter);
 });

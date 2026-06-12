@@ -1,7 +1,7 @@
 import { ConnectionOptions, Job, JobsOptions, Queue, Worker } from 'bullmq';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
-import { BaseAdapter } from 'redlock-universal';
+import Redlock from 'redlock';
 import * as schema from '../../db/schema.js';
 import { BatchPublishJobDetailsRepository } from '../repositories/BatchPublishJobDetailsRepository.js';
 import { IQueue, IWorker } from './Worker.js';
@@ -65,7 +65,7 @@ class DeleteBatchPublishJobDetailsWorker implements IWorker {
     private input: {
       redisConnection: ConnectionOptions;
       db: PostgresJsDatabase<typeof schema>;
-      lockAdapter: BaseAdapter;
+      lockAdapter: Redlock;
       logger: pino.Logger;
     },
   ) {
@@ -93,7 +93,7 @@ class DeleteBatchPublishJobDetailsWorker implements IWorker {
 export const createDeleteBatchPublishJobDetailsWorker = (input: {
   redisConnection: ConnectionOptions;
   db: PostgresJsDatabase<typeof schema>;
-  lockAdapter: BaseAdapter;
+  lockAdapter: Redlock;
   logger: pino.Logger;
 }) => {
   const log = input.logger.child({ worker: WorkerName });

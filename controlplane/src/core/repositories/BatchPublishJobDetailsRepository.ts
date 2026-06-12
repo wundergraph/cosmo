@@ -1,6 +1,6 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, sql } from 'drizzle-orm';
-import { BaseAdapter, createLock } from 'redlock-universal';
+import Redlock from 'redlock';
 import * as schema from '../../db/schema.js';
 import { BatchPublishJobStatus, NewBatchPublishJobDetails } from '../../db/models.js';
 import { traced } from '../tracing.js';
@@ -13,7 +13,7 @@ const LOCK_ACQUISITION_TIMEOUT_IN_MILLISECONDS = 30 * 60_000;
 export class BatchPublishJobDetailsRepository {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
-    private lockAdapter: BaseAdapter,
+    private lockAdapter: Redlock,
     private organizationId: string,
   ) {}
 
@@ -88,22 +88,27 @@ export class BatchPublishJobDetailsRepository {
   }
 
   public withNamespaceLock<Result>(namespaceId: string, fn: () => Promise<Result>): Promise<Result> {
-    const lockHandle = createLock({
-      adapter: this.lockAdapter,
-      key: `batch-publish:${namespaceId}`,
-      ttl: 15_000, // The lock should be released after 15 seconds, `using` keeps the lock alive if we are not done
-      retryAttempts: 0, // We are going to retry with `retryWithBackoff` so the lock should not be retried
-    });
-
     const lockAcquisitionDeadline = Date.now() + LOCK_ACQUISITION_TIMEOUT_IN_MILLISECONDS;
-    return retryWithBackoff(() => lockHandle.using(fn), {
-      attempts: 500, // We are waiting about ~40 minutes
-      baseInterval: 1000,
-      maxInterval: 5000,
-      jitter: true,
-      shouldRetry() {
-        return Date.now() < lockAcquisitionDeadline;
+    return retryWithBackoff(
+      () =>
+        this.lockAdapter.using(
+          [`batch-publish:${namespaceId}`],
+          15_000,
+          {
+            retryCount: 0, // We are going to retry with `retryWithBackoff` so the lock should not be retried
+            automaticExtensionThreshold: 5000,
+          },
+          fn,
+        ),
+      {
+        attempts: 500, // We are waiting about ~40 minutes
+        baseInterval: 1000,
+        maxInterval: 5000,
+        jitter: true,
+        shouldRetry() {
+          return Date.now() < lockAcquisitionDeadline;
+        },
       },
-    });
+    );
   }
 }
