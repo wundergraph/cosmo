@@ -99,17 +99,21 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	sub := p.conn.PSubscribe(ctx, subConf.Channels...)
 	msgChan := sub.Channel()
 
-	cleanup := func() {
-		err := sub.PUnsubscribe(ctx, subConf.Channels...)
-		if err != nil {
-			log.Error(fmt.Sprintf("error unsubscribing from redis for topics %v", subConf.Channels), zap.Error(err))
-		}
-	}
-
 	p.closeWg.Add(1)
 
 	go func() {
 		defer p.closeWg.Done()
+
+		// Always release the dedicated pub/sub connection on every exit path,
+		// otherwise each subscription leaks a connection. Closing the PubSub
+		// also unsubscribes from all channels server-side, so an explicit
+		// PUnsubscribe is unnecessary (and would fail anyway once the context
+		// driving teardown is cancelled).
+		defer func() {
+			if err := sub.Close(); err != nil {
+				log.Error(fmt.Sprintf("error closing redis subscription for topics %v", subConf.Channels), zap.Error(err))
+			}
+		}()
 
 		for {
 			select {
@@ -137,12 +141,10 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscription if it is not already done
 				log.Debug("application context done, stopping subscription")
-				cleanup()
 				return
 			case <-ctx.Done():
 				// When the subscription context is done, we stop the subscription if it is not already done
 				log.Debug("subscription context done, stopping subscription")
-				cleanup()
 				return
 			}
 		}
