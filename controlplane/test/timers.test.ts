@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { computeDelay, pollWithBackoff, retryWithBackoff } from '../src/core/util/poll-with-backoff.js';
+import { computeDelay, pollWithBackoff, retryWithBackoff } from '../src/core/util/timers.js';
 
 describe('computeDelay', () => {
   test('returns base when attempt is 0', () => {

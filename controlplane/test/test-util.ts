@@ -47,7 +47,7 @@ import { DeactivateOrganizationQueue } from '../src/core/workers/DeactivateOrgan
 import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
 import { DeleteOrganizationAuditLogsQueue } from '../src/core/workers/DeleteOrganizationAuditLogsWorker.js';
-import { retryWithBackoff } from '../src/core/util/poll-with-backoff.js';
+import { retryWithBackoff } from '../src/core/util/timers.js';
 import {
   isAlreadyExistsError,
   isRealmNotReadyError,

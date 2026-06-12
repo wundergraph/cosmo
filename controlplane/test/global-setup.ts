@@ -1,6 +1,6 @@
 import { pino } from 'pino';
 import Keycloak from '../src/core/services/Keycloak.js';
-import { retryWithBackoff } from '../src/core/util/poll-with-backoff.js';
+import { retryWithBackoff } from '../src/core/util/timers.js';
 import { TEST_REALM, keycloakClientOptions, isAlreadyExistsError } from './keycloak-test-utils.js';
 
 /**
