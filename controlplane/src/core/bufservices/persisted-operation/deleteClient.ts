@@ -9,6 +9,7 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import type { BlobStorage } from '../../blobstorage/index.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
@@ -43,8 +44,8 @@ export function deleteClient(
     }
 
     const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
-    const preview = await operationsRepo.previewDeleteClient(req.clientName);
 
+    const preview = await operationsRepo.previewDeleteClient(req.clientName);
     if (!preview) {
       return {
         response: {
@@ -55,30 +56,7 @@ export function deleteClient(
       };
     }
 
-    const clientDirectory = `${authContext.organizationId}/${federatedGraph.id}/operations/${encodeURIComponent(req.clientName)}`;
-
-    async function removeClientFromBlobStorage(key: string): Promise<
-      | {
-          ok: true;
-        }
-      | {
-          ok: false;
-          error: Error;
-        }
-    > {
-      try {
-        await opts.blobStorage.removeDirectory({ key });
-
-        return { ok: true };
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error('Unknown error');
-
-        return { ok: false, error };
-      }
-    }
-
     const deletedClient = await operationsRepo.deleteClient(req.clientName);
-
     if (!deletedClient) {
       return {
         response: {
@@ -90,7 +68,10 @@ export function deleteClient(
     }
 
     if (preview.persistedOperationsCount > 0) {
-      const removedFromBlobStorageMetadata = await removeClientFromBlobStorage(clientDirectory);
+      const clientDirectory = `${authContext.organizationId}/${federatedGraph.id}/operations/${encodeURIComponent(req.clientName)}`;
+      const removedFromBlobStorageMetadata = await removeClientFromBlobStorage(clientDirectory, {
+        storage: opts.blobStorage,
+      });
 
       if (!removedFromBlobStorageMetadata.ok) {
         logger.error(
@@ -122,4 +103,31 @@ export function deleteClient(
       deletedOperationsCount: deletedClient.deletedOperationsCount,
     };
   });
+}
+
+async function removeClientFromBlobStorage(
+  key: string,
+  {
+    storage,
+  }: {
+    storage: BlobStorage;
+  },
+): Promise<
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      error: Error;
+    }
+> {
+  try {
+    await storage.removeDirectory({ key });
+
+    return { ok: true };
+  } catch (e) {
+    const error = e instanceof Error ? e : new Error('Unknown error');
+
+    return { ok: false, error };
+  }
 }
