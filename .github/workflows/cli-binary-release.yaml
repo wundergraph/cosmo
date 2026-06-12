@@ -55,3 +55,35 @@ jobs:
         shell: bash
         # the '*' here is needed to catch `.exe` files for Windows builds, if we ever add them
         run: gh release upload ${{ github.event.release.tag_name }} out/wgc-experimental-${{ steps.split.outputs._1 }}-${{ matrix.target }}*.gz --clobber
+
+  notify-homebrew-tap:
+    if: startsWith(github.event.release.tag_name, 'wgc@')
+    name: Notify homebrew tap of wgc release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Extract version
+        id: version
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: echo "version=${TAG#wgc@}" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to homebrew-cosmo
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: wundergraph
+          repositories: homebrew-cosmo
+          permission-contents: write
+
+      - name: Dispatch wgc-release
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          repository: wundergraph/homebrew-cosmo
+          event-type: wgc-release
+          client-payload: '{"version": "${{ steps.version.outputs.version }}"}'
