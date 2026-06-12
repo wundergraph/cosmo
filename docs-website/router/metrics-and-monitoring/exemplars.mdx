@@ -52,23 +52,59 @@ With `trace_based` or `always_on`, every eligible measurement runs through the r
 
 ### Memory
 
-The SDK keeps a separate exemplar reservoir for every metric stream. A metric stream is a unique combination of a metric and its attribute set. Memory grows with the number of active streams multiplied by the reservoir size.
+The SDK keeps a separate exemplar reservoir for every metric stream. A metric stream is a unique combination of a metric and its attribute set. Exemplar memory grows with the number of active streams multiplied by the reservoir size of each stream.
 
-The reservoir size depends on the instrument:
+The reservoir size depends on the instrument. For histograms it holds one exemplar per bucket, so the bucket count sets the per-stream maximum. The router uses different bucket boundaries per backend.
 
 | Instrument | Reservoir | Exemplars per stream |
-|-|-|-|
-| Histograms (for example request duration) | One exemplar per bucket | One per histogram bucket |
+|------------|-----------|----------------------|
+| Request duration histogram (OTLP) | One exemplar per bucket | n |
+| Request duration histogram (Prometheus) | One exemplar per bucket | n |
 | Counters and other instruments | Fixed-size reservoir | 1 |
 
-Each exemplar stores a timestamp, the measured value, the trace ID, the span ID, and the filtered attributes. This is a small fixed footprint per exemplar, but it is multiplied by metric cardinality.
+Each exemplar stores a timestamp, the measured value, the trace ID, the span ID, and the filtered attributes. The in-memory footprint is roughly 100 bytes per exemplar. That footprint is multiplied by the bucket count and by metric cardinality, which is where memory grows quickly.
 
-High cardinality is the main risk. Every additional attribute value creates new metric streams, and each stream carries its own reservoir. Routers with many subgraphs, clients, or operation-level attributes will hold proportionally more exemplars in memory.
+High cardinality is the main risk. Every additional attribute value creates new metric streams, and each stream carries its own reservoir. Operation name, operation hash, client name, and client version are the attributes that drive stream count on a router.
+
+#### Example calculation
+
+
+<Note>
+This example is theoretical. It is a rough order-of-magnitude estimate, not a measured figure. The per-exemplar footprint, bucket counts, and stream counts vary with configuration and traffic, and the SDK adds overhead the formula ignores. Use it to reason about how memory scales, not to size capacity exactly.
+</Note>
+
+
+Estimate the exemplar memory of a single histogram with:
+
+```
+memory ≈ streams × buckets per stream × bytes per exemplar
+```
+
+`streams` is the number of distinct attribute combinations seen for that histogram. The examples below use the OTLP request duration histogram (39 buckets) and a footprint of 100 bytes per exemplar.
+
+**Bounded cardinality.** A router serves 200 distinct operations from 5 clients with 2 status codes. That is `200 × 5 × 2 = 2000` potential combinations, capped at the default cardinality limit of 2000 streams.
+
+```
+2000 streams × 39 buckets × 100 bytes ≈ 7.8 MB
+```
+
+This is the exemplar memory for one histogram. The router exposes several histogram instruments (request duration, operation planning time, operation cost), and each holds its own reservoirs, so the real total is a few times this figure.
+
+**Unbounded cardinality.** A client sends operations without a name, so `wg.operation.hash` becomes unique per query shape. With 50,000 distinct shapes and the cardinality limit removed:
+
+```
+50000 streams × 39 buckets × 100 bytes ≈ 195 MB
+```
+
+The same metric now consumes 25 times more memory, for one histogram. With `always_on` this happens regardless of trace sampling, because every measurement is eligible to fill a bucket. This is the scenario where exemplar memory explodes.
+
+The default cardinality limit of 2000 streams per instrument is what prevents the second case. It caps exemplar memory per histogram to a fixed worst case. Raising or disabling the limit removes that ceiling.
 
 ### Recommendations
 
 - Start with `trace_based`. It bounds both recording overhead and memory to sampled traces, and every recorded exemplar links to a trace that was actually stored.
 - Keep trace sampling at a moderate rate. The exemplar cost under `trace_based` follows the sampling rate.
-- Reserve `always_on` for low-throughput or debugging scenarios. It records exemplars even when no sampled trace exists, which raises overhead and produces exemplars with empty or unsampled trace context.
+- Reserve `always_on` for low-throughput or debugging scenarios. It records exemplars even when no sampled trace exists, which raises overhead and produces exemplars with empty or unsampled trace context. It also fills exemplar reservoirs for every stream regardless of sampling, so its memory cost scales with full cardinality.
+- Keep the cardinality limit in place. The default of 2000 streams per instrument caps exemplar memory to a fixed worst case per histogram. Do not disable it on a router that records exemplars.
 - Control metric cardinality. Use [exclude_metric_labels](/router/metrics-and-monitoring#exclude-certain-metrics-and-labels) and the [cardinality limit](/router/configuration#metrics) to cap the number of metric streams, which directly caps exemplar memory.
 
