@@ -1,6 +1,0 @@
-pnpm-lock.yaml linguist-generated
-controlplane/migrations/meta/*.json linguist-generated
-connect-go/gen/**.go linguist-generated
-connect/src/wg/cosmo/**.ts linguist-generated
-router/gen/**.go linguist-generated
-router/internal/graphiql/graphiql.html linguist-generated
