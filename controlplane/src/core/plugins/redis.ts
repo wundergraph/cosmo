@@ -4,11 +4,13 @@ import path from 'node:path';
 import fp from 'fastify-plugin';
 import IORedis from 'ioredis';
 import { ConnectionOptions } from 'bullmq';
+import { BaseAdapter, IoredisAdapter } from 'redlock-universal';
 
 declare module 'fastify' {
   interface FastifyInstance {
     redisForWorker: ConnectionOptions;
     redisForQueue: ConnectionOptions;
+    lockAdapter: BaseAdapter;
     redisConnect(): Promise<void>;
   }
 }
@@ -82,21 +84,32 @@ export const createRedisConnections = async (opts: RedisPluginOptions) => {
     lazyConnect: true,
   });
 
-  return { redisQueue, redisWorker };
+  const lockAdapter = new IoredisAdapter(
+    new IORedis.Redis({
+      ...connectionConfig,
+      enableOfflineQueue: false,
+      lazyConnect: true,
+    }),
+    { keyPrefix: 'controlplane' },
+  );
+
+  return { redisQueue, redisWorker, lockAdapter };
 };
 
 export default fp<RedisPluginOptions>(async function (fastify, opts) {
-  const { redisQueue, redisWorker } = await createRedisConnections(opts);
+  const { redisQueue, redisWorker, lockAdapter } = await createRedisConnections(opts);
 
   fastify.decorate('redisConnect', async () => {
     try {
       // Wait explicitly for the connection to be established.
       await redisQueue.connect();
       await redisWorker.connect();
+      await lockAdapter.getClient().connect();
 
       // Healthcheck.
       await redisWorker.ping();
       await redisQueue.ping();
+      await lockAdapter.ping();
 
       fastify.log.debug('Redis connection healthcheck succeeded');
     } catch (error) {
@@ -109,4 +122,5 @@ export default fp<RedisPluginOptions>(async function (fastify, opts) {
 
   fastify.decorate<IORedis.Redis>('redisForWorker', redisWorker);
   fastify.decorate<IORedis.Redis>('redisForQueue', redisQueue);
+  fastify.decorate<BaseAdapter>('lockAdapter', lockAdapter);
 });

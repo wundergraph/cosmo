@@ -13,6 +13,7 @@ import Fastify from 'fastify';
 import { pino } from 'pino';
 import postgres from 'postgres';
 import { expect } from 'vitest';
+import { MemoryAdapter } from 'redlock-universal';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import ScimController from '../src/core/controllers/scim.js';
@@ -48,13 +49,13 @@ import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
 import { DeleteOrganizationAuditLogsQueue } from '../src/core/workers/DeleteOrganizationAuditLogsWorker.js';
 import { retryWithBackoff } from '../src/core/util/timers.js';
+import { DeleteBatchPublishJobDetailsQueue } from '../src/core/workers/DeleteBatchPublishJobDetailsWorker.js';
 import {
   isAlreadyExistsError,
   isRealmNotReadyError,
   keycloakClientOptions,
   TEST_REALM,
 } from './keycloak-test-utils.js';
-import { DeleteBatchPublishJobDetailsQueue } from '../src/core/workers/DeleteBatchPublishJobDetailsWorker.js';
 
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
@@ -186,6 +187,7 @@ export const SetupTest = async function ({
         deleteUserQueue,
         deleteBatchPublishJobDetailsQueue,
       },
+      lockAdapter: new MemoryAdapter(),
     }),
   });
 

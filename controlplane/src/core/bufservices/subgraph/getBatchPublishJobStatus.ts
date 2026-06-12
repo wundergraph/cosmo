@@ -27,8 +27,8 @@ export function getBatchPublishJobStatus(
       throw new UnauthorizedError();
     }
 
-    const jobDetailsRepo = new BatchPublishJobDetailsRepository(opts.db, authContext.organizationId);
-    const jobDetails = await jobDetailsRepo.byId(req.jobId);
+    const jobRepo = new BatchPublishJobDetailsRepository(opts.db, opts.lockAdapter, authContext.organizationId);
+    const jobDetails = await jobRepo.byId(req.jobId);
     if (!jobDetails) {
       return {
         response: {
@@ -47,7 +47,7 @@ export function getBatchPublishJobStatus(
     const deploymentErrors = jobDetails.compositionResult?.deploymentErrors ?? [];
 
     let status: BatchPublishJobStatus | undefined;
-    let failureReason = jobDetails.failureReason || undefined;
+    const failureReason = jobDetails.failureReason || undefined;
     switch (jobDetails.status) {
       case 'pending': {
         status = BatchPublishJobStatus.PENDING;
@@ -65,16 +65,6 @@ export function getBatchPublishJobStatus(
         status = BatchPublishJobStatus.COMPLETED;
         break;
       }
-    }
-
-    // If there is an existing lock for the job and it has expired, we consider the job abandoned
-    if (
-      (status === BatchPublishJobStatus.PENDING || status === BatchPublishJobStatus.PROCESSING) &&
-      jobDetails.lockExpiresAt &&
-      jobDetails.lockExpiresAt < new Date()
-    ) {
-      status = BatchPublishJobStatus.FAILED;
-      failureReason = 'Server closed before the composition completed.';
     }
 
     const boundedLimit = req.limit === undefined ? maxRowLimitForChecks : clamp(req.limit, 1, maxRowLimitForChecks);
