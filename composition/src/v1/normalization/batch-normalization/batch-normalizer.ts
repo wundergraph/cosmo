@@ -30,7 +30,7 @@ import { upsertFederatedDirectiveData } from '../utils';
 import { invalidOverrideTargetSubgraphNameWarning } from '../../warnings/warnings';
 import { MAX_OR_SCOPES } from '../../constants/constants';
 import { normalizeSubgraph } from '../normalization-factory';
-import { type LinkImportData } from '../types/types';
+import { type FieldSetCacheEntry, type LinkImportData } from '../types/types';
 import { type HandleOverridesParams } from './types/params';
 import { internalSubgraphFromNormalization } from '../../../subgraph/utils';
 import { type DirectiveDefinitionData } from '../../../directive-definition-data/types/types';
@@ -51,6 +51,8 @@ export class BatchNormalizer {
   subgraphNames = new Set<SubgraphName>();
   invalidORScopesCoords = new Set<string>();
   fieldCoordsByNamedTypeName = new Map<TypeName, Set<string>>();
+  // Shared across all subgraph normalizations of a single batch normalization run
+  fieldSetCacheByRawFieldSet = new Map<string, FieldSetCacheEntry>();
   subgraphs: Array<Subgraph>;
   warnings: Array<Warning> = [];
   validationErrors: Array<Error> = [];
@@ -207,10 +209,11 @@ export class BatchNormalizer {
     }
 
     const internalGraph = new Graph();
-    for (const subgraph of this.subgraphs) {
+    this.subgraphs.forEach((subgraph) => {
       const subgraphName = subgraph.name;
       const normalizationResult = normalizeSubgraph({
         document: subgraph.definitions,
+        fieldSetCacheByRawFieldSet: this.fieldSetCacheByRawFieldSet,
         internalGraph,
         options: this.options,
         subgraphName,
@@ -220,20 +223,24 @@ export class BatchNormalizer {
       }
       if (!normalizationResult.success) {
         this.validationErrors.push(subgraphValidationError(subgraphName, normalizationResult.errors));
-        continue;
+        return;
       }
 
       this.handleLinkImports(normalizationResult.importDataByDirectiveName);
 
-      for (const authorizationData of normalizationResult.authorizationDataByParentTypeName.values()) {
+      normalizationResult.authorizationDataByParentTypeName.forEach((authorizationData) => {
         upsertAuthorizationData(this.authorizationDataByParentTypeName, authorizationData, this.invalidORScopesCoords);
-      }
-      for (const [namedTypeName, fieldCoords] of normalizationResult.fieldCoordsByNamedTypeName) {
-        addIterableToSet({
-          source: fieldCoords,
-          target: getValueOrDefault(this.fieldCoordsByNamedTypeName, namedTypeName, () => new Set<string>()),
-        });
-      }
+      });
+      normalizationResult.fieldCoordsByNamedTypeName.forEach((fieldCoords, namedTypeName) => {
+        const existingFieldCoords = this.fieldCoordsByNamedTypeName.get(namedTypeName);
+        if (existingFieldCoords) {
+          fieldCoords.forEach((fieldCoord) => {
+            existingFieldCoords.add(fieldCoord);
+          });
+        } else {
+          this.fieldCoordsByNamedTypeName.set(namedTypeName, new Set<string>(fieldCoords));
+        }
+      });
       mergeSetValueMap({
         source: normalizationResult.concreteTypeNamesByAbstractTypeName,
         target: this.concreteTypeNamesByAbstractTypeName,
@@ -258,13 +265,13 @@ export class BatchNormalizer {
           normalizationResult.overriddenFieldNamesByParentTypeNameByTargetSubgraphName,
         subgraphName,
       });
-    }
+    });
     if (this.invalidORScopesCoords.size > 0) {
       this.errors.push(orScopesLimitError(MAX_OR_SCOPES, [...this.invalidORScopesCoords]));
     }
     if (this.duplicateOverriddenFieldCoords.size > 0) {
       const duplicateOverriddenFieldErrorMessages: string[] = [];
-      for (const fieldCoords of this.duplicateOverriddenFieldCoords) {
+      this.duplicateOverriddenFieldCoords.forEach((fieldCoords) => {
         const sourceSubgraphNames = getOrThrowError(
           this.overrideSourceSubgraphNamesByFieldCoords,
           fieldCoords,
@@ -273,7 +280,7 @@ export class BatchNormalizer {
         duplicateOverriddenFieldErrorMessages.push(
           duplicateOverriddenFieldErrorMessage(fieldCoords, sourceSubgraphNames),
         );
-      }
+      });
       this.errors.push(duplicateOverriddenFieldsError(duplicateOverriddenFieldErrorMessages));
     }
 

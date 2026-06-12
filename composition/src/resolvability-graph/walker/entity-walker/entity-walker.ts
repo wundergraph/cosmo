@@ -9,7 +9,7 @@ import {
   type VisitEntityDescendantEdgeParams,
   type VisitEntityDescendantNodeParams,
 } from './types/params';
-import { add, getValueOrDefault } from '../../../utils/utils';
+import { getValueOrDefault } from '../../../utils/utils';
 
 export class EntityWalker {
   // Prevents registering the same entity node before there has been a chance to validate it.
@@ -48,19 +48,27 @@ export class EntityWalker {
     node: { fieldDataByName, nodeName, typeName },
     selectionPath,
   }: GetNodeResolutionDataParams): NodeResolutionData {
-    const dataByNodeName = getValueOrDefault(
-      this.resDataByNodeName,
-      nodeName,
-      () => new NodeResolutionData({ fieldDataByName, typeName }),
-    );
+    let dataByNodeName = this.resDataByNodeName.get(nodeName);
+    if (!dataByNodeName) {
+      dataByNodeName = new NodeResolutionData({ fieldDataByName, typeName });
+      this.resDataByNodeName.set(nodeName, dataByNodeName);
+    }
     if (!this.relativeOriginPaths || this.relativeOriginPaths.size < 1) {
-      return getValueOrDefault(this.resDataByRelativeOriginPath, selectionPath, () => dataByNodeName.copy());
+      let data = this.resDataByRelativeOriginPath.get(selectionPath);
+      if (!data) {
+        data = dataByNodeName.copy();
+        this.resDataByRelativeOriginPath.set(selectionPath, data);
+      }
+      return data;
     }
     let returnData: NodeResolutionData | undefined = undefined;
     for (const path of this.relativeOriginPaths) {
-      const data = getValueOrDefault(this.resDataByRelativeOriginPath, `${path}${selectionPath}`, () =>
-        dataByNodeName.copy(),
-      );
+      const fullPath = `${path}${selectionPath}`;
+      let data = this.resDataByRelativeOriginPath.get(fullPath);
+      if (!data) {
+        data = dataByNodeName.copy();
+        this.resDataByRelativeOriginPath.set(fullPath, data);
+      }
       returnData ??= data;
     }
     return returnData!;
@@ -86,7 +94,7 @@ export class EntityWalker {
     if (data.areDescendantsResolved()) {
       return { visited: true, areDescendantsResolved: true };
     }
-    if (!add(edge.visitedIndices, this.index)) {
+    if (edge.lastVisitedIndex === this.index) {
       /* This check is necessary to avoid infinite loops inexpensively.
        * If the edge has been visited before, any unresolvable will be propagated by the first instance.
        * Descendant paths need to be cleaned up to avoid false positives.
@@ -97,6 +105,7 @@ export class EntityWalker {
       });
       return { visited: true, areDescendantsResolved: true, isRevisitedNode: true };
     }
+    edge.lastVisitedIndex = this.index;
     if (edge.node.hasEntitySiblings) {
       /* This check prevents infinite loops.
        * The entity is only propagated into this map after it has been assessed for resolvability.
@@ -131,7 +140,7 @@ export class EntityWalker {
       return { visited: true, areDescendantsResolved: true };
     }
     let removeDescendantPaths: true | undefined = undefined;
-    for (const [fieldName, edge] of node.headToTailEdges) {
+    node.headToTailEdges.forEach((edge, fieldName) => {
       const { areDescendantsResolved, isExternal, isRevisitedNode, visited } = this.visitEntityDescendantEdge({
         edge,
         selectionPath,
@@ -146,7 +155,7 @@ export class EntityWalker {
         selectionPath,
         visited,
       });
-    }
+    });
     if (data.isResolved()) {
       this.removeUnresolvablePaths({ removeDescendantPaths, selectionPath });
     } else {
@@ -163,12 +172,12 @@ export class EntityWalker {
       return { visited: true, areDescendantsResolved: true };
     }
     let resolvedDescendants = 0;
-    for (const edge of node.headToTailEdges.values()) {
+    node.headToTailEdges.forEach((edge) => {
       // Propagate any one of the abstract path failures.
       if (this.visitEntityDescendantEdge({ edge, selectionPath }).areDescendantsResolved) {
         resolvedDescendants += 1;
       }
-    }
+    });
     return { visited: true, areDescendantsResolved: resolvedDescendants === node.headToTailEdges.size };
   }
 
@@ -188,32 +197,43 @@ export class EntityWalker {
     if (!visited) {
       return;
     }
-    const dataByNodeName = getValueOrDefault(this.resDataByNodeName, node.nodeName, () => data.copy());
+    let dataByNodeName = this.resDataByNodeName.get(node.nodeName);
+    if (!dataByNodeName) {
+      dataByNodeName = data.copy();
+      this.resDataByNodeName.set(node.nodeName, dataByNodeName);
+    }
     data.addResolvedFieldName(fieldName);
     dataByNodeName.addResolvedFieldName(fieldName);
     if (areDescendantsResolved) {
       /* Cannot propagate`areDescendantsResolved` to `dataByNodeName` because the context
        * of `data` is not isolated to the graph being walked only.
        */
-      data.resolvedDescendantNames.add(fieldName);
+      data.addResolvedDescendantName(fieldName);
     }
     if (this.relativeOriginPaths) {
       for (const originPath of this.relativeOriginPaths) {
-        const originData = getValueOrDefault(this.resDataByRelativeOriginPath, `${originPath}${selectionPath}`, () =>
-          data.copy(),
-        );
+        const fullPath = `${originPath}${selectionPath}`;
+        let originData = this.resDataByRelativeOriginPath.get(fullPath);
+        if (!originData) {
+          originData = data.copy();
+          this.resDataByRelativeOriginPath.set(fullPath, originData);
+        }
         originData.addResolvedFieldName(fieldName);
         if (areDescendantsResolved) {
-          originData.resolvedDescendantNames.add(fieldName);
+          originData.addResolvedDescendantName(fieldName);
           this.removeUnresolvablePaths({ selectionPath: `.${fieldName}`, removeDescendantPaths: true });
         }
       }
       return;
     }
-    const originData = getValueOrDefault(this.resDataByRelativeOriginPath, selectionPath, () => data.copy());
+    let originData = this.resDataByRelativeOriginPath.get(selectionPath);
+    if (!originData) {
+      originData = data.copy();
+      this.resDataByRelativeOriginPath.set(selectionPath, originData);
+    }
     originData.addResolvedFieldName(fieldName);
     if (areDescendantsResolved) {
-      originData.resolvedDescendantNames.add(fieldName);
+      originData.addResolvedDescendantName(fieldName);
     }
   }
 

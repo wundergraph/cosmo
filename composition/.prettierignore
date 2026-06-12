@@ -1,3 +1,6 @@
 tests/unstaged-tests
 coverage/
 CHANGELOG.md
+bench/
+dist-baseline/
+tests/*/unstaged-tests

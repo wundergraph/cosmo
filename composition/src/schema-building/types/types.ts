@@ -45,7 +45,8 @@ export enum ExtensionType {
 
 export type EnumDefinitionData = {
   appearances: number;
-  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
+  // Lazily allocated upon first write to retain a stable object shape.
+  configureDescriptionDataBySubgraphName?: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   enumValueDataByName: Map<string, EnumValueData>;
   extensionType: ExtensionType;
@@ -60,7 +61,8 @@ export type EnumDefinitionData = {
 
 export type EnumValueData = {
   appearances: number;
-  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
+  // Lazily allocated upon first write to retain a stable object shape.
+  configureDescriptionDataBySubgraphName?: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   federatedCoords: string;
   kind: Kind.ENUM_VALUE_DEFINITION;
@@ -83,12 +85,15 @@ export type ExternalFieldData = {
 };
 
 export type FieldData = {
-  argumentDataByName: Map<ArgumentName, InputValueData>;
-  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
+  // Lazily allocated; most fields do not define arguments.
+  argumentDataByName?: Map<ArgumentName, InputValueData>;
+  // Lazily allocated upon first write to retain a stable object shape.
+  configureDescriptionDataBySubgraphName?: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   externalFieldDataBySubgraphName: Map<SubgraphName, ExternalFieldData>;
   federatedCoords: string;
-  inheritedDirectiveNames: Set<DirectiveName>;
+  // Lazily allocated; most fields do not inherit directives.
+  inheritedDirectiveNames?: Set<DirectiveName>;
   isInaccessible: boolean;
   isShareableBySubgraphName: Map<SubgraphName, boolean>;
   kind: Kind.FIELD_DEFINITION;
@@ -96,7 +101,8 @@ export type FieldData = {
   namedTypeKind: OutputNodeKind | Kind.NULL;
   namedTypeName: TypeName;
   node: MutableFieldNode;
-  nullLevelsBySubgraphName: Map<SubgraphName, Set<number>>;
+  // Lazily allocated; only set when @semanticNonNull is defined on the field.
+  nullLevelsBySubgraphName?: Map<SubgraphName, Set<number>>;
   originalParentTypeName: TypeName;
   federatedDirectivesData: FederatedDirectivesData;
   renamedParentTypeName: TypeName;
@@ -106,7 +112,8 @@ export type FieldData = {
 };
 
 export type InputObjectDefinitionData = {
-  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
+  // Lazily allocated upon first write to retain a stable object shape.
+  configureDescriptionDataBySubgraphName?: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   inputValueDataByName: Map<FieldName, InputValueData>;
@@ -120,7 +127,8 @@ export type InputObjectDefinitionData = {
 };
 
 export type InputValueData = {
-  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
+  // Lazily allocated upon first write to retain a stable object shape.
+  configureDescriptionDataBySubgraphName?: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   federatedCoords: string;
   includeDefaultValue: boolean;
@@ -143,7 +151,8 @@ export type InputValueData = {
 };
 
 export type InterfaceDefinitionData = {
-  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
+  // Lazily allocated upon first write to retain a stable object shape.
+  configureDescriptionDataBySubgraphName?: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   fieldDataByName: Map<FieldName, FieldData>;
@@ -160,7 +169,8 @@ export type InterfaceDefinitionData = {
 };
 
 export type ObjectDefinitionData = {
-  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
+  // Lazily allocated upon first write to retain a stable object shape.
+  configureDescriptionDataBySubgraphName?: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   fieldDataByName: Map<FieldName, FieldData>;
@@ -180,13 +190,16 @@ export type ObjectDefinitionData = {
 
 export type FederatedDirectivesData = {
   deprecatedReason: string;
-  directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
+  // Lazily allocated; most nodes do not define federated directives.
+  directivesByName?: Map<DirectiveName, Array<ConstDirectiveNode>>;
   isDeprecated: boolean;
-  tagDirectiveByName: Map<string, ConstDirectiveNode>;
+  // Lazily allocated; most nodes do not define @tag.
+  tagDirectiveByName?: Map<string, ConstDirectiveNode>;
 };
 
 export type ScalarDefinitionData = {
-  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
+  // Lazily allocated upon first write to retain a stable object shape.
+  configureDescriptionDataBySubgraphName?: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   kind: Kind.SCALAR_TYPE_DEFINITION;
@@ -206,7 +219,8 @@ export type SchemaData = {
 };
 
 export type UnionDefinitionData = {
-  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
+  // Lazily allocated upon first write to retain a stable object shape.
+  configureDescriptionDataBySubgraphName?: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   kind: Kind.UNION_TYPE_DEFINITION;

@@ -15,6 +15,10 @@ import {
   type StringValueNode,
   type TypeNode,
 } from 'graphql';
+
+// graphql v16's CJS root re-exports enum objects through getters; keep hot-path reads local.
+const KindRef = Kind;
+
 import { extractExecutableDirectiveLocations, formatDescription, stringToNameNode } from '../ast/utils';
 import {
   duplicateDirectiveDefinitionLocationError,
@@ -49,7 +53,7 @@ export type MutableEnumNode = {
 
 export function getMutableEnumNode(nameNode: NameNode): MutableEnumNode {
   return {
-    kind: Kind.ENUM_TYPE_DEFINITION,
+    kind: KindRef.ENUM_TYPE_DEFINITION,
     name: { ...nameNode },
   };
 }
@@ -61,12 +65,15 @@ export type MutableEnumValueNode = {
   description?: StringValueNode;
 };
 
-export function getMutableEnumValueNode(node: EnumValueDefinitionNode): MutableEnumValueNode {
+export function getMutableEnumValueNode(
+  node: EnumValueDefinitionNode,
+  description: StringValueNode | undefined = formatDescription(node.description),
+): MutableEnumValueNode {
   return {
     directives: [],
     kind: node.kind,
-    name: { ...node.name },
-    description: formatDescription(node.description),
+    name: node.name,
+    description,
   };
 }
 
@@ -79,14 +86,19 @@ export type MutableFieldNode = {
   description?: StringValueNode;
 };
 
-export function getMutableFieldNode(node: FieldDefinitionNode, hostPath: string, errors: Error[]): MutableFieldNode {
+export function getMutableFieldNode(
+  node: FieldDefinitionNode,
+  hostPath: string,
+  errors: Error[],
+  description: StringValueNode | undefined = formatDescription(node.description),
+): MutableFieldNode {
   return {
     arguments: [],
     directives: [],
     kind: node.kind,
-    name: { ...node.name },
-    type: getMutableTypeNode(node.type, hostPath, errors),
-    description: formatDescription(node.description),
+    name: node.name,
+    type: getSharedTypeNode(node.type, hostPath, errors),
+    description,
   };
 }
 
@@ -100,7 +112,7 @@ export type MutableInputObjectNode = {
 
 export function getMutableInputObjectNode(nameNode: NameNode): MutableInputObjectNode {
   return {
-    kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+    kind: KindRef.INPUT_OBJECT_TYPE_DEFINITION,
     name: { ...nameNode },
   };
 }
@@ -118,14 +130,15 @@ export function getMutableInputValueNode(
   node: InputValueDefinitionNode,
   hostPath: string,
   errors: Error[],
+  description: StringValueNode | undefined = formatDescription(node.description),
 ): MutableInputValueNode {
   return {
     directives: [],
     kind: node.kind,
-    name: { ...node.name },
-    type: getMutableTypeNode(node.type, hostPath, errors),
+    name: node.name,
+    type: getSharedTypeNode(node.type, hostPath, errors),
     defaultValue: node.defaultValue,
-    description: formatDescription(node.description),
+    description,
   };
 }
 
@@ -140,7 +153,7 @@ export type MutableInterfaceNode = {
 
 export function getMutableInterfaceNode(nameNode: NameNode): MutableInterfaceNode {
   return {
-    kind: Kind.INTERFACE_TYPE_DEFINITION,
+    kind: KindRef.INTERFACE_TYPE_DEFINITION,
     name: { ...nameNode },
   };
 }
@@ -156,7 +169,7 @@ export type MutableObjectNode = {
 
 export function getMutableObjectNode(nameNode: NameNode): MutableObjectNode {
   return {
-    kind: Kind.OBJECT_TYPE_DEFINITION,
+    kind: KindRef.OBJECT_TYPE_DEFINITION,
     name: { ...nameNode },
   };
 }
@@ -170,7 +183,7 @@ export type MutableScalarNode = {
 
 export function getMutableScalarNode(nameNode: NameNode): MutableScalarNode {
   return {
-    kind: Kind.SCALAR_TYPE_DEFINITION,
+    kind: KindRef.SCALAR_TYPE_DEFINITION,
     name: { ...nameNode },
   };
 }
@@ -182,6 +195,8 @@ export type MutableIntermediateTypeNode = {
   type?: MutableIntermediateTypeNode;
 };
 
+// Chains reachable from *Data.type and *.node.type may alias the parsed subgraph AST (and the caller's DocumentNode).
+// Never write into a chain node; clone-and-replace the .type reference instead (see rebuildTypeNodeWithNamedTypeName).
 export type MutableTypeNode = MutableNamedTypeNode | MutableListTypeNode | MutableNonNullTypeNode;
 
 export type MutableNamedTypeNode = {
@@ -204,16 +219,16 @@ export function getMutableTypeNode(node: TypeNode, typePath: string, errors: Err
   let lastTypeNode = deepCopy;
   for (let i = 0; i < MAXIMUM_TYPE_NESTING; i++) {
     switch (node.kind) {
-      case Kind.NAMED_TYPE:
+      case KindRef.NAMED_TYPE:
         lastTypeNode.name = { ...node.name };
         return deepCopy as MutableTypeNode;
-      case Kind.LIST_TYPE:
+      case KindRef.LIST_TYPE:
         lastTypeNode.kind = node.kind;
         lastTypeNode.type = { kind: node.type.kind };
         lastTypeNode = lastTypeNode.type;
         node = node.type;
         continue;
-      case Kind.NON_NULL_TYPE:
+      case KindRef.NON_NULL_TYPE:
         lastTypeNode.kind = node.kind;
         lastTypeNode.type = { kind: node.type.kind };
         lastTypeNode = lastTypeNode.type;
@@ -225,7 +240,49 @@ export function getMutableTypeNode(node: TypeNode, typePath: string, errors: Err
   }
   errors.push(maximumTypeNestingExceededError(typePath));
   // Return a dummy type when the type has exceeded nesting
-  return { kind: Kind.NAMED_TYPE, name: stringToNameNode(getTypeNodeNamedTypeName(node)) };
+  return { kind: KindRef.NAMED_TYPE, name: stringToNameNode(getTypeNodeNamedTypeName(node)) };
+}
+
+export function getSharedTypeNode(node: TypeNode, typePath: string, errors: Array<Error>): MutableTypeNode {
+  let cursor = node;
+  for (let i = 0; i < MAXIMUM_TYPE_NESTING; i++) {
+    switch (cursor.kind) {
+      case KindRef.NAMED_TYPE:
+        return node as MutableTypeNode;
+      case KindRef.LIST_TYPE:
+      case KindRef.NON_NULL_TYPE:
+        cursor = cursor.type;
+        continue;
+      default:
+        throw unexpectedTypeNodeKindFatalError(typePath);
+    }
+  }
+  errors.push(maximumTypeNestingExceededError(typePath));
+  // Return a dummy type when the type has exceeded nesting
+  return { kind: KindRef.NAMED_TYPE, name: stringToNameNode(getTypeNodeNamedTypeName(cursor)) };
+}
+
+export function rebuildTypeNodeWithNamedTypeName(
+  typeNode: MutableTypeNode,
+  namedTypeName: string,
+): MutableTypeNode | undefined {
+  const rebuilt: MutableIntermediateTypeNode = { kind: typeNode.kind };
+  let lastTypeNode = rebuilt;
+  for (let i = 0; i < MAXIMUM_TYPE_NESTING; i++) {
+    switch (typeNode.kind) {
+      case KindRef.NAMED_TYPE:
+        lastTypeNode.name = stringToNameNode(namedTypeName);
+        return rebuilt as MutableTypeNode;
+      case KindRef.LIST_TYPE:
+      case KindRef.NON_NULL_TYPE:
+        lastTypeNode.kind = typeNode.kind;
+        lastTypeNode.type = { kind: typeNode.type.kind };
+        lastTypeNode = lastTypeNode.type;
+        typeNode = typeNode.type;
+        continue;
+    }
+  }
+  return undefined;
 }
 
 export type MutableUnionNode = {
@@ -238,7 +295,7 @@ export type MutableUnionNode = {
 
 export function getMutableUnionNode(nameNode: NameNode): MutableUnionNode {
   return {
-    kind: Kind.UNION_TYPE_DEFINITION,
+    kind: KindRef.UNION_TYPE_DEFINITION,
     name: { ...nameNode },
   };
 }
@@ -259,14 +316,14 @@ export type CompositeOutputNode =
   | ObjectTypeExtensionNode;
 
 export function getTypeNodeNamedTypeName(typeNode: TypeNode): string {
-  if (typeNode.kind === Kind.NAMED_TYPE) {
+  if (typeNode.kind === KindRef.NAMED_TYPE) {
     return typeNode.name.value;
   }
   return getTypeNodeNamedTypeName(typeNode.type);
 }
 
 export function getNamedTypeNode(typeNode: TypeNode): TypeNode {
-  if (typeNode.kind === Kind.NAMED_TYPE) {
+  if (typeNode.kind === KindRef.NAMED_TYPE) {
     return typeNode;
   }
   return getNamedTypeNode(typeNode.type);
