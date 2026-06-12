@@ -1,0 +1,108 @@
+import { PlainMessage } from '@bufbuild/protobuf';
+import { HandlerContext } from '@connectrpc/connect';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import type {
+  PreviewDeleteClientRequest,
+  PreviewDeleteClientResponse,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { UnauthorizedError } from '../../errors/errors.js';
+import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
+import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
+import { getDateRange } from '../../repositories/analytics/util.js';
+import type { RouterOptions } from '../../routes.js';
+import { defaultRetentionLimitInDays } from '../../constants.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
+
+export function previewDeleteClient(
+  opts: RouterOptions,
+  req: PreviewDeleteClientRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<PreviewDeleteClientResponse>> {
+  let logger = getLogger(ctx, opts.logger);
+
+  return handleError<PlainMessage<PreviewDeleteClientResponse>>(ctx, logger, async () => {
+    req.namespace = req.namespace || DefaultNamespace;
+
+    const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+    logger = enrichLogger(ctx, logger, authContext);
+
+    const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+    const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
+
+    if (!federatedGraph) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Federated graph '${req.fedGraphName}' does not exist`,
+        },
+        persistedOperationsCount: 0,
+        hasTraffic: false,
+        organizationSlug: authContext.organizationSlug,
+      };
+    }
+
+    if (authContext.organizationDeactivated || !authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+      throw new UnauthorizedError();
+    }
+
+    const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
+    const preview = await operationsRepo.previewDeleteClient(req.clientName);
+
+    if (!preview) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Client '${req.clientName}' does not exist`,
+        },
+        persistedOperationsCount: 0,
+        hasTraffic: false,
+        organizationSlug: authContext.organizationSlug,
+      };
+    }
+
+    if (!opts.chClient || preview.persistedOperationsCount === 0) {
+      return {
+        response: {
+          code: EnumStatusCode.OK,
+        },
+        client: preview,
+        persistedOperationsCount: preview.persistedOperationsCount,
+        hasTraffic: false,
+        organizationSlug: authContext.organizationSlug,
+      };
+    }
+
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const changeRetention = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'breaking-change-retention',
+    });
+    const limit = changeRetention?.limit ?? defaultRetentionLimitInDays;
+    const [start, end] = getDateRange({
+      start: Date.now() - limit * 24 * 60 * 60 * 1000,
+      end: Date.now(),
+    });
+
+    const metricsRepo = new MetricsRepository(opts.chClient);
+    const hasTraffic = await metricsRepo.hasPersistedOperationTrafficForClient({
+      clientName: req.clientName,
+      organizationId: authContext.organizationId,
+      graphId: federatedGraph.id,
+      start,
+      end,
+    });
+
+    return {
+      response: {
+        code: EnumStatusCode.OK,
+      },
+      client: preview,
+      persistedOperationsCount: preview.persistedOperationsCount,
+      hasTraffic,
+      organizationSlug: authContext.organizationSlug,
+    };
+  });
+}
