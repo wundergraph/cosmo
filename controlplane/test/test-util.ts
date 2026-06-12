@@ -46,7 +46,9 @@ import { NewBillingPlan, OrganizationRole } from '../src/db/models.js';
 import { DeactivateOrganizationQueue } from '../src/core/workers/DeactivateOrganizationWorker.js';
 import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
+import { NetworkError } from '@keycloak/keycloak-admin-client';
 import { DeleteOrganizationAuditLogsQueue } from '../src/core/workers/DeleteOrganizationAuditLogsWorker.js';
+import { keycloakClientOptions, TEST_REALM } from './keycloak-test-config.js';
 
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
@@ -117,23 +119,12 @@ export const SetupTest = async function ({
     users.adminJimCompanyB = createTestContext('company-b', randomUUID());
   }
 
-  const realm = 'test';
-  const loginRealm = 'master';
-  const apiUrl = process.env.KC_API_URL || 'http://localhost:8080';
-  const clientId = 'studio';
-  const adminUser = 'admin';
-  const adminPassword = 'changeme';
+  const realm = TEST_REALM;
+  const apiUrl = keycloakClientOptions.apiUrl;
   const webBaseUrl = 'http://localhost:3000';
 
   const authenticator = createTestAuthenticator(users, apiUrl, realm);
-  const keycloakClient = new Keycloak({
-    apiUrl,
-    realm: loginRealm,
-    clientId,
-    adminUser,
-    adminPassword,
-    logger: log,
-  });
+  const keycloakClient = new Keycloak({ ...keycloakClientOptions, logger: log });
 
   const platformWebhooks = new MockPlatformWebhookService();
   const mailerClient = new Mailer({
@@ -500,9 +491,7 @@ export const addKeycloakUser = async ({
   await keycloakClient.authenticateClient();
 
   let id = '';
-  // The realm is created once in global setup, but Keycloak's caches can briefly
-  // lag behind, so a freshly created realm may not yet be visible to users.create.
-  // Retry on "Realm not found" before giving up, so this never flakes in CI.
+  // Retry on "Realm not found": Keycloak's caches can briefly lag behind the realm created in global setup.
   const maxRealmRetries = 5;
   for (let attempt = 1; ; attempt++) {
     try {
@@ -516,8 +505,10 @@ export const addKeycloakUser = async ({
         id: userTestData.userId,
       });
       break;
-    } catch (e: any) {
-      if (e.response?.status === 409) {
+    } catch (e: unknown) {
+      const status = e instanceof NetworkError ? e.response.status : undefined;
+
+      if (status === 409) {
         const existingUser = await keycloakClient.findUserByEmail({
           realm: realmName,
           email: userTestData.email,
@@ -531,14 +522,14 @@ export const addKeycloakUser = async ({
         break;
       }
 
-      const realmNotReady = e.response?.status === 404 || /realm not found/i.test(e.message ?? '');
+      const message = e instanceof Error ? e.message : String(e);
+      const realmNotReady = status === 404 || /realm not found/i.test(message);
       if (realmNotReady && attempt < maxRealmRetries) {
         await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
         continue;
       }
 
-      e.message = `Failed to add keycloak user: ${userTestData.email}.` + e.message;
-      throw e;
+      throw new Error(`Failed to add keycloak user: ${userTestData.email}. ${message}`, { cause: e });
     }
   }
 
