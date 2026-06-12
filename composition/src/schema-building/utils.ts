@@ -124,7 +124,6 @@ export function newFederatedDirectivesData(): FederatedDirectivesData {
   };
 }
 
-
 type IsNodeExternalOrShareableResult = {
   isExternal: boolean;
   isShareable: boolean;
@@ -891,9 +890,7 @@ export function isTypeValidImplementation({
 }
 
 export function isNodeDataInaccessible(data: NodeData): boolean {
-  return (
-    data.federatedDirectivesData.directivesByName?.has(INACCESSIBLE) || data.directivesByName.has(INACCESSIBLE)
-  );
+  return data.federatedDirectivesData.directivesByName?.has(INACCESSIBLE) || data.directivesByName.has(INACCESSIBLE);
 }
 
 export function isLeafKind(kind: Kind): boolean {

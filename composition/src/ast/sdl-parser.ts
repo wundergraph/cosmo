@@ -464,7 +464,12 @@ class SimpleSdlParser {
           block: false,
         };
       }
-      if (code === Char.Backslash || code === 10 || code === 13 || !isValidSourceCharacter(this.source, this.position)) {
+      if (
+        code === Char.Backslash ||
+        code === 10 ||
+        code === 13 ||
+        !isValidSourceCharacter(this.source, this.position)
+      ) {
         this.fail();
       }
       this.position += code >= 0xd800 && code <= 0xdbff ? 2 : 1;
@@ -530,7 +535,10 @@ class SimpleSdlParser {
 
   private peekKeyword(keyword: string) {
     this.skipIgnored();
-    return this.source.startsWith(keyword, this.position) && !isNameContinue(this.source.charCodeAt(this.position + keyword.length));
+    return (
+      this.source.startsWith(keyword, this.position) &&
+      !isNameContinue(this.source.charCodeAt(this.position + keyword.length))
+    );
   }
 
   private eatKeyword(keyword: string) {
@@ -1298,7 +1306,14 @@ class SdlParser {
     let position = this.position;
     while (position < length) {
       const ignoredCode = source.charCodeAt(position);
-      if (ignoredCode === 9 || ignoredCode === 10 || ignoredCode === 13 || ignoredCode === 32 || ignoredCode === 44 || ignoredCode === 0xfeff) {
+      if (
+        ignoredCode === 9 ||
+        ignoredCode === 10 ||
+        ignoredCode === 13 ||
+        ignoredCode === 32 ||
+        ignoredCode === 44 ||
+        ignoredCode === 0xfeff
+      ) {
         position++;
         continue;
       }
@@ -1527,7 +1542,11 @@ class SdlParser {
     if (isUnicodeScalarValue(code)) {
       return { value: String.fromCodePoint(code), size: 6 };
     }
-    if (isLeadingSurrogate(code) && this.source.charCodeAt(position + 6) === Char.Backslash && this.source.charCodeAt(position + 7) === Code.u) {
+    if (
+      isLeadingSurrogate(code) &&
+      this.source.charCodeAt(position + 6) === Char.Backslash &&
+      this.source.charCodeAt(position + 7) === Code.u
+    ) {
       const trailing = read16BitHexCode(this.source, position + 8);
       if (isTrailingSurrogate(trailing)) {
         return { value: String.fromCodePoint(code, trailing), size: 12 };
@@ -1544,7 +1563,11 @@ class SdlParser {
 
     while (position < this.length) {
       const code = this.source.charCodeAt(position);
-      if (code === Char.Quote && this.source.charCodeAt(position + 1) === Char.Quote && this.source.charCodeAt(position + 2) === Char.Quote) {
+      if (
+        code === Char.Quote &&
+        this.source.charCodeAt(position + 1) === Char.Quote &&
+        this.source.charCodeAt(position + 2) === Char.Quote
+      ) {
         currentLine += this.source.slice(chunkStart, position);
         blockLines.push(currentLine);
         this.position = position + 3;
@@ -1695,7 +1718,12 @@ function isTrailingSurrogate(code: number) {
 }
 
 function isUnicodeScalarValue(code: number) {
-  return (code >= 0x0009 && code <= 0x000a) || code === 0x000d || (code >= 0x0020 && code <= 0xd7ff) || (code >= 0xe000 && code <= 0x10ffff);
+  return (
+    (code >= 0x0009 && code <= 0x000a) ||
+    code === 0x000d ||
+    (code >= 0x0020 && code <= 0xd7ff) ||
+    (code >= 0xe000 && code <= 0x10ffff)
+  );
 }
 
 function isValidSourceCharacter(source: string, position: number) {

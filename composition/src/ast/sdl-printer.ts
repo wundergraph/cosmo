@@ -261,7 +261,11 @@ function getOperationTypes(context: PrinterContext): Array<OperationTypeDefiniti
     addInferredOperationType(context, operationTypeMap, OperationTypeNodeRef.SUBSCRIPTION, 'Subscription');
   }
   const operationTypes: Array<OperationTypeDefinitionNode> = [];
-  for (const operation of [OperationTypeNodeRef.QUERY, OperationTypeNodeRef.MUTATION, OperationTypeNodeRef.SUBSCRIPTION]) {
+  for (const operation of [
+    OperationTypeNodeRef.QUERY,
+    OperationTypeNodeRef.MUTATION,
+    OperationTypeNodeRef.SUBSCRIPTION,
+  ]) {
     const operationType = operationTypeMap.get(operation);
     if (operationType) {
       operationTypes.push(operationType);
@@ -306,13 +310,17 @@ function printDirectiveDefinitions(context: PrinterContext, chunks: Array<string
         printWrappedArguments(args) +
         (definition.repeatable ? ' repeatable' : '') +
         ' on ' +
-        sortedNameNodes(definition.locations).map((location) => location.value).join(' | '),
+        sortedNameNodes(definition.locations)
+          .map((location) => location.value)
+          .join(' | '),
     );
   }
 }
 
 function printTypeDefinitions(context: PrinterContext, chunks: Array<string>): void {
-  const definitions = sortByName(context.typeDefinitionList.filter((definition) => !shouldOmitTypeDefinition(definition)));
+  const definitions = sortByName(
+    context.typeDefinitionList.filter((definition) => !shouldOmitTypeDefinition(definition)),
+  );
   for (const definition of definitions) {
     switch (definition.kind) {
       case KindRef.OBJECT_TYPE_DEFINITION:
@@ -338,7 +346,10 @@ function printTypeDefinitions(context: PrinterContext, chunks: Array<string>): v
 }
 
 function shouldOmitTypeDefinition(definition: DefinitionInfo): boolean {
-  return definition.name.value.startsWith('__') || (definition.kind === KindRef.SCALAR_TYPE_DEFINITION && SPECIFIED_SCALARS.has(definition.name.value));
+  return (
+    definition.name.value.startsWith('__') ||
+    (definition.kind === KindRef.SCALAR_TYPE_DEFINITION && SPECIFIED_SCALARS.has(definition.name.value))
+  );
 }
 
 function printObjectTypeDefinition(definition: ObjectTypeDefinitionNode, context: PrinterContext): string {
@@ -402,7 +413,9 @@ function printScalarTypeDefinition(definition: ScalarTypeDefinitionNode, context
 function printFieldDefinition(field: FieldDefinitionNode, context: PrinterContext): string {
   let printed = field.name.value;
   if (field.arguments && field.arguments.length > 0) {
-    printed += printWrappedArguments(sortedInputValues(field.arguments).map((arg) => printInputValueDefinition(arg, context)));
+    printed += printWrappedArguments(
+      sortedInputValues(field.arguments).map((arg) => printInputValueDefinition(arg, context)),
+    );
   }
   printed += ': ' + printType(field.type);
   const directives = printDirectives(field.directives, context);
@@ -562,7 +575,7 @@ function isSpecifiedDirectiveName(name: string): boolean {
       return true;
     default:
       return false;
-    }
+  }
 }
 
 function printDirective(directive: DirectiveNode, context: PrinterContext): string {
@@ -590,7 +603,9 @@ function printDirectiveArgument(
   return (
     arg.name.value +
     ': ' +
-    (argInfo ? printDirectiveArgumentValue(arg.value as ConstValueNode, argInfo.type, context) : printValueNode(arg.value as ConstValueNode))
+    (argInfo
+      ? printDirectiveArgumentValue(arg.value as ConstValueNode, argInfo.type, context)
+      : printValueNode(arg.value as ConstValueNode))
   );
 }
 
@@ -617,7 +632,9 @@ function printDirectiveArgumentValue(valueNode: ConstValueNode, type: TypeRef, c
   }
   switch (namedType.name) {
     case 'Int':
-      return valueNode.kind === KindRef.INT ? String(Number(valueNode.value)) : printAstFromValue(valueFromUntypedAst(valueNode), type, context);
+      return valueNode.kind === KindRef.INT
+        ? String(Number(valueNode.value))
+        : printAstFromValue(valueFromUntypedAst(valueNode), type, context);
     case 'Float':
       return valueNode.kind === KindRef.INT || valueNode.kind === KindRef.FLOAT
         ? printUntypedValue(Number(valueNode.value))
@@ -632,11 +649,17 @@ function printDirectiveArgumentValue(valueNode: ConstValueNode, type: TypeRef, c
       if (valueNode.kind === KindRef.INT) {
         return valueNode.value;
       }
-      return valueNode.kind === KindRef.STRING ? printString(valueNode.value) : printAstFromValue(valueFromUntypedAst(valueNode), type, context);
+      return valueNode.kind === KindRef.STRING
+        ? printString(valueNode.value)
+        : printAstFromValue(valueFromUntypedAst(valueNode), type, context);
     case 'String':
-      return valueNode.kind === KindRef.STRING ? printString(valueNode.value) : printAstFromValue(valueFromUntypedAst(valueNode), type, context);
+      return valueNode.kind === KindRef.STRING
+        ? printString(valueNode.value)
+        : printAstFromValue(valueFromUntypedAst(valueNode), type, context);
     default:
-      return valueNode.kind === KindRef.STRING ? printString(valueNode.value) : printAstFromValue(valueFromUntypedAst(valueNode), type, context);
+      return valueNode.kind === KindRef.STRING
+        ? printString(valueNode.value)
+        : printAstFromValue(valueFromUntypedAst(valueNode), type, context);
   }
 }
 
@@ -774,7 +797,14 @@ function printAstFromValue(value: unknown, type: TypeRef, context: PrinterContex
   }
   if (type.kind === KindRef.LIST_TYPE) {
     if (Array.isArray(value)) {
-      return '[' + value.map((item) => printAstFromValue(item, type.type, context)).filter(Boolean).join(', ') + ']';
+      return (
+        '[' +
+        value
+          .map((item) => printAstFromValue(item, type.type, context))
+          .filter(Boolean)
+          .join(', ') +
+        ']'
+      );
     }
     return printAstFromValue(value, type.type, context);
   }
@@ -898,7 +928,9 @@ function printValueNode(valueNode: ConstValueNode): string {
     case KindRef.LIST:
       return '[' + valueNode.values.map(printValueNode).join(', ') + ']';
     case KindRef.OBJECT:
-      return '{' + valueNode.fields.map((field) => field.name.value + ': ' + printValueNode(field.value)).join(', ') + '}';
+      return (
+        '{' + valueNode.fields.map((field) => field.name.value + ': ' + printValueNode(field.value)).join(', ') + '}'
+      );
   }
 }
 
@@ -976,14 +1008,10 @@ function printDescription(description: StringValueNode): string {
 
 function printImplementedInterfaces(interfaces: ReadonlyArray<NamedTypeNode> | undefined): string {
   const sortedInterfaces = sortedNamedTypes(interfaces);
-  return sortedInterfaces.length > 0
-    ? 'implements ' + sortedInterfaces.map((type) => type.name.value).join(' & ')
-    : '';
+  return sortedInterfaces.length > 0 ? 'implements ' + sortedInterfaces.map((type) => type.name.value).join(' & ') : '';
 }
 
-function sortedFieldDefinitions(
-  fields: ReadonlyArray<FieldDefinitionNode> | undefined,
-): Array<FieldDefinitionNode> {
+function sortedFieldDefinitions(fields: ReadonlyArray<FieldDefinitionNode> | undefined): Array<FieldDefinitionNode> {
   return sortByName(fields);
 }
 
@@ -993,9 +1021,7 @@ function sortedInputValues(
   return sortByName(values);
 }
 
-function sortedEnumValues(
-  values: ReadonlyArray<EnumValueDefinitionNode> | undefined,
-): Array<EnumValueDefinitionNode> {
+function sortedEnumValues(values: ReadonlyArray<EnumValueDefinitionNode> | undefined): Array<EnumValueDefinitionNode> {
   return sortByName(values);
 }
 

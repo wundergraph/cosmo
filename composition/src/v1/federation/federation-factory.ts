@@ -3410,7 +3410,10 @@ export class FederationFactory {
       }
     }
     if (accessibleChildren < 1) {
-      (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
+      (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<
+        DirectiveName,
+        Array<ConstDirectiveNode>
+      >()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
       this.inaccessibleCoords.add(parentDefinitionData.name);
     }
   }
@@ -3439,7 +3442,10 @@ export class FederationFactory {
       }
     }
     if (accessibleChildren < 1) {
-      (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
+      (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<
+        DirectiveName,
+        Array<ConstDirectiveNode>
+      >()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
       this.inaccessibleCoords.add(parentDefinitionData.name);
     }
   }
@@ -3480,7 +3486,10 @@ export class FederationFactory {
           continue;
         }
         if (!contractTagOptions.tagNamesToExclude.isDisjointFrom(parentTagData.tagNames)) {
-          (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
+          (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<
+            DirectiveName,
+            Array<ConstDirectiveNode>
+          >()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
           this.inaccessibleCoords.add(parentTypeName);
           // If the parent is inaccessible, there is no need to assess further
           continue;
@@ -3526,7 +3535,10 @@ export class FederationFactory {
               }
               if (!contractTagOptions.tagNamesToExclude.isDisjointFrom(childTagData.tagNames)) {
                 getValueOrDefault(
-                  (fieldData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()),
+                  (fieldData.federatedDirectivesData.directivesByName ??= new Map<
+                    DirectiveName,
+                    Array<ConstDirectiveNode>
+                  >()),
                   INACCESSIBLE,
                   () => [generateSimpleDirective(INACCESSIBLE)],
                 );
@@ -3545,7 +3557,10 @@ export class FederationFactory {
                 }
                 if (!contractTagOptions.tagNamesToExclude.isDisjointFrom(argTagNames)) {
                   getValueOrDefault(
-                    (inputValueData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()),
+                    (inputValueData.federatedDirectivesData.directivesByName ??= new Map<
+                      DirectiveName,
+                      Array<ConstDirectiveNode>
+                    >()),
                     INACCESSIBLE,
                     () => [generateSimpleDirective(INACCESSIBLE)],
                   );
@@ -3554,7 +3569,10 @@ export class FederationFactory {
               }
             }
             if (accessibleFields < 1) {
-              (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
+              (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<
+                DirectiveName,
+                Array<ConstDirectiveNode>
+              >()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
               this.inaccessibleCoords.add(parentTypeName);
             }
           }
@@ -3567,7 +3585,10 @@ export class FederationFactory {
         }
         const parentTagData = this.parentTagDataByTypeName.get(parentTypeName);
         if (!parentTagData) {
-          (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
+          (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<
+            DirectiveName,
+            Array<ConstDirectiveNode>
+          >()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
           this.inaccessibleCoords.add(parentTypeName);
           // If the parent is inaccessible, there is no need to assess further
           continue;
@@ -3576,7 +3597,10 @@ export class FederationFactory {
           continue;
         }
         if (parentTagData.childTagDataByChildName.size < 1) {
-          (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
+          (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<
+            DirectiveName,
+            Array<ConstDirectiveNode>
+          >()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
           this.inaccessibleCoords.add(parentTypeName);
           // If the parent is inaccessible, there is no need to assess further
           continue;
@@ -3612,7 +3636,10 @@ export class FederationFactory {
               const childTagData = parentTagData.childTagDataByChildName.get(fieldName);
               if (!childTagData || contractTagOptions.tagNamesToInclude.isDisjointFrom(childTagData.tagNames)) {
                 getValueOrDefault(
-                  (fieldData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()),
+                  (fieldData.federatedDirectivesData.directivesByName ??= new Map<
+                    DirectiveName,
+                    Array<ConstDirectiveNode>
+                  >()),
                   INACCESSIBLE,
                   () => [generateSimpleDirective(INACCESSIBLE)],
                 );
@@ -3621,7 +3648,10 @@ export class FederationFactory {
               }
             }
             if (accessibleFields < 1) {
-              (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
+              (parentDefinitionData.federatedDirectivesData.directivesByName ??= new Map<
+                DirectiveName,
+                Array<ConstDirectiveNode>
+              >()).set(INACCESSIBLE, [generateSimpleDirective(INACCESSIBLE)]);
               this.inaccessibleCoords.add(parentTypeName);
             }
         }

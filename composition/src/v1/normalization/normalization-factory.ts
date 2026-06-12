@@ -963,10 +963,13 @@ export class NormalizationFactory {
       if (!data.description) {
         this.invalidConfigureDescriptionNodeDatas.push(data);
       }
-      (data.configureDescriptionDataBySubgraphName ??= new Map<SubgraphName, ConfigureDescriptionData>()).set(this.subgraphName, {
-        propagate: true,
-        description: data.description?.value || '',
-      });
+      (data.configureDescriptionDataBySubgraphName ??= new Map<SubgraphName, ConfigureDescriptionData>()).set(
+        this.subgraphName,
+        {
+          propagate: true,
+          description: data.description?.value || '',
+        },
+      );
       return;
     }
     const configureDescriptionData: ConfigureDescriptionData = {
@@ -1200,7 +1203,9 @@ export class NormalizationFactory {
       description,
       namedTypeKind: BASE_SCALARS.has(namedTypeName) ? KindRef.SCALAR_TYPE_DEFINITION : KindRef.NULL,
       node: getMutableInputValueNode(node, parentName, this.errors, description),
-      requiredSubgraphNames: isRequired ? new CompactSet<SubgraphName>(this.subgraphName) : new CompactSet<SubgraphName>(),
+      requiredSubgraphNames: isRequired
+        ? new CompactSet<SubgraphName>(this.subgraphName)
+        : new CompactSet<SubgraphName>(),
       subgraphNames: new CompactSet<SubgraphName>(this.subgraphName),
       typeNode: getSharedTypeNode(node.type, parentName, this.errors),
     });
@@ -1405,7 +1410,10 @@ export class NormalizationFactory {
       directivesByName: directivesByName,
       extensionType,
       fieldDataByName: new Map<string, FieldData>(),
-      implementedInterfaceTypeNames: this.extractImplementedInterfaceTypeNames(node, new CompactSet<AbstractTypeName>()),
+      implementedInterfaceTypeNames: this.extractImplementedInterfaceTypeNames(
+        node,
+        new CompactSet<AbstractTypeName>(),
+      ),
       isEntity: directivesByName.has(KEY),
       isInaccessible: directivesByName.has(INACCESSIBLE),
       kind: KindRef.INTERFACE_TYPE_DEFINITION,
@@ -1473,7 +1481,10 @@ export class NormalizationFactory {
       }
       return;
     }
-    const implementedInterfaceTypeNames = this.extractImplementedInterfaceTypeNames(node, new CompactSet<AbstractTypeName>());
+    const implementedInterfaceTypeNames = this.extractImplementedInterfaceTypeNames(
+      node,
+      new CompactSet<AbstractTypeName>(),
+    );
     if (!directivesByName.has(INTERFACE_OBJECT)) {
       this.addConcreteTypeNamesForImplementedInterfaces(implementedInterfaceTypeNames, typeName);
     }
@@ -1835,7 +1846,10 @@ export class NormalizationFactory {
       };
     }
     // @TODO handle abstract types and fragments
-    if (namedTypeData.kind !== KindRef.INTERFACE_TYPE_DEFINITION && namedTypeData.kind !== KindRef.OBJECT_TYPE_DEFINITION) {
+    if (
+      namedTypeData.kind !== KindRef.INTERFACE_TYPE_DEFINITION &&
+      namedTypeData.kind !== KindRef.OBJECT_TYPE_DEFINITION
+    ) {
       return {
         errorString: incompatibleTypeWithProvidesErrorMessage({
           fieldCoords,
@@ -3232,7 +3246,8 @@ export class NormalizationFactory {
     }
     const parentTypeName = this.renamedParentTypeName || this.originalParentTypeName;
     const fieldCoords = `${parentTypeName}.${node.name.value}`;
-    const isSubscription = this.getOperationTypeNodeForRootTypeName(parentTypeName) === OperationTypeNodeRef.SUBSCRIPTION;
+    const isSubscription =
+      this.getOperationTypeNodeForRootTypeName(parentTypeName) === OperationTypeNodeRef.SUBSCRIPTION;
     for (const directiveNode of node.directives) {
       if (directiveNode.name.value !== SUBSCRIPTION_FILTER) {
         continue;

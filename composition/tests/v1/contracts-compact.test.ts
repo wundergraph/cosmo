@@ -1,16 +1,7 @@
-import {
-  type ContractTagOptions,
-  parse,
-  ROUTER_COMPATIBILITY_VERSION_ONE,
-  type Subgraph,
-} from '../../src';
+import { type ContractTagOptions, parse, ROUTER_COMPATIBILITY_VERSION_ONE, type Subgraph } from '../../src';
 import { describe, expect, test } from 'vitest';
 import { SCHEMA_QUERY_DEFINITION, TAG_DIRECTIVE } from './utils/utils';
-import {
-  federateSubgraphsWithContractsSuccess,
-  normalizeString,
-  schemaToSortedNormalizedString,
-} from '../utils/utils';
+import { federateSubgraphsWithContractsSuccess, normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Contract compact collection tests', () => {
   test('preserves compact field metadata after cloning contract federation factories', () => {

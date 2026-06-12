@@ -36,7 +36,9 @@ function graphqlFiles(dir: string): string[] {
 }
 
 function isTypeSystemDocument(document: DocumentNode) {
-  return document.definitions.every((definition) => definition.kind !== 'OperationDefinition' && definition.kind !== 'FragmentDefinition');
+  return document.definitions.every(
+    (definition) => definition.kind !== 'OperationDefinition' && definition.kind !== 'FragmentDefinition',
+  );
 }
 
 const scenarioDir = join(__dirname, '../../bench/scenario');
@@ -77,10 +79,10 @@ const validSnippets = [
 block
 description with \\""" escaped triple and emoji 🚀
 """ type Query { a: String }`,
-  "\"crlf\\r\\ntext\" type Query { a: String }",
+  '"crlf\\r\\ntext" type Query { a: String }',
   `# comment
   type Query, { a: String, b(arg: Int, other: [String!] = ["x", "y"],): Float, }`,
-  "\uFEFFtype Query { a: String }",
+  '\uFEFFtype Query { a: String }',
   `type Query { values(input: Input = { a: 1, b: -2.5, c: 1e3, d: false, e: null, f: ENUM, g: [1, { nested: "x" }] }): String } input Input { a: Int }`,
   `type Query @dir(a: { b: [{ c: "d" }] }) { field(arg: String @dir(a: true)): String @dir(a: null) } directive @dir(a: Input) repeatable on OBJECT | FIELD_DEFINITION | ARGUMENT_DEFINITION input Input { a: String }`,
 ] as const;
