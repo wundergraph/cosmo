@@ -100,7 +100,7 @@ export function deleteClient(
         code: EnumStatusCode.OK,
       },
       client: deletedClient.client,
-      deletedOperationsCount: deletedClient.deletedOperationsCount,
+      deletedOperationsCount: preview.persistedOperationsCount,
     };
   });
 }

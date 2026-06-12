@@ -378,7 +378,6 @@ export class OperationsRepository {
   public deleteClient(clientName: string): Promise<
     | {
         client: ClientDTO;
-        deletedOperationsCount: number;
       }
     | undefined
   > {
@@ -416,18 +415,7 @@ export class OperationsRepository {
         return undefined;
       }
 
-      const deletedOperations = await tx
-        .select({
-          count: count(),
-        })
-        .from(federatedGraphPersistedOperations)
-        .where(
-          and(
-            eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
-            eq(federatedGraphPersistedOperations.clientId, client.id),
-          ),
-        );
-
+      // Operations are deleted via cascade when clients are dropped
       const deletedRows = await tx
         .delete(federatedGraphClients)
         .where(
@@ -452,7 +440,6 @@ export class OperationsRepository {
           createdBy: client.createdBy?.email ?? '',
           lastUpdatedBy: client.updatedBy?.email ?? '',
         },
-        deletedOperationsCount: deletedOperations?.[0]?.count || 0,
       };
     });
   }
