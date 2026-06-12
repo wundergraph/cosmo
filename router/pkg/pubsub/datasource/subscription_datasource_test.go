@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
@@ -30,6 +32,31 @@ func (t testSubscriptionEventConfiguration) ProviderType() ProviderType {
 
 func (t testSubscriptionEventConfiguration) RootFieldName() string {
 	return "testSubscription"
+}
+
+func (t testSubscriptionEventConfiguration) Clone() SubscriptionEventConfiguration {
+	return t
+}
+
+type testRequestContextStore struct {
+	mu     sync.RWMutex
+	values map[string]any
+}
+
+func (s *testRequestContextStore) Set(key string, value any) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.values == nil {
+		s.values = make(map[string]any)
+	}
+	s.values[key] = value
+}
+
+func (s *testRequestContextStore) Get(key string) (value any, exists bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	value, exists = s.values[key]
+	return value, exists
 }
 
 // testSubscriptionDataSourceEventBuilder is a reusable event builder for tests
@@ -98,6 +125,57 @@ func TestPubSubSubscriptionDataSource_Start_Success(t *testing.T) {
 
 	err = dataSource.Start(ctx, nil, input, mockUpdater)
 	assert.NoError(t, err)
+	mockAdapter.AssertExpectations(t)
+}
+
+func TestPubSubSubscriptionDataSource_Start_UsesSubscriptionOnStartConfiguration(t *testing.T) {
+	mockAdapter := NewMockProvider(t)
+	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+		return nil
+	}
+
+	dataSource := NewPubSubSubscriptionDataSource[*testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
+
+	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) (SubscriptionEventConfiguration, error) {
+		typedConfig, ok := config.(*testSubscriptionEventConfiguration)
+		require.True(t, ok)
+		typedConfig.Topic = "changed-topic"
+		return typedConfig, nil
+	}
+
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnStart: SubscriptionOnStartHooks{
+			Handlers: []SubscriptionOnStartFn{hook},
+		},
+	})
+
+	testConfig := &testSubscriptionEventConfiguration{
+		Topic:   "original-topic",
+		Subject: "test-subject",
+	}
+	input, err := json.Marshal(testConfig)
+	require.NoError(t, err)
+
+	requestStore := &testRequestContextStore{}
+	requestCtx := context.WithValue(context.Background(), rcontext.RequestContextKey, requestStore)
+
+	err = dataSource.SubscriptionOnStart(resolve.StartupHookContext{
+		Context: requestCtx,
+		Updater: func(data []byte) {},
+	}, input)
+	require.NoError(t, err)
+
+	ctx := resolve.NewContext(requestCtx)
+	mockUpdater := NewMockSubscriptionUpdater(t)
+	expectedConfig := &testSubscriptionEventConfiguration{
+		Topic:   "changed-topic",
+		Subject: "test-subject",
+	}
+
+	mockAdapter.On("Subscribe", ctx.Context(), expectedConfig, mock.AnythingOfType("*datasource.subscriptionEventUpdater")).Return(nil)
+
+	err = dataSource.Start(ctx, nil, input, mockUpdater)
+	require.NoError(t, err)
 	mockAdapter.AssertExpectations(t)
 }
 
@@ -183,20 +261,20 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_WithHooks(t *testing.T
 	hook1EventBuilderExists := false
 	hook2EventBuilderExists := false
 
-	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
+	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) (SubscriptionEventConfiguration, error) {
 		hook1Called = true
 		if eventBuilder != nil {
 			hook1EventBuilderExists = true
 		}
-		return nil
+		return config, nil
 	}
 
-	hook2 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
+	hook2 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) (SubscriptionEventConfiguration, error) {
 		hook2Called = true
 		if eventBuilder != nil {
 			hook2EventBuilderExists = true
 		}
-		return nil
+		return config, nil
 	}
 
 	dataSource.SetHooks(Hooks{
@@ -234,8 +312,8 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsClose(t *te
 	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	// Add hook that returns close=true
-	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
-		return nil
+	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) (SubscriptionEventConfiguration, error) {
+		return config, nil
 	}
 
 	dataSource.SetHooks(Hooks{
@@ -270,8 +348,8 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsError(t *te
 
 	expectedError := errors.New("hook error")
 	// Add hook that returns an error
-	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
-		return expectedError
+	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) (SubscriptionEventConfiguration, error) {
+		return nil, expectedError
 	}
 
 	dataSource.SetHooks(Hooks{
@@ -309,11 +387,11 @@ func TestPubSubSubscriptionDataSource_SetSubscriptionOnStartFns(t *testing.T) {
 	assert.Len(t, dataSource.hooks.SubscriptionOnStart.Handlers, 0)
 
 	// Add hooks
-	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
-		return nil
+	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) (SubscriptionEventConfiguration, error) {
+		return config, nil
 	}
-	hook2 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
-		return nil
+	hook2 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) (SubscriptionEventConfiguration, error) {
+		return config, nil
 	}
 
 	dataSource.SetHooks(Hooks{
@@ -369,9 +447,9 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_InvalidEventConfigInpu
 	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	hookCalled := false
-	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
+	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) (SubscriptionEventConfiguration, error) {
 		hookCalled = true
-		return nil
+		return config, nil
 	}
 
 	dataSource.SetHooks(Hooks{
@@ -430,7 +508,7 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_PanicRecovery(t *testi
 			dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 			// Add hook that panics
-			hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
+			hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) (SubscriptionEventConfiguration, error) {
 				panic(tt.panicValue)
 			}
 

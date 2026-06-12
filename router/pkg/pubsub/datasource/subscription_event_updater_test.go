@@ -34,6 +34,11 @@ func (c *testSubscriptionEventConfig) RootFieldName() string {
 	return c.fieldName
 }
 
+func (c *testSubscriptionEventConfig) Clone() SubscriptionEventConfiguration {
+	c2 := *c
+	return &c2
+}
+
 type receivedHooksArgs struct {
 	events []StreamEvent
 	cfg    SubscriptionEventConfiguration
