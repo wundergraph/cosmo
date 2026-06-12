@@ -15,6 +15,19 @@ export interface PollWithBackoffOptions {
   leading?: boolean;
 }
 
+export interface RetryWithBackoffOptions {
+  /** Maximum number of attempts before giving up and rethrowing the last error. */
+  attempts: number;
+  /** Base delay between attempts, in milliseconds. Grows exponentially when `maxInterval` is larger. */
+  baseInterval: number;
+  /** Upper bound on the delay between attempts, in milliseconds. Set equal to `baseInterval` for a fixed interval. */
+  maxInterval: number;
+  /** Multiply each delay by a random factor in [0.5, 1.0] to desynchronize callers. */
+  jitter?: boolean;
+  /** Optional signal that cancels the loop and any in-flight wait; aborting rejects with the signal's reason. */
+  signal?: AbortSignal;
+}
+
 export function computeDelay(base: number, max: number, attempt: number, jitter: boolean): number {
   const delay = Math.min(max, base * 2 ** attempt);
   return jitter ? delay * (0.5 + Math.random() * 0.5) : delay;
@@ -55,15 +68,52 @@ export async function pollWithBackoff(
   }
 }
 
-function sleep(ms: number, signal: AbortSignal): Promise<'aborted' | 'ok'> {
+/**
+ * Runs `task` until it succeeds or `attempts` is exhausted, waiting between tries
+ * with the same exponential backoff as {@link pollWithBackoff}. Unlike the poller,
+ * this is bounded: it returns the task's value on success and rethrows the last
+ * error once attempts run out. Pass `maxInterval === baseInterval` for a fixed
+ * interval. An aborted `signal` cancels the loop and rejects with its reason.
+ */
+export async function retryWithBackoff<T>(
+  task: (signal?: AbortSignal) => Promise<T>,
+  options: RetryWithBackoffOptions,
+): Promise<T> {
+  const { attempts, baseInterval, maxInterval, jitter = false, signal } = options;
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (signal?.aborted) {
+      throw signal.reason;
+    }
+
+    try {
+      return await task(signal);
+    } catch (error) {
+      lastError = error;
+    }
+
+    const isLastAttempt = attempt === attempts - 1;
+    if (!isLastAttempt) {
+      const delay = computeDelay(baseInterval, maxInterval, attempt, jitter);
+      if ((await sleep(delay, signal)) === 'aborted') {
+        throw signal?.reason;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+function sleep(ms: number, signal?: AbortSignal): Promise<'aborted' | 'ok'> {
   return new Promise((resolve) => {
-    if (signal.aborted) {
+    if (signal?.aborted) {
       resolve('aborted');
       return;
     }
 
     const timer = setTimeout(() => {
-      signal.removeEventListener('abort', onAbort);
+      signal?.removeEventListener('abort', onAbort);
       resolve('ok');
     }, ms);
 
@@ -72,6 +122,6 @@ function sleep(ms: number, signal: AbortSignal): Promise<'aborted' | 'ok'> {
       resolve('aborted');
     }
 
-    signal.addEventListener('abort', onAbort, { once: true });
+    signal?.addEventListener('abort', onAbort, { once: true });
   });
 }

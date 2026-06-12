@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { computeDelay, pollWithBackoff } from '../src/core/util/poll-with-backoff.js';
+import { computeDelay, pollWithBackoff, retryWithBackoff } from '../src/core/util/poll-with-backoff.js';
 
 describe('computeDelay', () => {
   test('returns base when attempt is 0', () => {
@@ -284,6 +284,94 @@ describe('pollWithBackoff', () => {
       onFailure: () => {},
     });
 
+    expect(task).not.toHaveBeenCalled();
+  });
+});
+
+describe('retryWithBackoff', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('returns the value on first success without waiting', async () => {
+    const task = vi.fn().mockResolvedValue(42);
+
+    await expect(retryWithBackoff(task, { attempts: 3, baseInterval: 1000, maxInterval: 1000 })).resolves.toBe(42);
+    expect(task).toHaveBeenCalledTimes(1);
+  });
+
+  test('retries until the task succeeds and returns its value', async () => {
+    const task = vi.fn().mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce('ok');
+
+    const promise = retryWithBackoff(task, { attempts: 3, baseInterval: 1000, maxInterval: 1000 });
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(promise).resolves.toBe('ok');
+    expect(task).toHaveBeenCalledTimes(2);
+  });
+
+  test('rethrows the last error once attempts are exhausted', async () => {
+    const task = vi.fn().mockRejectedValue(new Error('always'));
+
+    const promise = retryWithBackoff(task, { attempts: 2, baseInterval: 1000, maxInterval: 1000 });
+    promise.catch(() => {});
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(promise).rejects.toThrow('always');
+    expect(task).toHaveBeenCalledTimes(2);
+  });
+
+  test('waits with exponential backoff between attempts', async () => {
+    const task = vi.fn().mockRejectedValue(new Error('boom'));
+
+    const promise = retryWithBackoff(task, { attempts: 4, baseInterval: 1000, maxInterval: 60_000 });
+    promise.catch(() => {});
+
+    expect(task).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(task).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(task).toHaveBeenCalledTimes(3);
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(task).toHaveBeenCalledTimes(4);
+
+    await expect(promise).rejects.toThrow('boom');
+  });
+
+  test('stops retrying and rejects with the signal reason when aborted', async () => {
+    const controller = new AbortController();
+    const reason = new Error('cancelled');
+    const task = vi.fn().mockRejectedValue(new Error('boom'));
+
+    const promise = retryWithBackoff(task, {
+      attempts: 5,
+      baseInterval: 1000,
+      maxInterval: 1000,
+      signal: controller.signal,
+    });
+    promise.catch(() => {});
+
+    expect(task).toHaveBeenCalledTimes(1);
+    controller.abort(reason);
+    await expect(promise).rejects.toBe(reason);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(task).toHaveBeenCalledTimes(1);
+  });
+
+  test('throws the signal reason without running the task if already aborted', async () => {
+    const controller = new AbortController();
+    const reason = new Error('pre-aborted');
+    controller.abort(reason);
+    const task = vi.fn();
+
+    await expect(
+      retryWithBackoff(task, { attempts: 3, baseInterval: 1000, maxInterval: 1000, signal: controller.signal }),
+    ).rejects.toBe(reason);
     expect(task).not.toHaveBeenCalled();
   });
 });

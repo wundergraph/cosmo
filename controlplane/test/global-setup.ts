@@ -1,7 +1,7 @@
-import { setTimeout as sleep } from 'node:timers/promises';
 import { NetworkError } from '@keycloak/keycloak-admin-client';
 import { pino } from 'pino';
 import Keycloak from '../src/core/services/Keycloak.js';
+import { retryWithBackoff } from '../src/core/util/poll-with-backoff.js';
 import { TEST_REALM, keycloakClientOptions } from './keycloak-test-config.js';
 
 /**
@@ -15,9 +15,13 @@ export default async function setup() {
   const keycloakClient = new Keycloak({ ...keycloakClientOptions, logger });
 
   // Generous budget: CI boots Keycloak in the background, so it may not be ready yet.
-  await retry(() => keycloakClient.authenticateClient(), { attempts: 180, delayMs: 1000 });
+  await retryWithBackoff(() => keycloakClient.authenticateClient(), {
+    attempts: 180,
+    baseInterval: 1000,
+    maxInterval: 1000,
+  });
 
-  await retry(
+  await retryWithBackoff(
     async () => {
       try {
         await keycloakClient.client.realms.create({
@@ -34,33 +38,17 @@ export default async function setup() {
         throw e;
       }
     },
-    { attempts: 10, delayMs: 1000 },
+    { attempts: 10, baseInterval: 1000, maxInterval: 1000 },
   );
 
   // The realm can be acknowledged before it is readable; wait until it is.
-  await retry(
+  await retryWithBackoff(
     async () => {
       const found = await keycloakClient.client.realms.findOne({ realm: TEST_REALM });
       if (!found) {
         throw new Error(`Realm "${TEST_REALM}" is not yet readable`);
       }
     },
-    { attempts: 30, delayMs: 500 },
+    { attempts: 30, baseInterval: 500, maxInterval: 500 },
   );
-}
-
-async function retry<T>(
-  task: () => Promise<T>,
-  { attempts, delayMs }: { attempts: number; delayMs: number },
-): Promise<T> {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await task();
-    } catch (error) {
-      if (attempt >= attempts) {
-        throw error;
-      }
-      await sleep(delayMs);
-    }
-  }
 }
