@@ -298,7 +298,7 @@ export class OperationsRepository {
     return clients;
   }
 
-  public async getRegisteredClientsWithMetadata(): Promise<ClientDTOWithOperationMetadata[]> {
+  public getRegisteredClientsWithMetadata(): Promise<ClientDTOWithOperationMetadata[]> {
     return this.getRegisteredClientsWithOperationMetadata();
   }
 
