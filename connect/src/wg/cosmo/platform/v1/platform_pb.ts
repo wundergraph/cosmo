@@ -11,6 +11,38 @@ import { EnumStatusCode, GraphQLSubscriptionProtocol, GraphQLWebsocketSubprotoco
 import { EventMeta } from "../../notifications/events_pb.js";
 
 /**
+ * @generated from enum wg.cosmo.platform.v1.BatchPublishJobStatus
+ */
+export enum BatchPublishJobStatus {
+  /**
+   * @generated from enum value: PENDING = 0;
+   */
+  PENDING = 0,
+
+  /**
+   * @generated from enum value: PROCESSING = 1;
+   */
+  PROCESSING = 1,
+
+  /**
+   * @generated from enum value: FAILED = 2;
+   */
+  FAILED = 2,
+
+  /**
+   * @generated from enum value: COMPLETED = 3;
+   */
+  COMPLETED = 3,
+}
+// Retrieve enum metadata with: proto3.getEnumType(BatchPublishJobStatus)
+proto3.util.setEnumType(BatchPublishJobStatus, "wg.cosmo.platform.v1.BatchPublishJobStatus", [
+  { no: 0, name: "PENDING" },
+  { no: 1, name: "PROCESSING" },
+  { no: 2, name: "FAILED" },
+  { no: 3, name: "COMPLETED" },
+]);
+
+/**
  * @generated from enum wg.cosmo.platform.v1.LintSeverity
  */
 export enum LintSeverity {
@@ -1259,6 +1291,132 @@ export class PublishFederatedSubgraphsResponse extends Message<PublishFederatedS
 
   static equals(a: PublishFederatedSubgraphsResponse | PlainMessage<PublishFederatedSubgraphsResponse> | undefined, b: PublishFederatedSubgraphsResponse | PlainMessage<PublishFederatedSubgraphsResponse> | undefined): boolean {
     return proto3.util.equals(PublishFederatedSubgraphsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetBatchPublishJobStatusRequest
+ */
+export class GetBatchPublishJobStatusRequest extends Message<GetBatchPublishJobStatusRequest> {
+  /**
+   * @generated from field: string jobId = 1;
+   */
+  jobId = "";
+
+  /**
+   * Optional limit for the number of errors/warnings returned.
+   *
+   * @generated from field: optional int32 limit = 2;
+   */
+  limit?: number;
+
+  constructor(data?: PartialMessage<GetBatchPublishJobStatusRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetBatchPublishJobStatusRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "jobId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetBatchPublishJobStatusRequest {
+    return new GetBatchPublishJobStatusRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetBatchPublishJobStatusRequest {
+    return new GetBatchPublishJobStatusRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetBatchPublishJobStatusRequest {
+    return new GetBatchPublishJobStatusRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetBatchPublishJobStatusRequest | PlainMessage<GetBatchPublishJobStatusRequest> | undefined, b: GetBatchPublishJobStatusRequest | PlainMessage<GetBatchPublishJobStatusRequest> | undefined): boolean {
+    return proto3.util.equals(GetBatchPublishJobStatusRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetBatchPublishJobStatusResponse
+ */
+export class GetBatchPublishJobStatusResponse extends Message<GetBatchPublishJobStatusResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.BatchPublishJobStatus jobStatus = 2;
+   */
+  jobStatus = BatchPublishJobStatus.PENDING;
+
+  /**
+   * @generated from field: optional string failureReason = 3;
+   */
+  failureReason?: string;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 4;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 5;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 6;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.SubgraphPublishStats counts = 7;
+   */
+  counts?: SubgraphPublishStats;
+
+  /**
+   * The names of the subgraphs whose schema actually changed as a result of this batch publish.
+   *
+   * @generated from field: repeated string updatedSubgraphNames = 8;
+   */
+  updatedSubgraphNames: string[] = [];
+
+  constructor(data?: PartialMessage<GetBatchPublishJobStatusResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetBatchPublishJobStatusResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "jobStatus", kind: "enum", T: proto3.getEnumType(BatchPublishJobStatus) },
+    { no: 3, name: "failureReason", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 5, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 6, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
+    { no: 7, name: "counts", kind: "message", T: SubgraphPublishStats, opt: true },
+    { no: 8, name: "updatedSubgraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetBatchPublishJobStatusResponse {
+    return new GetBatchPublishJobStatusResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetBatchPublishJobStatusResponse {
+    return new GetBatchPublishJobStatusResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetBatchPublishJobStatusResponse {
+    return new GetBatchPublishJobStatusResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetBatchPublishJobStatusResponse | PlainMessage<GetBatchPublishJobStatusResponse> | undefined, b: GetBatchPublishJobStatusResponse | PlainMessage<GetBatchPublishJobStatusResponse> | undefined): boolean {
+    return proto3.util.equals(GetBatchPublishJobStatusResponse, a, b);
   }
 }
 

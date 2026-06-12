@@ -118,6 +118,31 @@ message PublishFederatedSubgraphsResponse {
   optional string jobId = 7;
 }
 
+message GetBatchPublishJobStatusRequest {
+  string jobId = 1;
+  // Optional limit for the number of errors/warnings returned.
+  optional int32 limit = 2;
+}
+
+enum BatchPublishJobStatus {
+  PENDING = 0;
+  PROCESSING = 1;
+  FAILED = 2;
+  COMPLETED = 3;
+}
+
+message GetBatchPublishJobStatusResponse {
+  Response response = 1;
+  BatchPublishJobStatus jobStatus = 2;
+  optional string failureReason = 3;
+  repeated CompositionError compositionErrors = 4;
+  repeated DeploymentError deploymentErrors = 5;
+  repeated CompositionWarning compositionWarnings = 6;
+  optional SubgraphPublishStats counts = 7;
+  // The names of the subgraphs whose schema actually changed as a result of this batch publish.
+  repeated string updatedSubgraphNames = 8;
+}
+
 message GitInfo {
   string commit_sha = 1;
   string account_id = 2;
@@ -3454,6 +3479,8 @@ service PlatformService {
   // PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
   // request. Affected federated graphs (and their contracts / feature flags) are composed exactly once each.
   rpc PublishFederatedSubgraphs(PublishFederatedSubgraphsRequest) returns (PublishFederatedSubgraphsResponse) {}
+  // Gets the status of a batch publish job by the provided job identifier.
+  rpc GetBatchPublishJobStatus(GetBatchPublishJobStatusRequest) returns (GetBatchPublishJobStatusResponse) {}
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
   // DeleteFederatedGraph deletes a federated graph from the control plane.
