@@ -50,6 +50,12 @@ type engineLoaderHooks struct {
 
 	storeSubgraphResponseBody bool
 	headerPropagation         *HeaderPropagation
+
+	// tracingEnabled / metricsEnabled gate the per-fetch telemetry work. When both are
+	// disabled (and there is no subgraph access logger), OnLoad/OnFinished skip span
+	// creation, attribute building, and measurements entirely — header propagation still runs.
+	tracingEnabled bool
+	metricsEnabled bool
 }
 
 type engineLoaderHooksRequestContext struct {
@@ -65,6 +71,8 @@ func NewEngineRequestHooks(
 	metricAttributes *attributeExpressions,
 	storeSubgraphResponseBody bool,
 	headerPropagation *HeaderPropagation,
+	tracingEnabled bool,
+	metricsEnabled bool,
 ) resolve.LoaderHooks {
 	var tracer trace.Tracer
 	if tracerProvider != nil {
@@ -88,6 +96,8 @@ func NewEngineRequestHooks(
 		accessLogger:                  logger,
 		storeSubgraphResponseBody:     storeSubgraphResponseBody,
 		headerPropagation:             headerPropagation,
+		tracingEnabled:                tracingEnabled,
+		metricsEnabled:                metricsEnabled,
 	}
 }
 
@@ -109,12 +119,14 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		return ctx
 	}
 
-	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
-		trace.WithAttributes([]attribute.KeyValue{
-			rotel.WgSubgraphName.String(ds.Name),
-			rotel.WgSubgraphID.String(ds.ID),
-		}...),
-	)
+	if f.tracingEnabled {
+		ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
+			trace.WithAttributes([]attribute.KeyValue{
+				rotel.WgSubgraphName.String(ds.Name),
+				rotel.WgSubgraphID.String(ds.ID),
+			}...),
+		)
+	}
 
 	return context.WithValue(ctx, rcontext.EngineLoaderHooksContextKey, &engineLoaderHooksRequestContext{
 		startTime: start,
@@ -150,6 +162,13 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 
 	hookCtx, ok := ctx.Value(rcontext.EngineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
 	if !ok {
+		return
+	}
+
+	// Fast path: with tracing, metrics, and subgraph access logging all disabled there is no
+	// consumer for the per-fetch span/attributes/measurements. Header propagation (above) has
+	// already run, so skip the remaining telemetry work and its allocations entirely.
+	if !f.tracingEnabled && !f.metricsEnabled && f.accessLogger == nil {
 		return
 	}
 

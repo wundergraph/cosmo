@@ -2235,3 +2235,58 @@ persisted_operations:
 		require.Equal(t, "at '/persisted_operations/manifest/poll_jitter': duration must be greater or equal than 1s", js.Causes[0].Error())
 	})
 }
+
+func TestEngineExecutionFlagsFromYAML(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+engine:
+  enable_dataflow_execution: true
+  enable_execution_plan_scheduling: true
+`)
+
+	cfg, err := LoadConfig([]string{f})
+
+	require.NoError(t, err)
+
+	require.True(t, cfg.Config.EngineExecutionConfiguration.EnableDataflowExecution)
+	require.True(t, cfg.Config.EngineExecutionConfiguration.EnableExecutionPlanScheduling)
+}
+
+func TestEngineExecutionFlagsDefaultOff(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+
+	cfg, err := LoadConfig([]string{f})
+
+	require.NoError(t, err)
+
+	require.False(t, cfg.Config.EngineExecutionConfiguration.EnableDataflowExecution)
+	require.False(t, cfg.Config.EngineExecutionConfiguration.EnableExecutionPlanScheduling)
+}
+
+func TestEngineExecutionFlagsFromEnv(t *testing.T) {
+	t.Setenv("ENGINE_ENABLE_DATAFLOW", "true")
+	t.Setenv("ENGINE_ENABLE_SCHEDULE_TREE", "true")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+
+	cfg, err := LoadConfig([]string{f})
+
+	require.NoError(t, err)
+
+	require.True(t, cfg.Config.EngineExecutionConfiguration.EnableDataflowExecution)
+	require.True(t, cfg.Config.EngineExecutionConfiguration.EnableExecutionPlanScheduling)
+}

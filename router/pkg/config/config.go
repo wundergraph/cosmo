@@ -460,7 +460,12 @@ type EngineExecutionConfiguration struct {
 	EnableSubgraphFetchOperationName                 bool          `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
 	DisableVariablesRemapping                        bool          `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
 	EnableRequireFetchReasons                        bool          `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
-	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
+	// EnableDataflowExecution and EnableExecutionPlanScheduling deviate from the
+	// env-name-derives-from-field convention: the env tags are pinned to the names
+	// the benchmark suite, byte-identity gate, and 4-mode test driver key on.
+	EnableDataflowExecution       bool          `envDefault:"false" env:"ENGINE_ENABLE_DATAFLOW" yaml:"enable_dataflow_execution"`
+	EnableExecutionPlanScheduling bool          `envDefault:"false" env:"ENGINE_ENABLE_SCHEDULE_TREE" yaml:"enable_execution_plan_scheduling"`
+	SubscriptionFetchTimeout      time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
 
 	// Server-side WebSocket handler options (router accepting client connections)
 	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`

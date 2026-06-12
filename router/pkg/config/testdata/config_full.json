@@ -923,6 +923,8 @@
     "EnableSubgraphFetchOperationName": true,
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
+    "EnableDataflowExecution": false,
+    "EnableExecutionPlanScheduling": false,
     "SubscriptionFetchTimeout": 30000000000,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
