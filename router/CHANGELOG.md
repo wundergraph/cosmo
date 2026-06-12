@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.322.2](https://github.com/wundergraph/cosmo/compare/router@0.322.1...router@0.322.2) (2026-06-11)
+
+### Bug Fixes
+
+* include improvements in go-arena ([#2959](https://github.com/wundergraph/cosmo/issues/2959)) ([9726c4f](https://github.com/wundergraph/cosmo/commit/9726c4fe3d6e5fc3313b54682845e34e3c7d9bd2)) (@ysmolski)
+
 ## [0.322.1](https://github.com/wundergraph/cosmo/compare/router@0.322.0...router@0.322.1) (2026-06-11)
 
 **Note:** Version bump only for package router
