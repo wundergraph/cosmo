@@ -87,6 +87,10 @@ export async function retryWithBackoff<T>(
 ): Promise<T> {
   const { attempts, baseInterval, maxInterval, jitter = false, signal, shouldRetry } = options;
 
+  if (attempts < 1) {
+    throw new RangeError(`retryWithBackoff requires attempts >= 1, got ${attempts}`);
+  }
+
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt++) {
     if (signal?.aborted) {

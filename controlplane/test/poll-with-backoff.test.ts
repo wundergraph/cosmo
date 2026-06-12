@@ -297,6 +297,15 @@ describe('retryWithBackoff', () => {
     vi.useRealTimers();
   });
 
+  test('throws a RangeError without running the task when attempts is below 1', async () => {
+    const task = vi.fn();
+
+    await expect(retryWithBackoff(task, { attempts: 0, baseInterval: 1000, maxInterval: 1000 })).rejects.toThrow(
+      RangeError,
+    );
+    expect(task).not.toHaveBeenCalled();
+  });
+
   test('returns the value on first success without waiting', async () => {
     const task = vi.fn().mockResolvedValue(42);
 
