@@ -1910,7 +1910,7 @@ func (x *GetBatchPublishJobStatusRequest) GetLimit() int32 {
 type GetBatchPublishJobStatusResponse struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	Response            *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
-	JobStatus           BatchPublishJobStatus  `protobuf:"varint,2,opt,name=jobStatus,proto3,enum=wg.cosmo.platform.v1.BatchPublishJobStatus" json:"jobStatus,omitempty"`
+	Status              *BatchPublishJobStatus `protobuf:"varint,2,opt,name=status,proto3,enum=wg.cosmo.platform.v1.BatchPublishJobStatus,oneof" json:"status,omitempty"`
 	FailureReason       *string                `protobuf:"bytes,3,opt,name=failureReason,proto3,oneof" json:"failureReason,omitempty"`
 	CompositionErrors   []*CompositionError    `protobuf:"bytes,4,rep,name=compositionErrors,proto3" json:"compositionErrors,omitempty"`
 	DeploymentErrors    []*DeploymentError     `protobuf:"bytes,5,rep,name=deploymentErrors,proto3" json:"deploymentErrors,omitempty"`
@@ -1959,9 +1959,9 @@ func (x *GetBatchPublishJobStatusResponse) GetResponse() *Response {
 	return nil
 }
 
-func (x *GetBatchPublishJobStatusResponse) GetJobStatus() BatchPublishJobStatus {
-	if x != nil {
-		return x.JobStatus
+func (x *GetBatchPublishJobStatusResponse) GetStatus() BatchPublishJobStatus {
+	if x != nil && x.Status != nil {
+		return *x.Status
 	}
 	return BatchPublishJobStatus_PENDING
 }
@@ -33262,16 +33262,17 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x1fGetBatchPublishJobStatusRequest\x12\x14\n" +
 	"\x05jobId\x18\x01 \x01(\tR\x05jobId\x12\x19\n" +
 	"\x05limit\x18\x02 \x01(\x05H\x00R\x05limit\x88\x01\x01B\b\n" +
-	"\x06_limit\"\xf3\x04\n" +
+	"\x06_limit\"\xfd\x04\n" +
 	" GetBatchPublishJobStatusResponse\x12:\n" +
-	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12I\n" +
-	"\tjobStatus\x18\x02 \x01(\x0e2+.wg.cosmo.platform.v1.BatchPublishJobStatusR\tjobStatus\x12)\n" +
-	"\rfailureReason\x18\x03 \x01(\tH\x00R\rfailureReason\x88\x01\x01\x12T\n" +
+	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12H\n" +
+	"\x06status\x18\x02 \x01(\x0e2+.wg.cosmo.platform.v1.BatchPublishJobStatusH\x00R\x06status\x88\x01\x01\x12)\n" +
+	"\rfailureReason\x18\x03 \x01(\tH\x01R\rfailureReason\x88\x01\x01\x12T\n" +
 	"\x11compositionErrors\x18\x04 \x03(\v2&.wg.cosmo.platform.v1.CompositionErrorR\x11compositionErrors\x12Q\n" +
 	"\x10deploymentErrors\x18\x05 \x03(\v2%.wg.cosmo.platform.v1.DeploymentErrorR\x10deploymentErrors\x12Z\n" +
 	"\x13compositionWarnings\x18\x06 \x03(\v2(.wg.cosmo.platform.v1.CompositionWarningR\x13compositionWarnings\x12G\n" +
-	"\x06counts\x18\a \x01(\v2*.wg.cosmo.platform.v1.SubgraphPublishStatsH\x01R\x06counts\x88\x01\x01\x122\n" +
-	"\x14updatedSubgraphNames\x18\b \x03(\tR\x14updatedSubgraphNamesB\x10\n" +
+	"\x06counts\x18\a \x01(\v2*.wg.cosmo.platform.v1.SubgraphPublishStatsH\x02R\x06counts\x88\x01\x01\x122\n" +
+	"\x14updatedSubgraphNames\x18\b \x03(\tR\x14updatedSubgraphNamesB\t\n" +
+	"\a_statusB\x10\n" +
 	"\x0e_failureReasonB\t\n" +
 	"\a_counts\"\x8f\x01\n" +
 	"\aGitInfo\x12\x1d\n" +
@@ -36782,7 +36783,7 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	47,  // 19: wg.cosmo.platform.v1.PublishFederatedSubgraphsResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
 	26,  // 20: wg.cosmo.platform.v1.PublishFederatedSubgraphsResponse.counts:type_name -> wg.cosmo.platform.v1.SubgraphPublishStats
 	19,  // 21: wg.cosmo.platform.v1.GetBatchPublishJobStatusResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	0,   // 22: wg.cosmo.platform.v1.GetBatchPublishJobStatusResponse.jobStatus:type_name -> wg.cosmo.platform.v1.BatchPublishJobStatus
+	0,   // 22: wg.cosmo.platform.v1.GetBatchPublishJobStatusResponse.status:type_name -> wg.cosmo.platform.v1.BatchPublishJobStatus
 	46,  // 23: wg.cosmo.platform.v1.GetBatchPublishJobStatusResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
 	48,  // 24: wg.cosmo.platform.v1.GetBatchPublishJobStatusResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
 	47,  // 25: wg.cosmo.platform.v1.GetBatchPublishJobStatusResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning

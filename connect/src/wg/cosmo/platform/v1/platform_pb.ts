@@ -1349,9 +1349,9 @@ export class GetBatchPublishJobStatusResponse extends Message<GetBatchPublishJob
   response?: Response;
 
   /**
-   * @generated from field: wg.cosmo.platform.v1.BatchPublishJobStatus jobStatus = 2;
+   * @generated from field: optional wg.cosmo.platform.v1.BatchPublishJobStatus status = 2;
    */
-  jobStatus = BatchPublishJobStatus.PENDING;
+  status?: BatchPublishJobStatus;
 
   /**
    * @generated from field: optional string failureReason = 3;
@@ -1394,7 +1394,7 @@ export class GetBatchPublishJobStatusResponse extends Message<GetBatchPublishJob
   static readonly typeName = "wg.cosmo.platform.v1.GetBatchPublishJobStatusResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "jobStatus", kind: "enum", T: proto3.getEnumType(BatchPublishJobStatus) },
+    { no: 2, name: "status", kind: "enum", T: proto3.getEnumType(BatchPublishJobStatus), opt: true },
     { no: 3, name: "failureReason", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 5, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },

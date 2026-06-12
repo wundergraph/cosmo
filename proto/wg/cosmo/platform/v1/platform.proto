@@ -133,7 +133,7 @@ enum BatchPublishJobStatus {
 
 message GetBatchPublishJobStatusResponse {
   Response response = 1;
-  BatchPublishJobStatus jobStatus = 2;
+  optional BatchPublishJobStatus status = 2;
   optional string failureReason = 3;
   repeated CompositionError compositionErrors = 4;
   repeated DeploymentError deploymentErrors = 5;

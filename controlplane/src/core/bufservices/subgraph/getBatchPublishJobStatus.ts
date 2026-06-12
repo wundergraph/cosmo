@@ -35,22 +35,22 @@ export function getBatchPublishJobStatus(
     const compositionWarnings = jobDetails?.compositionResult?.compositionWarnings ?? [];
     const deploymentErrors = jobDetails?.compositionResult?.deploymentErrors ?? [];
 
-    let jobStatus = BatchPublishJobStatus.PENDING;
+    let status: BatchPublishJobStatus | undefined;
     switch (jobDetails?.status) {
       case 'pending': {
-        jobStatus = BatchPublishJobStatus.PENDING;
+        status = BatchPublishJobStatus.PENDING;
         break;
       }
       case 'processing': {
-        jobStatus = BatchPublishJobStatus.PROCESSING;
+        status = BatchPublishJobStatus.PROCESSING;
         break;
       }
       case 'failed': {
-        jobStatus = BatchPublishJobStatus.FAILED;
+        status = BatchPublishJobStatus.FAILED;
         break;
       }
       case 'completed': {
-        jobStatus = BatchPublishJobStatus.COMPLETED;
+        status = BatchPublishJobStatus.COMPLETED;
         break;
       }
     }
@@ -66,7 +66,7 @@ export function getBatchPublishJobStatus(
           : EnumStatusCode.ERR_NOT_FOUND,
         details: jobDetails ? undefined : `A job with the identifier "${req.jobId}" does not exists`,
       },
-      jobStatus,
+      status,
       failureReason: jobDetails?.failureReason || undefined,
       deploymentErrors: deploymentErrors.slice(0, boundedLimit),
       compositionErrors: compositionErrors.slice(0, boundedLimit),
