@@ -4,7 +4,8 @@ import yaml from 'js-yaml';
 import { join, resolve } from 'pathe';
 import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
-import { fetchRouterConfig, getFederatedGraphSchemas, getSubgraphSDL, getSubgraphsOfFedGraph } from '../utils.js';
+import { getFederatedGraphSchemas, getSubgraphSDL, getSubgraphsOfFedGraph } from '../utils.js';
+import { fetchRouterConfig } from '../../../router/utils.js';
 
 export default (opts: BaseCommandOptions) => {
   const cmd = new Command('fetch');
@@ -49,7 +50,21 @@ export default (opts: BaseCommandOptions) => {
         name,
         namespace: options.namespace,
       });
-      writeFileSync(join(superGraphPath, `cosmoConfig.json`), routerConfig);
+      writeFileSync(join(superGraphPath, `cosmoConfig.json`), routerConfig.routerConfig);
+      if (routerConfig.mapper) {
+        writeFileSync(join(basePath, `cosmo-mapper.json`), JSON.stringify(routerConfig.mapper));
+      }
+
+      if (routerConfig.featureFlags?.size) {
+        const featureFlagsPath = join(basePath, 'feature-flags');
+        if (!existsSync(featureFlagsPath)) {
+          mkdirSync(featureFlagsPath, { recursive: true });
+        }
+
+        for (const [featureFlagName, featureFlagConfig] of routerConfig.featureFlags) {
+          writeFileSync(join(featureFlagsPath, `${featureFlagName}.json`), featureFlagConfig);
+        }
+      }
 
       writeFileSync(join(superGraphPath, `cosmoSchema.graphql`), fedGraphSchemas.sdl);
 

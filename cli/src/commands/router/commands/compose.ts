@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import {
   buildRouterConfig,
   type ComposedSubgraph,
@@ -15,13 +16,14 @@ import semver from 'semver';
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
-import { basename, dirname, resolve } from 'pathe';
+import { basename, dirname, resolve, join } from 'pathe';
 import pc from 'picocolors';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
   GRPCMapping,
+  RouterConfig,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import Table from 'cli-table3';
 import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
@@ -176,6 +178,10 @@ export default (opts: BaseCommandOptions) => {
     'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
   );
   command.option('--ignore-external-keys', 'This flag ignores errors related to true external entity keys.');
+  command.option(
+    '--split-configs-enabled',
+    'This flag enables splitting the router config into multiple files. Router version 0.315.0 or higher is required.',
+  );
 
   command.action(async (options) => {
     const inputFile = resolve(options.input);
@@ -185,6 +191,13 @@ export default (opts: BaseCommandOptions) => {
       program.error(
         pc.red(pc.bold(`The input file '${pc.bold(inputFile)}' does not exist. Please check the path and try again.`)),
       );
+    }
+
+    if (options.out) {
+      options.out = resolve(options.out);
+      if (options.splitConfigsEnabled && !existsSync(options.out)) {
+        await mkdir(options.out, { recursive: true });
+      }
     }
 
     const fileContent = (await readFile(inputFile)).toString();
@@ -263,13 +276,44 @@ export default (opts: BaseCommandOptions) => {
       subgraphs: subgraphs.map((s, index) => constructRouterSubgraph(result, s, index)),
     });
 
+    const mapper = new Map<string, string>();
+    mapper.set('', createHash('sha256').update(routerConfig.toJsonString()).digest('hex'));
+
     if (config.feature_flags && config.feature_flags.length > 0) {
       const ffConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
-      routerConfig.featureFlagConfigs = ffConfigs;
+      if (!options.splitConfigsEnabled) {
+        routerConfig.featureFlagConfigs = ffConfigs;
+      } else if (ffConfigs.configByFeatureFlagName && options.out) {
+        const outDir = join(options.out, 'feature-flags');
+        if (!existsSync(outDir)) {
+          await mkdir(outDir, { recursive: true });
+        }
+
+        for (const [featureFlagName, featureFlagConfig] of Object.entries(ffConfigs.configByFeatureFlagName)) {
+          const ffRouterConfig = new RouterConfig({
+            engineConfig: featureFlagConfig.engineConfig,
+            version: featureFlagConfig.version,
+            subgraphs: featureFlagConfig.subgraphs,
+            compatibilityVersion: routerConfig.compatibilityVersion,
+          });
+
+          const routerConfigJson = ffRouterConfig.toJsonString();
+          await writeFile(join(outDir, `${featureFlagName}.json`), routerConfigJson);
+          mapper.set(featureFlagName, createHash('sha256').update(routerConfigJson).digest('hex'));
+        }
+      }
     }
 
     if (options.out) {
-      await writeFile(options.out, routerConfig.toJsonString());
+      await writeFile(
+        options.splitConfigsEnabled ? join(options.out, 'router-config.json') : options.out,
+        routerConfig.toJsonString(),
+      );
+
+      if (options.splitConfigsEnabled && mapper.size > 0) {
+        await writeFile(join(options.out, 'mapper.json'), JSON.stringify(Object.fromEntries(mapper)));
+      }
+
       console.log(pc.green(`Router config successfully written to ${pc.bold(options.out)}`));
     } else {
       console.log(routerConfig.toJsonString());

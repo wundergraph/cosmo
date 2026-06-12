@@ -1,19 +1,45 @@
-import { writeFile } from 'node:fs/promises';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { Command, program } from 'commander';
-import jwtDecode from 'jwt-decode';
+import { writeFile, mkdir } from 'node:fs/promises';
+import { Command } from 'commander';
 import pc from 'picocolors';
-import { resolve } from 'pathe';
-import { getBaseHeaders, config } from '../../../core/config.js';
+import { resolve, join } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { GraphToken } from '../../auth/utils.js';
-import { makeSignature, safeCompare } from '../../../core/signature.js';
+import { fetchRouterConfig, type FetchRouterConfigResult } from '../utils.js';
 
-export const handleOutput = async (out: string | undefined, config: string) => {
+export const handleOutput = async (
+  out: string | undefined,
+  graphSignKey: string | undefined,
+  config: FetchRouterConfigResult,
+) => {
   if (out) {
-    await writeFile(resolve(out), config ?? '');
+    if (config.splitConfigLoading) {
+      let directory = resolve(out);
+      await mkdir(directory, { recursive: true });
+      await writeFile(join(directory, 'latest.json'), config.routerConfig);
+      if (config.mapper) {
+        await writeFile(join(directory, 'mapper.json'), JSON.stringify(config.mapper));
+      }
+
+      if (config.featureFlags && config.featureFlags.size > 0) {
+        directory = resolve(directory, 'feature-flags');
+        await mkdir(directory, { recursive: true });
+
+        for (const [featureFlagName, featureFlagRouterConfig] of config.featureFlags) {
+          await writeFile(resolve(directory, `${featureFlagName}.json`), featureFlagRouterConfig);
+        }
+      }
+    } else {
+      await writeFile(resolve(out), config.routerConfig);
+    }
+
+    if (graphSignKey) {
+      console.log(pc.green('The signature of the router config matches the local computed signature.'));
+    }
+
+    console.log(
+      pc.green(`The router config${config.splitConfigLoading ? 's' : ''} has been written to ${pc.bold(out)}`),
+    );
   } else {
-    console.log(config);
+    console.log(config.routerConfig);
   }
 };
 
@@ -30,82 +56,22 @@ export default (opts: BaseCommandOptions) => {
     'The signature key to verify the downloaded router config. If not provided, the router config will not be verified.',
   );
   command.action(async (name, options) => {
-    const resp = await opts.client.platform.generateRouterToken(
-      {
-        fedGraphName: name,
-        namespace: options.namespace,
-      },
-      {
-        headers: getBaseHeaders(),
-      },
-    );
-
-    if (resp.response?.code !== EnumStatusCode.OK) {
-      console.log(`${pc.red(`Could not fetch the router config for the graph ${pc.bold(name)}`)}`);
-      if (resp.response?.details) {
-        console.log(pc.red(pc.bold(resp.response?.details)));
-      }
-      process.exitCode = 1;
-      return;
-    }
-
-    let decoded: GraphToken;
-
     try {
-      decoded = jwtDecode<GraphToken>(resp.token);
-    } catch {
-      program.error('Could not fetch the router config. Please try again');
+      const result = await fetchRouterConfig({
+        client: opts.client,
+        name,
+        namespace: options.namespace,
+        graphSignKey: options.graphSignKey,
+      });
+
+      await handleOutput(options.out, options.graphSignKey, result);
+    } catch (err) {
+      if (err instanceof Error) {
+        console.error(err.message);
+      }
+
+      process.exitCode = 1;
     }
-
-    const requestBody = JSON.stringify({
-      Version: '',
-    });
-
-    const headers = new Headers();
-    headers.append('Content-Type', 'application/json; charset=UTF-8');
-    headers.append('Authorization', 'Bearer ' + resp.token);
-    headers.append('Accept-Encoding', 'gzip');
-
-    const url = new URL(
-      `/${decoded.organization_id}/${decoded.federated_graph_id}/routerconfigs/latest.json`,
-      config.cdnURL,
-    );
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: requestBody,
-    });
-
-    const body = await response.text();
-
-    if (options.graphSignKey) {
-      const signature = response.headers.get('X-Signature-SHA256');
-      if (!signature) {
-        console.log(pc.red('You provided a signature key, but the router config does not have a signature header.'));
-        process.exitCode = 1;
-        return;
-      }
-
-      const hash = await makeSignature(body, options.graphSignKey);
-
-      if (!safeCompare(hash, signature)) {
-        console.log(pc.red('The signature of the router config does not match the provided signature key.'));
-        process.exitCode = 1;
-        return;
-      }
-
-      if (options.out) {
-        await handleOutput(options.out, body);
-
-        console.log(pc.green('The signature of the router config matches the local computed signature.'));
-        console.log(pc.green(`The router config has been written to ${pc.bold(options.out)}`));
-
-        return;
-      }
-    }
-
-    await handleOutput(options.out, body);
   });
 
   return command;
