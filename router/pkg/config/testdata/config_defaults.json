@@ -27,15 +27,6 @@
       },
       "Attributes": null,
       "OperationContentAttributes": false,
-      "Network": {
-        "Enabled": false
-      },
-      "Resolver": {
-        "Enabled": false
-      },
-      "Router": {
-        "Enabled": false
-      },
       "ExportGraphQLVariables": false,
       "WithNewRoot": false,
       "SanitizeUTF8": {

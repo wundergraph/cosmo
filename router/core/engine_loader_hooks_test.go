@@ -19,7 +19,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
 )
 
 func setupTestContext(t *testing.T, tp *sdktrace.TracerProvider) (context.Context, *requestContext) {
@@ -40,88 +39,6 @@ func setupTestContext(t *testing.T, tp *sdktrace.TracerProvider) (context.Contex
 	return ctx, rc
 }
 
-func TestEmitFetchPrepareRequestSpan(t *testing.T) {
-	t.Parallel()
-
-	exporter := tracetest.NewInMemoryExporter(t)
-	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
-	tracer := tp.Tracer("test")
-
-	parentCtx, parentSpan := tracer.Start(context.Background(), "Engine - Fetch")
-	start := time.Now().Add(-time.Millisecond)
-	timings := &rcontext.FetchTraceTimings{
-		ParentContext: parentCtx,
-		SubgraphID:    "subgraph-1",
-		SubgraphName:  "products",
-	}
-	timings.FetchStartUnixNano.Store(start.UnixNano())
-
-	ctx := context.WithValue(context.Background(), rcontext.FetchTraceTimingsKey, timings)
-	emitFetchPrepareRequestSpan(ctx, time.Now())
-	parentSpan.End()
-
-	spans := exporter.GetSpans().Snapshots()
-	require.Len(t, spans, 2)
-
-	var fetchSpan, prepareSpan sdktrace.ReadOnlySpan
-	for _, span := range spans {
-		switch span.Name() {
-		case "Engine - Fetch":
-			fetchSpan = span
-		case "Engine - Fetch Prepare Request":
-			prepareSpan = span
-		}
-	}
-
-	require.NotNil(t, fetchSpan)
-	require.NotNil(t, prepareSpan)
-	require.Equal(t, fetchSpan.SpanContext().SpanID(), prepareSpan.Parent().SpanID())
-	require.True(t, prepareSpan.EndTime().After(prepareSpan.StartTime()))
-	require.Contains(t, prepareSpan.Attributes(), rotel.WgComponentName.String("engine-loader"))
-	require.Contains(t, prepareSpan.Attributes(), rotel.WgSubgraphID.String("subgraph-1"))
-	require.Contains(t, prepareSpan.Attributes(), rotel.WgSubgraphName.String("products"))
-}
-
-func TestEmitResolverPhaseSpan(t *testing.T) {
-	t.Parallel()
-
-	exporter := tracetest.NewInMemoryExporter(t)
-	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
-	tracer := tp.Tracer("test")
-
-	parentCtx, parentSpan := tracer.Start(context.Background(), "Operation - Execute")
-	parentCtx = trace.ContextWithSpan(parentCtx, parentSpan)
-	start := time.Now().Add(-time.Millisecond)
-	emitRouterPhaseSpan(parentCtx, tracer, "Operation - Resolve Response", start, time.Millisecond, rotel.WgComponentName.String("engine-resolver"))
-	emitRouterPhaseSpan(parentCtx, tracer, "Router - Write Response", start.Add(time.Millisecond), time.Millisecond, rotel.WgComponentName.String("router-server"))
-	parentSpan.End()
-
-	spans := exporter.GetSpans().Snapshots()
-	require.Len(t, spans, 3)
-
-	var executeSpan, resolveSpan, writeSpan sdktrace.ReadOnlySpan
-	for _, span := range spans {
-		switch span.Name() {
-		case "Operation - Execute":
-			executeSpan = span
-		case "Operation - Resolve Response":
-			resolveSpan = span
-		case "Router - Write Response":
-			writeSpan = span
-		}
-	}
-
-	require.NotNil(t, executeSpan)
-	require.NotNil(t, resolveSpan)
-	require.NotNil(t, writeSpan)
-	require.Equal(t, executeSpan.SpanContext().SpanID(), resolveSpan.Parent().SpanID())
-	require.Equal(t, executeSpan.SpanContext().SpanID(), writeSpan.Parent().SpanID())
-	require.True(t, resolveSpan.EndTime().After(resolveSpan.StartTime()))
-	require.True(t, writeSpan.EndTime().After(writeSpan.StartTime()))
-	require.Contains(t, resolveSpan.Attributes(), rotel.WgComponentName.String("engine-resolver"))
-	require.Contains(t, writeSpan.Attributes(), rotel.WgComponentName.String("router-server"))
-}
-
 func TestOnFinished_ClientDisconnect(t *testing.T) {
 	t.Parallel()
 
@@ -137,7 +54,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil)
 
 		ctx, _ := setupTestContext(t, tp)
 
@@ -167,7 +84,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil)
 
 		ctx, _ := setupTestContext(t, tp)
 
@@ -194,7 +111,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil)
 
 		ctx, _ := setupTestContext(t, tp)
 

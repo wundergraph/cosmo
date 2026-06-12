@@ -84,13 +84,6 @@ type Tracing struct {
 
 	OperationContentAttributes bool `yaml:"operation_content_attributes" envDefault:"false" env:"TRACING_OPERATION_CONTENT_ATTRIBUTES"`
 
-	// Network enables additional subgraph HTTP phase spans.
-	Network TelemetryCategory `yaml:"network" envPrefix:"TRACING_NETWORK_"`
-	// Resolver enables additional resolver phase spans.
-	Resolver TelemetryCategory `yaml:"resolver" envPrefix:"TRACING_RESOLVER_"`
-	// Router enables additional router phase spans.
-	Router TelemetryCategory `yaml:"router" envPrefix:"TRACING_ROUTER_"`
-
 	TracingGlobalFeatures `yaml:",inline"`
 
 	// SanitizeUTF8 configures sanitization of invalid UTF-8 sequences in span attribute values

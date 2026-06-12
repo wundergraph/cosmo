@@ -338,53 +338,47 @@ type Config struct {
 	TLSConfig                          config.TLSConfiguration
 	TraceExporter                      trace.SpanExporter
 	TracingSanitizeUTF8                *config.SanitizeUTF8Config
-	// TracingNetworkSpans enables additional subgraph HTTP phase spans.
-	TracingNetworkSpans bool
-	// TracingResolverSpans enables resolver phase spans.
-	TracingResolverSpans bool
-	// TracingRouterSpans enables router phase spans.
-	TracingRouterSpans           bool
-	IPAnonymization              *core.IPAnonymizationConfig
-	CustomMetricAttributes       []config.CustomAttribute
-	CustomTelemetryAttributes    []config.CustomAttribute
-	CustomTracingAttributes      []config.CustomAttribute
-	CustomResourceAttributes     []config.CustomStaticAttribute
-	OperationContentAttributes   bool
-	MetricReader                 metric.Reader
-	PrometheusRegistry           *prometheus.Registry
-	PrometheusPort               int
-	ShutdownDelay                time.Duration
-	NoRetryClient                bool
-	PropagationConfig            config.PropagationConfig
-	CacheControlPolicy           config.CacheControlPolicy
-	ApqConfig                    config.AutomaticPersistedQueriesConfig
-	LogObservation               LogObservationConfig
-	ClientHeader                 config.ClientHeader
-	ResponseTraceHeader          config.ResponseTraceHeader
-	Logger                       *zap.Logger
-	AccessLogger                 *zap.Logger
-	AccessLogFields              []config.CustomAttribute
-	MetricOptions                MetricOptions
-	ModifyEventsConfiguration    func(cfg *config.EventsConfiguration)
-	EnableRuntimeMetrics         bool
-	EnableNats                   bool
-	BatchingConfig               config.BatchingConfig
-	EnableKafka                  bool
-	SubgraphAccessLogsEnabled    bool
-	SubgraphAccessLogFields      []config.CustomAttribute
-	AssertCacheMetrics           *CacheMetricsAssertions
-	DisableSimulateCloudExporter bool
-	CdnSever                     *httptest.Server
-	UseVersionedGraph            bool
-	NoShutdownTestServer         bool
-	MCP                          config.MCPConfiguration
-	MCPOperationsPath            string
-	MCPAuthToken                 string // Optional Bearer token for MCP authentication
-	EnableRedis                  bool
-	EnableRedisCluster           bool
-	Plugins                      PluginConfig
-	EnableGRPC                   bool
-	IgnoreQueryParamsList        []string
+	IPAnonymization                    *core.IPAnonymizationConfig
+	CustomMetricAttributes             []config.CustomAttribute
+	CustomTelemetryAttributes          []config.CustomAttribute
+	CustomTracingAttributes            []config.CustomAttribute
+	CustomResourceAttributes           []config.CustomStaticAttribute
+	OperationContentAttributes         bool
+	MetricReader                       metric.Reader
+	PrometheusRegistry                 *prometheus.Registry
+	PrometheusPort                     int
+	ShutdownDelay                      time.Duration
+	NoRetryClient                      bool
+	PropagationConfig                  config.PropagationConfig
+	CacheControlPolicy                 config.CacheControlPolicy
+	ApqConfig                          config.AutomaticPersistedQueriesConfig
+	LogObservation                     LogObservationConfig
+	ClientHeader                       config.ClientHeader
+	ResponseTraceHeader                config.ResponseTraceHeader
+	Logger                             *zap.Logger
+	AccessLogger                       *zap.Logger
+	AccessLogFields                    []config.CustomAttribute
+	MetricOptions                      MetricOptions
+	ModifyEventsConfiguration          func(cfg *config.EventsConfiguration)
+	EnableRuntimeMetrics               bool
+	EnableNats                         bool
+	BatchingConfig                     config.BatchingConfig
+	EnableKafka                        bool
+	SubgraphAccessLogsEnabled          bool
+	SubgraphAccessLogFields            []config.CustomAttribute
+	AssertCacheMetrics                 *CacheMetricsAssertions
+	DisableSimulateCloudExporter       bool
+	CdnSever                           *httptest.Server
+	UseVersionedGraph                  bool
+	NoShutdownTestServer               bool
+	MCP                                config.MCPConfiguration
+	MCPOperationsPath                  string
+	MCPAuthToken                       string // Optional Bearer token for MCP authentication
+	EnableRedis                        bool
+	EnableRedisCluster                 bool
+	Plugins                            PluginConfig
+	EnableGRPC                         bool
+	IgnoreQueryParamsList              []string
 }
 
 type PluginConfig struct {
@@ -1573,9 +1567,6 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 			Propagation:                testConfig.PropagationConfig,
 			TracingGlobalFeatures:      config.TracingGlobalFeatures{},
 			ResponseTraceHeader:        testConfig.ResponseTraceHeader,
-			Network:                    config.TelemetryCategory{Enabled: testConfig.TracingNetworkSpans},
-			Resolver:                   config.TelemetryCategory{Enabled: testConfig.TracingResolverSpans},
-			Router:                     config.TelemetryCategory{Enabled: testConfig.TracingRouterSpans},
 		}
 
 		if testConfig.TracingSanitizeUTF8 != nil {

@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -89,11 +88,6 @@ type HandlerOptions struct {
 
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
-
-	// EmitResolverSpans emits resolver child spans using timings reported by the engine.
-	EmitResolverSpans bool
-	// EmitRouterSpans emits router response-write child spans.
-	EmitRouterSpans bool
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -109,8 +103,6 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		engineStats:                              opts.EngineStats,
 		metricStore:                              opts.MetricStore,
 		tracer:                                   tracer,
-		emitResolverSpans:                        opts.EmitResolverSpans,
-		emitRouterSpans:                          opts.EmitRouterSpans,
 		authorizer:                               opts.Authorizer,
 		rateLimiter:                              opts.RateLimiter,
 		rateLimitConfig:                          opts.RateLimitConfig,
@@ -151,9 +143,6 @@ type GraphQLHandler struct {
 	enableCostResponseHeaders       bool
 
 	apolloSubscriptionMultipartPrintBoundary bool
-
-	emitResolverSpans bool
-	emitRouterSpans   bool
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -163,7 +152,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(reqCtx.telemetry.traceAttrs...),
 	)
-	executionSpanContext := trace.ContextWithSpan(context.Background(), graphqlExecutionSpan)
 	defer graphqlExecutionSpan.End()
 
 	resolveCtx := resolve.NewContext(executionContext)
@@ -260,7 +248,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		resolveStart := time.Now()
 		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
 		if err != nil {
@@ -282,14 +269,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
 
 		reqCtx.expressionContext.Request.Operation.ResolverAcquireDuration = info.ResolveAcquireWaitTime
-
-		if h.emitResolverSpans {
-			emitResolverAcquireSpan(executionSpanContext, h.tracer, resolveStart, info.ResolveAcquireWaitTime, info.ResolveDeduplicated)
-			emitRouterPhaseSpan(executionSpanContext, h.tracer, "Operation - Resolve Response", info.ResponseResolveStartTime, info.ResponseResolveDuration, rotel.WgComponentName.String("engine-resolver"))
-		}
-		if h.emitRouterSpans {
-			emitRouterPhaseSpan(executionSpanContext, h.tracer, "Router - Write Response", info.ResponseWriteStartTime, info.ResponseWriteDuration, rotel.WgComponentName.String("router-server"))
-		}
 
 		if h.metricStore != nil {
 			h.metricStore.MeasureResolverAcquireDuration(
@@ -622,25 +601,4 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 			w.Header().Set(ExecutionPlanCacheHeader, "MISS")
 		}
 	}
-}
-
-// emitResolverAcquireSpan emits a retroactive "Resolver - Acquire" child span
-// representing the time the resolver spent waiting for a slot before executing.
-// The span is anchored at resolveStart (the moment we entered the resolver call)
-// and lasts for waitTime. When waitTime is zero the span is skipped to avoid
-// trace noise on uncontested fast paths.
-func emitResolverAcquireSpan(ctx context.Context, tracer trace.Tracer, resolveStart time.Time, waitTime time.Duration, deduplicated bool) {
-	if tracer == nil || waitTime <= 0 {
-		return
-	}
-	_, span := tracer.Start(ctx, "Resolver - Acquire",
-		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithTimestamp(resolveStart),
-		trace.WithAttributes(
-			rotel.WgComponentName.String("engine-resolver"),
-			rotel.WgAcquireResolverWaitTimeMs.Int64(waitTime.Milliseconds()),
-			rotel.WgResolverDeduplicatedRequest.Bool(deduplicated),
-		),
-	)
-	span.End(trace.WithTimestamp(resolveStart.Add(waitTime)))
 }

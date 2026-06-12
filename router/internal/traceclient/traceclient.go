@@ -12,19 +12,6 @@ import (
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
-	"go.opentelemetry.io/otel/attribute"
-	otrace "go.opentelemetry.io/otel/trace"
-)
-
-const tracerName = "wundergraph/cosmo/router/traceclient"
-
-// Child span names emitted for each httptrace phase under the subgraph HTTP
-// client span.
-const (
-	spanDNSLookup       = "HTTP - DNS Lookup"
-	spanTCPConnect      = "HTTP - TCP Connect"
-	spanTLSHandshake    = "HTTP - TLS Handshake"
-	spanTimeToFirstByte = "HTTP - Time To First Byte"
 )
 
 type AcquiredConnection struct {
@@ -57,54 +44,26 @@ type ClientTrace struct {
 	ConnectionGet      *GetConnection
 	ConnectionAcquired *AcquiredConnection
 	phases             phaseTimings
-
-	// parentCtx is populated by external code (the otelhttp pre-handler) once
-	// the subgraph HTTP client span is active. It is used as the parent for the
-	// per-phase child spans emitted in processConnectionMetrics. When unset,
-	// child spans fall back to a root context and become orphaned at the tracing
-	// backend.
-	parentCtx context.Context
-}
-
-// SetParentCtx records the request context whose active span should parent the
-// per-phase child spans. Called by the otelhttp pre-handler.
-func (c *ClientTrace) SetParentCtx(ctx context.Context) {
-	c.parentCtx = ctx
 }
 
 type ClientTraceContextKey struct{}
 
 type TraceInjectingRoundTripper struct {
-	base                    http.RoundTripper
-	connectionMetricStore   metric.ConnectionMetricStore
-	tracerProvider          otrace.TracerProvider
-	tracer                  otrace.Tracer
-	emitConnectionPhaseSpan bool
-	reqContextValuesGetter  func(ctx context.Context, req *http.Request) (*expr.Context, string)
-}
-
-type Options struct {
-	ConnectionMetricStore   metric.ConnectionMetricStore
-	TracerProvider          otrace.TracerProvider
-	EmitConnectionPhaseSpan bool
-	ReqContextValuesGetter  func(ctx context.Context, req *http.Request) (*expr.Context, string)
+	base                   http.RoundTripper
+	connectionMetricStore  metric.ConnectionMetricStore
+	reqContextValuesGetter func(ctx context.Context, req *http.Request) (*expr.Context, string)
 }
 
 func NewTraceInjectingRoundTripper(
 	base http.RoundTripper,
-	opts Options,
+	connectionMetricStore metric.ConnectionMetricStore,
+	reqContextValuesGetter func(ctx context.Context, req *http.Request) (*expr.Context, string),
 ) *TraceInjectingRoundTripper {
-	rt := &TraceInjectingRoundTripper{
-		base:                    base,
-		connectionMetricStore:   opts.ConnectionMetricStore,
-		tracerProvider:          opts.TracerProvider,
-		emitConnectionPhaseSpan: opts.EmitConnectionPhaseSpan,
-		reqContextValuesGetter:  opts.ReqContextValuesGetter,
+	return &TraceInjectingRoundTripper{
+		base:                   base,
+		connectionMetricStore:  connectionMetricStore,
+		reqContextValuesGetter: reqContextValuesGetter,
 	}
-	if opts.TracerProvider != nil && opts.EmitConnectionPhaseSpan {
-		rt.tracer = opts.TracerProvider.Tracer(tracerName)
-	}
-	return rt
 }
 
 func GetClientTraceFromContext(ctx context.Context) *ClientTrace {
@@ -259,39 +218,6 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 			serverAttributes...,
 		)
 	}
-
-	t.emitPhaseSpans(trace, serverAttributes)
-}
-
-// emitPhaseSpans emits one retroactive child span per observed httptrace phase
-// under the active subgraph HTTP client span. Each span uses the recorded
-// start/end timestamps so it appears at the correct point on the timeline at
-// the tracing backend. Phases with missing endpoints are skipped.
-func (t *TraceInjectingRoundTripper) emitPhaseSpans(trace *ClientTrace, attrs []attribute.KeyValue) {
-	if t.tracer == nil || trace.parentCtx == nil {
-		return
-	}
-
-	spanAttrs := otrace.WithAttributes(attrs...)
-
-	emit := func(name string, start, end time.Time) {
-		if start.IsZero() || end.IsZero() || !end.After(start) {
-			return
-		}
-		_, span := t.tracer.Start(
-			trace.parentCtx,
-			name,
-			otrace.WithSpanKind(otrace.SpanKindInternal),
-			otrace.WithTimestamp(start),
-			spanAttrs,
-		)
-		span.End(otrace.WithTimestamp(end))
-	}
-
-	emit(spanDNSLookup, trace.phases.DNSStart, trace.phases.DNSDone)
-	emit(spanTCPConnect, trace.phases.ConnectStart, trace.phases.ConnectDone)
-	emit(spanTLSHandshake, trace.phases.TLSStart, trace.phases.TLSDone)
-	emit(spanTimeToFirstByte, trace.phases.WroteRequest, trace.phases.FirstByte)
 }
 
 func msFromDuration(d time.Duration) float64 {

@@ -77,12 +77,6 @@ type Config struct {
 	Attributes          []config.CustomAttribute
 	// SanitizeUTF8 configures sanitization of invalid UTF-8 sequences in span attribute values
 	SanitizeUTF8 *attributeprocessor.SanitizeUTF8Config
-	// NetworkSpans enables subgraph HTTP phase spans.
-	NetworkSpans bool
-	// ResolverSpans enables resolver phase spans.
-	ResolverSpans bool
-	// RouterSpans enables router phase spans.
-	RouterSpans bool
 }
 
 func DefaultExporter(cfg *Config) *ExporterConfig {

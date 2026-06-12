@@ -48,15 +48,6 @@
         }
       ],
       "OperationContentAttributes": false,
-      "Network": {
-        "Enabled": true
-      },
-      "Resolver": {
-        "Enabled": true
-      },
-      "Router": {
-        "Enabled": true
-      },
       "ExportGraphQLVariables": true,
       "WithNewRoot": false,
       "SanitizeUTF8": {

@@ -201,9 +201,6 @@ func (c *Config) Usage() map[string]any {
 			exporters[i].Endpoint = exporter.Endpoint
 		}
 		usage["tracing_exporters"] = exporters
-		usage["tracing_network_spans"] = c.traceConfig.NetworkSpans
-		usage["tracing_resolver_spans"] = c.traceConfig.ResolverSpans
-		usage["tracing_router_spans"] = c.traceConfig.RouterSpans
 	}
 
 	metricsEnabled := c.metricConfig != nil && c.metricConfig.IsEnabled()

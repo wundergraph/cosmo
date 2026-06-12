@@ -1164,42 +1164,6 @@
               "default": false,
               "description": "Enable the addition of GraphQL operation body content as trace attributes. When enabled, original operation content will be added to the trace span for parse and normalized operation content will be added to the trace span for normalize. The default value is false."
             },
-            "network": {
-              "type": "object",
-              "additionalProperties": false,
-              "description": "Configure additional network tracing spans.",
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "default": false,
-                  "description": "Emit subgraph HTTP phase child spans, including DNS lookup, TCP connect, TLS handshake, time-to-first-byte, response body read, and fetch response processing. The default value is false."
-                }
-              }
-            },
-            "resolver": {
-              "type": "object",
-              "additionalProperties": false,
-              "description": "Configure additional resolver tracing spans.",
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "default": false,
-                  "description": "Emit resolver phase spans, including Resolver - Acquire and Operation - Resolve Response. The default value is false."
-                }
-              }
-            },
-            "router": {
-              "type": "object",
-              "additionalProperties": false,
-              "description": "Configure additional router tracing spans.",
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "default": false,
-                  "description": "Emit router phase spans, including Router - Write Response, Telemetry - Record Metrics, and Router - Finalize Response. The default value is false."
-                }
-              }
-            },
             "exporters": {
               "type": "array",
               "description": "The exporters to use to export the traces. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",

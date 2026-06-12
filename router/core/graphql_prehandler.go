@@ -77,7 +77,6 @@ type PreHandlerOptions struct {
 	ForceEnableInboundRequestDeduplication bool
 	HeaderPropagation                      *HeaderPropagation
 	SpanNameFormatter                      SpanNameFormatterFunc
-	EmitRouterPhaseSpans                   bool
 }
 
 type PreHandler struct {
@@ -119,7 +118,6 @@ type PreHandler struct {
 	enableInboundRequestDeduplication      bool
 	forceEnableInboundRequestDeduplication bool
 	spanNameFormatter                      SpanNameFormatterFunc
-	emitRouterPhaseSpans                   bool
 }
 
 type httpOperation struct {
@@ -189,7 +187,6 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
 		headerPropagation:                      opts.HeaderPropagation,
 		spanNameFormatter:                      spanNameFormatter,
-		emitRouterPhaseSpans:                   opts.EmitRouterPhaseSpans,
 	}
 }
 
@@ -266,16 +263,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			statusCode := ww.Status()
 			writtenBytes := ww.BytesWritten()
 
-			recordMetricsStart := time.Now()
 			metrics.Finish(
 				requestContext,
 				statusCode,
 				writtenBytes,
 				h.flushTelemetryAfterResponse,
 			)
-			if h.emitRouterPhaseSpans {
-				emitRouterPhaseSpan(r.Context(), h.tracer, "Telemetry - Record Metrics", recordMetricsStart, time.Since(recordMetricsStart), otel.RouterServerAttribute)
-			}
 
 			if h.flushTelemetryAfterResponse {
 				h.flushMetrics(r.Context(), requestLogger)

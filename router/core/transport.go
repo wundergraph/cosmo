@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/circuit"
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/traceclient"
 	"go.opentelemetry.io/otel/propagation"
@@ -52,8 +51,6 @@ func NewCustomTransport(
 	connectionMetricStore metric.ConnectionMetricStore,
 	breaker *circuit.Manager,
 	enableTraceClient bool,
-	tracerProvider otrace.TracerProvider,
-	emitConnectionPhaseSpan bool,
 ) *CustomTransport {
 	ct := &CustomTransport{
 		metricStore: metricStore,
@@ -82,12 +79,7 @@ func NewCustomTransport(
 			}
 			return &reqContext.expressionContext, activeSubgraphName
 		}
-		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, traceclient.Options{
-			ConnectionMetricStore:   connectionMetricStore,
-			TracerProvider:          tracerProvider,
-			EmitConnectionPhaseSpan: emitConnectionPhaseSpan,
-			ReqContextValuesGetter:  getValuesFromRequest,
-		})
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getValuesFromRequest)
 	}
 
 	if breaker.HasCircuits() {
@@ -204,7 +196,6 @@ type TransportFactory struct {
 	tracePropagators              propagation.TextMapPropagator
 	spanNameFormatter             SpanNameFormatterFunc
 	enableTraceClient             bool
-	emitConnectionPhaseSpan       bool
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -223,9 +214,6 @@ type TransportOptions struct {
 	TracePropagators              propagation.TextMapPropagator
 	SpanNameFormatter             SpanNameFormatterFunc
 	EnableTraceClient             bool
-	// EmitConnectionPhaseSpan toggles per-phase HTTP child spans (DNS, TCP,
-	// TLS, time-to-first-byte) on subgraph requests.
-	EmitConnectionPhaseSpan bool
 }
 
 type SubscriptionClientOptions struct {
@@ -255,11 +243,8 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		spanNameFormatter:             spanNameFormatter,
 		circuitBreaker:                opts.CircuitBreaker,
 		enableTraceClient:             opts.EnableTraceClient,
-		emitConnectionPhaseSpan:       opts.EmitConnectionPhaseSpan,
 	}
 }
-
-const minFetchPrepareRequestSpanDuration = 100 * time.Microsecond
 
 func (t TransportFactory) RoundTripper(baseTransport http.RoundTripper) http.RoundTripper {
 	if t.localhostFallbackInsideDocker && docker.Inside() {
@@ -278,12 +263,10 @@ func (t TransportFactory) RoundTripper(baseTransport http.RoundTripper) http.Rou
 		otelHttpOptions = append(otelHttpOptions, otelhttp.WithPropagators(t.tracePropagators))
 	}
 
-	traceTransportOptions := []trace.TransportOption{
+	traceTransport := trace.NewTransport(
+		baseTransport,
+		otelHttpOptions,
 		trace.WithPreHandler(func(r *http.Request) {
-			if t.emitConnectionPhaseSpan {
-				emitFetchPrepareRequestSpan(r.Context(), time.Now())
-			}
-
 			span := otrace.SpanFromContext(r.Context())
 			reqContext := getRequestContext(r.Context())
 
@@ -298,22 +281,8 @@ func (t TransportFactory) RoundTripper(baseTransport http.RoundTripper) http.Rou
 			attributes = append(attributes, reqContext.telemetry.traceAttrs...)
 
 			span.SetAttributes(attributes...)
-
-			// Expose the HTTP client span context to the trace client so that the
-			// per-phase httptrace child spans (DNS lookup, TCP connect, TLS,
-			// time-to-first-byte) are parented under the subgraph HTTP span.
-			if t.enableTraceClient {
-				if ct, ok := r.Context().Value(traceclient.ClientTraceContextKey{}).(*traceclient.ClientTrace); ok && ct != nil {
-					ct.SetParentCtx(r.Context())
-				}
-			}
 		}),
-	}
-	if t.emitConnectionPhaseSpan {
-		traceTransportOptions = append(traceTransportOptions, trace.WithResponseBodyReadSpan())
-	}
-
-	traceTransport := trace.NewTransport(baseTransport, otelHttpOptions, traceTransportOptions...)
+	)
 	tp := NewCustomTransport(
 		traceTransport,
 		t.retryOptions,
@@ -321,8 +290,6 @@ func (t TransportFactory) RoundTripper(baseTransport http.RoundTripper) http.Rou
 		t.connectionMetricStore,
 		t.circuitBreaker,
 		t.enableTraceClient,
-		t.tracerProvider,
-		t.emitConnectionPhaseSpan,
 	)
 
 	tp.preHandlers = t.preHandlers
@@ -330,44 +297,6 @@ func (t TransportFactory) RoundTripper(baseTransport http.RoundTripper) http.Rou
 	tp.logger = t.logger
 
 	return tp
-}
-
-func emitFetchPrepareRequestSpan(ctx context.Context, end time.Time) {
-	timings, _ := ctx.Value(rcontext.FetchTraceTimingsKey).(*rcontext.FetchTraceTimings)
-	if timings == nil || !timings.FetchPrepareSpanEmitted.CompareAndSwap(false, true) {
-		return
-	}
-
-	startUnixNano := timings.FetchStartUnixNano.Load()
-	if startUnixNano == 0 {
-		return
-	}
-
-	start := time.Unix(0, startUnixNano)
-	if end.Sub(start) < minFetchPrepareRequestSpanDuration {
-		return
-	}
-
-	parentCtx := timings.ParentContext
-	if parentCtx == nil {
-		parentCtx = ctx
-	}
-
-	_, span := otrace.SpanFromContext(parentCtx).TracerProvider().Tracer(
-		EngineLoaderHooksScopeName,
-		otrace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
-	).Start(
-		parentCtx,
-		"Engine - Fetch Prepare Request",
-		otrace.WithSpanKind(otrace.SpanKindInternal),
-		otrace.WithTimestamp(start),
-		otrace.WithAttributes(
-			otel.WgComponentName.String("engine-loader"),
-			otel.WgSubgraphID.String(timings.SubgraphID),
-			otel.WgSubgraphName.String(timings.SubgraphName),
-		),
-	)
-	span.End(otrace.WithTimestamp(end))
 }
 
 func (t TransportFactory) DefaultHTTPProxyURL() *url.URL {

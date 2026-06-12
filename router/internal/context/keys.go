@@ -13,5 +13,4 @@ const (
 	SubgraphResolverContextKey
 	EngineLoaderHooksContextKey
 	FetchTimingKey
-	FetchTraceTimingsKey
 )

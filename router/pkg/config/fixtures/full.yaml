@@ -147,12 +147,6 @@ telemetry:
     sampling_rate: 1
     export_graphql_variables: true
     with_new_root: false
-    network:
-      enabled: true
-    resolver:
-      enabled: true
-    router:
-      enabled: true
     propagation:
       # https://www.w3.org/TR/trace-context/
       trace_context: true
