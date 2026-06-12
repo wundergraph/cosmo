@@ -364,6 +364,12 @@ const (
 	// PlatformServiceGetClientsProcedure is the fully-qualified name of the PlatformService's
 	// GetClients RPC.
 	PlatformServiceGetClientsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetClients"
+	// PlatformServicePreviewDeleteClientProcedure is the fully-qualified name of the PlatformService's
+	// PreviewDeleteClient RPC.
+	PlatformServicePreviewDeleteClientProcedure = "/wg.cosmo.platform.v1.PlatformService/PreviewDeleteClient"
+	// PlatformServiceDeleteClientProcedure is the fully-qualified name of the PlatformService's
+	// DeleteClient RPC.
+	PlatformServiceDeleteClientProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteClient"
 	// PlatformServiceGetRoutersProcedure is the fully-qualified name of the PlatformService's
 	// GetRouters RPC.
 	PlatformServiceGetRoutersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetRouters"
@@ -823,6 +829,10 @@ type PlatformServiceClient interface {
 	UpdateIDPMappers(context.Context, *connect.Request[v1.UpdateIDPMappersRequest]) (*connect.Response[v1.UpdateIDPMappersResponse], error)
 	// GetClients returns all the clients of the federated graph
 	GetClients(context.Context, *connect.Request[v1.GetClientsRequest]) (*connect.Response[v1.GetClientsResponse], error)
+	// PreviewDeleteClient returns the affected operation count for deleting a client
+	PreviewDeleteClient(context.Context, *connect.Request[v1.PreviewDeleteClientRequest]) (*connect.Response[v1.PreviewDeleteClientResponse], error)
+	// DeleteClient deletes a registered client and its persisted operations
+	DeleteClient(context.Context, *connect.Request[v1.DeleteClientRequest]) (*connect.Response[v1.DeleteClientResponse], error)
 	// GetRouters returns all active routers of the federated graph
 	GetRouters(context.Context, *connect.Request[v1.GetRoutersRequest]) (*connect.Response[v1.GetRoutersResponse], error)
 	// GetInvitations returns all the invitations a user has received
@@ -1650,6 +1660,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("GetClients")),
 			connect.WithClientOptions(opts...),
 		),
+		previewDeleteClient: connect.NewClient[v1.PreviewDeleteClientRequest, v1.PreviewDeleteClientResponse](
+			httpClient,
+			baseURL+PlatformServicePreviewDeleteClientProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("PreviewDeleteClient")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteClient: connect.NewClient[v1.DeleteClientRequest, v1.DeleteClientResponse](
+			httpClient,
+			baseURL+PlatformServiceDeleteClientProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("DeleteClient")),
+			connect.WithClientOptions(opts...),
+		),
 		getRouters: connect.NewClient[v1.GetRoutersRequest, v1.GetRoutersResponse](
 			httpClient,
 			baseURL+PlatformServiceGetRoutersProcedure,
@@ -2264,6 +2286,8 @@ type platformServiceClient struct {
 	deleteOIDCProvider                                 *connect.Client[v1.DeleteOIDCProviderRequest, v1.DeleteOIDCProviderResponse]
 	updateIDPMappers                                   *connect.Client[v1.UpdateIDPMappersRequest, v1.UpdateIDPMappersResponse]
 	getClients                                         *connect.Client[v1.GetClientsRequest, v1.GetClientsResponse]
+	previewDeleteClient                                *connect.Client[v1.PreviewDeleteClientRequest, v1.PreviewDeleteClientResponse]
+	deleteClient                                       *connect.Client[v1.DeleteClientRequest, v1.DeleteClientResponse]
 	getRouters                                         *connect.Client[v1.GetRoutersRequest, v1.GetRoutersResponse]
 	getInvitations                                     *connect.Client[v1.GetInvitationsRequest, v1.GetInvitationsResponse]
 	acceptOrDeclineInvitation                          *connect.Client[v1.AcceptOrDeclineInvitationRequest, v1.AcceptOrDeclineInvitationResponse]
@@ -2915,6 +2939,16 @@ func (c *platformServiceClient) GetClients(ctx context.Context, req *connect.Req
 	return c.getClients.CallUnary(ctx, req)
 }
 
+// PreviewDeleteClient calls wg.cosmo.platform.v1.PlatformService.PreviewDeleteClient.
+func (c *platformServiceClient) PreviewDeleteClient(ctx context.Context, req *connect.Request[v1.PreviewDeleteClientRequest]) (*connect.Response[v1.PreviewDeleteClientResponse], error) {
+	return c.previewDeleteClient.CallUnary(ctx, req)
+}
+
+// DeleteClient calls wg.cosmo.platform.v1.PlatformService.DeleteClient.
+func (c *platformServiceClient) DeleteClient(ctx context.Context, req *connect.Request[v1.DeleteClientRequest]) (*connect.Response[v1.DeleteClientResponse], error) {
+	return c.deleteClient.CallUnary(ctx, req)
+}
+
 // GetRouters calls wg.cosmo.platform.v1.PlatformService.GetRouters.
 func (c *platformServiceClient) GetRouters(ctx context.Context, req *connect.Request[v1.GetRoutersRequest]) (*connect.Response[v1.GetRoutersResponse], error) {
 	return c.getRouters.CallUnary(ctx, req)
@@ -3561,6 +3595,10 @@ type PlatformServiceHandler interface {
 	UpdateIDPMappers(context.Context, *connect.Request[v1.UpdateIDPMappersRequest]) (*connect.Response[v1.UpdateIDPMappersResponse], error)
 	// GetClients returns all the clients of the federated graph
 	GetClients(context.Context, *connect.Request[v1.GetClientsRequest]) (*connect.Response[v1.GetClientsResponse], error)
+	// PreviewDeleteClient returns the affected operation count for deleting a client
+	PreviewDeleteClient(context.Context, *connect.Request[v1.PreviewDeleteClientRequest]) (*connect.Response[v1.PreviewDeleteClientResponse], error)
+	// DeleteClient deletes a registered client and its persisted operations
+	DeleteClient(context.Context, *connect.Request[v1.DeleteClientRequest]) (*connect.Response[v1.DeleteClientResponse], error)
 	// GetRouters returns all active routers of the federated graph
 	GetRouters(context.Context, *connect.Request[v1.GetRoutersRequest]) (*connect.Response[v1.GetRoutersResponse], error)
 	// GetInvitations returns all the invitations a user has received
@@ -4384,6 +4422,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("GetClients")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServicePreviewDeleteClientHandler := connect.NewUnaryHandler(
+		PlatformServicePreviewDeleteClientProcedure,
+		svc.PreviewDeleteClient,
+		connect.WithSchema(platformServiceMethods.ByName("PreviewDeleteClient")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceDeleteClientHandler := connect.NewUnaryHandler(
+		PlatformServiceDeleteClientProcedure,
+		svc.DeleteClient,
+		connect.WithSchema(platformServiceMethods.ByName("DeleteClient")),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetRoutersHandler := connect.NewUnaryHandler(
 		PlatformServiceGetRoutersProcedure,
 		svc.GetRouters,
@@ -5105,6 +5155,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceUpdateIDPMappersHandler.ServeHTTP(w, r)
 		case PlatformServiceGetClientsProcedure:
 			platformServiceGetClientsHandler.ServeHTTP(w, r)
+		case PlatformServicePreviewDeleteClientProcedure:
+			platformServicePreviewDeleteClientHandler.ServeHTTP(w, r)
+		case PlatformServiceDeleteClientProcedure:
+			platformServiceDeleteClientHandler.ServeHTTP(w, r)
 		case PlatformServiceGetRoutersProcedure:
 			platformServiceGetRoutersHandler.ServeHTTP(w, r)
 		case PlatformServiceGetInvitationsProcedure:
@@ -5716,6 +5770,14 @@ func (UnimplementedPlatformServiceHandler) UpdateIDPMappers(context.Context, *co
 
 func (UnimplementedPlatformServiceHandler) GetClients(context.Context, *connect.Request[v1.GetClientsRequest]) (*connect.Response[v1.GetClientsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetClients is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) PreviewDeleteClient(context.Context, *connect.Request[v1.PreviewDeleteClientRequest]) (*connect.Response[v1.PreviewDeleteClientResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.PreviewDeleteClient is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) DeleteClient(context.Context, *connect.Request[v1.DeleteClientRequest]) (*connect.Response[v1.DeleteClientResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteClient is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetRouters(context.Context, *connect.Request[v1.GetRoutersRequest]) (*connect.Response[v1.GetRoutersResponse], error) {
