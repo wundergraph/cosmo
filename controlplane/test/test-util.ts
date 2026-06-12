@@ -500,24 +500,38 @@ export const addKeycloakUser = async ({
   await keycloakClient.authenticateClient();
 
   let id = '';
-  try {
-    id = await keycloakClient.addKeycloakUser({
-      email: userTestData.email,
-      firstName: 'Test',
-      lastName: 'User',
-      realm: realmName,
-      isPasswordTemp: false,
-      password: 'wunder@123',
-      id: userTestData.userId,
-    });
-  } catch (e: any) {
-    if (e.response?.status === 409) {
-      const res = await keycloakClient.client.users.find({
-        realm: realmName,
+  // The realm is created once in global setup, but Keycloak's caches can briefly
+  // lag behind, so a freshly created realm may not yet be visible to users.create.
+  // Retry on "Realm not found" before giving up, so this never flakes in CI.
+  const maxRealmRetries = 5;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      id = await keycloakClient.addKeycloakUser({
         email: userTestData.email,
+        firstName: 'Test',
+        lastName: 'User',
+        realm: realmName,
+        isPasswordTemp: false,
+        password: 'wunder@123',
+        id: userTestData.userId,
       });
-      id = res[0].id!;
-    } else {
+      break;
+    } catch (e: any) {
+      if (e.response?.status === 409) {
+        const res = await keycloakClient.client.users.find({
+          realm: realmName,
+          email: userTestData.email,
+        });
+        id = res[0].id!;
+        break;
+      }
+
+      const realmNotReady = e.response?.status === 404 || /realm not found/i.test(e.message ?? '');
+      if (realmNotReady && attempt < maxRealmRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
+        continue;
+      }
+
       e.message = `Failed to add keycloak user: ${userTestData.email}.` + e.message;
       throw e;
     }
