@@ -26,6 +26,11 @@ export interface RetryWithBackoffOptions {
   jitter?: boolean;
   /** Optional signal that cancels the loop and any in-flight wait; aborting rejects with the signal's reason. */
   signal?: AbortSignal;
+  /**
+   * Decide whether a thrown error is worth retrying. Return `false` to rethrow it
+   * immediately without consuming further attempts. Defaults to retrying every error.
+   */
+  shouldRetry?: (error: unknown) => boolean;
 }
 
 export function computeDelay(base: number, max: number, attempt: number, jitter: boolean): number {
@@ -74,12 +79,13 @@ export async function pollWithBackoff(
  * this is bounded: it returns the task's value on success and rethrows the last
  * error once attempts run out. Pass `maxInterval === baseInterval` for a fixed
  * interval. An aborted `signal` cancels the loop and rejects with its reason.
+ * Pass `shouldRetry` to rethrow unexpected errors immediately instead of burning attempts.
  */
 export async function retryWithBackoff<T>(
   task: (signal?: AbortSignal) => Promise<T>,
   options: RetryWithBackoffOptions,
 ): Promise<T> {
-  const { attempts, baseInterval, maxInterval, jitter = false, signal } = options;
+  const { attempts, baseInterval, maxInterval, jitter = false, signal, shouldRetry } = options;
 
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt++) {
@@ -91,6 +97,9 @@ export async function retryWithBackoff<T>(
       return await task(signal);
     } catch (error) {
       lastError = error;
+      if (shouldRetry && !shouldRetry(error)) {
+        throw error;
+      }
     }
 
     const isLastAttempt = attempt === attempts - 1;

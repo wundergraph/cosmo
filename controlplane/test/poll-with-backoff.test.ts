@@ -363,6 +363,39 @@ describe('retryWithBackoff', () => {
     expect(task).toHaveBeenCalledTimes(1);
   });
 
+  test('rethrows immediately without retrying when shouldRetry returns false', async () => {
+    const fatal = new Error('fatal');
+    const task = vi.fn().mockRejectedValue(fatal);
+
+    await expect(
+      retryWithBackoff(task, {
+        attempts: 5,
+        baseInterval: 1000,
+        maxInterval: 1000,
+        shouldRetry: () => false,
+      }),
+    ).rejects.toBe(fatal);
+    expect(task).toHaveBeenCalledTimes(1);
+  });
+
+  test('retries only the errors shouldRetry accepts', async () => {
+    const retryable = new Error('retry me');
+    const fatal = new Error('do not retry me');
+    const task = vi.fn().mockRejectedValueOnce(retryable).mockRejectedValueOnce(fatal);
+
+    const promise = retryWithBackoff(task, {
+      attempts: 5,
+      baseInterval: 1000,
+      maxInterval: 1000,
+      shouldRetry: (e) => e instanceof Error && e.message === 'retry me',
+    });
+    promise.catch(() => {});
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(promise).rejects.toBe(fatal);
+    expect(task).toHaveBeenCalledTimes(2);
+  });
+
   test('throws the signal reason without running the task if already aborted', async () => {
     const controller = new AbortController();
     const reason = new Error('pre-aborted');

@@ -1,8 +1,7 @@
-import { NetworkError } from '@keycloak/keycloak-admin-client';
 import { pino } from 'pino';
 import Keycloak from '../src/core/services/Keycloak.js';
 import { retryWithBackoff } from '../src/core/util/poll-with-backoff.js';
-import { TEST_REALM, keycloakClientOptions } from './keycloak-test-config.js';
+import { TEST_REALM, keycloakClientOptions, isAlreadyExistsError } from './keycloak-test-utils.js';
 
 /**
  * Creates the shared test realm once, before any test worker spawns. Otherwise the
@@ -14,7 +13,6 @@ export default async function setup() {
   const logger = pino({ level: 'silent' });
   const keycloakClient = new Keycloak({ ...keycloakClientOptions, logger });
 
-  // Generous budget: CI boots Keycloak in the background, so it may not be ready yet.
   await retryWithBackoff(() => keycloakClient.authenticateClient(), {
     attempts: 180,
     baseInterval: 1000,
@@ -31,10 +29,10 @@ export default async function setup() {
           registrationEmailAsUsername: true,
         });
       } catch (e: unknown) {
-        // 409 means the realm already exists; anything else may be transient — retry.
-        if (e instanceof NetworkError && e.response.status === 409) {
+        if (isAlreadyExistsError(e)) {
           return;
         }
+        // Anything else may be transient
         throw e;
       }
     },
