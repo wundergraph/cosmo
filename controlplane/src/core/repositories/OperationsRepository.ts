@@ -298,10 +298,6 @@ export class OperationsRepository {
     return clients;
   }
 
-  public getRegisteredClientsWithMetadata(): Promise<ClientDTOWithOperationMetadata[]> {
-    return this.getRegisteredClientsWithOperationMetadata();
-  }
-
   public async getRegisteredClientByName(clientName: string): Promise<ClientDTO | undefined> {
     const client = await this.db.query.federatedGraphClients.findFirst({
       where: and(
@@ -334,7 +330,7 @@ export class OperationsRepository {
     return clients[0];
   }
 
-  private async getRegisteredClientsWithOperationMetadata(input?: {
+  public async getRegisteredClientsWithOperationMetadata(input?: {
     clientName?: string;
   }): Promise<ClientDTOWithOperationMetadata[]> {
     const createdBy = aliasedTable(users, 'created_by');

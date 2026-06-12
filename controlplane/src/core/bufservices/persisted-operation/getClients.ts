@@ -43,7 +43,7 @@ export function getClients(
     const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
 
     if (req.includeTraffic && opts.chClient) {
-      const clients = await operationsRepo.getRegisteredClientsWithMetadata();
+      const clients = await operationsRepo.getRegisteredClientsWithOperationMetadata();
       const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
       const changeRetention = await orgRepo.getFeature({
         organizationId: authContext.organizationId,
