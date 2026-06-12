@@ -13,7 +13,6 @@ import Fastify from 'fastify';
 import { pino } from 'pino';
 import postgres from 'postgres';
 import { expect } from 'vitest';
-import { MemoryAdapter } from 'redlock-universal';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import ScimController from '../src/core/controllers/scim.js';
@@ -187,7 +186,7 @@ export const SetupTest = async function ({
         deleteUserQueue,
         deleteBatchPublishJobDetailsQueue,
       },
-      lockAdapter: new MemoryAdapter(),
+      lockAdapter: server.lockAdapter,
     }),
   });
 
