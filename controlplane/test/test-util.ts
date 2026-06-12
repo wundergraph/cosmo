@@ -47,6 +47,13 @@ import { DeactivateOrganizationQueue } from '../src/core/workers/DeactivateOrgan
 import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
 import { DeleteOrganizationAuditLogsQueue } from '../src/core/workers/DeleteOrganizationAuditLogsWorker.js';
+import { retryWithBackoff } from '../src/core/util/timers.js';
+import {
+  isAlreadyExistsError,
+  isRealmNotReadyError,
+  keycloakClientOptions,
+  TEST_REALM,
+} from './keycloak-test-utils.js';
 
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
@@ -117,23 +124,12 @@ export const SetupTest = async function ({
     users.adminJimCompanyB = createTestContext('company-b', randomUUID());
   }
 
-  const realm = 'test';
-  const loginRealm = 'master';
-  const apiUrl = process.env.KC_API_URL || 'http://localhost:8080';
-  const clientId = 'studio';
-  const adminUser = 'admin';
-  const adminPassword = 'changeme';
+  const realm = TEST_REALM;
+  const apiUrl = keycloakClientOptions.apiUrl;
   const webBaseUrl = 'http://localhost:3000';
 
   const authenticator = createTestAuthenticator(users, apiUrl, realm);
-  const keycloakClient = new Keycloak({
-    apiUrl,
-    realm: loginRealm,
-    clientId,
-    adminUser,
-    adminPassword,
-    logger: log,
-  });
+  const keycloakClient = new Keycloak({ ...keycloakClientOptions, logger: log });
 
   const platformWebhooks = new MockPlatformWebhookService();
   const mailerClient = new Mailer({
@@ -440,10 +436,11 @@ export const SetupKeycloak = async ({
       displayName: realmName,
       registrationEmailAsUsername: true,
     });
-  } catch (e: any) {
-    if (e.response?.status !== 409) {
-      e.message = `Failed to create keycloak realm: ${realmName}.` + e.message;
-      throw e;
+  } catch (e: unknown) {
+    // Ignore an existing realm (e.g. created by global setup).
+    if (!isAlreadyExistsError(e)) {
+      const message = e instanceof Error ? e.message : String(e);
+      throw new Error(`Failed to create keycloak realm: ${realmName}. ${message}`, { cause: e });
     }
   }
 
@@ -499,28 +496,54 @@ export const addKeycloakUser = async ({
 }): Promise<[string, string | undefined]> => {
   await keycloakClient.authenticateClient();
 
-  let id = '';
+  let id: string;
   try {
-    id = await keycloakClient.addKeycloakUser({
-      email: userTestData.email,
-      firstName: 'Test',
-      lastName: 'User',
-      realm: realmName,
-      isPasswordTemp: false,
-      password: 'wunder@123',
-      id: userTestData.userId,
-    });
-  } catch (e: any) {
-    if (e.response?.status === 409) {
-      const res = await keycloakClient.client.users.find({
-        realm: realmName,
-        email: userTestData.email,
-      });
-      id = res[0].id!;
-    } else {
-      e.message = `Failed to add keycloak user: ${userTestData.email}.` + e.message;
-      throw e;
-    }
+    // Keycloak's caches can briefly lag behind the realm created in global setup ("Realm not found"),
+    // and the exact-match lookup below can likewise lag behind a conflicting write — both are transient.
+    id = await retryWithBackoff(
+      async () => {
+        try {
+          return await keycloakClient.addKeycloakUser({
+            email: userTestData.email,
+            firstName: 'Test',
+            lastName: 'User',
+            realm: realmName,
+            isPasswordTemp: false,
+            password: 'wunder@123',
+            id: userTestData.userId,
+          });
+        } catch (e: unknown) {
+          if (!isAlreadyExistsError(e)) {
+            throw e;
+          }
+
+          const existingUser = await keycloakClient.findUserByEmail({
+            realm: realmName,
+            email: userTestData.email,
+          });
+
+          if (existingUser?.id) {
+            return existingUser.id;
+          }
+
+          throw new Error(
+            `Keycloak reported a duplicate user for ${userTestData.email}, but no exact match was readable yet`,
+          );
+        }
+      },
+      {
+        attempts: 5,
+        baseInterval: 200,
+        maxInterval: 1000,
+        shouldRetry: (e) => {
+          const message = e instanceof Error ? e.message : String(e);
+          return isRealmNotReadyError(e) || /no exact match was readable/i.test(message);
+        },
+      },
+    );
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    throw new Error(`Failed to add keycloak user: ${userTestData.email}. ${message}`, { cause: e });
   }
 
   let kcRootGroupId: string | undefined;
@@ -532,10 +555,11 @@ export const addKeycloakUser = async ({
     });
 
     kcRootGroupId = rootGroupId;
-  } catch (e: any) {
-    if (e.response?.status !== 409) {
-      e.message = `Failed to seed group: ${userTestData.organizationSlug}.` + e.message;
-      throw e;
+  } catch (e: unknown) {
+    // Ignore an already-seeded group.
+    if (!isAlreadyExistsError(e)) {
+      const message = e instanceof Error ? e.message : String(e);
+      throw new Error(`Failed to seed group: ${userTestData.organizationSlug}. ${message}`, { cause: e });
     }
   }
 
