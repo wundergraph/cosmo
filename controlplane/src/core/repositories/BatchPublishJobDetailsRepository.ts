@@ -1,12 +1,15 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
 import { BatchPublishJobStatus, NewBatchPublishJobDetails } from '../../db/models.js';
+import { traced } from '../tracing.js';
 
 const ONE_DAY_IN_SECONDS = 86_400;
+const OWNED_BATCH_PUBLISH_LOCK_IDS = new Set<string>();
 
 class LockAcquisitionTimeoutError extends Error {}
 
+@traced
 export class BatchPublishJobDetailsRepository {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
@@ -79,13 +82,56 @@ export class BatchPublishJobDetailsRepository {
 
   public async withNamespaceLock<Result>(namespaceId: string, jobId: string, fn: () => Result): Promise<Result> {
     const lock = await this.#acquireLock(namespaceId, jobId);
+    OWNED_BATCH_PUBLISH_LOCK_IDS.add(lock);
+
     try {
       return await fn();
     } finally {
+      OWNED_BATCH_PUBLISH_LOCK_IDS.delete(jobId);
       await this.db
         .delete(schema.batchPublishJobDetailsJobLocks)
         .where(eq(schema.batchPublishJobDetailsJobLocks.id, lock))
         .catch(() => {});
+    }
+  }
+
+  public static async cleanupOwnedLocks(db: PostgresJsDatabase<typeof schema>) {
+    if (OWNED_BATCH_PUBLISH_LOCK_IDS.size === 0) {
+      return;
+    }
+
+    const pendingIds = [...OWNED_BATCH_PUBLISH_LOCK_IDS];
+    while (pendingIds.length > 0) {
+      const deleteChunk = pendingIds.splice(0, 100);
+      const deletedLocks = await db
+        .delete(schema.batchPublishJobDetailsJobLocks)
+        .where(inArray(schema.batchPublishJobDetailsJobLocks.id, deleteChunk))
+        .returning({ jobId: schema.batchPublishJobDetailsJobLocks.jobId })
+        .catch(() => []);
+
+      await db
+        .update(schema.batchPublishJobDetails)
+        .set({
+          status: 'failed',
+          failureReason: 'Server was shutdown before the composition completed.',
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            inArray(
+              schema.batchPublishJobDetails.id,
+              deletedLocks.map((l) => l.jobId),
+            ),
+            or(
+              eq(schema.batchPublishJobDetails.status, 'pending'),
+              eq(schema.batchPublishJobDetails.status, 'processing'),
+            ),
+          ),
+        );
+
+      if (deleteChunk.length < 100) {
+        break;
+      }
     }
   }
 

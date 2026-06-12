@@ -7,6 +7,7 @@ import { sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from '../../db/schema.js';
 import { RunMigration } from '../migrate.js';
+import { BatchPublishJobDetailsRepository } from '../repositories/BatchPublishJobDetailsRepository.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -94,6 +95,7 @@ export default fp<DbPluginOptions & DatabaseConnectionConfig>(async function (fa
   fastify.addHook('onClose', async () => {
     fastify.log.debug('Closing database connection ...');
 
+    await BatchPublishJobDetailsRepository.cleanupOwnedLocks(db).catch(() => {});
     await queryConnection.end({
       timeout: opts.gracefulTimeoutSec ?? 5,
     });
