@@ -6,6 +6,7 @@ import 'set.prototype.issubsetof/auto';
 import 'set.prototype.issupersetof/auto';
 
 export * from './ast/utils';
+export * from './ast/sdl-printer';
 export * from './buildASTSchema/buildASTSchema';
 export * from './directive-definition-data/directive-definition-data';
 export * from './directive-definition-data/types/params';

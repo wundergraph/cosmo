@@ -62,7 +62,8 @@ export type ContractTagOptions = {
 };
 
 export type MutualParentDefinitionData = {
-  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
+  // Lazily allocated upon first write to retain a stable object shape.
+  configureDescriptionDataBySubgraphName?: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   name: TypeName;

@@ -25,6 +25,12 @@ import {
   type UnionTypeDefinitionNode,
   type UnionTypeExtensionNode,
 } from 'graphql';
+
+// graphql v16's CJS root re-exports enum objects through getters; keep hot helper reads local.
+const KindRef = Kind;
+const OperationTypeNodeRef = OperationTypeNode;
+
+import { parseSdl, SdlParserFallback } from './sdl-parser';
 import { type CompositeOutputNode } from '../schema-building/ast';
 import {
   ARGUMENT_DEFINITION_UPPER,
@@ -76,7 +82,7 @@ export function isNodeInterfaceObject(node: ObjectTypeDefinitionNode): boolean {
 
 export function stringToNameNode(value: string): NameNode {
   return {
-    kind: Kind.NAME,
+    kind: KindRef.NAME,
     value,
   };
 }
@@ -99,7 +105,7 @@ export function setToNameNodeArray(set: Set<string>): NameNode[] {
 
 export function stringToNamedTypeNode(value: string): NamedTypeNode {
   return {
-    kind: Kind.NAMED_TYPE,
+    kind: KindRef.NAMED_TYPE,
     name: stringToNameNode(value),
   };
 }
@@ -114,47 +120,47 @@ export function setToNamedTypeNodeArray(set: Set<string>): NamedTypeNode[] {
 
 export function nodeKindToDirectiveLocation(kind: Kind): string {
   switch (kind) {
-    case Kind.ARGUMENT:
+    case KindRef.ARGUMENT:
       return ARGUMENT_DEFINITION_UPPER;
-    case Kind.ENUM_TYPE_DEFINITION:
+    case KindRef.ENUM_TYPE_DEFINITION:
     // intentional fallthrough
-    case Kind.ENUM_TYPE_EXTENSION:
+    case KindRef.ENUM_TYPE_EXTENSION:
       return ENUM_UPPER;
-    case Kind.ENUM_VALUE_DEFINITION:
+    case KindRef.ENUM_VALUE_DEFINITION:
       return ENUM_VALUE_UPPER;
-    case Kind.FIELD_DEFINITION:
+    case KindRef.FIELD_DEFINITION:
       return FIELD_DEFINITION_UPPER;
-    case Kind.FRAGMENT_DEFINITION:
+    case KindRef.FRAGMENT_DEFINITION:
       return FRAGMENT_DEFINITION_UPPER;
-    case Kind.FRAGMENT_SPREAD:
+    case KindRef.FRAGMENT_SPREAD:
       return FRAGMENT_SPREAD_UPPER;
-    case Kind.INLINE_FRAGMENT:
+    case KindRef.INLINE_FRAGMENT:
       return INLINE_FRAGMENT_UPPER;
-    case Kind.INPUT_VALUE_DEFINITION:
+    case KindRef.INPUT_VALUE_DEFINITION:
       return INPUT_FIELD_DEFINITION_UPPER;
-    case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+    case KindRef.INPUT_OBJECT_TYPE_DEFINITION:
     // intentional fallthrough
-    case Kind.INPUT_OBJECT_TYPE_EXTENSION:
+    case KindRef.INPUT_OBJECT_TYPE_EXTENSION:
       return INPUT_OBJECT_UPPER;
-    case Kind.INTERFACE_TYPE_DEFINITION:
+    case KindRef.INTERFACE_TYPE_DEFINITION:
     // intentional fallthrough
-    case Kind.INTERFACE_TYPE_EXTENSION:
+    case KindRef.INTERFACE_TYPE_EXTENSION:
       return INTERFACE_UPPER;
-    case Kind.OBJECT_TYPE_DEFINITION:
+    case KindRef.OBJECT_TYPE_DEFINITION:
     // intentional fallthrough
-    case Kind.OBJECT_TYPE_EXTENSION:
+    case KindRef.OBJECT_TYPE_EXTENSION:
       return OBJECT_UPPER;
-    case Kind.SCALAR_TYPE_DEFINITION:
+    case KindRef.SCALAR_TYPE_DEFINITION:
     // intentional fallthrough
-    case Kind.SCALAR_TYPE_EXTENSION:
+    case KindRef.SCALAR_TYPE_EXTENSION:
       return SCALAR_UPPER;
-    case Kind.SCHEMA_DEFINITION:
+    case KindRef.SCHEMA_DEFINITION:
     // intentional fallthrough
-    case Kind.SCHEMA_EXTENSION:
+    case KindRef.SCHEMA_EXTENSION:
       return SCHEMA_UPPER;
-    case Kind.UNION_TYPE_DEFINITION:
+    case KindRef.UNION_TYPE_DEFINITION:
     // intentional fallthrough
-    case Kind.UNION_TYPE_EXTENSION:
+    case KindRef.UNION_TYPE_EXTENSION:
       return UNION_UPPER;
     default:
       return kind;
@@ -162,13 +168,13 @@ export function nodeKindToDirectiveLocation(kind: Kind): string {
 }
 
 export const operationTypeNodeToDefaultType = new Map<OperationTypeNode, string>([
-  [OperationTypeNode.MUTATION, MUTATION],
-  [OperationTypeNode.QUERY, QUERY],
-  [OperationTypeNode.SUBSCRIPTION, SUBSCRIPTION],
+  [OperationTypeNodeRef.MUTATION, MUTATION],
+  [OperationTypeNodeRef.QUERY, QUERY],
+  [OperationTypeNodeRef.SUBSCRIPTION, SUBSCRIPTION],
 ]);
 
 export function isKindAbstract(kind: Kind) {
-  return kind === Kind.INTERFACE_TYPE_DEFINITION || kind === Kind.UNION_TYPE_DEFINITION;
+  return kind === KindRef.INTERFACE_TYPE_DEFINITION || kind === KindRef.UNION_TYPE_DEFINITION;
 }
 
 export function extractExecutableDirectiveLocations(
@@ -226,7 +232,7 @@ export function lexicographicallySortSelectionSetNode(selectionSetNode: Selectio
       })
       .map((selection) => {
         switch (selection.kind) {
-          case Kind.FIELD: {
+          case KindRef.FIELD: {
             return {
               ...selection,
               arguments: lexicographicallySortArgumentNodes(selection),
@@ -235,10 +241,10 @@ export function lexicographicallySortSelectionSetNode(selectionSetNode: Selectio
                 : selection.selectionSet,
             };
           }
-          case Kind.FRAGMENT_SPREAD: {
+          case KindRef.FRAGMENT_SPREAD: {
             return selection;
           }
-          case Kind.INLINE_FRAGMENT: {
+          case KindRef.INLINE_FRAGMENT: {
             return {
               ...selection,
               selectionSet: lexicographicallySortSelectionSetNode(selection.selectionSet),
@@ -253,7 +259,7 @@ export function lexicographicallySortDocumentNode(documentNode: DocumentNode): D
   return {
     ...documentNode,
     definitions: documentNode.definitions.map((definition) => {
-      if (definition.kind !== Kind.OPERATION_DEFINITION) {
+      if (definition.kind !== KindRef.OPERATION_DEFINITION) {
         return definition;
       }
       return {
@@ -270,6 +276,16 @@ type ParseResult = {
 };
 
 export function parse(source: string, noLocation = true): DocumentNode {
+  if (!noLocation) {
+    return graphqlParse(source, { noLocation });
+  }
+  try {
+    return parseSdl(source);
+  } catch (e) {
+    if (e instanceof SdlParserFallback) {
+      return graphqlParse(source, { noLocation });
+    }
+  }
   return graphqlParse(source, { noLocation });
 }
 
@@ -280,6 +296,20 @@ export function safeParse(value: string, noLocation = true): ParseResult {
   } catch (e) {
     return { error: e as Error };
   }
+}
+
+export function safeParseFieldSet(rawFieldSet: string): ParseResult {
+  const result = safeParse('{' + rawFieldSet + '}');
+  if (result.error || !result.documentNode) {
+    return result;
+  }
+  /* A raw field set that escapes its wrapping braces (e.g. through a comment) can parse into additional
+   * definitions beyond the single expected operation definition. Such field sets are invalid. */
+  const definitions = result.documentNode.definitions;
+  if (definitions.length !== 1 || definitions[0].kind !== KindRef.OPERATION_DEFINITION) {
+    return { error: new Error('A field set must define exactly one selection set.') };
+  }
+  return result;
 }
 
 export type EnumTypeNode = EnumTypeDefinitionNode | EnumTypeExtensionNode;

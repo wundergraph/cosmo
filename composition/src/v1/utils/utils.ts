@@ -1,4 +1,8 @@
 import { type DocumentNode, Kind } from 'graphql';
+
+// graphql v16's CJS root re-exports enum objects through getters; keep hot helper reads local.
+const KindRef = Kind;
+
 import type { FieldConfiguration } from '../../router-configuration/types';
 import type {
   AuthorizationData,
@@ -53,62 +57,62 @@ export function mapToArrayOfValues<K, V>(map: Map<K, V>): Array<V> {
 
 export function kindToConvertedTypeString(kind: Kind): string {
   switch (kind) {
-    case Kind.BOOLEAN: {
+    case KindRef.BOOLEAN: {
       return BOOLEAN_SCALAR;
     }
-    case Kind.ENUM:
+    case KindRef.ENUM:
     // intentional fallthrough
-    case Kind.ENUM_TYPE_DEFINITION:
+    case KindRef.ENUM_TYPE_DEFINITION:
     // intentional fallthrough
-    case Kind.ENUM_TYPE_EXTENSION: {
+    case KindRef.ENUM_TYPE_EXTENSION: {
       return ENUM;
     }
-    case Kind.ENUM_VALUE_DEFINITION: {
+    case KindRef.ENUM_VALUE_DEFINITION: {
       return ENUM_VALUE;
     }
-    case Kind.FIELD_DEFINITION: {
+    case KindRef.FIELD_DEFINITION: {
       return FIELD;
     }
-    case Kind.FLOAT: {
+    case KindRef.FLOAT: {
       return FLOAT_SCALAR;
     }
-    case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+    case KindRef.INPUT_OBJECT_TYPE_DEFINITION:
     // intentional fallthrough
-    case Kind.INPUT_OBJECT_TYPE_EXTENSION: {
+    case KindRef.INPUT_OBJECT_TYPE_EXTENSION: {
       return INPUT_OBJECT;
     }
-    case Kind.INPUT_VALUE_DEFINITION: {
+    case KindRef.INPUT_VALUE_DEFINITION: {
       return INPUT_VALUE;
     }
-    case Kind.INT: {
+    case KindRef.INT: {
       return INT_SCALAR;
     }
-    case Kind.INTERFACE_TYPE_DEFINITION:
+    case KindRef.INTERFACE_TYPE_DEFINITION:
     // intentional fallthrough
-    case Kind.INTERFACE_TYPE_EXTENSION: {
+    case KindRef.INTERFACE_TYPE_EXTENSION: {
       return INTERFACE;
     }
-    case Kind.NULL: {
+    case KindRef.NULL: {
       return NULL;
     }
-    case Kind.OBJECT:
+    case KindRef.OBJECT:
     // intentional fallthrough
-    case Kind.OBJECT_TYPE_DEFINITION:
+    case KindRef.OBJECT_TYPE_DEFINITION:
     // intentional fallthrough
-    case Kind.OBJECT_TYPE_EXTENSION: {
+    case KindRef.OBJECT_TYPE_EXTENSION: {
       return OBJECT;
     }
-    case Kind.STRING: {
+    case KindRef.STRING: {
       return STRING_SCALAR;
     }
-    case Kind.SCALAR_TYPE_DEFINITION:
+    case KindRef.SCALAR_TYPE_DEFINITION:
     // intentional fallthrough
-    case Kind.SCALAR_TYPE_EXTENSION: {
+    case KindRef.SCALAR_TYPE_EXTENSION: {
       return SCALAR;
     }
-    case Kind.UNION_TYPE_DEFINITION:
+    case KindRef.UNION_TYPE_DEFINITION:
     // intentional fallthrough
-    case Kind.UNION_TYPE_EXTENSION: {
+    case KindRef.UNION_TYPE_EXTENSION: {
       return UNION;
     }
     default:
@@ -131,9 +135,9 @@ export function isNodeLeaf(kind?: Kind) {
     return true;
   }
   switch (kind) {
-    case Kind.OBJECT_TYPE_DEFINITION:
-    case Kind.INTERFACE_TYPE_DEFINITION:
-    case Kind.UNION_TYPE_DEFINITION:
+    case KindRef.OBJECT_TYPE_DEFINITION:
+    case KindRef.INTERFACE_TYPE_DEFINITION:
+    case KindRef.UNION_TYPE_DEFINITION:
       return false;
     default:
       return true;
@@ -446,7 +450,7 @@ export function upsertAuthorizationConfiguration(
 }
 
 export function isObjectNodeKind(kind: Kind) {
-  return kind === Kind.OBJECT_TYPE_DEFINITION || kind === Kind.OBJECT_TYPE_EXTENSION;
+  return kind === KindRef.OBJECT_TYPE_DEFINITION || kind === KindRef.OBJECT_TYPE_EXTENSION;
 }
 
 export function isCompositeOutputNodeKind(kind: Kind): kind is CompositeOutputNodeKind {
@@ -457,5 +461,5 @@ export function isObjectDefinitionData(data?: ParentDefinitionData): data is Obj
   if (!data) {
     return false;
   }
-  return data.kind === Kind.OBJECT_TYPE_DEFINITION;
+  return data.kind === KindRef.OBJECT_TYPE_DEFINITION;
 }

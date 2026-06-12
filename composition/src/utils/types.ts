@@ -24,7 +24,8 @@ export type ImplementationErrors = {
 };
 
 export type GraphFieldData = {
-  externalSubgraphNames: Set<SubgraphName>;
+  // Lazily allocated upon first write to retain a stable object shape.
+  externalSubgraphNames?: Set<SubgraphName>;
   name: string;
   namedTypeName: string;
   isLeaf: boolean;

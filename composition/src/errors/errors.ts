@@ -1790,7 +1790,7 @@ export function semanticNonNullInconsistentLevelsError(data: FieldData): Error {
   let message =
     `The "@semanticNonNull" directive defined on field "${coords}"` +
     ` is invalid due to inconsistent values provided to the "levels" argument across the following subgraphs:\n`;
-  for (const [subgraphName, levels] of data.nullLevelsBySubgraphName) {
+  for (const [subgraphName, levels] of data.nullLevelsBySubgraphName ?? []) {
     message += ` Subgraph "${subgraphName}" defines levels ${Array.from(levels).sort((a, b) => a - b)}.\n`;
   }
   message +=

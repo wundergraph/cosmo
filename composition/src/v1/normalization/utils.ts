@@ -8,9 +8,14 @@ import {
   Kind,
   OperationTypeNode,
   print,
-  visit,
 } from 'graphql';
+
+// graphql v16's CJS root re-exports enum objects through getters; keep hot helper reads local.
+const KindRef = Kind;
+const OperationTypeNodeRef = OperationTypeNode;
+
 import { isKindAbstract, lexicographicallySortDocumentNode } from '../../ast/utils';
+import { walkFieldSetDocument } from '../../ast/field-set-walker';
 import { type NormalizationFactory } from './normalization-factory';
 import {
   abstractTypeInKeyFieldSetErrorMessage,
@@ -155,7 +160,7 @@ export function extractFieldSetValue(name: string, map: Map<string, string>, dir
   }
   // The argument should be a string type named "fields"
   const fieldsArgument = args[0];
-  if (fieldsArgument.name.value !== FIELDS || fieldsArgument.value.kind !== Kind.STRING) {
+  if (fieldsArgument.name.value !== FIELDS || fieldsArgument.value.kind !== KindRef.STRING) {
     return;
   }
   map.set(name, fieldsArgument.value.value);
@@ -204,205 +209,197 @@ export function validateKeyFieldSets(
     let shouldDefineSelectionSet = true;
     let lastFieldName = '';
     let isUnconditionallyExternalKey = false;
-    visit(documentNode, {
-      Argument: {
-        enter(node) {
-          // Fields that define arguments are never allowed in a key FieldSet
-          // However, at this stage, it actually means the argument is undefined on the field
+    walkFieldSetDocument(documentNode, {
+      argumentEnter(node) {
+        // Fields that define arguments are never allowed in a key FieldSet
+        // However, at this stage, it actually means the argument is undefined on the field
+        errorMessages.push(
+          unexpectedArgumentErrorMessage(
+            rawFieldSet,
+            `${parentDatas[currentDepth].name}.${lastFieldName}`,
+            node.name.value,
+          ),
+        );
+        return BREAK;
+      },
+      fieldEnter(node) {
+        const parentData = parentDatas[currentDepth];
+        const parentTypeName = parentData.name;
+        // If a composite type was just visited, a selection set should have been entered
+        if (shouldDefineSelectionSet) {
+          const lastFieldCoords = `${parentTypeName}.${lastFieldName}`;
+          const lastFieldData = parentData.fieldDataByName.get(lastFieldName);
+          if (!lastFieldData) {
+            errorMessages.push(undefinedFieldInFieldSetErrorMessage(rawFieldSet, lastFieldCoords, lastFieldName));
+            return BREAK;
+          }
+          const lastFieldNamedTypeName = getTypeNodeNamedTypeName(lastFieldData.node.type);
+          // If the child is not found, it's a base scalar. Undefined types would have already been handled.
+          const namedTypeData = nf.parentDefinitionDataByTypeName.get(lastFieldNamedTypeName);
+          const namedTypeKind = namedTypeData ? namedTypeData.kind : KindRef.SCALAR_TYPE_DEFINITION;
           errorMessages.push(
-            unexpectedArgumentErrorMessage(
+            invalidSelectionSetErrorMessage(
               rawFieldSet,
-              `${parentDatas[currentDepth].name}.${lastFieldName}`,
-              node.name.value,
+              [lastFieldCoords],
+              lastFieldNamedTypeName,
+              kindToNodeType(namedTypeKind),
             ),
           );
           return BREAK;
-        },
-      },
-      Field: {
-        enter(node) {
-          const parentData = parentDatas[currentDepth];
-          const parentTypeName = parentData.name;
-          // If a composite type was just visited, a selection set should have been entered
-          if (shouldDefineSelectionSet) {
-            const lastFieldCoords = `${parentTypeName}.${lastFieldName}`;
-            const lastFieldData = parentData.fieldDataByName.get(lastFieldName);
-            if (!lastFieldData) {
-              errorMessages.push(undefinedFieldInFieldSetErrorMessage(rawFieldSet, lastFieldCoords, lastFieldName));
-              return BREAK;
-            }
-            const lastFieldNamedTypeName = getTypeNodeNamedTypeName(lastFieldData.node.type);
-            // If the child is not found, it's a base scalar. Undefined types would have already been handled.
-            const namedTypeData = nf.parentDefinitionDataByTypeName.get(lastFieldNamedTypeName);
-            const namedTypeKind = namedTypeData ? namedTypeData.kind : Kind.SCALAR_TYPE_DEFINITION;
-            errorMessages.push(
-              invalidSelectionSetErrorMessage(
-                rawFieldSet,
-                [lastFieldCoords],
-                lastFieldNamedTypeName,
-                kindToNodeType(namedTypeKind),
-              ),
-            );
-            return BREAK;
-          }
-          const fieldName = node.name.value;
-          const fieldCoords = `${parentTypeName}.${fieldName}`;
-          lastFieldName = fieldName;
-          if (fieldName === TYPENAME) {
-            return;
-          }
-          const fieldData = parentData.fieldDataByName.get(fieldName);
-          // undefined if the field does not exist on the parent
-          if (!fieldData) {
-            errorMessages.push(undefinedFieldInFieldSetErrorMessage(rawFieldSet, parentTypeName, fieldName));
-            return BREAK;
-          }
-          // TODO navigate already provided keys
-          if (fieldData.argumentDataByName.size) {
-            errorMessages.push(argumentsInKeyFieldSetErrorMessage(rawFieldSet, fieldCoords));
-            return BREAK;
-          }
-          if (definedFields[currentDepth].has(fieldName)) {
-            errorMessages.push(duplicateFieldInFieldSetErrorMessage(rawFieldSet, fieldCoords));
-            return BREAK;
-          }
-          const externalFieldData = fieldData.externalFieldDataBySubgraphName.get(nf.subgraphName);
-          if (
-            !nf.isSubgraphEventDrivenGraph &&
-            externalFieldData?.isDefinedExternal &&
-            !externalFieldData.isUnconditionallyProvided
-          ) {
-            const conditionalData = nf.conditionalFieldDataByCoords.get(fieldCoords);
-            if (!conditionalData && !nf.options.ignoreExternalKeys) {
-              isUnconditionallyExternalKey = true;
-              const edge = graphNode.headToTailEdges.get(fieldName);
-              if (edge) {
-                edge.isExternal = true;
-              }
+        }
+        const fieldName = node.name.value;
+        const fieldCoords = `${parentTypeName}.${fieldName}`;
+        lastFieldName = fieldName;
+        if (fieldName === TYPENAME) {
+          return;
+        }
+        const fieldData = parentData.fieldDataByName.get(fieldName);
+        // undefined if the field does not exist on the parent
+        if (!fieldData) {
+          errorMessages.push(undefinedFieldInFieldSetErrorMessage(rawFieldSet, parentTypeName, fieldName));
+          return BREAK;
+        }
+        // TODO navigate already provided keys
+        if (fieldData.argumentDataByName?.size) {
+          errorMessages.push(argumentsInKeyFieldSetErrorMessage(rawFieldSet, fieldCoords));
+          return BREAK;
+        }
+        if (definedFields[currentDepth].has(fieldName)) {
+          errorMessages.push(duplicateFieldInFieldSetErrorMessage(rawFieldSet, fieldCoords));
+          return BREAK;
+        }
+        const externalFieldData = fieldData.externalFieldDataBySubgraphName.get(nf.subgraphName);
+        if (
+          !nf.isSubgraphEventDrivenGraph &&
+          externalFieldData?.isDefinedExternal &&
+          !externalFieldData.isUnconditionallyProvided
+        ) {
+          const conditionalData = nf.conditionalFieldDataByCoords.get(fieldCoords);
+          if (!conditionalData && !nf.options.ignoreExternalKeys) {
+            isUnconditionallyExternalKey = true;
+            const edge = graphNode.headToTailEdges.get(fieldName);
+            if (edge) {
+              edge.isExternal = true;
             }
           }
-          // Add the field set for which the field coordinates contribute a key field
+        }
+        // Add the field set for which the field coordinates contribute a key field
+        getValueOrDefault(
           getValueOrDefault(
-            getValueOrDefault(
-              nf.keyFieldSetsByEntityTypeNameByFieldCoords,
-              fieldCoords,
-              () => new Map<string, Set<string>>(),
-            ),
-            entityTypeName,
-            () => new Set<string>(),
-          ).add(fieldSet);
-          currentPath.push(fieldName);
-          // Fields that form part of an entity key are intrinsically shareable
-          fieldData.isShareableBySubgraphName.set(nf.subgraphName, true);
-          definedFields[currentDepth].add(fieldName);
-          getValueOrDefault(nf.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(fieldName);
-          const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-          // The base scalars are not in the parents map
-          if (BASE_SCALARS.has(namedTypeName)) {
-            keyFieldSetPaths.add(currentPath.join(LITERAL_PERIOD));
-            currentPath.pop();
-            return;
-          }
-          // The child could itself be a parent
-          const namedTypeData = nf.parentDefinitionDataByTypeName.get(namedTypeName);
-          if (!namedTypeData) {
-            // Should not be possible to receive this error
-            errorMessages.push(unknownTypeInFieldSetErrorMessage(rawFieldSet, fieldCoords, namedTypeName));
-            return BREAK;
-          }
-          if (namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
-            shouldDefineSelectionSet = true;
-            parentDatas.push(namedTypeData);
-            return;
-          }
-          // interfaces and unions are invalid in a key directive
-          if (isKindAbstract(namedTypeData.kind)) {
-            errorMessages.push(
-              abstractTypeInKeyFieldSetErrorMessage(
-                rawFieldSet,
-                fieldCoords,
-                namedTypeName,
-                kindToNodeType(namedTypeData.kind),
-              ),
-            );
-            return BREAK;
-          }
+            nf.keyFieldSetsByEntityTypeNameByFieldCoords,
+            fieldCoords,
+            () => new Map<string, Set<string>>(),
+          ),
+          entityTypeName,
+          () => new Set<string>(),
+        ).add(fieldSet);
+        currentPath.push(fieldName);
+        // Fields that form part of an entity key are intrinsically shareable
+        fieldData.isShareableBySubgraphName.set(nf.subgraphName, true);
+        definedFields[currentDepth].add(fieldName);
+        getValueOrDefault(nf.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(fieldName);
+        const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+        // The base scalars are not in the parents map
+        if (BASE_SCALARS.has(namedTypeName)) {
           keyFieldSetPaths.add(currentPath.join(LITERAL_PERIOD));
           currentPath.pop();
-        },
-      },
-      InlineFragment: {
-        enter() {
-          errorMessages.push(inlineFragmentInFieldSetErrorMessage);
+          return;
+        }
+        // The child could itself be a parent
+        const namedTypeData = nf.parentDefinitionDataByTypeName.get(namedTypeName);
+        if (!namedTypeData) {
+          // Should not be possible to receive this error
+          errorMessages.push(unknownTypeInFieldSetErrorMessage(rawFieldSet, fieldCoords, namedTypeName));
           return BREAK;
-        },
+        }
+        if (namedTypeData.kind === KindRef.OBJECT_TYPE_DEFINITION) {
+          shouldDefineSelectionSet = true;
+          parentDatas.push(namedTypeData);
+          return;
+        }
+        // interfaces and unions are invalid in a key directive
+        if (isKindAbstract(namedTypeData.kind)) {
+          errorMessages.push(
+            abstractTypeInKeyFieldSetErrorMessage(
+              rawFieldSet,
+              fieldCoords,
+              namedTypeName,
+              kindToNodeType(namedTypeData.kind),
+            ),
+          );
+          return BREAK;
+        }
+        keyFieldSetPaths.add(currentPath.join(LITERAL_PERIOD));
+        currentPath.pop();
       },
-      SelectionSet: {
-        enter() {
-          if (!shouldDefineSelectionSet) {
-            const parentData = parentDatas[currentDepth];
-            const parentTypeName = parentData.name;
-            const fieldCoordinates = `${parentTypeName}.${lastFieldName}`;
-            if (lastFieldName === TYPENAME) {
-              errorMessages.push(
-                invalidSelectionSetDefinitionErrorMessage(
-                  rawFieldSet,
-                  [fieldCoordinates],
-                  STRING_SCALAR,
-                  kindToNodeType(Kind.SCALAR_TYPE_DEFINITION),
-                ),
-              );
-              return BREAK;
-            }
-            // If the last field is not an object-like
-            const fieldData = parentData.fieldDataByName.get(lastFieldName);
-            if (!fieldData) {
-              errorMessages.push(undefinedFieldInFieldSetErrorMessage(rawFieldSet, fieldCoordinates, lastFieldName));
-              return BREAK;
-            }
-            const fieldNamedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-            // If the child is not found, it's a base scalar. Undefined types would have already been handled.
-            const namedTypeData = nf.parentDefinitionDataByTypeName.get(fieldNamedTypeName);
-            const namedTypeKind = namedTypeData ? namedTypeData.kind : Kind.SCALAR_TYPE_DEFINITION;
+      inlineFragmentEnter() {
+        errorMessages.push(inlineFragmentInFieldSetErrorMessage);
+        return BREAK;
+      },
+      selectionSetEnter() {
+        if (!shouldDefineSelectionSet) {
+          const parentData = parentDatas[currentDepth];
+          const parentTypeName = parentData.name;
+          const fieldCoordinates = `${parentTypeName}.${lastFieldName}`;
+          if (lastFieldName === TYPENAME) {
             errorMessages.push(
               invalidSelectionSetDefinitionErrorMessage(
                 rawFieldSet,
                 [fieldCoordinates],
-                fieldNamedTypeName,
-                kindToNodeType(namedTypeKind),
+                STRING_SCALAR,
+                kindToNodeType(KindRef.SCALAR_TYPE_DEFINITION),
               ),
             );
             return BREAK;
           }
-          currentDepth += 1;
+          // If the last field is not an object-like
+          const fieldData = parentData.fieldDataByName.get(lastFieldName);
+          if (!fieldData) {
+            errorMessages.push(undefinedFieldInFieldSetErrorMessage(rawFieldSet, fieldCoordinates, lastFieldName));
+            return BREAK;
+          }
+          const fieldNamedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+          // If the child is not found, it's a base scalar. Undefined types would have already been handled.
+          const namedTypeData = nf.parentDefinitionDataByTypeName.get(fieldNamedTypeName);
+          const namedTypeKind = namedTypeData ? namedTypeData.kind : KindRef.SCALAR_TYPE_DEFINITION;
+          errorMessages.push(
+            invalidSelectionSetDefinitionErrorMessage(
+              rawFieldSet,
+              [fieldCoordinates],
+              fieldNamedTypeName,
+              kindToNodeType(namedTypeKind),
+            ),
+          );
+          return BREAK;
+        }
+        currentDepth += 1;
+        shouldDefineSelectionSet = false;
+        if (currentDepth < 0 || currentDepth >= parentDatas.length) {
+          errorMessages.push(unparsableFieldSetSelectionErrorMessage(rawFieldSet, lastFieldName));
+          return BREAK;
+        }
+        definedFields.push(new Set<string>());
+      },
+      selectionSetLeave() {
+        if (shouldDefineSelectionSet) {
+          const grandparentData = parentDatas[currentDepth];
+          const grandparentTypeName = grandparentData.name;
+          const parentData = parentDatas[currentDepth + 1];
+          const fieldCoordinates = `${grandparentTypeName}.${lastFieldName}`;
+          errorMessages.push(
+            invalidSelectionSetErrorMessage(
+              rawFieldSet,
+              [fieldCoordinates],
+              parentData.name,
+              kindToNodeType(parentData.kind),
+            ),
+          );
           shouldDefineSelectionSet = false;
-          if (currentDepth < 0 || currentDepth >= parentDatas.length) {
-            errorMessages.push(unparsableFieldSetSelectionErrorMessage(rawFieldSet, lastFieldName));
-            return BREAK;
-          }
-          definedFields.push(new Set<string>());
-        },
-        leave() {
-          if (shouldDefineSelectionSet) {
-            const grandparentData = parentDatas[currentDepth];
-            const grandparentTypeName = grandparentData.name;
-            const parentData = parentDatas[currentDepth + 1];
-            const fieldCoordinates = `${grandparentTypeName}.${lastFieldName}`;
-            errorMessages.push(
-              invalidSelectionSetErrorMessage(
-                rawFieldSet,
-                [fieldCoordinates],
-                parentData.name,
-                kindToNodeType(parentData.kind),
-              ),
-            );
-            shouldDefineSelectionSet = false;
-          }
-          // Empty selection sets would be a parse error, so it is unnecessary to handle them
-          currentDepth -= 1;
-          parentDatas.pop();
-          definedFields.pop();
-        },
+        }
+        // Empty selection sets would be a parse error, so it is unnecessary to handle them
+        currentDepth -= 1;
+        parentDatas.pop();
+        definedFields.pop();
       },
     });
     if (errorMessages.length > 0) {
@@ -415,9 +412,9 @@ export function validateKeyFieldSets(
       selectionSet: fieldSet,
       ...(isUnresolvable ? { disableEntityResolver: true } : {}),
     });
-    graphNode.satisfiedFieldSets.add(fieldSet);
+    (graphNode.satisfiedFieldSets ??= new Set<string>()).add(fieldSet);
     if (isUnconditionallyExternalKey) {
-      graphNode.externalFieldSets.add(fieldSet);
+      (graphNode.externalFieldSets ??= new Set<string>()).add(fieldSet);
     }
     if (isUnresolvable) {
       continue;
@@ -437,7 +434,7 @@ export function getConditionalFieldSetDirectiveName(isProvides: boolean): string
 }
 
 export function isNodeQuery(typeName: string, operationTypeNode?: OperationTypeNode): boolean {
-  return typeName === QUERY || operationTypeNode === OperationTypeNode.QUERY;
+  return typeName === QUERY || operationTypeNode === OperationTypeNodeRef.QUERY;
 }
 
 export function validateArgumentTemplateReferences(
@@ -551,7 +548,7 @@ export function upsertFederatedDirectiveData({
 
 // This function aims to mirror Apollo functionality
 function extractLinkUrlSegments(argNode: ConstArgumentNode): ExtractImportUrlSegmentsResult {
-  if (argNode.value.kind !== Kind.STRING) {
+  if (argNode.value.kind !== KindRef.STRING) {
     return {
       error: invalidLinkDirectiveUrlError(''),
       success: false,
@@ -645,7 +642,7 @@ function extractLinkImportObject(value: ConstObjectValueNode): ExtractLinkImport
     const fieldName = field.name.value;
     switch (fieldName) {
       case AS: {
-        if (field.value.kind !== Kind.STRING) {
+        if (field.value.kind !== KindRef.STRING) {
           errors.push(invalidFieldLinkDirectiveImportObjectError({ fieldName, value: valueString }));
           break;
         }
@@ -653,7 +650,7 @@ function extractLinkImportObject(value: ConstObjectValueNode): ExtractLinkImport
         break;
       }
       case NAME: {
-        if (field.value.kind !== Kind.STRING) {
+        if (field.value.kind !== KindRef.STRING) {
           errors.push(invalidFieldLinkDirectiveImportObjectError({ fieldName, value: valueString }));
           break;
         }
@@ -701,7 +698,7 @@ function extractLinkImports(values: ReadonlyArray<ConstValueNode>): ExtractLinkI
   for (let i = 0; i < values.length; i++) {
     const value = values[i];
     switch (value.kind) {
-      case Kind.STRING: {
+      case KindRef.STRING: {
         imports.push({
           name: value.value,
           coreUrl: '',
@@ -710,7 +707,7 @@ function extractLinkImports(values: ReadonlyArray<ConstValueNode>): ExtractLinkI
         });
         break;
       }
-      case Kind.OBJECT: {
+      case KindRef.OBJECT: {
         const objectResult = extractLinkImportObject(value);
         if (!objectResult.success) {
           errors.push(...objectResult.errors);
@@ -779,7 +776,7 @@ export function extractLinkArgs(
         }
         case IMPORT: {
           switch (arg.value.kind) {
-            case Kind.STRING: {
+            case KindRef.STRING: {
               imports.push({
                 name: arg.value.value,
                 coreUrl: '',
@@ -788,7 +785,7 @@ export function extractLinkArgs(
               });
               break;
             }
-            case Kind.LIST: {
+            case KindRef.LIST: {
               const importsResult = extractLinkImports(arg.value.values);
               if (!importsResult.success) {
                 return importsResult;

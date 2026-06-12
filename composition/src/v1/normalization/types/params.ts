@@ -4,6 +4,7 @@ import { type ConstDirectiveNode, type DocumentNode } from 'graphql';
 import type { Subgraph } from '../../../subgraph/types';
 import type { CompositionOptions } from '../../../types/params';
 import type { Graph } from '../../../resolvability-graph/graph';
+import type { FieldSetCacheEntry } from './types';
 
 export type ValidateOneOfDirectiveParams = {
   data: InputObjectDefinitionData;
@@ -13,7 +14,6 @@ export type ValidateOneOfDirectiveParams = {
 export type HandleFieldInheritableDirectivesParams = {
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   fieldName: FieldName;
-  inheritedDirectiveNames: Set<DirectiveName>;
   parentData: CompositeOutputData;
 };
 
@@ -31,12 +31,14 @@ export type BatchNormalizeParams = {
 
 export type NormalizationFactoryParams = {
   internalGraph: Graph;
+  fieldSetCacheByRawFieldSet?: Map<string, FieldSetCacheEntry>;
   options?: CompositionOptions;
   subgraphName?: SubgraphName;
 };
 
 export type NormalizeSubgraphParams = {
   document: DocumentNode;
+  fieldSetCacheByRawFieldSet?: Map<string, FieldSetCacheEntry>;
   internalGraph?: Graph;
   options?: CompositionOptions;
   subgraphName?: SubgraphName;

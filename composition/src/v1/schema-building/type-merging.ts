@@ -1,6 +1,10 @@
 import { Kind, type ListTypeNode, type NamedTypeNode, type NonNullTypeNode, type TypeNode } from 'graphql';
 import { maximumTypeNestingExceededError } from '../../errors/errors';
-import { getMutableTypeNode, type MutableIntermediateTypeNode } from '../../schema-building/ast';
+import {
+  getSharedTypeNode,
+  rebuildTypeNodeWithNamedTypeName,
+  type MutableIntermediateTypeNode,
+} from '../../schema-building/ast';
 import { stringToNameNode } from '../../ast/utils';
 import { type FieldData } from '../../schema-building/types/types';
 import { MAXIMUM_TYPE_NESTING } from '../../utils/integer-constants';
@@ -49,7 +53,7 @@ function getMergedTypeNode(
   mostRestrictive: boolean,
   errors: Array<Error>,
 ): GetMergedTypeResult {
-  other = getMutableTypeNode(other, hostPath, errors); // current is already a deep copy
+  other = getSharedTypeNode(other, hostPath, errors); // current is already a deep copy
   // The first type of the pair to diverge in restriction takes precedence in all future differences.
   // If the other type of the pair also diverges, it's an error.
   // To keep the output link intact, it is not possible to spread assign "lastTypeNode".
@@ -137,14 +141,11 @@ export function getMostRestrictiveMergedTypeNode(
 }
 
 export function renameNamedTypeName(fieldData: FieldData, newNamedTypeName: string, errors: Error[]) {
-  let typeNode = fieldData.type;
-  for (let i = 0; i < MAXIMUM_TYPE_NESTING; i++) {
-    if (typeNode.kind === Kind.NAMED_TYPE) {
-      fieldData.namedTypeName = newNamedTypeName;
-      typeNode.name = stringToNameNode(newNamedTypeName);
-      return;
-    }
-    typeNode = typeNode.type;
+  const rebuilt = rebuildTypeNodeWithNamedTypeName(fieldData.type, newNamedTypeName);
+  if (rebuilt) {
+    fieldData.namedTypeName = newNamedTypeName;
+    fieldData.type = rebuilt;
+    return;
   }
   // Use a dummy renamed type if the traversal fails
   fieldData.type = { kind: Kind.NAMED_TYPE, name: stringToNameNode(newNamedTypeName) };
