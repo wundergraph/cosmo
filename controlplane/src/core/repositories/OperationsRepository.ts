@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { OverrideChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { aliasedTable, and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
+import { SQL, aliasedTable, and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { FastifyBaseLogger } from 'fastify';
@@ -299,17 +299,7 @@ export class OperationsRepository {
   }
 
   public async getRegisteredClientsWithMetadata(): Promise<ClientDTOWithOperationMetadata[]> {
-    const clients = await this.getRegisteredClients();
-    const clientsWithMetadata: ClientDTOWithOperationMetadata[] = [];
-
-    for (const client of clients) {
-      clientsWithMetadata.push({
-        ...client,
-        persistedOperationsCount: await this.getClientPersistedOperationCount(client.id),
-      });
-    }
-
-    return clientsWithMetadata;
+    return this.getRegisteredClientsWithOperationMetadata();
   }
 
   public async getRegisteredClientByName(clientName: string): Promise<ClientDTO | undefined> {
@@ -339,16 +329,54 @@ export class OperationsRepository {
   }
 
   public async previewDeleteClient(clientName: string): Promise<ClientDTOWithOperationMetadata | undefined> {
-    const client = await this.getRegisteredClientByName(clientName);
+    const clients = await this.getRegisteredClientsWithOperationMetadata({ clientName });
 
-    if (!client) {
-      return undefined;
-    }
+    return clients[0];
+  }
 
-    return {
-      ...client,
-      persistedOperationsCount: await this.getClientPersistedOperationCount(client.id),
-    };
+  private async getRegisteredClientsWithOperationMetadata(input?: {
+    clientName?: string;
+  }): Promise<ClientDTOWithOperationMetadata[]> {
+    const createdBy = aliasedTable(users, 'created_by');
+    const updatedBy = aliasedTable(users, 'updated_by');
+    const conditions: (SQL<unknown> | undefined)[] = [
+      eq(federatedGraphClients.federatedGraphId, this.federatedGraphId),
+      input?.clientName ? eq(federatedGraphClients.name, input.clientName) : undefined,
+    ];
+
+    const clients = await this.db
+      .select({
+        id: federatedGraphClients.id,
+        name: federatedGraphClients.name,
+        createdAt: federatedGraphClients.createdAt,
+        updatedAt: federatedGraphClients.updatedAt,
+        createdBy: createdBy.email,
+        updatedBy: updatedBy.email,
+        persistedOperationsCount: sql<number>`cast(count(${federatedGraphPersistedOperations.id}) as int)`,
+      })
+      .from(federatedGraphClients)
+      .leftJoin(createdBy, eq(createdBy.id, federatedGraphClients.createdById))
+      .leftJoin(updatedBy, eq(updatedBy.id, federatedGraphClients.updatedById))
+      .leftJoin(
+        federatedGraphPersistedOperations,
+        and(
+          eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+          eq(federatedGraphPersistedOperations.clientId, federatedGraphClients.id),
+        ),
+      )
+      .where(and(...conditions))
+      .groupBy(federatedGraphClients.id, createdBy.email, updatedBy.email)
+      .orderBy(desc(sql`coalesce(${federatedGraphClients.updatedAt}, ${federatedGraphClients.createdAt})`));
+
+    return clients.map((client) => ({
+      id: client.id,
+      name: client.name,
+      createdAt: client.createdAt.toISOString(),
+      lastUpdatedAt: client.updatedAt?.toISOString() || '',
+      createdBy: client.createdBy ?? '',
+      lastUpdatedBy: client.updatedBy ?? '',
+      persistedOperationsCount: client.persistedOperationsCount,
+    }));
   }
 
   public deleteClient(clientName: string): Promise<
@@ -747,20 +775,6 @@ export class OperationsRepository {
     logger.debug({ revision, operationCount: allOperations.length, path }, 'PQL manifest generated and uploaded');
 
     return { revision, operationCount: allOperations.length };
-  }
-
-  private async getClientPersistedOperationCount(clientId: string) {
-    const result = await this.db
-      .select({ count: count() })
-      .from(federatedGraphPersistedOperations)
-      .where(
-        and(
-          eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
-          eq(federatedGraphPersistedOperations.clientId, clientId),
-        ),
-      );
-
-    return Number(result[0]?.count ?? 0);
   }
 
   private static createPersistedOperationDTO({
