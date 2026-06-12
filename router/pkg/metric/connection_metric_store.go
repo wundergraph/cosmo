@@ -17,6 +17,10 @@ import (
 type ConnectionMetricProvider interface {
 	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureMaxConnections(ctx context.Context, count int64, opts ...otelmetric.RecordOption)
+	MeasureDNSLookupDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
+	MeasureTCPConnectDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
+	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
+	MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	Flush(ctx context.Context) error
 	Shutdown() error
 }
@@ -24,6 +28,10 @@ type ConnectionMetricProvider interface {
 // ConnectionMetricStore is the interface for connection and pool metrics only.
 type ConnectionMetricStore interface {
 	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
+	MeasureDNSLookupDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
+	MeasureTCPConnectDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
+	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
+	MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	Flush(ctx context.Context) error
 	Shutdown(ctx context.Context) error
 }
@@ -50,16 +58,16 @@ func NewConnectionMetricStore(
 		promConnectionMetrics: &noopConnectionMetricProvider{},
 	}
 
-	if metricsConfig.OpenTelemetry.ConnectionStats {
-		otlpMetrics, err := newOtlpConnectionMetrics(logger, otelProvider, connectionPoolStats, baseAttributes)
+	if metricsConfig.OpenTelemetry.ConnectionStats || metricsConfig.OpenTelemetry.NetworkStats {
+		otlpMetrics, err := newOtlpConnectionMetrics(logger, otelProvider, connectionPoolStats, baseAttributes, metricsConfig.OpenTelemetry.NetworkStats)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create otlp connection metrics: %w", err)
 		}
 		connMetrics.otlpConnectionMetrics = otlpMetrics
 	}
 
-	if metricsConfig.Prometheus.ConnectionStats {
-		promMetrics, err := newPromConnectionMetrics(logger, promProvider, connectionPoolStats, baseAttributes)
+	if metricsConfig.Prometheus.ConnectionStats || metricsConfig.Prometheus.NetworkStats {
+		promMetrics, err := newPromConnectionMetrics(logger, promProvider, connectionPoolStats, baseAttributes, metricsConfig.Prometheus.NetworkStats)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create prometheus connection metrics: %w", err)
 		}
@@ -83,11 +91,38 @@ func (c *ConnectionMetrics) MeasureMaxConnections(ctx context.Context, reused bo
 }
 
 func (c *ConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
-	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
-
+	opts := c.recordOpts(attrs)
 	c.otlpConnectionMetrics.MeasureConnectionAcquireDuration(ctx, duration, opts)
 	c.promConnectionMetrics.MeasureConnectionAcquireDuration(ctx, duration, opts)
+}
+
+func (c *ConnectionMetrics) MeasureDNSLookupDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+	opts := c.recordOpts(attrs)
+	c.otlpConnectionMetrics.MeasureDNSLookupDuration(ctx, duration, opts)
+	c.promConnectionMetrics.MeasureDNSLookupDuration(ctx, duration, opts)
+}
+
+func (c *ConnectionMetrics) MeasureTCPConnectDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+	opts := c.recordOpts(attrs)
+	c.otlpConnectionMetrics.MeasureTCPConnectDuration(ctx, duration, opts)
+	c.promConnectionMetrics.MeasureTCPConnectDuration(ctx, duration, opts)
+}
+
+func (c *ConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+	opts := c.recordOpts(attrs)
+	c.otlpConnectionMetrics.MeasureTLSHandshakeDuration(ctx, duration, opts)
+	c.promConnectionMetrics.MeasureTLSHandshakeDuration(ctx, duration, opts)
+}
+
+func (c *ConnectionMetrics) MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+	opts := c.recordOpts(attrs)
+	c.otlpConnectionMetrics.MeasureTimeToFirstByte(ctx, duration, opts)
+	c.promConnectionMetrics.MeasureTimeToFirstByte(ctx, duration, opts)
+}
+
+func (c *ConnectionMetrics) recordOpts(attrs []attribute.KeyValue) otelmetric.RecordOption {
+	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
+	return otelmetric.WithAttributes(append(copied, attrs...)...)
 }
 
 // Flush flushes the metrics to the backend synchronously.

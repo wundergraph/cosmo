@@ -140,6 +140,12 @@ func (h *OtlpMetricStore) MeasureOperationPlanningTime(ctx context.Context, plan
 	}
 }
 
+func (h *OtlpMetricStore) MeasureResolverAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.histograms[ResolverAcquireDurationHistogram]; ok {
+		c.Record(ctx, duration, opts...)
+	}
+}
+
 func (h *OtlpMetricStore) MeasureSchemaFieldUsage(_ context.Context, _ int64, _ ...otelmetric.AddOption) {
 	// Do not record schema usage in OpenTelemetry
 }

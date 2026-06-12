@@ -107,19 +107,25 @@ type CostStats struct {
 	ActualEnabled    bool `yaml:"actual_enabled" envDefault:"false" env:"ACTUAL_ENABLED"`
 }
 
+type TelemetryCategory struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+}
+
 type Prometheus struct {
-	Enabled             bool        `yaml:"enabled" envDefault:"true" env:"PROMETHEUS_ENABLED"`
-	Path                string      `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
-	ListenAddr          string      `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
-	GraphqlCache        bool        `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
-	ConnectionStats     bool        `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
-	Streams             bool        `yaml:"streams" envDefault:"false" env:"PROMETHEUS_STREAM"`
-	EngineStats         EngineStats `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
-	CostStats           CostStats   `yaml:"cost_stats" envPrefix:"PROMETHEUS_COST_STATS_"`
-	CircuitBreaker      bool        `yaml:"circuit_breaker" envDefault:"false" env:"PROMETHEUS_CIRCUIT_BREAKER"`
-	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
-	ExcludeMetricLabels RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
-	ExcludeScopeInfo    bool        `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
+	Enabled             bool              `yaml:"enabled" envDefault:"true" env:"PROMETHEUS_ENABLED"`
+	Path                string            `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
+	ListenAddr          string            `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
+	GraphqlCache        bool              `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
+	ConnectionStats     bool              `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
+	Network             TelemetryCategory `yaml:"network" envPrefix:"PROMETHEUS_NETWORK_"`
+	Resolver            TelemetryCategory `yaml:"resolver" envPrefix:"PROMETHEUS_RESOLVER_"`
+	Streams             bool              `yaml:"streams" envDefault:"false" env:"PROMETHEUS_STREAM"`
+	EngineStats         EngineStats       `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
+	CostStats           CostStats         `yaml:"cost_stats" envPrefix:"PROMETHEUS_COST_STATS_"`
+	CircuitBreaker      bool              `yaml:"circuit_breaker" envDefault:"false" env:"PROMETHEUS_CIRCUIT_BREAKER"`
+	ExcludeMetrics      RegExArray        `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
+	ExcludeMetricLabels RegExArray        `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
+	ExcludeScopeInfo    bool              `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
 
 	SchemaFieldUsage PrometheusSchemaFieldUsage `yaml:"schema_usage" envPrefix:"PROMETHEUS_SCHEMA_FIELD_USAGE_"`
 }
@@ -164,6 +170,8 @@ type MetricsOTLP struct {
 	RouterRuntime       bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
 	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
 	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
+	Network             TelemetryCategory     `yaml:"network" envPrefix:"METRICS_OTLP_NETWORK_"`
+	Resolver            TelemetryCategory     `yaml:"resolver" envPrefix:"METRICS_OTLP_RESOLVER_"`
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
 	CostStats           CostStats             `yaml:"cost_stats" envPrefix:"METRICS_OTLP_COST_STATS_"`
 	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`

@@ -79,16 +79,17 @@ type Response struct {
 }
 
 type Operation struct {
-	Sha256Hash        string        `expr:"sha256Hash"`
-	ParsingTime       time.Duration `expr:"parsingTime"`
-	Name              string        `expr:"name"`
-	Type              string        `expr:"type"`
-	PersistedID       string        `expr:"persistedId"`
-	NormalizationTime time.Duration `expr:"normalizationTime"`
-	Hash              string        `expr:"hash"`
-	QueryPlanHash     string        `expr:"queryPlanHash"`
-	ValidationTime    time.Duration `expr:"validationTime"`
-	PlanningTime      time.Duration `expr:"planningTime"`
+	Sha256Hash              string        `expr:"sha256Hash"`
+	ParsingTime             time.Duration `expr:"parsingTime"`
+	Name                    string        `expr:"name"`
+	Type                    string        `expr:"type"`
+	PersistedID             string        `expr:"persistedId"`
+	NormalizationTime       time.Duration `expr:"normalizationTime"`
+	Hash                    string        `expr:"hash"`
+	QueryPlanHash           string        `expr:"queryPlanHash"`
+	ValidationTime          time.Duration `expr:"validationTime"`
+	PlanningTime            time.Duration `expr:"planningTime"`
+	ResolverAcquireDuration time.Duration `expr:"resolverAcquireDuration"`
 
 	NormalizationCacheHit          bool `expr:"normalizationCacheHit"`
 	VariablesNormalizationCacheHit bool `expr:"variablesNormalizationCacheHit"`
@@ -148,6 +149,10 @@ type SubgraphResponse struct {
 type ClientTrace struct {
 	FetchDuration             time.Duration `expr:"fetchDuration"`
 	ConnectionAcquireDuration time.Duration `expr:"connAcquireDuration"`
+	DNSLookupDuration         time.Duration `expr:"dnsLookupDuration"`
+	TCPConnectDuration        time.Duration `expr:"tcpConnectDuration"`
+	TLSHandshakeDuration      time.Duration `expr:"tlsHandshakeDuration"`
+	TimeToFirstByte           time.Duration `expr:"timeToFirstByte"`
 }
 
 // Subgraph Related

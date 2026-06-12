@@ -33,6 +33,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
@@ -1131,10 +1132,22 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
-		_, err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
+		var info *resolve.GraphQLResolveInfo
+		info, err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
 			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw)
+		}
+		if info != nil {
+			reqContext.expressionContext.Request.Operation.ResolverAcquireDuration = info.ResolveAcquireWaitTime
+			if h.graphqlHandler.metricStore != nil {
+				h.graphqlHandler.metricStore.MeasureResolverAcquireDuration(
+					resolveCtx.Context(),
+					info.ResolveAcquireWaitTime,
+					reqContext.telemetry.metricSliceAttrs,
+					otelmetric.WithAttributes(reqContext.telemetry.metricAttrs...),
+				)
+			}
 		}
 		_ = rw.Flush()
 		rw.Complete()
