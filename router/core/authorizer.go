@@ -86,6 +86,9 @@ func (a *CosmoAuthorizer) validateScopes(ctx *resolve.Context, coordinate resolv
 	if len(requiredOrScopes) == 0 {
 		return nil
 	}
+	if hasWildcardScope(ctx.Context()) {
+		return nil
+	}
 WithNext:
 	for _, requiredOrScope := range requiredOrScopes {
 		for i := range requiredOrScope.RequiredAndScopes {
