@@ -202,7 +202,7 @@ func (r *SubgraphCircuitBreakerOptions) IsEnabled() bool {
 
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
 // Alternatively, use Router.NewServer() to create a new server instance without starting it.
-func NewRouter(opts ...Option) (*Router, error) {
+func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 	r := &Router{
 		EngineStats: statistics.NewNoopEngineStats(),
 	}
@@ -324,7 +324,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	postRules := CreateCacheControlPolicyHeaderRules(r.cacheControlPolicy)
 	var err error
-	r.headerPropagation, err = NewHeaderPropagation(r.headerRules, postRules)
+	r.headerPropagation, err = NewHeaderPropagation(ctx, r.logger, r.headerRules, postRules)
 	if err != nil {
 		return nil, err
 	}
