@@ -83,12 +83,14 @@ export type ExternalFieldData = {
 };
 
 export type FieldData = {
-  argumentDataByName: Map<ArgumentName, InputValueData>;
+  // Lazily allocated; most fields do not define arguments.
+  argumentDataByName?: Map<ArgumentName, InputValueData>;
   configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   externalFieldDataBySubgraphName: Map<SubgraphName, ExternalFieldData>;
   federatedCoords: string;
-  inheritedDirectiveNames: Set<DirectiveName>;
+  // Lazily allocated; most fields do not inherit directives.
+  inheritedDirectiveNames?: Set<DirectiveName>;
   isInaccessible: boolean;
   isShareableBySubgraphName: Map<SubgraphName, boolean>;
   kind: Kind.FIELD_DEFINITION;
@@ -96,7 +98,8 @@ export type FieldData = {
   namedTypeKind: OutputNodeKind | Kind.NULL;
   namedTypeName: TypeName;
   node: MutableFieldNode;
-  nullLevelsBySubgraphName: Map<SubgraphName, Set<number>>;
+  // Lazily allocated; only set when @semanticNonNull is defined on the field.
+  nullLevelsBySubgraphName?: Map<SubgraphName, Set<number>>;
   originalParentTypeName: TypeName;
   federatedDirectivesData: FederatedDirectivesData;
   renamedParentTypeName: TypeName;
@@ -180,9 +183,11 @@ export type ObjectDefinitionData = {
 
 export type FederatedDirectivesData = {
   deprecatedReason: string;
-  directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
+  // Lazily allocated; most nodes do not define federated directives.
+  directivesByName?: Map<DirectiveName, Array<ConstDirectiveNode>>;
   isDeprecated: boolean;
-  tagDirectiveByName: Map<string, ConstDirectiveNode>;
+  // Lazily allocated; most nodes do not define @tag.
+  tagDirectiveByName?: Map<string, ConstDirectiveNode>;
 };
 
 export type ScalarDefinitionData = {

@@ -1,4 +1,5 @@
 import {
+  type ASTNode,
   type BooleanValueNode,
   type ConstDirectiveNode,
   type ConstValueNode,
@@ -109,11 +110,12 @@ import { FEDERATED_DIRECTIVE_DATAS } from '../v1/normalization/utils';
 import { ROUTER_FEDERATED_DIRECTIVE_NAMES } from '../v1/constants/strings';
 
 export function newFederatedDirectivesData(): FederatedDirectivesData {
+  // The maps are intentionally left undefined; they are lazily allocated upon first write.
   return {
     deprecatedReason: '',
-    directivesByName: new Map<DirectiveName, Array<ConstDirectiveNode>>(),
+    directivesByName: undefined,
     isDeprecated: false,
-    tagDirectiveByName: new Map<string, ConstDirectiveNode>(),
+    tagDirectiveByName: undefined,
   };
 }
 
@@ -191,6 +193,20 @@ export function areDefaultValuesCompatible(typeNode: TypeNode, incomingDefaultVa
   }
 }
 
+/* Caches the printed value of an AST node by node identity. This is only safe for nodes that are never mutated
+ * in place after being printed, e.g., directive nodes and input default value nodes, which are always replaced
+ * wholesale rather than mutated. */
+const printedValueByNode = new WeakMap<ASTNode, string>();
+
+function cachedPrint(node: ASTNode): string {
+  let printedValue = printedValueByNode.get(node);
+  if (printedValue === undefined) {
+    printedValue = print(node);
+    printedValueByNode.set(node, printedValue);
+  }
+  return printedValue;
+}
+
 export function compareAndValidateInputDefaultValues({
   existingData,
   incomingData,
@@ -208,8 +224,8 @@ export function compareAndValidateInputDefaultValues({
       success: true,
     };
   }
-  const existingDefaultValueString = print(existingData.defaultValue);
-  const incomingDefaultValueString = print(incomingData.defaultValue);
+  const existingDefaultValueString = cachedPrint(existingData.defaultValue);
+  const incomingDefaultValueString = cachedPrint(incomingData.defaultValue);
   if (existingDefaultValueString == incomingDefaultValueString) {
     return {
       success: true,
@@ -252,6 +268,9 @@ export function getRenamedRootTypeName(
 type ChildDefinitionNode = EnumValueDefinitionNode | FieldDefinitionNode | InputValueDefinitionNode;
 
 function propagateFieldDataArguments(fieldData: FieldData) {
+  if (!fieldData.argumentDataByName) {
+    return;
+  }
   for (const argumentData of fieldData.argumentDataByName.values()) {
     // First propagate the argument's directives
     for (const directiveNodes of argumentData.directivesByName.values()) {
@@ -359,10 +378,11 @@ export function upsertTagDirectives(
   federatedDirectivesData: FederatedDirectivesData,
   incomingDirectiveNodes: ConstDirectiveNode[],
 ) {
+  const tagDirectiveByName = (federatedDirectivesData.tagDirectiveByName ??= new Map<string, ConstDirectiveNode>());
   for (const incomingDirectiveNode of incomingDirectiveNodes) {
     // The argument was already validated in the normalization factory, so it can be safely cast
     const incomingNameString = (incomingDirectiveNode.arguments![0].value as StringValueNode).value;
-    federatedDirectivesData.tagDirectiveByName.set(incomingNameString, incomingDirectiveNode);
+    tagDirectiveByName.set(incomingNameString, incomingDirectiveNode);
   }
 }
 
@@ -371,12 +391,16 @@ export function propagateAuthDirectives(parentData: ParentDefinitionData, authDa
     return;
   }
   if (authData.requiresAuthentication) {
-    parentData.federatedDirectivesData.directivesByName.set(AUTHENTICATED, [generateSimpleDirective(AUTHENTICATED)]);
+    (parentData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()).set(
+      AUTHENTICATED,
+      [generateSimpleDirective(AUTHENTICATED)],
+    );
   }
   if (authData.requiredScopes.length > 0) {
-    parentData.federatedDirectivesData.directivesByName.set(REQUIRES_SCOPES, [
-      generateRequiresScopesDirective(authData.requiredScopes),
-    ]);
+    (parentData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()).set(
+      REQUIRES_SCOPES,
+      [generateRequiresScopesDirective(authData.requiredScopes)],
+    );
   }
 }
 
@@ -389,12 +413,16 @@ export function propagateFieldAuthDirectives(fieldData: FieldData, authData?: Au
     return;
   }
   if (fieldAuthData.originalData.requiresAuthentication) {
-    fieldData.federatedDirectivesData.directivesByName.set(AUTHENTICATED, [generateSimpleDirective(AUTHENTICATED)]);
+    (fieldData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()).set(
+      AUTHENTICATED,
+      [generateSimpleDirective(AUTHENTICATED)],
+    );
   }
   if (fieldAuthData.originalData.requiredScopes.length > 0) {
-    fieldData.federatedDirectivesData.directivesByName.set(REQUIRES_SCOPES, [
-      generateRequiresScopesDirective(fieldAuthData.originalData.requiredScopes),
-    ]);
+    (fieldData.federatedDirectivesData.directivesByName ??= new Map<DirectiveName, Array<ConstDirectiveNode>>()).set(
+      REQUIRES_SCOPES,
+      [generateRequiresScopesDirective(fieldAuthData.originalData.requiredScopes)],
+    );
   }
 }
 
@@ -436,7 +464,7 @@ export function extractUniqueDirectiveNodes(directiveNodes: Array<ConstDirective
   const nodes: Array<ConstDirectiveNode> = [];
   const printedNodes = new Set<string>();
   for (const directiveNode of directiveNodes) {
-    const directive = print(directiveNode);
+    const directive = cachedPrint(directiveNode);
     if (printedNodes.has(directive)) {
       continue;
     }
@@ -451,14 +479,16 @@ export function getRouterSchemaDirectiveNodes({
   federatedDirectiveDataByName,
   parentDefinitionDataByTypeName,
 }: GetRouterFederatedDirectiveNodesParams): GetFederatedDirectiveNodesResult {
-  const nodes = [...data.federatedDirectivesData.tagDirectiveByName.values()];
+  const nodes: Array<ConstDirectiveNode> = data.federatedDirectivesData.tagDirectiveByName
+    ? [...data.federatedDirectivesData.tagDirectiveByName.values()]
+    : [];
   if (data.federatedDirectivesData.isDeprecated) {
     nodes.push(generateDeprecatedDirective(data.federatedDirectivesData.deprecatedReason));
   }
   const coords = getNodeCoords(data);
   const errors: Array<Error> = [];
   const warnings: Array<Warning> = [];
-  for (const [directiveName, directiveNodes] of data.federatedDirectivesData.directivesByName) {
+  for (const [directiveName, directiveNodes] of data.federatedDirectivesData.directivesByName ?? []) {
     if (directiveName === SEMANTIC_NON_NULL && isFieldData(data)) {
       nodes.push(
         generateSemanticNonNullDirective(getFirstEntry(data.nullLevelsBySubgraphName) ?? new Set<number>([0])),
@@ -534,7 +564,7 @@ export function getClientFederatedDirectiveNodes<T extends NodeData>(nodeData: T
   if (nodeData.federatedDirectivesData.isDeprecated) {
     persistedDirectiveNodes.push(generateDeprecatedDirective(nodeData.federatedDirectivesData.deprecatedReason));
   }
-  for (const [directiveName, directiveNodes] of nodeData.federatedDirectivesData.directivesByName) {
+  for (const [directiveName, directiveNodes] of nodeData.federatedDirectivesData.directivesByName ?? []) {
     if (directiveName === SEMANTIC_NON_NULL && isFieldData(nodeData)) {
       persistedDirectiveNodes.push(
         generateSemanticNonNullDirective(getFirstEntry(nodeData.nullLevelsBySubgraphName) ?? new Set<number>([0])),
@@ -556,7 +586,7 @@ export function getClientFederatedDirectiveNodes<T extends NodeData>(nodeData: T
 export function getClientSchemaFieldNodeByFieldData(fieldData: FieldData): MutableFieldNode {
   const directives = getClientFederatedDirectiveNodes(fieldData);
   const argumentNodes: MutableInputValueNode[] = [];
-  for (const inputValueData of fieldData.argumentDataByName.values()) {
+  for (const inputValueData of fieldData.argumentDataByName?.values() ?? []) {
     if (isNodeDataInaccessible(inputValueData)) {
       continue;
     }
@@ -855,7 +885,9 @@ export function isTypeValidImplementation({
 }
 
 export function isNodeDataInaccessible(data: NodeData): boolean {
-  return data.federatedDirectivesData.directivesByName.has(INACCESSIBLE) || data.directivesByName.has(INACCESSIBLE);
+  return (
+    data.federatedDirectivesData.directivesByName?.has(INACCESSIBLE) || data.directivesByName.has(INACCESSIBLE)
+  );
 }
 
 export function isLeafKind(kind: Kind): boolean {

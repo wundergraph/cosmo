@@ -166,11 +166,9 @@ export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () 
 }
 
 export function add<T>(set: Set<T>, key: T): boolean {
-  if (set.has(key)) {
-    return false;
-  }
+  const initialSize = set.size;
   set.add(key);
-  return true;
+  return set.size !== initialSize;
 }
 
 export function generateSimpleDirective(name: string): ConstDirectiveNode {
@@ -263,7 +261,10 @@ export function addMapEntries<K, V>({ source, target }: AddMapEntriesParams<K, V
   }
 }
 
-export function getFirstEntry<K, V>(collection: Set<V> | Map<K, V>): V | undefined {
+export function getFirstEntry<K, V>(collection: Set<V> | Map<K, V> | undefined): V | undefined {
+  if (!collection) {
+    return;
+  }
   const { value, done } = collection.values().next();
   if (done) {
     return;

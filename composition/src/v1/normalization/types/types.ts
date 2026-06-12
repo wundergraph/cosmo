@@ -38,6 +38,13 @@ export type KeyFieldSetData = {
   rawFieldSet: string;
 };
 
+/* Caches the results of parsing and normalizing a raw field set string, which are deterministic for identical raw
+ * strings. Parsed DocumentNodes are intentionally never cached because consumers sort them in place. */
+export type FieldSetCacheEntry = {
+  error?: Error;
+  normalizedFieldSet?: string;
+};
+
 export type FieldSetData = {
   provides: Map<string, string>;
   requires: Map<string, string>;

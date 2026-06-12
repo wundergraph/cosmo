@@ -7,7 +7,6 @@ import {
   type VisitNodeParams,
   type VisitRootFieldEdgesParams,
 } from './types/params';
-import { add, getValueOrDefault } from '../../../utils/utils';
 import { type NodeName, type SelectionPath, type VisitNodeResult } from '../../types/types';
 import { NodeResolutionData } from '../../node-resolution-data/node-resolution-data';
 
@@ -36,9 +35,10 @@ export class RootFieldWalker {
     if (edge.node.isLeaf) {
       return { visited: true, areDescendantsResolved: true };
     }
-    if (!add(edge.visitedIndices, this.index)) {
+    if (edge.lastVisitedIndex === this.index) {
       return { visited: true, areDescendantsResolved: true };
     }
+    edge.lastVisitedIndex = this.index;
     /* Check for siblings rather than entity edges.
      * This is because resolvable: false and unsatisfied edges are not propagated.
      * In these cases, the error message explains the specific reason the jump cannot happen.
@@ -51,9 +51,12 @@ export class RootFieldWalker {
       if (this.resDataByNodeName.has(edge.node.nodeName)) {
         return { visited: true, areDescendantsResolved: true };
       }
-      getValueOrDefault(this.pathsByEntityNodeName, edge.node.nodeName, () => new Set<SelectionPath>()).add(
-        `${selectionPath}.${edge.edgeName}`,
-      );
+      let paths = this.pathsByEntityNodeName.get(edge.node.nodeName);
+      if (!paths) {
+        paths = new Set<SelectionPath>();
+        this.pathsByEntityNodeName.set(edge.node.nodeName, paths);
+      }
+      paths.add(`${selectionPath}.${edge.edgeName}`);
       return { visited: true, areDescendantsResolved: false };
     }
     if (edge.node.isAbstract) {
@@ -134,19 +137,22 @@ export class RootFieldWalker {
     if (edge.node.isLeaf) {
       return { visited: true, areDescendantsResolved: true };
     }
-    if (!add(edge.visitedIndices, this.index)) {
+    if (edge.lastVisitedIndex === this.index) {
       return { visited: true, areDescendantsResolved: true };
     }
+    edge.lastVisitedIndex = this.index;
     /* Check for siblings rather than entity edges.
      * This is because resolvable: false and unsatisfied edges are not propagated.
      * In these cases, the error message explains the specific reason the jump cannot happen.
      */
     if (edge.node.hasEntitySiblings) {
-      getValueOrDefault(
-        this.entityNodeNamesByPath,
-        `${selectionPath}.${edge.edgeName}`,
-        () => new Set<SelectionPath>(),
-      ).add(edge.node.nodeName);
+      const path = `${selectionPath}.${edge.edgeName}`;
+      let entityNodeNames = this.entityNodeNamesByPath.get(path);
+      if (!entityNodeNames) {
+        entityNodeNames = new Set<NodeName>();
+        this.entityNodeNamesByPath.set(path, entityNodeNames);
+      }
+      entityNodeNames.add(edge.node.nodeName);
     }
     if (edge.node.isAbstract) {
       return this.visitSharedAbstractNode({
@@ -210,30 +216,35 @@ export class RootFieldWalker {
     };
   }
   getNodeResolutionData({ node, selectionPath }: GetNodeResolutionDataParams): NodeResolutionData {
-    const data = getValueOrDefault(
-      this.resDataByNodeName,
-      node.nodeName,
-      () =>
-        new NodeResolutionData({
-          fieldDataByName: node.fieldDataByName,
-          typeName: node.typeName,
-        }),
-    );
-    getValueOrDefault(this.resDataByPath, selectionPath, () => data.copy());
+    let data = this.resDataByNodeName.get(node.nodeName);
+    if (!data) {
+      data = new NodeResolutionData({
+        fieldDataByName: node.fieldDataByName,
+        typeName: node.typeName,
+      });
+      this.resDataByNodeName.set(node.nodeName, data);
+    }
+    if (!this.resDataByPath.get(selectionPath)) {
+      this.resDataByPath.set(selectionPath, data.copy());
+    }
     return data;
   }
 
   getSharedNodeResolutionData({ node, selectionPath }: GetNodeResolutionDataParams): NodeResolutionData {
-    const dataByNodeName = getValueOrDefault(
-      this.resDataByNodeName,
-      node.nodeName,
-      () =>
-        new NodeResolutionData({
-          fieldDataByName: node.fieldDataByName,
-          typeName: node.typeName,
-        }),
-    );
-    return getValueOrDefault(this.resDataByPath, selectionPath, () => dataByNodeName.copy());
+    let dataByNodeName = this.resDataByNodeName.get(node.nodeName);
+    if (!dataByNodeName) {
+      dataByNodeName = new NodeResolutionData({
+        fieldDataByName: node.fieldDataByName,
+        typeName: node.typeName,
+      });
+      this.resDataByNodeName.set(node.nodeName, dataByNodeName);
+    }
+    let data = this.resDataByPath.get(selectionPath);
+    if (!data) {
+      data = dataByNodeName.copy();
+      this.resDataByPath.set(selectionPath, data);
+    }
+    return data;
   }
 
   propagateVisitedField({
@@ -253,21 +264,20 @@ export class RootFieldWalker {
       return;
     }
     data.addResolvedFieldName(fieldName);
-    const dataBySelectionPath = getValueOrDefault(
-      this.resDataByPath,
-      selectionPath,
-      () =>
-        new NodeResolutionData({
-          fieldDataByName: node.fieldDataByName,
-          typeName: node.typeName,
-        }),
-    );
+    let dataBySelectionPath = this.resDataByPath.get(selectionPath);
+    if (!dataBySelectionPath) {
+      dataBySelectionPath = new NodeResolutionData({
+        fieldDataByName: node.fieldDataByName,
+        typeName: node.typeName,
+      });
+      this.resDataByPath.set(selectionPath, dataBySelectionPath);
+    }
     dataBySelectionPath.addResolvedFieldName(fieldName);
     if (!areDescendantsResolved) {
       return;
     }
-    data.resolvedDescendantNames.add(fieldName);
-    dataBySelectionPath.resolvedDescendantNames.add(fieldName);
+    data.addResolvedDescendantName(fieldName);
+    dataBySelectionPath.addResolvedDescendantName(fieldName);
   }
 
   propagateSharedVisitedField({
@@ -281,21 +291,20 @@ export class RootFieldWalker {
       return;
     }
     data.addResolvedFieldName(fieldName);
-    const dataByNodeName = getValueOrDefault(
-      this.resDataByNodeName,
-      node.nodeName,
-      () =>
-        new NodeResolutionData({
-          fieldDataByName: node.fieldDataByName,
-          typeName: node.typeName,
-        }),
-    );
+    let dataByNodeName = this.resDataByNodeName.get(node.nodeName);
+    if (!dataByNodeName) {
+      dataByNodeName = new NodeResolutionData({
+        fieldDataByName: node.fieldDataByName,
+        typeName: node.typeName,
+      });
+      this.resDataByNodeName.set(node.nodeName, dataByNodeName);
+    }
     dataByNodeName.addResolvedFieldName(fieldName);
     if (!areDescendantsResolved) {
       return;
     }
-    data.resolvedDescendantNames.add(fieldName);
-    dataByNodeName.resolvedDescendantNames.add(fieldName);
+    data.addResolvedDescendantName(fieldName);
+    dataByNodeName.addResolvedDescendantName(fieldName);
   }
 
   visitRootFieldEdges({ edges, rootTypeName }: VisitRootFieldEdgesParams): VisitNodeResult {

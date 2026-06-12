@@ -20,7 +20,10 @@ export function internalSubgraphFromNormalization({
     operationTypes: normalization.operationTypes,
     overriddenFieldNamesByParentTypeName: new Map<TypeName, Set<FieldName>>(),
     parentDefinitionDataByTypeName: normalization.parentDefinitionDataByTypeName,
-    schema: normalization.schema,
+    get schema() {
+      // Defers (memoized) schema construction until the schema is actually accessed.
+      return normalization.schema;
+    },
     schemaNode: normalization.schemaNode,
   };
 }

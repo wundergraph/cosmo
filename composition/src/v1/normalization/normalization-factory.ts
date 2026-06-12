@@ -7,6 +7,7 @@ import {
   type DocumentNode,
   type EnumValueDefinitionNode,
   type FieldDefinitionNode,
+  type GraphQLSchema,
   type InputValueDefinitionNode,
   type InterfaceTypeDefinitionNode,
   type IntValueNode,
@@ -21,18 +22,20 @@ import {
   type TypeExtensionNode,
   type TypeNode,
   type ValueNode,
-  visit,
 } from 'graphql';
+import { walkFieldSetDocument } from '../../ast/field-set-walker';
 import {
   type EnumTypeNode,
   formatDescription,
   type InputObjectTypeNode,
   type InterfaceTypeNode,
   isKindAbstract,
+  lexicographicallySortDocumentNode,
   nodeKindToDirectiveLocation,
   type ObjectTypeNode,
   operationTypeNodeToDefaultType,
   safeParse,
+  safeParseFieldSet,
   type ScalarTypeNode,
   type SchemaNode,
   setToNamedTypeNodeArray,
@@ -356,6 +359,7 @@ import {
   type ComposeDirectiveNode,
   type ConditionalFieldSetValidationResult,
   type ExtractDirectiveArgumentDataResult,
+  type FieldSetCacheEntry,
   type FieldSetData,
   type FieldSetParentResult,
   type HandleCostDirectiveParams,
@@ -414,11 +418,13 @@ export function normalizeSubgraphFromString({
 
 export function normalizeSubgraph({
   document,
+  fieldSetCacheByRawFieldSet,
   internalGraph,
   options,
   subgraphName,
 }: NormalizeSubgraphParams): NormalizationResult {
   const normalizationFactory = new NormalizationFactory({
+    fieldSetCacheByRawFieldSet,
     internalGraph: internalGraph || new Graph(),
     options,
     subgraphName,
@@ -449,6 +455,7 @@ export class NormalizationFactory {
   entityInterfaceDataByTypeName = new Map<TypeName, EntityInterfaceSubgraphData>();
   eventsConfigurations = new Map<string, EventConfiguration[]>();
   federatedDirectiveDataByName = new Map<DirectiveName, DirectiveDefinitionData>();
+  fieldSetCacheByRawFieldSet: Map<string, FieldSetCacheEntry>;
   fieldSetDataByTypeName = new Map<TypeName, FieldSetData>();
   importDataByDirectiveName = new Map<DirectiveName, LinkImportData>();
   interfaceImplementationTypeNamesByInterfaceTypeName = new Map<InterfaceTypeName, Set<InterfaceTypeName>>();
@@ -482,7 +489,8 @@ export class NormalizationFactory {
   usesEdfsNatsStreamConfiguration: boolean = false;
   warnings: Array<Warning> = [];
 
-  constructor({ internalGraph, options, subgraphName }: NormalizationFactoryParams) {
+  constructor({ fieldSetCacheByRawFieldSet, internalGraph, options, subgraphName }: NormalizationFactoryParams) {
+    this.fieldSetCacheByRawFieldSet = fieldSetCacheByRawFieldSet ?? new Map<string, FieldSetCacheEntry>();
     this.options = options ?? {};
     this.subgraphName = subgraphName || NOT_APPLICABLE;
     this.internalGraph = internalGraph;
@@ -496,7 +504,7 @@ export class NormalizationFactory {
   }
 
   validateArguments(fieldData: FieldData, parentKind: Kind) {
-    for (const argumentData of fieldData.argumentDataByName.values()) {
+    for (const argumentData of fieldData.argumentDataByName?.values() ?? []) {
       const namedTypeName = getTypeNodeNamedTypeName(argumentData.type);
       if (BASE_SCALARS.has(namedTypeName)) {
         argumentData.namedTypeKind = Kind.SCALAR_TYPE_DEFINITION;
@@ -529,30 +537,32 @@ export class NormalizationFactory {
   handleFieldInheritableDirectives({
     directivesByName,
     fieldName,
-    inheritedDirectiveNames,
     parentData,
-  }: HandleFieldInheritableDirectivesParams) {
+  }: HandleFieldInheritableDirectivesParams): Set<DirectiveName> | undefined {
+    // Lazily allocated; most fields do not inherit directives.
+    let inheritedDirectiveNames: Set<DirectiveName> | undefined;
     if (this.doesParentRequireFetchReasons && !directivesByName.has(REQUIRE_FETCH_REASONS)) {
       directivesByName.set(REQUIRE_FETCH_REASONS, [generateSimpleDirective(REQUIRE_FETCH_REASONS)]);
-      inheritedDirectiveNames.add(REQUIRE_FETCH_REASONS);
+      (inheritedDirectiveNames ??= new Set<DirectiveName>()).add(REQUIRE_FETCH_REASONS);
     }
     if (this.doesParentRequireFetchReasons || directivesByName.has(REQUIRE_FETCH_REASONS)) {
       parentData.requireFetchReasonsFieldNames.add(fieldName);
     }
     if (!isObjectDefinitionData(parentData)) {
-      return;
+      return inheritedDirectiveNames;
     }
     if (this.isParentObjectExternal && !directivesByName.has(EXTERNAL)) {
       directivesByName.set(EXTERNAL, [generateSimpleDirective(EXTERNAL)]);
-      inheritedDirectiveNames.add(EXTERNAL);
+      (inheritedDirectiveNames ??= new Set<DirectiveName>()).add(EXTERNAL);
     }
     if (directivesByName.has(EXTERNAL)) {
       this.unvalidatedExternalFieldCoords.add(`${parentData.name}.${fieldName}`);
     }
     if (this.isParentObjectShareable && !directivesByName.has(SHAREABLE)) {
       directivesByName.set(SHAREABLE, [generateSimpleDirective(SHAREABLE)]);
-      inheritedDirectiveNames.add(SHAREABLE);
+      (inheritedDirectiveNames ??= new Set<DirectiveName>()).add(SHAREABLE);
     }
+    return inheritedDirectiveNames;
   }
 
   extractDirectives(
@@ -629,7 +639,10 @@ export class NormalizationFactory {
             }),
           );
         } else {
-          data.nullLevelsBySubgraphName.set(this.subgraphName, new Set<number>([0]));
+          (data.nullLevelsBySubgraphName ??= new Map<SubgraphName, Set<number>>()).set(
+            this.subgraphName,
+            new Set<number>([0]),
+          );
         }
       }
       if (isListSize && !isTypeNodeListType(data.type)) {
@@ -871,7 +884,7 @@ export class NormalizationFactory {
         return;
       }
       case Kind.FIELD_DEFINITION: {
-        for (const [argumentName, argumentData] of data.argumentDataByName) {
+        for (const [argumentName, argumentData] of data.argumentDataByName ?? []) {
           this.validateDirectives(argumentData, `${data.originalParentTypeName}.${data.name}(${argumentName}: ...)`);
         }
         return;
@@ -1244,15 +1257,16 @@ export class NormalizationFactory {
   addFieldDataByNode(
     fieldDataByName: Map<FieldName, FieldData>,
     node: FieldDefinitionNode,
-    argumentDataByName: Map<ArgumentName, InputValueData>,
+    argumentDataByName: Map<ArgumentName, InputValueData> | undefined,
     directivesByName: Map<DirectiveName, ConstDirectiveNode[]>,
-    inheritedDirectiveNames = new Set<DirectiveName>(),
+    inheritedDirectiveNames?: Set<DirectiveName>,
   ): FieldData {
     const name = node.name.value;
     const parentTypeName = this.renamedParentTypeName || this.originalParentTypeName;
     const fieldCoords = `${this.originalParentTypeName}.${name}`;
     const { isExternal, isShareable } = isNodeExternalOrShareable(node, !this.isSubgraphVersionTwo, directivesByName);
     const namedTypeName = getTypeNodeNamedTypeName(node.type);
+    const isBaseScalar = BASE_SCALARS.has(namedTypeName);
     const fieldData: FieldData = {
       argumentDataByName: argumentDataByName,
       configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
@@ -1265,10 +1279,11 @@ export class NormalizationFactory {
       isShareableBySubgraphName: new Map<string, boolean>([[this.subgraphName, isShareable]]),
       kind: Kind.FIELD_DEFINITION,
       name,
-      namedTypeKind: BASE_SCALARS.has(namedTypeName) ? Kind.SCALAR_TYPE_DEFINITION : Kind.NULL,
+      namedTypeKind: isBaseScalar ? Kind.SCALAR_TYPE_DEFINITION : Kind.NULL,
       namedTypeName,
       node: getMutableFieldNode(node, fieldCoords, this.errors),
-      nullLevelsBySubgraphName: new Map<SubgraphName, Set<number>>(),
+      // Lazily allocated upon first write to retain a stable object shape.
+      nullLevelsBySubgraphName: undefined,
       originalParentTypeName: this.originalParentTypeName,
       federatedDirectivesData: newFederatedDirectivesData(),
       renamedParentTypeName: parentTypeName,
@@ -1277,7 +1292,7 @@ export class NormalizationFactory {
       directivesByName: directivesByName,
       description: formatDescription(node.description),
     };
-    if (!BASE_SCALARS.has(fieldData.namedTypeName)) {
+    if (!isBaseScalar) {
       this.referencedTypeNames.add(fieldData.namedTypeName);
     }
     this.extractConfigureDescriptionsData(fieldData);
@@ -1719,8 +1734,20 @@ export class NormalizationFactory {
       if (rawFieldSet === undefined) {
         continue;
       }
-      const { error, documentNode } = safeParse('{' + rawFieldSet + '}');
+      const cachedEntry = this.fieldSetCacheByRawFieldSet.get(rawFieldSet);
+      if (cachedEntry?.error) {
+        this.errors.push(
+          invalidDirectiveError(KEY, parentTypeName, numberToOrdinal(keyNumber), [
+            unparsableFieldSetErrorMessage(rawFieldSet, cachedEntry.error),
+          ]),
+        );
+        continue;
+      }
+      const { error, documentNode } = safeParseFieldSet(rawFieldSet);
       if (error || !documentNode) {
+        if (error) {
+          this.fieldSetCacheByRawFieldSet.set(rawFieldSet, { error });
+        }
         this.errors.push(
           invalidDirectiveError(KEY, parentTypeName, numberToOrdinal(keyNumber), [
             unparsableFieldSetErrorMessage(rawFieldSet, error),
@@ -1728,7 +1755,17 @@ export class NormalizationFactory {
         );
         continue;
       }
-      const normalizedFieldSet = getNormalizedFieldSet(documentNode);
+      let normalizedFieldSet: string;
+      if (cachedEntry?.normalizedFieldSet === undefined) {
+        normalizedFieldSet = getNormalizedFieldSet(documentNode);
+        this.fieldSetCacheByRawFieldSet.set(rawFieldSet, { normalizedFieldSet });
+      } else {
+        /* The documentNode is stored and later visited by key field set validations that expect the lexicographically
+         * sorted order that getNormalizedFieldSet otherwise produces, so the fresh parse must still be sorted in
+         * place. */
+        lexicographicallySortDocumentNode(documentNode);
+        normalizedFieldSet = cachedEntry.normalizedFieldSet;
+      }
       const keyFieldSetData = keyFieldSetDataByFieldSet.get(normalizedFieldSet);
       if (keyFieldSetData) {
         // Duplicate keys should potentially be a warning. For now, simply propagate if it's resolvable.
@@ -1826,9 +1863,17 @@ export class NormalizationFactory {
     isProvides: boolean,
     directiveParentTypeName: string,
   ): ConditionalFieldSetValidationResult {
-    // Create a new selection set so that the value can be parsed as a new DocumentNode
-    const { error, documentNode } = safeParse('{' + fieldSet + '}');
+    const cachedEntry = this.fieldSetCacheByRawFieldSet.get(fieldSet);
+    if (cachedEntry?.error) {
+      return { errorMessages: [unparsableFieldSetErrorMessage(fieldSet, cachedEntry.error)] };
+    }
+    /* Create a new selection set so that the value can be parsed as a new DocumentNode.
+     * A fresh parse is always required because the visitation below depends on the raw document order. */
+    const { error, documentNode } = safeParseFieldSet(fieldSet);
     if (error || !documentNode) {
+      if (error) {
+        this.fieldSetCacheByRawFieldSet.set(fieldSet, { error });
+      }
       return { errorMessages: [unparsableFieldSetErrorMessage(fieldSet, error)] };
     }
     const nf = this;
@@ -1844,312 +1889,302 @@ export class NormalizationFactory {
     let shouldDefineSelectionSet = true;
     let lastFieldName = directiveFieldName;
     let hasConditionalField = false;
-    visit(documentNode, {
-      Argument: {
-        enter() {
-          return false;
-        },
+    walkFieldSetDocument(documentNode, {
+      argumentEnter() {
+        return false;
       },
-      Field: {
-        enter(node) {
-          const parentData = parentDatas[currentDepth];
-          const parentTypeName = parentData.name;
-          if (parentData.kind === Kind.UNION_TYPE_DEFINITION) {
-            errorMessages.push(invalidSelectionOnUnionErrorMessage(fieldSet, fieldCoordsPath, parentTypeName));
+      fieldEnter(node) {
+        const parentData = parentDatas[currentDepth];
+        const parentTypeName = parentData.name;
+        if (parentData.kind === Kind.UNION_TYPE_DEFINITION) {
+          errorMessages.push(invalidSelectionOnUnionErrorMessage(fieldSet, fieldCoordsPath, parentTypeName));
+          return BREAK;
+        }
+        const fieldName = node.name.value;
+        const currentFieldCoords = `${parentTypeName}.${fieldName}`;
+        nf.unvalidatedExternalFieldCoords.delete(currentFieldCoords);
+        // If an object-like was just visited, a selection set should have been entered
+        if (shouldDefineSelectionSet) {
+          errorMessages.push(
+            invalidSelectionSetErrorMessage(fieldSet, fieldCoordsPath, parentTypeName, kindToNodeType(parentData.kind)),
+          );
+          return BREAK;
+        }
+        fieldCoordsPath.push(currentFieldCoords);
+        fieldPath.push(fieldName);
+        lastFieldName = fieldName;
+        if (fieldName === TYPENAME) {
+          if (isProvides) {
+            errorMessages.push(typeNameAlreadyProvidedErrorMessage(currentFieldCoords, nf.subgraphName));
             return BREAK;
           }
-          const fieldName = node.name.value;
-          const currentFieldCoords = `${parentTypeName}.${fieldName}`;
-          nf.unvalidatedExternalFieldCoords.delete(currentFieldCoords);
-          // If an object-like was just visited, a selection set should have been entered
-          if (shouldDefineSelectionSet) {
-            errorMessages.push(
-              invalidSelectionSetErrorMessage(
-                fieldSet,
-                fieldCoordsPath,
-                parentTypeName,
-                kindToNodeType(parentData.kind),
-              ),
-            );
-            return BREAK;
+          if (externalAncestors.size < 1) {
+            nf.#handleNonExternalConditionalField({
+              currentFieldCoords,
+              directiveCoords,
+              directiveName,
+              fieldSet,
+            });
           }
-          fieldCoordsPath.push(currentFieldCoords);
-          fieldPath.push(fieldName);
-          lastFieldName = fieldName;
-          if (fieldName === TYPENAME) {
-            if (isProvides) {
-              errorMessages.push(typeNameAlreadyProvidedErrorMessage(currentFieldCoords, nf.subgraphName));
-              return BREAK;
-            }
-            if (externalAncestors.size < 1) {
-              nf.#handleNonExternalConditionalField({
-                currentFieldCoords,
-                directiveCoords,
-                directiveName,
-                fieldSet,
-              });
+          return;
+        }
+        const fieldData = parentData.fieldDataByName.get(fieldName);
+        // undefined if the field does not exist on the parent
+        if (!fieldData) {
+          errorMessages.push(undefinedFieldInFieldSetErrorMessage(fieldSet, parentTypeName, fieldName));
+          return BREAK;
+        }
+        if (definedFields[currentDepth].has(fieldName)) {
+          errorMessages.push(duplicateFieldInFieldSetErrorMessage(fieldSet, currentFieldCoords));
+          return BREAK;
+        }
+        definedFields[currentDepth].add(fieldName);
+        const { isDefinedExternal, isUnconditionallyProvided } = getOrThrowError(
+          fieldData.externalFieldDataBySubgraphName,
+          nf.subgraphName,
+          `${currentFieldCoords}.externalFieldDataBySubgraphName`,
+        );
+        const isFieldConditional = isDefinedExternal && !isUnconditionallyProvided;
+        if (!isUnconditionallyProvided) {
+          hasConditionalField = true;
+        }
+        const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+        // The child could itself be a parent
+        const namedTypeData = nf.parentDefinitionDataByTypeName.get(namedTypeName);
+        // The base scalars are not in the parents map
+        if (
+          BASE_SCALARS.has(namedTypeName) ||
+          namedTypeData?.kind === Kind.SCALAR_TYPE_DEFINITION ||
+          namedTypeData?.kind === Kind.ENUM_TYPE_DEFINITION
+        ) {
+          if (externalAncestors.size < 1 && !isDefinedExternal) {
+            nf.#handleNonExternalConditionalField({
+              currentFieldCoords,
+              directiveCoords,
+              directiveName,
+              fieldSet,
+            });
+            return;
+          }
+          if (externalAncestors.size < 1 && isUnconditionallyProvided) {
+            // V2 subgraphs return an error when an external key field on an entity extension is provided.
+            if (nf.isSubgraphVersionTwo) {
+              errorMessages.push(fieldAlreadyProvidedErrorMessage(currentFieldCoords, nf.subgraphName, directiveName));
+            } else {
+              nf.warnings.push(
+                fieldAlreadyProvidedWarning(currentFieldCoords, directiveName, directiveCoords, nf.subgraphName),
+              );
             }
             return;
           }
-          const fieldData = parentData.fieldDataByName.get(fieldName);
-          // undefined if the field does not exist on the parent
-          if (!fieldData) {
-            errorMessages.push(undefinedFieldInFieldSetErrorMessage(fieldSet, parentTypeName, fieldName));
-            return BREAK;
+          // @TODO re-assess in v2 because this would be breaking for @provides in v1
+          if (!isFieldConditional && !isProvides) {
+            // Do not add unnecessary @requires configurations
+            return;
           }
-          if (definedFields[currentDepth].has(fieldName)) {
-            errorMessages.push(duplicateFieldInFieldSetErrorMessage(fieldSet, currentFieldCoords));
-            return BREAK;
-          }
-          definedFields[currentDepth].add(fieldName);
-          const { isDefinedExternal, isUnconditionallyProvided } = getOrThrowError(
-            fieldData.externalFieldDataBySubgraphName,
-            nf.subgraphName,
-            `${currentFieldCoords}.externalFieldDataBySubgraphName`,
+          const conditionalFieldData = getValueOrDefault(
+            nf.conditionalFieldDataByCoords,
+            currentFieldCoords,
+            newConditionalFieldData,
           );
-          const isFieldConditional = isDefinedExternal && !isUnconditionallyProvided;
-          if (!isUnconditionallyProvided) {
-            hasConditionalField = true;
-          }
-          const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-          // The child could itself be a parent
-          const namedTypeData = nf.parentDefinitionDataByTypeName.get(namedTypeName);
-          // The base scalars are not in the parents map
-          if (
-            BASE_SCALARS.has(namedTypeName) ||
-            namedTypeData?.kind === Kind.SCALAR_TYPE_DEFINITION ||
-            namedTypeData?.kind === Kind.ENUM_TYPE_DEFINITION
-          ) {
-            if (externalAncestors.size < 1 && !isDefinedExternal) {
-              nf.#handleNonExternalConditionalField({
-                currentFieldCoords,
-                directiveCoords,
-                directiveName,
-                fieldSet,
-              });
-              return;
-            }
-            if (externalAncestors.size < 1 && isUnconditionallyProvided) {
-              // V2 subgraphs return an error when an external key field on an entity extension is provided.
-              if (nf.isSubgraphVersionTwo) {
-                errorMessages.push(
-                  fieldAlreadyProvidedErrorMessage(currentFieldCoords, nf.subgraphName, directiveName),
-                );
-              } else {
-                nf.warnings.push(
-                  fieldAlreadyProvidedWarning(currentFieldCoords, directiveName, directiveCoords, nf.subgraphName),
-                );
-              }
-              return;
-            }
-            // @TODO re-assess in v2 because this would be breaking for @provides in v1
-            if (!isFieldConditional && !isProvides) {
-              // Do not add unnecessary @requires configurations
-              return;
-            }
-            const conditionalFieldData = getValueOrDefault(
+          const fieldSetCondition = newFieldSetConditionData({
+            fieldCoordinatesPath: [...fieldCoordsPath],
+            fieldPath: [...fieldPath],
+          });
+          isProvides
+            ? conditionalFieldData.providedBy.push(fieldSetCondition)
+            : conditionalFieldData.requiredBy.push(fieldSetCondition);
+          return;
+        }
+        if (!namedTypeData) {
+          // Should not be possible to receive this error
+          errorMessages.push(unknownTypeInFieldSetErrorMessage(fieldSet, currentFieldCoords, namedTypeName));
+          return BREAK;
+        }
+        // TODO isFieldConditional
+        if (isDefinedExternal) {
+          if (isProvides) {
+            getValueOrDefault(
               nf.conditionalFieldDataByCoords,
               currentFieldCoords,
               newConditionalFieldData,
+            ).providedBy.push(
+              newFieldSetConditionData({
+                fieldCoordinatesPath: [...fieldCoordsPath],
+                fieldPath: [...fieldPath],
+              }),
             );
-            const fieldSetCondition = newFieldSetConditionData({
-              fieldCoordinatesPath: [...fieldCoordsPath],
-              fieldPath: [...fieldPath],
-            });
-            isProvides
-              ? conditionalFieldData.providedBy.push(fieldSetCondition)
-              : conditionalFieldData.requiredBy.push(fieldSetCondition);
-            return;
           }
-          if (!namedTypeData) {
-            // Should not be possible to receive this error
-            errorMessages.push(unknownTypeInFieldSetErrorMessage(fieldSet, currentFieldCoords, namedTypeName));
-            return BREAK;
-          }
-          // TODO isFieldConditional
-          if (isDefinedExternal) {
-            if (isProvides) {
-              getValueOrDefault(
-                nf.conditionalFieldDataByCoords,
-                currentFieldCoords,
-                newConditionalFieldData,
-              ).providedBy.push(
-                newFieldSetConditionData({
-                  fieldCoordinatesPath: [...fieldCoordsPath],
-                  fieldPath: [...fieldPath],
-                }),
-              );
-            }
-            externalAncestors.add(currentFieldCoords);
-          }
-          if (
-            namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION ||
-            namedTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION ||
-            namedTypeData.kind === Kind.UNION_TYPE_DEFINITION
-          ) {
-            shouldDefineSelectionSet = true;
-            parentDatas.push(namedTypeData);
-            return;
-          }
-        },
-        leave() {
-          externalAncestors.delete(fieldCoordsPath.pop() || '');
-          fieldPath.pop();
-        },
+          externalAncestors.add(currentFieldCoords);
+        }
+        if (
+          namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION ||
+          namedTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION ||
+          namedTypeData.kind === Kind.UNION_TYPE_DEFINITION
+        ) {
+          shouldDefineSelectionSet = true;
+          parentDatas.push(namedTypeData);
+          return;
+        }
       },
-      InlineFragment: {
-        enter(node) {
-          const parentData = parentDatas[currentDepth];
-          const parentTypeName = parentData.name;
-          const fieldCoordinates =
-            fieldCoordsPath.length < 1 ? selectionSetParentData.name : fieldCoordsPath[fieldCoordsPath.length - 1];
-          if (!node.typeCondition) {
-            errorMessages.push(inlineFragmentWithoutTypeConditionErrorMessage(fieldSet, fieldCoordinates));
-            return BREAK;
-          }
-          const typeConditionName = node.typeCondition.name.value;
-          // It's possible to infinitely define fragments
-          if (typeConditionName === parentTypeName) {
-            parentDatas.push(parentData);
-            shouldDefineSelectionSet = true;
+      fieldLeave() {
+        externalAncestors.delete(fieldCoordsPath.pop() || '');
+        fieldPath.pop();
+      },
+      inlineFragmentEnter(node) {
+        const parentData = parentDatas[currentDepth];
+        const parentTypeName = parentData.name;
+        const fieldCoordinates =
+          fieldCoordsPath.length < 1 ? selectionSetParentData.name : fieldCoordsPath[fieldCoordsPath.length - 1];
+        if (!node.typeCondition) {
+          errorMessages.push(inlineFragmentWithoutTypeConditionErrorMessage(fieldSet, fieldCoordinates));
+          return BREAK;
+        }
+        const typeConditionName = node.typeCondition.name.value;
+        // It's possible to infinitely define fragments
+        if (typeConditionName === parentTypeName) {
+          parentDatas.push(parentData);
+          shouldDefineSelectionSet = true;
+          return;
+        }
+        if (!isKindAbstract(parentData.kind)) {
+          errorMessages.push(
+            invalidInlineFragmentTypeErrorMessage(fieldSet, fieldCoordsPath, typeConditionName, parentTypeName),
+          );
+          return BREAK;
+        }
+        const fragmentNamedTypeData = nf.parentDefinitionDataByTypeName.get(typeConditionName);
+        if (!fragmentNamedTypeData) {
+          errorMessages.push(
+            unknownInlineFragmentTypeConditionErrorMessage(
+              fieldSet,
+              fieldCoordsPath,
+              parentTypeName,
+              typeConditionName,
+            ),
+          );
+          return BREAK;
+        }
+        shouldDefineSelectionSet = true;
+        switch (fragmentNamedTypeData.kind) {
+          case Kind.INTERFACE_TYPE_DEFINITION: {
+            if (!fragmentNamedTypeData.implementedInterfaceTypeNames.has(parentTypeName)) {
+              break;
+            }
+            parentDatas.push(fragmentNamedTypeData);
             return;
           }
-          if (!isKindAbstract(parentData.kind)) {
-            errorMessages.push(
-              invalidInlineFragmentTypeErrorMessage(fieldSet, fieldCoordsPath, typeConditionName, parentTypeName),
-            );
-            return BREAK;
+          case Kind.OBJECT_TYPE_DEFINITION: {
+            const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
+            if (!concreteTypeNames || !concreteTypeNames.has(typeConditionName)) {
+              break;
+            }
+            parentDatas.push(fragmentNamedTypeData);
+            return;
           }
-          const fragmentNamedTypeData = nf.parentDefinitionDataByTypeName.get(typeConditionName);
-          if (!fragmentNamedTypeData) {
+          case Kind.UNION_TYPE_DEFINITION: {
+            parentDatas.push(fragmentNamedTypeData);
+            return;
+          }
+          default: {
             errorMessages.push(
-              unknownInlineFragmentTypeConditionErrorMessage(
+              invalidInlineFragmentTypeConditionTypeErrorMessage(
                 fieldSet,
                 fieldCoordsPath,
                 parentTypeName,
                 typeConditionName,
+                kindToNodeType(fragmentNamedTypeData.kind),
               ),
             );
             return BREAK;
           }
-          shouldDefineSelectionSet = true;
-          switch (fragmentNamedTypeData.kind) {
-            case Kind.INTERFACE_TYPE_DEFINITION: {
-              if (!fragmentNamedTypeData.implementedInterfaceTypeNames.has(parentTypeName)) {
-                break;
-              }
-              parentDatas.push(fragmentNamedTypeData);
-              return;
-            }
-            case Kind.OBJECT_TYPE_DEFINITION: {
-              const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
-              if (!concreteTypeNames || !concreteTypeNames.has(typeConditionName)) {
-                break;
-              }
-              parentDatas.push(fragmentNamedTypeData);
-              return;
-            }
-            case Kind.UNION_TYPE_DEFINITION: {
-              parentDatas.push(fragmentNamedTypeData);
-              return;
-            }
-            default: {
-              errorMessages.push(
-                invalidInlineFragmentTypeConditionTypeErrorMessage(
-                  fieldSet,
-                  fieldCoordsPath,
-                  parentTypeName,
-                  typeConditionName,
-                  kindToNodeType(fragmentNamedTypeData.kind),
-                ),
-              );
-              return BREAK;
-            }
-          }
-          errorMessages.push(
-            invalidInlineFragmentTypeConditionErrorMessage(
-              fieldSet,
-              fieldCoordsPath,
-              typeConditionName,
-              kindToNodeType(parentData.kind),
-              parentTypeName,
-            ),
-          );
-          return BREAK;
-        },
+        }
+        errorMessages.push(
+          invalidInlineFragmentTypeConditionErrorMessage(
+            fieldSet,
+            fieldCoordsPath,
+            typeConditionName,
+            kindToNodeType(parentData.kind),
+            parentTypeName,
+          ),
+        );
+        return BREAK;
       },
-      SelectionSet: {
-        enter() {
-          if (!shouldDefineSelectionSet) {
-            const parentData = parentDatas[currentDepth];
-            if (parentData.kind === Kind.UNION_TYPE_DEFINITION) {
-              // Should never happen
-              errorMessages.push(unparsableFieldSetSelectionErrorMessage(fieldSet, lastFieldName));
-              return BREAK;
-            }
-            if (lastFieldName === TYPENAME) {
-              errorMessages.push(
-                invalidSelectionSetDefinitionErrorMessage(
-                  fieldSet,
-                  fieldCoordsPath,
-                  STRING_SCALAR,
-                  kindToNodeType(Kind.SCALAR_TYPE_DEFINITION),
-                ),
-              );
-              return BREAK;
-            }
-            const fieldData = parentData.fieldDataByName.get(lastFieldName);
-            if (!fieldData) {
-              errorMessages.push(undefinedFieldInFieldSetErrorMessage(fieldSet, parentData.name, lastFieldName));
-              return BREAK;
-            }
-            const fieldNamedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-            // If the child is not found, it's a base scalar. Undefined types would have already been handled.
-            const namedTypeData = nf.parentDefinitionDataByTypeName.get(fieldNamedTypeName);
-            const childKind = namedTypeData ? namedTypeData.kind : Kind.SCALAR_TYPE_DEFINITION;
+      selectionSetEnter() {
+        if (!shouldDefineSelectionSet) {
+          const parentData = parentDatas[currentDepth];
+          if (parentData.kind === Kind.UNION_TYPE_DEFINITION) {
+            // Should never happen
+            errorMessages.push(unparsableFieldSetSelectionErrorMessage(fieldSet, lastFieldName));
+            return BREAK;
+          }
+          if (lastFieldName === TYPENAME) {
             errorMessages.push(
               invalidSelectionSetDefinitionErrorMessage(
                 fieldSet,
                 fieldCoordsPath,
-                fieldNamedTypeName,
-                kindToNodeType(childKind),
+                STRING_SCALAR,
+                kindToNodeType(Kind.SCALAR_TYPE_DEFINITION),
               ),
             );
             return BREAK;
           }
-          currentDepth += 1;
+          const fieldData = parentData.fieldDataByName.get(lastFieldName);
+          if (!fieldData) {
+            errorMessages.push(undefinedFieldInFieldSetErrorMessage(fieldSet, parentData.name, lastFieldName));
+            return BREAK;
+          }
+          const fieldNamedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+          // If the child is not found, it's a base scalar. Undefined types would have already been handled.
+          const namedTypeData = nf.parentDefinitionDataByTypeName.get(fieldNamedTypeName);
+          const childKind = namedTypeData ? namedTypeData.kind : Kind.SCALAR_TYPE_DEFINITION;
+          errorMessages.push(
+            invalidSelectionSetDefinitionErrorMessage(
+              fieldSet,
+              fieldCoordsPath,
+              fieldNamedTypeName,
+              kindToNodeType(childKind),
+            ),
+          );
+          return BREAK;
+        }
+        currentDepth += 1;
+        shouldDefineSelectionSet = false;
+        if (currentDepth < 0 || currentDepth >= parentDatas.length) {
+          errorMessages.push(unparsableFieldSetSelectionErrorMessage(fieldSet, lastFieldName));
+          return BREAK;
+        }
+        definedFields.push(new Set<string>());
+      },
+      selectionSetLeave() {
+        if (shouldDefineSelectionSet) {
+          const parentData = parentDatas[currentDepth + 1];
+          errorMessages.push(
+            invalidSelectionSetErrorMessage(
+              fieldSet,
+              fieldCoordsPath,
+              parentData.name,
+              kindToNodeType(parentData.kind),
+            ),
+          );
           shouldDefineSelectionSet = false;
-          if (currentDepth < 0 || currentDepth >= parentDatas.length) {
-            errorMessages.push(unparsableFieldSetSelectionErrorMessage(fieldSet, lastFieldName));
-            return BREAK;
-          }
-          definedFields.push(new Set<string>());
-        },
-        leave() {
-          if (shouldDefineSelectionSet) {
-            const parentData = parentDatas[currentDepth + 1];
-            errorMessages.push(
-              invalidSelectionSetErrorMessage(
-                fieldSet,
-                fieldCoordsPath,
-                parentData.name,
-                kindToNodeType(parentData.kind),
-              ),
-            );
-            shouldDefineSelectionSet = false;
-          }
-          // Empty selection sets would be a parse error, so it is unnecessary to handle them
-          currentDepth -= 1;
-          parentDatas.pop();
-          definedFields.pop();
-        },
+        }
+        // Empty selection sets would be a parse error, so it is unnecessary to handle them
+        currentDepth -= 1;
+        parentDatas.pop();
+        definedFields.pop();
       },
     });
     if (errorMessages.length > 0 || !hasConditionalField) {
       return { errorMessages };
     }
+    let normalizedFieldSet = cachedEntry?.normalizedFieldSet;
+    if (normalizedFieldSet === undefined) {
+      normalizedFieldSet = getNormalizedFieldSet(documentNode);
+      this.fieldSetCacheByRawFieldSet.set(fieldSet, { normalizedFieldSet });
+    }
     return {
-      configuration: { fieldName: directiveFieldName, selectionSet: getNormalizedFieldSet(documentNode) },
+      configuration: { fieldName: directiveFieldName, selectionSet: normalizedFieldSet },
       errorMessages,
     };
   }
@@ -2279,9 +2314,9 @@ export class NormalizationFactory {
           invalidFieldImplementation.implementedResponseType = printTypeNode(fieldData.node.type);
         }
         const handledArguments = new Set<string>();
-        for (const [argumentName, interfaceArgument] of interfaceField.argumentDataByName) {
+        for (const [argumentName, interfaceArgument] of interfaceField.argumentDataByName ?? []) {
           handledArguments.add(argumentName);
-          const containerArgument = fieldData.argumentDataByName.get(argumentName);
+          const containerArgument = fieldData.argumentDataByName?.get(argumentName);
           // The type implementing the interface must include all arguments with no variation for that argument
           if (!containerArgument) {
             hasErrors = true;
@@ -2299,7 +2334,7 @@ export class NormalizationFactory {
           }
         }
         // Additional arguments must be optional (nullable)
-        for (const [argumentName, argumentData] of fieldData.argumentDataByName) {
+        for (const [argumentName, argumentData] of fieldData.argumentDataByName ?? []) {
           if (handledArguments.has(argumentName)) {
             continue;
           }
@@ -2423,7 +2458,7 @@ export class NormalizationFactory {
         }),
       );
     }
-    data.nullLevelsBySubgraphName.set(this.subgraphName, levels);
+    (data.nullLevelsBySubgraphName ??= new Map<SubgraphName, Set<number>>()).set(this.subgraphName, levels);
   }
 
   getOrCreateFieldWeight(typeName: TypeName, fieldName: FieldName): FieldWeightConfiguration {
@@ -2605,7 +2640,7 @@ export class NormalizationFactory {
 
             // First segment should be valid argument name:
             const firstSegment = segments[0];
-            const argData = data.argumentDataByName.get(firstSegment);
+            const argData = data.argumentDataByName?.get(firstSegment);
             if (!argData) {
               errorMessages.push(listSizeInvalidSlicingArgumentErrorMessage(directiveCoords, slicingArgPath));
               continue;
@@ -3414,7 +3449,7 @@ export class NormalizationFactory {
       return false;
     }
     for (const [fieldName, fieldData] of data.fieldDataByName) {
-      if (fieldData.argumentDataByName.size > 0) {
+      if (fieldData.argumentDataByName?.size) {
         return false;
       }
       if (fieldName !== SUCCESS) {
@@ -3827,116 +3862,106 @@ export class NormalizationFactory {
         const externalExtensionFieldCoordsByRawFieldSet = new Map<string, Set<string>>();
         let currentDepth = -1;
         let shouldDefineSelectionSet = true;
-        visit(keyFieldSetData.documentNode, {
-          Argument: {
-            enter() {
+        walkFieldSetDocument(keyFieldSetData.documentNode, {
+          argumentEnter() {
+            return BREAK;
+          },
+          fieldEnter(node) {
+            const parentData = parentDatas[currentDepth];
+            const parentTypeName = parentData.name;
+            // If a composite type was just visited, a selection set should have been entered
+            if (shouldDefineSelectionSet) {
               return BREAK;
-            },
-          },
-          Field: {
-            enter(node) {
-              const parentData = parentDatas[currentDepth];
-              const parentTypeName = parentData.name;
-              // If a composite type was just visited, a selection set should have been entered
-              if (shouldDefineSelectionSet) {
-                return BREAK;
-              }
-              const fieldName = node.name.value;
-              const fieldCoords = `${parentTypeName}.${fieldName}`;
-              // If a field declared @external is a key field, it is valid use of @external.
-              nf.unvalidatedExternalFieldCoords.delete(fieldCoords);
-              const fieldData = parentData.fieldDataByName.get(fieldName);
-              // undefined if the field does not exist on the parent
-              if (!fieldData || fieldData.argumentDataByName.size) {
-                return BREAK;
-              }
-              // Fields that form part of an entity key are intrinsically shareable
-              fieldData.isShareableBySubgraphName.set(nf.subgraphName, true);
-              /* !!! IMPORTANT NOTE REGARDING INCONSISTENT APOLLO BEHAVIOUR !!!
-               * V1 entities with "@extends" may define unique nested key fields as @external without restriction.
-               * However, V1 entity extensions (with the "extend" keyword) cannot do this.
-               * Instead, an error is returned stating that there must be a non-external definition of the field.
-               * This inconsistency in behaviour appears to be a bug.
-               * It doesn't make much sense to enforce "origin fields" only sometimes (or ever, honestly).
-               * Consequently, a decision was made not ever to enforce meaningless origin fields for extensions.
-               *
-               * In the event the nested key field is not unique, the error may propagate as a field resolvability
-               * error, e.g., unable to use the nested @external key field to satisfy a field set in another subgraph.
-               *
-               * In addition, the nested key field of a V2 entity extension (either "@extends" or "extend" keyword)
-               * are considered unconditionally provided regardless of the presence of "@external".
-               *
-               * However, if the subgraph is an EDG, the @external state should be kept regardless of extension.
-               * */
-              const externalFieldData = fieldData.externalFieldDataBySubgraphName.get(nf.subgraphName);
-              if (
-                nf.edfsDirectiveReferences.size < 1 &&
-                externalFieldData &&
-                externalFieldData.isDefinedExternal &&
-                !externalFieldData.isUnconditionallyProvided
-              ) {
-                /*
-                 * The key field is unconditionally provided if all the following are true:
-                 * 1. The root entity is an extension type.
-                 * 2. The field is also a key field for the parent entity.
-                 */
-                if (entityParentData.extensionType !== ExtensionType.NONE) {
-                  externalFieldData.isUnconditionallyProvided = true;
-                  getValueOrDefault(
-                    externalExtensionFieldCoordsByRawFieldSet,
-                    keyFieldSetData.rawFieldSet,
-                    () => new Set<string>(),
-                  ).add(fieldCoords);
-                }
-              }
-              getValueOrDefault(nf.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(
-                fieldName,
-              );
-              const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-              // The base scalars are not in the parents map
-              if (BASE_SCALARS.has(namedTypeName)) {
-                return;
-              }
-              // The child could itself be a parent
-              const namedTypeData = nf.parentDefinitionDataByTypeName.get(namedTypeName);
-              if (!namedTypeData) {
-                return BREAK;
-              }
-              if (namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
-                shouldDefineSelectionSet = true;
-                parentDatas.push(namedTypeData);
-                return;
-              }
-              // interfaces and unions are invalid in a key directive
-              if (isKindAbstract(namedTypeData.kind)) {
-                return BREAK;
-              }
-            },
-          },
-          InlineFragment: {
-            enter() {
+            }
+            const fieldName = node.name.value;
+            const fieldCoords = `${parentTypeName}.${fieldName}`;
+            // If a field declared @external is a key field, it is valid use of @external.
+            nf.unvalidatedExternalFieldCoords.delete(fieldCoords);
+            const fieldData = parentData.fieldDataByName.get(fieldName);
+            // undefined if the field does not exist on the parent
+            if (!fieldData || fieldData.argumentDataByName?.size) {
               return BREAK;
-            },
-          },
-          SelectionSet: {
-            enter() {
-              if (!shouldDefineSelectionSet) {
-                return BREAK;
+            }
+            // Fields that form part of an entity key are intrinsically shareable
+            fieldData.isShareableBySubgraphName.set(nf.subgraphName, true);
+            /* !!! IMPORTANT NOTE REGARDING INCONSISTENT APOLLO BEHAVIOUR !!!
+             * V1 entities with "@extends" may define unique nested key fields as @external without restriction.
+             * However, V1 entity extensions (with the "extend" keyword) cannot do this.
+             * Instead, an error is returned stating that there must be a non-external definition of the field.
+             * This inconsistency in behaviour appears to be a bug.
+             * It doesn't make much sense to enforce "origin fields" only sometimes (or ever, honestly).
+             * Consequently, a decision was made not ever to enforce meaningless origin fields for extensions.
+             *
+             * In the event the nested key field is not unique, the error may propagate as a field resolvability
+             * error, e.g., unable to use the nested @external key field to satisfy a field set in another subgraph.
+             *
+             * In addition, the nested key field of a V2 entity extension (either "@extends" or "extend" keyword)
+             * are considered unconditionally provided regardless of the presence of "@external".
+             *
+             * However, if the subgraph is an EDG, the @external state should be kept regardless of extension.
+             * */
+            const externalFieldData = fieldData.externalFieldDataBySubgraphName.get(nf.subgraphName);
+            if (
+              nf.edfsDirectiveReferences.size < 1 &&
+              externalFieldData &&
+              externalFieldData.isDefinedExternal &&
+              !externalFieldData.isUnconditionallyProvided
+            ) {
+              /*
+               * The key field is unconditionally provided if all the following are true:
+               * 1. The root entity is an extension type.
+               * 2. The field is also a key field for the parent entity.
+               */
+              if (entityParentData.extensionType !== ExtensionType.NONE) {
+                externalFieldData.isUnconditionallyProvided = true;
+                getValueOrDefault(
+                  externalExtensionFieldCoordsByRawFieldSet,
+                  keyFieldSetData.rawFieldSet,
+                  () => new Set<string>(),
+                ).add(fieldCoords);
               }
-              currentDepth += 1;
+            }
+            getValueOrDefault(nf.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(fieldName);
+            const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+            // The base scalars are not in the parents map
+            if (BASE_SCALARS.has(namedTypeName)) {
+              return;
+            }
+            // The child could itself be a parent
+            const namedTypeData = nf.parentDefinitionDataByTypeName.get(namedTypeName);
+            if (!namedTypeData) {
+              return BREAK;
+            }
+            if (namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
+              shouldDefineSelectionSet = true;
+              parentDatas.push(namedTypeData);
+              return;
+            }
+            // interfaces and unions are invalid in a key directive
+            if (isKindAbstract(namedTypeData.kind)) {
+              return BREAK;
+            }
+          },
+          inlineFragmentEnter() {
+            return BREAK;
+          },
+          selectionSetEnter() {
+            if (!shouldDefineSelectionSet) {
+              return BREAK;
+            }
+            currentDepth += 1;
+            shouldDefineSelectionSet = false;
+            if (currentDepth < 0 || currentDepth >= parentDatas.length) {
+              return BREAK;
+            }
+          },
+          selectionSetLeave() {
+            if (shouldDefineSelectionSet) {
               shouldDefineSelectionSet = false;
-              if (currentDepth < 0 || currentDepth >= parentDatas.length) {
-                return BREAK;
-              }
-            },
-            leave() {
-              if (shouldDefineSelectionSet) {
-                shouldDefineSelectionSet = false;
-              }
-              // Empty selection sets would be a parse error, so it is unnecessary to handle them
-              currentDepth -= 1;
-              parentDatas.pop();
-            },
+            }
+            // Empty selection sets would be a parse error, so it is unnecessary to handle them
+            currentDepth -= 1;
+            parentDatas.pop();
           },
         });
         if (externalExtensionFieldCoordsByRawFieldSet.size < 1) {
@@ -4322,6 +4347,8 @@ export class NormalizationFactory {
       kind: Kind.DOCUMENT,
       definitions,
     };
+    let lazySchema: GraphQLSchema | undefined;
+    let lazySubgraphString: string | undefined;
     return {
       authorizationDataByParentTypeName: this.authorizationDataByParentTypeName,
       concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
@@ -4346,10 +4373,18 @@ export class NormalizationFactory {
       originalTypeNameByRenamedTypeName: this.originalTypeNameByRenamedTypeName,
       overriddenFieldNamesByParentTypeNameByTargetSubgraphName: this.overriddenFieldNamesByTypeNameByTargetSubgraphName,
       parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
-      schema: buildASTSchema(newAST, { addInvalidExtensionOrphans: true, assumeValid: true, assumeValidSDL: true }),
+      get schema() {
+        return (lazySchema ??= buildASTSchema(newAST, {
+          addInvalidExtensionOrphans: true,
+          assumeValid: true,
+          assumeValidSDL: true,
+        }));
+      },
       schemaNode: schemaNodeResult.node,
       subgraphAST: newAST,
-      subgraphString: print(newAST),
+      get subgraphString() {
+        return (lazySubgraphString ??= print(newAST));
+      },
       success: true,
       warnings: this.warnings,
     };
