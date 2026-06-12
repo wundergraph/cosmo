@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type triggerHashInputFn func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error
+type triggerHashInputFn func(input []byte, xxh *xxhash.Digest) error
 
 type EventBuilderFn func(data []byte) MutableStreamEvent
 
@@ -88,8 +88,8 @@ func (s *PubSubSubscriptionDataSource[C]) SetHooks(hooks Hooks) {
 	s.hooks = hooks
 }
 
-func (s *PubSubSubscriptionDataSource[C]) HashTriggerInput(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
-	return s.triggerHashInput(ctx, input, xxh)
+func (s *PubSubSubscriptionDataSource[C]) HashTriggerInput(input []byte, xxh *xxhash.Digest) error {
+	return s.triggerHashInput(input, xxh)
 }
 
 var _ SubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)

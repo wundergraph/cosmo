@@ -76,7 +76,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 }
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.SubscriptionDataSource, error) {
-	triggerHashInputFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	triggerHashInputFn := func(input []byte, xxh *xxhash.Digest) error {
 		val, _, _, err := jsonparser.Get(input, "subjects")
 		if err != nil {
 			return err
