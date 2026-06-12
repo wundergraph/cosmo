@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/**'
       - '.github/workflows/image-release.yml'
+      - '.github/workflows/cli-binary-release.yaml'
       - '.github/actions/**'
       - 'docs-website/**'
       - 'CLAUDE.md'
