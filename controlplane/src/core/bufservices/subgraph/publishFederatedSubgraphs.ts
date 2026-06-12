@@ -290,11 +290,9 @@ export function publishFederatedSubgraphs(
           try {
             const result = await batchPublishJobDetailsRepo.withNamespaceLock(namespace.id, jobId, async () => {
               await batchPublishJobDetailsRepo.update(jobId, { status: 'processing' });
-              await new Promise((resolve) => setTimeout(resolve, 15_000));
               return runBatchPublish({ ...runBatchPublishParams, shouldRefreshSubgraphs: true });
             });
 
-            await new Promise((resolve) => setTimeout(resolve, 15_000));
             await batchPublishJobDetailsRepo.update(jobId, {
               status: 'completed',
               compositionResult: {
