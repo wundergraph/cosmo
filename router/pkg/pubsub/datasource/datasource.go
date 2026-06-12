@@ -10,7 +10,7 @@ import (
 type SubscriptionDataSource interface {
 	SubscriptionEventConfiguration(input []byte) (SubscriptionEventConfiguration, error)
 	Start(ctx *resolve.Context, header http.Header, input []byte, updater resolve.SubscriptionUpdater) error
-	TriggerIDInput(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error
+	HashTriggerInput(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error
 	SetHooks(hooks Hooks)
 }
 

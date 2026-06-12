@@ -88,7 +88,7 @@ func (s *PubSubSubscriptionDataSource[C]) SetHooks(hooks Hooks) {
 	s.hooks = hooks
 }
 
-func (s *PubSubSubscriptionDataSource[C]) TriggerIDInput(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+func (s *PubSubSubscriptionDataSource[C]) HashTriggerInput(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
 	return s.triggerHashInput(ctx, input, xxh)
 }
 
