@@ -62,7 +62,7 @@ async function runDelete({
   const program = new Command();
   program.exitOverride();
   program.addCommand(DeleteClientsCommand({ client }));
-  await program.parseAsync(['delete', 'mygraph', 'web', ...args], { from: 'user' });
+  await program.parseAsync(['delete', 'web', '--graph-name', 'mygraph', ...args], { from: 'user' });
 }
 
 function getJsonOutput(logSpy: MockInstance<typeof console.log>) {

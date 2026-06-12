@@ -159,18 +159,21 @@ const deleteClient = async (
 export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
   command.description('Deletes a registered GraphQL client');
+  command.requiredOption(
+    '-g, --graph-name <graphName>',
+    'The name of the federated graph or monograph the client belongs to.',
+  );
   command.option('-n, --namespace <string>', 'The namespace of the federated graph or monograph.', 'default');
   command.option('-j, --json', 'Prints to the console in json format instead of text');
   command.option(
     '-f, --force',
     'Deletes the client without confirmation. Required with --json if operations would be deleted or have traffic.',
   );
-  command.argument('<graph-name>', 'The name of the federated graph or monograph.');
   command.argument('<client-name>', 'The name of the registered GraphQL client.');
 
-  command.action(async (graphName, clientName, options) => {
+  command.action(async (clientName, options) => {
     const previewResponseMetadata = await fetchPreviewDeleteClient(opts.client, {
-      fedGraphName: graphName,
+      fedGraphName: options.graphName,
       namespace: options.namespace,
       clientName,
     });
@@ -211,7 +214,7 @@ export default (opts: BaseCommandOptions) => {
 
     if ((previewResp.persistedOperationsCount > 0 || previewResp.hasTraffic) && !options.force) {
       const studioUrlObj = new URL(
-        `${previewResp.organizationSlug}/${options.namespace}/graph/${graphName}/operations`,
+        `${previewResp.organizationSlug}/${options.namespace}/graph/${options.graphName}/operations`,
         config.webURL,
       );
       studioUrlObj.searchParams.set('clientNames', previewResp.client?.name ?? '');
@@ -249,7 +252,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     const deleteClientResponseMetadata = await deleteClient(opts.client, {
-      fedGraphName: graphName,
+      fedGraphName: options.graphName,
       namespace: options.namespace,
       clientName,
     });

@@ -7,7 +7,7 @@ icon: trash
 ## Usage
 
 ```bash
-npx wgc clients delete <graph-name> <client-name>
+npx wgc clients delete <client-name> --graph-name <graph-name>
 ```
 
 ## Description
@@ -20,11 +20,11 @@ Use `--force` to skip confirmation. Use `--json` to print structured JSON output
 
 ## Parameters
 
-- `<graph-name>`: The name of the federated graph or monograph.
-
 - `<client-name>`: The name of the registered GraphQL client.
 
 ## Options
+
+- `-g, --graph-name <string>` : The name of the federated graph or monograph the client belongs to. Required.
 
 - `-n, --namespace <string>` : The namespace of the federated graph or monograph. Defaults to `default`.
 
@@ -35,19 +35,19 @@ Use `--force` to skip confirmation. Use `--json` to print structured JSON output
 ## Examples
 
 ```bash
-npx wgc clients delete production web
+npx wgc clients delete web --graph-name production
 ```
 
 Deletes the client named `web` from the graph named `production`.
 
 ```bash
-npx wgc clients delete production web --namespace staging --force
+npx wgc clients delete web --graph-name production --namespace staging --force
 ```
 
 Deletes the client named `web` from the graph named `production` in the `staging` namespace without prompting.
 
 ```bash
-npx wgc clients delete production web --json --force
+npx wgc clients delete web --graph-name production --json --force
 ```
 
 Deletes the client named `web` and prints JSON output.
