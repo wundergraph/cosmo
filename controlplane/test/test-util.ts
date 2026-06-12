@@ -518,11 +518,16 @@ export const addKeycloakUser = async ({
       break;
     } catch (e: any) {
       if (e.response?.status === 409) {
-        const res = await keycloakClient.client.users.find({
+        const existingUser = await keycloakClient.findUserByEmail({
           realm: realmName,
           email: userTestData.email,
         });
-        id = res[0].id!;
+        if (!existingUser?.id) {
+          throw new Error(
+            `Keycloak reported a duplicate user for ${userTestData.email}, but no exact match was readable yet`,
+          );
+        }
+        id = existingUser.id;
         break;
       }
 
