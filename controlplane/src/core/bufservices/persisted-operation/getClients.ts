@@ -1,3 +1,4 @@
+import { subDays } from 'date-fns';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -50,7 +51,7 @@ export function getClients(
       });
       const limit = changeRetention?.limit ?? defaultRetentionLimitInDays;
       const [start, end] = getDateRange({
-        start: Date.now() - limit * 24 * 60 * 60 * 1000,
+        start: subDays(Date.now(), limit).getTime(),
         end: Date.now(),
       });
 
