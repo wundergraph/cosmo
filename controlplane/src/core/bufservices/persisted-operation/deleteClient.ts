@@ -77,24 +77,6 @@ export function deleteClient(
       }
     }
 
-    if (preview.persistedOperationsCount > 0) {
-      const removedFromBlobStorageMetadata = await removeClientFromBlobStorage(clientDirectory);
-
-      if (!removedFromBlobStorageMetadata.ok) {
-        logger.error(
-          removedFromBlobStorageMetadata.error,
-          `Could not delete operations for client ${req.clientName} at ${clientDirectory}`,
-        );
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Failed to delete client ${req.clientName}`,
-          },
-          deletedOperationsCount: 0,
-        };
-      }
-    }
-
     const deletedClient = await operationsRepo.deleteClient(req.clientName);
 
     if (!deletedClient) {
@@ -105,6 +87,17 @@ export function deleteClient(
         },
         deletedOperationsCount: 0,
       };
+    }
+
+    if (preview.persistedOperationsCount > 0) {
+      const removedFromBlobStorageMetadata = await removeClientFromBlobStorage(clientDirectory);
+
+      if (!removedFromBlobStorageMetadata.ok) {
+        logger.error(
+          removedFromBlobStorageMetadata.error,
+          `Could not delete operations for client ${req.clientName} at ${clientDirectory}`,
+        );
+      }
     }
 
     try {

@@ -791,7 +791,7 @@ describe('Persisted operations', (ctx) => {
       expect(Object.keys(manifest.operations)).toStrictEqual([]);
     });
 
-    test('Should fail deleting a client when blob storage removal fails', async (testContext) => {
+    test('Should delete a client when blob storage removal fails', async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
 
@@ -817,19 +817,15 @@ describe('Persisted operations', (ctx) => {
 
       expect(removeDirectorySpy).toHaveBeenCalledTimes(1);
       expect(deleteResp.response).toMatchObject({
-        code: EnumStatusCode.ERR,
+        code: EnumStatusCode.OK,
       });
-      expect(deleteResp.response?.details).toContain('Failed to delete client');
+      expect(deleteResp.deletedOperationsCount).toEqual(1);
 
       const clientsResp = await client.getClients({
         fedGraphName,
         namespace: 'default',
       });
-      expect(clientsResp.clients).toStrictEqual([
-        expect.objectContaining({
-          name: 'curl',
-        }),
-      ]);
+      expect(clientsResp.clients).toStrictEqual([]);
     });
 
     test('Should skip blob storage removal when deleting a client without persisted operations', async (testContext) => {
