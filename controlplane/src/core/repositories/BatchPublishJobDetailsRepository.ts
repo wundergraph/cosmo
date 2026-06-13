@@ -92,7 +92,7 @@ export class BatchPublishJobDetailsRepository {
     return retryWithBackoff(
       () =>
         this.lockAdapter.using(
-          [`batch-publish:${namespaceId}`],
+          [`controlplane:batch-publish:${namespaceId}`],
           15_000,
           {
             retryCount: 0, // We are going to retry with `retryWithBackoff` so the lock should not be retried
