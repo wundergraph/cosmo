@@ -995,6 +995,13 @@
       "when": 1780043447126,
       "tag": "0141_faithful_boomer",
       "breakpoints": true
+    },
+    {
+      "idx": 142,
+      "version": "7",
+      "when": 1781292945239,
+      "tag": "0142_same_chronomancer",
+      "breakpoints": true
     }
   ]
 }

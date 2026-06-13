@@ -48,6 +48,7 @@ import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
 import { DeleteOrganizationAuditLogsQueue } from '../src/core/workers/DeleteOrganizationAuditLogsWorker.js';
 import { retryWithBackoff } from '../src/core/util/timers.js';
+import { DeleteBatchPublishJobDetailsQueue } from '../src/core/workers/DeleteBatchPublishJobDetailsWorker.js';
 import {
   isAlreadyExistsError,
   isRealmNotReadyError,
@@ -152,6 +153,7 @@ export const SetupTest = async function ({
   const deactivateOrganizationQueue = new DeactivateOrganizationQueue(log, server.redisForQueue);
   const deleteUserQueue = new DeleteUserQueue(log, server.redisForQueue);
   const reactivateOrganizationQueue = new ReactivateOrganizationQueue(log, server.redisForQueue);
+  const deleteBatchPublishJobDetailsQueue = new DeleteBatchPublishJobDetailsQueue(log, server.redisForQueue);
 
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
@@ -182,7 +184,9 @@ export const SetupTest = async function ({
         deactivateOrganizationQueue,
         reactivateOrganizationQueue,
         deleteUserQueue,
+        deleteBatchPublishJobDetailsQueue,
       },
+      lockAdapter: server.lockAdapter,
     }),
   });
 
