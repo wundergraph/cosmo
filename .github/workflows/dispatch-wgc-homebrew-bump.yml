@@ -1,0 +1,55 @@
+name: Dispatch wgc homebrew bump
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  dispatch:
+    name: Dispatch wgc-release if cooldown cleared
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Authenticate to homebrew-cosmo
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: wundergraph
+          repositories: homebrew-cosmo
+          permission-contents: write
+
+      - name: Check cooldown and dispatch
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          latest=$(npm view wgc version)
+          published=$(npm view wgc time --json | jq -r --arg v "$latest" '.[$v]')
+          age_hours=$(( ( $(date +%s) - $(date -d "$published" +%s) ) / 3600 ))
+
+          formula=$(curl -fsSL https://raw.githubusercontent.com/wundergraph/homebrew-cosmo/main/Formula/wgc.rb)
+          tap_version=$(grep -oE 'wgc-[0-9]+\.[0-9]+\.[0-9]+\.tgz' <<< "$formula" | head -n1 | sed -E 's/^wgc-(.*)\.tgz$/\1/')
+
+          echo "latest=$latest tap=$tap_version age_hours=$age_hours"
+
+          if [ "$latest" = "$tap_version" ]; then
+            echo "Tap already on $latest, nothing to do."
+            exit 0
+          fi
+
+          if [ "$age_hours" -le 24 ]; then
+            echo "$latest is only ${age_hours}h old, waiting for the 24h cooldown."
+            exit 0
+          fi
+
+          echo "Dispatching wgc-release for $latest"
+          jq -nc --arg v "$latest" '{event_type:"wgc-release",client_payload:{version:$v}}' \
+            | gh api --method POST repos/wundergraph/homebrew-cosmo/dispatches --input -
