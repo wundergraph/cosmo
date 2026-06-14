@@ -72,14 +72,14 @@ export class CompositionService {
     actorId: string;
     federatedGraph: FederatedGraphDTO;
   }): Promise<ComposeAndDeployResult> {
-    const orgFeatures = await this.#getOrganizationFeatures();
+    const orgFeatures = await this.getOrganizationFeatures();
     const compositionOptions: CompositionOptions = {
       disableResolvabilityValidation: this.disableResolvabilityValidation,
       ignoreExternalKeys: orgFeatures.ignoreExternalKeys,
     };
 
     if (!orgFeatures.splitConfigLoading) {
-      return this.#legacyComposeAndDeploy({
+      return this.legacyComposeAndDeploy({
         actorId,
         federatedGraphs: [federatedGraph],
         compositionOptions,
@@ -132,7 +132,7 @@ export class CompositionService {
       compositionOptions,
     });
 
-    await this.#handleCompositionResultsAndDeploy({
+    await this.handleCompositionResultsAndDeploy({
       actorId,
       graphAndCompositionResults: [{ federatedGraph, results }],
       result,
@@ -153,10 +153,10 @@ export class CompositionService {
     isEnabled?: boolean;
     prevFederatedGraphs?: FederatedGraphDTO[];
   }): Promise<ComposeAndDeployResult> {
-    const orgFeatures = await this.#getOrganizationFeatures();
+    const orgFeatures = await this.getOrganizationFeatures();
     const enabled = isEnabled ?? featureFlag.isEnabled;
     if (!orgFeatures.splitConfigLoading) {
-      return await this.#legacyComposeAndDeployFeatureFlag({
+      return await this.legacyComposeAndDeployFeatureFlag({
         actorId,
         featureFlag,
         enabled,
@@ -189,7 +189,7 @@ export class CompositionService {
         }
       }
 
-      const deleteErrors = await this.#deleteFeatureFlagConfigs(featureFlag, federatedGraphsToDeleteFrom);
+      const deleteErrors = await this.deleteFeatureFlagConfigs(featureFlag, federatedGraphsToDeleteFrom);
       if (deleteErrors.length > 0) {
         result.deploymentErrors.push(...deleteErrors);
         return result;
@@ -204,7 +204,7 @@ export class CompositionService {
     if (!enabled) {
       // The feature flag is disabled; instead of recomposing, we are just going to delete the router configuration
       // from the federated graphs the feature flag is associated with
-      const deleteError = await this.#deleteFeatureFlagConfigs(featureFlag, federatedGraphs);
+      const deleteError = await this.deleteFeatureFlagConfigs(featureFlag, federatedGraphs);
       result.deploymentErrors.push(...deleteError);
       return result;
     }
@@ -265,7 +265,7 @@ export class CompositionService {
       graphAndCompositionResults.push({ federatedGraph: graph, results });
     }
 
-    await this.#handleCompositionResultsAndDeploy({
+    await this.handleCompositionResultsAndDeploy({
       actorId,
       graphAndCompositionResults,
       result,
@@ -285,7 +285,7 @@ export class CompositionService {
     featureFlag: FeatureFlagDTO;
     authorize: (graph: FederatedGraphDTO) => Promise<void>;
   }): Promise<ComposeAndDeployResult> {
-    const orgFeatures = await this.#getOrganizationFeatures();
+    const orgFeatures = await this.getOrganizationFeatures();
     const featureFlagRepo = new FeatureFlagRepository(this.logger, this.db, this.organizationId);
 
     // Collect the federated graph DTOs that have the feature flag enabled because they will be re-composed
@@ -312,7 +312,7 @@ export class CompositionService {
     await featureFlagRepo.delete(featureFlag.id);
 
     if (!orgFeatures.splitConfigLoading) {
-      return await this.#legacyComposeAndDeploy({
+      return await this.legacyComposeAndDeploy({
         actorId,
         federatedGraphs,
         compositionOptions: {
@@ -323,7 +323,7 @@ export class CompositionService {
     }
 
     return {
-      deploymentErrors: await this.#deleteFeatureFlagConfigs(featureFlag, federatedGraphs),
+      deploymentErrors: await this.deleteFeatureFlagConfigs(featureFlag, federatedGraphs),
       compositionErrors: [],
       compositionWarnings: [],
     };
@@ -340,9 +340,9 @@ export class CompositionService {
     affectedFeatureFlags: FeatureFlagDTO[];
     isFeatureSubgraph: boolean;
   }): Promise<ComposeAndDeployResult> {
-    const orgFeatures = await this.#getOrganizationFeatures();
+    const orgFeatures = await this.getOrganizationFeatures();
     if (!orgFeatures.splitConfigLoading) {
-      return await this.#legacyComposeAndDeploy({
+      return await this.legacyComposeAndDeploy({
         actorId,
         federatedGraphs: affectedFederatedGraphs,
         compositionOptions: {
@@ -389,7 +389,7 @@ export class CompositionService {
     return result;
   }
 
-  async #getOrganizationFeatures(): Promise<OrganizationFeatures> {
+  private async getOrganizationFeatures(): Promise<OrganizationFeatures> {
     const orgRepo = new OrganizationRepository(this.logger, this.db);
     const ignoreExternalKeysFeature = await orgRepo.getFeature({
       organizationId: this.organizationId,
@@ -407,7 +407,7 @@ export class CompositionService {
     };
   }
 
-  async #legacyComposeAndDeploy({
+  private async legacyComposeAndDeploy({
     actorId,
     federatedGraphs,
     compositionOptions,
@@ -473,11 +473,11 @@ export class CompositionService {
       graphAndCompositionResults.push({ federatedGraph: graph, results });
     }
 
-    await this.#handleCompositionResultsAndDeploy({ actorId, graphAndCompositionResults, result });
+    await this.handleCompositionResultsAndDeploy({ actorId, graphAndCompositionResults, result });
     return result;
   }
 
-  async #legacyComposeAndDeployFeatureFlag({
+  private async legacyComposeAndDeployFeatureFlag({
     actorId,
     featureFlag,
     enabled,
@@ -506,7 +506,7 @@ export class CompositionService {
       }
     }
 
-    return await this.#legacyComposeAndDeploy({
+    return await this.legacyComposeAndDeploy({
       actorId,
       federatedGraphs: allFederatedGraphsToCompose,
       compositionOptions: {
@@ -516,11 +516,11 @@ export class CompositionService {
     });
   }
 
-  #getManifestBasePath(federatedGraphId: string): string {
+  private getManifestBasePath(federatedGraphId: string): string {
     return `${this.organizationId}/${federatedGraphId}/manifest`;
   }
 
-  #getLatestPath(graph: FederatedGraphDTO): string | undefined {
+  private getLatestPath(graph: FederatedGraphDTO): string | undefined {
     let versionPath = '';
     if (graph.routerCompatibilityVersion !== ROUTER_COMPATIBILITY_VERSION_ONE) {
       if (ROUTER_COMPATIBILITY_VERSIONS.has(graph.routerCompatibilityVersion as SupportedRouterCompatibilityVersion)) {
@@ -533,7 +533,7 @@ export class CompositionService {
     return `${versionPath}latest.json`;
   }
 
-  async #updateMapperForFederatedGraph(federatedGraphId: string): Promise<void> {
+  private async updateMapperForFederatedGraph(federatedGraphId: string): Promise<void> {
     const routerHashesForGraph = await this.db
       .select({
         id: schema.routerConfigHash.id,
@@ -564,7 +564,7 @@ export class CompositionService {
 
     // Upload the mapper file to the CDN
     await this.blobStorage.putObject({
-      key: `${this.#getManifestBasePath(federatedGraphId)}/mapper.json`,
+      key: `${this.getManifestBasePath(federatedGraphId)}/mapper.json`,
       body: Buffer.from(mapperContent, 'utf8'),
       contentType: 'application/json; charset=utf-8',
       metadata: {
@@ -574,7 +574,7 @@ export class CompositionService {
     });
   }
 
-  async #deleteFeatureFlagConfigs(
+  private async deleteFeatureFlagConfigs(
     featureFlag: FeatureFlagDTO,
     federatedGraphs: FederatedGraphDTO[],
   ): Promise<PlainMessage<DeploymentError>[]> {
@@ -602,10 +602,10 @@ export class CompositionService {
       federatedGraphs.map(async (graph) => {
         try {
           await this.blobStorage.deleteObject({
-            key: `${this.#getManifestBasePath(graph.id)}/feature-flags/${featureFlag.name}.json`,
+            key: `${this.getManifestBasePath(graph.id)}/feature-flags/${featureFlag.name}.json`,
           });
 
-          await this.#updateMapperForFederatedGraph(graph.id);
+          await this.updateMapperForFederatedGraph(graph.id);
         } catch (err) {
           if (err instanceof Error) {
             deploymentErrors.push({
@@ -621,7 +621,7 @@ export class CompositionService {
     return deploymentErrors;
   }
 
-  async #handleCompositionResult({
+  private async handleCompositionResult({
     actorId,
     federatedGraph,
     compositionResult,
@@ -740,7 +740,7 @@ export class CompositionService {
     };
   }
 
-  async #handleCompositionResultsAndDeploy({
+  private async handleCompositionResultsAndDeploy({
     actorId,
     graphAndCompositionResults,
     result,
@@ -781,7 +781,7 @@ export class CompositionService {
       const contractBaseCompositionDataByContractId = new Map<string, ContractBaseCompositionData>();
 
       for (const compositionResult of results) {
-        const { baseCompositionFailed } = await this.#handleCompositionResult({
+        const { baseCompositionFailed } = await this.handleCompositionResult({
           actorId,
           federatedGraph,
           compositionResult,
@@ -908,7 +908,7 @@ export class CompositionService {
       }
 
       if (isFeatureFlagComposition) {
-        await this.#deployFeatureFlags(
+        await this.deployFeatureFlags(
           actorId,
           graph,
           baseCompositionData.featureFlagRouterExecutionConfigByFeatureFlagName,
@@ -928,7 +928,7 @@ export class CompositionService {
           );
         }
 
-        await this.#deployGraph({
+        await this.deployGraph({
           actorId,
           routerExecutionConfig: baseCompositionData.routerExecutionConfig,
           graph,
@@ -942,7 +942,7 @@ export class CompositionService {
       }
 
       if (splitConfig) {
-        await this.#updateMapperForFederatedGraph(federatedGraph.id);
+        await this.updateMapperForFederatedGraph(federatedGraph.id);
       }
 
       // Handle contracts
@@ -955,7 +955,7 @@ export class CompositionService {
           throw new Error(`Unexpected: Contract graph with id "${contractId}" not found after latest composition`);
         }
 
-        await this.#deployGraph({
+        await this.deployGraph({
           actorId,
           routerExecutionConfig,
           graph: contractDTO,
@@ -967,13 +967,13 @@ export class CompositionService {
         });
 
         if (splitConfig) {
-          await this.#updateMapperForFederatedGraph(contractDTO.id);
+          await this.updateMapperForFederatedGraph(contractDTO.id);
         }
       }
     }
   }
 
-  async #deployGraph({
+  private async deployGraph({
     actorId,
     routerExecutionConfig,
     graph,
@@ -992,8 +992,8 @@ export class CompositionService {
     result: ComposeAndDeployResult;
     splitConfig: boolean;
   }) {
-    const manifestBasePath = this.#getManifestBasePath(graph.id);
-    const readyPathOverride = this.#getLatestPath(graph);
+    const manifestBasePath = this.getManifestBasePath(graph.id);
+    const readyPathOverride = this.getLatestPath(graph);
     if (readyPathOverride) {
       const { errors: uploadErrors } = await composer.composeAndUploadRouterConfig({
         admissionConfig: {
@@ -1020,7 +1020,7 @@ export class CompositionService {
       });
 
       if (splitConfig) {
-        await this.#saveRouterConfigHash(graph.id, undefined, routerExecutionConfig);
+        await this.saveRouterConfigHash(graph.id, undefined, routerExecutionConfig);
       }
 
       result.deploymentErrors.push(
@@ -1041,7 +1041,7 @@ export class CompositionService {
     }
 
     if (splitConfig && featureFlagRouterExecutionConfigByFeatureFlagName.size > 0) {
-      await this.#deployFeatureFlags(
+      await this.deployFeatureFlags(
         actorId,
         graph,
         featureFlagRouterExecutionConfigByFeatureFlagName,
@@ -1051,14 +1051,14 @@ export class CompositionService {
     }
   }
 
-  async #deployFeatureFlags(
+  private async deployFeatureFlags(
     actorId: string,
     graph: FederatedGraphDTO,
     featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>,
     composer: Composer,
     result: ComposeAndDeployResult,
   ): Promise<void> {
-    const baseManifestPath = this.#getManifestBasePath(graph.id);
+    const baseManifestPath = this.getManifestBasePath(graph.id);
     for (const [
       featureFlagName,
       featureFlagRouterExecutionConfig,
@@ -1088,7 +1088,7 @@ export class CompositionService {
         },
       });
 
-      await this.#saveRouterConfigHash(graph.id, featureFlagName, routerExecutionConfig);
+      await this.saveRouterConfigHash(graph.id, featureFlagName, routerExecutionConfig);
       result.deploymentErrors.push(
         ...uploadErrors
           .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
@@ -1101,7 +1101,7 @@ export class CompositionService {
     }
   }
 
-  async #saveRouterConfigHash(
+  private async saveRouterConfigHash(
     federatedGraphId: string,
     featureFlagName: string | undefined,
     routerConfig: RouterConfig,

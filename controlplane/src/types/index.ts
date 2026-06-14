@@ -569,6 +569,16 @@ export interface ClientDTO {
   lastUpdatedBy: string;
 }
 
+export interface ClientDTOWithOperationMetadata {
+  id: string;
+  name: string;
+  createdAt: string;
+  createdBy: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+  persistedOperationsCount: number;
+}
+
 export interface PersistedOperationWithClientDTO {
   id: string;
   operationId: string;

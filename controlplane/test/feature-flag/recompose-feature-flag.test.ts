@@ -4,16 +4,29 @@ import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.j
 import {
   assertFeatureFlagExecutionConfig,
   assertNumberOfCompositions,
+  createAndPublishSubgraph,
   createFeatureFlag,
+  createFederatedGraph,
+  createThenPublishFeatureSubgraph,
+  DEFAULT_NAMESPACE,
+  DEFAULT_ROUTER_URL,
+  DEFAULT_SUBGRAPH_URL_ONE,
+  DEFAULT_SUBGRAPH_URL_TWO,
   featureFlagIntegrationTestSetUp,
   getDebugTestOptions,
   SetupTest,
 } from '../test-util.js';
+import { Label } from '../../src/types/index.js';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 
 // Change to true to enable a longer timeout
 const isDebugMode = false;
 let dbname = '';
+
+// Base "monolith" lacks `isPending`; the versioned feature subgraph adds it back on republish.
+const usersSDL = `type Query { users: [User!]! } type User @key(fields: "id") { id: ID! email: String! }`;
+const monolithBaseSDL = `type User @key(fields: "id") { id: ID! name: String! }`;
+const monolithFeatureSDL = `type User @key(fields: "id") { id: ID! name: String! isPending: Boolean! }`;
 
 vi.mock('../../src/core/clickhouse/index.js', () => {
   const ClickHouseClient = vi.fn();
@@ -239,6 +252,80 @@ describe('Recompose feature flag tests', () => {
       // The feature flag recomposition
       await assertNumberOfCompositions(client, baseGraphName, 3);
       await assertNumberOfCompositions(client, contractName, 2);
+    },
+  );
+
+  test(
+    'that republishing a feature subgraph with new fields updates the feature flag supergraph',
+    getDebugTestOptions(isDebugMode),
+    async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient, enabledFeatures: ['split-config-loading'] });
+      testContext.onTestFinished(() => server.close());
+
+      const labels: Label[] = [{ key: 'team', value: 'A' }];
+
+      await createAndPublishSubgraph(client, 'users', DEFAULT_NAMESPACE, usersSDL, labels, DEFAULT_SUBGRAPH_URL_ONE);
+      await createAndPublishSubgraph(
+        client,
+        'monolith',
+        DEFAULT_NAMESPACE,
+        monolithBaseSDL,
+        labels,
+        DEFAULT_SUBGRAPH_URL_TWO,
+      );
+      await createThenPublishFeatureSubgraph(
+        client,
+        'users-feature',
+        'users',
+        DEFAULT_NAMESPACE,
+        usersSDL,
+        labels,
+        'http://localhost:4101',
+      );
+      // monolith-feature published v1: WITHOUT `isPending`.
+      await createThenPublishFeatureSubgraph(
+        client,
+        'monolith-feature',
+        'monolith',
+        DEFAULT_NAMESPACE,
+        monolithBaseSDL,
+        labels,
+        'http://localhost:4102',
+      );
+
+      const federatedGraphName = genID('fedGraph');
+      await createFederatedGraph(client, federatedGraphName, DEFAULT_NAMESPACE, ['team=A'], DEFAULT_ROUTER_URL);
+
+      const featureFlagName = genID('flag');
+      await createFeatureFlag(
+        client,
+        featureFlagName,
+        labels,
+        ['users-feature', 'monolith-feature'],
+        DEFAULT_NAMESPACE,
+        true,
+      );
+
+      const featureFlagSdl = () =>
+        client.getFederatedGraphSDLByName({ name: federatedGraphName, namespace: DEFAULT_NAMESPACE, featureFlagName });
+
+      // v1 has no `isPending` as the feature subgraph schema was the same as the base graph schema and the base graph schema had no `isPending`.
+      const sdlV1 = await featureFlagSdl();
+      expect(sdlV1.response?.code).toBe(EnumStatusCode.OK);
+      expect(sdlV1.sdl).not.toContain('isPending');
+
+      // Republish monolith-feature v2: now WITH `isPending`.
+      const republish = await client.publishFederatedSubgraph({
+        name: 'monolith-feature',
+        namespace: DEFAULT_NAMESPACE,
+        schema: monolithFeatureSDL,
+      });
+      expect(republish.response?.code).toBe(EnumStatusCode.OK);
+
+      // The feature flag supergraph must now reflect the republished schema and contain `isPending`.
+      const sdlV2 = await featureFlagSdl();
+      expect(sdlV2.response?.code).toBe(EnumStatusCode.OK);
+      expect(sdlV2.sdl).toContain('isPending');
     },
   );
 });

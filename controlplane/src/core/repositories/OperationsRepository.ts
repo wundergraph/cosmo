@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { OverrideChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { aliasedTable, and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
+import { SQL, aliasedTable, and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { FastifyBaseLogger } from 'fastify';
@@ -11,6 +11,7 @@ import type { BlobStorage } from '../blobstorage/index.js';
 import { createManifestBlobStoragePath } from '../bufservices/persisted-operation/utils.js';
 import {
   ClientDTO,
+  ClientDTOWithOperationMetadata,
   PersistedOperationDTO,
   PersistedOperationWithClientDTO,
   SchemaChangeType,
@@ -295,6 +296,152 @@ export class OperationsRepository {
     }
 
     return clients;
+  }
+
+  public async getRegisteredClientByName(clientName: string): Promise<ClientDTO | undefined> {
+    const client = await this.db.query.federatedGraphClients.findFirst({
+      where: and(
+        eq(federatedGraphClients.federatedGraphId, this.federatedGraphId),
+        eq(federatedGraphClients.name, clientName),
+      ),
+      with: {
+        createdBy: true,
+        updatedBy: true,
+      },
+    });
+
+    if (!client) {
+      return undefined;
+    }
+
+    return {
+      id: client.id,
+      name: client.name,
+      createdAt: client.createdAt.toISOString(),
+      lastUpdatedAt: client.updatedAt?.toISOString() || '',
+      createdBy: client.createdBy?.email ?? '',
+      lastUpdatedBy: client.updatedBy?.email ?? '',
+    };
+  }
+
+  public async previewDeleteClient(clientName: string): Promise<ClientDTOWithOperationMetadata | undefined> {
+    const clients = await this.getRegisteredClientsWithOperationMetadata({ clientName });
+
+    return clients[0];
+  }
+
+  public async getRegisteredClientsWithOperationMetadata(input?: {
+    clientName?: string;
+  }): Promise<ClientDTOWithOperationMetadata[]> {
+    const createdBy = aliasedTable(users, 'created_by');
+    const updatedBy = aliasedTable(users, 'updated_by');
+    const conditions: (SQL<unknown> | undefined)[] = [
+      eq(federatedGraphClients.federatedGraphId, this.federatedGraphId),
+      input?.clientName ? eq(federatedGraphClients.name, input.clientName) : undefined,
+    ];
+
+    const clients = await this.db
+      .select({
+        id: federatedGraphClients.id,
+        name: federatedGraphClients.name,
+        createdAt: federatedGraphClients.createdAt,
+        updatedAt: federatedGraphClients.updatedAt,
+        createdBy: createdBy.email,
+        updatedBy: updatedBy.email,
+        persistedOperationsCount: sql<number>`cast(count(${federatedGraphPersistedOperations.id}) as int)`,
+      })
+      .from(federatedGraphClients)
+      .leftJoin(createdBy, eq(createdBy.id, federatedGraphClients.createdById))
+      .leftJoin(updatedBy, eq(updatedBy.id, federatedGraphClients.updatedById))
+      .leftJoin(
+        federatedGraphPersistedOperations,
+        and(
+          eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+          eq(federatedGraphPersistedOperations.clientId, federatedGraphClients.id),
+        ),
+      )
+      .where(and(...conditions))
+      .groupBy(federatedGraphClients.id, createdBy.email, updatedBy.email)
+      .orderBy(desc(sql`coalesce(${federatedGraphClients.updatedAt}, ${federatedGraphClients.createdAt})`));
+
+    return clients.map((client) => ({
+      id: client.id,
+      name: client.name,
+      createdAt: client.createdAt.toISOString(),
+      lastUpdatedAt: client.updatedAt?.toISOString() || '',
+      createdBy: client.createdBy ?? '',
+      lastUpdatedBy: client.updatedBy ?? '',
+      persistedOperationsCount: client.persistedOperationsCount,
+    }));
+  }
+
+  public deleteClient(clientName: string): Promise<
+    | {
+        client: ClientDTO;
+      }
+    | undefined
+  > {
+    return this.db.transaction(async (tx) => {
+      const client = await tx.query.federatedGraphClients.findFirst({
+        where: and(
+          eq(federatedGraphClients.federatedGraphId, this.federatedGraphId),
+          eq(federatedGraphClients.name, clientName),
+        ),
+        with: {
+          createdBy: true,
+          updatedBy: true,
+        },
+      });
+
+      if (!client) {
+        return undefined;
+      }
+
+      // Lock parent so concurrent persisted-operation INSERTs (which take FOR KEY SHARE on this row) block until commit; otherwise they'd be cascade-deleted but missing from the returned snapshot.
+      const lockedRows = await tx
+        .select({ id: federatedGraphClients.id })
+        .from(federatedGraphClients)
+        .where(
+          and(
+            eq(federatedGraphClients.federatedGraphId, this.federatedGraphId),
+            eq(federatedGraphClients.name, clientName),
+            eq(federatedGraphClients.id, client.id),
+          ),
+        )
+        .for('update');
+
+      if (lockedRows.length === 0) {
+        // Another transaction deleted the client before this transaction acquired the lock.
+        return undefined;
+      }
+
+      // Operations are deleted via cascade when clients are dropped
+      const deletedRows = await tx
+        .delete(federatedGraphClients)
+        .where(
+          and(
+            eq(federatedGraphClients.federatedGraphId, this.federatedGraphId),
+            eq(federatedGraphClients.id, client.id),
+          ),
+        )
+        .returning({ id: federatedGraphClients.id });
+
+      if (deletedRows.length === 0) {
+        // Another transaction deleted the client after the operation snapshot was read.
+        return undefined;
+      }
+
+      return {
+        client: {
+          id: client.id,
+          name: client.name,
+          createdAt: client.createdAt.toISOString(),
+          lastUpdatedAt: client.updatedAt?.toISOString() || '',
+          createdBy: client.createdBy?.email ?? '',
+          lastUpdatedBy: client.updatedBy?.email ?? '',
+        },
+      };
+    });
   }
 
   public createOperationOverrides(data: {

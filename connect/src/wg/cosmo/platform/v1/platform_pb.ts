@@ -17087,6 +17087,16 @@ export class ClientInfo extends Message<ClientInfo> {
    */
   lastUpdatedBy = "";
 
+  /**
+   * @generated from field: optional int32 persistedOperationsCount = 7;
+   */
+  persistedOperationsCount?: number;
+
+  /**
+   * @generated from field: optional bool hasTraffic = 8;
+   */
+  hasTraffic?: boolean;
+
   constructor(data?: PartialMessage<ClientInfo>) {
     super();
     proto3.util.initPartial(data, this);
@@ -17101,6 +17111,8 @@ export class ClientInfo extends Message<ClientInfo> {
     { no: 4, name: "lastUpdatedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "createdBy", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "lastUpdatedBy", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "persistedOperationsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 8, name: "hasTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ClientInfo {
@@ -17134,6 +17146,11 @@ export class GetClientsRequest extends Message<GetClientsRequest> {
    */
   namespace = "";
 
+  /**
+   * @generated from field: bool includeTraffic = 3;
+   */
+  includeTraffic = false;
+
   constructor(data?: PartialMessage<GetClientsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -17144,6 +17161,7 @@ export class GetClientsRequest extends Message<GetClientsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "includeTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetClientsRequest {
@@ -17203,6 +17221,263 @@ export class GetClientsResponse extends Message<GetClientsResponse> {
 
   static equals(a: GetClientsResponse | PlainMessage<GetClientsResponse> | undefined, b: GetClientsResponse | PlainMessage<GetClientsResponse> | undefined): boolean {
     return proto3.util.equals(GetClientsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.PreviewDeleteClientRequest
+ */
+export class PreviewDeleteClientRequest extends Message<PreviewDeleteClientRequest> {
+  /**
+   * @generated from field: string fedGraphName = 1;
+   */
+  fedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string clientName = 3;
+   */
+  clientName = "";
+
+  constructor(data?: PartialMessage<PreviewDeleteClientRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.PreviewDeleteClientRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PreviewDeleteClientRequest {
+    return new PreviewDeleteClientRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PreviewDeleteClientRequest {
+    return new PreviewDeleteClientRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PreviewDeleteClientRequest {
+    return new PreviewDeleteClientRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PreviewDeleteClientRequest | PlainMessage<PreviewDeleteClientRequest> | undefined, b: PreviewDeleteClientRequest | PlainMessage<PreviewDeleteClientRequest> | undefined): boolean {
+    return proto3.util.equals(PreviewDeleteClientRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.PreviewDeleteClientResponse
+ */
+export class PreviewDeleteClientResponse extends Message<PreviewDeleteClientResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.ClientInfo client = 2;
+   */
+  client?: ClientInfo;
+
+  /**
+   * @generated from field: int32 persistedOperationsCount = 3;
+   */
+  persistedOperationsCount = 0;
+
+  /**
+   * @generated from field: bool hasTraffic = 4;
+   */
+  hasTraffic = false;
+
+  /**
+   * @generated from field: string organizationSlug = 5;
+   */
+  organizationSlug = "";
+
+  constructor(data?: PartialMessage<PreviewDeleteClientResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.PreviewDeleteClientResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "client", kind: "message", T: ClientInfo },
+    { no: 3, name: "persistedOperationsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "hasTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "organizationSlug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PreviewDeleteClientResponse {
+    return new PreviewDeleteClientResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PreviewDeleteClientResponse {
+    return new PreviewDeleteClientResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PreviewDeleteClientResponse {
+    return new PreviewDeleteClientResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PreviewDeleteClientResponse | PlainMessage<PreviewDeleteClientResponse> | undefined, b: PreviewDeleteClientResponse | PlainMessage<PreviewDeleteClientResponse> | undefined): boolean {
+    return proto3.util.equals(PreviewDeleteClientResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteClientRequest
+ */
+export class DeleteClientRequest extends Message<DeleteClientRequest> {
+  /**
+   * @generated from field: string fedGraphName = 1;
+   */
+  fedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string clientName = 3;
+   */
+  clientName = "";
+
+  constructor(data?: PartialMessage<DeleteClientRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteClientRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteClientRequest {
+    return new DeleteClientRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteClientRequest {
+    return new DeleteClientRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteClientRequest {
+    return new DeleteClientRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteClientRequest | PlainMessage<DeleteClientRequest> | undefined, b: DeleteClientRequest | PlainMessage<DeleteClientRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteClientRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteClientResponse
+ */
+export class DeleteClientResponse extends Message<DeleteClientResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.ClientInfo client = 2;
+   */
+  client?: ClientInfo;
+
+  /**
+   * @generated from field: int32 deletedOperationsCount = 3;
+   */
+  deletedOperationsCount = 0;
+
+  constructor(data?: PartialMessage<DeleteClientResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteClientResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "client", kind: "message", T: ClientInfo },
+    { no: 3, name: "deletedOperationsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteClientResponse {
+    return new DeleteClientResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteClientResponse {
+    return new DeleteClientResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteClientResponse {
+    return new DeleteClientResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteClientResponse | PlainMessage<DeleteClientResponse> | undefined, b: DeleteClientResponse | PlainMessage<DeleteClientResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteClientResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteClientResponse.Operation
+ */
+export class DeleteClientResponse_Operation extends Message<DeleteClientResponse_Operation> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string operationId = 2;
+   */
+  operationId = "";
+
+  /**
+   * @generated from field: repeated string operationNames = 3;
+   */
+  operationNames: string[] = [];
+
+  constructor(data?: PartialMessage<DeleteClientResponse_Operation>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteClientResponse.Operation";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "operationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operationNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteClientResponse_Operation {
+    return new DeleteClientResponse_Operation().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteClientResponse_Operation {
+    return new DeleteClientResponse_Operation().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteClientResponse_Operation {
+    return new DeleteClientResponse_Operation().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteClientResponse_Operation | PlainMessage<DeleteClientResponse_Operation> | undefined, b: DeleteClientResponse_Operation | PlainMessage<DeleteClientResponse_Operation> | undefined): boolean {
+    return proto3.util.equals(DeleteClientResponse_Operation, a, b);
   }
 }
 
@@ -19554,6 +19829,11 @@ export class UpdateFeatureFlagResponse extends Message<UpdateFeatureFlagResponse
    */
   compositionWarnings: CompositionWarning[] = [];
 
+  /**
+   * @generated from field: optional bool has_changed = 5;
+   */
+  hasChanged?: boolean;
+
   constructor(data?: PartialMessage<UpdateFeatureFlagResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -19566,6 +19846,7 @@ export class UpdateFeatureFlagResponse extends Message<UpdateFeatureFlagResponse
     { no: 2, name: "composition_errors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deployment_errors", kind: "message", T: DeploymentError, repeated: true },
     { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
+    { no: 5, name: "has_changed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagResponse {

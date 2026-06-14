@@ -9,7 +9,7 @@ import { Observable, Subscriber } from 'rxjs';
 
 import { traced } from '../../tracing.js';
 import { ClickHouseUnavailableError } from '../../errors/errors.js';
-import { pollWithBackoff } from '../../util/poll-with-backoff.js';
+import { pollWithBackoff } from '../../util/timers.js';
 import { ClickHouseCompressionMethod, ClickHouseDataFormat } from './enums/index.js';
 
 import { ClickHouseClientOptions } from './interfaces/index.js';
