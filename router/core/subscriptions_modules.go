@@ -455,8 +455,6 @@ func (e *StreamHandlerError) Error() string {
 	return e.Message
 }
 
-// SubscriptionBeforeTriggerHandlerContext is the context passed to SubscriptionBeforeTrigger hooks.
-// It exposes full request context read-only; only the subscription event configuration is mutable.
 type SubscriptionBeforeTriggerHandlerContext interface {
 	// Request is the original request received by the router.
 	Request() *http.Request
@@ -468,6 +466,9 @@ type SubscriptionBeforeTriggerHandlerContext interface {
 	Authentication() authentication.Authentication
 	// SubscriptionEventConfiguration returns the current subscription event configuration.
 	// The returned value is a pointer; mutating it directly takes effect without any additional call.
+	//
+	// This method is currently EXPERIMENTAL.
+	// The signature and behaviour might change without prior notice.
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
 }
 
@@ -499,10 +500,12 @@ func (c *pubSubSubscriptionBeforeTriggerHookContext) SubscriptionEventConfigurat
 	return c.subscriptionEventConfiguration
 }
 
-// SubscriptionBeforeTriggerHandler is the module interface for the before-trigger hook.
 type SubscriptionBeforeTriggerHandler interface {
-	// SubscriptionBeforeTrigger runs before the subscription trigger is created.
-	// It may only modify the subscription event configuration.
+	// SubscriptionBeforeTrigger allows to modify the event configuration
+	// before the subscription starts.
+	//
+	// This method is currently EXPERIMENTAL.
+	// The signature and behaviour might change without prior notice.
 	SubscriptionBeforeTrigger(ctx SubscriptionBeforeTriggerHandlerContext)
 }
 
