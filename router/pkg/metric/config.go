@@ -10,6 +10,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 )
 
 // DefaultServerName Default resource name.
@@ -17,6 +18,27 @@ const DefaultServerName = "cosmo-router"
 
 // DefaultCardinalityLimit is the hard limit on the number of metric streams that can be collected for a single instrument.
 const DefaultCardinalityLimit = 2000
+
+type ExemplarFilter string
+
+const (
+	ExemplarFilterTraceBased ExemplarFilter = "trace_based"
+	ExemplarFilterAlwaysOff  ExemplarFilter = "always_off"
+	ExemplarFilterAlwaysOn   ExemplarFilter = "always_on"
+)
+
+func (e ExemplarFilter) toOtelExemplarFilter() exemplar.Filter {
+	switch e {
+	case ExemplarFilterTraceBased:
+		return exemplar.TraceBasedFilter
+	case ExemplarFilterAlwaysOff:
+		return exemplar.AlwaysOffFilter
+	case ExemplarFilterAlwaysOn:
+		return exemplar.AlwaysOnFilter
+	default:
+		return exemplar.AlwaysOffFilter
+	}
+}
 
 type PrometheusConfig struct {
 	Enabled         bool
@@ -40,6 +62,7 @@ type PrometheusConfig struct {
 	// Prometheus schema field usage configuration
 	PromSchemaFieldUsage PrometheusSchemaFieldUsage
 	Streams              bool
+	ExemplarFilter       ExemplarFilter
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -103,9 +126,10 @@ type OpenTelemetry struct {
 	// Metric labels to exclude from the OTLP exporter.
 	ExcludeMetricLabels []*regexp.Regexp
 	// TestReader is used for testing purposes. If set, the reader will be used instead of the configured exporters.
-	TestReader  sdkmetric.Reader
-	Streams     bool
-	LogExporter LogExporterConfig
+	TestReader     sdkmetric.Reader
+	Streams        bool
+	LogExporter    LogExporterConfig
+	ExemplarFilter ExemplarFilter
 }
 
 func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {

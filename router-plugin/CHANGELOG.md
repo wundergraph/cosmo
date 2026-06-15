@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.8.0](https://github.com/wundergraph/cosmo/compare/router-plugin@0.7.0...router-plugin@0.8.0) (2026-06-15)
+
+### Features
+
+* **router:** support exemplar filter configuration ([#2921](https://github.com/wundergraph/cosmo/issues/2921)) ([78877ee](https://github.com/wundergraph/cosmo/commit/78877ee0b24a01820431eb49f146af61b5c22f46)) (@Noroth)
+
 # [0.7.0](https://github.com/wundergraph/cosmo/compare/router-plugin@0.6.0...router-plugin@0.7.0) (2026-05-20)
 
 ### Features

@@ -3,20 +3,98 @@
 # See pkg/config/config.go for the full list of configuration options.
 # This file is used for the demo environment
 
-version: "1"
+version: '1'
 
+access_logs:
+  enabled: true
+  router:
+    fields:
+      - key: 'operation_name'
+        value_from:
+          expression: 'request.operation.name'
+      - key: 'operation_hash'
+        value_from:
+          expression: 'request.operation.hash'
+      - key: 'operation_type'
+        value_from:
+          expression: 'request.operation.type'
+      - key: 'parsing_time_ms'
+        value_from:
+          expression: 'request.operation.parsingTime'
+      - key: 'normalization_time_ms'
+        value_from:
+          expression: 'request.operation.normalizationTime'
+      - key: 'validation_time_ms'
+        value_from:
+          expression: 'request.operation.validationTime'
+      - key: 'planning_time_ms'
+        value_from:
+          expression: 'request.operation.planningTime'
+      - key: 'resolver_acquire_duration_ms'
+        value_from:
+          expression: 'request.operation.resolverAcquireDuration'
+      - key: 'plan_cache_hit'
+        value_from:
+          expression: 'request.operation.planCacheHit'
+  subgraphs:
+    enabled: true
+    fields:
+      - key: 'subgraph_id'
+        value_from:
+          expression: 'subgraph.id'
+      - key: 'subgraph_name'
+        value_from:
+          expression: 'subgraph.name'
+      - key: 'fetch_duration_ms'
+        value_from:
+          expression: 'subgraph.request.clientTrace.fetchDuration'
+      - key: 'conn_acquire_duration_ms'
+        value_from:
+          expression: 'subgraph.request.clientTrace.connAcquireDuration'
+      - key: 'dns_lookup_duration_ms'
+        value_from:
+          expression: 'subgraph.request.clientTrace.dnsLookupDuration'
+      - key: 'tcp_connect_duration_ms'
+        value_from:
+          expression: 'subgraph.request.clientTrace.tcpConnectDuration'
+      - key: 'tls_handshake_duration_ms'
+        value_from:
+          expression: 'subgraph.request.clientTrace.tlsHandshakeDuration'
+      - key: 'time_to_first_byte_ms'
+        value_from:
+          expression: 'subgraph.request.clientTrace.timeToFirstByte'
+      - key: 'subgraph_error'
+        value_from:
+          expression: "subgraph.request.error ?? ''"
+
+telemetry:
+  metrics:
+    otlp:
+      enabled: true
+      connection_stats: true
+      network:
+        enabled: true # env: METRICS_OTLP_NETWORK_ENABLED
+      resolver:
+        enabled: true # env: METRICS_OTLP_RESOLVER_ENABLED
+    prometheus:
+      enabled: true
+      connection_stats: true
+      network:
+        enabled: true # env: PROMETHEUS_NETWORK_ENABLED
+      resolver:
+        enabled: true # env: PROMETHEUS_RESOLVER_ENABLED
 events:
   providers:
     nats:
       - id: default
-        url: "nats://localhost:4222"
+        url: 'nats://localhost:4222'
       - id: my-nats
-        url: "nats://localhost:4222"
+        url: 'nats://localhost:4222'
     kafka:
       - id: my-kafka
         brokers:
-          - "localhost:9092"
+          - 'localhost:9092'
     redis:
       - id: my-redis
         urls:
-          - "redis://localhost:6379/2"
+          - 'redis://localhost:6379/2'
