@@ -96,6 +96,12 @@ type Operation struct {
 	VariablesRemappingCacheHit     bool `expr:"variablesRemappingCacheHit"`
 	PersistedOperationCacheHit     bool `expr:"persistedOperationCacheHit"`
 	PlanCacheHit                   bool `expr:"planCacheHit"`
+
+	// Variables is the JSON string of the operation variables sent with the request. It is only
+	// populated when an expression references it, to avoid the serialization cost on every request.
+	// The value can contain sensitive data and can be large, so it should be logged with care.
+	// Not populated for WebSocket subscriptions (see request.operation note in the docs).
+	Variables string `expr:"variables"`
 }
 
 type Client struct {

@@ -109,6 +109,66 @@ func TestVisitorManager(t *testing.T) {
 		}
 	})
 
+	t.Run("verify IsRequestOperationVariablesUsedInExpressions", func(t *testing.T) {
+		t.Parallel()
+
+		testCases := []struct {
+			name           string
+			expression     string
+			expectedResult bool
+		}{
+			{
+				name:           "without variables",
+				expression:     "request.operation.name",
+				expectedResult: false,
+			},
+			{
+				name:           "variablesRemappingCacheHit is not variables",
+				expression:     "request.operation.variablesRemappingCacheHit",
+				expectedResult: false,
+			},
+			{
+				name:           "variablesNormalizationCacheHit is not variables",
+				expression:     "request.operation.variablesNormalizationCacheHit",
+				expectedResult: false,
+			},
+			{
+				name:           "with variables dot chaining",
+				expression:     "request.operation.variables",
+				expectedResult: true,
+			},
+			{
+				name:           "with variables square bracket",
+				expression:     `request["operation"]["variables"]`,
+				expectedResult: true,
+			},
+			{
+				name:           "with variables mixed access",
+				expression:     `request["operation"].variables`,
+				expectedResult: true,
+			},
+			{
+				name:           "with variables in conditional with cache hit",
+				expression:     `request.operation.variablesRemappingCacheHit ? "" : request.operation.variables`,
+				expectedResult: true,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				exprManager := CreateNewExprManager()
+				visitorManager := exprManager.VisitorManager
+
+				_, err := exprManager.CompileAnyExpression(tc.expression)
+				require.NoError(t, err)
+
+				require.Equal(t, tc.expectedResult, visitorManager.IsRequestOperationVariablesUsedInExpressions())
+			})
+		}
+	})
+
 	t.Run("verify IsSubgraphResponseBodyUsedInExpressions", func(t *testing.T) {
 		t.Parallel()
 

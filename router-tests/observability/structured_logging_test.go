@@ -4109,6 +4109,116 @@ func TestAccessLogs(t *testing.T) {
 			)
 		})
 
+		t.Run("validate request.operation.variables expression", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "operation_variables",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.variables",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employee"`),
+						Query:         `query Employee($id: Int!) { employee(id: $id) { id } }`,
+						Variables:     []byte(`{"id": 4}`),
+					})
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestContext := requestLog.All()[0].ContextMap()
+					val, ok := requestContext["operation_variables"].(string)
+					require.True(t, ok)
+					require.JSONEq(t, `{"id":4}`, val)
+				},
+			)
+		})
+
+		t.Run("validate request.operation.variables expression without variables", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "operation_variables",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.variables",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestContext := requestLog.All()[0].ContextMap()
+					val, ok := requestContext["operation_variables"].(string)
+					require.True(t, ok)
+					require.JSONEq(t, `{}`, val)
+				},
+			)
+		})
+
+		t.Run("validate request.operation.variables logged only on variablesRemappingCacheHit miss", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "variables_on_remap_miss",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: `request.operation.variablesRemappingCacheHit ? "" : request.operation.variables`,
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					// First request: remapping cache miss, so the variables are logged.
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employee"`),
+						Query:         `query Employee($id: Int!) { employee(id: $id) { id } }`,
+						Variables:     []byte(`{"id": 4}`),
+					})
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestContext := requestLog.All()[0].ContextMap()
+					val, ok := requestContext["variables_on_remap_miss"].(string)
+					require.True(t, ok)
+					require.JSONEq(t, `{"id":4}`, val)
+
+					// Second identical request: remapping cache hit, so the expression evaluates to an
+					// empty string and the field is skipped entirely.
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employee"`),
+						Query:         `query Employee($id: Int!) { employee(id: $id) { id } }`,
+						Variables:     []byte(`{"id": 4}`),
+					})
+					requestLog = xEnv.Observer().FilterMessage("/graphql")
+					requestContext = requestLog.All()[1].ContextMap()
+					_, ok = requestContext["variables_on_remap_miss"]
+					require.False(t, ok, "variables should not be logged on a remapping cache hit")
+				},
+			)
+		})
+
 		t.Run("validate request.operation.persistedOperationCacheHit expression", func(t *testing.T) {
 			t.Parallel()
 

@@ -78,6 +78,11 @@ The `request` object is a read-only entity that provides details about the incom
 - `request.operation.variablesRemappingCacheHit` (bool)
 - `request.operation.persistedOperationCacheHit` (bool)
 - `request.operation.planCacheHit` (bool)
+- `request.operation.variables` - The operation variables sent with the request, as a JSON string. The value can contain sensitive data and can be large, so log it with care. It is only serialized when an expression references it, so configurations that do not use it pay no cost.
+
+The serialization of `request.operation.variables` is decided once per request across the whole configuration. If any access log, metric, telemetry, tracing, or rate-limiter expression references it, it is serialized; otherwise it is skipped.
+
+`request.operation.*` fields are populated during HTTP request handling. They are not available for WebSocket subscription access logs, which reuse the expression context from the initial HTTP upgrade request.
 
 #### Example expressions
 
@@ -86,6 +91,8 @@ hasPrefix(request.operation.name, 'Delete') == true
 request.operation.sha256Hash != ''
 request.operation.persistedId != ''
 request.operation.planCacheHit == true
+# Log the variables only when the variable remapping cache missed.
+request.operation.variablesRemappingCacheHit ? '' : request.operation.variables
 ```
 
 ### Client Object
