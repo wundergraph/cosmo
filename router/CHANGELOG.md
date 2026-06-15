@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.323.1](https://github.com/wundergraph/cosmo/compare/router@0.323.0...router@0.323.1) (2026-06-15)
+
+### Bug Fixes
+
+* **router:** fix inefficient trigger id generation ([#2950](https://github.com/wundergraph/cosmo/issues/2950)) ([837467e](https://github.com/wundergraph/cosmo/commit/837467e9f37b24cbdcf138f9c7ca82b834f68aac)) (@dkorittki)
+
 # [0.323.0](https://github.com/wundergraph/cosmo/compare/router@0.322.2...router@0.323.0) (2026-06-15)
 
 ### Features
