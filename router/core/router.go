@@ -2738,6 +2738,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		CardinalityLimit:   cfg.Metrics.CardinalityLimit,
 		OpenTelemetry: rmetric.OpenTelemetry{
 			Enabled:         cfg.Metrics.OTLP.Enabled,
+			ExemplarFilter:  rmetric.ExemplarFilter(cfg.Metrics.OTLP.ExemplarFilter),
 			RouterRuntime:   cfg.Metrics.OTLP.RouterRuntime,
 			GraphqlCache:    cfg.Metrics.OTLP.GraphqlCache,
 			ConnectionStats: cfg.Metrics.OTLP.ConnectionStats,
@@ -2758,6 +2759,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		},
 		Prometheus: rmetric.PrometheusConfig{
 			Enabled:         cfg.Metrics.Prometheus.Enabled,
+			ExemplarFilter:  rmetric.ExemplarFilter(cfg.Metrics.Prometheus.ExemplarFilter),
 			ListenAddr:      cfg.Metrics.Prometheus.ListenAddr,
 			Path:            cfg.Metrics.Prometheus.Path,
 			GraphqlCache:    cfg.Metrics.Prometheus.GraphqlCache,
