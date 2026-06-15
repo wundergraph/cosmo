@@ -92,6 +92,7 @@
       "mdast-util-to-hast": ">=13.2.1",
       "js-yaml": ">=4.1.1",
       "fast-uri": "3.1.2",
+      "tmp": "0.2.7",
       "fast-xml-parser": "5.8.0",
       "@aws-sdk/client-sesv2": "^3.996.0",
       "handlebars": "4.7.9",
