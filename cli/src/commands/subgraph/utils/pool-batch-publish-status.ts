@@ -14,7 +14,7 @@ export async function poolBatchPublishStatus(
   let resp: GetBatchPublishJobStatusResponse;
 
   const headers = getBaseHeaders();
-  for (let attempt = 0;; attempt++) {
+  for (let attempt = 0; ; attempt++) {
     resp = await client.platform.getBatchPublishJobStatus({ jobId }, { headers });
     if (resp.response?.code !== EnumStatusCode.OK) {
       return new PublishFederatedSubgraphsResponse({
