@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"net/http/httptest"
-	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,12 +29,6 @@ func (c *testSubscriptionEventConfig) RootFieldName() string {
 	return c.fieldName
 }
 
-func (c *testSubscriptionEventConfig) Clone() datasource.SubscriptionEventConfiguration {
-	c2 := *c
-	c2.channels = slices.Clone(c.channels)
-	return &c2
-}
-
 func TestNewPubSubSubscriptionOnStartHookReturnsUpdatedSubscriptionEventConfiguration(t *testing.T) {
 	originalConfig := &testSubscriptionEventConfig{
 		providerID: "provider",
@@ -48,9 +41,10 @@ func TestNewPubSubSubscriptionOnStartHookReturnsUpdatedSubscriptionEventConfigur
 
 	hook := NewPubSubSubscriptionOnStartHook(func(ctx SubscriptionOnStartHandlerContext) error {
 		got := ctx.SubscriptionEventConfiguration()
-		// The getter returns a defensive copy: equal by value but not the same pointer.
+		// The getter returns a read-only wrapper — not the same pointer as the original.
 		require.NotSame(t, originalConfig, got)
-		require.Equal(t, originalConfig, got)
+		require.Equal(t, originalConfig.ProviderID(), got.ProviderID())
+		require.Equal(t, originalConfig.RootFieldName(), got.RootFieldName())
 		require.True(t, ctx.SetSubscriptionEventConfiguration(updatedConfig))
 		return nil
 	})
@@ -76,11 +70,11 @@ func TestNewPubSubSubscriptionOnStartHookInPlaceMutationIsNoOp(t *testing.T) {
 	}
 
 	hook := NewPubSubSubscriptionOnStartHook(func(ctx SubscriptionOnStartHandlerContext) error {
-		// Mutating the returned config in place must not affect the live
-		// configuration: it is a defensive copy. Only SetSubscriptionEventConfiguration applies changes.
-		got := ctx.SubscriptionEventConfiguration().(*testSubscriptionEventConfig)
-		got.fieldName = "mutated"
-		got.channels[0] = "mutated-channel"
+		// The getter returns a read-only wrapper: type-asserting to the concrete
+		// type must fail, so direct mutation of the live config is impossible.
+		got := ctx.SubscriptionEventConfiguration()
+		_, ok := got.(*testSubscriptionEventConfig)
+		require.False(t, ok, "type assertion to concrete type must fail")
 		return nil
 	})
 

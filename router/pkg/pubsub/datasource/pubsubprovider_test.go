@@ -58,11 +58,6 @@ func (c *testSubscriptionConfig) RootFieldName() string {
 	return c.fieldName
 }
 
-func (c *testSubscriptionConfig) Clone() SubscriptionEventConfiguration {
-	c2 := *c
-	return &c2
-}
-
 type testPublishConfig struct {
 	providerID   string
 	providerType ProviderType

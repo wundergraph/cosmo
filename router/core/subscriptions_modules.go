@@ -118,9 +118,9 @@ func (c *pubSubSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 	if c.subscriptionEventConfiguration == nil {
 		return nil
 	}
-	// Return a deep copy so callers cannot mutate the live configuration in
-	// place. Changes are only applied when passed back via SetSubscriptionEventConfiguration.
-	return c.subscriptionEventConfiguration.Clone()
+	// Wrap in a read-only adapter so callers cannot type-assert to a concrete
+	// type and mutate the live configuration. Changes are applied via SetSubscriptionEventConfiguration.
+	return datasource.NewReadOnlySubscriptionEventConfiguration(c.subscriptionEventConfiguration)
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) SetSubscriptionEventConfiguration(config datasource.SubscriptionEventConfiguration) bool {
@@ -428,8 +428,9 @@ func (c *pubSubStreamReceiveEventHookContext) SubscriptionEventConfiguration() d
 	if c.subscriptionEventConfiguration == nil {
 		return nil
 	}
-	// Return a deep copy so callers cannot mutate the live configuration in place.
-	return c.subscriptionEventConfiguration.Clone()
+	// Wrap in a read-only adapter so callers cannot type-assert to a concrete
+	// type and mutate the live configuration.
+	return datasource.NewReadOnlySubscriptionEventConfiguration(c.subscriptionEventConfiguration)
 }
 
 func (c *pubSubStreamReceiveEventHookContext) NewEvent(data []byte) datasource.MutableStreamEvent {
