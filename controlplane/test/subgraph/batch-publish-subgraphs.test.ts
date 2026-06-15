@@ -4,6 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { formatISO } from 'date-fns';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, onTestFinished, test, vi } from 'vitest';
+import { QueueEvents } from 'bullmq';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -26,6 +27,11 @@ import {
   tomorrowDate,
   yearStartDate,
 } from '../test-util.js';
+import {
+  BatchPublishJobStatus,
+  GetBatchPublishJobStatusResponse,
+} from '../../../connect/src/wg/cosmo/platform/v1/platform_pb.js';
+import { createDeleteBatchPublishJobDetailsWorker } from '../../src/core/workers/DeleteBatchPublishJobDetailsWorker.js';
 
 let dbname = '';
 
@@ -622,5 +628,95 @@ describe('Batch publish subgraphs tests', () => {
     testContext.onTestFinished(() => server.close());
 
     await runFanOutScenario(client);
+  });
+
+  test('that batch publish can be queued and the completion status can be fetched', async (testContext) => {
+    const { client, server, queues, users } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    const deleteBatchPublishJobDetailsWorker = createDeleteBatchPublishJobDetailsWorker({
+      db: server.db,
+      logger: server.log,
+      redisConnection: server.redisForWorker,
+      lockAdapter: server.lockAdapter,
+    });
+    testContext.onTestFinished(() => deleteBatchPublishJobDetailsWorker.close());
+
+    const label1 = genUniqueLabel('team1');
+    const label2 = genUniqueLabel('team2');
+    const fedGraph1 = genID('fedGraph1');
+    const fedGraph2 = genID('fedGraph2');
+    const subgraphA = genID('subgraphA');
+    const subgraphB = genID('subgraphB');
+
+    await createFederatedGraph(client, fedGraph1, DEFAULT_NAMESPACE, [joinLabel(label1)], DEFAULT_ROUTER_URL);
+    await createFederatedGraph(client, fedGraph2, DEFAULT_NAMESPACE, [joinLabel(label2)], DEFAULT_ROUTER_URL);
+    await createAndPublishSubgraph(
+      client,
+      subgraphA,
+      DEFAULT_NAMESPACE,
+      `type Query { a: String }`,
+      [label1],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+    await createAndPublishSubgraph(
+      client,
+      subgraphB,
+      DEFAULT_NAMESPACE,
+      `type Query { b: String }`,
+      [label2],
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+
+    const resp = await client.publishFederatedSubgraphs({
+      namespace: DEFAULT_NAMESPACE,
+      subgraphs: [
+        { name: subgraphA, schema: `type Query { a: String a2: String }` },
+        { name: subgraphB, schema: `type Query { b: String b2: String }` },
+      ],
+      async: true,
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(resp.counts?.compositionErrors).toBe(0);
+    expect(resp.counts?.deploymentErrors).toBe(0);
+    expect(resp.updatedSubgraphNames).toHaveLength(0);
+    expect(resp.jobId).toBeDefined();
+
+    let statusResp: GetBatchPublishJobStatusResponse;
+    for (;;) {
+      statusResp = await client.getBatchPublishJobStatus({ jobId: resp.jobId });
+      expect(statusResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(statusResp.status).not.toBe(BatchPublishJobStatus.FAILED);
+      if (statusResp.status === BatchPublishJobStatus.COMPLETED) {
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    expect(statusResp.response?.code).toBe(BatchPublishJobStatus.COMPLETED);
+    expect(statusResp.counts?.compositionErrors).toBe(0);
+    expect(statusResp.counts?.deploymentErrors).toBe(0);
+    expect(statusResp.updatedSubgraphNames).toHaveLength(2);
+    expect(statusResp.updatedSubgraphNames).toEqual(expect.arrayContaining([subgraphA, subgraphB]));
+
+    // Both federated graphs should now contain the published fields.
+    const sdl1 = await client.getFederatedGraphSDLByName({ name: fedGraph1, namespace: DEFAULT_NAMESPACE });
+    expect(sdl1.sdl).toContain('a2');
+    const sdl2 = await client.getFederatedGraphSDLByName({ name: fedGraph2, namespace: DEFAULT_NAMESPACE });
+    expect(sdl2.sdl).toContain('b2');
+
+    // Ensure that the job is deleted
+    const job = await queues.deleteBatchPublishJobDetailsQueue.addJob({
+      jobId: resp.jobId!,
+      organizationId: users.adminAliceCompanyA.organizationId,
+    });
+
+    await job.changeDelay(0);
+    await job.waitUntilFinished(new QueueEvents(job.queueName));
+
+    statusResp = await client.getBatchPublishJobStatus({ jobId: resp.jobId });
+    expect(statusResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
   });
 });
