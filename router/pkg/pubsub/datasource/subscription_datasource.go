@@ -127,6 +127,9 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionBeforeTrigger(ctx context.
 
 	for _, fn := range s.hooks.SubscriptionBeforeTrigger.Handlers {
 		conf = fn(ctx, conf)
+
+		// Check wether a hook developer set config type not compatible with this pubsub datasource
+		// (i.e. Kafka configuration on a Redis datasource).
 		if _, ok := conf.(C); !ok {
 			return nil, errors.New("invalid subscription configuration returned by SubscriptionBeforeTrigger hook")
 		}

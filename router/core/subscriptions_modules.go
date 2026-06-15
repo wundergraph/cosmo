@@ -467,9 +467,8 @@ type SubscriptionBeforeTriggerHandlerContext interface {
 	// Authentication is the authentication for the request.
 	Authentication() authentication.Authentication
 	// SubscriptionEventConfiguration returns the current subscription event configuration.
+	// The returned value is a pointer; mutating it directly takes effect without any additional call.
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
-	// SetSubscriptionEventConfiguration replaces the subscription event configuration.
-	SetSubscriptionEventConfiguration(cfg datasource.SubscriptionEventConfiguration)
 }
 
 type pubSubSubscriptionBeforeTriggerHookContext struct {
@@ -498,10 +497,6 @@ func (c *pubSubSubscriptionBeforeTriggerHookContext) Authentication() authentica
 
 func (c *pubSubSubscriptionBeforeTriggerHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
 	return c.subscriptionEventConfiguration
-}
-
-func (c *pubSubSubscriptionBeforeTriggerHookContext) SetSubscriptionEventConfiguration(cfg datasource.SubscriptionEventConfiguration) {
-	c.subscriptionEventConfiguration = cfg
 }
 
 // SubscriptionBeforeTriggerHandler is the module interface for the before-trigger hook.
