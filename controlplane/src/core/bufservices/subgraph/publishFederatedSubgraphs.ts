@@ -246,15 +246,15 @@ export function publishFederatedSubgraphs(
     };
 
     if (req.async) {
-      const batchPublishJobDetailsRepo = new BatchPublishJobDetailsRepository(opts.db, authContext.organizationId);
-      const jobId = await batchPublishJobDetailsRepo.create();
+      const jobRepo = new BatchPublishJobDetailsRepository(opts.db, opts.lockAdapter, authContext.organizationId);
+      const jobId = await jobRepo.create();
       try {
         await opts.queues.deleteBatchPublishJobDetailsQueue.addJob({
           jobId,
           organizationId: authContext.organizationId,
         });
       } catch (err) {
-        await batchPublishJobDetailsRepo.delete(jobId);
+        await jobRepo.delete(jobId);
         logger.error(err, 'Failed to add job to delete batch publish job details queue');
 
         return {
@@ -288,12 +288,12 @@ export function publishFederatedSubgraphs(
         },
         async () => {
           try {
-            const result = await batchPublishJobDetailsRepo.withNamespaceLock(namespace.id, jobId, async () => {
-              await batchPublishJobDetailsRepo.update(jobId, { status: 'processing' });
+            const result = await jobRepo.withNamespaceLock(namespace.id, async () => {
+              await jobRepo.update(jobId, { status: 'processing' });
               return runBatchPublish({ ...runBatchPublishParams, shouldRefreshSubgraphs: true });
             });
 
-            await batchPublishJobDetailsRepo.update(jobId, {
+            await jobRepo.update(jobId, {
               status: 'completed',
               compositionResult: {
                 deploymentErrors: result.deploymentErrors,
@@ -304,7 +304,7 @@ export function publishFederatedSubgraphs(
             });
           } catch (err) {
             Sentry.captureException(err);
-            await batchPublishJobDetailsRepo.update(jobId, {
+            await jobRepo.update(jobId, {
               status: 'failed',
               failureReason: err instanceof Error ? err.message : null,
             });

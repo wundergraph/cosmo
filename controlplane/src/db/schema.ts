@@ -2784,23 +2784,3 @@ export const batchPublishJobDetails = pgTable('batch_publish_job_details', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
 });
-
-export const batchPublishJobDetailsJobLocks = pgTable(
-  'batch_publish_job_details_job_locks',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    organizationId: uuid('organization_id')
-      .notNull()
-      .references(() => organizations.id, { onDelete: 'cascade' }),
-    namespaceId: uuid('namespace_id')
-      .notNull()
-      .references(() => namespaces.id, { onDelete: 'cascade' }),
-    jobId: uuid('job_id')
-      .notNull()
-      .references(() => batchPublishJobDetails.id, { onDelete: 'cascade' }),
-    expiresAt: timestamp('expiresAt', { withTimezone: true }).notNull(),
-  },
-  (t) => ({
-    uniqueNamespace: unique('batch_publish_job_details_job_locks_namespace_id_key').on(t.namespaceId),
-  }),
-);

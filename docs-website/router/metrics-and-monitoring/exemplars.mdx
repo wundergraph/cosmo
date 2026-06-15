@@ -1,0 +1,110 @@
+---
+title: "Exemplars"
+description: "Link aggregated metrics back to the traces that produced them by recording OpenTelemetry exemplars."
+sidebarTitle: "Exemplars"
+icon: "crosshairs"
+---
+
+Exemplars are example data points that the OpenTelemetry SDK attaches to aggregated metrics. Each exemplar records a single measurement together with the trace ID and span ID that were active when the measurement was taken. This links an aggregated metric value back to a concrete trace. A latency spike on a histogram can be traced to the exact request that produced it.
+
+See the [OpenTelemetry metrics SDK specification](https://opentelemetry.io/docs/specs/otel/metrics/sdk/#exemplar) for the full definition.
+
+## Exemplar filter
+
+An exemplar filter decides which measurements are eligible to record an exemplar. The router exposes the filter as `exemplar_filter`. It is configured independently for OTLP metrics and Prometheus metrics. The values follow the [OpenTelemetry exemplar filter specification](https://opentelemetry.io/docs/specs/otel/metrics/sdk/#exemplarfilter).
+
+| Filter | Description |
+|-|-|
+| `always_off` | Records no exemplars. This is the default. |
+| `trace_based` | Records exemplars only for measurements taken within the context of a sampled trace. |
+| `always_on` | Records exemplars for all measurements, regardless of trace context. |
+
+`trace_based` is the recommended setting for correlating metrics with traces. Every recorded exemplar points to a trace that was sampled and stored, so the link from a metric to its trace always resolves. `always_on` records exemplars even when no sampled trace is present, which produces exemplars with empty or unsampled trace context.
+
+## Configuration
+
+Exemplars are disabled by default (`always_off`). Set the filter under the OTLP and Prometheus metrics sections as needed.
+
+<CodeGroup>
+  ```yaml config.yaml
+  telemetry:
+    metrics:
+      otlp:
+        exemplar_filter: trace_based
+      prometheus:
+        exemplar_filter: trace_based
+  ```
+</CodeGroup>
+
+The filter can also be set through environment variables: `METRICS_OTLP_EXEMPLAR_FILTER` for OTLP and `PROMETHEUS_EXEMPLAR_FILTER` for Prometheus. See the [router configuration reference](/router/configuration#metrics) for all metric options.
+
+## Performance and memory considerations
+
+Exemplars are recorded by the OpenTelemetry SDK. Recording uses reservoir sampling, so the cost is bounded per metric stream. The defaults are still off for a reason. There is a measurable cost on the hot path.
+
+### Recording overhead
+
+With `always_off` (the default), there is no exemplar sampling and no overhead.
+
+With `trace_based` or `always_on`, every eligible measurement runs through the reservoir. This adds work to the metric recording path on each request. The absolute cost is on the order of tens of nanoseconds per measurement. The relative cost of the recording call itself can increase by up to tens of percent. For most workloads this is negligible against the cost of serving a GraphQL request, but it is not zero on high-throughput routers.
+
+`always_on` records exemplars for every measurement. `trace_based` only records for measurements taken inside a sampled trace, so its overhead scales with your trace sampling rate. A low sampling rate keeps the added cost small.
+
+### Memory
+
+The SDK keeps a separate exemplar reservoir for every metric stream. A metric stream is a unique combination of a metric and its attribute set. Exemplar memory grows with the number of active streams multiplied by the reservoir size of each stream.
+
+The reservoir size depends on the instrument. For histograms it holds one exemplar per bucket, so the bucket count sets the per-stream maximum. The router uses different bucket boundaries per backend.
+
+| Instrument | Reservoir | Exemplars per stream |
+|------------|-----------|----------------------|
+| Request duration histogram (OTLP) | One exemplar per bucket | n |
+| Request duration histogram (Prometheus) | One exemplar per bucket | n |
+| Counters and other instruments | Fixed-size reservoir | 1 |
+
+Each exemplar stores a timestamp, the measured value, the trace ID, the span ID, and the filtered attributes. The in-memory footprint is roughly 100 bytes per exemplar. That footprint is multiplied by the bucket count and by metric cardinality, which is where memory grows quickly.
+
+High cardinality is the main risk. Every additional attribute value creates new metric streams, and each stream carries its own reservoir. Operation name, operation hash, client name, and client version are the attributes that drive stream count on a router.
+
+#### Example calculation
+
+
+<Note>
+This example is theoretical. It is a rough order-of-magnitude estimate, not a measured figure. The per-exemplar footprint, bucket counts, and stream counts vary with configuration and traffic, and the SDK adds overhead the formula ignores. Use it to reason about how memory scales, not to size capacity exactly.
+</Note>
+
+
+Estimate the exemplar memory of a single histogram with:
+
+```
+memory ≈ streams × buckets per stream × bytes per exemplar
+```
+
+`streams` is the number of distinct attribute combinations seen for that histogram. The examples below use the OTLP request duration histogram (39 buckets) and a footprint of 100 bytes per exemplar.
+
+**Bounded cardinality.** A router serves 200 distinct operations from 5 clients with 2 status codes. That is `200 × 5 × 2 = 2000` potential combinations, capped at the default cardinality limit of 2000 streams.
+
+```
+2000 streams × 39 buckets × 100 bytes ≈ 7.8 MB
+```
+
+This is the exemplar memory for one histogram. The router exposes several histogram instruments (request duration, operation planning time, operation cost), and each holds its own reservoirs, so the real total is a few times this figure.
+
+**Unbounded cardinality.** A client sends operations without a name, so `wg.operation.hash` becomes unique per query shape. With 50,000 distinct shapes and the cardinality limit removed:
+
+```
+50000 streams × 39 buckets × 100 bytes ≈ 195 MB
+```
+
+The same metric now consumes 25 times more memory, for one histogram. With `always_on` this happens regardless of trace sampling, because every measurement is eligible to fill a bucket. This is the scenario where exemplar memory explodes.
+
+The default cardinality limit of 2000 streams per instrument is what prevents the second case. It caps exemplar memory per histogram to a fixed worst case. Raising or disabling the limit removes that ceiling.
+
+### Recommendations
+
+- Start with `trace_based`. It bounds both recording overhead and memory to sampled traces, and every recorded exemplar links to a trace that was actually stored.
+- Keep trace sampling at a moderate rate. The exemplar cost under `trace_based` follows the sampling rate.
+- Reserve `always_on` for low-throughput or debugging scenarios. It records exemplars even when no sampled trace exists, which raises overhead and produces exemplars with empty or unsampled trace context. It also fills exemplar reservoirs for every stream regardless of sampling, so its memory cost scales with full cardinality.
+- Keep the cardinality limit in place. The default of 2000 streams per instrument caps exemplar memory to a fixed worst case per histogram. Do not disable it on a router that records exemplars.
+- Control metric cardinality. Use [exclude_metric_labels](/router/metrics-and-monitoring#exclude-certain-metrics-and-labels) and the [cardinality limit](/router/configuration#metrics) to cap the number of metric streams, which directly caps exemplar memory.
+

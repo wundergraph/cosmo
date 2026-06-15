@@ -487,6 +487,7 @@ export default async function build(opts: BuildConfig) {
     createDeleteBatchPublishJobDetailsWorker({
       redisConnection: fastify.redisForWorker,
       db: fastify.db,
+      lockAdapter: fastify.lockAdapter,
       logger,
     }),
   );
@@ -612,6 +613,7 @@ export default async function build(opts: BuildConfig) {
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
       webhookProxyUrl: opts.webhook?.proxyUrl,
       cdnBaseUrl: opts.cdnBaseUrl,
+      lockAdapter: fastify.lockAdapter,
     }),
     contextValues(req) {
       const values = createContextValues().set<FastifyBaseLogger>(

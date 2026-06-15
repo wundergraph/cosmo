@@ -15,30 +15,15 @@ catalogs:
     '@connectrpc/connect-node':
       specifier: 1.5.0
       version: 1.5.0
-    '@connectrpc/connect-query':
-      specifier: ^1.4.1
-      version: 1.4.1
-    '@connectrpc/connect-web':
-      specifier: 1.5.0
-      version: 1.5.0
     '@graphql-tools/utils':
       specifier: ^11.0.0
       version: 11.0.0
-    '@types/lodash':
-      specifier: 4.17.24
-      version: 4.17.24
     '@types/lodash-es':
       specifier: 4.17.12
       version: 4.17.12
     '@types/node':
       specifier: ^22.0.0
       version: 22.17.0
-    '@types/react':
-      specifier: 18.3.3
-      version: 18.3.3
-    '@types/react-dom':
-      specifier: 18.3.0
-      version: 18.3.0
     '@vitest/coverage-v8':
       specifier: 3.2.4
       version: 3.2.4
@@ -63,24 +48,12 @@ catalogs:
     eslint-plugin-require-extensions:
       specifier: ^0.1.3
       version: 0.1.3
-    hono:
-      specifier: 4.12.12
-      version: 4.12.12
-    lodash:
-      specifier: 4.18.1
-      version: 4.18.1
     lodash-es:
       specifier: 4.18.1
       version: 4.18.1
     pino:
       specifier: ^8.19.0
       version: 8.19.0
-    prettier:
-      specifier: ^3.6.2
-      version: 3.6.2
-    react-dom:
-      specifier: 18.3.1
-      version: 18.3.1
     tsx:
       specifier: ^4.16.0
       version: 4.19.4
@@ -131,6 +104,7 @@ overrides:
   markdown-it: 14.1.1
   rollup@3.29.5: 3.30.0
   '@rollup/pluginutils@5.3.0>rollup': 4.59.0
+  shell-quote: 1.8.4
 
 patchedDependencies:
   graphql@16.9.0:
@@ -661,7 +635,7 @@ importers:
         specifier: 8.0.0
         version: 8.0.0
       ioredis:
-        specifier: ^5.4.1
+        specifier: 5.4.1
         version: 5.4.1
       isomorphic-dompurify:
         specifier: ^2.33.0
@@ -699,6 +673,9 @@ importers:
       prom-client:
         specifier: ^15.1.3
         version: 15.1.3
+      redlock:
+        specifier: 5.0.0-beta.2
+        version: 5.0.0-beta.2
       rxjs:
         specifier: ^7.8.1
         version: 7.8.1
@@ -12998,6 +12975,10 @@ packages:
     resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
     engines: {node: '>=4'}
 
+  redlock@5.0.0-beta.2:
+    resolution: {integrity: sha512-2RDWXg5jgRptDrB1w9O/JgSZC0j7y4SlaXnor93H/UJm/QyDiFgBKNtrh0TI6oCXqYSaSoXxFh6Sd3VtYfhRXw==}
+    engines: {node: '>=12'}
+
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
     engines: {node: '>= 0.4'}
@@ -13318,8 +13299,8 @@ packages:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
 
-  shell-quote@1.8.3:
-    resolution: {integrity: sha512-ObmnIF4hXNg1BqhnHmgbDETF8dLPCggZWBjkQfhZpbszZnYur5DUljTcCHii5LC3J5E0yeO/1LIMyH+UvHQgyw==}
+  shell-quote@1.8.4:
+    resolution: {integrity: sha512-VsC6n6vz1ihYYyZZwX7YZSF5l5x36ca17OC+a69h94YqB7X6XLwf+5MOgynYir2SLFUbl8gIYvBo8K8RoNQ6bQ==}
     engines: {node: '>= 0.4'}
 
   shimmer@1.2.1:
@@ -26444,7 +26425,7 @@ snapshots:
   launch-editor@2.13.2:
     dependencies:
       picocolors: 1.1.1
-      shell-quote: 1.8.3
+      shell-quote: 1.8.4
 
   leac@0.6.0: {}
 
@@ -28666,6 +28647,10 @@ snapshots:
     dependencies:
       redis-errors: 1.2.0
 
+  redlock@5.0.0-beta.2:
+    dependencies:
+      node-abort-controller: 3.1.1
+
   reflect.getprototypeof@1.0.10:
     dependencies:
       call-bind: 1.0.9
@@ -29119,7 +29104,7 @@ snapshots:
 
   shebang-regex@3.0.0: {}
 
-  shell-quote@1.8.3: {}
+  shell-quote@1.8.4: {}
 
   shimmer@1.2.1: {}
 

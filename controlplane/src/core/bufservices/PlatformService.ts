@@ -129,6 +129,8 @@ import { getPersistedOperations } from './persisted-operation/getPersistedOperat
 import { publishPersistedOperations } from './persisted-operation/publishPersistedOperations.js';
 import { deletePersistedOperation } from './persisted-operation/deletePersistedOperation.js';
 import { checkPersistedOperationTraffic } from './persisted-operation/check-persisted-operation-traffic.js';
+import { previewDeleteClient } from './persisted-operation/previewDeleteClient.js';
+import { deleteClient } from './persisted-operation/deleteClient.js';
 import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
 import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
 import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
@@ -678,6 +680,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getClients: (req, ctx) => {
       return getClients(opts, req, ctx);
+    },
+
+    previewDeleteClient: (req, ctx) => {
+      return previewDeleteClient(opts, req, ctx);
+    },
+
+    deleteClient: (req, ctx) => {
+      return deleteClient(opts, req, ctx);
     },
 
     getOrganizationRequestsCount: (req, ctx) => {

@@ -27,16 +27,28 @@ export function getBatchPublishJobStatus(
       throw new UnauthorizedError();
     }
 
-    const boundedLimit = req.limit === undefined ? maxRowLimitForChecks : clamp(req.limit, 1, maxRowLimitForChecks);
-    const jobDetailsRepo = new BatchPublishJobDetailsRepository(opts.db, authContext.organizationId);
-    const jobDetails = await jobDetailsRepo.byId(req.jobId);
+    const jobRepo = new BatchPublishJobDetailsRepository(opts.db, opts.lockAdapter, authContext.organizationId);
+    const jobDetails = await jobRepo.byId(req.jobId);
+    if (!jobDetails) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `A job with the identifier "${req.jobId}" does not exists`,
+        },
+        deploymentErrors: [],
+        compositionWarnings: [],
+        compositionErrors: [],
+        updatedSubgraphNames: [],
+      };
+    }
 
-    const compositionErrors = jobDetails?.compositionResult?.compositionErrors ?? [];
-    const compositionWarnings = jobDetails?.compositionResult?.compositionWarnings ?? [];
-    const deploymentErrors = jobDetails?.compositionResult?.deploymentErrors ?? [];
+    const compositionErrors = jobDetails.compositionResult?.compositionErrors ?? [];
+    const compositionWarnings = jobDetails.compositionResult?.compositionWarnings ?? [];
+    const deploymentErrors = jobDetails.compositionResult?.deploymentErrors ?? [];
 
     let status: BatchPublishJobStatus | undefined;
-    switch (jobDetails?.status) {
+    const failureReason = jobDetails.failureReason || undefined;
+    switch (jobDetails.status) {
       case 'pending': {
         status = BatchPublishJobStatus.PENDING;
         break;
@@ -55,19 +67,18 @@ export function getBatchPublishJobStatus(
       }
     }
 
+    const boundedLimit = req.limit === undefined ? maxRowLimitForChecks : clamp(req.limit, 1, maxRowLimitForChecks);
     return {
       response: {
-        code: jobDetails
-          ? compositionErrors.length > 0
+        code:
+          compositionErrors.length > 0
             ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
             : deploymentErrors.length > 0
               ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
-              : EnumStatusCode.OK
-          : EnumStatusCode.ERR_NOT_FOUND,
-        details: jobDetails ? undefined : `A job with the identifier "${req.jobId}" does not exists`,
+              : EnumStatusCode.OK,
       },
       status,
-      failureReason: jobDetails?.failureReason || undefined,
+      failureReason,
       deploymentErrors: deploymentErrors.slice(0, boundedLimit),
       compositionErrors: compositionErrors.slice(0, boundedLimit),
       compositionWarnings: compositionWarnings.slice(0, boundedLimit),

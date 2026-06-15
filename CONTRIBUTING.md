@@ -89,6 +89,8 @@ We merge all pull requests in `squash merge` mode. You're not enforced to use [c
 
 When updating your branch after a review has been requested, prefer using a merge strategy (e.g. `git merge main`) rather than rebasing. This preserves the review context and avoids force-pushes that can disrupt the review process.
 
+If you're fixing a bug, or adding a feature which is not trivial, ensure the reviewers can validate the changes manually. Add `## How to test` section to the pull request description, with individual steps that reviewer can take to test the changes. Pictures and/or videos help a lot.
+
 ## Local Development
 
 ### Prerequisites
