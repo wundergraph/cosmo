@@ -469,7 +469,7 @@ export class CompositionService {
     for (let i = 0; i < affectedFeatureFlags.length; i += COMPOSITION_DEPLOY_CONCURRENCY) {
       const window = affectedFeatureFlags.slice(i, i + COMPOSITION_DEPLOY_CONCURRENCY);
       const composed = await Promise.all(
-        window.map((featureFlag) => limit(() => this.composeAffectedFeatureFlag(featureFlag, compositionOptions))),
+        window.map((featureFlag) => this.composeAffectedFeatureFlag(featureFlag, compositionOptions, limit)),
       );
       await this.persistAndUploadBatch({
         actorId,
@@ -545,13 +545,10 @@ export class CompositionService {
     return { federatedGraph, results };
   }
 
-  /**
-   * Compose (no writes) a single affected feature flag for every federated graph it targets. Mirrors the composition
-   * step of {@link composeAndDeployFeatureFlag}; the deploy is handled separately by {@link persistAndUploadBatch}.
-   */
   private async composeAffectedFeatureFlag(
     featureFlag: FeatureFlagDTO,
     compositionOptions: CompositionOptions,
+    limit: ReturnType<typeof pLimit>,
   ): Promise<FederatedGraphAndCompositionResults[]> {
     const featureFlagRepo = new FeatureFlagRepository(this.logger, this.db, this.organizationId);
     const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
@@ -566,50 +563,51 @@ export class CompositionService {
     }
 
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
-    const graphAndCompositionResults: FederatedGraphAndCompositionResults[] = [];
-    for (const graph of federatedGraphs) {
-      const subgraphs = await subgraphRepo.listByFederatedGraph({
-        federatedGraphTargetId: graph.targetId,
-        published: true,
-      });
+    return Promise.all(
+      federatedGraphs.map((graph) =>
+        limit(async () => {
+          const subgraphs = await subgraphRepo.listByFederatedGraph({
+            federatedGraphTargetId: graph.targetId,
+            published: true,
+          });
 
-      const baseCompositionSubgraphs = subgraphs.map((s) => ({
-        name: s.name,
-        url: s.routingUrl,
-        definitions: parse(s.schemaSDL),
-      }));
+          const baseCompositionSubgraphs = subgraphs.map((s) => ({
+            name: s.name,
+            url: s.routingUrl,
+            definitions: parse(s.schemaSDL),
+          }));
 
-      const subgraphsToCompose = featureFlagRepo.getFeatureFlagRelatedSubgraphsToCompose(
-        new Map([[featureFlag.id, featureFlag]]),
-        baseCompositionSubgraphs,
-        subgraphs,
-        [],
-      );
+          const subgraphsToCompose = featureFlagRepo.getFeatureFlagRelatedSubgraphsToCompose(
+            new Map([[featureFlag.id, featureFlag]]),
+            baseCompositionSubgraphs,
+            subgraphs,
+            [],
+          );
 
-      const { results } = await composeGraphsInWorker({
-        federatedGraph: graph,
-        subgraphsToCompose: subgraphsToCompose.map((s) => ({
-          subgraphs: s.subgraphs,
-          isFeatureFlagComposition: s.isFeatureFlagComposition,
-          featureFlagName: s.featureFlagName,
-          featureFlagId: s.featureFlagId,
-        })),
-        tagOptionsByContractName: graph.contract
-          ? [
-              {
-                contractName: graph.name,
-                excludeTags: graph.contract.excludeTags,
-                includeTags: graph.contract.includeTags,
-              },
-            ]
-          : [],
-        compositionOptions,
-      });
+          const { results } = await composeGraphsInWorker({
+            federatedGraph: graph,
+            subgraphsToCompose: subgraphsToCompose.map((s) => ({
+              subgraphs: s.subgraphs,
+              isFeatureFlagComposition: s.isFeatureFlagComposition,
+              featureFlagName: s.featureFlagName,
+              featureFlagId: s.featureFlagId,
+            })),
+            tagOptionsByContractName: graph.contract
+              ? [
+                  {
+                    contractName: graph.name,
+                    excludeTags: graph.contract.excludeTags,
+                    includeTags: graph.contract.includeTags,
+                  },
+                ]
+              : [],
+            compositionOptions,
+          });
 
-      graphAndCompositionResults.push({ federatedGraph: graph, results });
-    }
-
-    return graphAndCompositionResults;
+          return { federatedGraph: graph, results };
+        }),
+      ),
+    );
   }
 
   /**
