@@ -454,3 +454,99 @@ type StreamHandlerError struct {
 func (e *StreamHandlerError) Error() string {
 	return e.Message
 }
+
+// SubscriptionBeforeTriggerHandlerContext is the context passed to SubscriptionBeforeTrigger hooks.
+// It exposes full request context read-only; only the subscription event configuration is mutable.
+type SubscriptionBeforeTriggerHandlerContext interface {
+	// Request is the original request received by the router.
+	Request() *http.Request
+	// Logger is the logger for the request.
+	Logger() *zap.Logger
+	// Operation is the GraphQL operation.
+	Operation() OperationContext
+	// Authentication is the authentication for the request.
+	Authentication() authentication.Authentication
+	// SubscriptionEventConfiguration returns the current subscription event configuration.
+	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
+	// SetSubscriptionEventConfiguration replaces the subscription event configuration.
+	// A returned error fails the subscription and is propagated to the client.
+	SetSubscriptionEventConfiguration(cfg datasource.SubscriptionEventConfiguration) error
+}
+
+type pubSubSubscriptionBeforeTriggerHookContext struct {
+	request                        *http.Request
+	logger                         *zap.Logger
+	operation                      OperationContext
+	authentication                 authentication.Authentication
+	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
+}
+
+func (c *pubSubSubscriptionBeforeTriggerHookContext) Request() *http.Request {
+	return c.request
+}
+
+func (c *pubSubSubscriptionBeforeTriggerHookContext) Logger() *zap.Logger {
+	return c.logger
+}
+
+func (c *pubSubSubscriptionBeforeTriggerHookContext) Operation() OperationContext {
+	return c.operation
+}
+
+func (c *pubSubSubscriptionBeforeTriggerHookContext) Authentication() authentication.Authentication {
+	return c.authentication
+}
+
+func (c *pubSubSubscriptionBeforeTriggerHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
+	return c.subscriptionEventConfiguration
+}
+
+func (c *pubSubSubscriptionBeforeTriggerHookContext) SetSubscriptionEventConfiguration(cfg datasource.SubscriptionEventConfiguration) error {
+	c.subscriptionEventConfiguration = cfg
+	return nil
+}
+
+// SubscriptionBeforeTriggerHandler is the module interface for the before-trigger hook.
+type SubscriptionBeforeTriggerHandler interface {
+	// SubscriptionBeforeTrigger runs before the subscription trigger is created.
+	// It may only modify the subscription event configuration. A returned error
+	// fails the subscription and is propagated to the client.
+	SubscriptionBeforeTrigger(ctx SubscriptionBeforeTriggerHandlerContext) error
+}
+
+// NewPubSubSubscriptionBeforeTriggerHook converts a SubscriptionBeforeTriggerHandler fn to a datasource.SubscriptionBeforeTriggerFn.
+func NewPubSubSubscriptionBeforeTriggerHook(fn func(ctx SubscriptionBeforeTriggerHandlerContext) error) datasource.SubscriptionBeforeTriggerFn {
+	if fn == nil {
+		return nil
+	}
+
+	return func(ctx context.Context, subConf datasource.SubscriptionEventConfiguration) (datasource.SubscriptionEventConfiguration, error) {
+		requestContext := getRequestContext(ctx)
+
+		logger := requestContext.Logger()
+		if logger != nil {
+			logger = logger.With(zap.String("component", "pubsub_subscription_before_trigger_hook"))
+			if subConf != nil {
+				logger = logger.With(
+					zap.String("provider_id", subConf.ProviderID()),
+					zap.String("provider_type", string(subConf.ProviderType())),
+					zap.String("field_name", subConf.RootFieldName()),
+				)
+			}
+		}
+
+		hookCtx := &pubSubSubscriptionBeforeTriggerHookContext{
+			request:                        requestContext.Request(),
+			logger:                         logger,
+			operation:                      requestContext.Operation(),
+			authentication:                 requestContext.Authentication(),
+			subscriptionEventConfiguration: subConf,
+		}
+
+		if err := fn(hookCtx); err != nil {
+			return nil, err
+		}
+
+		return hookCtx.subscriptionEventConfiguration, nil
+	}
+}

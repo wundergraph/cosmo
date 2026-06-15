@@ -766,6 +766,10 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.subscriptionHooks.onReceiveEvents.handlers = append(r.subscriptionHooks.onReceiveEvents.handlers, handler.OnReceiveEvents)
 		}
 
+		if handler, ok := moduleInstance.(SubscriptionBeforeTriggerHandler); ok {
+			r.subscriptionHooks.onBeforeTrigger.handlers = append(r.subscriptionHooks.onBeforeTrigger.handlers, handler.SubscriptionBeforeTrigger)
+		}
+
 		r.modules = append(r.modules, moduleInstance)
 
 		r.logger.Info("Module registered",

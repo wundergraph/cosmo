@@ -32,6 +32,11 @@ type subscriptionHooks struct {
 	onStart         onStartHooks
 	onPublishEvents onPublishEventsHooks
 	onReceiveEvents onReceiveEventsHooks
+	onBeforeTrigger onBeforeTriggerHooks
+}
+
+type onBeforeTriggerHooks struct {
+	handlers []func(ctx SubscriptionBeforeTriggerHandlerContext) error
 }
 
 type onStartHooks struct {

@@ -1,11 +1,13 @@
 package datasource
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
+	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
@@ -92,8 +94,71 @@ func (s *PubSubSubscriptionDataSource[C]) HashTriggerInput(input []byte, xxh *xx
 	return s.triggerHashInput(input, xxh)
 }
 
+func (s *PubSubSubscriptionDataSource[C]) SubscriptionBeforeTrigger(ctx context.Context, input []byte) ([]byte, error) {
+	if len(s.hooks.SubscriptionBeforeTrigger.Handlers) == 0 {
+		return input, nil
+	}
+
+	var (
+		conf SubscriptionEventConfiguration
+		err  error
+	)
+
+	defer func() {
+		if r := recover(); r != nil {
+			s.logger.
+				WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
+				Error("[Recovery from handler panic]",
+					zap.Any("error", r),
+				)
+			switch v := r.(type) {
+			case error:
+				err = v
+			default:
+				err = fmt.Errorf("%v", v)
+			}
+		}
+	}()
+
+	conf, err = s.SubscriptionEventConfiguration(input)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fn := range s.hooks.SubscriptionBeforeTrigger.Handlers {
+		conf, err = fn(ctx, conf)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := conf.(C); !ok {
+			return nil, errors.New("invalid subscription configuration returned by SubscriptionBeforeTrigger hook")
+		}
+	}
+
+	return mergeConfigIntoInput(input, conf)
+}
+
+// mergeConfigIntoInput re-serializes the (possibly mutated) config back into
+// the original input JSON, preserving non-config keys such as initial_payload
+// and body.extensions that the resolver may have added.
+func mergeConfigIntoInput(input []byte, conf SubscriptionEventConfiguration) ([]byte, error) {
+	confBytes, err := json.Marshal(conf)
+	if err != nil {
+		return nil, err
+	}
+	err = jsonparser.ObjectEach(confBytes, func(key, value []byte, dataType jsonparser.ValueType, _ int) error {
+		input, err = jsonparser.Set(input, value, string(key))
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return input, nil
+}
+
 var _ SubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
 var _ resolve.HookableSubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
+var _ resolve.BeforeTriggerSubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
 
 func NewPubSubSubscriptionDataSource[C SubscriptionEventConfiguration](pubSub Adapter, triggerHashInputFn triggerHashInputFn, logger *zap.Logger, eventBuilder EventBuilderFn) *PubSubSubscriptionDataSource[C] {
 	if logger == nil {
