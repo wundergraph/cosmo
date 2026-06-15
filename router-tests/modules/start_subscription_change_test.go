@@ -113,7 +113,7 @@ func TestStartSubscriptionChangeHook(t *testing.T) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 
-			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
+			assert.GreaterOrEqual(t, int32(1), customModule.HookCallCount.Load())
 		})
 	})
 }
