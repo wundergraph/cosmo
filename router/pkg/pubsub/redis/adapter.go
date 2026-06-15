@@ -109,13 +109,13 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 
 	go func() {
 		defer p.closeWg.Done()
+		defer cleanup()
 
 		for {
 			select {
 			case msg, ok := <-msgChan:
 				if !ok {
 					log.Debug("subscription closed, stopping")
-					cleanup()
 					return
 				}
 				if msg == nil {
@@ -137,12 +137,10 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscription if it is not already done
 				log.Debug("application context done, stopping subscription")
-				cleanup()
 				return
 			case <-ctx.Done():
 				// When the subscription context is done, we stop the subscription if it is not already done
 				log.Debug("subscription context done, stopping subscription")
-				cleanup()
 				return
 			}
 		}
