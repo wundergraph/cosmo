@@ -10,7 +10,7 @@ import { getBaseHeaders } from '../../../core/config.js';
 import { handleCompositionResult } from '../../../handle-composition-result.js';
 import { limitMaxValue } from '../../../constants.js';
 import { fileExists } from '../../../utils.js';
-import { poolBatchPublishStatus } from '../utils/pool-batch-publish-status.js';
+import { pollBatchPublishStatus } from '../utils/poll-batch-publish-status.js';
 
 const entrySchema = z.object({
   name: z.string().trim().min(1, 'a non-empty "name" is required'),
@@ -58,7 +58,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.option('-j, --json', 'Prints to the console in json format instead of table');
-  command.option('--async', 'This flag enable pooling for the publish status');
+  command.option('--async', 'This flag enables polling the operation status');
 
   command.action(async (options) => {
     const configFile = resolve(options.config);
@@ -142,7 +142,7 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.jobId) {
-      resp = await poolBatchPublishStatus(opts.client, resp.jobId);
+      resp = await pollBatchPublishStatus(opts.client, resp.jobId);
     }
 
     const total = subgraphs.length;

@@ -7,7 +7,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Client } from '../../../core/client/client.js';
 import { getBaseHeaders } from '../../../core/config.js';
 
-export async function poolBatchPublishStatus(
+export async function pollBatchPublishStatus(
   client: Client,
   jobId: string,
 ): Promise<PublishFederatedSubgraphsResponse> {
