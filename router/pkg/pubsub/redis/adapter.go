@@ -111,7 +111,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 
 		err = sub.Close()
 		if err != nil {
-			log.Error(fmt.Sprintf("error closing connection to redis: %v", zap.Error(err)))
+			log.Error("error closing connection to redis", zap.Error(err))
 		}
 	}
 
@@ -125,6 +125,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 			case msg, ok := <-msgChan:
 				if !ok {
 					log.Debug("subscription closed, stopping")
+					cleanup()
 					return
 				}
 				if msg == nil {
