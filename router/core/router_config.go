@@ -36,7 +36,7 @@ type subscriptionHooks struct {
 }
 
 type onBeforeTriggerHooks struct {
-	handlers []func(ctx SubscriptionBeforeTriggerHandlerContext) error
+	handlers []func(ctx SubscriptionBeforeTriggerHandlerContext)
 }
 
 type onStartHooks struct {

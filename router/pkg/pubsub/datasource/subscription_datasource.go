@@ -126,10 +126,7 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionBeforeTrigger(ctx context.
 	}
 
 	for _, fn := range s.hooks.SubscriptionBeforeTrigger.Handlers {
-		conf, err = fn(ctx, conf)
-		if err != nil {
-			return nil, err
-		}
+		conf = fn(ctx, conf)
 		if _, ok := conf.(C); !ok {
 			return nil, errors.New("invalid subscription configuration returned by SubscriptionBeforeTrigger hook")
 		}

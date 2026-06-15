@@ -469,8 +469,7 @@ type SubscriptionBeforeTriggerHandlerContext interface {
 	// SubscriptionEventConfiguration returns the current subscription event configuration.
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
 	// SetSubscriptionEventConfiguration replaces the subscription event configuration.
-	// A returned error fails the subscription and is propagated to the client.
-	SetSubscriptionEventConfiguration(cfg datasource.SubscriptionEventConfiguration) error
+	SetSubscriptionEventConfiguration(cfg datasource.SubscriptionEventConfiguration)
 }
 
 type pubSubSubscriptionBeforeTriggerHookContext struct {
@@ -501,26 +500,24 @@ func (c *pubSubSubscriptionBeforeTriggerHookContext) SubscriptionEventConfigurat
 	return c.subscriptionEventConfiguration
 }
 
-func (c *pubSubSubscriptionBeforeTriggerHookContext) SetSubscriptionEventConfiguration(cfg datasource.SubscriptionEventConfiguration) error {
+func (c *pubSubSubscriptionBeforeTriggerHookContext) SetSubscriptionEventConfiguration(cfg datasource.SubscriptionEventConfiguration) {
 	c.subscriptionEventConfiguration = cfg
-	return nil
 }
 
 // SubscriptionBeforeTriggerHandler is the module interface for the before-trigger hook.
 type SubscriptionBeforeTriggerHandler interface {
 	// SubscriptionBeforeTrigger runs before the subscription trigger is created.
-	// It may only modify the subscription event configuration. A returned error
-	// fails the subscription and is propagated to the client.
-	SubscriptionBeforeTrigger(ctx SubscriptionBeforeTriggerHandlerContext) error
+	// It may only modify the subscription event configuration.
+	SubscriptionBeforeTrigger(ctx SubscriptionBeforeTriggerHandlerContext)
 }
 
 // NewPubSubSubscriptionBeforeTriggerHook converts a SubscriptionBeforeTriggerHandler fn to a datasource.SubscriptionBeforeTriggerFn.
-func NewPubSubSubscriptionBeforeTriggerHook(fn func(ctx SubscriptionBeforeTriggerHandlerContext) error) datasource.SubscriptionBeforeTriggerFn {
+func NewPubSubSubscriptionBeforeTriggerHook(fn func(ctx SubscriptionBeforeTriggerHandlerContext)) datasource.SubscriptionBeforeTriggerFn {
 	if fn == nil {
 		return nil
 	}
 
-	return func(ctx context.Context, subConf datasource.SubscriptionEventConfiguration) (datasource.SubscriptionEventConfiguration, error) {
+	return func(ctx context.Context, subConf datasource.SubscriptionEventConfiguration) datasource.SubscriptionEventConfiguration {
 		requestContext := getRequestContext(ctx)
 
 		logger := requestContext.Logger()
@@ -543,10 +540,8 @@ func NewPubSubSubscriptionBeforeTriggerHook(fn func(ctx SubscriptionBeforeTrigge
 			subscriptionEventConfiguration: subConf,
 		}
 
-		if err := fn(hookCtx); err != nil {
-			return nil, err
-		}
+		fn(hookCtx)
 
-		return hookCtx.subscriptionEventConfiguration, nil
+		return hookCtx.subscriptionEventConfiguration
 	}
 }
