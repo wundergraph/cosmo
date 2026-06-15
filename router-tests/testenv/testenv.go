@@ -298,6 +298,8 @@ type MetricOptions struct {
 	LogExporter                           MetricsLogExporterOptions
 	OTLPCostStats                         config.CostStats
 	PrometheusCostStats                   config.CostStats
+	OTLPExemplarFilter                    config.ExemplarFilter
+	PrometheusExemplarFilter              config.ExemplarFilter
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -1627,6 +1629,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 
 		prometheusConfig = rmetric.PrometheusConfig{
 			Enabled:         true,
+			ExemplarFilter:  rmetric.ExemplarFilter(testConfig.MetricOptions.PrometheusExemplarFilter),
 			ListenAddr:      fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
 			Path:            "/metrics",
 			TestRegistry:    testConfig.PrometheusRegistry,
@@ -1657,6 +1660,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 				},
 				OTLP: config.MetricsOTLP{
 					Enabled:         true,
+					ExemplarFilter:  testConfig.MetricOptions.OTLPExemplarFilter,
 					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
 					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
 					Streams:         testConfig.MetricOptions.EnableOTLPStreamMetrics,
