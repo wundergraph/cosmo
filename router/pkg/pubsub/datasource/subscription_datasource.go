@@ -147,7 +147,16 @@ func mergeConfigIntoInput(input []byte, conf SubscriptionEventConfiguration) ([]
 		return nil, err
 	}
 	err = jsonparser.ObjectEach(confBytes, func(key, value []byte, dataType jsonparser.ValueType, _ int) error {
-		input, err = jsonparser.Set(input, value, string(key))
+		rawValue := value
+		if dataType == jsonparser.String {
+			// jsonparser.ObjectEach strips the surrounding quotes from string values.
+			// jsonparser.Set expects valid JSON, so we must re-add them.
+			rawValue = make([]byte, len(value)+2)
+			rawValue[0] = '"'
+			copy(rawValue[1:], value)
+			rawValue[len(rawValue)-1] = '"'
+		}
+		input, err = jsonparser.Set(input, rawValue, string(key))
 		return err
 	})
 	if err != nil {
