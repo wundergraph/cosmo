@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/**'
       - '.github/workflows/image-release.yml'
+      - '.github/workflows/cli-binary-release.yaml'
       - '.github/actions/**'
       - 'docs-website/**'
       - 'CLAUDE.md'
@@ -15,6 +16,7 @@ on:
       - 'LICENSE'
       - '.github/PULL_REQUEST_TEMPLATE.md'
       - '.github/CODEOWNERS'
+      - '.gitignore'
 jobs:
   build_test:
     timeout-minutes: 5

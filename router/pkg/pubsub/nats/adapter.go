@@ -176,6 +176,13 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 		subscriptions[i] = subscription
 	}
 
+	// Flush ensures the SUB commands are delivered to the NATS server before returning,
+	// so that publishers can immediately target these subjects without missing messages.
+	if err := p.client.Flush(); err != nil {
+		log.Error("flushing NATS connection after subscribe", zap.Error(err))
+		return datasource.NewError("failed to flush NATS connection", err)
+	}
+
 	p.closeWg.Add(1)
 
 	go func() {

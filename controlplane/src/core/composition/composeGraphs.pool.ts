@@ -151,9 +151,15 @@ export function composeGraphsInWorker(
         namespaceId: task.federatedGraph.namespaceId,
       },
     },
-    () => {
+    (span) => {
       const traceData = Sentry.getTraceData();
-      return getComposeGraphsPool().run({
+      const pool = getComposeGraphsPool();
+      span.setAttribute('pool.queueSize', pool.queueSize);
+      span.setAttribute('pool.threads', pool.threads.length);
+      Sentry.setMeasurement('pool.queueSize', pool.queueSize, 'none');
+      Sentry.setMeasurement('pool.threads', pool.threads.length, 'none');
+
+      return pool.run({
         ...fullTask,
         trace: {
           sentryTrace: traceData['sentry-trace'],

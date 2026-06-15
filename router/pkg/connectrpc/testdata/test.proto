@@ -31,7 +31,37 @@ message GetEmployeeResponse {
   Mood mood = 2;
 }
 
+// DocumentStatus exercises protographic's case-preserving enum value naming:
+// the value segment keeps its original GraphQL case (active, not ACTIVE), so the
+// response transform must NOT uppercase the value when re-adding the prefix.
+enum DocumentStatus {
+  DOCUMENT_STATUS_UNSPECIFIED = 0;
+  DOCUMENT_STATUS_active = 1;
+  DOCUMENT_STATUS_archived = 2;
+}
+
+// Document is a nested message holding an enum, used to exercise the recursive
+// response transform.
+message Document {
+  string title = 1;
+  DocumentStatus status = 2;
+}
+
+// GetDocumentRequest is the request message for GetDocument
+message GetDocumentRequest {
+  string id = 1;
+}
+
+// GetDocumentResponse exercises the response transform's repeated-enum and
+// nested-message handling.
+message GetDocumentResponse {
+  string name = 1;
+  repeated Mood moods = 2;
+  Document document = 3;
+}
+
 // EmployeeService provides employee operations
 service EmployeeService {
   rpc GetEmployee(GetEmployeeRequest) returns (GetEmployeeResponse);
+  rpc GetDocument(GetDocumentRequest) returns (GetDocumentResponse);
 }

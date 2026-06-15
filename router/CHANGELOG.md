@@ -4,6 +4,45 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.323.1](https://github.com/wundergraph/cosmo/compare/router@0.323.0...router@0.323.1) (2026-06-15)
+
+### Bug Fixes
+
+* **router:** fix inefficient trigger id generation ([#2950](https://github.com/wundergraph/cosmo/issues/2950)) ([837467e](https://github.com/wundergraph/cosmo/commit/837467e9f37b24cbdcf138f9c7ca82b834f68aac)) (@dkorittki)
+
+# [0.323.0](https://github.com/wundergraph/cosmo/compare/router@0.322.2...router@0.323.0) (2026-06-15)
+
+### Features
+
+* **router:** support exemplar filter configuration ([#2921](https://github.com/wundergraph/cosmo/issues/2921)) ([78877ee](https://github.com/wundergraph/cosmo/commit/78877ee0b24a01820431eb49f146af61b5c22f46)) (@Noroth)
+
+## [0.322.2](https://github.com/wundergraph/cosmo/compare/router@0.322.1...router@0.322.2) (2026-06-11)
+
+### Bug Fixes
+
+* include improvements in go-arena ([#2959](https://github.com/wundergraph/cosmo/issues/2959)) ([9726c4f](https://github.com/wundergraph/cosmo/commit/9726c4fe3d6e5fc3313b54682845e34e3c7d9bd2)) (@ysmolski)
+
+## [0.322.1](https://github.com/wundergraph/cosmo/compare/router@0.322.0...router@0.322.1) (2026-06-11)
+
+**Note:** Version bump only for package router
+
+# [0.322.0](https://github.com/wundergraph/cosmo/compare/router@0.321.2...router@0.322.0) (2026-06-10)
+
+### Bug Fixes
+
+* **router/connectrpc:** map GraphQL enum values to proto names on response path ([#2928](https://github.com/wundergraph/cosmo/issues/2928)) ([6029ae0](https://github.com/wundergraph/cosmo/commit/6029ae05dccc532adabada9b3ab8d6d8495c9ffe)) (@asoorm)
+* **router:** strip Sep-2025 executable descriptions from forwarded ops ([#2884](https://github.com/wundergraph/cosmo/issues/2884)) ([7961cf4](https://github.com/wundergraph/cosmo/commit/7961cf428c5374b63823733f1724b1da17f63480)) (@asoorm)
+
+### Features
+
+* support setting headers from file ([#2908](https://github.com/wundergraph/cosmo/issues/2908)) ([fef5e7c](https://github.com/wundergraph/cosmo/commit/fef5e7cb2350a21099dcb103c156d710af8b4a6d)) (@Noroth)
+
+## [0.321.2](https://github.com/wundergraph/cosmo/compare/router@0.321.1...router@0.321.2) (2026-06-08)
+
+### Bug Fixes
+
+* calculate costs for abstract fields correctly ([#2925](https://github.com/wundergraph/cosmo/issues/2925)) ([474722f](https://github.com/wundergraph/cosmo/commit/474722f750064750d2cd4742374eddd6610057f3)) (@ysmolski)
+
 ## [0.321.1](https://github.com/wundergraph/cosmo/compare/router@0.321.0...router@0.321.1) (2026-06-04)
 
 **Note:** Version bump only for package router
