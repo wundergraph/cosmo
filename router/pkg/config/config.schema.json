@@ -1512,6 +1512,12 @@
                   "not": {
                     "required": ["exclude_metrics", "include_metrics"]
                   }
+                },
+                "exemplar_filter": {
+                  "type": "string",
+                  "default": "always_off",
+                  "enum": ["trace_based", "always_off", "always_on"],
+                  "description": "Controls which metric measurements are eligible to record exemplars. 'always_off' records no exemplars (the default). 'trace_based' only records exemplars for measurements taken within a sampled trace context. 'always_on' records exemplars for all measurements. See https://opentelemetry.io/docs/specs/otel/metrics/sdk/#exemplarfilter."
                 }
               }
             },
@@ -1652,6 +1658,12 @@
                       }
                     }
                   }
+                },
+                "exemplar_filter": {
+                  "type": "string",
+                  "default": "always_off",
+                  "enum": ["trace_based", "always_off", "always_on"],
+                  "description": "Controls which metric measurements are eligible to record exemplars. 'always_off' records no exemplars (the default). 'trace_based' only records exemplars for measurements taken within a sampled trace context. 'always_on' records exemplars for all measurements. See https://opentelemetry.io/docs/specs/otel/metrics/sdk/#exemplarfilter."
                 }
               }
             }
@@ -1993,7 +2005,7 @@
                     "$ref": "#/$defs/traffic_shaping_header_response_rule"
                   },
                   {
-                    "$ref": "#/$defs/set_header_rule"
+                    "$ref": "#/$defs/set_response_header_rule"
                   }
                 ]
               }
@@ -4622,6 +4634,82 @@
         "name": {
           "type": "string",
           "examples": ["X-API-Key"],
+          "description": "The name of the header to set."
+        },
+        "value": {
+          "type": "string",
+          "examples": ["My-Secret-Value"],
+          "description": "The value to set for the header. This can include environment variables."
+        },
+        "expression": {
+          "type": "string",
+          "description": "The template expression to evaluate. The expression must return a string value."
+        },
+        "value_from": {
+          "type": "object",
+          "description": "DEPRECATED: Use expression instead. The configuration for the value from. The value from is used to extract a value from a request context and propagate it to subgraphs. This is currently only valid in requests",
+          "additionalProperties": false,
+          "required": ["context_field"],
+          "properties": {
+            "context_field": {
+              "type": "string",
+              "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
+              "enum": ["operation_name"]
+            }
+          }
+        },
+        "from_file": {
+          "type": "object",
+          "description": "Source the header value from a file's contents. The file is loaded into memory and refreshed at refresh_interval, so request-time reads do not touch disk. Currently only valid in requests.",
+          "additionalProperties": false,
+          "required": ["path", "refresh_interval"],
+          "properties": {
+            "path": {
+              "type": "string",
+              "examples": ["/etc/secrets/api.key"],
+              "description": "Absolute path to the file whose contents become the header value. Trailing whitespace is trimmed."
+            },
+            "refresh_interval": {
+              "type": "string",
+              "format": "go-duration",
+              "duration": {
+                "minimum": "100ms"
+              },
+              "default": "1m",
+              "description": "Determines how often the file is checked for changes and re-read into memory. The minimum value is 100ms."
+            }
+          }
+        }
+      },
+      "required": ["op", "name"],
+      "oneOf": [
+        {
+          "required": ["value"]
+        },
+        {
+          "required": ["expression"]
+        },
+        {
+          "required": ["value_from"]
+        },
+        {
+          "required": ["from_file"]
+        }
+      ]
+    },
+    "set_response_header_rule": {
+      "type": "object",
+      "description": "The configuration for setting response headers. This is used to set specific headers in responses. Unlike the request variant, 'from_file' is not allowed here.",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string",
+          "const": "set",
+          "description": "The 'set' operation is used to set a specific header value."
+        },
+        "name": {
+          "type": "string",
+          "examples": ["X-Custom-Header"],
           "description": "The name of the header to set."
         },
         "value": {

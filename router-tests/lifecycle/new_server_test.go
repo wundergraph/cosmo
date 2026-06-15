@@ -133,6 +133,7 @@ func setupNewServerTest(t *testing.T) (rr *core.Router, cleanup func()) {
 	require.NoError(t, protojson.Unmarshal([]byte(replaced), &routerConfig))
 
 	rr, err := core.NewRouter(
+		t.Context(),
 		core.WithDisableUsageTracking(),
 		core.WithLogger(zap.NewNop()),
 		core.WithDevelopmentMode(true),

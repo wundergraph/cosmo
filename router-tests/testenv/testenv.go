@@ -173,6 +173,7 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	}
 	b.StartTimer()
 	f(b, env)
+	b.StopTimer()
 	if cfg.AssertCacheMetrics != nil {
 		assertCacheMetrics(b, env, cfg.AssertCacheMetrics.BaseGraphAssertions, "")
 
@@ -180,6 +181,7 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 			assertCacheMetrics(b, env, v, ff)
 		}
 	}
+	b.StartTimer()
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -296,6 +298,8 @@ type MetricOptions struct {
 	LogExporter                           MetricsLogExporterOptions
 	OTLPCostStats                         config.CostStats
 	PrometheusCostStats                   config.CostStats
+	OTLPExemplarFilter                    config.ExemplarFilter
+	PrometheusExemplarFilter              config.ExemplarFilter
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -711,7 +715,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			return &config.Config{}, nil
 		},
 		RouterFactory: func(ctx context.Context, res *core.RouterResources) (*core.Router, error) {
-			rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
+			rr, err := configureRouter(ctx, listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 			if err != nil {
 				cancel(err)
 				return nil, err
@@ -1141,7 +1145,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
-	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
+	rr, err := configureRouter(ctx, listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 	if err != nil {
 		cancel(err)
 		return nil, err
@@ -1332,7 +1336,7 @@ func GenerateVersionedJwtToken() (string, error) {
 	return jwtToken.SignedString([]byte("hunter2"))
 }
 
-func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
+func configureRouter(ctx context.Context, listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{},
 		CDN: config.CDNConfiguration{
@@ -1625,6 +1629,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 		prometheusConfig = rmetric.PrometheusConfig{
 			Enabled:         true,
+			ExemplarFilter:  rmetric.ExemplarFilter(testConfig.MetricOptions.PrometheusExemplarFilter),
 			ListenAddr:      fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
 			Path:            "/metrics",
 			TestRegistry:    testConfig.PrometheusRegistry,
@@ -1655,6 +1660,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				},
 				OTLP: config.MetricsOTLP{
 					Enabled:         true,
+					ExemplarFilter:  testConfig.MetricOptions.OTLPExemplarFilter,
 					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
 					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
 					Streams:         testConfig.MetricOptions.EnableOTLPStreamMetrics,
@@ -1738,7 +1744,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(wsConfig))
 		routerOpts = append(routerOpts, core.WithClientHeader(testConfig.ClientHeader))
 	}
-	return core.NewRouter(routerOpts...)
+	return core.NewRouter(ctx, routerOpts...)
 }
 
 func testTokenClaims() jwt.MapClaims {

@@ -129,6 +129,8 @@ import { getPersistedOperations } from './persisted-operation/getPersistedOperat
 import { publishPersistedOperations } from './persisted-operation/publishPersistedOperations.js';
 import { deletePersistedOperation } from './persisted-operation/deletePersistedOperation.js';
 import { checkPersistedOperationTraffic } from './persisted-operation/check-persisted-operation-traffic.js';
+import { previewDeleteClient } from './persisted-operation/previewDeleteClient.js';
+import { deleteClient } from './persisted-operation/deleteClient.js';
 import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
 import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
 import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
@@ -154,6 +156,7 @@ import { getSubgraphSDLFromLatestComposition } from './subgraph/getSubgraphSDLFr
 import { getSubgraphs } from './subgraph/getSubgraphs.js';
 import { moveSubgraph } from './subgraph/moveSubgraph.js';
 import { publishFederatedSubgraph } from './subgraph/publishFederatedSubgraph.js';
+import { publishFederatedSubgraphs } from './subgraph/publishFederatedSubgraphs.js';
 import { updateSubgraph } from './subgraph/updateSubgraph.js';
 import { acceptOrDeclineInvitation } from './user/acceptOrDeclineInvitation.js';
 import { deleteUser } from './user/deleteUser.js';
@@ -268,6 +271,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     publishFederatedSubgraph: (req, ctx) => {
       return publishFederatedSubgraph(opts, req, ctx);
+    },
+
+    publishFederatedSubgraphs: (req, ctx) => {
+      return publishFederatedSubgraphs(opts, req, ctx);
     },
 
     forceCheckSuccess: (req, ctx) => {
@@ -668,6 +675,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getClients: (req, ctx) => {
       return getClients(opts, req, ctx);
+    },
+
+    previewDeleteClient: (req, ctx) => {
+      return previewDeleteClient(opts, req, ctx);
+    },
+
+    deleteClient: (req, ctx) => {
+      return deleteClient(opts, req, ctx);
     },
 
     getOrganizationRequestsCount: (req, ctx) => {

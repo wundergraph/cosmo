@@ -101,6 +101,9 @@ const (
 	// PlatformServicePublishFederatedSubgraphProcedure is the fully-qualified name of the
 	// PlatformService's PublishFederatedSubgraph RPC.
 	PlatformServicePublishFederatedSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraph"
+	// PlatformServicePublishFederatedSubgraphsProcedure is the fully-qualified name of the
+	// PlatformService's PublishFederatedSubgraphs RPC.
+	PlatformServicePublishFederatedSubgraphsProcedure = "/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraphs"
 	// PlatformServiceCreateFederatedGraphProcedure is the fully-qualified name of the PlatformService's
 	// CreateFederatedGraph RPC.
 	PlatformServiceCreateFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateFederatedGraph"
@@ -358,6 +361,12 @@ const (
 	// PlatformServiceGetClientsProcedure is the fully-qualified name of the PlatformService's
 	// GetClients RPC.
 	PlatformServiceGetClientsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetClients"
+	// PlatformServicePreviewDeleteClientProcedure is the fully-qualified name of the PlatformService's
+	// PreviewDeleteClient RPC.
+	PlatformServicePreviewDeleteClientProcedure = "/wg.cosmo.platform.v1.PlatformService/PreviewDeleteClient"
+	// PlatformServiceDeleteClientProcedure is the fully-qualified name of the PlatformService's
+	// DeleteClient RPC.
+	PlatformServiceDeleteClientProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteClient"
 	// PlatformServiceGetRoutersProcedure is the fully-qualified name of the PlatformService's
 	// GetRouters RPC.
 	PlatformServiceGetRoutersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetRouters"
@@ -641,6 +650,9 @@ type PlatformServiceClient interface {
 	CreateFederatedSubgraph(context.Context, *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error)
 	// PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
 	PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error)
+	// PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
+	// request. Affected federated graphs (and their contracts / feature flags) are composed exactly once each.
+	PublishFederatedSubgraphs(context.Context, *connect.Request[v1.PublishFederatedSubgraphsRequest]) (*connect.Response[v1.PublishFederatedSubgraphsResponse], error)
 	// CreateFederatedGraph creates a federated graph on the control plane.
 	CreateFederatedGraph(context.Context, *connect.Request[v1.CreateFederatedGraphRequest]) (*connect.Response[v1.CreateFederatedGraphResponse], error)
 	// DeleteFederatedGraph deletes a federated graph from the control plane.
@@ -812,6 +824,10 @@ type PlatformServiceClient interface {
 	UpdateIDPMappers(context.Context, *connect.Request[v1.UpdateIDPMappersRequest]) (*connect.Response[v1.UpdateIDPMappersResponse], error)
 	// GetClients returns all the clients of the federated graph
 	GetClients(context.Context, *connect.Request[v1.GetClientsRequest]) (*connect.Response[v1.GetClientsResponse], error)
+	// PreviewDeleteClient returns the affected operation count for deleting a client
+	PreviewDeleteClient(context.Context, *connect.Request[v1.PreviewDeleteClientRequest]) (*connect.Response[v1.PreviewDeleteClientResponse], error)
+	// DeleteClient deletes a registered client and its persisted operations
+	DeleteClient(context.Context, *connect.Request[v1.DeleteClientRequest]) (*connect.Response[v1.DeleteClientResponse], error)
 	// GetRouters returns all active routers of the federated graph
 	GetRouters(context.Context, *connect.Request[v1.GetRoutersRequest]) (*connect.Response[v1.GetRoutersResponse], error)
 	// GetInvitations returns all the invitations a user has received
@@ -1109,6 +1125,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServicePublishFederatedSubgraphProcedure,
 			connect.WithSchema(platformServiceMethods.ByName("PublishFederatedSubgraph")),
+			connect.WithClientOptions(opts...),
+		),
+		publishFederatedSubgraphs: connect.NewClient[v1.PublishFederatedSubgraphsRequest, v1.PublishFederatedSubgraphsResponse](
+			httpClient,
+			baseURL+PlatformServicePublishFederatedSubgraphsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("PublishFederatedSubgraphs")),
 			connect.WithClientOptions(opts...),
 		),
 		createFederatedGraph: connect.NewClient[v1.CreateFederatedGraphRequest, v1.CreateFederatedGraphResponse](
@@ -1625,6 +1647,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceGetClientsProcedure,
 			connect.WithSchema(platformServiceMethods.ByName("GetClients")),
+			connect.WithClientOptions(opts...),
+		),
+		previewDeleteClient: connect.NewClient[v1.PreviewDeleteClientRequest, v1.PreviewDeleteClientResponse](
+			httpClient,
+			baseURL+PlatformServicePreviewDeleteClientProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("PreviewDeleteClient")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteClient: connect.NewClient[v1.DeleteClientRequest, v1.DeleteClientResponse](
+			httpClient,
+			baseURL+PlatformServiceDeleteClientProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("DeleteClient")),
 			connect.WithClientOptions(opts...),
 		),
 		getRouters: connect.NewClient[v1.GetRoutersRequest, v1.GetRoutersResponse](
@@ -2153,6 +2187,7 @@ type platformServiceClient struct {
 	migrateMonograph                                   *connect.Client[v1.MigrateMonographRequest, v1.MigrateMonographResponse]
 	createFederatedSubgraph                            *connect.Client[v1.CreateFederatedSubgraphRequest, v1.CreateFederatedSubgraphResponse]
 	publishFederatedSubgraph                           *connect.Client[v1.PublishFederatedSubgraphRequest, v1.PublishFederatedSubgraphResponse]
+	publishFederatedSubgraphs                          *connect.Client[v1.PublishFederatedSubgraphsRequest, v1.PublishFederatedSubgraphsResponse]
 	createFederatedGraph                               *connect.Client[v1.CreateFederatedGraphRequest, v1.CreateFederatedGraphResponse]
 	deleteFederatedGraph                               *connect.Client[v1.DeleteFederatedGraphRequest, v1.DeleteFederatedGraphResponse]
 	deleteFederatedSubgraph                            *connect.Client[v1.DeleteFederatedSubgraphRequest, v1.DeleteFederatedSubgraphResponse]
@@ -2239,6 +2274,8 @@ type platformServiceClient struct {
 	deleteOIDCProvider                                 *connect.Client[v1.DeleteOIDCProviderRequest, v1.DeleteOIDCProviderResponse]
 	updateIDPMappers                                   *connect.Client[v1.UpdateIDPMappersRequest, v1.UpdateIDPMappersResponse]
 	getClients                                         *connect.Client[v1.GetClientsRequest, v1.GetClientsResponse]
+	previewDeleteClient                                *connect.Client[v1.PreviewDeleteClientRequest, v1.PreviewDeleteClientResponse]
+	deleteClient                                       *connect.Client[v1.DeleteClientRequest, v1.DeleteClientResponse]
 	getRouters                                         *connect.Client[v1.GetRoutersRequest, v1.GetRoutersResponse]
 	getInvitations                                     *connect.Client[v1.GetInvitationsRequest, v1.GetInvitationsResponse]
 	acceptOrDeclineInvitation                          *connect.Client[v1.AcceptOrDeclineInvitationRequest, v1.AcceptOrDeclineInvitationResponse]
@@ -2431,6 +2468,11 @@ func (c *platformServiceClient) CreateFederatedSubgraph(ctx context.Context, req
 // PublishFederatedSubgraph calls wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph.
 func (c *platformServiceClient) PublishFederatedSubgraph(ctx context.Context, req *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error) {
 	return c.publishFederatedSubgraph.CallUnary(ctx, req)
+}
+
+// PublishFederatedSubgraphs calls wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraphs.
+func (c *platformServiceClient) PublishFederatedSubgraphs(ctx context.Context, req *connect.Request[v1.PublishFederatedSubgraphsRequest]) (*connect.Response[v1.PublishFederatedSubgraphsResponse], error) {
+	return c.publishFederatedSubgraphs.CallUnary(ctx, req)
 }
 
 // CreateFederatedGraph calls wg.cosmo.platform.v1.PlatformService.CreateFederatedGraph.
@@ -2878,6 +2920,16 @@ func (c *platformServiceClient) UpdateIDPMappers(ctx context.Context, req *conne
 // GetClients calls wg.cosmo.platform.v1.PlatformService.GetClients.
 func (c *platformServiceClient) GetClients(ctx context.Context, req *connect.Request[v1.GetClientsRequest]) (*connect.Response[v1.GetClientsResponse], error) {
 	return c.getClients.CallUnary(ctx, req)
+}
+
+// PreviewDeleteClient calls wg.cosmo.platform.v1.PlatformService.PreviewDeleteClient.
+func (c *platformServiceClient) PreviewDeleteClient(ctx context.Context, req *connect.Request[v1.PreviewDeleteClientRequest]) (*connect.Response[v1.PreviewDeleteClientResponse], error) {
+	return c.previewDeleteClient.CallUnary(ctx, req)
+}
+
+// DeleteClient calls wg.cosmo.platform.v1.PlatformService.DeleteClient.
+func (c *platformServiceClient) DeleteClient(ctx context.Context, req *connect.Request[v1.DeleteClientRequest]) (*connect.Response[v1.DeleteClientResponse], error) {
+	return c.deleteClient.CallUnary(ctx, req)
 }
 
 // GetRouters calls wg.cosmo.platform.v1.PlatformService.GetRouters.
@@ -3350,6 +3402,9 @@ type PlatformServiceHandler interface {
 	CreateFederatedSubgraph(context.Context, *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error)
 	// PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
 	PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error)
+	// PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
+	// request. Affected federated graphs (and their contracts / feature flags) are composed exactly once each.
+	PublishFederatedSubgraphs(context.Context, *connect.Request[v1.PublishFederatedSubgraphsRequest]) (*connect.Response[v1.PublishFederatedSubgraphsResponse], error)
 	// CreateFederatedGraph creates a federated graph on the control plane.
 	CreateFederatedGraph(context.Context, *connect.Request[v1.CreateFederatedGraphRequest]) (*connect.Response[v1.CreateFederatedGraphResponse], error)
 	// DeleteFederatedGraph deletes a federated graph from the control plane.
@@ -3521,6 +3576,10 @@ type PlatformServiceHandler interface {
 	UpdateIDPMappers(context.Context, *connect.Request[v1.UpdateIDPMappersRequest]) (*connect.Response[v1.UpdateIDPMappersResponse], error)
 	// GetClients returns all the clients of the federated graph
 	GetClients(context.Context, *connect.Request[v1.GetClientsRequest]) (*connect.Response[v1.GetClientsResponse], error)
+	// PreviewDeleteClient returns the affected operation count for deleting a client
+	PreviewDeleteClient(context.Context, *connect.Request[v1.PreviewDeleteClientRequest]) (*connect.Response[v1.PreviewDeleteClientResponse], error)
+	// DeleteClient deletes a registered client and its persisted operations
+	DeleteClient(context.Context, *connect.Request[v1.DeleteClientRequest]) (*connect.Response[v1.DeleteClientResponse], error)
 	// GetRouters returns all active routers of the federated graph
 	GetRouters(context.Context, *connect.Request[v1.GetRoutersRequest]) (*connect.Response[v1.GetRoutersResponse], error)
 	// GetInvitations returns all the invitations a user has received
@@ -3814,6 +3873,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServicePublishFederatedSubgraphProcedure,
 		svc.PublishFederatedSubgraph,
 		connect.WithSchema(platformServiceMethods.ByName("PublishFederatedSubgraph")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServicePublishFederatedSubgraphsHandler := connect.NewUnaryHandler(
+		PlatformServicePublishFederatedSubgraphsProcedure,
+		svc.PublishFederatedSubgraphs,
+		connect.WithSchema(platformServiceMethods.ByName("PublishFederatedSubgraphs")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateFederatedGraphHandler := connect.NewUnaryHandler(
@@ -4330,6 +4395,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceGetClientsProcedure,
 		svc.GetClients,
 		connect.WithSchema(platformServiceMethods.ByName("GetClients")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServicePreviewDeleteClientHandler := connect.NewUnaryHandler(
+		PlatformServicePreviewDeleteClientProcedure,
+		svc.PreviewDeleteClient,
+		connect.WithSchema(platformServiceMethods.ByName("PreviewDeleteClient")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceDeleteClientHandler := connect.NewUnaryHandler(
+		PlatformServiceDeleteClientProcedure,
+		svc.DeleteClient,
+		connect.WithSchema(platformServiceMethods.ByName("DeleteClient")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetRoutersHandler := connect.NewUnaryHandler(
@@ -4877,6 +4954,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceCreateFederatedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServicePublishFederatedSubgraphProcedure:
 			platformServicePublishFederatedSubgraphHandler.ServeHTTP(w, r)
+		case PlatformServicePublishFederatedSubgraphsProcedure:
+			platformServicePublishFederatedSubgraphsHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateFederatedGraphProcedure:
 			platformServiceCreateFederatedGraphHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteFederatedGraphProcedure:
@@ -5049,6 +5128,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceUpdateIDPMappersHandler.ServeHTTP(w, r)
 		case PlatformServiceGetClientsProcedure:
 			platformServiceGetClientsHandler.ServeHTTP(w, r)
+		case PlatformServicePreviewDeleteClientProcedure:
+			platformServicePreviewDeleteClientHandler.ServeHTTP(w, r)
+		case PlatformServiceDeleteClientProcedure:
+			platformServiceDeleteClientHandler.ServeHTTP(w, r)
 		case PlatformServiceGetRoutersProcedure:
 			platformServiceGetRoutersHandler.ServeHTTP(w, r)
 		case PlatformServiceGetInvitationsProcedure:
@@ -5308,6 +5391,10 @@ func (UnimplementedPlatformServiceHandler) CreateFederatedSubgraph(context.Conte
 
 func (UnimplementedPlatformServiceHandler) PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) PublishFederatedSubgraphs(context.Context, *connect.Request[v1.PublishFederatedSubgraphsRequest]) (*connect.Response[v1.PublishFederatedSubgraphsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraphs is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) CreateFederatedGraph(context.Context, *connect.Request[v1.CreateFederatedGraphRequest]) (*connect.Response[v1.CreateFederatedGraphResponse], error) {
@@ -5652,6 +5739,14 @@ func (UnimplementedPlatformServiceHandler) UpdateIDPMappers(context.Context, *co
 
 func (UnimplementedPlatformServiceHandler) GetClients(context.Context, *connect.Request[v1.GetClientsRequest]) (*connect.Response[v1.GetClientsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetClients is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) PreviewDeleteClient(context.Context, *connect.Request[v1.PreviewDeleteClientRequest]) (*connect.Response[v1.PreviewDeleteClientResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.PreviewDeleteClient is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) DeleteClient(context.Context, *connect.Request[v1.DeleteClientRequest]) (*connect.Response[v1.DeleteClientResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteClient is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetRouters(context.Context, *connect.Request[v1.GetRoutersRequest]) (*connect.Response[v1.GetRoutersResponse], error) {
