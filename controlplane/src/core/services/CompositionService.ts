@@ -836,8 +836,6 @@ export class CompositionService {
     result: ComposeAndDeployResult;
     uploadTasks: Array<() => Promise<void>>;
   }): Promise<void> {
-    await this.saveRouterConfigHash(graph.id, undefined, routerExecutionConfig);
-
     const manifestBasePath = this.getManifestBasePath(graph.id);
     const readyPathOverride = this.getLatestPath(graph);
     if (!readyPathOverride) {
@@ -848,6 +846,8 @@ export class CompositionService {
       });
       return;
     }
+
+    await this.saveRouterConfigHash(graph.id, undefined, routerExecutionConfig);
 
     uploadTasks.push(async () => {
       const { errors: uploadErrors } = await composer.composeAndUploadRouterConfig({
