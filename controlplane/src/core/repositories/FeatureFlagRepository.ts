@@ -72,7 +72,11 @@ export type FeatureFlagCollectCaches = {
 };
 
 /** Get-or-compute a cached promise (single-flight). With no cache, just computes. */
-function memoizePromise<T>(cache: Map<string, Promise<T>> | undefined, key: string, compute: () => Promise<T>): Promise<T> {
+function memoizePromise<T>(
+  cache: Map<string, Promise<T>> | undefined,
+  key: string,
+  compute: () => Promise<T>,
+): Promise<T> {
   if (!cache) {
     return compute();
   }
