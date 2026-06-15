@@ -695,7 +695,7 @@ describe('Batch publish subgraphs tests', () => {
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
-    expect(statusResp.response?.code).toBe(BatchPublishJobStatus.COMPLETED);
+    expect(statusResp.status).toBe(BatchPublishJobStatus.COMPLETED);
     expect(statusResp.counts?.compositionErrors).toBe(0);
     expect(statusResp.counts?.deploymentErrors).toBe(0);
     expect(statusResp.updatedSubgraphNames).toHaveLength(2);
