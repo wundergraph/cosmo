@@ -418,6 +418,7 @@ export const SetupTest = async function ({
       deactivateOrganizationQueue,
       deleteUserQueue,
       reactivateOrganizationQueue,
+      deleteBatchPublishJobDetailsQueue,
     },
   };
 };

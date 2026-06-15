@@ -1,6 +1,6 @@
 {
-  "id": "80082baf-082a-4c4d-bb8d-c6e1e3ac6b0e",
-  "prevId": "cf701524-2af6-40c6-b864-aa8b9a3a95aa",
+  "id": "a5338476-90c7-4c5e-a333-df4b2bd5c45c",
+  "prevId": "80082baf-082a-4c4d-bb8d-c6e1e3ac6b0e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -468,6 +468,76 @@
         }
       },
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "public.batch_publish_job_details": {
+      "name": "batch_publish_job_details",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "status": {
+          "name": "status",
+          "type": "batch_publish_job_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "failure_reason": {
+          "name": "failure_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "composition_result": {
+          "name": "composition_result",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "batch_publish_job_details_organization_id_organizations_id_fk": {
+          "name": "batch_publish_job_details_organization_id_organizations_id_fk",
+          "tableFrom": "batch_publish_job_details",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
@@ -9231,6 +9301,16 @@
     }
   },
   "enums": {
+    "public.batch_publish_job_status": {
+      "name": "batch_publish_job_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "processing",
+        "failed",
+        "completed"
+      ]
+    },
     "public.git_installation_type": {
       "name": "git_installation_type",
       "schema": "public",
