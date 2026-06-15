@@ -12,18 +12,18 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type uniqueRequestIdFn func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error
+type triggerHashInputFn func(input []byte, xxh *xxhash.Digest) error
 
 type EventBuilderFn func(data []byte) MutableStreamEvent
 
 // PubSubSubscriptionDataSource is a data source for handling subscriptions using a Pub/Sub mechanism.
 // It implements the SubscriptionDataSource interface and HookableSubscriptionDataSource
 type PubSubSubscriptionDataSource[C SubscriptionEventConfiguration] struct {
-	pubSub          Adapter
-	uniqueRequestID uniqueRequestIdFn
-	hooks           Hooks
-	logger          *zap.Logger
-	eventBuilder    EventBuilderFn
+	pubSub           Adapter
+	triggerHashInput triggerHashInputFn
+	hooks            Hooks
+	logger           *zap.Logger
+	eventBuilder     EventBuilderFn
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input []byte) (SubscriptionEventConfiguration, error) {
@@ -88,17 +88,21 @@ func (s *PubSubSubscriptionDataSource[C]) SetHooks(hooks Hooks) {
 	s.hooks = hooks
 }
 
+func (s *PubSubSubscriptionDataSource[C]) HashTriggerInput(input []byte, xxh *xxhash.Digest) error {
+	return s.triggerHashInput(input, xxh)
+}
+
 var _ SubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
 var _ resolve.HookableSubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
 
-func NewPubSubSubscriptionDataSource[C SubscriptionEventConfiguration](pubSub Adapter, uniqueRequestIdFn uniqueRequestIdFn, logger *zap.Logger, eventBuilder EventBuilderFn) *PubSubSubscriptionDataSource[C] {
+func NewPubSubSubscriptionDataSource[C SubscriptionEventConfiguration](pubSub Adapter, triggerHashInputFn triggerHashInputFn, logger *zap.Logger, eventBuilder EventBuilderFn) *PubSubSubscriptionDataSource[C] {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
 	return &PubSubSubscriptionDataSource[C]{
-		pubSub:          pubSub,
-		uniqueRequestID: uniqueRequestIdFn,
-		logger:          logger,
-		eventBuilder:    eventBuilder,
+		pubSub:           pubSub,
+		triggerHashInput: triggerHashInputFn,
+		logger:           logger,
+		eventBuilder:     eventBuilder,
 	}
 }

@@ -199,6 +199,7 @@ telemetry:
         exclude_metrics:
           - "process\\."
           - "server\\.uptime"
+      exemplar_filter: trace_based
 
     # Expose OpenTelemetry metrics for scraping
     prometheus:
@@ -219,6 +220,7 @@ telemetry:
       schema_usage:
         enabled: true
         include_operation_sha: true
+      exemplar_filter: trace_based
 
 cache_control_policy:
   enabled: true
@@ -291,6 +293,11 @@ headers:
       - op: 'set'
         name: 'x-expression-header'
         expression: "request.header.Get('X-Operation-Name')"
+      - op: 'set'
+        name: 'x-from-file-header'
+        from_file:
+          path: '/etc/secrets/api-key'
+          refresh_interval: 1m
     response:
       - op: 'propagate'
         algorithm: 'append'

@@ -4,6 +4,31 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.235.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.234.0...controlplane@0.235.0) (2026-06-15)
+
+### Features
+
+* **controlplane:** always sample batch subgraph publish traces ([#2957](https://github.com/wundergraph/cosmo/issues/2957)) ([2665d95](https://github.com/wundergraph/cosmo/commit/2665d9550139e2ad5aa38ad737076e3da09c6fc7)) (@gausie)
+
+# [0.234.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.233.0...controlplane@0.234.0) (2026-06-12)
+
+### Features
+
+* delete & list clients using wgc ([#2795](https://github.com/wundergraph/cosmo/issues/2795)) ([9aef4ca](https://github.com/wundergraph/cosmo/commit/9aef4cad767748accc70a5fa87f3d8f7c5062ea6)) (@comatory)
+
+# [0.233.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.232.1...controlplane@0.233.0) (2026-06-10)
+
+### Features
+
+* controlplane improve composition queries ([#2903](https://github.com/wundergraph/cosmo/issues/2903)) ([deb6f17](https://github.com/wundergraph/cosmo/commit/deb6f17e25d7f5e7438aaee088b54253efa0054c)) (@wilsonrivera)
+* improve performance for subgraph batch publishing ([#2949](https://github.com/wundergraph/cosmo/issues/2949)) ([746c876](https://github.com/wundergraph/cosmo/commit/746c876a71929c2aef075a81ccff508f2f7cf44b)) (@wilsonrivera)
+
+## [0.232.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.232.0...controlplane@0.232.1) (2026-06-10)
+
+### Bug Fixes
+
+* dedupe and exclude disabled feature flags in schema page dropdown ([#2938](https://github.com/wundergraph/cosmo/issues/2938)) ([8887e60](https://github.com/wundergraph/cosmo/commit/8887e60f469714793b9ed9247eb3e76961111e2b)) (@JivusAyrus)
+
 # [0.232.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.231.0...controlplane@0.232.0) (2026-06-08)
 
 ### Bug Fixes

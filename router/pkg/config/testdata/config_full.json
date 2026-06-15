@@ -90,7 +90,8 @@
             "server\\.uptime"
           ],
           "IncludeMetrics": null
-        }
+        },
+        "ExemplarFilter": "trace_based"
       },
       "Prometheus": {
         "Enabled": true,
@@ -119,7 +120,8 @@
             "Interval": 2000000000,
             "ExportTimeout": 10000000000
           }
-        }
+        },
+        "ExemplarFilter": "trace_based"
       },
       "CardinalityLimit": 2000
     }
@@ -275,7 +277,8 @@
           "Name": "",
           "Value": "",
           "Expression": "",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
         },
         {
           "Operation": "propagate",
@@ -287,7 +290,8 @@
           "Name": "",
           "Value": "",
           "Expression": "",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
         },
         {
           "Operation": "propagate",
@@ -299,7 +303,8 @@
           "Name": "",
           "Value": "",
           "Expression": "",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
         },
         {
           "Operation": "set",
@@ -311,7 +316,8 @@
           "Name": "X-API-Key",
           "Value": "some-secret",
           "Expression": "",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
         },
         {
           "Operation": "set",
@@ -328,7 +334,8 @@
             "ContextField": "operation_name",
             "ResponseHeader": "",
             "Expression": ""
-          }
+          },
+          "FromFile": null
         },
         {
           "Operation": "set",
@@ -340,7 +347,24 @@
           "Name": "x-expression-header",
           "Value": "",
           "Expression": "request.header.Get('X-Operation-Name')",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
+        },
+        {
+          "Operation": "set",
+          "Matching": "",
+          "NegateMatch": false,
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "x-from-file-header",
+          "Value": "",
+          "Expression": "",
+          "ValueFrom": null,
+          "FromFile": {
+            "Path": "/etc/secrets/api-key",
+            "RefreshInterval": 60000000000
+          }
         }
       ],
       "Response": [
@@ -370,7 +394,8 @@
             "Name": "",
             "Value": "",
             "Expression": "",
-            "ValueFrom": null
+            "ValueFrom": null,
+            "FromFile": null
           }
         ],
         "Response": [

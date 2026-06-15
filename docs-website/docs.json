@@ -192,6 +192,7 @@
                 "pages": [
                   "router/metrics-and-monitoring",
                   "router/metrics-and-monitoring/span-error-status",
+                  "router/metrics-and-monitoring/exemplars",
                   "router/metrics-and-monitoring/prometheus-metric-reference",
                   "router/metrics-and-monitoring/grafana"
                 ]
@@ -624,6 +625,11 @@
                 "group": "Operations",
                 "icon": "get-pocket",
                 "pages": ["cli/operations", "cli/operations/push"]
+              },
+              {
+                "group": "Clients",
+                "icon": "laptop-mobile",
+                "pages": ["cli/clients", "cli/clients/list", "cli/clients/delete"]
               },
               {
                 "group": "Schema Contracts",
