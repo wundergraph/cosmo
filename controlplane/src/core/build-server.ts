@@ -63,6 +63,7 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
+import { createNotifyOrganizationDeletionQueuedWorker } from './workers/NotifyOrganizationDeletionQueuedWorker.js';
 import {
   createDeleteBatchPublishJobDetailsWorker,
   DeleteBatchPublishJobDetailsQueue,
@@ -479,6 +480,15 @@ export default async function build(opts: BuildConfig) {
       blobStorage,
       platformWebhooks,
       deleteOrganizationAuditLogsQueue,
+    }),
+  );
+
+  bullWorkers.push(
+    createNotifyOrganizationDeletionQueuedWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      mailer: mailerClient,
     }),
   );
 

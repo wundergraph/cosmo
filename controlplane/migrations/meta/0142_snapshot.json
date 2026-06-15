@@ -1,5 +1,5 @@
 {
-  "id": "e559a8d3-37e2-4dae-8de0-a31a12581ee4",
+  "id": "80082baf-082a-4c4d-bb8d-c6e1e3ac6b0e",
   "prevId": "cf701524-2af6-40c6-b864-aa8b9a3a95aa",
   "version": "7",
   "dialect": "postgresql",
@@ -468,76 +468,6 @@
         }
       },
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "public.batch_publish_job_details": {
-      "name": "batch_publish_job_details",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "status": {
-          "name": "status",
-          "type": "batch_publish_job_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "failure_reason": {
-          "name": "failure_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "composition_result": {
-          "name": "composition_result",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "batch_publish_job_details_organization_id_organizations_id_fk": {
-          "name": "batch_publish_job_details_organization_id_organizations_id_fk",
-          "tableFrom": "batch_publish_job_details",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
@@ -6404,6 +6334,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "scca_schema_check_subgraph_id_idx": {
+          "name": "scca_schema_check_subgraph_id_idx",
+          "columns": [
+            {
+              "expression": "schema_check_subgraph_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -6998,6 +6943,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "scgpa_schema_check_subgraph_id_idx": {
+          "name": "scgpa_schema_check_subgraph_id_idx",
+          "columns": [
+            {
+              "expression": "schema_check_subgraph_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -7107,6 +7067,21 @@
           "columns": [
             {
               "expression": "schema_check_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sclact_schema_check_subgraph_id_idx": {
+          "name": "sclact_schema_check_subgraph_id_idx",
+          "columns": [
+            {
+              "expression": "schema_check_subgraph_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7336,6 +7311,21 @@
           "columns": [
             {
               "expression": "subgraph_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "scs_namespace_id_idx": {
+          "name": "scs_namespace_id_idx",
+          "columns": [
+            {
+              "expression": "namespace_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7629,6 +7619,21 @@
           "columns": [
             {
               "expression": "target_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sce_webhook_delivery_id_idx": {
+          "name": "sce_webhook_delivery_id_idx",
+          "columns": [
+            {
+              "expression": "check_extension_delivery_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -9226,16 +9231,6 @@
     }
   },
   "enums": {
-    "public.batch_publish_job_status": {
-      "name": "batch_publish_job_status",
-      "schema": "public",
-      "values": [
-        "pending",
-        "processing",
-        "failed",
-        "completed"
-      ]
-    },
     "public.git_installation_type": {
       "name": "git_installation_type",
       "schema": "public",
