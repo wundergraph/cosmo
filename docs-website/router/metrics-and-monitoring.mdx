@@ -248,6 +248,30 @@ telemetry:
 * `router.engine.messages.sent`: The number of total messages for subscriptions sent over from the subgraph to the router.
 
 
+### Resolver Metrics
+
+These metrics expose how the GraphQL engine's resolver concurrency pool is used. The router limits the number of resolvers that can run at the same time (see [`max_concurrent_resolvers`](/router/configuration#router-engine-configuration)). Use these metrics to detect when operations are queuing because the pool is saturated.
+
+```yaml config.yaml
+telemetry:
+  metrics:
+    otlp:
+      resolver:
+        enabled: true
+    prometheus:
+      resolver:
+        enabled: true
+```
+
+#### Metrics
+
+* `router.engine.resolvers.max_concurrent`: The configured maximum number of concurrent GraphQL resolver slots, as set by `ENGINE_MAX_CONCURRENT_RESOLVERS`.
+
+* `router.engine.resolvers.inflight`: The number of GraphQL resolver slots currently in use. When this approaches `router.engine.resolvers.max_concurrent`, operations start waiting for a free slot.
+
+* `router.graphql.resolver.acquire_duration`: Histogram (ms) of the time spent waiting to acquire a resolver concurrency slot. A rising value indicates resolver pool saturation.
+
+
 ### Cosmo Streams Metrics
 We expose metrics for [Cosmo Streams](/router/cosmo-streams). New data points are emitted when new messages are either sent or received from the messaging backend
 
@@ -319,6 +343,33 @@ We use the following standard dimensions
 * `router.http.client.connection.active`: The number of currently active connections, grouped by both subgraph and host. A connection is considered active once it has completed DNS resolution, TLS handshake, and dialing. While it’s less common, multiple subgraphs can share the same host, which is why both dimensions are included.
 
 * `router.http.client.connection.acquire_duration`: The duration in ms that a connection took to be initialized, which includes all of DNS, TLS Handshakes, and Dialing the host.
+
+### Network Metrics
+
+These metrics break down each outgoing subgraph request into its individual HTTP phases. They are collected per request using Go's `httptrace`, so unlike [Connection Metrics](#connection-metrics) they do not depend on the connection pool dialer. Use them to attribute subgraph latency to DNS resolution, connection setup, the TLS handshake, or the subgraph itself. This is useful for diagnosing issues such as slow DNS lookups.
+
+<CodeGroup>
+  ```bash config.yaml
+telemetry:
+  metrics:
+    otlp:
+      network:
+        enabled: true
+    prometheus:
+      network:
+        enabled: true
+  ```
+</CodeGroup>
+
+#### Metrics
+
+* `router.http.client.dns_lookup_duration`: Histogram (ms) of the DNS lookup duration for outgoing subgraph requests. Recorded as `0` when a cached or reused connection skips the lookup.
+
+* `router.http.client.tcp_connect_duration`: Histogram (ms) of the TCP connect (dial) duration for outgoing subgraph requests. Recorded only when a new connection is established.
+
+* `router.http.client.tls_handshake_duration`: Histogram (ms) of the TLS handshake duration for outgoing subgraph requests. Recorded only for new TLS connections.
+
+* `router.http.client.time_to_first_byte`: Histogram (ms) of the time from completing the request write to receiving the first response byte from the subgraph.
 
 ## Custom Attributes
 

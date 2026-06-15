@@ -122,6 +122,28 @@ telemetry:
 
 * [`router_engine_messages_sent_total`](#router-engine-messages-sent-total): The number of total messages for subscriptions sent over from the subgraph to the router.
 
+### Resolver Metrics
+
+These metrics expose usage of the GraphQL engine's resolver concurrency pool. Use them to detect when operations queue because the pool is saturated.
+
+#### Enable Resolver Metrics
+
+```yaml config.yaml
+telemetry:
+  metrics:
+    prometheus:
+      resolver:
+        enabled: true
+```
+
+#### Metrics
+
+* `router_engine_resolvers_max_concurrent`: The configured maximum number of concurrent GraphQL resolver slots, as set by `ENGINE_MAX_CONCURRENT_RESOLVERS`.
+
+* `router_engine_resolvers_inflight`: The number of GraphQL resolver slots currently in use.
+
+* `router_graphql_resolver_acquire_duration`: The time in ms spent waiting to acquire a resolver concurrency slot. A rising value indicates resolver pool saturation.
+
 ### Cosmo Streams Metrics
 We expose metrics for [Cosmo Streams](/router/cosmo-streams), these statistics are collected at the level when the message is sent to the messaging backend or directly received from the messaging backend.
 
@@ -192,6 +214,30 @@ telemetry:
 #### Examples
 
 You can find more examples here under [`Connection`](/router/metrics-and-monitoring#example-prometheus-queries)
+
+### Network Metrics
+
+These metrics break down each outgoing subgraph request into its individual HTTP phases, collected per request via Go's `httptrace`. Use them to attribute subgraph latency to DNS resolution, connection setup, the TLS handshake, or the subgraph itself.
+
+#### Enable Network Metrics
+
+```yaml config.yaml
+telemetry:
+  metrics:
+    prometheus:
+      network:
+        enabled: true
+```
+
+#### Metrics
+
+* `router_http_client_dns_lookup_duration`: The DNS lookup duration in ms for outgoing subgraph requests. Recorded as `0` when a cached or reused connection skips the lookup.
+
+* `router_http_client_tcp_connect_duration`: The TCP connect (dial) duration in ms for outgoing subgraph requests. Recorded only when a new connection is established.
+
+* `router_http_client_tls_handshake_duration`: The TLS handshake duration in ms for outgoing subgraph requests. Recorded only for new TLS connections.
+
+* `router_http_client_time_to_first_byte`: The time in ms from completing the request write to receiving the first response byte from the subgraph.
 
 ### Go Runtime Metrics
 
