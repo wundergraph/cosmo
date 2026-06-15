@@ -58,7 +58,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.option('-j, --json', 'Prints to the console in json format instead of table');
-  command.option('--async', '');
+  command.option('--async', 'This flag enable pooling for the publish status');
 
   command.action(async (options) => {
     const configFile = resolve(options.config);

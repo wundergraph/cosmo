@@ -14,7 +14,7 @@ export async function poolBatchPublishStatus(
   let resp: GetBatchPublishJobStatusResponse;
 
   const headers = getBaseHeaders();
-  for (;;) {
+  for (let attempt = 0;; attempt++) {
     resp = await client.platform.getBatchPublishJobStatus({ jobId }, { headers });
     if (resp.response?.code !== EnumStatusCode.OK) {
       return new PublishFederatedSubgraphsResponse({
@@ -25,7 +25,7 @@ export async function poolBatchPublishStatus(
     switch (resp.status) {
       case BatchPublishJobStatus.PENDING:
       case BatchPublishJobStatus.PROCESSING: {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await sleep(computeDelay(1000, 5000, attempt, true));
         break;
       }
       case BatchPublishJobStatus.FAILED: {
@@ -44,4 +44,30 @@ export async function poolBatchPublishStatus(
       }
     }
   }
+}
+
+function computeDelay(base: number, max: number, attempt: number, jitter: boolean): number {
+  const delay = Math.min(max, base * 2 ** attempt);
+  return jitter ? delay * (0.5 + Math.random() * 0.5) : delay;
+}
+
+function sleep(ms: number, signal?: AbortSignal): Promise<'aborted' | 'ok'> {
+  return new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve('aborted');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve('ok');
+    }, ms);
+
+    function onAbort() {
+      clearTimeout(timer);
+      resolve('aborted');
+    }
+
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 }
