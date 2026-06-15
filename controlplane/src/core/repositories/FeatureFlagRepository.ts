@@ -1139,13 +1139,13 @@ export class FeatureFlagRepository {
 
     const featureFlagsBySubgraphId = await memoizePromise(
       caches?.featureFlagsByBaseSubgraphId,
-      baseSubgraphId,
+      `${namespaceId}:${excludeDisabled}:${baseSubgraphId}`,
       () => this.getFeatureFlagsByBaseSubgraphId({ baseSubgraphId, namespaceId, excludeDisabled }),
     );
 
     const matchedFeatureFlags = await memoizePromise(
       caches?.matchedFeatureFlagsByLabelKey,
-      [...fedGraphLabelMatchers].sort().join(';'),
+      `${namespaceId}:${excludeDisabled}:${[...fedGraphLabelMatchers].sort().join(';')}`,
       () => this.getMatchedFeatureFlags({ namespaceId, fedGraphLabelMatchers, excludeDisabled }),
     );
 
