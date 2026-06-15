@@ -171,7 +171,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		}))
 	}
 
-	return NewRouter(options...)
+	return NewRouter(ctx, options...)
 }
 
 // optionFromExecutionConfig returns an Option that configures the router with the execution config.

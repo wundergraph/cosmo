@@ -708,11 +708,23 @@ export class FederatedGraphRepository {
     isFeatureFlagComposition: boolean;
     featureFlagId: string;
   }) {
-    return this.db.transaction<FederatedGraphDTO | undefined>(async (tx) => {
-      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
+    return this.db.transaction(async (tx) => {
       const compositionRepo = new GraphCompositionRepository(this.logger, tx);
-      const fedGraph = await fedGraphRepo.byTargetId(targetId);
-      if (fedGraph === undefined) {
+      const [federatedGraph] = await tx
+        .select({
+          targetId: targets.id,
+          id: federatedGraphs.id,
+          composedSchemaVersionId: federatedGraphs.composedSchemaVersionId,
+          routerCompatibilityVersion: federatedGraphs.routerCompatibilityVersion,
+        })
+        .from(targets)
+        .innerJoin(federatedGraphs, eq(federatedGraphs.targetId, targetId))
+        .where(
+          and(eq(targets.type, 'federated'), eq(targets.organizationId, this.organizationId), eq(targets.id, targetId)),
+        )
+        .execute();
+
+      if (federatedGraph === undefined) {
         return undefined;
       }
 
@@ -732,7 +744,7 @@ export class FederatedGraphRepository {
         .values({
           id: schemaVersionId,
           organizationId: this.organizationId,
-          targetId: fedGraph.targetId,
+          targetId: federatedGraph.targetId,
           schemaSDL: composedSDL,
           clientSchema,
         })
@@ -746,8 +758,8 @@ export class FederatedGraphRepository {
       if (isFeatureFlagComposition) {
         await tx.insert(federatedGraphsToFeatureFlagSchemaVersions).values({
           composedSchemaVersionId: schemaVersionId,
-          federatedGraphId: fedGraph.id,
-          baseCompositionSchemaVersionId: fedGraph.composedSchemaVersionId || '',
+          federatedGraphId: federatedGraph.id,
+          baseCompositionSchemaVersionId: federatedGraph.composedSchemaVersionId!,
           featureFlagId,
         });
       } else {
@@ -756,37 +768,24 @@ export class FederatedGraphRepository {
           .set({
             composedSchemaVersionId: insertedVersion[0].insertedId,
           })
-          .where(eq(federatedGraphs.id, fedGraph.id));
+          .where(eq(federatedGraphs.id, federatedGraph.id));
       }
 
       // adding the composition entry and the relation between fedGraph schema version and subgraph schema version
       await compositionRepo.addComposition({
-        fedGraphTargetId: fedGraph.targetId,
+        fedGraphTargetId: federatedGraph.targetId,
         fedGraphSchemaVersionId: insertedVersion[0].insertedId,
         composedSubgraphs,
         compositionErrorString,
         compositionWarningString,
         composedById,
         isFeatureFlagComposition,
-        routerCompatibilityVersion: fedGraph.routerCompatibilityVersion,
+        routerCompatibilityVersion: federatedGraph.routerCompatibilityVersion,
       });
 
       return {
-        id: fedGraph.id,
-        targetId: fedGraph.targetId,
-        supportsFederation: fedGraph.supportsFederation,
-        name: fedGraph.name,
-        labelMatchers: fedGraph.labelMatchers,
-        compositionErrors: compositionErrorString,
-        isComposable: fedGraph.isComposable,
-        lastUpdatedAt: fedGraph.lastUpdatedAt,
-        routingUrl: fedGraph.routingUrl,
-        subgraphsCount: fedGraph.subgraphsCount,
         composedSchemaVersionId: insertedVersion[0].insertedId,
-        namespace: fedGraph.namespace,
-        namespaceId: fedGraph.namespaceId,
-        routerCompatibilityVersion: fedGraph.routerCompatibilityVersion,
-        organizationId: fedGraph.organizationId,
+        routerCompatibilityVersion: federatedGraph.routerCompatibilityVersion,
       };
     });
   }

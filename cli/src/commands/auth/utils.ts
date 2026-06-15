@@ -138,12 +138,16 @@ export const startPollingForAccessToken = async ({
   }
 };
 
-// checks if either of access token or api key are present
-// if not, it will try to refresh the access token
-export async function checkAuth() {
+/**
+ * Checks if either of access token or api key are present.
+ * If not, it will try to refresh the access token
+ *
+ * @param [showErrorMessage] - when `false`, any and all error message will be skipped
+ */
+export async function checkAuth(showErrorMessage = true): Promise<void> {
   const userConfig = readConfigFile();
 
-  if (config.apiKey && userConfig.accessToken) {
+  if (config.apiKey && userConfig.accessToken && showErrorMessage) {
     console.error(
       `${pc.yellow('Warning')} ${pc.dim(
         'Both COSMO_API_KEY and login credentials found. Environment variable has precedence.\n',
@@ -157,6 +161,10 @@ export async function checkAuth() {
   }
 
   if (!userConfig.organizationSlug) {
+    if (!showErrorMessage) {
+      return;
+    }
+
     program.error(pc.red('Organization slug is not set. Please run `wgc auth login` to set the organization slug.'));
   }
 
@@ -173,6 +181,10 @@ export async function checkAuth() {
 
   // Check if refresh token is expired
   if (userConfig?.refreshToken && userConfig?.refreshExpiresAt && new Date(userConfig.refreshExpiresAt) < new Date()) {
+    if (!showErrorMessage) {
+      return;
+    }
+
     program.error(pc.red('Refresh token has expired. Please login again with `wgc auth login`'));
   }
 
@@ -216,4 +228,21 @@ export async function checkAuth() {
         e.toString(),
     );
   }
+}
+
+/**
+ * Perform access token refresh and updates the value for `config.apiKey` accordingly  (if needed);
+ * however, if the value for `config.apiKey` remains empty, that means the user is not authenticated or the
+ * token refresh failed
+ *
+ * @returns {boolean} A value indicating whether the client is authenticated
+ */
+export async function isAuthenticated(): Promise<boolean> {
+  try {
+    await checkAuth(false);
+  } catch {
+    // ignore
+  }
+
+  return Boolean(config.apiKey);
 }
