@@ -92,6 +92,7 @@
       "mdast-util-to-hast": ">=13.2.1",
       "js-yaml": ">=4.1.1",
       "fast-uri": "3.1.2",
+      "tmp": "0.2.7",
       "fast-xml-parser": "5.8.0",
       "@aws-sdk/client-sesv2": "^3.996.0",
       "handlebars": "4.7.9",
@@ -106,7 +107,8 @@
       "serialize-javascript": "7.0.3",
       "markdown-it": "14.1.1",
       "rollup@3.29.5": "3.30.0",
-      "@rollup/pluginutils@5.3.0>rollup": "4.59.0"
+      "@rollup/pluginutils@5.3.0>rollup": "4.59.0",
+      "shell-quote": "1.8.4"
     },
     "patchedDependencies": {
       "graphql@16.9.0": "patches/graphql@16.9.0.patch"
