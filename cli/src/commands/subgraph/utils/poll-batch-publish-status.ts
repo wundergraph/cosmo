@@ -1,5 +1,4 @@
 import {
-  GetBatchPublishJobStatusResponse,
   PublishFederatedSubgraphsResponse,
   BatchPublishJobStatus,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -10,12 +9,12 @@ import { getBaseHeaders } from '../../../core/config.js';
 export async function pollBatchPublishStatus(
   client: Client,
   jobId: string,
+  signal: AbortSignal,
 ): Promise<PublishFederatedSubgraphsResponse> {
-  let resp: GetBatchPublishJobStatusResponse;
-
+  let attempt = 0;
   const headers = getBaseHeaders();
-  for (let attempt = 0; ; attempt++) {
-    resp = await client.platform.getBatchPublishJobStatus({ jobId }, { headers });
+  while (!signal.aborted) {
+    const resp = await client.platform.getBatchPublishJobStatus({ jobId }, { headers, signal });
     if (resp.response?.code !== EnumStatusCode.OK) {
       return new PublishFederatedSubgraphsResponse({
         response: resp.response,
@@ -25,7 +24,7 @@ export async function pollBatchPublishStatus(
     switch (resp.status) {
       case BatchPublishJobStatus.PENDING:
       case BatchPublishJobStatus.PROCESSING: {
-        await sleep(computeDelay(1000, 5000, attempt, true));
+        await sleep(computeDelay(1000, 5000, attempt++, true));
         break;
       }
       case BatchPublishJobStatus.FAILED: {
@@ -44,6 +43,17 @@ export async function pollBatchPublishStatus(
       }
     }
   }
+
+  /**
+   * The only reason we should realistically get here is due to `signal` being aborted; however, we still need
+   * to return a response object
+   */
+  return new PublishFederatedSubgraphsResponse({
+    response: {
+      code: EnumStatusCode.ERR,
+      details: signal.aborted ? 'Operation was cancelled by the user.' : undefined,
+    },
+  });
 }
 
 function computeDelay(base: number, max: number, attempt: number, jitter: boolean): number {

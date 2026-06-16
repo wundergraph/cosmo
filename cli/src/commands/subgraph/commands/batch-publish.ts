@@ -142,7 +142,18 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.jobId) {
-      resp = await pollBatchPublishStatus(opts.client, resp.jobId);
+      const controller = new AbortController();
+      function cancelPolling() {
+        controller.abort();
+      }
+
+      process.on('SIGINT', cancelPolling);
+
+      try {
+        resp = await pollBatchPublishStatus(opts.client, resp.jobId, controller.signal);
+      } finally {
+        process.off('SIGINT', cancelPolling);
+      }
     }
 
     const total = subgraphs.length;
