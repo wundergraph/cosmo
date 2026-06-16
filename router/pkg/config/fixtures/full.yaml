@@ -489,6 +489,35 @@ storage_providers:
         - 'test@localhost:8000'
         - 'test2@localhost:8001'
 
+entity_caching:
+  enabled: true
+  global_cache_key_prefix: 'schema-v1'
+  l1:
+    enabled: true
+    max_size: 128MB
+  l2:
+    enabled: true
+    storage:
+      provider_id: 'my_redis'
+      key_prefix: 'cosmo_entity_cache_full'
+    circuit_breaker:
+      failure_threshold: 3
+      cooldown_period: 30s
+  subgraph_cache_overrides:
+    - name: 'accounts'
+      storage_provider_id: 'my_redis'
+      entities:
+        - type: 'User'
+          ttl: 5m
+          cache_name: 'users'
+          include_subgraph_header_prefix: true
+          shadow_mode: true
+      mutations:
+        - field_name: 'updateUser'
+          invalidate_entity_type: 'User'
+          enable_l2_population: true
+          ttl: 3m
+
 security:
   complexity_calculation_cache:
     enabled: true

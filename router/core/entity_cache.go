@@ -102,7 +102,8 @@ func buildEntityCacheInvalidationConfigs(entityCaching config.EntityCachingConfi
 				out[subgraph.Name] = make(map[string]*resolve.EntityCacheInvalidationConfig)
 			}
 			out[subgraph.Name][entity.Type] = &resolve.EntityCacheInvalidationConfig{
-				CacheName: resolveEntityCacheProviderID(subgraph, entity),
+				CacheName:                   resolveEntityCacheProviderID(subgraph, entity),
+				IncludeSubgraphHeaderPrefix: entity.IncludeSubgraphHeaderPrefix,
 			}
 		}
 	}

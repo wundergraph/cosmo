@@ -1106,17 +1106,26 @@ type SubgraphCacheOverride struct {
 	Name              string                           `yaml:"name,omitempty" env:"NAME"`
 	StorageProviderID string                           `yaml:"storage_provider_id,omitempty" env:"STORAGE_PROVIDER_ID"`
 	Entities          []EntityCacheEntityConfiguration `yaml:"entities,omitempty" envPrefix:"ENTITY_"`
+	Mutations         []MutationCacheConfiguration     `yaml:"mutations,omitempty" envPrefix:"MUTATION_"`
 }
 
 type EntityCacheEntityConfiguration struct {
-	Type              string        `yaml:"type,omitempty" env:"TYPE"`
-	StorageProviderID string        `yaml:"storage_provider_id,omitempty" env:"STORAGE_PROVIDER_ID"`
-	TTL               time.Duration `yaml:"ttl,omitempty" env:"TTL"`
-	CacheName         string        `yaml:"cache_name,omitempty" env:"CACHE_NAME"`
+	Type                        string        `yaml:"type,omitempty" env:"TYPE"`
+	StorageProviderID           string        `yaml:"storage_provider_id,omitempty" env:"STORAGE_PROVIDER_ID"`
+	TTL                         time.Duration `yaml:"ttl,omitempty" env:"TTL"`
+	CacheName                   string        `yaml:"cache_name,omitempty" env:"CACHE_NAME"`
+	IncludeSubgraphHeaderPrefix bool          `yaml:"include_subgraph_header_prefix,omitempty" env:"INCLUDE_SUBGRAPH_HEADER_PREFIX"`
 	// ShadowMode reads and writes L2 but always serves fresh data. Cached-vs-fresh
 	// comparison and ShadowComparisonEvent recording are engine-side. NegativeCacheTTL
 	// interaction is deferred to the engine's definition.
 	ShadowMode bool `yaml:"shadow_mode,omitempty" env:"SHADOW_MODE"`
+}
+
+type MutationCacheConfiguration struct {
+	FieldName            string        `yaml:"field_name,omitempty" env:"FIELD_NAME"`
+	InvalidateEntityType string        `yaml:"invalidate_entity_type,omitempty" env:"INVALIDATE_ENTITY_TYPE"`
+	EnableL2Population   bool          `yaml:"enable_l2_population,omitempty" env:"ENABLE_L2_POPULATION"`
+	TTL                  time.Duration `yaml:"ttl,omitempty" env:"TTL"`
 }
 
 type PersistedOperationsCDNProvider struct {

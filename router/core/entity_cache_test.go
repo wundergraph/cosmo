@@ -90,7 +90,7 @@ func TestBuildEntityCacheInvalidationConfigs(t *testing.T) {
 				Name:              "accounts",
 				StorageProviderID: "subgraph-cache",
 				Entities: []config.EntityCacheEntityConfiguration{
-					{Type: "User"},
+					{Type: "User", IncludeSubgraphHeaderPrefix: true},
 					{Type: "Organization", StorageProviderID: "entity-cache"},
 				},
 			},
@@ -100,7 +100,8 @@ func TestBuildEntityCacheInvalidationConfigs(t *testing.T) {
 	assert.Equal(t, map[string]map[string]*resolve.EntityCacheInvalidationConfig{
 		"accounts": {
 			"User": {
-				CacheName: "subgraph-cache",
+				CacheName:                   "subgraph-cache",
+				IncludeSubgraphHeaderPrefix: true,
 			},
 			"Organization": {
 				CacheName: "entity-cache",
@@ -119,7 +120,7 @@ func TestLoaderDataSourceMetaDataTranslatesEntityCacheConfig(t *testing.T) {
 					Name:              "accounts",
 					StorageProviderID: "accounts-cache",
 					Entities: []config.EntityCacheEntityConfiguration{
-						{Type: "User", TTL: 5 * time.Minute, ShadowMode: true},
+						{Type: "User", TTL: 5 * time.Minute, IncludeSubgraphHeaderPrefix: true, ShadowMode: true},
 						{Type: "Organization", StorageProviderID: "organization-cache", TTL: 10 * time.Minute, ShadowMode: false},
 						{Type: "Review", TTL: time.Minute},
 					},
@@ -143,10 +144,11 @@ func TestLoaderDataSourceMetaDataTranslatesEntityCacheConfig(t *testing.T) {
 	require.NotNil(t, metadata)
 	assert.Equal(t, plan.EntityCacheConfigurations{
 		{
-			TypeName:   "User",
-			CacheName:  "accounts-cache",
-			TTL:        5 * time.Minute,
-			ShadowMode: true,
+			TypeName:                    "User",
+			CacheName:                   "accounts-cache",
+			TTL:                         5 * time.Minute,
+			IncludeSubgraphHeaderPrefix: true,
+			ShadowMode:                  true,
 		},
 		{
 			TypeName:   "Organization",
@@ -155,4 +157,59 @@ func TestLoaderDataSourceMetaDataTranslatesEntityCacheConfig(t *testing.T) {
 			ShadowMode: false,
 		},
 	}, metadata.FederationMetaData.EntityCacheConfig)
+}
+
+func TestLoaderDataSourceMetaDataTranslatesMutationCacheConfig(t *testing.T) {
+	t.Parallel()
+
+	loader := &Loader{
+		entityCaching: config.EntityCachingConfiguration{
+			SubgraphCacheOverrides: []config.SubgraphCacheOverride{
+				{
+					Name: "accounts",
+					Mutations: []config.MutationCacheConfiguration{
+						{
+							FieldName:            "updateUser",
+							InvalidateEntityType: "User",
+							EnableL2Population:   true,
+							TTL:                  3 * time.Minute,
+						},
+						{
+							FieldName:            "deleteOrganization",
+							InvalidateEntityType: "Organization",
+						},
+					},
+				},
+			},
+		},
+		subgraphsByID: map[string]string{
+			"ds-accounts": "accounts",
+		},
+	}
+
+	metadata := loader.dataSourceMetaData(&nodev1.DataSourceConfiguration{
+		Id: "ds-accounts",
+	})
+
+	require.NotNil(t, metadata)
+	assert.Equal(t, plan.MutationFieldCacheConfigurations{
+		{
+			FieldName:                     "updateUser",
+			EnableEntityL2CachePopulation: true,
+			TTL:                           3 * time.Minute,
+		},
+		{
+			FieldName: "deleteOrganization",
+		},
+	}, metadata.FederationMetaData.MutationFieldCacheConfig)
+	assert.Equal(t, plan.MutationCacheInvalidationConfigurations{
+		{
+			FieldName:      "updateUser",
+			EntityTypeName: "User",
+		},
+		{
+			FieldName:      "deleteOrganization",
+			EntityTypeName: "Organization",
+		},
+	}, metadata.FederationMetaData.MutationCacheInvalidationConfig)
 }

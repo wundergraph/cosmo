@@ -257,10 +257,39 @@
                     "cache_name": {
                       "type": "string"
                     },
+                    "include_subgraph_header_prefix": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Include the subgraph request header hash prefix when building entity cache keys for this entity."
+                    },
                     "shadow_mode": {
                       "type": "boolean",
                       "default": false,
                       "description": "Enable engine shadow mode for this entity. The engine reads and writes L2, always serves fresh data, and records cached-vs-fresh comparison events."
+                    }
+                  }
+                }
+              },
+              "mutations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["field_name", "invalidate_entity_type"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "field_name": {
+                      "type": "string"
+                    },
+                    "invalidate_entity_type": {
+                      "type": "string"
+                    },
+                    "enable_l2_population": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "ttl": {
+                      "type": "string",
+                      "format": "go-duration"
                     }
                   }
                 }

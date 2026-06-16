@@ -658,6 +658,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		})
 	}
 	out.EntityCacheConfig = l.entityCacheConfigurationsForDataSource(in, out.Keys)
+	out.MutationFieldCacheConfig, out.MutationCacheInvalidationConfig = l.mutationCacheConfigurationsForDataSource(in)
 	for _, providesConfiguration := range in.Provides {
 		out.Provides = append(out.Provides, plan.FederationFieldConfiguration{
 			TypeName:     providesConfiguration.TypeName,
@@ -770,16 +771,63 @@ func (l *Loader) entityCacheConfigurationsForDataSource(in *nodev1.DataSourceCon
 			continue
 		}
 		out = append(out, plan.EntityCacheConfiguration{
-			TypeName:   entity.Type,
-			CacheName:  resolveEntityCacheProviderID(override, entity),
-			TTL:        entity.TTL,
-			ShadowMode: entity.ShadowMode,
+			TypeName:                    entity.Type,
+			CacheName:                   resolveEntityCacheProviderID(override, entity),
+			TTL:                         entity.TTL,
+			IncludeSubgraphHeaderPrefix: entity.IncludeSubgraphHeaderPrefix,
+			ShadowMode:                  entity.ShadowMode,
 		})
 	}
 	if len(out) == 0 {
 		return nil
 	}
 	return out
+}
+
+func (l *Loader) mutationCacheConfigurationsForDataSource(in *nodev1.DataSourceConfiguration) (plan.MutationFieldCacheConfigurations, plan.MutationCacheInvalidationConfigurations) {
+	subgraphName := l.subgraphsByID[in.Id]
+	if subgraphName == "" || len(l.entityCaching.SubgraphCacheOverrides) == 0 {
+		return nil, nil
+	}
+
+	var override config.SubgraphCacheOverride
+	for _, candidate := range l.entityCaching.SubgraphCacheOverrides {
+		if candidate.Name == subgraphName {
+			override = candidate
+			break
+		}
+	}
+	if override.Name == "" || len(override.Mutations) == 0 {
+		return nil, nil
+	}
+
+	// Composition directives are the eventual richer source for mutation cache
+	// metadata; config.yaml keeps the router wiring available until then.
+	fieldConfigs := make(plan.MutationFieldCacheConfigurations, 0, len(override.Mutations))
+	invalidationConfigs := make(plan.MutationCacheInvalidationConfigurations, 0, len(override.Mutations))
+	for _, mutation := range override.Mutations {
+		if mutation.FieldName == "" {
+			continue
+		}
+		fieldConfigs = append(fieldConfigs, plan.MutationFieldCacheConfiguration{
+			FieldName:                     mutation.FieldName,
+			EnableEntityL2CachePopulation: mutation.EnableL2Population,
+			TTL:                           mutation.TTL,
+		})
+		if mutation.InvalidateEntityType != "" {
+			invalidationConfigs = append(invalidationConfigs, plan.MutationCacheInvalidationConfiguration{
+				FieldName:      mutation.FieldName,
+				EntityTypeName: mutation.InvalidateEntityType,
+			})
+		}
+	}
+	if len(fieldConfigs) == 0 {
+		fieldConfigs = nil
+	}
+	if len(invalidationConfigs) == 0 {
+		invalidationConfigs = nil
+	}
+	return fieldConfigs, invalidationConfigs
 }
 
 func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfiguration) bool {

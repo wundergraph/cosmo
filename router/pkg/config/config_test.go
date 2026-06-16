@@ -815,7 +815,13 @@ entity_caching:
         - type: "User"
           ttl: 5m
           cache_name: "users"
+          include_subgraph_header_prefix: true
           shadow_mode: true
+      mutations:
+        - field_name: "updateUser"
+          invalidate_entity_type: "User"
+          enable_l2_population: true
+          ttl: 3m
 `)
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
@@ -834,7 +840,10 @@ entity_caching:
 				Name:              "accounts",
 				StorageProviderID: "memory-default",
 				Entities: []EntityCacheEntityConfiguration{
-					{Type: "User", TTL: 5 * time.Minute, CacheName: "users", ShadowMode: true},
+					{Type: "User", TTL: 5 * time.Minute, CacheName: "users", IncludeSubgraphHeaderPrefix: true, ShadowMode: true},
+				},
+				Mutations: []MutationCacheConfiguration{
+					{FieldName: "updateUser", InvalidateEntityType: "User", EnableL2Population: true, TTL: 3 * time.Minute},
 				},
 			},
 		}, cfg.Config.EntityCaching.SubgraphCacheOverrides)
