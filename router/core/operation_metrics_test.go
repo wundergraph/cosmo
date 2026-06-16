@@ -100,6 +100,8 @@ type spyRouterMetrics struct {
 	schemaUsageHasError bool
 	promUsageCalled     bool
 	promUsageHasError   bool
+
+	entityCacheAnalyticsEnabled bool
 }
 
 func (m *spyRouterMetrics) StartOperation(_ *zap.Logger, _ int64, _ []attribute.KeyValue, _ otelmetric.AddOption) *OperationMetrics {
@@ -126,6 +128,10 @@ func (m *spyRouterMetrics) PrometheusMetricsExporter() *graphqlmetrics.Prometheu
 
 func (m *spyRouterMetrics) MetricStore() metric.Store {
 	return m.store
+}
+
+func (m *spyRouterMetrics) EntityCacheAnalyticsEnabled() bool {
+	return m.entityCacheAnalyticsEnabled
 }
 
 type spyMetricStore struct {

@@ -61,6 +61,7 @@
         "Enabled": true,
         "RouterRuntime": true,
         "GraphqlCache": true,
+        "EntityCachingStats": true,
         "ConnectionStats": true,
         "EngineStats": {
           "Subscriptions": true
@@ -98,6 +99,7 @@
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": true,
+        "EntityCachingStats": true,
         "ConnectionStats": true,
         "Streams": false,
         "EngineStats": {

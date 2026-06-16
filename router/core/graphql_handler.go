@@ -16,6 +16,7 @@ import (
 
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
@@ -85,6 +86,7 @@ type HandlerOptions struct {
 
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
+	EntityCacheMetrics                       rmetric.EntityCacheMetrics
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -106,6 +108,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		engineLoaderHooks:                        opts.EngineLoaderHooks,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
 		headerPropagation:                        opts.HeaderPropagation,
+		entityCacheMetrics:                       opts.EntityCacheMetrics,
 	}
 	return graphQLHandler
 }
@@ -138,6 +141,7 @@ type GraphQLHandler struct {
 	enableCostResponseHeaders       bool
 
 	apolloSubscriptionMultipartPrintBoundary bool
+	entityCacheMetrics                       rmetric.EntityCacheMetrics
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -244,6 +248,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
+		if resolveCtx.ExecutionOptions.Caching.EnableCacheAnalytics {
+			h.recordEntityCacheAnalytics(resolveCtx)
+		}
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
 		if err != nil {
 			trackFinalResponseError(resolveCtx.Context(), err)
@@ -335,6 +342,18 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			headerPropagation: h.headerPropagation,
 		})
 	}
+}
+
+type entityCacheStatsProvider interface {
+	Context() context.Context
+	GetCacheStats() resolve.CacheAnalyticsSnapshot
+}
+
+func (h *GraphQLHandler) recordEntityCacheAnalytics(stats entityCacheStatsProvider) {
+	if h.entityCacheMetrics == nil {
+		return
+	}
+	h.entityCacheMetrics.RecordSnapshot(stats.Context(), stats.GetCacheStats())
 }
 
 func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Context {

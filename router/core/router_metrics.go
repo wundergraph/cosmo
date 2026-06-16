@@ -19,6 +19,7 @@ type RouterMetrics interface {
 	GQLMetricsExporter() *graphqlmetrics.GraphQLMetricsExporter
 	PrometheusMetricsExporter() *graphqlmetrics.PrometheusMetricsExporter
 	MetricStore() metric.Store
+	EntityCacheAnalyticsEnabled() bool
 }
 
 // routerMetrics encapsulates all data and configuration that the router
@@ -30,6 +31,7 @@ type routerMetrics struct {
 	routerConfigVersion       string
 	logger                    *zap.Logger
 	exportEnabled             bool
+	entityCacheAnalytics      bool
 }
 
 type routerMetricsConfig struct {
@@ -39,6 +41,7 @@ type routerMetricsConfig struct {
 	routerConfigVersion       string
 	logger                    *zap.Logger
 	exportEnabled             bool
+	entityCacheAnalytics      bool
 }
 
 func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
@@ -49,6 +52,7 @@ func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 		routerConfigVersion:       cfg.routerConfigVersion,
 		logger:                    cfg.logger,
 		exportEnabled:             cfg.exportEnabled,
+		entityCacheAnalytics:      cfg.entityCacheAnalytics,
 	}
 }
 
@@ -71,6 +75,10 @@ func (m *routerMetrics) StartOperation(logger *zap.Logger, requestContentLength 
 
 func (m *routerMetrics) MetricStore() metric.Store {
 	return m.metrics
+}
+
+func (m *routerMetrics) EntityCacheAnalyticsEnabled() bool {
+	return m.entityCacheAnalytics
 }
 
 func (m *routerMetrics) GQLMetricsExporter() *graphqlmetrics.GraphQLMetricsExporter {

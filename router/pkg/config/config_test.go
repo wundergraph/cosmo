@@ -1145,6 +1145,41 @@ version: "1"
 	require.True(t, c.Config.Telemetry.Metrics.OTLP.EngineStats.Subscriptions)
 }
 
+func TestLoadEntityCachingStatsMetricsConfig(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+telemetry:
+  metrics:
+    otlp:
+      entity_caching_stats: true
+    prometheus:
+      entity_caching_stats: true
+`)
+
+	c, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.True(t, c.Config.Telemetry.Metrics.OTLP.EntityCachingStats)
+	require.True(t, c.Config.Telemetry.Metrics.Prometheus.EntityCachingStats)
+}
+
+func TestDefaultEntityCachingStatsMetricsConfig(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+
+	c, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.False(t, c.Config.Telemetry.Metrics.OTLP.EntityCachingStats)
+	require.False(t, c.Config.Telemetry.Metrics.Prometheus.EntityCachingStats)
+}
+
 func TestMatchAndNegateMatch(t *testing.T) {
 	t.Parallel()
 

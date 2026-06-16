@@ -222,6 +222,7 @@ func (c *Config) Usage() map[string]any {
 			usage["metrics_otel_exclude_metrics_labels"] = c.metricConfig.OpenTelemetry.ExcludeMetricLabels
 			usage["metrics_otel_engine_stats_enabled"] = c.metricConfig.OpenTelemetry.EngineStats.Enabled()
 			usage["metrics_otel_graphql_cache"] = c.metricConfig.OpenTelemetry.GraphqlCache
+			usage["metrics_otel_entity_caching_stats"] = c.metricConfig.OpenTelemetry.EntityCachingStats
 			usage["metrics_otel_router_runtime"] = c.metricConfig.OpenTelemetry.RouterRuntime
 			usage["metrics_otel_connection_stats"] = c.metricConfig.OpenTelemetry.ConnectionStats
 		}
@@ -230,6 +231,7 @@ func (c *Config) Usage() map[string]any {
 			usage["metrics_prometheus_graphql_cache"] = c.metricConfig.Prometheus.GraphqlCache
 			usage["metrics_prometheus_engine_stats_enabled"] = c.metricConfig.Prometheus.EngineStats.Enabled()
 			usage["metrics_prometheus_engine_stats_subscriptions"] = c.metricConfig.Prometheus.EngineStats.Subscription
+			usage["metrics_prometheus_entity_caching_stats"] = c.metricConfig.Prometheus.EntityCachingStats
 			usage["metrics_prometheus_exclude_metrics"] = c.metricConfig.Prometheus.ExcludeMetrics
 			usage["metrics_prometheus_exclude_metrics_labels"] = c.metricConfig.Prometheus.ExcludeMetricLabels
 			usage["metrics_prometheus_exclude_scope_info"] = c.metricConfig.Prometheus.ExcludeScopeInfo

@@ -94,6 +94,7 @@ func TestPreHandlerParseRequestExecutionOptions_EntityCaching(t *testing.T) {
 	tests := []struct {
 		name          string
 		entityCaching config.EntityCachingConfiguration
+		metrics       RouterMetrics
 		header        http.Header
 		traceEnabled  bool
 		expected      resolve.CachingOptions
@@ -251,6 +252,34 @@ func TestPreHandlerParseRequestExecutionOptions_EntityCaching(t *testing.T) {
 				GlobalCacheKeyPrefix: "schema-v1",
 			},
 		},
+		{
+			name: "entity cache analytics is disabled without metrics recorder",
+			entityCaching: config.EntityCachingConfiguration{
+				Enabled: true,
+				L1: config.EntityCachingL1{
+					Enabled: true,
+				},
+			},
+			expected: resolve.CachingOptions{
+				EnableL1Cache: true,
+			},
+		},
+		{
+			name: "entity cache analytics is enabled when metrics recorder is enabled",
+			entityCaching: config.EntityCachingConfiguration{
+				Enabled: true,
+				L1: config.EntityCachingL1{
+					Enabled: true,
+				},
+			},
+			metrics: &spyRouterMetrics{
+				entityCacheAnalyticsEnabled: true,
+			},
+			expected: resolve.CachingOptions{
+				EnableL1Cache:        true,
+				EnableCacheAnalytics: true,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -269,6 +298,7 @@ func TestPreHandlerParseRequestExecutionOptions_EntityCaching(t *testing.T) {
 				enableRequestTracing: true,
 				developmentMode:      tt.traceEnabled,
 				entityCaching:        tt.entityCaching,
+				metrics:              tt.metrics,
 			}
 
 			executionOptions, _, err := h.internalParseRequestOptions(req, &ClientInfo{}, zap.NewNop())

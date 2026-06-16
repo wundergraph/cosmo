@@ -1380,6 +1380,9 @@ func (h *PreHandler) cachingOptions(r *http.Request, allowEntityCacheControlHead
 		EnableL2Cache:        h.entityCaching.Enabled && h.entityCaching.L2.Enabled,
 		GlobalCacheKeyPrefix: h.entityCaching.GlobalCacheKeyPrefix,
 	}
+	if h.metrics != nil && h.metrics.EntityCacheAnalyticsEnabled() {
+		options.EnableCacheAnalytics = true
+	}
 	if allowEntityCacheControlHeaders {
 		if headerValueEqualFold(r.Header, disableEntityCacheHeader, "true") {
 			options.EnableL1Cache = false

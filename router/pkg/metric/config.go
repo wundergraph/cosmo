@@ -41,14 +41,15 @@ func (e ExemplarFilter) toOtelExemplarFilter() exemplar.Filter {
 }
 
 type PrometheusConfig struct {
-	Enabled         bool
-	ConnectionStats bool
-	ListenAddr      string
-	Path            string
-	GraphqlCache    bool
-	EngineStats     EngineStatsConfig
-	CircuitBreaker  bool
-	CostStats       config.CostStats
+	Enabled            bool
+	ConnectionStats    bool
+	ListenAddr         string
+	Path               string
+	GraphqlCache       bool
+	EntityCachingStats bool
+	EngineStats        EngineStatsConfig
+	CircuitBreaker     bool
+	CostStats          config.CostStats
 	// Metrics to exclude from Prometheus exporter
 	ExcludeMetrics []*regexp.Regexp
 	// Metric labels to exclude from Prometheus exporter
@@ -109,14 +110,15 @@ type LogExporterConfig struct {
 }
 
 type OpenTelemetry struct {
-	Enabled         bool
-	ConnectionStats bool
-	RouterRuntime   bool
-	GraphqlCache    bool
-	CircuitBreaker  bool
-	CostStats       config.CostStats
-	EngineStats     EngineStatsConfig
-	Exporters       []*OpenTelemetryExporter
+	Enabled            bool
+	ConnectionStats    bool
+	RouterRuntime      bool
+	GraphqlCache       bool
+	EntityCachingStats bool
+	CircuitBreaker     bool
+	CostStats          config.CostStats
+	EngineStats        EngineStatsConfig
+	Exporters          []*OpenTelemetryExporter
 	// Metrics to exclude from the OTLP exporter.
 	ExcludeMetrics []*regexp.Regexp
 	// Metric labels to exclude from the OTLP exporter.

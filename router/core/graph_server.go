@@ -695,6 +695,7 @@ type graphMux struct {
 	metricStore               rmetric.Store
 	prometheusCacheMetrics    *rmetric.CacheMetrics
 	otelCacheMetrics          *rmetric.CacheMetrics
+	entityCacheMetrics        rmetric.EntityCacheMetrics
 	streamMetricStore         rmetric.StreamMetricStore
 	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
 }
@@ -991,6 +992,12 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	if s.entityCacheMetrics != nil {
+		if aErr := s.entityCacheMetrics.Shutdown(); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
 	if s.metricStore != nil {
 		if aErr := s.metricStore.Shutdown(ctx); aErr != nil {
 			err = errors.Join(err, aErr)
@@ -1025,10 +1032,11 @@ func (s *graphServer) buildGraphMux(
 	graphMuxCtx, graphMuxCancel := context.WithCancel(s.routerCtx)
 
 	gm := &graphMux{
-		ctx:               graphMuxCtx,
-		cancel:            graphMuxCancel,
-		metricStore:       rmetric.NewNoopMetrics(),
-		streamMetricStore: rmetric.NewNoopStreamMetricStore(),
+		ctx:                graphMuxCtx,
+		cancel:             graphMuxCancel,
+		metricStore:        rmetric.NewNoopMetrics(),
+		entityCacheMetrics: rmetric.NoopEntityCacheMetrics{},
+		streamMetricStore:  rmetric.NewNoopStreamMetricStore(),
 	}
 
 	httpRouter := chi.NewRouter()
@@ -1141,6 +1149,20 @@ func (s *graphServer) buildGraphMux(
 		gm.streamMetricStore = store
 	}
 
+	if s.metricConfig.OpenTelemetry.EntityCachingStats || s.metricConfig.Prometheus.EntityCachingStats {
+		entityCacheMetrics, err := rmetric.NewEntityCacheMetricStore(
+			s.logger,
+			baseMetricAttributes,
+			s.otlpMeterProvider,
+			s.promMeterProvider,
+			s.metricConfig,
+		)
+		if err != nil {
+			return nil, err
+		}
+		gm.entityCacheMetrics = entityCacheMetrics
+	}
+
 	subgraphs, err := configureSubgraphOverwrites(
 		opts.EngineConfig,
 		opts.ConfigSubgraphs,
@@ -1195,6 +1217,7 @@ func (s *graphServer) buildGraphMux(
 		exportEnabled:             s.graphqlMetricsConfig.Enabled,
 		routerConfigVersion:       opts.RouterConfigVersion,
 		logger:                    s.logger,
+		entityCacheAnalytics:      s.metricConfig.OpenTelemetry.EntityCachingStats || s.metricConfig.Prometheus.EntityCachingStats,
 	})
 
 	baseLogFields := []zapcore.Field{
@@ -1741,6 +1764,7 @@ func (s *graphServer) buildGraphMux(
 		SubgraphErrorPropagation:        s.subgraphErrorPropagation,
 		EngineLoaderHooks:               loaderHooks,
 		HeaderPropagation:               s.headerPropagation,
+		EntityCacheMetrics:              gm.entityCacheMetrics,
 	}
 
 	if s.redisClient != nil {
