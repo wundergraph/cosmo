@@ -25,6 +25,31 @@ import (
 
 const subscriptionOnCreateTestTimeout = 30 * time.Second
 
+type subResult struct {
+	data []byte
+	err  error
+}
+
+func newHookModule(cb func(ctx core.SubscriptionOnCreateHandlerContext)) *subscription_on_create.SubscriptionOnCreateModule {
+	return &subscription_on_create.SubscriptionOnCreateModule{
+		HookCallCount: &atomic.Int32{},
+		Callback:      cb,
+	}
+}
+
+func hookRouterOptions(m *subscription_on_create.SubscriptionOnCreateModule) []core.Option {
+	cfg := config.Config{
+		Graph: config.Graph{},
+		Modules: map[string]interface{}{
+			"subscriptionOnCreateModule": m,
+		},
+	}
+	return []core.Option{
+		core.WithModulesConfig(cfg.Modules),
+		core.WithCustomModules(&subscription_on_create.SubscriptionOnCreateModule{}),
+	}
+}
+
 func TestSubscriptionOnCreateHook(t *testing.T) {
 	t.Parallel()
 
@@ -38,43 +63,30 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 		// capturedSubject receives the modified subject once the hook fires.
 		capturedSubject := make(chan string, 1)
 
-		customModule := &subscription_on_create.SubscriptionOnCreateModule{
-			HookCallCount: &atomic.Int32{},
-			Callback: func(ctx core.SubscriptionOnCreateHandlerContext) {
-				conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubNats.SubscriptionEventConfiguration)
-				if !ok || len(conf.Subjects) == 0 {
-					return
-				}
-				// Redirect from the default subject (e.g. <prefix>.employeeUpdatedMyNats.1)
-				// to a custom subject with suffix ".99".
-				original := conf.Subjects[0]
-				dotIdx := strings.LastIndex(original, ".")
-				if dotIdx == -1 {
-					return
-				}
-				newSubject := original[:dotIdx+1] + "99"
-				conf.Subjects = []string{newSubject}
-				select {
-				case capturedSubject <- newSubject:
-				default:
-				}
-			},
-		}
-
-		cfg := config.Config{
-			Graph: config.Graph{},
-			Modules: map[string]interface{}{
-				"subscriptionOnCreateModule": customModule,
-			},
-		}
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+			conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubNats.SubscriptionEventConfiguration)
+			if !ok || len(conf.Subjects) == 0 {
+				return
+			}
+			// Redirect from the default subject (e.g. <prefix>.employeeUpdatedMyNats.1)
+			// to a custom subject with suffix ".99".
+			original := conf.Subjects[0]
+			dotIdx := strings.LastIndex(original, ".")
+			if dotIdx == -1 {
+				return
+			}
+			newSubject := original[:dotIdx+1] + "99"
+			conf.Subjects = []string{newSubject}
+			select {
+			case capturedSubject <- newSubject:
+			default:
+			}
+		})
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
-			RouterOptions: []core.Option{
-				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&subscription_on_create.SubscriptionOnCreateModule{}),
-			},
+			RouterOptions:            hookRouterOptions(customModule),
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
 				LogLevel: zapcore.InfoLevel,
@@ -93,13 +105,9 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			type result struct {
-				data []byte
-				err  error
-			}
-			resultCh := make(chan result, 1)
+			resultCh := make(chan subResult, 1)
 			_, err := client.Subscribe(&subscription, map[string]interface{}{"id": 1}, func(dataValue []byte, errValue error) error {
-				resultCh <- result{data: dataValue, err: errValue}
+				resultCh <- subResult{data: dataValue, err: errValue}
 				return nil
 			})
 			require.NoError(t, err)
@@ -124,7 +132,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			// Publishing to the hook-overridden subject (.99) must trigger it.
 			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionMyNats, newSubject, []byte(`{"id":1,"__typename":"Employee"}`), 1, subscriptionOnCreateTestTimeout)
 
-			testenv.AwaitChannelWithT(t, subscriptionOnCreateTestTimeout, resultCh, func(t *testing.T, r result) {
+			testenv.AwaitChannelWithT(t, subscriptionOnCreateTestTimeout, resultCh, func(t *testing.T, r subResult) {
 				require.NoError(t, r.err)
 				require.JSONEq(t, `{"employeeUpdatedMyNats":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(r.data))
 			})
@@ -146,41 +154,28 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 
 		capturedChannel := make(chan string, 1)
 
-		customModule := &subscription_on_create.SubscriptionOnCreateModule{
-			HookCallCount: &atomic.Int32{},
-			Callback: func(ctx core.SubscriptionOnCreateHandlerContext) {
-				conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubRedis.SubscriptionEventConfiguration)
-				if !ok || len(conf.Channels) == 0 {
-					return
-				}
-				original := conf.Channels[0]
-				dotIdx := strings.LastIndex(original, ".")
-				if dotIdx == -1 {
-					return
-				}
-				newChannel := original[:dotIdx+1] + "99"
-				conf.Channels = []string{newChannel}
-				select {
-				case capturedChannel <- newChannel:
-				default:
-				}
-			},
-		}
-
-		cfg := config.Config{
-			Graph: config.Graph{},
-			Modules: map[string]interface{}{
-				"subscriptionOnCreateModule": customModule,
-			},
-		}
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+			conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubRedis.SubscriptionEventConfiguration)
+			if !ok || len(conf.Channels) == 0 {
+				return
+			}
+			original := conf.Channels[0]
+			dotIdx := strings.LastIndex(original, ".")
+			if dotIdx == -1 {
+				return
+			}
+			newChannel := original[:dotIdx+1] + "99"
+			conf.Channels = []string{newChannel}
+			select {
+			case capturedChannel <- newChannel:
+			default:
+			}
+		})
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
 			EnableRedis:              true,
-			RouterOptions: []core.Option{
-				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&subscription_on_create.SubscriptionOnCreateModule{}),
-			},
+			RouterOptions:            hookRouterOptions(customModule),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscription struct {
 				employeeUpdatedMyRedis struct {
@@ -195,13 +190,9 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			type result struct {
-				data []byte
-				err  error
-			}
-			resultCh := make(chan result, 1)
+			resultCh := make(chan subResult, 1)
 			_, err := client.Subscribe(&subscription, map[string]interface{}{"id": 1}, func(dataValue []byte, errValue error) error {
-				resultCh <- result{data: dataValue, err: errValue}
+				resultCh <- subResult{data: dataValue, err: errValue}
 				return nil
 			})
 			require.NoError(t, err)
@@ -227,7 +218,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 
 			xEnv.RedisPublishUntilReceived(bareChannel, `{"__typename":"Employee","id":1,"update":{"name":"foo"}}`, subscriptionOnCreateTestTimeout)
 
-			testenv.AwaitChannelWithT(t, subscriptionOnCreateTestTimeout, resultCh, func(t *testing.T, r result) {
+			testenv.AwaitChannelWithT(t, subscriptionOnCreateTestTimeout, resultCh, func(t *testing.T, r subResult) {
 				require.NoError(t, r.err)
 				require.JSONEq(t, `{"employeeUpdatedMyRedis":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(r.data))
 			})
@@ -251,37 +242,24 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 		// This test verifies that the SubscriptionOnCreate hook can redirect a Kafka subscription
 		// to a different topic. It changes the default topic "employeeUpdated" to "employeeUpdatedTwo".
 
-		customModule := &subscription_on_create.SubscriptionOnCreateModule{
-			HookCallCount: &atomic.Int32{},
-			Callback: func(ctx core.SubscriptionOnCreateHandlerContext) {
-				conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubKafka.SubscriptionEventConfiguration)
-				if !ok {
-					return
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+			conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubKafka.SubscriptionEventConfiguration)
+			if !ok {
+				return
+			}
+			for i, topic := range conf.Topics {
+				// Replace "employeeUpdated" suffix with "employeeUpdatedTwo".
+				// The topic has a testenv prefix, e.g. "<prefix>employeeUpdated".
+				if strings.HasSuffix(topic, "employeeUpdated") {
+					conf.Topics[i] = strings.TrimSuffix(topic, "employeeUpdated") + "employeeUpdatedTwo"
 				}
-				for i, topic := range conf.Topics {
-					// Replace "employeeUpdated" suffix with "employeeUpdatedTwo".
-					// The topic has a testenv prefix, e.g. "<prefix>employeeUpdated".
-					if strings.HasSuffix(topic, "employeeUpdated") {
-						conf.Topics[i] = strings.TrimSuffix(topic, "employeeUpdated") + "employeeUpdatedTwo"
-					}
-				}
-			},
-		}
-
-		cfg := config.Config{
-			Graph: config.Graph{},
-			Modules: map[string]interface{}{
-				"subscriptionOnCreateModule": customModule,
-			},
-		}
+			}
+		})
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
-			RouterOptions: []core.Option{
-				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&subscription_on_create.SubscriptionOnCreateModule{}),
-			},
+			RouterOptions:            hookRouterOptions(customModule),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Ensure both topics exist.
 			events.KafkaEnsureTopicExists(t, xEnv, subscriptionOnCreateTestTimeout, "employeeUpdated", "employeeUpdatedTwo")
@@ -299,13 +277,9 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			type result struct {
-				data []byte
-				err  error
-			}
-			resultCh := make(chan result, 1)
+			resultCh := make(chan subResult, 1)
 			_, err := client.Subscribe(&subscription, map[string]interface{}{"employeeID": 1}, func(dataValue []byte, errValue error) error {
-				resultCh <- result{data: dataValue, err: errValue}
+				resultCh <- subResult{data: dataValue, err: errValue}
 				return nil
 			})
 			require.NoError(t, err)
@@ -321,7 +295,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			// Publishing to the hooked topic ("employeeUpdatedTwo") must trigger the subscription.
 			xEnv.KafkaPublishUntilReceived("employeeUpdatedTwo", `{"__typename":"Employee","id":1,"update":{"name":"foo"}}`, 1, subscriptionOnCreateTestTimeout)
 
-			testenv.AwaitChannelWithT(t, subscriptionOnCreateTestTimeout, resultCh, func(t *testing.T, r result) {
+			testenv.AwaitChannelWithT(t, subscriptionOnCreateTestTimeout, resultCh, func(t *testing.T, r subResult) {
 				require.NoError(t, r.err)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(r.data))
 			})
@@ -348,47 +322,29 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 		// capturedSubject99 receives the hook-overridden subject for sub1.
 		capturedSubject99 := make(chan string, 1)
 
-		customModule := &subscription_on_create.SubscriptionOnCreateModule{
-			HookCallCount: &atomic.Int32{},
-			Callback: func(ctx core.SubscriptionOnCreateHandlerContext) {
-				conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubNats.SubscriptionEventConfiguration)
-				if !ok || len(conf.Subjects) == 0 {
-					return
-				}
-				// Only redirect the subscription whose resolved subject ends in ".1".
-				if !strings.HasSuffix(conf.Subjects[0], ".1") {
-					return
-				}
-				original := conf.Subjects[0]
-				newSubject := strings.TrimSuffix(original, ".1") + ".99"
-				conf.Subjects = []string{newSubject}
-				select {
-				case capturedSubject99 <- newSubject:
-				default:
-				}
-			},
-		}
-
-		cfg := config.Config{
-			Graph: config.Graph{},
-			Modules: map[string]interface{}{
-				"subscriptionOnCreateModule": customModule,
-			},
-		}
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+			conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubNats.SubscriptionEventConfiguration)
+			if !ok || len(conf.Subjects) == 0 {
+				return
+			}
+			// Only redirect the subscription whose resolved subject ends in ".1".
+			if !strings.HasSuffix(conf.Subjects[0], ".1") {
+				return
+			}
+			original := conf.Subjects[0]
+			newSubject := strings.TrimSuffix(original, ".1") + ".99"
+			conf.Subjects = []string{newSubject}
+			select {
+			case capturedSubject99 <- newSubject:
+			default:
+			}
+		})
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
-			RouterOptions: []core.Option{
-				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&subscription_on_create.SubscriptionOnCreateModule{}),
-			},
+			RouterOptions:            hookRouterOptions(customModule),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			type result struct {
-				data []byte
-				err  error
-			}
-
 			// sub1: id=1, will be redirected by the hook to subject .99
 			var sub1 struct {
 				employeeUpdatedMyNats struct {
@@ -405,16 +361,16 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			sub1ResultCh := make(chan result, 1)
+			sub1ResultCh := make(chan subResult, 1)
 			_, err := client.Subscribe(&sub1, map[string]interface{}{"id": 1}, func(dataValue []byte, errValue error) error {
-				sub1ResultCh <- result{data: dataValue, err: errValue}
+				sub1ResultCh <- subResult{data: dataValue, err: errValue}
 				return nil
 			})
 			require.NoError(t, err)
 
-			sub2ResultCh := make(chan result, 2)
+			sub2ResultCh := make(chan subResult, 2)
 			_, err = client.Subscribe(&sub2, map[string]interface{}{"id": 2}, func(dataValue []byte, errValue error) error {
-				sub2ResultCh <- result{data: dataValue, err: errValue}
+				sub2ResultCh <- subResult{data: dataValue, err: errValue}
 				return nil
 			})
 			require.NoError(t, err)
@@ -438,7 +394,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			// Publish to subject .99 → only sub1 should receive.
 			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionMyNats, subject99, []byte(`{"id":1,"__typename":"Employee"}`), 1, subscriptionOnCreateTestTimeout)
 
-			testenv.AwaitChannelWithT(t, subscriptionOnCreateTestTimeout, sub1ResultCh, func(t *testing.T, r result) {
+			testenv.AwaitChannelWithT(t, subscriptionOnCreateTestTimeout, sub1ResultCh, func(t *testing.T, r subResult) {
 				require.NoError(t, r.err)
 				require.JSONEq(t, `{"employeeUpdatedMyNats":{"id":1}}`, string(r.data))
 			})
@@ -446,7 +402,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			// Publish to subject .2 → only sub2 should receive.
 			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionMyNats, xEnv.GetPubSubName("employeeUpdatedMyNats.2"), []byte(`{"id":2,"__typename":"Employee"}`), 1, subscriptionOnCreateTestTimeout)
 
-			testenv.AwaitChannelWithT(t, subscriptionOnCreateTestTimeout, sub2ResultCh, func(t *testing.T, r result) {
+			testenv.AwaitChannelWithT(t, subscriptionOnCreateTestTimeout, sub2ResultCh, func(t *testing.T, r subResult) {
 				require.NoError(t, r.err)
 				require.JSONEq(t, `{"employeeUpdatedMyNats":{"id":2}}`, string(r.data))
 			})
@@ -474,42 +430,29 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 
 		sharedSubjectCh := make(chan string, 2)
 
-		customModule := &subscription_on_create.SubscriptionOnCreateModule{
-			HookCallCount: &atomic.Int32{},
-			Callback: func(ctx core.SubscriptionOnCreateHandlerContext) {
-				conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubNats.SubscriptionEventConfiguration)
-				if !ok || len(conf.Subjects) == 0 {
-					return
-				}
-				// Redirect every subscription to the same "shared.1" subject regardless of
-				// which employeeID argument was used.
-				dotIdx := strings.LastIndex(conf.Subjects[0], ".")
-				if dotIdx == -1 {
-					return
-				}
-				sharedSubject := conf.Subjects[0][:dotIdx+1] + "shared"
-				conf.Subjects = []string{sharedSubject}
-				select {
-				case sharedSubjectCh <- sharedSubject:
-				default:
-				}
-			},
-		}
-
-		cfg := config.Config{
-			Graph: config.Graph{},
-			Modules: map[string]interface{}{
-				"subscriptionOnCreateModule": customModule,
-			},
-		}
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+			conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubNats.SubscriptionEventConfiguration)
+			if !ok || len(conf.Subjects) == 0 {
+				return
+			}
+			// Redirect every subscription to the same "shared.1" subject regardless of
+			// which employeeID argument was used.
+			dotIdx := strings.LastIndex(conf.Subjects[0], ".")
+			if dotIdx == -1 {
+				return
+			}
+			sharedSubject := conf.Subjects[0][:dotIdx+1] + "shared"
+			conf.Subjects = []string{sharedSubject}
+			select {
+			case sharedSubjectCh <- sharedSubject:
+			default:
+			}
+		})
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
-			RouterOptions: []core.Option{
-				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&subscription_on_create.SubscriptionOnCreateModule{}),
-			},
+			RouterOptions:            hookRouterOptions(customModule),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			var wg sync.WaitGroup
 			wg.Add(2)
@@ -613,43 +556,30 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 
 		reroutedSubjectCh := make(chan string, 1)
 
-		customModule := &subscription_on_create.SubscriptionOnCreateModule{
-			HookCallCount: &atomic.Int32{},
-			Callback: func(ctx core.SubscriptionOnCreateHandlerContext) {
-				if ctx.Request().Header.Get("X-Reroute") != "true" {
-					return
-				}
-				conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubNats.SubscriptionEventConfiguration)
-				if !ok || len(conf.Subjects) == 0 {
-					return
-				}
-				dotIdx := strings.LastIndex(conf.Subjects[0], ".")
-				if dotIdx == -1 {
-					return
-				}
-				newSubject := conf.Subjects[0][:dotIdx+1] + "rerouted"
-				conf.Subjects = []string{newSubject}
-				select {
-				case reroutedSubjectCh <- newSubject:
-				default:
-				}
-			},
-		}
-
-		cfg := config.Config{
-			Graph: config.Graph{},
-			Modules: map[string]interface{}{
-				"subscriptionOnCreateModule": customModule,
-			},
-		}
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+			if ctx.Request().Header.Get("X-Reroute") != "true" {
+				return
+			}
+			conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubNats.SubscriptionEventConfiguration)
+			if !ok || len(conf.Subjects) == 0 {
+				return
+			}
+			dotIdx := strings.LastIndex(conf.Subjects[0], ".")
+			if dotIdx == -1 {
+				return
+			}
+			newSubject := conf.Subjects[0][:dotIdx+1] + "rerouted"
+			conf.Subjects = []string{newSubject}
+			select {
+			case reroutedSubjectCh <- newSubject:
+			default:
+			}
+		})
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
-			RouterOptions: []core.Option{
-				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&subscription_on_create.SubscriptionOnCreateModule{}),
-			},
+			RouterOptions:            hookRouterOptions(customModule),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			var wg sync.WaitGroup
 			wg.Add(2)
@@ -762,27 +692,14 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 		// The engine propagates the error to the client as a GraphQL error and the router
 		// must not crash.
 
-		customModule := &subscription_on_create.SubscriptionOnCreateModule{
-			HookCallCount: &atomic.Int32{},
-			Callback: func(ctx core.SubscriptionOnCreateHandlerContext) {
-				panic("intentional panic from SubscriptionOnCreate hook")
-			},
-		}
-
-		cfg := config.Config{
-			Graph: config.Graph{},
-			Modules: map[string]interface{}{
-				"subscriptionOnCreateModule": customModule,
-			},
-		}
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+			panic("intentional panic from SubscriptionOnCreate hook")
+		})
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
-			RouterOptions: []core.Option{
-				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&subscription_on_create.SubscriptionOnCreateModule{}),
-			},
+			RouterOptions:            hookRouterOptions(customModule),
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
 				LogLevel: zapcore.ErrorLevel,
