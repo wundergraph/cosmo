@@ -867,7 +867,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		return err
 	}
 	r.providerRegistry = registry
-	r.entityCacheInstances = r.buildEntityCacheInstances()
+	entityCacheInstances, err := r.buildEntityCacheInstances()
+	if err != nil {
+		return err
+	}
+	r.entityCacheInstances = entityCacheInstances
 
 	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.DefaultExporter(r.traceConfig) != nil
 	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode

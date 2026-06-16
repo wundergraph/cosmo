@@ -73,9 +73,11 @@ func TestRouterBuildEntityCacheInstancesIncludesDefaultWhenReferenced(t *testing
 		}},
 	}
 
-	caches := r.buildEntityCacheInstances()
+	caches, err := r.buildEntityCacheInstances()
 
-	require.Contains(t, caches, "default")
+	require.NoError(t, err)
+	_, ok := caches["default"]
+	require.True(t, ok)
 	assert.Nil(t, caches["default"])
 }
 

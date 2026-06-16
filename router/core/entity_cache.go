@@ -1,12 +1,17 @@
 package core
 
 import (
+	"fmt"
+	"io"
+
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 const defaultEntityCacheProviderID = "default"
+const defaultEntityCacheKeyPrefix = "cosmo_entity_cache"
 
 func resolveEntityCacheProviderID(subgraph config.SubgraphCacheOverride, entity config.EntityCacheEntityConfiguration) string {
 	if entity.StorageProviderID != "" {
@@ -18,13 +23,13 @@ func resolveEntityCacheProviderID(subgraph config.SubgraphCacheOverride, entity 
 	return defaultEntityCacheProviderID
 }
 
-func (r *Router) buildEntityCacheInstances() map[string]resolve.LoaderCache {
-	return buildEntityCacheInstances(r.entityCaching)
+func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, error) {
+	return buildEntityCacheInstances(r.entityCaching, r.providerRegistry, r.logger)
 }
 
-func buildEntityCacheInstances(entityCaching config.EntityCachingConfiguration) map[string]resolve.LoaderCache {
+func buildEntityCacheInstances(entityCaching config.EntityCachingConfiguration, registry *ProviderRegistry, logger *zap.Logger) (map[string]resolve.LoaderCache, error) {
 	if len(entityCaching.SubgraphCacheOverrides) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	caches := make(map[string]resolve.LoaderCache)
@@ -36,9 +41,42 @@ func buildEntityCacheInstances(entityCaching config.EntityCachingConfiguration) 
 	}
 
 	if len(caches) == 0 {
-		return nil
+		return nil, nil
 	}
-	return caches
+
+	if !entityCaching.L2.Enabled || registry == nil {
+		return caches, nil
+	}
+
+	for cacheName := range caches {
+		storageProviderID := cacheName
+		if cacheName == defaultEntityCacheProviderID {
+			storageProviderID = entityCaching.L2.Storage.ProviderID
+		}
+		if storageProviderID == "" {
+			continue
+		}
+		redisProvider, ok := registry.Redis(storageProviderID)
+		if !ok {
+			continue
+		}
+		cache, err := newRedisEntityCache(logger, redisProvider, entityCaching.L2.Storage.KeyPrefix)
+		if err != nil {
+			closeEntityCacheInstances(caches)
+			return nil, fmt.Errorf("failed to create Redis entity cache %q with storage provider %q: %w", cacheName, storageProviderID, err)
+		}
+		caches[cacheName] = cache
+	}
+
+	return caches, nil
+}
+
+func closeEntityCacheInstances(caches map[string]resolve.LoaderCache) {
+	for _, cache := range caches {
+		if closer, ok := cache.(io.Closer); ok {
+			_ = closer.Close()
+		}
+	}
 }
 
 func buildEntityCacheInvalidationConfigs(entityCaching config.EntityCachingConfiguration) map[string]map[string]*resolve.EntityCacheInvalidationConfig {
