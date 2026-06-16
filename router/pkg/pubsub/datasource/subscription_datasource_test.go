@@ -20,6 +20,16 @@ type testSubscriptionEventConfiguration struct {
 	Subject string `json:"subject"`
 }
 
+// incompatibleSubscriptionEventConfiguration implements SubscriptionEventConfiguration
+// but is type-incompatible with testSubscriptionEventConfiguration.
+type incompatibleSubscriptionEventConfiguration struct{}
+
+func (i incompatibleSubscriptionEventConfiguration) ProviderID() string { return "incompatible" }
+func (i incompatibleSubscriptionEventConfiguration) ProviderType() ProviderType {
+	return ProviderTypeNats
+}
+func (i incompatibleSubscriptionEventConfiguration) RootFieldName() string { return "incompatible" }
+
 func (t testSubscriptionEventConfiguration) ProviderID() string {
 	return "test-provider"
 }
@@ -392,6 +402,312 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_InvalidEventConfigInpu
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid character 'j' looking for beginning of value")
 	assert.False(t, hookCalled)
+}
+
+func TestPubSubSubscriptionDataSource_SubscriptionOnCreate_NoHooks(t *testing.T) {
+	mockAdapter := NewMockProvider(t)
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
+		return nil
+	}
+
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
+
+	testConfig := testSubscriptionEventConfiguration{
+		Topic:   "test-topic",
+		Subject: "test-subject",
+	}
+	input, err := json.Marshal(testConfig)
+	require.NoError(t, err)
+
+	result, err := dataSource.SubscriptionOnCreate(context.Background(), input)
+	assert.NoError(t, err)
+	assert.Equal(t, input, result)
+}
+
+func TestPubSubSubscriptionDataSource_SubscriptionOnCreate_WithHooks(t *testing.T) {
+	mockAdapter := NewMockProvider(t)
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
+		return nil
+	}
+
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
+
+	hook1Called := false
+	hook2Called := false
+
+	hook1 := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+		hook1Called = true
+		return config
+	}
+
+	hook2 := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+		hook2Called = true
+		return config
+	}
+
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnCreate: SubscriptionOnCreateHooks{
+			Handlers: []SubscriptionOnCreateFn{hook1, hook2},
+		},
+	})
+
+	testConfig := testSubscriptionEventConfiguration{
+		Topic:   "test-topic",
+		Subject: "test-subject",
+	}
+	input, err := json.Marshal(testConfig)
+	require.NoError(t, err)
+
+	result, err := dataSource.SubscriptionOnCreate(context.Background(), input)
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.True(t, hook1Called)
+	assert.True(t, hook2Called)
+}
+
+func TestPubSubSubscriptionDataSource_SubscriptionOnCreate_HookModifiesConfig(t *testing.T) {
+	mockAdapter := NewMockProvider(t)
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
+		return nil
+	}
+
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
+
+	hook := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+		typedConfig := config.(testSubscriptionEventConfiguration)
+		typedConfig.Topic = "modified-topic"
+		return typedConfig
+	}
+
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnCreate: SubscriptionOnCreateHooks{
+			Handlers: []SubscriptionOnCreateFn{hook},
+		},
+	})
+
+	testConfig := testSubscriptionEventConfiguration{
+		Topic:   "original-topic",
+		Subject: "test-subject",
+	}
+	input, err := json.Marshal(testConfig)
+	require.NoError(t, err)
+
+	result, err := dataSource.SubscriptionOnCreate(context.Background(), input)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	var resultConfig testSubscriptionEventConfiguration
+	err = json.Unmarshal(result, &resultConfig)
+	require.NoError(t, err)
+	assert.Equal(t, "modified-topic", resultConfig.Topic)
+	assert.Equal(t, "test-subject", resultConfig.Subject)
+}
+
+func TestPubSubSubscriptionDataSource_SubscriptionOnCreate_HooksChained(t *testing.T) {
+	mockAdapter := NewMockProvider(t)
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
+		return nil
+	}
+
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
+
+	var hook1ReceivedTopic, hook2ReceivedTopic string
+
+	hook1 := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+		typedConfig := config.(testSubscriptionEventConfiguration)
+		hook1ReceivedTopic = typedConfig.Topic
+		typedConfig.Topic = "hook1-topic"
+		return typedConfig
+	}
+
+	hook2 := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+		typedConfig := config.(testSubscriptionEventConfiguration)
+		hook2ReceivedTopic = typedConfig.Topic
+		typedConfig.Topic = "hook2-topic"
+		return typedConfig
+	}
+
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnCreate: SubscriptionOnCreateHooks{
+			Handlers: []SubscriptionOnCreateFn{hook1, hook2},
+		},
+	})
+
+	testConfig := testSubscriptionEventConfiguration{
+		Topic:   "original-topic",
+		Subject: "test-subject",
+	}
+	input, err := json.Marshal(testConfig)
+	require.NoError(t, err)
+
+	result, err := dataSource.SubscriptionOnCreate(context.Background(), input)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	assert.Equal(t, "original-topic", hook1ReceivedTopic)
+	assert.Equal(t, "hook1-topic", hook2ReceivedTopic)
+
+	var resultConfig testSubscriptionEventConfiguration
+	err = json.Unmarshal(result, &resultConfig)
+	require.NoError(t, err)
+	assert.Equal(t, "hook2-topic", resultConfig.Topic)
+}
+
+func TestPubSubSubscriptionDataSource_SubscriptionOnCreate_HookReturnsWrongType(t *testing.T) {
+	mockAdapter := NewMockProvider(t)
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
+		return nil
+	}
+
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
+
+	hook := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+		return incompatibleSubscriptionEventConfiguration{}
+	}
+
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnCreate: SubscriptionOnCreateHooks{
+			Handlers: []SubscriptionOnCreateFn{hook},
+		},
+	})
+
+	testConfig := testSubscriptionEventConfiguration{
+		Topic:   "test-topic",
+		Subject: "test-subject",
+	}
+	input, err := json.Marshal(testConfig)
+	require.NoError(t, err)
+
+	result, err := dataSource.SubscriptionOnCreate(context.Background(), input)
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "invalid subscription configuration returned by SubscriptionOnCreate hook")
+}
+
+func TestPubSubSubscriptionDataSource_SubscriptionOnCreate_InvalidEventConfigInput(t *testing.T) {
+	mockAdapter := NewMockProvider(t)
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
+		return nil
+	}
+
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
+
+	hookCalled := false
+	hook := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+		hookCalled = true
+		return config
+	}
+
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnCreate: SubscriptionOnCreateHooks{
+			Handlers: []SubscriptionOnCreateFn{hook},
+		},
+	})
+
+	result, err := dataSource.SubscriptionOnCreate(context.Background(), []byte(`{"invalid": json}`))
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid character 'j' looking for beginning of value")
+	assert.Nil(t, result)
+	assert.False(t, hookCalled)
+}
+
+func TestPubSubSubscriptionDataSource_SubscriptionOnCreate_PanicRecovery(t *testing.T) {
+	panicErr := errors.New("panic error")
+
+	tests := []struct {
+		name            string
+		panicValue      any
+		expectedErr     error
+		expectedErrText string
+	}{
+		{
+			name:        "error type",
+			panicValue:  panicErr,
+			expectedErr: panicErr,
+		},
+		{
+			name:            "string type",
+			panicValue:      "panic string message",
+			expectedErrText: "panic string message",
+		},
+		{
+			name:            "other type",
+			panicValue:      42,
+			expectedErrText: "42",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockAdapter := NewMockProvider(t)
+			uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
+				return nil
+			}
+
+			dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
+
+			hook := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+				panic(tt.panicValue)
+			}
+
+			dataSource.SetHooks(Hooks{
+				SubscriptionOnCreate: SubscriptionOnCreateHooks{
+					Handlers: []SubscriptionOnCreateFn{hook},
+				},
+			})
+
+			testConfig := testSubscriptionEventConfiguration{
+				Topic:   "test-topic",
+				Subject: "test-subject",
+			}
+			input, err := json.Marshal(testConfig)
+			require.NoError(t, err)
+
+			result, err := dataSource.SubscriptionOnCreate(context.Background(), input)
+
+			assert.Error(t, err)
+			assert.Nil(t, result)
+			if tt.expectedErr != nil {
+				assert.Equal(t, tt.expectedErr, err)
+			}
+			if tt.expectedErrText != "" {
+				assert.Contains(t, err.Error(), tt.expectedErrText)
+			}
+		})
+	}
+}
+
+func TestPubSubSubscriptionDataSource_SetSubscriptionOnCreateFns(t *testing.T) {
+	mockAdapter := NewMockProvider(t)
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
+		return nil
+	}
+
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
+
+	assert.Len(t, dataSource.hooks.SubscriptionOnCreate.Handlers, 0)
+
+	hook1 := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+		return config
+	}
+	hook2 := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+		return config
+	}
+
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnCreate: SubscriptionOnCreateHooks{
+			Handlers: []SubscriptionOnCreateFn{hook1},
+		},
+	})
+	assert.Len(t, dataSource.hooks.SubscriptionOnCreate.Handlers, 1)
+
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnCreate: SubscriptionOnCreateHooks{
+			Handlers: []SubscriptionOnCreateFn{hook2},
+		},
+	})
+	assert.Len(t, dataSource.hooks.SubscriptionOnCreate.Handlers, 1)
 }
 
 func TestPubSubSubscriptionDataSource_SubscriptionOnStart_PanicRecovery(t *testing.T) {
