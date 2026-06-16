@@ -57,15 +57,20 @@ func buildEntityCacheInstances(entityCaching config.EntityCachingConfiguration, 
 			continue
 		}
 		redisProvider, ok := registry.Redis(storageProviderID)
-		if !ok {
+		if ok {
+			cache, err := newRedisEntityCache(logger, redisProvider, entityCaching.L2.Storage.KeyPrefix)
+			if err != nil {
+				closeEntityCacheInstances(caches)
+				return nil, fmt.Errorf("failed to create Redis entity cache %q with storage provider %q: %w", cacheName, storageProviderID, err)
+			}
+			caches[cacheName] = cache
 			continue
 		}
-		cache, err := newRedisEntityCache(logger, redisProvider, entityCaching.L2.Storage.KeyPrefix)
-		if err != nil {
-			closeEntityCacheInstances(caches)
-			return nil, fmt.Errorf("failed to create Redis entity cache %q with storage provider %q: %w", cacheName, storageProviderID, err)
+
+		memoryProvider, ok := registry.Memory(storageProviderID)
+		if ok {
+			caches[cacheName] = newMemoryEntityCache(memoryProvider, entityCaching.L2.Storage.KeyPrefix)
 		}
-		caches[cacheName] = cache
 	}
 
 	return caches, nil
