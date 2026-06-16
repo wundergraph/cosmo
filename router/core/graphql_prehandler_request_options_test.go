@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -85,26 +87,78 @@ func TestPreHandlerInternalParseRequestOptions_ForceUnauthenticatedRequestTracin
 	})
 }
 
-func TestPreHandlerParseRequestExecutionOptions_EntityCachingDefaultsDisabled(t *testing.T) {
+func TestPreHandlerParseRequestExecutionOptions_EntityCaching(t *testing.T) {
 	t.Parallel()
 
-	req := httptest.NewRequest("GET", "http://localhost/graphql", nil)
-	h := &PreHandler{
-		entityCaching: config.EntityCachingConfiguration{
-			GlobalCacheKeyPrefix: "schema-v1",
-			L1: config.EntityCachingL1{
-				Enabled: true,
+	tests := []struct {
+		name          string
+		entityCaching config.EntityCachingConfiguration
+		expected      resolve.CachingOptions
+	}{
+		{
+			name: "enables l1 cache when entity caching and l1 are enabled",
+			entityCaching: config.EntityCachingConfiguration{
+				Enabled:              true,
+				GlobalCacheKeyPrefix: "schema-v1",
+				L1: config.EntityCachingL1{
+					Enabled: true,
+				},
+				L2: config.EntityCachingL2{
+					Enabled: true,
+				},
 			},
-			L2: config.EntityCachingL2{
-				Enabled: true,
+			expected: resolve.CachingOptions{
+				EnableL1Cache:        true,
+				GlobalCacheKeyPrefix: "schema-v1",
+			},
+		},
+		{
+			name: "disables l1 cache when l1 is disabled",
+			entityCaching: config.EntityCachingConfiguration{
+				Enabled:              true,
+				GlobalCacheKeyPrefix: "schema-v1",
+				L1: config.EntityCachingL1{
+					Enabled: false,
+				},
+				L2: config.EntityCachingL2{
+					Enabled: true,
+				},
+			},
+			expected: resolve.CachingOptions{
+				GlobalCacheKeyPrefix: "schema-v1",
+			},
+		},
+		{
+			name: "disables l1 cache when entity caching is disabled",
+			entityCaching: config.EntityCachingConfiguration{
+				Enabled:              false,
+				GlobalCacheKeyPrefix: "schema-v1",
+				L1: config.EntityCachingL1{
+					Enabled: true,
+				},
+				L2: config.EntityCachingL2{
+					Enabled: true,
+				},
+			},
+			expected: resolve.CachingOptions{
+				GlobalCacheKeyPrefix: "schema-v1",
 			},
 		},
 	}
 
-	executionOptions := h.parseRequestExecutionOptions(req)
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	require.False(t, executionOptions.Caching.EnableL1Cache)
-	require.False(t, executionOptions.Caching.EnableL2Cache)
-	require.False(t, executionOptions.Caching.EnableCacheAnalytics)
-	require.Equal(t, "schema-v1", executionOptions.Caching.GlobalCacheKeyPrefix)
+			req := httptest.NewRequest("GET", "http://localhost/graphql", nil)
+			h := &PreHandler{
+				entityCaching: tt.entityCaching,
+			}
+
+			executionOptions := h.parseRequestExecutionOptions(req)
+
+			assert.Equal(t, tt.expected, executionOptions.Caching)
+		})
+	}
 }

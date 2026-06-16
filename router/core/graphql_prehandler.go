@@ -1367,6 +1367,8 @@ func (h *PreHandler) parseRequestExecutionOptions(r *http.Request) resolve.Execu
 
 func (h *PreHandler) cachingOptions() resolve.CachingOptions {
 	return resolve.CachingOptions{
+		// EnableL1Cache also gates the @requestScoped coordinate L1 in the engine.
+		EnableL1Cache:        h.entityCaching.Enabled && h.entityCaching.L1.Enabled,
 		GlobalCacheKeyPrefix: h.entityCaching.GlobalCacheKeyPrefix,
 	}
 }
