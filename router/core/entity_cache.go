@@ -63,13 +63,13 @@ func buildEntityCacheInstances(entityCaching config.EntityCachingConfiguration, 
 				closeEntityCacheInstances(caches)
 				return nil, fmt.Errorf("failed to create Redis entity cache %q with storage provider %q: %w", cacheName, storageProviderID, err)
 			}
-			caches[cacheName] = cache
+			caches[cacheName] = newCircuitBreakerCache(cache, entityCaching.L2.CircuitBreaker)
 			continue
 		}
 
 		memoryProvider, ok := registry.Memory(storageProviderID)
 		if ok {
-			caches[cacheName] = newMemoryEntityCache(memoryProvider, entityCaching.L2.Storage.KeyPrefix)
+			caches[cacheName] = newCircuitBreakerCache(newMemoryEntityCache(memoryProvider, entityCaching.L2.Storage.KeyPrefix), entityCaching.L2.CircuitBreaker)
 		}
 	}
 

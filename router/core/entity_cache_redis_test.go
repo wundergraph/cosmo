@@ -186,10 +186,11 @@ func TestBuildEntityCacheInstancesBuildsRedisCacheForDefaultProvider(t *testing.
 	require.NoError(t, err)
 	rawCache, ok := caches["default"]
 	require.True(t, ok)
-	cache, ok := rawCache.(*redisEntityCache)
+	breaker := requireCircuitBreakerCache(t, rawCache)
+	cache, ok := breaker.inner.(*redisEntityCache)
 	require.True(t, ok)
 	t.Cleanup(func() {
-		require.NoError(t, cache.Close())
+		require.NoError(t, breaker.Close())
 	})
 	require.NoError(t, cache.Set(ctx, []*resolve.CacheEntry{
 		{Key: "builder-key", Value: []byte("builder-value"), TTL: -1 * time.Second},
@@ -229,9 +230,10 @@ func TestBuildEntityCacheInstancesBuildsRedisCacheForEntityProviderOverride(t *t
 	caches, err := buildEntityCacheInstances(cfg, registry, zap.NewNop())
 
 	require.NoError(t, err)
-	cache, ok := caches["entity-redis"].(*redisEntityCache)
+	breaker := requireCircuitBreakerCache(t, caches["entity-redis"])
+	_, ok := breaker.inner.(*redisEntityCache)
 	require.True(t, ok)
 	t.Cleanup(func() {
-		require.NoError(t, cache.Close())
+		require.NoError(t, breaker.Close())
 	})
 }

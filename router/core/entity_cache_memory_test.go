@@ -209,6 +209,10 @@ func TestBuildEntityCacheInstancesBuildsMemoryCacheForDefaultProvider(t *testing
 				ProviderID: "memory-default",
 				KeyPrefix:  "builder-prefix",
 			},
+			CircuitBreaker: config.EntityCachingCircuitBreaker{
+				FailureThreshold: 7,
+				CooldownPeriod:   42 * time.Second,
+			},
 		},
 		SubgraphCacheOverrides: []config.SubgraphCacheOverride{
 			{
@@ -231,11 +235,14 @@ func TestBuildEntityCacheInstancesBuildsMemoryCacheForDefaultProvider(t *testing
 	require.NoError(t, err)
 	rawCache, ok := caches["default"]
 	require.True(t, ok)
-	cache, ok := rawCache.(*memoryEntityCache)
+	breaker := requireCircuitBreakerCache(t, rawCache)
+	cache, ok := breaker.inner.(*memoryEntityCache)
 	require.True(t, ok)
 	t.Cleanup(func() {
-		require.NoError(t, cache.Close())
+		require.NoError(t, breaker.Close())
 	})
+	assert.Equal(t, 7, breaker.failureThreshold)
+	assert.Equal(t, 42*time.Second, breaker.cooldownPeriod)
 	assert.Equal(t, "builder-prefix", cache.keyPrefix)
 }
 
@@ -270,10 +277,11 @@ func TestBuildEntityCacheInstancesBuildsMemoryCacheForEntityProviderOverride(t *
 	caches, err := buildEntityCacheInstances(cfg, registry, zap.NewNop())
 
 	require.NoError(t, err)
-	cache, ok := caches["entity-memory"].(*memoryEntityCache)
+	breaker := requireCircuitBreakerCache(t, caches["entity-memory"])
+	cache, ok := breaker.inner.(*memoryEntityCache)
 	require.True(t, ok)
 	t.Cleanup(func() {
-		require.NoError(t, cache.Close())
+		require.NoError(t, breaker.Close())
 	})
 	assert.Equal(t, uint64(100), cache.maxSize)
 	assert.Equal(t, "builder-prefix", cache.keyPrefix)
