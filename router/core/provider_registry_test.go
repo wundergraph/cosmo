@@ -17,6 +17,7 @@ func TestProviderRegistry(t *testing.T) {
 			S3:         []config.S3StorageProvider{{ID: "my-s3", Bucket: "b"}},
 			CDN:        []config.CDNStorageProvider{{ID: "my-cdn", URL: "https://cdn"}},
 			Redis:      []config.RedisStorageProvider{{ID: "my-redis"}},
+			Memory:     []config.MemoryStorageProvider{{ID: "my-memory", MaxSize: 100}},
 			FileSystem: []config.FileSystemStorageProvider{{ID: "my-fs", Path: "/tmp"}},
 		})
 		require.NoError(t, err)
@@ -32,6 +33,10 @@ func TestProviderRegistry(t *testing.T) {
 		redis, ok := reg.Redis("my-redis")
 		require.True(t, ok)
 		require.Equal(t, "my-redis", redis.ID)
+
+		memory, ok := reg.Memory("my-memory")
+		require.True(t, ok)
+		require.Equal(t, "my-memory", memory.ID)
 
 		fs, ok := reg.FileSystem("my-fs")
 		require.True(t, ok)
@@ -51,6 +56,9 @@ func TestProviderRegistry(t *testing.T) {
 		require.False(t, ok)
 
 		_, ok = reg.Redis("nope")
+		require.False(t, ok)
+
+		_, ok = reg.Memory("nope")
 		require.False(t, ok)
 
 		_, ok = reg.FileSystem("nope")
@@ -82,6 +90,15 @@ func TestProviderRegistry(t *testing.T) {
 			Redis: []config.RedisStorageProvider{{ID: "dup"}, {ID: "dup"}},
 		})
 		require.ErrorContains(t, err, "duplicate Redis storage provider with id 'dup'")
+	})
+
+	t.Run("duplicate Memory ID", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := NewProviderRegistry(config.StorageProviders{
+			Memory: []config.MemoryStorageProvider{{ID: "dup"}, {ID: "dup"}},
+		})
+		require.ErrorContains(t, err, "duplicate memory storage provider with id 'dup'")
 	})
 
 	t.Run("duplicate FileSystem ID", func(t *testing.T) {

@@ -27,6 +27,7 @@ import (
 	grpcdatasource "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/grpc_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 // Loader translates the protobuf-based router engine configuration into a
@@ -40,6 +41,8 @@ type Loader struct {
 	subscriptionHooks subscriptionHooks
 	includeInfo       bool
 	logger            *zap.Logger
+	entityCaching     config.EntityCachingConfiguration
+	subgraphsByID     map[string]string
 }
 
 type InstanceData struct {
@@ -243,6 +246,8 @@ type RouterEngineConfiguration struct {
 	Execution                    config.EngineExecutionConfiguration
 	Headers                      *config.HeaderRules
 	Events                       config.EventsConfiguration
+	EntityCaching                config.EntityCachingConfiguration
+	EntityCaches                 map[string]resolve.LoaderCache
 	SubgraphErrorPropagation     config.SubgraphErrorPropagationConfiguration
 	SubgraphExtensionPropagation config.SubgraphExtensionPropagationConfiguration
 	StreamMetricStore            rmetric.StreamMetricStore
@@ -311,6 +316,11 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	var outConfig plan.Configuration
 	// attach field usage information to the plan
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
+	l.entityCaching = routerEngineConfig.EntityCaching
+	l.subgraphsByID = make(map[string]string, len(subgraphs))
+	for _, subgraph := range subgraphs {
+		l.subgraphsByID[subgraph.Id] = subgraph.Name
+	}
 	for _, configuration := range engineConfig.FieldConfigurations {
 		var args []plan.ArgumentConfiguration
 		for _, argumentConfiguration := range configuration.ArgumentsConfiguration {
@@ -647,6 +657,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			Conditions:            conditions,
 		})
 	}
+	out.EntityCacheConfig = l.entityCacheConfigurationsForDataSource(in, out.Keys)
 	for _, providesConfiguration := range in.Provides {
 		out.Provides = append(out.Provides, plan.FederationFieldConfiguration{
 			TypeName:     providesConfiguration.TypeName,
@@ -719,6 +730,53 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 	}
 	for k, v := range costConfig.GetTypeWeights() {
 		out.CostConfig.Types[k] = int(v)
+	}
+	return out
+}
+
+func (l *Loader) entityCacheConfigurationsForDataSource(in *nodev1.DataSourceConfiguration, keys plan.FederationFieldConfigurations) plan.EntityCacheConfigurations {
+	subgraphName := l.subgraphsByID[in.Id]
+	if subgraphName == "" || len(l.entityCaching.SubgraphCacheOverrides) == 0 {
+		return nil
+	}
+
+	var override config.SubgraphCacheOverride
+	for _, candidate := range l.entityCaching.SubgraphCacheOverrides {
+		if candidate.Name == subgraphName {
+			override = candidate
+			break
+		}
+	}
+	if override.Name == "" || len(override.Entities) == 0 {
+		return nil
+	}
+
+	resolvableEntityTypes := make(map[string]struct{})
+	for _, key := range keys {
+		if !key.DisableEntityResolver {
+			resolvableEntityTypes[key.TypeName] = struct{}{}
+		}
+	}
+	if len(resolvableEntityTypes) == 0 {
+		return nil
+	}
+
+	out := make(plan.EntityCacheConfigurations, 0, len(override.Entities))
+	for _, entity := range override.Entities {
+		if entity.Type == "" {
+			continue
+		}
+		if _, ok := resolvableEntityTypes[entity.Type]; !ok {
+			continue
+		}
+		out = append(out, plan.EntityCacheConfiguration{
+			TypeName:  entity.Type,
+			CacheName: resolveEntityCacheProviderID(override, entity),
+			TTL:       entity.TTL,
+		})
+	}
+	if len(out) == 0 {
+		return nil
 	}
 	return out
 }

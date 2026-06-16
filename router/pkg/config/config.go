@@ -1026,6 +1026,7 @@ type StorageProviders struct {
 	S3         []S3StorageProvider         `yaml:"s3,omitempty" envPrefix:"S3_"`
 	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty" envPrefix:"CDN_"`
 	Redis      []RedisStorageProvider      `yaml:"redis,omitempty" envPrefix:"REDIS_"`
+	Memory     []MemoryStorageProvider     `yaml:"memory,omitempty" envPrefix:"MEMORY_"`
 	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty" envPrefix:"FS_"`
 }
 
@@ -1063,6 +1064,53 @@ type RedisStorageProvider struct {
 	ID             string   `yaml:"id,omitempty" env:"ID"`
 	URLs           []string `yaml:"urls,omitempty" env:"URLS"`
 	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" env:"CLUSTER_ENABLED" envDefault:"false"`
+}
+
+type MemoryStorageProvider struct {
+	ID      string      `yaml:"id,omitempty" env:"ID"`
+	MaxSize BytesString `yaml:"max_size,omitempty" env:"MAX_SIZE" envDefault:"100MB"`
+}
+
+type EntityCachingConfiguration struct {
+	Enabled                bool                    `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	GlobalCacheKeyPrefix   string                  `yaml:"global_cache_key_prefix,omitempty" env:"GLOBAL_CACHE_KEY_PREFIX"`
+	L1                     EntityCachingL1         `yaml:"l1,omitempty" envPrefix:"L1_"`
+	L2                     EntityCachingL2         `yaml:"l2,omitempty" envPrefix:"L2_"`
+	SubgraphCacheOverrides []SubgraphCacheOverride `yaml:"subgraph_cache_overrides,omitempty" envPrefix:"SUBGRAPH_CACHE_OVERRIDE_"`
+}
+
+type EntityCachingL1 struct {
+	Enabled bool        `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	MaxSize BytesString `yaml:"max_size,omitempty" envDefault:"100MB" env:"MAX_SIZE"`
+}
+
+type EntityCachingL2 struct {
+	Enabled        bool                        `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Storage        EntityCachingL2Storage      `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
+	CircuitBreaker EntityCachingCircuitBreaker `yaml:"circuit_breaker,omitempty" envPrefix:"CIRCUIT_BREAKER_"`
+}
+
+type EntityCachingL2Storage struct {
+	ProviderID string `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
+	KeyPrefix  string `yaml:"key_prefix,omitempty" envDefault:"cosmo_entity_cache" env:"KEY_PREFIX"`
+}
+
+type EntityCachingCircuitBreaker struct {
+	FailureThreshold int           `yaml:"failure_threshold,omitempty" envDefault:"5" env:"FAILURE_THRESHOLD"`
+	CooldownPeriod   time.Duration `yaml:"cooldown_period,omitempty" envDefault:"10s" env:"COOLDOWN_PERIOD"`
+}
+
+type SubgraphCacheOverride struct {
+	Name              string                           `yaml:"name,omitempty" env:"NAME"`
+	StorageProviderID string                           `yaml:"storage_provider_id,omitempty" env:"STORAGE_PROVIDER_ID"`
+	Entities          []EntityCacheEntityConfiguration `yaml:"entities,omitempty" envPrefix:"ENTITY_"`
+}
+
+type EntityCacheEntityConfiguration struct {
+	Type              string        `yaml:"type,omitempty" env:"TYPE"`
+	StorageProviderID string        `yaml:"storage_provider_id,omitempty" env:"STORAGE_PROVIDER_ID"`
+	TTL               time.Duration `yaml:"ttl,omitempty" env:"TTL"`
+	CacheName         string        `yaml:"cache_name,omitempty" env:"CACHE_NAME"`
 }
 
 type PersistedOperationsCDNProvider struct {
@@ -1428,6 +1476,7 @@ type Config struct {
 	SubgraphExtensionPropagation SubgraphExtensionPropagationConfiguration `yaml:"subgraph_extension_propagation" envPrefix:"SUBGRAPH_EXTENSION_PROPAGATION_"`
 
 	StorageProviders               StorageProviders                `yaml:"storage_providers" envPrefix:"STORAGE_PROVIDER_"`
+	EntityCaching                  EntityCachingConfiguration      `yaml:"entity_caching" envPrefix:"ENTITY_CACHING_"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
 	SplitConfigPoller              SplitConfigPollerRules          `yaml:"split_config_poller" envPrefix:"SPLIT_CONFIG_POLLER_"`
 	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
@@ -1572,6 +1621,10 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		}
 	}
 
+	if err := validateEntityCachingConfiguration(cfg.Config.EntityCaching, cfg.Config.StorageProviders); err != nil {
+		return nil, err
+	}
+
 	// Post-process the config
 	if cfg.Config.DevelopmentMode {
 		cfg.Config.JSONLog = false
@@ -1582,4 +1635,26 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 	}
 
 	return cfg, nil
+}
+
+func validateEntityCachingConfiguration(entityCaching EntityCachingConfiguration, storageProviders StorageProviders) error {
+	if entityCaching.L2.Storage.ProviderID != "" && !storageProviderIDExists(storageProviders, entityCaching.L2.Storage.ProviderID) {
+		return fmt.Errorf("entity_caching.l2.storage.provider_id %q does not match a configured storage provider", entityCaching.L2.Storage.ProviderID)
+	}
+
+	return nil
+}
+
+func storageProviderIDExists(storageProviders StorageProviders, id string) bool {
+	for _, provider := range storageProviders.Redis {
+		if provider.ID == id {
+			return true
+		}
+	}
+	for _, provider := range storageProviders.Memory {
+		if provider.ID == id {
+			return true
+		}
+	}
+	return false
 }

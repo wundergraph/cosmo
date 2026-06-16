@@ -14,6 +14,7 @@ type ProviderRegistry struct {
 	s3         map[string]config.S3StorageProvider
 	cdn        map[string]config.CDNStorageProvider
 	redis      map[string]config.RedisStorageProvider
+	memory     map[string]config.MemoryStorageProvider
 	fileSystem map[string]config.FileSystemStorageProvider
 }
 
@@ -24,6 +25,7 @@ func NewProviderRegistry(providers config.StorageProviders) (*ProviderRegistry, 
 		s3:         make(map[string]config.S3StorageProvider, len(providers.S3)),
 		cdn:        make(map[string]config.CDNStorageProvider, len(providers.CDN)),
 		redis:      make(map[string]config.RedisStorageProvider, len(providers.Redis)),
+		memory:     make(map[string]config.MemoryStorageProvider, len(providers.Memory)),
 		fileSystem: make(map[string]config.FileSystemStorageProvider, len(providers.FileSystem)),
 	}
 
@@ -44,6 +46,12 @@ func NewProviderRegistry(providers config.StorageProviders) (*ProviderRegistry, 
 			return nil, fmt.Errorf("duplicate Redis storage provider with id '%s'", p.ID)
 		}
 		r.redis[p.ID] = p
+	}
+	for _, p := range providers.Memory {
+		if _, ok := r.memory[p.ID]; ok {
+			return nil, fmt.Errorf("duplicate memory storage provider with id '%s'", p.ID)
+		}
+		r.memory[p.ID] = p
 	}
 	for _, p := range providers.FileSystem {
 		if _, ok := r.fileSystem[p.ID]; ok {
@@ -70,6 +78,12 @@ func (r *ProviderRegistry) CDN(id string) (config.CDNStorageProvider, bool) {
 // Redis looks up a Redis provider by ID.
 func (r *ProviderRegistry) Redis(id string) (config.RedisStorageProvider, bool) {
 	p, ok := r.redis[id]
+	return p, ok
+}
+
+// Memory looks up a memory provider by ID.
+func (r *ProviderRegistry) Memory(id string) (config.MemoryStorageProvider, bool) {
+	p, ok := r.memory[id]
 	return p, ok
 }
 

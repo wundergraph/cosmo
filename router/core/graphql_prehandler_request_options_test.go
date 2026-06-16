@@ -10,6 +10,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestPreHandlerInternalParseRequestOptions_ForceUnauthenticatedRequestTracing(t *testing.T) {
@@ -81,4 +83,28 @@ func TestPreHandlerInternalParseRequestOptions_ForceUnauthenticatedRequestTracin
 		require.False(t, executionOptions.IncludeQueryPlanInResponse)
 		require.False(t, traceOptions.Enable)
 	})
+}
+
+func TestPreHandlerParseRequestExecutionOptions_EntityCachingDefaultsDisabled(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest("GET", "http://localhost/graphql", nil)
+	h := &PreHandler{
+		entityCaching: config.EntityCachingConfiguration{
+			GlobalCacheKeyPrefix: "schema-v1",
+			L1: config.EntityCachingL1{
+				Enabled: true,
+			},
+			L2: config.EntityCachingL2{
+				Enabled: true,
+			},
+		},
+	}
+
+	executionOptions := h.parseRequestExecutionOptions(req)
+
+	require.False(t, executionOptions.Caching.EnableL1Cache)
+	require.False(t, executionOptions.Caching.EnableL2Cache)
+	require.False(t, executionOptions.Caching.EnableCacheAnalytics)
+	require.Equal(t, "schema-v1", executionOptions.Caching.GlobalCacheKeyPrefix)
 }

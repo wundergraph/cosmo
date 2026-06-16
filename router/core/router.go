@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -866,6 +867,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		return err
 	}
 	r.providerRegistry = registry
+	r.entityCacheInstances = r.buildEntityCacheInstances()
 
 	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.DefaultExporter(r.traceConfig) != nil
 	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
@@ -1895,6 +1897,16 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		})
 	}
 
+	for cacheName, cacheInstance := range r.entityCacheInstances {
+		if closer, ok := cacheInstance.(io.Closer); ok {
+			wg.Go(func() {
+				if closeErr := closer.Close(); closeErr != nil {
+					err.Append(fmt.Errorf("failed to close entity cache %s: %w", cacheName, closeErr))
+				}
+			})
+		}
+	}
+
 	wg.Go(func() {
 		for _, module := range r.modules {
 			if cleaner, ok := module.(Cleaner); ok {
@@ -2504,6 +2516,12 @@ func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlag
 func WithStorageProviders(cfg config.StorageProviders) Option {
 	return func(r *Router) {
 		r.storageProviders = cfg
+	}
+}
+
+func WithEntityCaching(cfg config.EntityCachingConfiguration) Option {
+	return func(r *Router) {
+		r.entityCaching = cfg
 	}
 }
 

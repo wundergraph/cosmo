@@ -78,6 +78,26 @@
             }
           }
         },
+        "memory": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
+              },
+              "max_size": {
+                "type": "string",
+                "description": "Maximum size of the in-memory storage provider.",
+                "format": "bytes-string",
+                "default": "100MB"
+              }
+            }
+          }
+        },
         "s3": {
           "type": "array",
           "description": "The configuration for the S3 storage provider. If no access key and secret key are provided, the provider will attempt to retrieve IAM credentials from the EC2 service.",
@@ -132,6 +152,113 @@
               "path": {
                 "type": "string",
                 "description": "The file system path where data is stored and retrieved."
+              }
+            }
+          }
+        }
+      }
+    },
+    "entity_caching": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Entity caching configuration. R1 wires the configuration surface without enabling cache behavior by default.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "global_cache_key_prefix": {
+          "type": "string"
+        },
+        "l1": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "max_size": {
+              "type": "string",
+              "format": "bytes-string",
+              "default": "100MB"
+            }
+          }
+        },
+        "l2": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "storage": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "provider_id": {
+                  "type": "string"
+                },
+                "key_prefix": {
+                  "type": "string",
+                  "default": "cosmo_entity_cache"
+                }
+              }
+            },
+            "circuit_breaker": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "failure_threshold": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 5
+                },
+                "cooldown_period": {
+                  "type": "string",
+                  "format": "go-duration",
+                  "default": "10s"
+                }
+              }
+            }
+          }
+        },
+        "subgraph_cache_overrides": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "storage_provider_id": {
+                "type": "string"
+              },
+              "entities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["type"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "storage_provider_id": {
+                      "type": "string"
+                    },
+                    "ttl": {
+                      "type": "string",
+                      "format": "go-duration"
+                    },
+                    "cache_name": {
+                      "type": "string"
+                    }
+                  }
+                }
               }
             }
           }

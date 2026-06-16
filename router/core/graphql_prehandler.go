@@ -77,6 +77,7 @@ type PreHandlerOptions struct {
 	ForceEnableInboundRequestDeduplication bool
 	HeaderPropagation                      *HeaderPropagation
 	SpanNameFormatter                      SpanNameFormatterFunc
+	EntityCaching                          config.EntityCachingConfiguration
 }
 
 type PreHandler struct {
@@ -118,6 +119,7 @@ type PreHandler struct {
 	enableInboundRequestDeduplication      bool
 	forceEnableInboundRequestDeduplication bool
 	spanNameFormatter                      SpanNameFormatterFunc
+	entityCaching                          config.EntityCachingConfiguration
 }
 
 type httpOperation struct {
@@ -187,6 +189,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
 		headerPropagation:                      opts.HeaderPropagation,
 		spanNameFormatter:                      spanNameFormatter,
+		entityCaching:                          opts.EntityCaching,
 	}
 }
 
@@ -1337,6 +1340,7 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 	return resolve.ExecutionOptions{
 		SkipLoader:                 false,
 		IncludeQueryPlanInResponse: false,
+		Caching:                    h.cachingOptions(),
 	}, traceOptions, nil
 }
 
@@ -1344,6 +1348,7 @@ func (h *PreHandler) parseRequestExecutionOptions(r *http.Request) resolve.Execu
 	options := resolve.ExecutionOptions{
 		SkipLoader:                 false,
 		IncludeQueryPlanInResponse: false,
+		Caching:                    h.cachingOptions(),
 	}
 	if r.Header.Get("X-WG-Skip-Loader") != "" {
 		options.SkipLoader = true
@@ -1358,6 +1363,12 @@ func (h *PreHandler) parseRequestExecutionOptions(r *http.Request) resolve.Execu
 		options.IncludeQueryPlanInResponse = true
 	}
 	return options
+}
+
+func (h *PreHandler) cachingOptions() resolve.CachingOptions {
+	return resolve.CachingOptions{
+		GlobalCacheKeyPrefix: h.entityCaching.GlobalCacheKeyPrefix,
+	}
 }
 
 func setExpressionContextClient(requestContext *requestContext) {

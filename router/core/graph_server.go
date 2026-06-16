@@ -1409,6 +1409,8 @@ func (s *graphServer) buildGraphMux(
 		Execution:                    s.engineExecutionConfiguration,
 		Headers:                      s.headerRules,
 		Events:                       s.eventsConfig,
+		EntityCaching:                s.entityCaching,
+		EntityCaches:                 s.entityCacheInstances,
 		SubgraphErrorPropagation:     s.subgraphErrorPropagation,
 		SubgraphExtensionPropagation: s.subgraphExtensionPropagation,
 		StreamMetricStore:            gm.streamMetricStore,
@@ -1827,6 +1829,7 @@ func (s *graphServer) buildGraphMux(
 		HeaderPropagation:                      s.headerPropagation,
 		OperationContentAttributes:             s.traceConfig.OperationContentAttributes,
 		SpanNameFormatter:                      s.spanNameFormatter,
+		EntityCaching:                          s.entityCaching,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {

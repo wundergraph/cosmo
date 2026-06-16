@@ -746,6 +746,21 @@ version: "1"
 	require.False(t, redisTwo.ClusterEnabled)
 }
 
+func TestMemoryStorageProviderFromEnv(t *testing.T) {
+	t.Setenv("STORAGE_PROVIDER_MEMORY_0_ID", "memory-one")
+	t.Setenv("STORAGE_PROVIDER_MEMORY_0_MAX_SIZE", "128MB")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.Len(t, cfg.Config.StorageProviders.Memory, 1)
+	require.Equal(t, "memory-one", cfg.Config.StorageProviders.Memory[0].ID)
+	require.Equal(t, uint64(128000000), cfg.Config.StorageProviders.Memory[0].MaxSize.Uint64())
+}
+
 func TestFileSystemStorageProviderFromEnv(t *testing.T) {
 	t.Setenv("STORAGE_PROVIDER_FS_0_ID", "fs-one")
 	t.Setenv("STORAGE_PROVIDER_FS_0_PATH", "/data/configs")
@@ -768,6 +783,82 @@ version: "1"
 	fsTwo := cfg.Config.StorageProviders.FileSystem[1]
 	require.Equal(t, "fs-two", fsTwo.ID)
 	require.Equal(t, "/data/backups", fsTwo.Path)
+}
+
+func TestEntityCachingConfiguration(t *testing.T) {
+	t.Parallel()
+
+	t.Run("loads defaults and subgraph overrides", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "memory-default"
+      max_size: 256MB
+
+entity_caching:
+  enabled: true
+  global_cache_key_prefix: "schema-v1"
+  l1:
+    enabled: true
+  l2:
+    enabled: true
+    storage:
+      provider_id: "memory-default"
+  subgraph_cache_overrides:
+    - name: "accounts"
+      storage_provider_id: "memory-default"
+      entities:
+        - type: "User"
+          ttl: 5m
+          cache_name: "users"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.True(t, cfg.Config.EntityCaching.Enabled)
+		require.Equal(t, "schema-v1", cfg.Config.EntityCaching.GlobalCacheKeyPrefix)
+		require.True(t, cfg.Config.EntityCaching.L1.Enabled)
+		require.Equal(t, uint64(100000000), cfg.Config.EntityCaching.L1.MaxSize.Uint64())
+		require.True(t, cfg.Config.EntityCaching.L2.Enabled)
+		require.Equal(t, "memory-default", cfg.Config.EntityCaching.L2.Storage.ProviderID)
+		require.Equal(t, "cosmo_entity_cache", cfg.Config.EntityCaching.L2.Storage.KeyPrefix)
+		require.Equal(t, 5, cfg.Config.EntityCaching.L2.CircuitBreaker.FailureThreshold)
+		require.Equal(t, 10*time.Second, cfg.Config.EntityCaching.L2.CircuitBreaker.CooldownPeriod)
+		require.Equal(t, []SubgraphCacheOverride{
+			{
+				Name:              "accounts",
+				StorageProviderID: "memory-default",
+				Entities: []EntityCacheEntityConfiguration{
+					{Type: "User", TTL: 5 * time.Minute, CacheName: "users"},
+				},
+			},
+		}, cfg.Config.EntityCaching.SubgraphCacheOverrides)
+	})
+
+	t.Run("rejects l2 storage provider_id that is not configured", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "memory-default"
+      max_size: 256MB
+
+entity_caching:
+  l2:
+    enabled: true
+    storage:
+      provider_id: "missing-provider"
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "entity_caching.l2.storage.provider_id \"missing-provider\" does not match a configured storage provider")
+	})
 }
 
 func TestInvalidExecutionConfig(t *testing.T) {
