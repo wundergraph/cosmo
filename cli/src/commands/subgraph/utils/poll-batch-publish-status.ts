@@ -24,7 +24,7 @@ export async function pollBatchPublishStatus(
     switch (resp.status) {
       case BatchPublishJobStatus.PENDING:
       case BatchPublishJobStatus.PROCESSING: {
-        await sleep(computeDelay(1000, 5000, attempt++, true));
+        await sleep(computeDelay(1000, 5000, attempt++, true), signal);
         break;
       }
       case BatchPublishJobStatus.FAILED: {
