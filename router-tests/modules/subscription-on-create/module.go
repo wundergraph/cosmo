@@ -12,7 +12,7 @@ const myModuleID = "subscriptionOnCreateModule"
 
 type SubscriptionOnCreateModule struct {
 	Logger        *zap.Logger
-	Callback      func(ctx core.SubscriptionOnCreateHandlerContext)
+	Callback      func(ctx core.SubscriptionOnCreateHandlerContext) error
 	HookCallCount *atomic.Int32
 }
 
@@ -21,13 +21,14 @@ func (m *SubscriptionOnCreateModule) Provision(ctx *core.ModuleContext) error {
 	return nil
 }
 
-func (m *SubscriptionOnCreateModule) SubscriptionOnCreate(ctx core.SubscriptionOnCreateHandlerContext) {
+func (m *SubscriptionOnCreateModule) SubscriptionOnCreate(ctx core.SubscriptionOnCreateHandlerContext) error {
 	if m.HookCallCount != nil {
 		m.HookCallCount.Add(1)
 	}
 	if m.Callback != nil {
-		m.Callback(ctx)
+		return m.Callback(ctx)
 	}
+	return nil
 }
 
 func (m *SubscriptionOnCreateModule) Module() core.ModuleInfo {

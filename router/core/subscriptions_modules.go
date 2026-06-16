@@ -502,20 +502,20 @@ func (c *pubSubSubscriptionOnCreateHookContext) SubscriptionEventConfiguration()
 
 type SubscriptionOnCreateHandler interface {
 	// SubscriptionOnCreate allows to modify the event configuration
-	// before the subscription starts.
+	// before the subscription starts. Returning a non-nil error aborts the subscription.
 	//
 	// This method is currently EXPERIMENTAL.
 	// The signature and behaviour might change without prior notice.
-	SubscriptionOnCreate(ctx SubscriptionOnCreateHandlerContext)
+	SubscriptionOnCreate(ctx SubscriptionOnCreateHandlerContext) error
 }
 
-// NewPubSubSubscriptionOnCreateHook converts a SubscriptiononCreateHandler fn to a datasource.SubscriptionOnCreateFn.
-func NewPubSubSubscriptionOnCreateHook(fn func(ctx SubscriptionOnCreateHandlerContext)) datasource.SubscriptionOnCreateFn {
+// NewPubSubSubscriptionOnCreateHook converts a SubscriptionOnCreateHandler fn to a datasource.SubscriptionOnCreateFn.
+func NewPubSubSubscriptionOnCreateHook(fn func(ctx SubscriptionOnCreateHandlerContext) error) datasource.SubscriptionOnCreateFn {
 	if fn == nil {
 		return nil
 	}
 
-	return func(ctx context.Context, subConf datasource.SubscriptionEventConfiguration) datasource.SubscriptionEventConfiguration {
+	return func(ctx context.Context, subConf datasource.SubscriptionEventConfiguration) (datasource.SubscriptionEventConfiguration, error) {
 		requestContext := getRequestContext(ctx)
 
 		logger := requestContext.Logger()
@@ -538,8 +538,10 @@ func NewPubSubSubscriptionOnCreateHook(fn func(ctx SubscriptionOnCreateHandlerCo
 			subscriptionEventConfiguration: subConf,
 		}
 
-		fn(hookCtx)
+		if err := fn(hookCtx); err != nil {
+			return nil, err
+		}
 
-		return hookCtx.subscriptionEventConfiguration
+		return hookCtx.subscriptionEventConfiguration, nil
 	}
 }

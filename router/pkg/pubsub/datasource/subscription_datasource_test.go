@@ -435,14 +435,14 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnCreate_WithHooks(t *testing.
 	hook1Called := false
 	hook2Called := false
 
-	hook1 := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+	hook1 := func(ctx context.Context, config SubscriptionEventConfiguration) (SubscriptionEventConfiguration, error) {
 		hook1Called = true
-		return config
+		return config, nil
 	}
 
-	hook2 := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+	hook2 := func(ctx context.Context, config SubscriptionEventConfiguration) (SubscriptionEventConfiguration, error) {
 		hook2Called = true
-		return config
+		return config, nil
 	}
 
 	dataSource.SetHooks(Hooks{
@@ -473,10 +473,10 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnCreate_HookModifiesConfig(t 
 
 	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
-	hook := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+	hook := func(ctx context.Context, config SubscriptionEventConfiguration) (SubscriptionEventConfiguration, error) {
 		typedConfig := config.(testSubscriptionEventConfiguration)
 		typedConfig.Topic = "modified-topic"
-		return typedConfig
+		return typedConfig, nil
 	}
 
 	dataSource.SetHooks(Hooks{
@@ -513,18 +513,18 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnCreate_HooksChained(t *testi
 
 	var hook1ReceivedTopic, hook2ReceivedTopic string
 
-	hook1 := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+	hook1 := func(ctx context.Context, config SubscriptionEventConfiguration) (SubscriptionEventConfiguration, error) {
 		typedConfig := config.(testSubscriptionEventConfiguration)
 		hook1ReceivedTopic = typedConfig.Topic
 		typedConfig.Topic = "hook1-topic"
-		return typedConfig
+		return typedConfig, nil
 	}
 
-	hook2 := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+	hook2 := func(ctx context.Context, config SubscriptionEventConfiguration) (SubscriptionEventConfiguration, error) {
 		typedConfig := config.(testSubscriptionEventConfiguration)
 		hook2ReceivedTopic = typedConfig.Topic
 		typedConfig.Topic = "hook2-topic"
-		return typedConfig
+		return typedConfig, nil
 	}
 
 	dataSource.SetHooks(Hooks{
@@ -561,8 +561,8 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnCreate_HookReturnsWrongType(
 
 	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
-	hook := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
-		return incompatibleSubscriptionEventConfiguration{}
+	hook := func(ctx context.Context, config SubscriptionEventConfiguration) (SubscriptionEventConfiguration, error) {
+		return incompatibleSubscriptionEventConfiguration{}, nil
 	}
 
 	dataSource.SetHooks(Hooks{
@@ -593,9 +593,9 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnCreate_InvalidEventConfigInp
 	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	hookCalled := false
-	hook := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+	hook := func(ctx context.Context, config SubscriptionEventConfiguration) (SubscriptionEventConfiguration, error) {
 		hookCalled = true
-		return config
+		return config, nil
 	}
 
 	dataSource.SetHooks(Hooks{
@@ -647,7 +647,7 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnCreate_PanicRecovery(t *test
 
 			dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
-			hook := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+			hook := func(ctx context.Context, config SubscriptionEventConfiguration) (SubscriptionEventConfiguration, error) {
 				panic(tt.panicValue)
 			}
 
@@ -688,11 +688,11 @@ func TestPubSubSubscriptionDataSource_SetSubscriptionOnCreateFns(t *testing.T) {
 
 	assert.Len(t, dataSource.hooks.SubscriptionOnCreate.Handlers, 0)
 
-	hook1 := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
-		return config
+	hook1 := func(ctx context.Context, config SubscriptionEventConfiguration) (SubscriptionEventConfiguration, error) {
+		return config, nil
 	}
-	hook2 := func(ctx context.Context, config SubscriptionEventConfiguration) SubscriptionEventConfiguration {
-		return config
+	hook2 := func(ctx context.Context, config SubscriptionEventConfiguration) (SubscriptionEventConfiguration, error) {
+		return config, nil
 	}
 
 	dataSource.SetHooks(Hooks{

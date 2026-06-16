@@ -36,7 +36,7 @@ type subscriptionHooks struct {
 }
 
 type onCreateHooks struct {
-	handlers []func(ctx SubscriptionOnCreateHandlerContext)
+	handlers []func(ctx SubscriptionOnCreateHandlerContext) error
 }
 
 type onStartHooks struct {

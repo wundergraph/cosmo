@@ -17,7 +17,6 @@ This handler is useful for:
 ## Limitations
 
 Compared to [`SubscriptionOnStart`](/router/cosmo-streams/custom-modules/subscription-on-start), this handler:
-- Cannot return an error — subscriptions cannot be rejected from this hook
 - Cannot emit events to the client
 - Only applies to Cosmo Streams / EDFS subscriptions, not to regular GraphQL subscriptions
 
@@ -29,10 +28,11 @@ Implement `SubscriptionOnCreateHandler` in a [Custom Module](/router/custom-modu
 type SubscriptionOnCreateHandler interface {
     // SubscriptionOnCreate is called once before the subscription is registered.
     // Mutations to the SubscriptionEventConfiguration take effect immediately.
+    // Returning a non-nil error aborts the subscription.
     //
     // This method is currently EXPERIMENTAL.
     // The signature and behaviour might change without prior notice.
-    SubscriptionOnCreate(ctx SubscriptionOnCreateHandlerContext)
+    SubscriptionOnCreate(ctx SubscriptionOnCreateHandlerContext) error
 }
 
 type SubscriptionOnCreateHandlerContext interface {
@@ -62,12 +62,13 @@ For NATS subscriptions:
 ```go
 import natspubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 
-func (m *MyModule) SubscriptionOnCreate(ctx core.SubscriptionOnCreateHandlerContext) {
+func (m *MyModule) SubscriptionOnCreate(ctx core.SubscriptionOnCreateHandlerContext) error {
     cfg, ok := ctx.SubscriptionEventConfiguration().(*natspubsub.SubscriptionEventConfiguration)
     if !ok {
-        return
+        return nil
     }
     // cfg.Subjects and cfg.StreamConfiguration are now directly mutable.
+    return nil
 }
 ```
 
@@ -76,12 +77,13 @@ For Redis subscriptions:
 ```go
 import redispubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/redis"
 
-func (m *MyModule) SubscriptionOnCreate(ctx core.SubscriptionOnCreateHandlerContext) {
+func (m *MyModule) SubscriptionOnCreate(ctx core.SubscriptionOnCreateHandlerContext) error {
     cfg, ok := ctx.SubscriptionEventConfiguration().(*redispubsub.SubscriptionEventConfiguration)
     if !ok {
-        return
+        return nil
     }
     // cfg fields are now directly mutable.
+    return nil
 }
 ```
 
@@ -111,26 +113,27 @@ const ModuleID = "tenantRoutingModule"
 
 type TenantRoutingModule struct{}
 
-func (m *TenantRoutingModule) SubscriptionOnCreate(ctx core.SubscriptionOnCreateHandlerContext) {
+func (m *TenantRoutingModule) SubscriptionOnCreate(ctx core.SubscriptionOnCreateHandlerContext) error {
     // Only rewrite subjects for the "employeeUpdated" subscription.
     if ctx.SubscriptionEventConfiguration().RootFieldName() != "employeeUpdated" {
-        return
+        return nil
     }
 
     cfg, ok := ctx.SubscriptionEventConfiguration().(*natspubsub.SubscriptionEventConfiguration)
     if !ok {
-        return
+        return nil
     }
 
     tenantID := ctx.Request().Header.Get("X-Tenant-ID")
     if tenantID == "" {
-        return
+        return nil
     }
 
     // Prefix every subject with the tenant ID.
     for i, subject := range cfg.Subjects {
         cfg.Subjects[i] = fmt.Sprintf("%s.%s", tenantID, subject)
     }
+    return nil
 }
 
 func (m *TenantRoutingModule) Module() core.ModuleInfo {
@@ -167,31 +170,32 @@ const ModuleID = "userChannelRoutingModule"
 
 type UserChannelRoutingModule struct{}
 
-func (m *UserChannelRoutingModule) SubscriptionOnCreate(ctx core.SubscriptionOnCreateHandlerContext) {
+func (m *UserChannelRoutingModule) SubscriptionOnCreate(ctx core.SubscriptionOnCreateHandlerContext) error {
     // Only rewrite channels for the "orderStatusUpdated" subscription.
     if ctx.SubscriptionEventConfiguration().RootFieldName() != "orderStatusUpdated" {
-        return
+        return nil
     }
 
     cfg, ok := ctx.SubscriptionEventConfiguration().(*redispubsub.SubscriptionEventConfiguration)
     if !ok {
-        return
+        return nil
     }
 
     auth := ctx.Authentication()
     if auth == nil {
-        return
+        return nil
     }
 
     userID, ok := auth.Claims()["sub"].(string)
     if !ok || userID == "" {
-        return
+        return nil
     }
 
     // Route each user to their own channel.
     for i, channel := range cfg.Channels {
         cfg.Channels[i] = fmt.Sprintf("%s.%s", channel, userID)
     }
+    return nil
 }
 
 func (m *UserChannelRoutingModule) Module() core.ModuleInfo {

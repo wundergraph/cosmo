@@ -1,6 +1,7 @@
 package module_test
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"sync"
@@ -30,7 +31,7 @@ type subResult struct {
 	err  error
 }
 
-func newHookModule(cb func(ctx core.SubscriptionOnCreateHandlerContext)) *subscription_on_create.SubscriptionOnCreateModule {
+func newHookModule(cb func(ctx core.SubscriptionOnCreateHandlerContext) error) *subscription_on_create.SubscriptionOnCreateModule {
 	return &subscription_on_create.SubscriptionOnCreateModule{
 		HookCallCount: &atomic.Int32{},
 		Callback:      cb,
@@ -63,17 +64,17 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 		// capturedSubject receives the modified subject once the hook fires.
 		capturedSubject := make(chan string, 1)
 
-		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) error {
 			conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubNats.SubscriptionEventConfiguration)
 			if !ok || len(conf.Subjects) == 0 {
-				return
+				return nil
 			}
 			// Redirect from the default subject (e.g. <prefix>.employeeUpdatedMyNats.1)
 			// to a custom subject with suffix ".99".
 			original := conf.Subjects[0]
 			dotIdx := strings.LastIndex(original, ".")
 			if dotIdx == -1 {
-				return
+				return nil
 			}
 			newSubject := original[:dotIdx+1] + "99"
 			conf.Subjects = []string{newSubject}
@@ -81,6 +82,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			case capturedSubject <- newSubject:
 			default:
 			}
+			return nil
 		})
 
 		testenv.Run(t, &testenv.Config{
@@ -154,15 +156,15 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 
 		capturedChannel := make(chan string, 1)
 
-		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) error {
 			conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubRedis.SubscriptionEventConfiguration)
 			if !ok || len(conf.Channels) == 0 {
-				return
+				return nil
 			}
 			original := conf.Channels[0]
 			dotIdx := strings.LastIndex(original, ".")
 			if dotIdx == -1 {
-				return
+				return nil
 			}
 			newChannel := original[:dotIdx+1] + "99"
 			conf.Channels = []string{newChannel}
@@ -170,6 +172,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			case capturedChannel <- newChannel:
 			default:
 			}
+			return nil
 		})
 
 		testenv.Run(t, &testenv.Config{
@@ -242,10 +245,10 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 		// This test verifies that the SubscriptionOnCreate hook can redirect a Kafka subscription
 		// to a different topic. It changes the default topic "employeeUpdated" to "employeeUpdatedTwo".
 
-		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) error {
 			conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubKafka.SubscriptionEventConfiguration)
 			if !ok {
-				return
+				return nil
 			}
 			for i, topic := range conf.Topics {
 				// Replace "employeeUpdated" suffix with "employeeUpdatedTwo".
@@ -254,6 +257,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 					conf.Topics[i] = strings.TrimSuffix(topic, "employeeUpdated") + "employeeUpdatedTwo"
 				}
 			}
+			return nil
 		})
 
 		testenv.Run(t, &testenv.Config{
@@ -322,14 +326,14 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 		// capturedSubject99 receives the hook-overridden subject for sub1.
 		capturedSubject99 := make(chan string, 1)
 
-		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) error {
 			conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubNats.SubscriptionEventConfiguration)
 			if !ok || len(conf.Subjects) == 0 {
-				return
+				return nil
 			}
 			// Only redirect the subscription whose resolved subject ends in ".1".
 			if !strings.HasSuffix(conf.Subjects[0], ".1") {
-				return
+				return nil
 			}
 			original := conf.Subjects[0]
 			newSubject := strings.TrimSuffix(original, ".1") + ".99"
@@ -338,6 +342,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			case capturedSubject99 <- newSubject:
 			default:
 			}
+			return nil
 		})
 
 		testenv.Run(t, &testenv.Config{
@@ -430,16 +435,16 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 
 		sharedSubjectCh := make(chan string, 2)
 
-		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) error {
 			conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubNats.SubscriptionEventConfiguration)
 			if !ok || len(conf.Subjects) == 0 {
-				return
+				return nil
 			}
 			// Redirect every subscription to the same "shared.1" subject regardless of
 			// which employeeID argument was used.
 			dotIdx := strings.LastIndex(conf.Subjects[0], ".")
 			if dotIdx == -1 {
-				return
+				return nil
 			}
 			sharedSubject := conf.Subjects[0][:dotIdx+1] + "shared"
 			conf.Subjects = []string{sharedSubject}
@@ -447,6 +452,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			case sharedSubjectCh <- sharedSubject:
 			default:
 			}
+			return nil
 		})
 
 		testenv.Run(t, &testenv.Config{
@@ -556,17 +562,17 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 
 		reroutedSubjectCh := make(chan string, 1)
 
-		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) error {
 			if ctx.Request().Header.Get("X-Reroute") != "true" {
-				return
+				return nil
 			}
 			conf, ok := ctx.SubscriptionEventConfiguration().(*pubsubNats.SubscriptionEventConfiguration)
 			if !ok || len(conf.Subjects) == 0 {
-				return
+				return nil
 			}
 			dotIdx := strings.LastIndex(conf.Subjects[0], ".")
 			if dotIdx == -1 {
-				return
+				return nil
 			}
 			newSubject := conf.Subjects[0][:dotIdx+1] + "rerouted"
 			conf.Subjects = []string{newSubject}
@@ -574,6 +580,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			case reroutedSubjectCh <- newSubject:
 			default:
 			}
+			return nil
 		})
 
 		testenv.Run(t, &testenv.Config{
@@ -692,7 +699,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 		// The engine propagates the error to the client as a GraphQL error and the router
 		// must not crash.
 
-		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) {
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) error {
 			panic("intentional panic from SubscriptionOnCreate hook")
 		})
 
@@ -733,6 +740,51 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			require.NotEmpty(t, panicLogs, "expected panic recovery log entry")
 
 			assert.GreaterOrEqual(t, customModule.HookCallCount.Load(), int32(1))
+		})
+	})
+
+	t.Run("hook returning an error aborts the subscription", func(t *testing.T) {
+		t.Parallel()
+
+		// This test verifies that when SubscriptionOnCreate returns a non-nil error the
+		// subscription is rejected: the client receives a GraphQL error and the subscription
+		// is completed without any events being delivered.
+
+		customModule := newHookModule(func(ctx core.SubscriptionOnCreateHandlerContext) error {
+			return errors.New("subscription rejected by hook")
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			RouterOptions:            hookRouterOptions(customModule),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			defer conn.Close()
+
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdatedMyNats(id: 1) { id } }"}`),
+			})
+			require.NoError(t, err)
+
+			// The engine writes an error response.
+			var msg testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &msg)
+			require.NoError(t, err)
+			require.Equal(t, "next", msg.Type)
+			require.Contains(t, string(msg.Payload), "failed to prepare subscription trigger")
+
+			// The subscription is completed immediately after the error.
+			var complete testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+
+			require.Eventually(t, func() bool {
+				return customModule.HookCallCount.Load() >= 1
+			}, subscriptionOnCreateTestTimeout, 50*time.Millisecond)
 		})
 	})
 }

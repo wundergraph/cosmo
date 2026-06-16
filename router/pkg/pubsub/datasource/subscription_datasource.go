@@ -123,7 +123,10 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnCreate(ctx context.Conte
 	}
 
 	for _, fn := range s.hooks.SubscriptionOnCreate.Handlers {
-		conf = fn(ctx, conf)
+		conf, err = fn(ctx, conf)
+		if err != nil {
+			return nil, err
+		}
 
 		// Check wether a hook developer set config type not compatible with this pubsub datasource
 		// (i.e. Kafka configuration on a Redis datasource).
