@@ -1319,7 +1319,8 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 		// In dev mode we always allow to enable tracing / query plans.
 		// force_unauthenticated_request_tracing=true allows ART without dev_mode or a controlplane token.
 		if h.developmentMode || h.forceUnauthenticatedRequestTracing {
-			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
+			traceOptions := h.parseRequestTraceOptions(r)
+			return h.parseRequestExecutionOptions(r, traceOptions.Enable), traceOptions, nil
 		}
 		// If the client has a valid request token, and we have a public key from the controlplane
 		if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
@@ -1330,7 +1331,8 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 				requestLogger.Debug(fmt.Sprintf("failed to parse request token: %s", err.Error()))
 				return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
 			}
-			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
+			traceOptions := h.parseRequestTraceOptions(r)
+			return h.parseRequestExecutionOptions(r, traceOptions.Enable), traceOptions, nil
 		}
 	}
 
@@ -1340,15 +1342,15 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 	return resolve.ExecutionOptions{
 		SkipLoader:                 false,
 		IncludeQueryPlanInResponse: false,
-		Caching:                    h.cachingOptions(),
+		Caching:                    h.cachingOptions(r, false),
 	}, traceOptions, nil
 }
 
-func (h *PreHandler) parseRequestExecutionOptions(r *http.Request) resolve.ExecutionOptions {
+func (h *PreHandler) parseRequestExecutionOptions(r *http.Request, allowEntityCacheControlHeaders bool) resolve.ExecutionOptions {
 	options := resolve.ExecutionOptions{
 		SkipLoader:                 false,
 		IncludeQueryPlanInResponse: false,
-		Caching:                    h.cachingOptions(),
+		Caching:                    h.cachingOptions(r, allowEntityCacheControlHeaders),
 	}
 	if r.Header.Get("X-WG-Skip-Loader") != "" {
 		options.SkipLoader = true
@@ -1365,12 +1367,46 @@ func (h *PreHandler) parseRequestExecutionOptions(r *http.Request) resolve.Execu
 	return options
 }
 
-func (h *PreHandler) cachingOptions() resolve.CachingOptions {
-	return resolve.CachingOptions{
+const (
+	disableEntityCacheHeader   = "X-WG-Disable-Entity-Cache"
+	disableEntityCacheL1Header = "X-WG-Disable-Entity-Cache-L1"
+	disableEntityCacheL2Header = "X-WG-Disable-Entity-Cache-L2"
+)
+
+func (h *PreHandler) cachingOptions(r *http.Request, allowEntityCacheControlHeaders bool) resolve.CachingOptions {
+	options := resolve.CachingOptions{
 		// EnableL1Cache also gates the @requestScoped coordinate L1 in the engine.
 		EnableL1Cache:        h.entityCaching.Enabled && h.entityCaching.L1.Enabled,
+		EnableL2Cache:        h.entityCaching.Enabled && h.entityCaching.L2.Enabled,
 		GlobalCacheKeyPrefix: h.entityCaching.GlobalCacheKeyPrefix,
 	}
+	if allowEntityCacheControlHeaders {
+		if headerValueEqualFold(r.Header, disableEntityCacheHeader, "true") {
+			options.EnableL1Cache = false
+			options.EnableL2Cache = false
+		}
+		if headerValueEqualFold(r.Header, disableEntityCacheL1Header, "true") {
+			options.EnableL1Cache = false
+		}
+		if headerValueEqualFold(r.Header, disableEntityCacheL2Header, "true") {
+			options.EnableL2Cache = false
+		}
+	}
+	return options
+}
+
+func headerValueEqualFold(header http.Header, key, value string) bool {
+	for headerKey, values := range header {
+		if !strings.EqualFold(headerKey, key) {
+			continue
+		}
+		for _, headerValue := range values {
+			if strings.EqualFold(headerValue, value) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func setExpressionContextClient(requestContext *requestContext) {

@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -93,6 +94,8 @@ func TestPreHandlerParseRequestExecutionOptions_EntityCaching(t *testing.T) {
 	tests := []struct {
 		name          string
 		entityCaching config.EntityCachingConfiguration
+		header        http.Header
+		traceEnabled  bool
 		expected      resolve.CachingOptions
 	}{
 		{
@@ -109,6 +112,7 @@ func TestPreHandlerParseRequestExecutionOptions_EntityCaching(t *testing.T) {
 			},
 			expected: resolve.CachingOptions{
 				EnableL1Cache:        true,
+				EnableL2Cache:        true,
 				GlobalCacheKeyPrefix: "schema-v1",
 			},
 		},
@@ -125,6 +129,7 @@ func TestPreHandlerParseRequestExecutionOptions_EntityCaching(t *testing.T) {
 				},
 			},
 			expected: resolve.CachingOptions{
+				EnableL2Cache:        true,
 				GlobalCacheKeyPrefix: "schema-v1",
 			},
 		},
@@ -144,6 +149,108 @@ func TestPreHandlerParseRequestExecutionOptions_EntityCaching(t *testing.T) {
 				GlobalCacheKeyPrefix: "schema-v1",
 			},
 		},
+		{
+			name: "trace enabled disable entity cache header disables l1 and l2",
+			entityCaching: config.EntityCachingConfiguration{
+				Enabled:              true,
+				GlobalCacheKeyPrefix: "schema-v1",
+				L1: config.EntityCachingL1{
+					Enabled: true,
+				},
+				L2: config.EntityCachingL2{
+					Enabled: true,
+				},
+			},
+			header: http.Header{
+				"X-WG-Disable-Entity-Cache": []string{"true"},
+			},
+			traceEnabled: true,
+			expected: resolve.CachingOptions{
+				GlobalCacheKeyPrefix: "schema-v1",
+			},
+		},
+		{
+			name: "trace enabled disable entity cache l1 header disables only l1",
+			entityCaching: config.EntityCachingConfiguration{
+				Enabled:              true,
+				GlobalCacheKeyPrefix: "schema-v1",
+				L1: config.EntityCachingL1{
+					Enabled: true,
+				},
+				L2: config.EntityCachingL2{
+					Enabled: true,
+				},
+			},
+			header: http.Header{
+				"X-WG-Disable-Entity-Cache-L1": []string{"true"},
+			},
+			traceEnabled: true,
+			expected: resolve.CachingOptions{
+				EnableL2Cache:        true,
+				GlobalCacheKeyPrefix: "schema-v1",
+			},
+		},
+		{
+			name: "trace enabled disable entity cache l2 header disables only l2",
+			entityCaching: config.EntityCachingConfiguration{
+				Enabled:              true,
+				GlobalCacheKeyPrefix: "schema-v1",
+				L1: config.EntityCachingL1{
+					Enabled: true,
+				},
+				L2: config.EntityCachingL2{
+					Enabled: true,
+				},
+			},
+			header: http.Header{
+				"X-WG-Disable-Entity-Cache-L2": []string{"true"},
+			},
+			traceEnabled: true,
+			expected: resolve.CachingOptions{
+				EnableL1Cache:        true,
+				GlobalCacheKeyPrefix: "schema-v1",
+			},
+		},
+		{
+			name: "trace disabled ignores disable entity cache header",
+			entityCaching: config.EntityCachingConfiguration{
+				Enabled:              true,
+				GlobalCacheKeyPrefix: "schema-v1",
+				L1: config.EntityCachingL1{
+					Enabled: true,
+				},
+				L2: config.EntityCachingL2{
+					Enabled: true,
+				},
+			},
+			header: http.Header{
+				"X-WG-Disable-Entity-Cache": []string{"true"},
+			},
+			expected: resolve.CachingOptions{
+				EnableL1Cache:        true,
+				EnableL2Cache:        true,
+				GlobalCacheKeyPrefix: "schema-v1",
+			},
+		},
+		{
+			name: "trace enabled without disable headers leaves config derived caching unchanged",
+			entityCaching: config.EntityCachingConfiguration{
+				Enabled:              true,
+				GlobalCacheKeyPrefix: "schema-v1",
+				L1: config.EntityCachingL1{
+					Enabled: true,
+				},
+				L2: config.EntityCachingL2{
+					Enabled: true,
+				},
+			},
+			traceEnabled: true,
+			expected: resolve.CachingOptions{
+				EnableL1Cache:        true,
+				EnableL2Cache:        true,
+				GlobalCacheKeyPrefix: "schema-v1",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -152,11 +259,20 @@ func TestPreHandlerParseRequestExecutionOptions_EntityCaching(t *testing.T) {
 			t.Parallel()
 
 			req := httptest.NewRequest("GET", "http://localhost/graphql", nil)
+			if tt.header != nil {
+				req.Header = tt.header.Clone()
+			}
+			if tt.traceEnabled {
+				req.Header.Set(RequestTraceHeader, "true")
+			}
 			h := &PreHandler{
-				entityCaching: tt.entityCaching,
+				enableRequestTracing: true,
+				developmentMode:      tt.traceEnabled,
+				entityCaching:        tt.entityCaching,
 			}
 
-			executionOptions := h.parseRequestExecutionOptions(req)
+			executionOptions, _, err := h.internalParseRequestOptions(req, &ClientInfo{}, zap.NewNop())
+			require.NoError(t, err)
 
 			assert.Equal(t, tt.expected, executionOptions.Caching)
 		})
