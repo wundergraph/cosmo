@@ -94,15 +94,12 @@ func (s *PubSubSubscriptionDataSource[C]) HashTriggerInput(input []byte, xxh *xx
 	return s.triggerHashInput(input, xxh)
 }
 
-func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnCreate(ctx context.Context, input []byte) ([]byte, error) {
+func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnCreate(ctx context.Context, input []byte) (result []byte, err error) {
 	if len(s.hooks.SubscriptionOnCreate.Handlers) == 0 {
 		return input, nil
 	}
 
-	var (
-		conf SubscriptionEventConfiguration
-		err  error
-	)
+	var conf SubscriptionEventConfiguration
 
 	defer func() {
 		if r := recover(); r != nil {
