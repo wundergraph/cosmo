@@ -1107,6 +1107,7 @@ type SubgraphCacheOverride struct {
 	StorageProviderID string                           `yaml:"storage_provider_id,omitempty" env:"STORAGE_PROVIDER_ID"`
 	Entities          []EntityCacheEntityConfiguration `yaml:"entities,omitempty" envPrefix:"ENTITY_"`
 	Mutations         []MutationCacheConfiguration     `yaml:"mutations,omitempty" envPrefix:"MUTATION_"`
+	Subscriptions     []SubscriptionCacheConfiguration `yaml:"subscriptions,omitempty" envPrefix:"SUBSCRIPTION_"`
 }
 
 type EntityCacheEntityConfiguration struct {
@@ -1126,6 +1127,14 @@ type MutationCacheConfiguration struct {
 	InvalidateEntityType string        `yaml:"invalidate_entity_type,omitempty" env:"INVALIDATE_ENTITY_TYPE"`
 	EnableL2Population   bool          `yaml:"enable_l2_population,omitempty" env:"ENABLE_L2_POPULATION"`
 	TTL                  time.Duration `yaml:"ttl,omitempty" env:"TTL"`
+}
+
+type SubscriptionCacheConfiguration struct {
+	TypeName            string        `yaml:"type_name,omitempty" env:"TYPE_NAME"`
+	FieldName           string        `yaml:"field_name,omitempty" env:"FIELD_NAME"`
+	CacheName           string        `yaml:"cache_name,omitempty" env:"CACHE_NAME"`
+	TTL                 time.Duration `yaml:"ttl,omitempty" env:"TTL"`
+	InvalidateOnKeyOnly bool          `yaml:"invalidate_on_key_only,omitempty" env:"INVALIDATE_ON_KEY_ONLY"`
 }
 
 type PersistedOperationsCDNProvider struct {
@@ -1655,6 +1664,17 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 func validateEntityCachingConfiguration(entityCaching EntityCachingConfiguration, storageProviders StorageProviders) error {
 	if entityCaching.L2.Storage.ProviderID != "" && !storageProviderIDExists(storageProviders, entityCaching.L2.Storage.ProviderID) {
 		return fmt.Errorf("entity_caching.l2.storage.provider_id %q does not match a configured storage provider", entityCaching.L2.Storage.ProviderID)
+	}
+
+	for subgraphIndex, subgraph := range entityCaching.SubgraphCacheOverrides {
+		for subscriptionIndex, subscription := range subgraph.Subscriptions {
+			if subscription.TypeName == "" {
+				return fmt.Errorf("entity_caching.subgraph_cache_overrides[%d].subscriptions[%d].type_name is required", subgraphIndex, subscriptionIndex)
+			}
+			if subscription.FieldName == "" {
+				return fmt.Errorf("entity_caching.subgraph_cache_overrides[%d].subscriptions[%d].field_name is required", subgraphIndex, subscriptionIndex)
+			}
+		}
 	}
 
 	return nil

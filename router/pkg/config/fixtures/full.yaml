@@ -517,6 +517,12 @@ entity_caching:
           invalidate_entity_type: 'User'
           enable_l2_population: true
           ttl: 3m
+      subscriptions:
+        - type_name: 'User'
+          field_name: 'userUpdated'
+          cache_name: 'users'
+          ttl: 7m
+          invalidate_on_key_only: true
 
 security:
   complexity_calculation_cache:

@@ -213,3 +213,56 @@ func TestLoaderDataSourceMetaDataTranslatesMutationCacheConfig(t *testing.T) {
 		},
 	}, metadata.FederationMetaData.MutationCacheInvalidationConfig)
 }
+
+func TestLoaderDataSourceMetaDataTranslatesSubscriptionCacheConfig(t *testing.T) {
+	t.Parallel()
+
+	loader := &Loader{
+		entityCaching: config.EntityCachingConfiguration{
+			SubgraphCacheOverrides: []config.SubgraphCacheOverride{
+				{
+					Name:              "accounts",
+					StorageProviderID: "accounts-cache",
+					Subscriptions: []config.SubscriptionCacheConfiguration{
+						{
+							TypeName:            "User",
+							FieldName:           "userUpdated",
+							CacheName:           "users",
+							TTL:                 7 * time.Minute,
+							InvalidateOnKeyOnly: true,
+						},
+						{
+							TypeName:  "Organization",
+							FieldName: "organizationUpdated",
+							TTL:       11 * time.Minute,
+						},
+					},
+				},
+			},
+		},
+		subgraphsByID: map[string]string{
+			"ds-accounts": "accounts",
+		},
+	}
+
+	metadata := loader.dataSourceMetaData(&nodev1.DataSourceConfiguration{
+		Id: "ds-accounts",
+	})
+
+	require.NotNil(t, metadata)
+	assert.Equal(t, plan.SubscriptionEntityPopulationConfigurations{
+		{
+			TypeName:                    "User",
+			FieldName:                   "userUpdated",
+			CacheName:                   "users",
+			TTL:                         7 * time.Minute,
+			EnableInvalidationOnKeyOnly: true,
+		},
+		{
+			TypeName:  "Organization",
+			FieldName: "organizationUpdated",
+			CacheName: "accounts-cache",
+			TTL:       11 * time.Minute,
+		},
+	}, metadata.FederationMetaData.SubscriptionEntityPopulationConfig)
+}

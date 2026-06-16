@@ -11,6 +11,7 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -62,6 +63,7 @@ type ExecutorBuildOptions struct {
 	TraceClientRequired            bool
 	PluginsEnabled                 bool
 	InstanceData                   InstanceData
+	EntityCacheMetrics             rmetric.EntityCacheMetrics
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, []pubsub_datasource.Provider, error) {
@@ -94,6 +96,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		Caches:                                 opts.RouterEngineConfig.EntityCaches,
 		EntityCacheConfigs:                     buildEntityCacheInvalidationConfigs(opts.RouterEngineConfig.EntityCaching),
 	}
+	configureSubscriptionEntityCacheCallbacks(ctx, &options, opts.RouterEngineConfig.EntityCaching, opts.EntityCacheMetrics)
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
 		options.ResolvableOptions.ApolloCompatibilityValueCompletionInExtensions = true
@@ -215,6 +218,32 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		RenameTypeNames: renameTypeNames,
 		TrackUsageInfo:  b.trackUsageInfo,
 	}, providers, nil
+}
+
+func configureSubscriptionEntityCacheCallbacks(ctx context.Context, options *resolve.ResolverOptions, entityCaching config.EntityCachingConfiguration, metrics rmetric.EntityCacheMetrics) {
+	if !entityCaching.Enabled || metrics == nil {
+		return
+	}
+
+	options.OnSubscriptionCacheWrite = func(event resolve.CacheWriteEvent) {
+		metrics.RecordSnapshot(ctx, resolve.CacheAnalyticsSnapshot{
+			L2Writes: []resolve.CacheWriteEvent{event},
+		})
+	}
+	options.OnSubscriptionCacheInvalidate = func(entityType string, keys []string) {
+		events := make([]resolve.CacheInvalidationEvent, 0, len(keys))
+		for _, key := range keys {
+			events = append(events, resolve.CacheInvalidationEvent{
+				EntityType: entityType,
+				Key:        key,
+				Source:     string(resolve.CacheSourceSubscription),
+				Deleted:    true,
+			})
+		}
+		metrics.RecordSnapshot(ctx, resolve.CacheAnalyticsSnapshot{
+			CacheInvalidations: events,
+		})
+	}
 }
 
 func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineCfg *RouterEngineConfiguration, pluginsEnabled bool) (*plan.Configuration, []pubsub_datasource.Provider, error) {

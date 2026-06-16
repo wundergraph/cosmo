@@ -46,6 +46,9 @@ func TestEntityCacheMetricsRecordSnapshot(t *testing.T) {
 			{EntityType: "User", Operation: "updateUser", Key: "user:1", Deleted: true},
 			{EntityType: "User", Operation: "updateUser", Key: "user:1", Written: true},
 		},
+		CacheInvalidations: []resolve.CacheInvalidationEvent{
+			{EntityType: "User", SubgraphName: "accounts", CacheName: "default", Key: "user:2", Source: string(resolve.CacheSourceSubscription), Deleted: true},
+		},
 		ShadowComparisons: []resolve.ShadowComparisonEvent{
 			{Key: "shadow-fresh", EntityType: "User", Matched: true},
 			{Key: "shadow-stale", EntityType: "User", Matched: false},
@@ -66,7 +69,8 @@ func TestEntityCacheMetricsRecordSnapshot(t *testing.T) {
 	require.Equal(t, int64(1), sumForAttributes(t, rm, EntityCacheWrites, "cache_level", "l1"))
 	require.Equal(t, int64(2), sumForAttributes(t, rm, EntityCacheWrites, "cache_level", "l2"))
 	require.Equal(t, int64(41), sumForAttributes(t, rm, EntityCacheCachedBytesServed))
-	require.Equal(t, int64(1), sumForAttributes(t, rm, EntityCacheMutations, "result", "invalidation"))
+	require.Equal(t, int64(1), sumForAttributes(t, rm, EntityCacheMutations, "result", "invalidation", "operation", "updateUser"))
+	require.Equal(t, int64(1), sumForAttributes(t, rm, EntityCacheMutations, "result", "invalidation", "operation", "subscription"))
 	require.Equal(t, int64(1), sumForAttributes(t, rm, EntityCacheMutations, "result", "population"))
 	require.Equal(t, int64(1), sumForAttributes(t, rm, EntityCacheShadowComparisons, "result", "fresh"))
 	require.Equal(t, int64(1), sumForAttributes(t, rm, EntityCacheShadowComparisons, "result", "stale"))

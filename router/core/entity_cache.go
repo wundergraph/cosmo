@@ -23,6 +23,16 @@ func resolveEntityCacheProviderID(subgraph config.SubgraphCacheOverride, entity 
 	return defaultEntityCacheProviderID
 }
 
+func resolveSubscriptionEntityCacheName(subgraph config.SubgraphCacheOverride, subscription config.SubscriptionCacheConfiguration) string {
+	if subscription.CacheName != "" {
+		return subscription.CacheName
+	}
+	if subgraph.StorageProviderID != "" {
+		return subgraph.StorageProviderID
+	}
+	return defaultEntityCacheProviderID
+}
+
 func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, error) {
 	return buildEntityCacheInstances(r.entityCaching, r.providerRegistry, r.logger)
 }
@@ -33,10 +43,21 @@ func buildEntityCacheInstances(entityCaching config.EntityCachingConfiguration, 
 	}
 
 	caches := make(map[string]resolve.LoaderCache)
+	storageProviderIDs := make(map[string]string)
 	for _, subgraph := range entityCaching.SubgraphCacheOverrides {
 		for _, entity := range subgraph.Entities {
 			providerID := resolveEntityCacheProviderID(subgraph, entity)
 			caches[providerID] = nil
+			storageProviderIDs[providerID] = providerID
+		}
+		for _, subscription := range subgraph.Subscriptions {
+			cacheName := resolveSubscriptionEntityCacheName(subgraph, subscription)
+			caches[cacheName] = nil
+			storageProviderID := subgraph.StorageProviderID
+			if storageProviderID == "" && cacheName != defaultEntityCacheProviderID {
+				storageProviderID = cacheName
+			}
+			storageProviderIDs[cacheName] = storageProviderID
 		}
 	}
 
@@ -49,7 +70,7 @@ func buildEntityCacheInstances(entityCaching config.EntityCachingConfiguration, 
 	}
 
 	for cacheName := range caches {
-		storageProviderID := cacheName
+		storageProviderID := storageProviderIDs[cacheName]
 		if cacheName == defaultEntityCacheProviderID {
 			storageProviderID = entityCaching.L2.Storage.ProviderID
 		}

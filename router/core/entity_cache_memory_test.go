@@ -286,3 +286,48 @@ func TestBuildEntityCacheInstancesBuildsMemoryCacheForEntityProviderOverride(t *
 	assert.Equal(t, uint64(100), cache.maxSize)
 	assert.Equal(t, "builder-prefix", cache.keyPrefix)
 }
+
+func TestBuildEntityCacheInstancesBuildsMemoryCacheForSubscriptionCacheName(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.EntityCachingConfiguration{
+		L2: config.EntityCachingL2{
+			Enabled: true,
+			Storage: config.EntityCachingL2Storage{
+				ProviderID: "memory-default",
+				KeyPrefix:  "builder-prefix",
+			},
+		},
+		SubgraphCacheOverrides: []config.SubgraphCacheOverride{
+			{
+				Name:              "accounts",
+				StorageProviderID: "subscription-memory",
+				Subscriptions: []config.SubscriptionCacheConfiguration{
+					{TypeName: "User", FieldName: "userUpdated", CacheName: "users"},
+				},
+			},
+		},
+	}
+	registry, err := NewProviderRegistry(config.StorageProviders{
+		Memory: []config.MemoryStorageProvider{
+			{ID: "memory-default", MaxSize: 100},
+			{ID: "subscription-memory", MaxSize: 256},
+		},
+	})
+	require.NoError(t, err)
+
+	caches, err := buildEntityCacheInstances(cfg, registry, zap.NewNop())
+
+	require.NoError(t, err)
+	assert.Equal(t, map[string]resolve.LoaderCache{
+		"users": caches["users"],
+	}, caches)
+	breaker := requireCircuitBreakerCache(t, caches["users"])
+	cache, ok := breaker.inner.(*memoryEntityCache)
+	require.True(t, ok)
+	t.Cleanup(func() {
+		require.NoError(t, breaker.Close())
+	})
+	assert.Equal(t, uint64(256), cache.maxSize)
+	assert.Equal(t, "builder-prefix", cache.keyPrefix)
+}

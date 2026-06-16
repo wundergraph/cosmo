@@ -1517,6 +1517,7 @@ func (s *graphServer) buildGraphMux(
 			HeartbeatInterval:              s.subscriptionHeartbeatInterval,
 			PluginsEnabled:                 s.plugins.Enabled,
 			InstanceData:                   s.instanceData,
+			EntityCacheMetrics:             gm.entityCacheMetrics,
 		},
 	)
 	if err != nil {

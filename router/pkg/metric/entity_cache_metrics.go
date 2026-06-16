@@ -208,6 +208,15 @@ func (m *entityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolv
 			))
 		}
 	}
+	for _, event := range snapshot.CacheInvalidations {
+		if event.Deleted {
+			m.instruments.mutations.Add(ctx, 1, m.addOptions(
+				attribute.String("entity_type", event.EntityType),
+				attribute.String("operation", event.Source),
+				attribute.String("result", "invalidation"),
+			))
+		}
+	}
 
 	for _, event := range snapshot.ShadowComparisons {
 		result := "stale"

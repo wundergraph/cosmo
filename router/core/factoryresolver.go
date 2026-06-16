@@ -659,6 +659,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 	}
 	out.EntityCacheConfig = l.entityCacheConfigurationsForDataSource(in, out.Keys)
 	out.MutationFieldCacheConfig, out.MutationCacheInvalidationConfig = l.mutationCacheConfigurationsForDataSource(in)
+	out.SubscriptionEntityPopulationConfig = l.subscriptionEntityPopulationConfigurationsForDataSource(in)
 	for _, providesConfiguration := range in.Provides {
 		out.Provides = append(out.Provides, plan.FederationFieldConfiguration{
 			TypeName:     providesConfiguration.TypeName,
@@ -828,6 +829,42 @@ func (l *Loader) mutationCacheConfigurationsForDataSource(in *nodev1.DataSourceC
 		invalidationConfigs = nil
 	}
 	return fieldConfigs, invalidationConfigs
+}
+
+func (l *Loader) subscriptionEntityPopulationConfigurationsForDataSource(in *nodev1.DataSourceConfiguration) plan.SubscriptionEntityPopulationConfigurations {
+	subgraphName := l.subgraphsByID[in.Id]
+	if subgraphName == "" || len(l.entityCaching.SubgraphCacheOverrides) == 0 {
+		return nil
+	}
+
+	var override config.SubgraphCacheOverride
+	for _, candidate := range l.entityCaching.SubgraphCacheOverrides {
+		if candidate.Name == subgraphName {
+			override = candidate
+			break
+		}
+	}
+	if override.Name == "" || len(override.Subscriptions) == 0 {
+		return nil
+	}
+
+	out := make(plan.SubscriptionEntityPopulationConfigurations, 0, len(override.Subscriptions))
+	for _, subscription := range override.Subscriptions {
+		if subscription.TypeName == "" || subscription.FieldName == "" {
+			continue
+		}
+		out = append(out, plan.SubscriptionEntityPopulationConfiguration{
+			TypeName:                    subscription.TypeName,
+			FieldName:                   subscription.FieldName,
+			CacheName:                   resolveSubscriptionEntityCacheName(override, subscription),
+			TTL:                         subscription.TTL,
+			EnableInvalidationOnKeyOnly: subscription.InvalidateOnKeyOnly,
+		})
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfiguration) bool {

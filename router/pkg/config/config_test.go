@@ -822,6 +822,12 @@ entity_caching:
           invalidate_entity_type: "User"
           enable_l2_population: true
           ttl: 3m
+      subscriptions:
+        - type_name: "User"
+          field_name: "userUpdated"
+          cache_name: "users"
+          ttl: 7m
+          invalidate_on_key_only: true
 `)
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
@@ -844,6 +850,9 @@ entity_caching:
 				},
 				Mutations: []MutationCacheConfiguration{
 					{FieldName: "updateUser", InvalidateEntityType: "User", EnableL2Population: true, TTL: 3 * time.Minute},
+				},
+				Subscriptions: []SubscriptionCacheConfiguration{
+					{TypeName: "User", FieldName: "userUpdated", CacheName: "users", TTL: 7 * time.Minute, InvalidateOnKeyOnly: true},
 				},
 			},
 		}, cfg.Config.EntityCaching.SubgraphCacheOverrides)
@@ -868,6 +877,24 @@ entity_caching:
 `)
 		_, err := LoadConfig([]string{f})
 		require.ErrorContains(t, err, "entity_caching.l2.storage.provider_id \"missing-provider\" does not match a configured storage provider")
+	})
+
+	t.Run("rejects subscription config without field_name", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+entity_caching:
+  subgraph_cache_overrides:
+    - name: "accounts"
+      subscriptions:
+        - type_name: "User"
+          field_name: ""
+          cache_name: "users"
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "entity_caching.subgraph_cache_overrides[0].subscriptions[0].field_name is required")
 	})
 }
 

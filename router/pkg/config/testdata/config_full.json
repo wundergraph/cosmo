@@ -1074,6 +1074,15 @@
             "EnableL2Population": true,
             "TTL": 180000000000
           }
+        ],
+        "Subscriptions": [
+          {
+            "TypeName": "User",
+            "FieldName": "userUpdated",
+            "CacheName": "users",
+            "TTL": 420000000000,
+            "InvalidateOnKeyOnly": true
+          }
         ]
       }
     ]

@@ -293,6 +293,33 @@
                     }
                   }
                 }
+              },
+              "subscriptions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["type_name", "field_name", "cache_name"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type_name": {
+                      "type": "string"
+                    },
+                    "field_name": {
+                      "type": "string"
+                    },
+                    "cache_name": {
+                      "type": "string"
+                    },
+                    "ttl": {
+                      "type": "string",
+                      "format": "go-duration"
+                    },
+                    "invalidate_on_key_only": {
+                      "type": "boolean",
+                      "default": false
+                    }
+                  }
+                }
               }
             }
           }
