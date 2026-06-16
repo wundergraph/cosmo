@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.4.7-0.20260615134408-fbd5babdb12c
+	github.com/wundergraph/graphql-go-tools/v2 v2.4.7-0.20260616114425-40fb9ae23943
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.44.0
@@ -181,4 +181,4 @@ require (
 // Remember you can use Go workspaces to avoid using replace directives in multiple go.mod files
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
-// replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+replace github.com/wundergraph/graphql-go-tools/v2 => /Users/dominik/code/graphql-go-tools.worktrees/dominik-new_subscriptionOnTrigger_hook/v2

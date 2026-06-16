@@ -356,8 +356,8 @@ func TestPubSubSubscriptionDataSource_InterfaceCompliance(t *testing.T) {
 	// Test that it implements SubscriptionDataSource interface
 	var _ SubscriptionDataSource = dataSource
 
-	// Test that it implements HookableSubscriptionDataSource interface
-	var _ resolve.HookableSubscriptionDataSource = dataSource
+	// Test that it implements HookablePubsubDatasource interface
+	var _ resolve.HookablePubsubDatasource = dataSource
 }
 
 func TestPubSubSubscriptionDataSource_SubscriptionOnStart_InvalidEventConfigInput(t *testing.T) {

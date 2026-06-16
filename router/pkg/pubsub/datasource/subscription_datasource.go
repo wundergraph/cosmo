@@ -19,7 +19,7 @@ type triggerHashInputFn func(input []byte, xxh *xxhash.Digest) error
 type EventBuilderFn func(data []byte) MutableStreamEvent
 
 // PubSubSubscriptionDataSource is a data source for handling subscriptions using a Pub/Sub mechanism.
-// It implements the SubscriptionDataSource interface and HookableSubscriptionDataSource
+// It implements the SubscriptionDataSource and HookablePubsubDatasource interfaces.
 type PubSubSubscriptionDataSource[C SubscriptionEventConfiguration] struct {
 	pubSub           Adapter
 	triggerHashInput triggerHashInputFn
@@ -166,7 +166,8 @@ func mergeConfigIntoInput(input []byte, conf SubscriptionEventConfiguration) ([]
 }
 
 var _ SubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
-var _ resolve.HookableSubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
+
+var _ resolve.HookablePubsubDatasource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
 
 func NewPubSubSubscriptionDataSource[C SubscriptionEventConfiguration](pubSub Adapter, triggerHashInputFn triggerHashInputFn, logger *zap.Logger, eventBuilder EventBuilderFn) *PubSubSubscriptionDataSource[C] {
 	if logger == nil {
