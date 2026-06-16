@@ -528,9 +528,9 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		onReceiveEventsFns[i] = NewPubSubOnReceiveEventsHook(fn)
 	}
 
-	subscriptionBeforeTriggerFns := make([]pubsub_datasource.SubscriptionBeforeTriggerFn, len(l.subscriptionHooks.onBeforeTrigger.handlers))
-	for i, fn := range l.subscriptionHooks.onBeforeTrigger.handlers {
-		subscriptionBeforeTriggerFns[i] = NewPubSubSubscriptionBeforeTriggerHook(fn)
+	subscriptionOnCreateFns := make([]pubsub_datasource.SubscriptionOnCreateFn, len(l.subscriptionHooks.onCreate.handlers))
+	for i, fn := range l.subscriptionHooks.onCreate.handlers {
+		subscriptionOnCreateFns[i] = NewPubSubSubscriptionOnCreateHook(fn)
 	}
 
 	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
@@ -553,8 +553,8 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				MaxConcurrentHandlers: l.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers,
 				Timeout:               l.subscriptionHooks.onReceiveEvents.timeout,
 			},
-			SubscriptionBeforeTrigger: pubsub_datasource.SubscriptionBeforeTriggerHooks{
-				Handlers: subscriptionBeforeTriggerFns,
+			SubscriptionOnCreate: pubsub_datasource.SubscriptionOnCreateHooks{
+				Handlers: subscriptionOnCreateFns,
 			},
 		},
 	)

@@ -13,21 +13,21 @@ type OnPublishEventsFn func(ctx context.Context, pubConf PublishEventConfigurati
 
 type OnReceiveEventsFn func(subscriptionCtx context.Context, updaterCtx context.Context, subConf SubscriptionEventConfiguration, eventBuilder EventBuilderFn, evts []StreamEvent) ([]StreamEvent, error)
 
-// SubscriptionBeforeTriggerFn is called before the subscription trigger is created.
+// SubscriptionOnCreateFn is called before the subscription trigger is created.
 // It receives the current subscription config and may return a modified one.
-type SubscriptionBeforeTriggerFn func(ctx context.Context, subConf SubscriptionEventConfiguration) SubscriptionEventConfiguration
+type SubscriptionOnCreateFn func(ctx context.Context, subConf SubscriptionEventConfiguration) SubscriptionEventConfiguration
 
 // Hooks contains hooks for the pubsub providers and data sources
 type Hooks struct {
-	SubscriptionOnStart       SubscriptionOnStartHooks
-	OnPublishEvents           OnPublishEventsHooks
-	OnReceiveEvents           OnReceiveEventsHooks
-	SubscriptionBeforeTrigger SubscriptionBeforeTriggerHooks
+	SubscriptionOnCreate SubscriptionOnCreateHooks
+	SubscriptionOnStart  SubscriptionOnStartHooks
+	OnPublishEvents      OnPublishEventsHooks
+	OnReceiveEvents      OnReceiveEventsHooks
 }
 
-// SubscriptionBeforeTriggerHooks contains hooks that run before a subscription trigger is created
-type SubscriptionBeforeTriggerHooks struct {
-	Handlers []SubscriptionBeforeTriggerFn
+// SubscriptionOnCreateHooks contains hooks that run before a subscription trigger is created
+type SubscriptionOnCreateHooks struct {
+	Handlers []SubscriptionOnCreateFn
 }
 
 // SubscriptionOnStartHooks contains hooks with settings for subscription starts

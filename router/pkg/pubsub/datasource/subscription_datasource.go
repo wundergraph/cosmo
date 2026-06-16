@@ -94,8 +94,8 @@ func (s *PubSubSubscriptionDataSource[C]) HashTriggerInput(input []byte, xxh *xx
 	return s.triggerHashInput(input, xxh)
 }
 
-func (s *PubSubSubscriptionDataSource[C]) SubscriptionBeforeTrigger(ctx context.Context, input []byte) ([]byte, error) {
-	if len(s.hooks.SubscriptionBeforeTrigger.Handlers) == 0 {
+func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnCreate(ctx context.Context, input []byte) ([]byte, error) {
+	if len(s.hooks.SubscriptionOnCreate.Handlers) == 0 {
 		return input, nil
 	}
 
@@ -125,13 +125,13 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionBeforeTrigger(ctx context.
 		return nil, err
 	}
 
-	for _, fn := range s.hooks.SubscriptionBeforeTrigger.Handlers {
+	for _, fn := range s.hooks.SubscriptionOnCreate.Handlers {
 		conf = fn(ctx, conf)
 
 		// Check wether a hook developer set config type not compatible with this pubsub datasource
 		// (i.e. Kafka configuration on a Redis datasource).
 		if _, ok := conf.(C); !ok {
-			return nil, errors.New("invalid subscription configuration returned by SubscriptionBeforeTrigger hook")
+			return nil, errors.New("invalid subscription configuration returned by SubscriptionOnCreate hook")
 		}
 	}
 
@@ -167,7 +167,7 @@ func mergeConfigIntoInput(input []byte, conf SubscriptionEventConfiguration) ([]
 
 var _ SubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
 var _ resolve.HookableSubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
-var _ resolve.BeforeTriggerSubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
+var _ resolve.OnCreateSubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
 
 func NewPubSubSubscriptionDataSource[C SubscriptionEventConfiguration](pubSub Adapter, triggerHashInputFn triggerHashInputFn, logger *zap.Logger, eventBuilder EventBuilderFn) *PubSubSubscriptionDataSource[C] {
 	if logger == nil {

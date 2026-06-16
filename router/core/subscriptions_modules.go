@@ -455,7 +455,7 @@ func (e *StreamHandlerError) Error() string {
 	return e.Message
 }
 
-type SubscriptionBeforeTriggerHandlerContext interface {
+type SubscriptionOnCreateHandlerContext interface {
 	// Request is the original request received by the router.
 	Request() *http.Request
 	// Logger is the logger for the request.
@@ -472,7 +472,7 @@ type SubscriptionBeforeTriggerHandlerContext interface {
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
 }
 
-type pubSubSubscriptionBeforeTriggerHookContext struct {
+type pubSubSubscriptionOnCreateHookContext struct {
 	request                        *http.Request
 	logger                         *zap.Logger
 	operation                      OperationContext
@@ -480,37 +480,37 @@ type pubSubSubscriptionBeforeTriggerHookContext struct {
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
 }
 
-func (c *pubSubSubscriptionBeforeTriggerHookContext) Request() *http.Request {
+func (c *pubSubSubscriptionOnCreateHookContext) Request() *http.Request {
 	return c.request
 }
 
-func (c *pubSubSubscriptionBeforeTriggerHookContext) Logger() *zap.Logger {
+func (c *pubSubSubscriptionOnCreateHookContext) Logger() *zap.Logger {
 	return c.logger
 }
 
-func (c *pubSubSubscriptionBeforeTriggerHookContext) Operation() OperationContext {
+func (c *pubSubSubscriptionOnCreateHookContext) Operation() OperationContext {
 	return c.operation
 }
 
-func (c *pubSubSubscriptionBeforeTriggerHookContext) Authentication() authentication.Authentication {
+func (c *pubSubSubscriptionOnCreateHookContext) Authentication() authentication.Authentication {
 	return c.authentication
 }
 
-func (c *pubSubSubscriptionBeforeTriggerHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
+func (c *pubSubSubscriptionOnCreateHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
 	return c.subscriptionEventConfiguration
 }
 
-type SubscriptionBeforeTriggerHandler interface {
-	// SubscriptionBeforeTrigger allows to modify the event configuration
+type SubscriptionOnCreateHandler interface {
+	// SubscriptionOnCreate allows to modify the event configuration
 	// before the subscription starts.
 	//
 	// This method is currently EXPERIMENTAL.
 	// The signature and behaviour might change without prior notice.
-	SubscriptionBeforeTrigger(ctx SubscriptionBeforeTriggerHandlerContext)
+	SubscriptionOnCreate(ctx SubscriptionOnCreateHandlerContext)
 }
 
-// NewPubSubSubscriptionBeforeTriggerHook converts a SubscriptionBeforeTriggerHandler fn to a datasource.SubscriptionBeforeTriggerFn.
-func NewPubSubSubscriptionBeforeTriggerHook(fn func(ctx SubscriptionBeforeTriggerHandlerContext)) datasource.SubscriptionBeforeTriggerFn {
+// NewPubSubSubscriptionOnCreateHook converts a SubscriptiononCreateHandler fn to a datasource.SubscriptionOnCreateFn.
+func NewPubSubSubscriptionOnCreateHook(fn func(ctx SubscriptionOnCreateHandlerContext)) datasource.SubscriptionOnCreateFn {
 	if fn == nil {
 		return nil
 	}
@@ -530,7 +530,7 @@ func NewPubSubSubscriptionBeforeTriggerHook(fn func(ctx SubscriptionBeforeTrigge
 			}
 		}
 
-		hookCtx := &pubSubSubscriptionBeforeTriggerHookContext{
+		hookCtx := &pubSubSubscriptionOnCreateHookContext{
 			request:                        requestContext.Request(),
 			logger:                         logger,
 			operation:                      requestContext.Operation(),
