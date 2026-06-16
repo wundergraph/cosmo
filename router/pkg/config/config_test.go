@@ -815,6 +815,7 @@ entity_caching:
         - type: "User"
           ttl: 5m
           cache_name: "users"
+          shadow_mode: true
 `)
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
@@ -833,7 +834,7 @@ entity_caching:
 				Name:              "accounts",
 				StorageProviderID: "memory-default",
 				Entities: []EntityCacheEntityConfiguration{
-					{Type: "User", TTL: 5 * time.Minute, CacheName: "users"},
+					{Type: "User", TTL: 5 * time.Minute, CacheName: "users", ShadowMode: true},
 				},
 			},
 		}, cfg.Config.EntityCaching.SubgraphCacheOverrides)

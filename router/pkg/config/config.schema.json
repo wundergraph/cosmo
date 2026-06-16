@@ -256,6 +256,11 @@
                     },
                     "cache_name": {
                       "type": "string"
+                    },
+                    "shadow_mode": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable engine shadow mode for this entity. The engine reads and writes L2, always serves fresh data, and records cached-vs-fresh comparison events."
                     }
                   }
                 }

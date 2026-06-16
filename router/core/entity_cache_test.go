@@ -119,8 +119,8 @@ func TestLoaderDataSourceMetaDataTranslatesEntityCacheConfig(t *testing.T) {
 					Name:              "accounts",
 					StorageProviderID: "accounts-cache",
 					Entities: []config.EntityCacheEntityConfiguration{
-						{Type: "User", TTL: 5 * time.Minute},
-						{Type: "Organization", StorageProviderID: "organization-cache", TTL: 10 * time.Minute},
+						{Type: "User", TTL: 5 * time.Minute, ShadowMode: true},
+						{Type: "Organization", StorageProviderID: "organization-cache", TTL: 10 * time.Minute, ShadowMode: false},
 						{Type: "Review", TTL: time.Minute},
 					},
 				},
@@ -143,14 +143,16 @@ func TestLoaderDataSourceMetaDataTranslatesEntityCacheConfig(t *testing.T) {
 	require.NotNil(t, metadata)
 	assert.Equal(t, plan.EntityCacheConfigurations{
 		{
-			TypeName:  "User",
-			CacheName: "accounts-cache",
-			TTL:       5 * time.Minute,
+			TypeName:   "User",
+			CacheName:  "accounts-cache",
+			TTL:        5 * time.Minute,
+			ShadowMode: true,
 		},
 		{
-			TypeName:  "Organization",
-			CacheName: "organization-cache",
-			TTL:       10 * time.Minute,
+			TypeName:   "Organization",
+			CacheName:  "organization-cache",
+			TTL:        10 * time.Minute,
+			ShadowMode: false,
 		},
 	}, metadata.FederationMetaData.EntityCacheConfig)
 }

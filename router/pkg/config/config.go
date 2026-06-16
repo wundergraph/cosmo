@@ -1113,6 +1113,10 @@ type EntityCacheEntityConfiguration struct {
 	StorageProviderID string        `yaml:"storage_provider_id,omitempty" env:"STORAGE_PROVIDER_ID"`
 	TTL               time.Duration `yaml:"ttl,omitempty" env:"TTL"`
 	CacheName         string        `yaml:"cache_name,omitempty" env:"CACHE_NAME"`
+	// ShadowMode reads and writes L2 but always serves fresh data. Cached-vs-fresh
+	// comparison and ShadowComparisonEvent recording are engine-side. NegativeCacheTTL
+	// interaction is deferred to the engine's definition.
+	ShadowMode bool `yaml:"shadow_mode,omitempty" env:"SHADOW_MODE"`
 }
 
 type PersistedOperationsCDNProvider struct {

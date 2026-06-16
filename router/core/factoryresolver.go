@@ -770,9 +770,10 @@ func (l *Loader) entityCacheConfigurationsForDataSource(in *nodev1.DataSourceCon
 			continue
 		}
 		out = append(out, plan.EntityCacheConfiguration{
-			TypeName:  entity.Type,
-			CacheName: resolveEntityCacheProviderID(override, entity),
-			TTL:       entity.TTL,
+			TypeName:   entity.Type,
+			CacheName:  resolveEntityCacheProviderID(override, entity),
+			TTL:        entity.TTL,
+			ShadowMode: entity.ShadowMode,
 		})
 	}
 	if len(out) == 0 {
