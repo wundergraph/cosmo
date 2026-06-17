@@ -127,7 +127,7 @@ async function handleSplitRouterConfig({
   const mapper = new Map<string, string>();
   mapper.set('', createHash('sha256').update(routerConfigJSON).digest('hex'));
   await writeFile(join(outputDir, routerConfigFile), routerConfigJSON);
-  if (!config.feature_flags || config.feature_flags.length < 1) {
+  if (!config.feature_flags || config.feature_flags.length === 0) {
     await writeFile(join(outputDir, mapperFile), JSON.stringify(Object.fromEntries(mapper)));
     return;
   }
@@ -293,11 +293,9 @@ export default (_: BaseCommandOptions) => {
       subgraphs: subgraphs.map((s, index) => constructRouterSubgraph(result, s, index)),
     });
 
-    if (options.splitConfigsEnabled) {
-      await handleSplitRouterConfig({ config, inputFileLocation, options, routerConfig, subgraphs });
-    } else {
-      await handleEmbeddedRouterConfig({ config, inputFileLocation, options, routerConfig, subgraphs });
-    }
+    await (options.splitConfigsEnabled
+      ? handleSplitRouterConfig({ config, inputFileLocation, options, routerConfig, subgraphs })
+      : handleEmbeddedRouterConfig({ config, inputFileLocation, options, routerConfig, subgraphs }));
   });
 
   return command;
