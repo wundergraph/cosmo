@@ -107,11 +107,10 @@ async function handleSplitRouterConfig({
 }: HandleRouterConfigParams) {
   let outputDir = options.out ? resolve(options.out) : options.out;
   if (!outputDir) {
-    const defaultDirName = resolve('router-compose-output');
-    if (!existsSync(defaultDirName)) {
-      await mkdir(defaultDirName, { recursive: true });
-    }
-    outputDir = defaultDirName;
+    outputDir = resolve('router-compose-output');
+  }
+  if (!existsSync(outputDir)) {
+    await mkdir(outputDir, { recursive: true });
   }
   const entries = await readdir(outputDir);
   if (entries.length > 0) {
@@ -140,7 +139,7 @@ async function handleSplitRouterConfig({
   } catch {
     console.log(
       pc.red(
-        `Split-config flag enabled; output directory "${ffDir}" is not empty. Please provide an empty root directory path.`,
+        `Split-config flag enabled; output directory "${ffDir}" already exists. Please provide an empty root directory path.`,
       ),
     );
     process.exitCode = 1;
