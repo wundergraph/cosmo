@@ -175,7 +175,18 @@ async function handleEmbeddedRouterConfig({
   }
   const routerConfigJson = routerConfig.toJsonString();
   if (options.out) {
-    await writeFile(join(options.out, routerConfigFile), routerConfigJson);
+    let output: string = options.out;
+    /**
+     * If the provided output doesn't end with `.json`, assume it's a directory and append the filename; otherwise,
+     * if the directory doesn't exist, we need to create before writing the file
+     */
+    if (!output.toLowerCase().endsWith('.json')) {
+      output = join(options.out, routerConfigJson);
+    } else if (!existsSync(output)) {
+      await mkdir(output, { recursive: true });
+    }
+
+    await writeFile(output, routerConfigJson);
     console.log(pc.green(`Router execution config successfully written to "${pc.bold(options.out)}".`));
   } else {
     console.log(routerConfigJson);
@@ -212,7 +223,7 @@ export default (_: BaseCommandOptions) => {
 
     if (options.out) {
       options.out = resolve(options.out);
-      if (!options.splitConfigsEnabled) {
+      if (options.splitConfigsEnabled) {
         await mkdir(options.out, { recursive: true });
       }
     }
