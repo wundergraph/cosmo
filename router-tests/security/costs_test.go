@@ -384,6 +384,37 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 
+		t.Run("ignore_implementing_type_weights excludes implementing-type weights on abstract fields", func(t *testing.T) {
+			t.Parallel()
+			// The RoleType interface field "employees" has no weight of its own.
+			// With the flag on, that implementing-type weight is skipped (Apollo behavior).
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:                       true,
+						Mode:                          config.CostControlModeMeasure,
+						MaxEstimatedLimit:             10000,
+						EstimatedListSize:             10,
+						ExposeHeaders:                 true,
+						IgnoreImplementingTypeWeights: true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { role { employees { id } } } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"errors":`)
+
+				// "@expensiveOp(coefficient: Int = 2 @cost(weight: 22))" is applied on
+				// Engineer.employees, Marketer.employees, and Operator.employees.
+				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + 10 * employees(1)))
+				require.Equal(t, "18", res.Response.Header.Get(core.CostEstimatedHeader))
+				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + 7 * employees(1)))
+				require.Equal(t, "15", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+
 		t.Run("slicingArguments controls list size estimation", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{

@@ -260,6 +260,8 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	if routerEngineCfg.CostControl != nil && routerEngineCfg.CostControl.Enabled {
 		planConfig.ComputeCosts = true
 		planConfig.StaticCostDefaultListSize = routerEngineCfg.CostControl.EstimatedListSize
+		// Router config name intentionally differs from the engine field name.
+		planConfig.SkipImplementingTypesOnAbstract = routerEngineCfg.CostControl.IgnoreImplementingTypeWeights
 	}
 
 	return planConfig, providers, nil
