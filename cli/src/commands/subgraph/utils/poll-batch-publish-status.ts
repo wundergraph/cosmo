@@ -21,7 +21,8 @@ export async function pollBatchPublishStatus(
   const headers = getBaseHeaders();
   while (!signal.aborted) {
     const resp = await client.platform.getBatchPublishJobStatus({ jobId }, { headers, signal });
-    if (!resp.response?.code || !EXPECTED_STATUS_CODES.has(resp.response.code)) {
+    const respCode = resp.response?.code;
+    if (respCode === undefined || !EXPECTED_STATUS_CODES.has(respCode)) {
       return new PublishFederatedSubgraphsResponse({
         response: resp.response,
       });
