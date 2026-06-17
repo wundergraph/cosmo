@@ -406,8 +406,8 @@ func TestOperationCost(t *testing.T) {
 				require.Contains(t, res.Body, `"data":`)
 				require.NotContains(t, res.Body, `"errors":`)
 
-				// "@expensiveOp(coefficient: Int = 2 @cost(weight: 22))" is applied on
-				// Engineer.employees, Marketer.employees, and Operator.employees.
+				// "@expensiveOp(coefficient: Int = 2 @cost(weight: 22))" should not be used!
+
 				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + 10 * employees(1)))
 				require.Equal(t, "18", res.Response.Header.Get(core.CostEstimatedHeader))
 				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + 7 * employees(1)))
