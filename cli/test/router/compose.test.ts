@@ -2,6 +2,7 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { Command } from 'commander';
 import { describe, expect, test } from 'vitest';
 import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
@@ -22,7 +23,7 @@ describe('router compose command tests', () => {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
     };
 
-    const outputDir = join(tmpdir(), 'router-compose');
+    const outputDir = join(tmpdir(), 'router-compose', randomUUID());
     const outputFile = join(outputDir, 'router-config.json');
     if (!existsSync(outputDir)) {
       await mkdir(outputDir);
@@ -47,7 +48,7 @@ describe('router compose command tests', () => {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
     };
 
-    const outputDir = join(tmpdir(), 'router-compose-split');
+    const outputDir = join(tmpdir(), 'router-compose-split', randomUUID());
     if (!existsSync(outputDir)) {
       await mkdir(outputDir);
     }
