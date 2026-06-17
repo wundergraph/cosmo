@@ -2336,8 +2336,6 @@ describe('Update proposal tests', () => {
     });
     expect(getProposalResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getProposalResponse.proposal?.subgraphs.length).toBe(2);
-    expect(
-      getProposalResponse.proposal?.subgraphs.some((sg) => sg.name === unpublishedSubgraphName),
-    ).toBe(true);
+    expect(getProposalResponse.proposal?.subgraphs.some((sg) => sg.name === unpublishedSubgraphName)).toBe(true);
   });
 });
