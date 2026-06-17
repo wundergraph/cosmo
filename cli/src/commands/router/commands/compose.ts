@@ -180,10 +180,17 @@ async function handleEmbeddedRouterConfig({
      * If the provided output doesn't end with `.json`, assume it's a directory and append the filename; otherwise,
      * if the directory doesn't exist, we need to create before writing the file
      */
-    if (!output.toLowerCase().endsWith('.json')) {
+    if (output.toLowerCase().endsWith('.json')) {
+      const dir = dirname(output);
+      if (!existsSync(dir)) {
+        await mkdir(dir, { recursive: true });
+      }
+    } else {
+      if (!existsSync(output)) {
+        await mkdir(output, { recursive: true });
+      }
+
       output = join(options.out, routerConfigJson);
-    } else if (!existsSync(output)) {
-      await mkdir(output, { recursive: true });
     }
 
     await writeFile(output, routerConfigJson);

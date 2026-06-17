@@ -25,10 +25,6 @@ describe('router compose command tests', () => {
 
     const outputDir = join(tmpdir(), 'router-compose', randomUUID());
     const outputFile = join(outputDir, 'router-config.json');
-    if (!existsSync(outputDir)) {
-      await mkdir(outputDir);
-    }
-
     const program = new Command();
 
     program.addCommand(ComposeCommand({ client }));
@@ -49,10 +45,6 @@ describe('router compose command tests', () => {
     };
 
     const outputDir = join(tmpdir(), 'router-compose-split', randomUUID());
-    if (!existsSync(outputDir)) {
-      await mkdir(outputDir);
-    }
-
     const program = new Command();
 
     program.addCommand(ComposeCommand({ client }));
