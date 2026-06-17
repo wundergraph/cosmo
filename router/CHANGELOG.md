@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.323.2](https://github.com/wundergraph/cosmo/compare/router@0.323.1...router@0.323.2) (2026-06-16)
+
+### Bug Fixes
+
+* **router:** close redis connections on unsubscribe ([#2917](https://github.com/wundergraph/cosmo/issues/2917)) ([48e901d](https://github.com/wundergraph/cosmo/commit/48e901da424169980136b697fe900aba90cbff6a)) (@dkorittki)
+
 ## [0.323.1](https://github.com/wundergraph/cosmo/compare/router@0.323.0...router@0.323.1) (2026-06-15)
 
 ### Bug Fixes

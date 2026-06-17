@@ -18,6 +18,8 @@ import {
   proposalMatchEnum,
   schemaChangeTypeEnum,
   subgraphTypeEnum,
+  batchPublishJobStatusEnum,
+  batchPublishJobDetails,
 } from './schema.js';
 
 export type FederatedGraph = typeof federatedGraphs.$inferSelect;
@@ -39,6 +41,8 @@ export type ProposalMatch = (typeof proposalMatchEnum.enumValues)[number];
 export type WebhookDeliveryInfo = typeof webhookDeliveries.$inferInsert;
 export type DBSchemaChangeType = (typeof schemaChangeTypeEnum.enumValues)[number];
 export type DBSubgraphType = (typeof subgraphTypeEnum.enumValues)[number];
+export type BatchPublishJobStatus = (typeof batchPublishJobStatusEnum.enumValues)[number];
+export type NewBatchPublishJobDetails = typeof batchPublishJobDetails.$inferInsert;
 
 export type AuditableType =
   | 'organization'

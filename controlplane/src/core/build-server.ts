@@ -64,6 +64,10 @@ import {
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
 import { createNotifyOrganizationDeletionQueuedWorker } from './workers/NotifyOrganizationDeletionQueuedWorker.js';
+import {
+  createDeleteBatchPublishJobDetailsWorker,
+  DeleteBatchPublishJobDetailsQueue,
+} from './workers/DeleteBatchPublishJobDetailsWorker.js';
 import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composition/composeGraphs.pool.js';
 
 export interface BuildConfig {
@@ -488,6 +492,16 @@ export default async function build(opts: BuildConfig) {
     }),
   );
 
+  const deleteBatchPublishJobDetailsQueue = new DeleteBatchPublishJobDetailsQueue(logger, fastify.redisForQueue);
+  bullWorkers.push(
+    createDeleteBatchPublishJobDetailsWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      lockAdapter: fastify.lockAdapter,
+      logger,
+    }),
+  );
+
   // required to verify webhook payloads
   await fastify.register(import('fastify-raw-body'), {
     field: 'rawBody',
@@ -603,11 +617,13 @@ export default async function build(opts: BuildConfig) {
         deactivateOrganizationQueue,
         reactivateOrganizationQueue,
         deleteUserQueue,
+        deleteBatchPublishJobDetailsQueue,
       },
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
       webhookProxyUrl: opts.webhook?.proxyUrl,
       cdnBaseUrl: opts.cdnBaseUrl,
+      lockAdapter: fastify.lockAdapter,
     }),
     contextValues(req) {
       const values = createContextValues().set<FastifyBaseLogger>(

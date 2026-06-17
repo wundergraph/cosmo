@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.125.0](https://github.com/wundergraph/cosmo/compare/wgc@0.124.0...wgc@0.125.0) (2026-06-16)
+
+### Features
+
+* controlpanel move to a accept first strategy for batch ([#2963](https://github.com/wundergraph/cosmo/issues/2963)) ([f54ef2a](https://github.com/wundergraph/cosmo/commit/f54ef2a4de3f218810eb2f800ad4e1c8c864496e)) (@wilsonrivera)
+
 # [0.124.0](https://github.com/wundergraph/cosmo/compare/wgc@0.123.0...wgc@0.124.0) (2026-06-12)
 
 ### Features
