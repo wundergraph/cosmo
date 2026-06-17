@@ -110,7 +110,7 @@ async function handleSplitRouterConfig({
     outputDir = resolve('router-compose-output');
   }
   if (!existsSync(outputDir)) {
-    await mkdir(outputDir, { recursive: true });
+    await mkdir(outputDir);
   }
   const entries = await readdir(outputDir);
   if (entries.length > 0) {
@@ -135,7 +135,7 @@ async function handleSplitRouterConfig({
   const ffConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
   const ffDir = join(outputDir, featureFlagsDir);
   try {
-    await mkdir(ffDir, { recursive: true });
+    await mkdir(ffDir);
   } catch {
     console.log(
       pc.red(
