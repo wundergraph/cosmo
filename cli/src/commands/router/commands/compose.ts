@@ -37,8 +37,8 @@ import {
   SubgraphMetaData,
   SubgraphPluginConfig,
   SubgraphPluginMetadata,
-} from './types/types';
-import { HandleRouterConfigParams } from './types/params';
+} from './types/types.js';
+import { HandleRouterConfigParams } from './types/params.js';
 
 const STATIC_SCHEMA_VERSION_ID = '00000000-0000-0000-0000-000000000000';
 
