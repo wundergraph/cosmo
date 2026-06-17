@@ -135,7 +135,7 @@ async function handleSplitRouterConfig({
   const ffConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
   const ffDir = join(outputDir, featureFlagsDir);
   try {
-    await mkdir(ffDir);
+    await mkdir(ffDir, { recursive: true });
   } catch {
     console.log(
       pc.red(
