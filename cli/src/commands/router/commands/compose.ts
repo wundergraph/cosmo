@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import {
   buildRouterConfig,
@@ -9,8 +9,6 @@ import {
   normalizeURL,
   type RouterSubgraph,
   SubgraphKind,
-  type SubscriptionProtocol,
-  type WebsocketSubprotocol,
 } from '@wundergraph/cosmo-shared';
 import semver from 'semver';
 import { Command, program } from 'commander';
@@ -29,95 +27,29 @@ import Table from 'cli-table3';
 import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
+import {
+  Config,
+  ConfigSubgraph,
+  GRPCSubgraphConfig,
+  GRPCSubgraphMetadata,
+  StandardSubgraphConfig,
+  StandardSubgraphMetaData,
+  SubgraphMetaData,
+  SubgraphPluginConfig,
+  SubgraphPluginMetadata,
+} from './types/types';
+import { HandleRouterConfigParams } from './types/params';
 
 const STATIC_SCHEMA_VERSION_ID = '00000000-0000-0000-0000-000000000000';
 
-type ConfigSubgraph = StandardSubgraphConfig | SubgraphPluginConfig | GRPCSubgraphConfig;
-
-type StandardSubgraphConfig = {
-  name: string;
-  routing_url: string;
-  schema?: {
-    file: string;
-  };
-  subscription?: {
-    url?: string;
-    protocol?: 'ws' | 'sse' | 'sse_post';
-    websocketSubprotocol?: 'auto' | 'graphql-ws' | 'graphql-transport-ws';
-  };
-  introspection?: {
-    url: string;
-    headers?: {
-      [key: string]: string;
-    };
-    raw?: boolean;
-  };
-};
-
-type SubgraphPluginConfig = {
-  plugin: {
-    version: string;
-    path: string;
-  };
-};
-
-type GRPCSubgraphConfig = {
-  name: string;
-  routing_url: string;
-  grpc: {
-    schema_file: string;
-    proto_file: string;
-    mapping_file: string;
-  };
-};
-
-type SubgraphMetadata = StandardSubgraphMetaData | SubgraphPluginMetadata | GRPCSubgraphMetadata;
-
-type StandardSubgraphMetaData = {
-  kind: SubgraphKind.Standard;
-  name: string;
-  sdl: string;
-  routingUrl: string;
-  subscriptionUrl: string;
-  subscriptionProtocol: SubscriptionProtocol;
-  websocketSubprotocol: WebsocketSubprotocol;
-};
-
-type SubgraphPluginMetadata = {
-  kind: SubgraphKind.Plugin;
-  name: string;
-  sdl: string;
-  mapping: GRPCMapping;
-  protoSchema: string;
-  version: string;
-};
-
-type GRPCSubgraphMetadata = {
-  kind: SubgraphKind.GRPC;
-  name: string;
-  sdl: string;
-  routingUrl: string;
-  protoSchema: string;
-  mapping: GRPCMapping;
-};
-
-type Config = {
-  version: number;
-  feature_flags: {
-    name: string;
-    feature_graphs: (StandardSubgraphConfig & { subgraph_name: string })[];
-  }[];
-  subgraphs: ConfigSubgraph[];
-};
-
-function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata, index: number): RouterSubgraph {
+function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetaData, index: number): RouterSubgraph {
   const subgraphConfig = result.subgraphConfigBySubgraphName.get(s.name);
   const schema = subgraphConfig?.schema;
   const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
   const costs = subgraphConfig?.costs;
 
   if (s.kind === SubgraphKind.Standard) {
-    const composedSubgraph: ComposedSubgraph = {
+    return {
       kind: SubgraphKind.Standard,
       id: `${index}`,
       name: s.name,
@@ -129,12 +61,11 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
       schema,
       configurationDataByTypeName,
       costs,
-    };
-    return composedSubgraph;
+    } satisfies ComposedSubgraph;
   }
 
   if (s.kind === SubgraphKind.Plugin) {
-    const composedSubgraphPlugin: ComposedSubgraphPlugin = {
+    return {
       kind: SubgraphKind.Plugin,
       id: `${index}`,
       name: s.name,
@@ -146,11 +77,10 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
       schema,
       configurationDataByTypeName,
       costs,
-    };
-    return composedSubgraphPlugin;
+    } satisfies ComposedSubgraphPlugin;
   }
 
-  const composedSubgraphGRPC: ComposedSubgraphGRPC = {
+  return {
     kind: SubgraphKind.GRPC,
     id: `${index}`,
     name: s.name,
@@ -161,11 +91,99 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
     schema,
     configurationDataByTypeName,
     costs,
-  };
-  return composedSubgraphGRPC;
+  } satisfies ComposedSubgraphGRPC;
 }
 
-export default (opts: BaseCommandOptions) => {
+const featureFlagsDir = 'feature-flags';
+const mapperFile = 'mapper.json';
+const routerConfigFile = 'router-config.json';
+
+async function handleSplitRouterConfig({
+  config,
+  inputFileLocation,
+  options,
+  routerConfig,
+  subgraphs,
+}: HandleRouterConfigParams) {
+  let outputDir = options.out ? resolve(options.out) : options.out;
+  if (!outputDir) {
+    const defaultDirName = resolve('router-compose-output');
+    if (!existsSync(defaultDirName)) {
+      await mkdir(defaultDirName, { recursive: true });
+    }
+    outputDir = defaultDirName;
+  }
+  const entries = await readdir(outputDir);
+  if (entries.length > 0) {
+    console.log(
+      pc.red(
+        `Split-config flag enabled; output directory "${outputDir}" is not empty. Please provide an empty directory path.`,
+      ),
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  const routerConfigJSON = routerConfig.toJsonString();
+  const mapper = new Map<string, string>();
+  mapper.set('', createHash('sha256').update(routerConfigJSON).digest('hex'));
+  await writeFile(join(outputDir, routerConfigFile), routerConfigJSON);
+  if (!config.feature_flags || config.feature_flags.length < 1) {
+    await writeFile(join(outputDir, mapperFile), JSON.stringify(Object.fromEntries(mapper)));
+    return;
+  }
+
+  const ffConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
+  const ffDir = join(outputDir, featureFlagsDir);
+  try {
+    await mkdir(ffDir);
+  } catch {
+    console.log(
+      pc.red(
+        `Split-config flag enabled; output directory "${ffDir}" is not empty. Please provide an empty root directory path.`,
+      ),
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  for (const [featureFlagName, featureFlagConfig] of Object.entries(ffConfigs.configByFeatureFlagName)) {
+    const ffRouterConfig = new RouterConfig({
+      engineConfig: featureFlagConfig.engineConfig,
+      version: featureFlagConfig.version,
+      subgraphs: featureFlagConfig.subgraphs,
+      compatibilityVersion: routerConfig.compatibilityVersion,
+    });
+
+    const routerConfigJson = ffRouterConfig.toJsonString();
+    await writeFile(join(ffDir, `${featureFlagName}.json`), routerConfigJson);
+    mapper.set(featureFlagName, createHash('sha256').update(routerConfigJson).digest('hex'));
+  }
+
+  await writeFile(join(outputDir, mapperFile), JSON.stringify(Object.fromEntries(mapper)));
+  console.log(pc.green(`Router execution manifest successfully written to "${pc.bold(outputDir)}".`));
+}
+
+async function handleEmbeddedRouterConfig({
+  config,
+  inputFileLocation,
+  options,
+  routerConfig,
+  subgraphs,
+}: HandleRouterConfigParams) {
+  if (!config.feature_flags || config.feature_flags.length > 0) {
+    routerConfig.featureFlagConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
+  }
+  const routerConfigJson = routerConfig.toJsonString();
+  if (options.out) {
+    await writeFile(join(options.out, routerConfigFile), routerConfigJson);
+    console.log(pc.green(`Router execution config successfully written to "${pc.bold(options.out)}".`));
+  } else {
+    console.log(routerConfigJson);
+  }
+}
+
+export default (_: BaseCommandOptions) => {
   const command = new Command('compose');
   command.description(
     'Generates a router config from a local composition file. This makes it easy to test your router without a control-plane connection. For production, please use the "router fetch" command',
@@ -195,7 +213,7 @@ export default (opts: BaseCommandOptions) => {
 
     if (options.out) {
       options.out = resolve(options.out);
-      if (options.splitConfigsEnabled && !existsSync(options.out)) {
+      if (!options.splitConfigsEnabled) {
         await mkdir(options.out, { recursive: true });
       }
     }
@@ -203,7 +221,7 @@ export default (opts: BaseCommandOptions) => {
     const fileContent = (await readFile(inputFile)).toString();
     const config = yaml.load(fileContent) as Config;
 
-    const subgraphs: SubgraphMetadata[] = [];
+    const subgraphs: SubgraphMetaData[] = [];
 
     for (const [index, subgraphConfig] of config.subgraphs.entries()) {
       const metadata = await toSubgraphMetadata(inputFileLocation, index, subgraphConfig, subgraphs);
@@ -276,47 +294,10 @@ export default (opts: BaseCommandOptions) => {
       subgraphs: subgraphs.map((s, index) => constructRouterSubgraph(result, s, index)),
     });
 
-    const mapper = new Map<string, string>();
-    mapper.set('', createHash('sha256').update(routerConfig.toJsonString()).digest('hex'));
-
-    if (config.feature_flags && config.feature_flags.length > 0) {
-      const ffConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
-      if (!options.splitConfigsEnabled) {
-        routerConfig.featureFlagConfigs = ffConfigs;
-      } else if (ffConfigs.configByFeatureFlagName && options.out) {
-        const outDir = join(options.out, 'feature-flags');
-        if (!existsSync(outDir)) {
-          await mkdir(outDir, { recursive: true });
-        }
-
-        for (const [featureFlagName, featureFlagConfig] of Object.entries(ffConfigs.configByFeatureFlagName)) {
-          const ffRouterConfig = new RouterConfig({
-            engineConfig: featureFlagConfig.engineConfig,
-            version: featureFlagConfig.version,
-            subgraphs: featureFlagConfig.subgraphs,
-            compatibilityVersion: routerConfig.compatibilityVersion,
-          });
-
-          const routerConfigJson = ffRouterConfig.toJsonString();
-          await writeFile(join(outDir, `${featureFlagName}.json`), routerConfigJson);
-          mapper.set(featureFlagName, createHash('sha256').update(routerConfigJson).digest('hex'));
-        }
-      }
-    }
-
-    if (options.out) {
-      await writeFile(
-        options.splitConfigsEnabled ? join(options.out, 'router-config.json') : options.out,
-        routerConfig.toJsonString(),
-      );
-
-      if (options.splitConfigsEnabled && mapper.size > 0) {
-        await writeFile(join(options.out, 'mapper.json'), JSON.stringify(Object.fromEntries(mapper)));
-      }
-
-      console.log(pc.green(`Router config successfully written to ${pc.bold(options.out)}`));
+    if (options.splitConfigsEnabled) {
+      await handleSplitRouterConfig({ config, inputFileLocation, options, routerConfig, subgraphs });
     } else {
-      console.log(routerConfig.toJsonString());
+      await handleEmbeddedRouterConfig({ config, inputFileLocation, options, routerConfig, subgraphs });
     }
   });
 
@@ -327,8 +308,8 @@ function toSubgraphMetadata(
   inputFileLocation: string,
   index: number,
   subgraphConfig: ConfigSubgraph,
-  subgraphs: SubgraphMetadata[],
-): Promise<SubgraphMetadata> {
+  subgraphs: SubgraphMetaData[],
+): Promise<SubgraphMetaData> {
   if ('plugin' in subgraphConfig) {
     return toSubgraphMetadataPlugin(inputFileLocation, subgraphConfig, subgraphs);
   }
@@ -362,7 +343,7 @@ async function toSubgraphMetadataGRPC(inputFileLocation: string, s: GRPCSubgraph
 async function toSubgraphMetadataPlugin(
   inputFileLocation: string,
   s: SubgraphPluginConfig,
-  subgraphs: SubgraphMetadata[],
+  subgraphs: SubgraphMetaData[],
 ): Promise<SubgraphPluginMetadata> {
   const pluginName = basename(s.plugin.path);
   if (subgraphs.some((sg) => sg.kind === SubgraphKind.Plugin && sg.name === pluginName)) {
@@ -397,7 +378,7 @@ async function toSubgraphMetadataStandard(
   inputFileLocation: string,
   index: number,
   s: StandardSubgraphConfig,
-  subgraphs: SubgraphMetadata[],
+  subgraphs: SubgraphMetaData[],
 ): Promise<StandardSubgraphMetaData> {
   // The subgraph name is required
   if (!s.name) {
@@ -424,8 +405,7 @@ async function toSubgraphMetadataStandard(
   // The GraphQL schema is provided in the input file
   if (s.schema?.file) {
     const schemaFile = resolve(inputFileLocation, s.schema.file);
-    const sdl = (await readFile(schemaFile)).toString();
-    schemaSDL = sdl;
+    schemaSDL = (await readFile(schemaFile)).toString();
   } else {
     // The GraphQL schema is not provided in the input file, so we need to introspect it
     try {
@@ -554,7 +534,7 @@ function validateSubgraphPlugin(inputFileLocation: string, s: SubgraphPluginConf
 async function buildFeatureFlagsConfig(
   config: Config,
   inputFileLocation: string,
-  subgraphs: SubgraphMetadata[],
+  subgraphs: SubgraphMetaData[],
   options: any,
 ): Promise<FeatureFlagRouterExecutionConfigs> {
   const ffConfigs: FeatureFlagRouterExecutionConfigs = new FeatureFlagRouterExecutionConfigs();
@@ -562,7 +542,7 @@ async function buildFeatureFlagsConfig(
   // @TODO This logic should exist only once in the shared package and reused across
   // control-plane and cli
 
-  for (const ff of config.feature_flags) {
+  for (const ff of config.feature_flags ?? []) {
     const featureSubgraphs: StandardSubgraphMetaData[] = [];
     const standardSubgraphs = config.subgraphs.filter(
       (ss) => !('plugin' in ss) && !('grpc' in ss),
@@ -698,7 +678,7 @@ async function buildFeatureFlagsConfig(
         const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
         const costs = subgraphConfig?.costs;
 
-        const composedSubgraph: ComposedSubgraph = {
+        return {
           kind: SubgraphKind.Standard,
           id: `${index}`,
           name: s.name,
@@ -710,8 +690,7 @@ async function buildFeatureFlagsConfig(
           schema,
           configurationDataByTypeName,
           costs,
-        };
-        return composedSubgraph;
+        } satisfies ComposedSubgraph;
       }),
     });
 
