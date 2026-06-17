@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs';
 import { expect, test, describe } from 'bun:test';
 import { $ } from 'bun';
-import pc from 'picocolors';
 
 import packageJSON from '../package.json' with { type: 'json' };
 

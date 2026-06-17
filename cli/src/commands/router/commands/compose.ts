@@ -27,6 +27,7 @@ import Table from 'cli-table3';
 import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
+import { mapperFile, routerConfigFile, featureFlagsDir, getRouterConfigOutputFile } from '../utils.js';
 import {
   Config,
   ConfigSubgraph,
@@ -93,10 +94,6 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetaData,
     costs,
   } satisfies ComposedSubgraphGRPC;
 }
-
-const featureFlagsDir = 'feature-flags';
-const mapperFile = 'mapper.json';
-const routerConfigFile = 'router-config.json';
 
 async function handleSplitRouterConfig({
   config,
@@ -173,26 +170,10 @@ async function handleEmbeddedRouterConfig({
   if (!config.feature_flags || config.feature_flags.length > 0) {
     routerConfig.featureFlagConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
   }
+
   const routerConfigJson = routerConfig.toJsonString();
   if (options.out) {
-    let output: string = options.out;
-    /**
-     * If the provided output doesn't end with `.json`, assume it's a directory and append the filename; otherwise,
-     * if the directory doesn't exist, we need to create before writing the file
-     */
-    if (output.toLowerCase().endsWith('.json')) {
-      const dir = dirname(output);
-      if (!existsSync(dir)) {
-        await mkdir(dir, { recursive: true });
-      }
-    } else {
-      if (!existsSync(output)) {
-        await mkdir(output, { recursive: true });
-      }
-
-      output = join(options.out, routerConfigJson);
-    }
-
+    const output = await getRouterConfigOutputFile(options.out);
     await writeFile(output, routerConfigJson);
     console.log(pc.green(`Router execution config successfully written to "${pc.bold(options.out)}".`));
   } else {

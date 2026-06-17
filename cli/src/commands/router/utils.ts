@@ -1,16 +1,41 @@
+import { existsSync } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import jwtDecode from 'jwt-decode';
 import pc from 'picocolors';
-import { Client } from '../../core/client/client.js';
+import { dirname, join } from 'pathe';
 import { config, getBaseHeaders } from '../../core/config.js';
 import { GraphToken } from '../auth/utils.js';
 import { makeSignature, safeCompare } from '../../core/signature.js';
+import type { FetchRouterConfigResult } from './types/types.js';
+import type { FetchRouterConfigParams } from './types/params.js';
 
-export interface FetchRouterConfigResult {
-  splitConfigLoading: boolean;
-  routerConfig: string;
-  featureFlags?: Map<string, string>;
-  mapper?: Record<string, string>;
+export const featureFlagsDir = 'feature-flags';
+export const latestFile = 'latest.json';
+export const mapperFile = 'mapper.json';
+export const routerConfigFile = 'router-config.json';
+
+export async function getRouterConfigOutputFile(out: string): Promise<string> {
+  let output: string = out;
+
+  /**
+   * If the provided output doesn't end with `.json`, assume it's a directory and append the filename; otherwise,
+   * if the directory doesn't exist, we need to create before writing the file
+   */
+  if (output.toLowerCase().endsWith('.json')) {
+    const dir = dirname(output);
+    if (!existsSync(dir)) {
+      await mkdir(dir, { recursive: true });
+    }
+  } else {
+    if (!existsSync(output)) {
+      await mkdir(output, { recursive: true });
+    }
+
+    output = join(out, routerConfigFile);
+  }
+
+  return output;
 }
 
 export const fetchRouterConfig = async ({
@@ -18,12 +43,7 @@ export const fetchRouterConfig = async ({
   name,
   namespace,
   graphSignKey,
-}: {
-  client: Client;
-  name: string;
-  namespace?: string;
-  graphSignKey?: string;
-}): Promise<FetchRouterConfigResult> => {
+}: FetchRouterConfigParams): Promise<FetchRouterConfigResult> => {
   const resp = await client.platform.generateRouterToken(
     {
       fedGraphName: name,
