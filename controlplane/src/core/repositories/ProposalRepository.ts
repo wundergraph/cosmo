@@ -61,12 +61,12 @@ export class ProposalRepository {
     await this.db.insert(schema.proposalSubgraphs).values(
       proposalSubgraphs.map((subgraph) => ({
         proposalId: proposal[0].id,
-        subgraphId: subgraph.subgraphId,
+        subgraphId: subgraph.subgraphId || null,
         subgraphName: subgraph.subgraphName,
         schemaSDL: subgraph.schemaSDL || null,
         isDeleted: subgraph.isDeleted,
         isNew: subgraph.isNew,
-        currentSchemaVersionId: subgraph.currentSchemaVersionId,
+        currentSchemaVersionId: subgraph.currentSchemaVersionId || null,
         labels: subgraph.isNew ? normalizeLabels(subgraph.labels).map((l) => joinLabel(l)) : undefined,
       })),
     );
@@ -387,12 +387,12 @@ export class ProposalRepository {
       await this.db.insert(schema.proposalSubgraphs).values(
         proposalSubgraphs.map((subgraph) => ({
           proposalId: id,
-          subgraphId: subgraph.subgraphId,
+          subgraphId: subgraph.subgraphId || null,
           subgraphName: subgraph.subgraphName,
           schemaSDL: subgraph.schemaSDL || null,
           isDeleted: subgraph.isDeleted,
           isNew: subgraph.isNew,
-          currentSchemaVersionId: subgraph.currentSchemaVersionId,
+          currentSchemaVersionId: subgraph.currentSchemaVersionId || null,
           labels: subgraph.isNew ? normalizeLabels(subgraph.labels).map((l) => joinLabel(l)) : undefined,
         })),
       );
