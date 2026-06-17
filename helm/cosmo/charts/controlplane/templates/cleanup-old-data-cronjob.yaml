@@ -1,0 +1,63 @@
+{{ if .Values.jobs.cleanupOldData.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: "{{ include "controlplane.fullname" . }}-cleanup-old-data"
+  labels:
+    {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.cleanupOldData.additionalLabels "context" .) | nindent 4 }}
+spec:
+  schedule: {{ .Values.jobs.cleanupOldData.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      parallelism: 1
+      template:
+        metadata:
+          name: "{{ include "controlplane.fullname" . }}-cleanup-old-data"
+          labels:
+            {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.cleanupOldData.additionalLabels "context" .) | nindent 12 }}
+        spec:
+          restartPolicy: OnFailure
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: cleanup-old-data
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+              image: "{{ include "controlplane.image" . }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              env:
+                - name: DB_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "controlplane.secretName" . }}
+                      key: databaseUrl
+                {{- if .Values.configuration.databaseTlsCert }}
+                - name: DB_TLS_CERT
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "controlplane.secretName" . }}
+                      key: databaseTlsCert
+                {{- end }}
+                {{- if .Values.configuration.databaseTlsCa }}
+                - name: DB_TLS_CA
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "controlplane.secretName" . }}
+                      key: databaseTlsCa
+                {{- end }}
+                {{- if .Values.configuration.databaseTlsKey }}
+                - name: DB_TLS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "controlplane.secretName" . }}
+                      key: databaseTlsKey
+                {{- end }}
+              args:
+                - "/app/dist/bin/cleanup-old-data.js"
+{{- end }}
