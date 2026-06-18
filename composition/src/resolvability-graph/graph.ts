@@ -32,7 +32,6 @@ import {
 import { type EntityAncestorCollection } from './utils/types/types';
 
 export class Graph {
-  edgeId = -1;
   entityDataNodeByTypeName = new Map<TypeName, EntityDataNode>();
   nodeByNodeName = new Map<NodeName, GraphNode>();
   nodesByTypeName = new Map<TypeName, Array<GraphNode>>();
@@ -47,7 +46,12 @@ export class Graph {
   constructor() {}
 
   getRootNode(typeName: RootTypeName): RootNode {
-    return getValueOrDefault(this.rootNodeByTypeName, typeName, () => new RootNode(typeName));
+    let rootNode = this.rootNodeByTypeName.get(typeName);
+    if (!rootNode) {
+      rootNode = new RootNode(typeName);
+      this.rootNodeByTypeName.set(typeName, rootNode);
+    }
+    return rootNode;
   }
 
   addOrUpdateNode(typeName: TypeName, options?: GraphNodeOptions): GraphNode {
@@ -62,23 +66,29 @@ export class Graph {
     }
     const newNode = new GraphNode(this.subgraphName, typeName, options);
     this.nodeByNodeName.set(nodeName, newNode);
-    getValueOrDefault(this.nodesByTypeName, typeName, () => []).push(newNode);
+    let nodes = this.nodesByTypeName.get(typeName);
+    if (!nodes) {
+      nodes = [];
+      this.nodesByTypeName.set(typeName, nodes);
+    }
+    nodes.push(newNode);
     return newNode;
   }
 
   addEdge(headNode: GraphNode | RootNode, tailNode: GraphNode, fieldName: string, isAbstractEdge = false): Edge {
     if (headNode.isRootNode) {
-      const edge = new Edge(this.getNextEdgeId(), tailNode, fieldName);
-      getValueOrDefault((headNode as RootNode).headToSharedTailEdges, fieldName, () => []).push(edge);
+      const edge = new Edge(tailNode, fieldName);
+      const headToSharedTailEdges = (headNode as RootNode).headToSharedTailEdges;
+      let sharedTailEdges = headToSharedTailEdges.get(fieldName);
+      if (!sharedTailEdges) {
+        sharedTailEdges = [];
+        headToSharedTailEdges.set(fieldName, sharedTailEdges);
+      }
+      sharedTailEdges.push(edge);
       return edge;
     }
     const headGraphNode = headNode as GraphNode;
-    const headToTailEdge = new Edge(
-      this.getNextEdgeId(),
-      tailNode,
-      isAbstractEdge ? tailNode.typeName : fieldName,
-      isAbstractEdge,
-    );
+    const headToTailEdge = new Edge(tailNode, isAbstractEdge ? tailNode.typeName : fieldName, isAbstractEdge);
     headGraphNode.headToTailEdges.set(fieldName, headToTailEdge);
     return headToTailEdge;
   }
@@ -91,10 +101,6 @@ export class Graph {
     const newNode = new EntityDataNode(typeName);
     this.entityDataNodeByTypeName.set(typeName, newNode);
     return newNode;
-  }
-
-  getNextEdgeId() {
-    return (this.edgeId += 1);
   }
 
   getNextWalkerIndex() {
@@ -123,6 +129,13 @@ export class Graph {
     if (!nodes) {
       return;
     }
+    // Each node in `nodes` shares the same type name, so each sibling node can be retrieved by subgraph name alone.
+    const siblingNodeBySubgraphName = new Map<SubgraphName, GraphNode>();
+    if (entityDataNode) {
+      for (const node of nodes) {
+        siblingNodeBySubgraphName.set(node.subgraphName, node);
+      }
+    }
     for (const node of nodes) {
       node.fieldDataByName = fieldDataByName;
       node.handleInaccessibleEdges();
@@ -131,20 +144,26 @@ export class Graph {
         continue;
       }
       node.hasEntitySiblings = true;
+      if (!node.satisfiedFieldSets) {
+        continue;
+      }
       for (const fieldSet of node.satisfiedFieldSets) {
         // If the field set is unresolvable in the entity's own subgraph, it cannot be used to jump to other subgraphs.
-        if (node.externalFieldSets.has(fieldSet)) {
+        if (node.externalFieldSets?.has(fieldSet)) {
           continue;
         }
         const subgraphNames = entityDataNode.targetSubgraphNamesByFieldSet.get(fieldSet);
-        for (const subgraphName of subgraphNames ?? []) {
+        if (!subgraphNames) {
+          continue;
+        }
+        for (const subgraphName of subgraphNames) {
           // A subgraph should not jump to itself
           if (subgraphName === node.subgraphName) {
             continue;
           }
-          const siblingNode = this.nodeByNodeName.get(`${subgraphName}.${node.typeName}`);
+          const siblingNode = siblingNodeBySubgraphName.get(subgraphName);
           if (siblingNode) {
-            node.entityEdges.push(new Edge(this.getNextEdgeId(), siblingNode, ''));
+            (node.entityEdges ??= []).push(siblingNode);
           }
         }
       }
@@ -514,7 +533,7 @@ export class Graph {
         entityNodeName,
         'nodeByNodeName',
       );
-      for (const fieldSet of satisfiedFieldSets) {
+      for (const fieldSet of satisfiedFieldSets ?? []) {
         getValueOrDefault(sourceSubgraphNamesBySatisfiedFieldSet, fieldSet, () => []).push(subgraphName);
       }
       subgraphNames.push(subgraphName);

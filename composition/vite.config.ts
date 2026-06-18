@@ -4,5 +4,7 @@ export default defineConfig({
   test: {
     // Ensure always the CJS version is used otherwise we might conflict with multiple versions of graphql
     alias: [{ find: /^graphql$/, replacement: 'graphql/index.js' }],
+    // Generates the deterministic benchmark scenario when absent (gitignored; needed by differential tests).
+    globalSetup: ['./tests/global-setup.ts'],
   },
 });

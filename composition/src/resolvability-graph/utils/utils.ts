@@ -24,7 +24,7 @@ import { LITERAL_SPACE, QUOTATION_JOIN } from '../constants/string-constants';
 import { MAX_RESOLVABILITY_PATH_SIZE } from '../constants/number-constants';
 
 export type UnresolvableFieldData = {
-  externalSubgraphNames: Set<SubgraphName>;
+  externalSubgraphNames?: Set<SubgraphName>;
   fieldName: FieldName;
   selectionSet: string;
   subgraphNames: Set<SubgraphName>;
@@ -67,7 +67,7 @@ export function generateResolvabilityErrorReasons({
 }: GenerateResolvabilityErrorReasonsParams): Array<string> {
   const { externalSubgraphNames, fieldName, typeName, subgraphNames } = unresolvableFieldData;
   const reasons: Array<string> = [rootFieldData.message];
-  if (externalSubgraphNames.size > 0) {
+  if (externalSubgraphNames?.size) {
     const nonExternalSubgraphNames = subgraphNames.difference(externalSubgraphNames);
     reasons.push(
       `The field "${typeName}.${fieldName}" is defined (and resolvable) in the following subgraph` +
@@ -195,7 +195,7 @@ export function generateSharedResolvabilityErrorReasons({
   const { externalSubgraphNames, fieldName, typeName, subgraphNames } = unresolvableFieldData;
   const coords: FieldCoords = `${typeName}.${fieldName}`;
   const reasons: Array<string> = [rootFieldData.message];
-  if (externalSubgraphNames.size > 0) {
+  if (externalSubgraphNames?.size) {
     const nonExternalSubgraphNames = subgraphNames.difference(externalSubgraphNames);
     reasons.push(
       `The field "${typeName}.${fieldName}" is defined (and resolvable) in the following subgraph` +
