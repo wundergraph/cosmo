@@ -3531,6 +3531,11 @@
             "expose_headers": {
               "type": "boolean",
               "description": "Enable costs response headers for estimated and actuals operation costs."
+            },
+            "ignore_implementing_type_weights": {
+              "type": "boolean",
+              "default": false,
+              "description": "When enabled, ignores @cost weights from implementing types on abstract (interface/union) fields that have no weight of their own. Emulates Apollo's cost behavior."
             }
           }
         },
