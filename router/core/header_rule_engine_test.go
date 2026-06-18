@@ -353,7 +353,16 @@ func TestPropagatedHeaders(t *testing.T) {
 		})
 		require.Error(t, err)
 	})
-
+	t.Run("set with FromFile returns header name", func(t *testing.T) {
+		  t.Parallel()
+		  path := writeHeaderSourceFile(t, "secret-value")
+		  names, regexps, err := PropagatedHeaders([]*config.RequestHeaderRule{
+				  {Operation: config.HeaderRuleOperationSet, Name: "X-Secret", FromFile: &config.FileHeaderSource{Path: path}},
+		  })
+		  require.NoError(t, err)
+		  assert.Equal(t, []string{"X-Secret"}, names)
+		  assert.Nil(t, regexps)
+	})
 	t.Run("propagate with no name or match errors", func(t *testing.T) {
 		t.Parallel()
 		_, _, err := PropagatedHeaders([]*config.RequestHeaderRule{
