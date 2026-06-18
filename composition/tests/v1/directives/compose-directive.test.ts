@@ -1096,5 +1096,73 @@ describe('@composeDirective tests', () => {
       );
       expect(warnings).toHaveLength(0);
     });
+
+    test('BUG: @composeDirective usages are dropped when a higher-version subgraph that does not apply the directive is processed after one that does', () => {
+      /*
+       * `upsertFederatedDirectiveData` only keeps the highest directive version: when a higher version
+       * is seen, it replaces the entry with a fresh copy of that subgraph's directive data, discarding
+       * the `isReferenced` flag aggregated from earlier subgraphs. So if the directive is applied only
+       * in a lower-version subgraph, a higher-version subgraph that composes but never applies it resets
+       * `isReferenced` to false, resulting in every usage of the directive being silently stripped at render time.
+       */
+      const appliesV1 = createSubgraph(
+        'appliesV1',
+        `
+        schema
+        @link(import: ["@a"], url: "https://a/a/v1.0")
+        @composeDirective(name: "@a") {
+          query: Query
+        }
+        
+        directive @a on FIELD_DEFINITION
+        
+        type Query {
+          first: ID @a
+        }
+        `,
+      );
+      const composesHigherButDoesNotApply = createSubgraph(
+        'composesHigherButDoesNotApply',
+        `
+        schema
+        @link(import: ["@a"], url: "https://a/a/v1.1")
+        @composeDirective(name: "@a") {
+          query: Query
+        }
+        
+        directive @a on FIELD_DEFINITION
+        
+        type Query {
+          second: ID
+        }
+        `,
+      );
+      const expected = normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        directive @a on FIELD_DEFINITION
+        
+        type Query {
+          first: ID @a
+          second: ID
+        }
+      `,
+      );
+      // Sanity check: when the higher (non-applying) version is processed first, composition is correct.
+      const higherFirst = federateSubgraphsSuccess(
+        [composesHigherButDoesNotApply, appliesV1],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(higherFirst.federatedGraphSchema)).toBe(expected);
+      expect(higherFirst.warnings).toHaveLength(0);
+      // Bug: when the applying (lower) version is processed first, the higher version resets
+      // `isReferenced` to false and `@a` is silently stripped.
+      const appliesFirst = federateSubgraphsSuccess(
+        [appliesV1, composesHigherButDoesNotApply],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(appliesFirst.federatedGraphSchema)).toBe(expected);
+      expect(appliesFirst.warnings).toHaveLength(0);
+    });
   });
 });
