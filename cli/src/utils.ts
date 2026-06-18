@@ -457,6 +457,23 @@ const gradientStops: [number, number, number][] = [
   [180, 100, 255], // purple
 ];
 
+/**
+ * JSON.stringify replacer that strips protobuf-es v2 internal fields
+ * (`$typeName`, `$unknown`) from message objects, so CLI `--json` output stays a
+ * clean, user-facing shape. It runs for every nested object too, so nested
+ * messages are handled as well.
+ */
+export function stripProtobufInternals(_key: string, value: unknown): unknown {
+  if (value != null && typeof value === 'object' && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    if ('$typeName' in record || '$unknown' in record) {
+      const { $typeName, $unknown, ...rest } = record;
+      return rest;
+    }
+  }
+  return value;
+}
+
 function interpolateColor(t: number): [number, number, number] {
   const segment = t * (gradientStops.length - 1);
   const i = Math.min(Math.floor(segment), gradientStops.length - 2);

@@ -15,7 +15,7 @@ import type {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { SubgraphCommandJsonOutput } from './core/types/types.js';
-import { printTruncationWarning } from './utils.js';
+import { printTruncationWarning, stripProtobufInternals } from './utils.js';
 
 export function handleCompositionResult({
   totalErrorCounts,
@@ -68,7 +68,7 @@ export function handleCompositionResult({
         if (!suppressWarnings) {
           successMessageJson.compositionWarnings = compositionWarnings;
         }
-        console.log(JSON.stringify(successMessageJson));
+        console.log(JSON.stringify(successMessageJson, stripProtobufInternals));
       } else {
         spinner.succeed(successMessage);
       }
@@ -85,7 +85,7 @@ export function handleCompositionResult({
         if (!suppressWarnings) {
           compositionFailedMessageJson.compositionWarnings = compositionWarnings;
         }
-        console.log(JSON.stringify(compositionFailedMessageJson));
+        console.log(JSON.stringify(compositionFailedMessageJson, stripProtobufInternals));
       } else {
         spinner.fail(subgraphCompositionBaseErrorMessage);
 
@@ -138,7 +138,7 @@ export function handleCompositionResult({
         if (!suppressWarnings) {
           deploymentFailedMessageJson.compositionWarnings = compositionWarnings;
         }
-        console.log(JSON.stringify(deploymentFailedMessageJson));
+        console.log(JSON.stringify(deploymentFailedMessageJson, stripProtobufInternals));
       } else {
         spinner.warn(deploymentErrorMessage);
 
@@ -191,7 +191,7 @@ export function handleCompositionResult({
         if (!suppressWarnings) {
           defaultErrorMessageJson.compositionWarnings = compositionWarnings;
         }
-        console.log(JSON.stringify(defaultErrorMessageJson));
+        console.log(JSON.stringify(defaultErrorMessageJson, stripProtobufInternals));
       } else {
         spinner.fail(defaultErrorMessage);
         if (responseDetails) {
