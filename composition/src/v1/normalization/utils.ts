@@ -535,6 +535,8 @@ export function upsertFederatedDirectiveData({
       continue;
     }
 
+    existingData.isReferenced ||= directiveData.isReferenced;
+
     /* If at least one subgraph includes the directive name in a `@composeDirective` directive, the definition of
      * the custom directive should be propagated in the federated graph.
      * The directive itself must be referenced in at least once in one of those subgraphs to propagate also the usages
