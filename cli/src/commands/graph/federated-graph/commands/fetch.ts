@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { Command } from 'commander';
 import yaml from 'js-yaml';
 import { join, resolve } from 'pathe';
@@ -48,6 +48,13 @@ export default (opts: BaseCommandOptions) => {
       basePath = join(basePath, `${name}${options.namespace ? `-${options.namespace}` : ''}`);
       if (!existsSync(basePath)) {
         await mkdir(basePath, { recursive: true });
+      }
+
+      const entries = await readdir(basePath);
+      if (entries.length > 0) {
+        console.log(pc.red(`Output directory "${basePath}" is not empty. Please provide an empty directory path.`));
+        process.exitCode = 1;
+        return;
       }
 
       const superGraphPath = join(basePath, '/supergraph/');
