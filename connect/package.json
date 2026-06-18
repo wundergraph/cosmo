@@ -23,8 +23,8 @@
     }
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^2.2.2",
-    "@connectrpc/connect-query": "^2.0.0"
+    "@bufbuild/protobuf": "catalog:",
+    "@connectrpc/connect-query": "catalog:"
   },
   "devDependencies": {
     "del-cli": "catalog:",

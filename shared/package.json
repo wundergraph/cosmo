@@ -33,7 +33,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@bufbuild/protobuf": "^2.2.2",
+    "@bufbuild/protobuf": "catalog:",
     "@graphql-tools/schema": "^8.5.1",
     "@graphql-tools/utils": "catalog:",
     "@wundergraph/composition": "workspace:*",
