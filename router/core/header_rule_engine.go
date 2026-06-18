@@ -1059,7 +1059,7 @@ func PropagatedHeaders(rules []*config.RequestHeaderRule) (headerNames []string,
 	for _, rule := range rules {
 		switch rule.Operation {
 		case config.HeaderRuleOperationSet:
-			if rule.Name == "" || (rule.Value == "" && rule.ValueFrom == nil && rule.Expression == "") {
+			if rule.Name == "" || (rule.Value == "" && rule.ValueFrom == nil && rule.Expression == "" && rule.FromFile == nil) {
 				return nil, nil, fmt.Errorf("invalid header set rule %+v, no header name/value combination", rule)
 			}
 			headerNames = append(headerNames, rule.Name)
