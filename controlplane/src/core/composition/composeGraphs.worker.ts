@@ -10,6 +10,8 @@
  * to `.ts` source files, so only `import type` (which is erased at runtime)
  * is safe for local modules. Value imports from npm packages are fine.
  */
+import { randomUUID } from 'node:crypto';
+import os from 'node:os';
 import { create, fromJson, toJson, type JsonValue } from '@bufbuild/protobuf';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import * as Sentry from '@sentry/node';
@@ -31,8 +33,6 @@ import {
 import type { RouterSubgraph } from '@wundergraph/cosmo-shared';
 import { buildRouterConfig, SubgraphKind } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
-import { randomUUID } from 'node:crypto';
-import os from 'node:os';
 import { workerId } from 'tinypool';
 import { z } from 'zod';
 import type { SubgraphDTO } from '../../types/index.js';

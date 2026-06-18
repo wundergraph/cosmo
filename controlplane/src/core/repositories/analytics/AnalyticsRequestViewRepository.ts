@@ -5,7 +5,7 @@ import {
   AnalyticsViewGroupName,
   AnalyticsViewRowValue,
   CustomOptions,
-  Unit
+  Unit,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { PlainMessage } from '../../../types/index.js';
 import { ClickHouseClient } from '../../clickhouse/index.js';

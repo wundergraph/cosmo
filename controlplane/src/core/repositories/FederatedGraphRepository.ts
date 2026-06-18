@@ -1,4 +1,5 @@
 /* eslint-disable no-labels */
+import { KeyObject } from 'node:crypto';
 import type { Warning } from '@wundergraph/composition';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import {
@@ -22,7 +23,6 @@ import {
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
-import { KeyObject } from 'node:crypto';
 import { uid } from 'uid/secure';
 import * as schema from '../../db/schema.js';
 import {
@@ -45,7 +45,7 @@ import {
   FederatedGraphListFilterOptions,
   GraphApiKeyDTO,
   Label,
-  RouterRequestKeysDTO
+  RouterRequestKeysDTO,
 } from '../../types/index.js';
 import { CompositionSubgraphRecord } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
