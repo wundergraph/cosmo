@@ -6,6 +6,12 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Client } from '../../../core/client/client.js';
 import { getBaseHeaders } from '../../../core/config.js';
 
+const EXPECTED_STATUS_CODES = new Set([
+  EnumStatusCode.OK,
+  EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
+  EnumStatusCode.ERR_DEPLOYMENT_FAILED,
+]);
+
 export async function pollBatchPublishStatus(
   client: Client,
   jobId: string,
@@ -15,7 +21,8 @@ export async function pollBatchPublishStatus(
   const headers = getBaseHeaders();
   while (!signal.aborted) {
     const resp = await client.platform.getBatchPublishJobStatus({ jobId }, { headers, signal });
-    if (resp.response?.code !== EnumStatusCode.OK) {
+    const respCode = resp.response?.code;
+    if (respCode === undefined || !EXPECTED_STATUS_CODES.has(respCode)) {
       return new PublishFederatedSubgraphsResponse({
         response: resp.response,
       });
