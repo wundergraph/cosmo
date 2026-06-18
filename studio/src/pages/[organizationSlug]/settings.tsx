@@ -108,7 +108,7 @@ const OrganizationDetails = () => {
       {
         onSuccess: (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            router.replace(`/${data.organizationSlug}/settings`);
+            router.replace(`/${encodeURIComponent(data.organizationSlug)}/settings`);
             toast({
               description: 'Organization details updated successfully.',
               duration: 3000,
