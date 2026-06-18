@@ -60,6 +60,10 @@ Once a provider is defined, you reference it by `provider_id` in the configurati
 * [**Execution config**](/router/configuration#execution-config-options) — load the router execution configuration from S3 instead of the Cosmo CDN.
 * [**Persisted operations**](/router/persisted-queries/persisted-operations#using-a-custom-storage-provider) — load individual persisted operations or the PQL manifest from S3.
 
+## Configuration via environment variables
+
+Storage providers can also be configured entirely through environment variables using indexed notation. This is useful in containerized deployments or when secrets should not live in config files. See the [configuration reference](/router/configuration#storage-providers) for the full list of environment variables for each provider type.
+
 ## Best Practices
 
 * Create different S3 credentials for READ and WRITE to reduce the attack surface.

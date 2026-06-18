@@ -90,7 +90,8 @@
             "server\\.uptime"
           ],
           "IncludeMetrics": null
-        }
+        },
+        "ExemplarFilter": "trace_based"
       },
       "Prometheus": {
         "Enabled": true,
@@ -119,7 +120,8 @@
             "Interval": 2000000000,
             "ExportTimeout": 10000000000
           }
-        }
+        },
+        "ExemplarFilter": "trace_based"
       },
       "CardinalityLimit": 2000
     }
@@ -180,6 +182,24 @@
           "InsecureSkipCaVerification": false
         }
       }
+    },
+    "ClientGRPC": {
+      "All": {
+        "CertFile": "/path/to/grpc-client.crt",
+        "KeyFile": "/path/to/grpc-client.key",
+        "CaFile": "/path/to/grpc-ca.crt",
+        "InsecureSkipCaVerification": false,
+        "Enabled": true
+      },
+      "Subgraphs": {
+        "my-grpc-subgraph": {
+          "CertFile": "/path/to/my-grpc-subgraph-client.crt",
+          "KeyFile": "/path/to/my-grpc-subgraph-client.key",
+          "CaFile": "/path/to/my-grpc-subgraph-ca.crt",
+          "InsecureSkipCaVerification": false,
+          "Enabled": true
+        }
+      }
     }
   },
   "CacheControl": {
@@ -209,7 +229,23 @@
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
     "RouterURL": "https://cosmo-router.wundergraph.com",
-    "OmitToolNamePrefix": false
+    "OmitToolNamePrefix": false,
+    "OAuth": {
+      "Enabled": false,
+      "JWKS": null,
+      "AuthorizationServerURL": "",
+      "Scopes": {
+        "Initialize": null,
+        "ToolsList": null,
+        "ToolsCall": null,
+        "ExecuteGraphQL": null,
+        "GetOperationInfo": null,
+        "GetSchema": null
+      },
+      "ScopeChallengeIncludeTokenScopes": false,
+      "MaxScopeCombinations": 2048
+    },
+    "ResourceDocumentation": ""
   },
   "ConnectRPC": {
     "Enabled": false,
@@ -241,7 +277,8 @@
           "Name": "",
           "Value": "",
           "Expression": "",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
         },
         {
           "Operation": "propagate",
@@ -253,7 +290,8 @@
           "Name": "",
           "Value": "",
           "Expression": "",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
         },
         {
           "Operation": "propagate",
@@ -265,7 +303,8 @@
           "Name": "",
           "Value": "",
           "Expression": "",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
         },
         {
           "Operation": "set",
@@ -277,7 +316,8 @@
           "Name": "X-API-Key",
           "Value": "some-secret",
           "Expression": "",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
         },
         {
           "Operation": "set",
@@ -294,7 +334,8 @@
             "ContextField": "operation_name",
             "ResponseHeader": "",
             "Expression": ""
-          }
+          },
+          "FromFile": null
         },
         {
           "Operation": "set",
@@ -306,7 +347,24 @@
           "Name": "x-expression-header",
           "Value": "",
           "Expression": "request.header.Get('X-Operation-Name')",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
+        },
+        {
+          "Operation": "set",
+          "Matching": "",
+          "NegateMatch": false,
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "x-from-file-header",
+          "Value": "",
+          "Expression": "",
+          "ValueFrom": null,
+          "FromFile": {
+            "Path": "/etc/secrets/api-key",
+            "RefreshInterval": 60000000000
+          }
         }
       ],
       "Response": [
@@ -336,7 +394,8 @@
             "Name": "",
             "Value": "",
             "Expression": "",
-            "ValueFrom": null
+            "ValueFrom": null,
+            "FromFile": null
           }
         ],
         "Response": [
@@ -602,6 +661,7 @@
           "Audiences": null
         }
       ],
+      "ScopeClaim": "customscp",
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
       "HeaderSources": [
@@ -673,6 +733,7 @@
           "ID": "default",
           "URL": "nats://localhost:4222",
           "Authentication": null,
+          "TLS": null,
           "DeleteDurableConsumersOnShutdown": false
         },
         {
@@ -685,6 +746,7 @@
             },
             "Token": null
           },
+          "TLS": null,
           "DeleteDurableConsumersOnShutdown": false
         }
       ],
@@ -738,6 +800,7 @@
     },
     "Workers": 8,
     "ItemsPerSecond": 50,
+    "ItemDelay": 0,
     "Timeout": 30000000000,
     "InMemoryFallback": true
   },
@@ -780,6 +843,7 @@
       "CacheSize": 1024
     },
     "ComplexityLimits": {
+      "Mode": "enforce",
       "Depth": {
         "Enabled": true,
         "Limit": 5,
@@ -841,16 +905,10 @@
     "EnableInboundRequestDeduplication": true,
     "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
+    "ForceUnauthenticatedRequestTracing": false,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 32,
     "EnableNetPoll": true,
-    "WebSocketClientPollTimeout": 1000000000,
-    "WebSocketClientConnBufferSize": 128,
-    "WebSocketClientReadTimeout": 5000000000,
-    "WebSocketClientWriteTimeout": 10000000000,
-    "WebSocketClientPingInterval": 10000000000,
-    "WebSocketClientPingTimeout": 30000000000,
-    "WebSocketClientFrameTimeout": 100000000,
     "ExecutionPlanCacheSize": 1024,
     "SlowPlanCacheSize": 300,
     "SlowPlanCacheThreshold": 100000000,
@@ -868,6 +926,15 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "WebSocketServerReadTimeout": 5000000000,
+    "WebSocketServerWriteTimeout": 10000000000,
+    "WebSocketServerPollTimeout": 1000000000,
+    "WebSocketServerConnBufferSize": 128,
+    "WebSocketClientWriteTimeout": 10000000000,
+    "WebSocketClientReadLimit": 1000000,
+    "WebSocketClientPingInterval": 10000000000,
+    "WebSocketClientPingTimeout": 30000000000,
+    "WebSocketClientAckTimeout": 30000000000,
     "ValidateRequiredExternalFields": false,
     "RelaxSubgraphOperationFieldSelectionMergingNullability": false
   },
@@ -927,6 +994,14 @@
     ],
     "AllowedFields": null
   },
+  "SubgraphExtensionPropagation": {
+    "Enabled": true,
+    "AllowedExtensionFields": [
+      "rateLimit",
+      "auth"
+    ],
+    "Algorithm": "last_write"
+  },
   "StorageProviders": {
     "S3": [
       {
@@ -971,7 +1046,21 @@
       "Enabled": false,
       "ProviderID": "",
       "ObjectPath": ""
+    },
+    "Manifest": {
+      "Path": "",
+      "SkipMissingFeatureFlags": false,
+      "IgnoredFeatureFlags": null,
+      "Watch": false,
+      "WatchInterval": 1000000000
     }
+  },
+  "SplitConfigPoller": {
+    "SkipMissingFeatureFlags": true,
+    "IgnoredFeatureFlags": [
+      "experimental-checkout",
+      "ab-test-foo"
+    ]
   },
   "PersistedOperationsConfig": {
     "Disabled": false,
@@ -1053,7 +1142,8 @@
     "Enabled": true,
     "Path": "some/path/to/plugins",
     "Registry": {
-      "URL": "cosmo-registry.wundergraph.com"
+      "URL": "cosmo-registry.wundergraph.com",
+      "Insecure": false
     }
   },
   "WatchConfig": {

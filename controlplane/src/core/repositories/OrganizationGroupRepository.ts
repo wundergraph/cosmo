@@ -5,7 +5,9 @@ import { OrganizationGroupDTO } from '../../types/index.js';
 import { OrganizationRole } from '../../db/models.js';
 import { organizationRoleEnum } from '../../db/schema.js';
 import { defaultGroupDescription } from '../test-util.js';
+import { traced } from '../tracing.js';
 
+@traced
 export class OrganizationGroupRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 

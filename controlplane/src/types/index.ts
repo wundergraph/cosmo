@@ -1,8 +1,14 @@
 import type { Message } from '@bufbuild/protobuf';
-import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  CompositionError,
+  CompositionWarning,
+  DeploymentError,
+  LintSeverity,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
 import { DBSubgraphType, GraphPruningRuleEnum, OrganizationRole, ProposalMatch, ProposalOrigin } from '../db/models.js';
 import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
+import { ComposeGraphsTaskResultItem } from '../core/composition/composeGraphs.types.js';
 
 /**
  * Utility type that strips protobuf-es V2 message metadata ($typeName, $unknown)
@@ -29,6 +35,7 @@ type PlainField<F> =
           : F;
 
 export const COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID = 'composition-ignore-external-keys';
+export const SPLIT_CONFIG_LOADING_FEATURE_ID = 'split-config-loading';
 
 export type FeatureIds =
   | 'users'
@@ -40,11 +47,13 @@ export type FeatureIds =
   | 'trace-sampling-rate'
   | 'requests'
   | 'feature-flags'
+  | 'persisted-operations'
   // Boolean features
   | 'ai'
   | 'cache-warmer'
   | 'composition-ignore-external-keys' // COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID
   | 'field-pruning-grace-period'
+  | 'login-method-restrictions'
   | 'oidc'
   | 'plugins'
   | 'proposals'
@@ -53,7 +62,8 @@ export type FeatureIds =
   | 'security'
   | 'sso'
   | 'subgraph-check-extensions'
-  | 'support';
+  | 'support'
+  | 'split-config-loading';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -507,6 +517,9 @@ export type UserInfoEndpointResponse = {
   family_name: string;
   email: string;
   groups: string[];
+  // Set by the realm-level `identity_provider` protocol mapper when the user
+  // federated through a broker IdP. Absent for direct username/password logins.
+  identity_provider?: string;
 };
 
 export type AuthContext = {
@@ -518,11 +531,21 @@ export type AuthContext = {
   rbac: RBACEvaluator;
   userDisplayName: string;
   apiKeyName?: string;
+  loginMethod?: LoginMethod;
 };
+
+/**
+ * The outcome of evaluating the IdP namespace gate for a login method:
+ * - `all`        — no gate applies; every namespace is reachable.
+ * - `none`       — the login method is allowed in no namespace.
+ * - `restricted` — reachable only in `namespaceIds`.
+ */
+export type NamespaceAccess = { kind: 'all' } | { kind: 'none' } | { kind: 'restricted'; namespaceIds: Set<string> };
 
 export interface GraphApiKeyJwtPayload extends JWTPayload {
   federated_graph_id: string;
   organization_id: string;
+  features?: string[];
 }
 
 export interface PluginAccess {
@@ -570,6 +593,16 @@ export interface ClientDTO {
   lastUpdatedBy: string;
 }
 
+export interface ClientDTOWithOperationMetadata {
+  id: string;
+  name: string;
+  createdAt: string;
+  createdBy: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+  persistedOperationsCount: number;
+}
+
 export interface PersistedOperationWithClientDTO {
   id: string;
   operationId: string;
@@ -613,6 +646,7 @@ export interface UpdatedPersistedOperation {
 export interface GraphCompositionDTO {
   id: string;
   schemaVersionId: string;
+  targetId?: string;
   createdAt: string;
   createdBy?: string;
   compositionErrors?: string;
@@ -829,3 +863,28 @@ export interface ProposalSubgraphDTO {
   isNew: boolean;
   labels: Label[];
 }
+
+export interface ComposeAndDeployResult {
+  deploymentErrors: PlainMessage<DeploymentError>[];
+  compositionErrors: PlainMessage<CompositionError>[];
+  compositionWarnings: PlainMessage<CompositionWarning>[];
+}
+
+export interface OrganizationFeatures {
+  ignoreExternalKeys: boolean;
+  splitConfigLoading: boolean;
+}
+
+export interface FederatedGraphAndCompositionResults {
+  federatedGraph: FederatedGraphDTO;
+  results: ComposeGraphsTaskResultItem[];
+}
+
+export const SOCIAL_LOGIN_PROVIDERS = ['google', 'github'] as const;
+export type SocialLoginProvider = (typeof SOCIAL_LOGIN_PROVIDERS)[number];
+
+export type LoginMethod =
+  | { type: 'sso'; ssoProviderId: string; alias: string }
+  | { type: 'social'; provider: SocialLoginProvider; alias: string }
+  | { type: 'password' }
+  | { type: 'api-key' };

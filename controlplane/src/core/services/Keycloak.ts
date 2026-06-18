@@ -4,16 +4,32 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { uid } from 'uid';
 import { FastifyBaseLogger } from 'fastify';
 import { decodeJwt } from 'jose';
+import axios, { type AxiosInstance, isAxiosError, isCancel } from 'axios';
+import { HttpProxyAgent } from 'http-proxy-agent';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import { MemberRole } from '../../db/models.js';
 import { organizationRoleEnum } from '../../db/schema.js';
-import { AuthenticationError } from '../errors/errors.js';
+import { AuthenticationError, PublicError } from '../errors/errors.js';
+import { isValidLocalhostOrSecureEndpoint } from '../util.js';
+import { traced } from '../tracing.js';
 
+interface ParsedOpenIdConfiguration {
+  issuer?: string;
+  userinfo_endpoint?: string;
+  token_endpoint?: string;
+  authorization_endpoint?: string;
+  end_session_endpoint?: string;
+  jwks_uri?: string;
+}
+
+@traced
 export default class Keycloak {
   client: KeycloakAdminClient;
   adminUser = '';
   adminPassword = '';
   clientId = '';
   realm = '';
+  #httpClient: AxiosInstance;
 
   private logger: FastifyBaseLogger;
 
@@ -24,6 +40,7 @@ export default class Keycloak {
     adminUser: string;
     adminPassword: string;
     logger: FastifyBaseLogger;
+    webhookProxyUrl?: string;
   }) {
     this.client = new KeycloakAdminClient({
       baseUrl: options.apiUrl,
@@ -35,6 +52,24 @@ export default class Keycloak {
     this.adminUser = options.adminUser;
     this.adminPassword = options.adminPassword;
     this.logger = options.logger;
+
+    let httpAgent: HttpProxyAgent<string> | undefined;
+    let httpsAgent: HttpsProxyAgent<string> | undefined;
+    if (options.webhookProxyUrl) {
+      try {
+        httpAgent = new HttpProxyAgent(options.webhookProxyUrl, {});
+        httpsAgent = new HttpsProxyAgent(options.webhookProxyUrl, {});
+      } catch (e) {
+        this.logger.error(e, 'Failed to create proxy agent');
+      }
+    }
+
+    this.#httpClient = axios.create({
+      httpAgent,
+      httpsAgent,
+      proxy: false,
+      baseURL: options.apiUrl,
+    });
   }
 
   public async authenticateClient() {
@@ -255,6 +290,7 @@ export default class Keycloak {
     name,
     alias,
     discoveryEndpoint,
+    abortSignal,
   }: {
     realm?: string;
     clientId: string;
@@ -262,12 +298,21 @@ export default class Keycloak {
     name: string;
     alias: string;
     discoveryEndpoint: string;
+    abortSignal?: AbortSignal;
   }) {
-    const oidcUrls = await this.client.identityProviders.importFromUrl({
-      realm: realm || this.realm,
-      fromUrl: discoveryEndpoint,
-      providerId: 'oidc',
-    });
+    const openIdConfiguration = await this.#fetchOpenIdConfiguration(discoveryEndpoint, abortSignal);
+    if (
+      typeof openIdConfiguration !== 'object' ||
+      typeof openIdConfiguration?.token_endpoint !== 'string' ||
+      !isValidLocalhostOrSecureEndpoint(openIdConfiguration.token_endpoint) ||
+      typeof openIdConfiguration.authorization_endpoint !== 'string' ||
+      !isValidLocalhostOrSecureEndpoint(openIdConfiguration.authorization_endpoint)
+    ) {
+      throw new PublicError(
+        EnumStatusCode.ERR,
+        'The provided OpenID configuration does not contain a valid token or authorization endpoint.',
+      );
+    }
 
     await this.client.identityProviders.create({
       alias,
@@ -279,11 +324,12 @@ export default class Keycloak {
         hideOnLoginPage: true,
         syncMode: 'FORCE',
         validateSignature: 'true',
-        tokenUrl: oidcUrls.tokenUrl,
-        authorizationUrl: oidcUrls.authorizationUrl,
-        jwksUrl: oidcUrls.jwksUrl,
-        logoutUrl: oidcUrls.logoutUrl,
-        issuer: oidcUrls.issuer,
+        tokenUrl: openIdConfiguration.token_endpoint,
+        authorizationUrl: openIdConfiguration.authorization_endpoint,
+        jwksUrl: openIdConfiguration.jwks_uri,
+        logoutUrl: openIdConfiguration.end_session_endpoint,
+        userInfoUrl: openIdConfiguration.userinfo_endpoint,
+        issuer: openIdConfiguration.issuer,
         useJwksUrl: 'true',
         defaultScope: 'openid email profile',
       },
@@ -460,16 +506,107 @@ export default class Keycloak {
     userID: string;
   }) {
     // Delete from the root organization group
-    await this.client.users.delFromGroup({ id: userID, groupId, realm: realm || this.realm });
+    await this.client.users.delFromGroup({
+      id: userID,
+      groupId,
+      realm: realm || this.realm,
+    });
 
     // And any subgroup
-    const subGroups = await this.fetchAllSubGroups({ realm: realm || this.realm, kcGroupId: groupId });
+    const subGroups = await this.fetchAllSubGroups({
+      realm: realm || this.realm,
+      kcGroupId: groupId,
+    });
     for (const subGroup of subGroups) {
       await this.client.users.delFromGroup({
         id: userID,
         groupId: subGroup.id!,
         realm: realm || this.realm,
       });
+    }
+  }
+
+  /**
+   * This method retrieves the OpenID Configuration from the provided discovery endpoint.
+   *
+   * The reason to introduce this method is to have more control over how we fetch the configuration, such as
+   * providing a custom cancellation signal and custom timeout so we try to minimize the workload sent to Keycloak,
+   * and we don't run into long wait times when the provided endpoint is a valid endpoint but unreachable.
+   *
+   * @param discoveryEndpoint The endpoint to fetch the OpenID Configuration from.
+   * @param signal AbortSignal to allow for cancellation of the request.
+   * @private
+   */
+  async #fetchOpenIdConfiguration(
+    discoveryEndpoint: string,
+    signal: AbortSignal | undefined,
+  ): Promise<ParsedOpenIdConfiguration> {
+    try {
+      const response = await this.#httpClient.get(discoveryEndpoint, {
+        signal,
+        timeout: 10_000,
+        maxBodyLength: 3 * 1024 * 1024, // ~3mb
+        validateStatus: (_) => true,
+      });
+
+      if (response.status !== 200) {
+        throw new PublicError(
+          EnumStatusCode.ERR,
+          `Unexpected status code received from discovery endpoint: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      // Make sure that the discovery endpoint returned a valid JSON response
+      let data = response.data;
+      if (typeof data === 'object') {
+        // No need to parse the data
+      } else if (typeof data === 'string') {
+        try {
+          data = JSON.parse(data);
+        } catch {
+          // Failed to parse the response as JSON
+          throw new PublicError(
+            EnumStatusCode.ERR,
+            'Failed to parse response from the provided discovery endpoint as JSON.',
+          );
+        }
+      } else {
+        // Invalid response format
+        throw new PublicError(
+          EnumStatusCode.ERR,
+          'Failed to parse response from the provided discovery endpoint as JSON.',
+        );
+      }
+
+      // Cast the data to the expected type
+      return data as ParsedOpenIdConfiguration;
+    } catch (e: unknown) {
+      if (isCancel(e)) {
+        // The user canceled the request
+        throw new PublicError(EnumStatusCode.ERR, 'Request cancelled by user');
+      } else if (isAxiosError(e)) {
+        let message: string;
+        switch (e.code) {
+          case 'ECONNREFUSED': {
+            message =
+              'The discovery endpoint could not be reached. Please, make sure that the discovery endpoint is correct and reachable.';
+            break;
+          }
+          case 'ECONNABORTED': {
+            message =
+              'The discovery endpoint did not respond within the time limit. Please, make sure that he discovery endpoint is correct and reachable.';
+            break;
+          }
+          default: {
+            message = e.message;
+            break;
+          }
+        }
+
+        throw new PublicError(EnumStatusCode.ERR, message);
+      }
+
+      throw e;
     }
   }
 }

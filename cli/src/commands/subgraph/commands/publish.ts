@@ -152,7 +152,8 @@ export default (opts: BaseCommandOptions) => {
         spinner.fail(`Failed to publish subgraph "${name}".`);
         console.log(pc.red(`Error: Proposal match failed`));
         console.log(pc.red(resp.proposalMatchMessage));
-        break;
+        process.exitCode = 1;
+        return;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
         spinner.warn('Subgraph published but with composition errors.');

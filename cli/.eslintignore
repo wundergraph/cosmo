@@ -1,4 +1,4 @@
 dist
 .output
-node-modules
+node_modules
 gen

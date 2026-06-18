@@ -195,6 +195,18 @@ configuration:
   s3SecretAccessKey: ''
   # -- Forces usage of path style urls for S3. Default is true.
   s3ForcePathStyle: 'true'
+  # -- The url of S3-compatible storage for backup/failover purposes. If not defined, failover is not used.
+  s3FailoverStorageUrl: ''
+  # -- The region where the S3 failover bucket is located.
+  s3FailoverRegion: ''
+  # -- The endpoint of the S3 failover bucket.
+  s3FailoverEndpoint: ''
+  # -- S3 failover access key id, can be used instead of [username]:[password] in the url
+  s3FailoverAccessKeyId: ''
+  # -- S3 failover secret access key, can be used instead of [username]:[password] in the url
+  s3FailoverSecretAccessKey: ''
+  # -- Forces usage of path style urls for the failover S3. Default is true.
+  s3FailoverForcePathStyle: ''
   stripeSecretKey: ''
   stripeWebhookSecret: ''
   # -- The default billing plan, eg `developer@1`
@@ -288,5 +300,20 @@ jobs:
     # -- Adds additional labels to the database-migration job
     additionalLabels: {}
   seedOrganization:
+    # -- Adds additional labels to the job (see: .Values.global.seed)
+    additionalLabels: {}
+  # -- Scheduled CronJob to delete data (schema checks, audit logs, etc.) older than 90 days
+  cleanupOldData:
+    # -- Enables the cleanup CronJob
+    enabled: false
+    # -- Adds additional labels to the job
+    additionalLabels: {}
+    # -- Cron schedule (default: 1st of every month at 2AM UTC)
+    schedule: '0 2 1 * *'
+  deleteInactiveOrgs:
+    # -- Enables the job to be run
+    enabled: true
+    # -- Cron schedule (default: 1st of every month at midnight UTC)
+    schedule: '0 0 1 * *'
     # -- Adds additional labels to the job (see: .Values.global.seed)
     additionalLabels: {}

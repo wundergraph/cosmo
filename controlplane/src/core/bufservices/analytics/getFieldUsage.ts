@@ -6,6 +6,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { UsageRepository } from '../../repositories/analytics/UsageRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function getFieldUsage(
@@ -56,6 +57,10 @@ export function getFieldUsage(
         clients: [],
         requestSeries: [],
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
     }
 
     let dr: DateRange | undefined;

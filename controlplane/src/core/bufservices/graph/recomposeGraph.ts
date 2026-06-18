@@ -2,21 +2,16 @@ import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { RecomposeGraphRequest, RecomposeGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { AuthContext, FederatedGraphDTO, PlainMessage } from '../../../types/index.js';
+import { maxRowLimitForChecks } from '../../constants.js';
+import { UnauthorizedError } from '../../errors/errors.js';
+import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { CompositionService } from '../../services/CompositionService.js';
 import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
-import { UnauthorizedError } from '../../errors/errors.js';
-import {
-  PlainMessage,
-  AuthContext,
-  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-  FederatedGraphDTO,
-} from '../../../types/index.js';
-import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { maxRowLimitForChecks } from '../../constants.js';
 
 export function recomposeGraph(
   opts: RouterOptions,
@@ -37,8 +32,6 @@ export function recomposeGraph(
       opts.webhookProxyUrl,
     );
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
@@ -73,30 +66,20 @@ export function recomposeGraph(
       authContext,
     });
 
-    const ignoreExternalKeys =
-      (
-        await orgRepo.getFeature({
-          organizationId: authContext.organizationId,
-          featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-        })
-      )?.enabled ?? false;
+    const { compositionErrors, compositionWarnings, deploymentErrors } = await opts.db.transaction((tx) => {
+      const compositionService = new CompositionService(
+        tx,
+        authContext.organizationId,
+        logger,
+        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+        opts.blobStorage,
+        opts.chClient,
+        opts.webhookProxyUrl,
+        req.disableResolvabilityValidation,
+      );
 
-    const { compositionErrors, compositionWarnings, deploymentErrors } =
-      await federatedGraphRepo.composeAndDeployGraphs({
-        actorId: authContext.userId,
-        admissionConfig: {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          webhookJWTSecret: opts.admissionWebhookJWTSecret,
-        },
-        blobStorage: opts.blobStorage,
-        chClient: opts.chClient!,
-        compositionOptions: {
-          disableResolvabilityValidation: req.disableResolvabilityValidation,
-          ignoreExternalKeys,
-        },
-        federatedGraphs: [graph],
-        webhookProxyUrl: opts.webhookProxyUrl,
-      });
+      return compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph: graph });
+    });
 
     sendOrgWebhooks({
       authContext,
@@ -107,7 +90,6 @@ export function recomposeGraph(
     });
 
     const auditLogRepo = new AuditLogRepository(opts.db);
-
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,

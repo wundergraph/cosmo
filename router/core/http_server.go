@@ -46,7 +46,6 @@ var notReadyState = &serverState{
 type server struct {
 	mu          sync.RWMutex
 	httpServer  *http.Server
-	tlsConfig   *TlsConfig
 	logger      *zap.Logger
 	state       atomic.Pointer[serverState]
 	healthcheck health.Checker
@@ -57,7 +56,6 @@ type server struct {
 type httpServerOptions struct {
 	addr               string
 	logger             *zap.Logger
-	tlsConfig          *TlsConfig
 	tlsServerConfig    *tls.Config
 	healthcheck        health.Checker
 	baseURL            string
@@ -93,7 +91,6 @@ func newServer(opts *httpServerOptions) (*server, error) {
 
 	n := &server{
 		httpServer:  httpServer,
-		tlsConfig:   opts.tlsConfig,
 		logger:      opts.logger,
 		mu:          sync.RWMutex{},
 		healthcheck: opts.healthcheck,
@@ -153,7 +150,7 @@ func (s *server) SwapGraphServer(ctx context.Context, svr *graphServer) {
 // listenAndServe starts the server using the pre-bound listener and blocks until shutdown.
 // This method is called in a goroutine; the port was already bound in newServer().
 func (s *server) listenAndServe() error {
-	if s.tlsConfig != nil && s.tlsConfig.Enabled {
+	if s.httpServer.TLSConfig != nil {
 		// Use TLS with the pre-bound listener
 		if err := s.httpServer.ServeTLS(s.listener, "", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err

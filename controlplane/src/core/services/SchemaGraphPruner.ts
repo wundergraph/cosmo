@@ -17,7 +17,9 @@ import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { buildSchema } from '../composition/composition.js';
 import { getFederatedGraphRouterCompatibilityVersion } from '../util.js';
+import { traced } from '../tracing.js';
 
+@traced
 export default class SchemaGraphPruner {
   constructor(
     private federatedGraphRepo: FederatedGraphRepository,
@@ -26,7 +28,7 @@ export default class SchemaGraphPruner {
     private schema: GraphQLSchema,
   ) {}
 
-  getAllFields = ({ schema, onlyDeprecated }: { schema?: GraphQLSchema; onlyDeprecated?: boolean }): Field[] => {
+  getAllFields({ schema, onlyDeprecated }: { schema?: GraphQLSchema; onlyDeprecated?: boolean }): Field[] {
     const fields: Field[] = [];
     const schemaToBeUsed = schema || this.schema;
 
@@ -70,9 +72,9 @@ export default class SchemaGraphPruner {
     }
 
     return fields;
-  };
+  }
 
-  fetchUnusedFields = async ({
+  async fetchUnusedFields({
     subgraphId,
     namespaceId,
     organizationId,
@@ -89,7 +91,7 @@ export default class SchemaGraphPruner {
     // fields that were added in the proposed schema passed to the check command
     addedFields: SchemaDiff[];
     severityLevel: LintSeverityLevel;
-  }): Promise<GraphPruningIssueResult[]> => {
+  }): Promise<GraphPruningIssueResult[]> {
     const limit = pLimit(5);
     const allFields = this.getAllFields({});
     // fetching all the fields of this subgraph that are in grace period
@@ -147,9 +149,9 @@ export default class SchemaGraphPruner {
     }
 
     return graphPruningIssues;
-  };
+  }
 
-  fetchDeprecatedFields = async ({
+  async fetchDeprecatedFields({
     subgraphId,
     namespaceId,
     organizationId,
@@ -165,7 +167,7 @@ export default class SchemaGraphPruner {
     rangeInDays: number;
     severityLevel: LintSeverityLevel;
     addedDeprecatedFields: SchemaDiff[];
-  }): Promise<GraphPruningIssueResult[]> => {
+  }): Promise<GraphPruningIssueResult[]> {
     const limit = pLimit(5);
     const allDeprecatedFields = this.getAllFields({ onlyDeprecated: true });
     // fetching all the deprecated fields of this subgraph that are in grace period
@@ -237,9 +239,9 @@ export default class SchemaGraphPruner {
     }
 
     return graphPruningIssues;
-  };
+  }
 
-  fetchNonDeprecatedDeletedFields = ({
+  fetchNonDeprecatedDeletedFields({
     federatedGraphs,
     severityLevel,
     removedFields,
@@ -249,7 +251,7 @@ export default class SchemaGraphPruner {
     severityLevel: LintSeverityLevel;
     removedFields: SchemaDiff[];
     oldSchema: string;
-  }): GraphPruningIssueResult[] => {
+  }): GraphPruningIssueResult[] {
     let oldGraphQLSchema: GraphQLSchema | undefined;
 
     try {
@@ -306,9 +308,9 @@ export default class SchemaGraphPruner {
     }
 
     return graphPruningIssues;
-  };
+  }
 
-  schemaGraphPruneCheck = async ({
+  async schemaGraphPruneCheck({
     subgraph,
     graphPruningConfigs,
     organizationId,
@@ -323,7 +325,7 @@ export default class SchemaGraphPruner {
     // fields that were added/updated in the proposed schema passed to the check command
     updatedFields: SchemaDiff[];
     removedFields: SchemaDiff[];
-  }): Promise<SchemaGraphPruningIssues> => {
+  }): Promise<SchemaGraphPruningIssues> {
     const graphPruneWarnings: GraphPruningIssueResult[] = [];
     const graphPruneErrors: GraphPruningIssueResult[] = [];
 
@@ -401,5 +403,5 @@ export default class SchemaGraphPruner {
       warnings: graphPruneWarnings,
       errors: graphPruneErrors,
     };
-  };
+  }
 }

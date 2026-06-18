@@ -215,7 +215,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 			"go_memstats_heap_released_bytes",
 			"go_memstats_heap_sys_bytes",
 			"go_memstats_last_gc_time_seconds",
-			"go_memstats_lookups_total",
+			// "go_memstats_lookups_total", // Deprecated by go and not exposed anymore.
 			"go_memstats_mallocs_total",
 			"go_memstats_mcache_inuse_bytes",
 			"go_memstats_mcache_sys_bytes",
@@ -292,6 +292,10 @@ func TestValidateExposedMetrics(t *testing.T) {
 				Value: PointerOf("0.0.1"),
 			},
 			{
+				Name:  PointerOf("otel_scope_schema_url"),
+				Value: PointerOf(""),
+			},
+			{
 				Name:  PointerOf("rpc_grpc_status_code"),
 				Value: PointerOf("0"),
 			},
@@ -316,7 +320,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 				Value: PointerOf("org123"),
 			},
 		}
-		require.Equal(t, expectedLabels, labels)
+		require.ElementsMatch(t, expectedLabels, labels)
 	})
 }
 
@@ -419,6 +423,10 @@ func TestValidateExposedAttributesWithoutClaims(t *testing.T) {
 				Value: PointerOf("3"),
 			},
 			{
+				Name:  PointerOf("otel_scope_schema_url"),
+				Value: PointerOf(""),
+			},
+			{
 				Name:  PointerOf("rpc_method"),
 				Value: PointerOf("PublishGraphQLMetrics"),
 			},
@@ -439,7 +447,7 @@ func TestValidateExposedAttributesWithoutClaims(t *testing.T) {
 				Value: PointerOf(""),
 			},
 		}
-		require.Equal(t, expectedLabels, labels)
+		require.ElementsMatch(t, expectedLabels, labels)
 	})
 }
 

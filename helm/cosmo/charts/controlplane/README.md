@@ -52,6 +52,12 @@ WunderGraph Cosmo Controlplane
 | configuration.redisTlsKey | string | `""` |  |
 | configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
 | configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| configuration.s3FailoverAccessKeyId | string | `""` | S3 failover access key id, can be used instead of [username]:[password] in the url |
+| configuration.s3FailoverEndpoint | string | `""` | The endpoint of the S3 failover bucket. |
+| configuration.s3FailoverForcePathStyle | string | `""` | Forces usage of path style urls for the failover S3. Default is true. |
+| configuration.s3FailoverRegion | string | `""` | The region where the S3 failover bucket is located. |
+| configuration.s3FailoverSecretAccessKey | string | `""` | S3 failover secret access key, can be used instead of [username]:[password] in the url |
+| configuration.s3FailoverStorageUrl | string | `""` | The url of S3-compatible storage for backup/failover purposes. If not defined, failover is not used. |
 | configuration.s3ForcePathStyle | string | `"true"` | Forces usage of path style urls for S3. Default is true. |
 | configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
 | configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
@@ -81,12 +87,16 @@ WunderGraph Cosmo Controlplane
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |
-| jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
+| jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"cleanupOldData":{"additionalLabels":{},"enabled":false,"schedule":"0 2 1 * *"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteInactiveOrgs":{"additionalLabels":{},"enabled":true,"schedule":"0 0 1 * *"},"deleteUser":{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
 | jobs.activateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
 | jobs.activateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
 | jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
 | jobs.activateOrganization.id | string | `"123"` | The unique identifier of the organization |
 | jobs.activateOrganization.slug | string | `"foo"` | The slug of the organization |
+| jobs.cleanupOldData | object | `{"additionalLabels":{},"enabled":false,"schedule":"0 2 1 * *"}` | Scheduled CronJob to delete data (schema checks, audit logs, etc.) older than 90 days |
+| jobs.cleanupOldData.additionalLabels | object | `{}` | Adds additional labels to the job |
+| jobs.cleanupOldData.enabled | bool | `false` | Enables the cleanup CronJob |
+| jobs.cleanupOldData.schedule | string | `"0 2 1 * *"` | Cron schedule (default: 1st of every month at 2AM UTC) |
 | jobs.clickhouseMigration.additionalLabels | object | `{}` | Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector) |
 | jobs.databaseMigration.additionalLabels | object | `{}` | Adds additional labels to the database-migration job |
 | jobs.deactivateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
@@ -95,6 +105,9 @@ WunderGraph Cosmo Controlplane
 | jobs.deactivateOrganization.id | string | `"123"` | The unique identifier of the organization |
 | jobs.deactivateOrganization.reason | string | `""` | The reason for deactivation |
 | jobs.deactivateOrganization.slug | string | `"foo"` | The slug of the organization |
+| jobs.deleteInactiveOrgs.additionalLabels | object | `{}` | Adds additional labels to the job (see: .Values.global.seed) |
+| jobs.deleteInactiveOrgs.enabled | bool | `true` | Enables the job to be run |
+| jobs.deleteInactiveOrgs.schedule | string | `"0 0 1 * *"` | Cron schedule (default: 1st of every month at midnight UTC) |
 | jobs.deleteUser | object | `{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"}` | Used to delete the user |
 | jobs.deleteUser.additionalLabels | object | `{}` | Adds additional labels to the job |
 | jobs.deleteUser.email | string | `"foo@wundergraph.com"` | The email of the user |

@@ -1,0 +1,20 @@
+{
+  "name": "mcp-ts",
+  "version": "1.0.0",
+  "description": "MCP OAuth scope enforcement E2E tests using the official MCP TypeScript SDK",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@9.12.3",
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@types/node": "^22.19.15",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

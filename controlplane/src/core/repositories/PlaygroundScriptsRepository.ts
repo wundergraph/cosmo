@@ -1,7 +1,9 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
+import { traced } from '../tracing.js';
 
+@traced
 export class PlaygroundScriptsRepository {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,

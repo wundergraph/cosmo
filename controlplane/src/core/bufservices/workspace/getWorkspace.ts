@@ -1,25 +1,17 @@
-import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-
 import {
   GetWorkspaceRequest,
-  GetWorkspaceResponse,
-  WorkspaceNamespaceSchema,
-  WorkspaceFederatedGraphSchema,
-  WorkspaceSubgraphSchema,
+  GetWorkspaceResponse
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-
-import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
-import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
-import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { PlainMessage } from '../../../types/index.js';
+import type { RouterOptions } from '../../routes.js';
+import { WorkspaceService } from '../../services/WorkspaceService.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function getWorkspace(
   opts: RouterOptions,
-  req: GetWorkspaceRequest,
+  _: GetWorkspaceRequest,
   ctx: HandlerContext,
 ): Promise<PlainMessage<GetWorkspaceResponse>> {
   let logger = getLogger(ctx, opts.logger);
@@ -28,89 +20,12 @@ export function getWorkspace(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    // Step 1 - Retrieve all the namespaces the requesting actor have access to
-    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
-    const namespaces = await namespaceRepo.list(authContext.rbac);
-    if (namespaces.length === 0) {
-      // The user doesn't have access to any namespace
-      return {
-        response: { code: EnumStatusCode.OK },
-        namespaces: [],
-      };
-    }
-
-    // Initialize the response
-    const result = namespaces
-      .map((ns) =>
-        create(WorkspaceNamespaceSchema, {
-          id: ns.id,
-          name: ns.name,
-          graphs: [],
-        }),
-      )
-      .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
-
-    // Step 2 - Retrieve all the federated graphs the actor has access to, based on the namespaces
-    const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const federatedGraphs = await fedGraphRepo.list({
-      offset: 0, // From the beginning
-      limit: 0, // Retrieve all federated graphs
-      namespaceIds: namespaces.map((ns) => ns.id),
-      rbac: authContext.rbac,
-    });
-
-    if (federatedGraphs.length === 0) {
-      //
-      return {
-        response: { code: EnumStatusCode.OK },
-        namespaces: result,
-      };
-    }
-
-    //
-    const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-    await Promise.all(
-      federatedGraphs.map(async (graph) => {
-        const namespace = result.find((ns) => ns.id === graph.namespaceId);
-        if (!namespace) {
-          //
-          return;
-        }
-
-        const subgraphsForFederatedGraph = await subgraphRepo.listByFederatedGraph({
-          federatedGraphTargetId: graph.targetId,
-          rbac: authContext.rbac,
-        });
-
-        //
-        namespace.graphs.push(
-          create(WorkspaceFederatedGraphSchema, {
-            id: graph.id,
-            targetId: graph.targetId,
-            name: graph.name,
-            isContract: !!graph.contract?.id,
-            subgraphs: subgraphsForFederatedGraph
-              .map((subgraph) =>
-                create(WorkspaceSubgraphSchema, {
-                  id: subgraph.id,
-                  targetId: subgraph.targetId,
-                  name: subgraph.name,
-                }),
-              )
-              .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })),
-          }),
-        );
-      }),
-    );
-
-    // Finally, sort the namespaces alphabetically
-    for (const namespace of result) {
-      namespace.graphs.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
-    }
+    const workspaceService = new WorkspaceService(authContext.organizationId, authContext.rbac, opts.db);
+    const namespaces = await workspaceService.getWorkspaceNamespaces();
 
     return {
       response: { code: EnumStatusCode.OK },
-      namespaces: result,
+      namespaces,
     };
   });
 }

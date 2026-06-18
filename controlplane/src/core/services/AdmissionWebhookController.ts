@@ -10,6 +10,7 @@ import { HttpsProxyAgent } from 'https-proxy-agent';
 import * as schema from '../../db/schema.js';
 import { WebhookDeliveryInfo } from '../../db/models.js';
 import { webhookAxiosRetryCond } from '../util.js';
+import { traced } from '../tracing.js';
 
 export class AdmissionError extends Error {
   constructor(message: string, cause?: Error) {
@@ -34,6 +35,7 @@ export interface ValidateConfigResponse {
   error?: string;
 }
 
+@traced
 export class AdmissionWebhookController {
   httpClient: AxiosInstance;
   constructor(

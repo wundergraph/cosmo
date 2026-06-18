@@ -11,6 +11,37 @@ import (
 type Response struct {
 	// Config is the marshaled router config
 	Config *nodev1.RouterConfig
+	// Changes is a summary of which parts of Config
+	// have changed since the last successful config apply.
+	// Nil means changes are unknown -> expect everything to be changed.
+	Changes *Changes
+	// Hashes holds the execution config hashes of base + feature flag graphs.
+	// It contains all hashes the router will apply or already has applied (unchanged hashes).
+	// It does not contain hashes of configs removed from the CDN (the router will remove the corresponding graph mux)
+	// or those hashes of configs, which are new in the CDN but the router failed to fetch.
+	Hashes map[string]HashInfo
+}
+
+type HashInfo struct {
+	OldHash string
+	NewHash string
+}
+
+type Changes struct {
+	AddedConfigs   map[string]struct{}
+	RemovedConfigs map[string]struct{}
+	ChangedConfigs map[string]struct{}
+}
+
+func (c *Changes) BaseGraphChanged() bool {
+	// c being nil means we don't know if there are changes, so
+	// callers should expect it to have changed.
+	if c == nil {
+		return true
+	}
+
+	_, exists := c.ChangedConfigs[""]
+	return exists
 }
 
 type Client interface {

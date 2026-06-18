@@ -7,9 +7,9 @@ import {
   SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
-import { maxRowLimitForChecks } from '../../constants.js';
-import { PlainMessage, COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { PlainMessage } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
+import { maxRowLimitForChecks } from '../../constants.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -20,6 +20,7 @@ import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPruningRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { CompositionService } from '../../services/CompositionService.js';
 import {
   clamp,
   convertToSubgraphType,
@@ -70,11 +71,6 @@ export function publishFederatedSubgraph(
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
-
-    const ignoreExternalKeysFeature = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-    });
 
     const subgraphSchemaSDL = req.schema;
     const namespace = await namespaceRepo.byName(req.namespace);
@@ -153,6 +149,7 @@ export function publishFederatedSubgraph(
           schemaSDL: subgraphSchemaSDL,
           routerCompatibilityVersion,
           isDeleted: false,
+          approvedOnly: true,
         });
         if (matches.length === 0) {
           const message = `The subgraph ${req.name}'s schema does not match to this subgraph's schema in any approved proposal.`;
@@ -565,47 +562,51 @@ export function publishFederatedSubgraph(
       }
     }
 
-    const { compositionErrors, updatedFederatedGraphs, deploymentErrors, subgraphChanged, compositionWarnings } =
-      await subgraphRepo.update(
-        {
-          targetId: subgraph.targetId,
-          labels: subgraph.labels,
-          unsetLabels: false,
-          schemaSDL: subgraphSchemaSDL,
-          updatedBy: authContext.userId,
-          namespaceId: namespace.id,
-          isV2Graph,
-          proto:
-            subgraph.type === 'grpc_plugin'
-              ? {
-                  schema: req.proto?.schema || '',
-                  mappings: req.proto?.mappings || '',
-                  lock: req.proto?.lock || '',
-                  pluginData: {
-                    platforms: req.proto?.platforms || [],
-                    version: req.proto?.version || '',
-                  },
-                }
-              : subgraph.type === 'grpc_service'
+    const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs, subgraphChanged } =
+      await opts.db.transaction((tx) => {
+        const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
+        const compositionService = new CompositionService(
+          tx,
+          authContext.organizationId,
+          logger,
+          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+          opts.blobStorage,
+          opts.chClient,
+          opts.webhookProxyUrl,
+          req.disableResolvabilityValidation,
+        );
+
+        return subgraphRepo.update(
+          {
+            targetId: subgraph.targetId,
+            labels: subgraph.labels,
+            unsetLabels: false,
+            schemaSDL: subgraphSchemaSDL,
+            updatedBy: authContext.userId,
+            namespaceId: namespace.id,
+            isV2Graph,
+            proto:
+              subgraph.type === 'grpc_plugin'
                 ? {
                     schema: req.proto?.schema || '',
                     mappings: req.proto?.mappings || '',
                     lock: req.proto?.lock || '',
+                    pluginData: {
+                      platforms: req.proto?.platforms || [],
+                      version: req.proto?.version || '',
+                    },
                   }
-                : undefined,
-        },
-        opts.blobStorage,
-        {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          webhookJWTSecret: opts.admissionWebhookJWTSecret,
-        },
-        opts.chClient!,
-        {
-          disableResolvabilityValidation: req.disableResolvabilityValidation,
-          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
-        },
-        opts.webhookProxyUrl,
-      );
+                : subgraph.type === 'grpc_service'
+                  ? {
+                      schema: req.proto?.schema || '',
+                      mappings: req.proto?.mappings || '',
+                      lock: req.proto?.lock || '',
+                    }
+                  : undefined,
+          },
+          compositionService,
+        );
+      });
 
     // if this subgraph is part of a proposal, mark the proposal subgraph as published
     // and if all proposal subgraphs are published, collect proposal details for the webhook
@@ -755,38 +756,17 @@ export function publishFederatedSubgraph(
       deploymentErrors: deploymentErrors.length,
     };
 
-    if (compositionErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        compositionErrors: boundedCompositionErrors,
-        compositionWarnings: boundedCompositionWarnings,
-        deploymentErrors: [],
-        proposalMatchMessage,
-        counts,
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-        compositionErrors: [],
-        deploymentErrors: boundedDeploymentErrors,
-        compositionWarnings: boundedCompositionWarnings,
-        proposalMatchMessage,
-        counts,
-      };
-    }
-
     return {
       response: {
-        code: EnumStatusCode.OK,
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
       },
-      compositionErrors: [],
-      deploymentErrors: [],
+      deploymentErrors: boundedDeploymentErrors,
+      compositionErrors: boundedCompositionErrors,
       hasChanged: subgraphChanged,
       compositionWarnings: boundedCompositionWarnings,
       proposalMatchMessage,

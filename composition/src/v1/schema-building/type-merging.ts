@@ -2,7 +2,7 @@ import { Kind, type ListTypeNode, type NamedTypeNode, type NonNullTypeNode, type
 import { maximumTypeNestingExceededError } from '../../errors/errors';
 import { getMutableTypeNode, type MutableIntermediateTypeNode } from '../../schema-building/ast';
 import { stringToNameNode } from '../../ast/utils';
-import { type FieldData } from '../../schema-building/types';
+import { type FieldData } from '../../schema-building/types/types';
 import { MAXIMUM_TYPE_NESTING } from '../../utils/integer-constants';
 
 export enum DivergentType {

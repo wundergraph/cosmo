@@ -75,6 +75,7 @@ function costsToCostConfiguration(costs?: Costs): CostConfiguration | undefined 
       create(FieldWeightConfigurationSchema, {
         ...fw,
         argumentWeights: Object.fromEntries(fw.argumentWeights),
+        directiveArgumentWeights: Object.fromEntries(fw.directiveArgumentWeights),
       }),
     ),
     listSizes: [...costs.listSizes.values()].map((ls) => create(FieldListSizeConfigurationSchema, ls)),

@@ -9,6 +9,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
@@ -55,6 +56,13 @@ export function getCompositionDetails(
         compositionSubgraphs: [],
         featureFlagCompositions: [],
       };
+    }
+
+    if (composition.targetId) {
+      const graph = await fedRepo.byTargetId(composition.targetId);
+      if (graph && !authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+        throw new UnauthorizedError();
+      }
     }
 
     const compositionSubgraphs = await compositionRepo.getCompositionSubgraphs({

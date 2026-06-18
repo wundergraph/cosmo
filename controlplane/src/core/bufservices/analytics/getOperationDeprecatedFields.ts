@@ -12,6 +12,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { UsageRepository } from '../../repositories/analytics/UsageRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import SchemaGraphPruner from '../../services/SchemaGraphPruner.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { PlainMessage, Field } from '../../../types/index.js';
 
@@ -48,6 +49,10 @@ export function getOperationDeprecatedFields(
         },
         deprecatedFields: [],
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
     }
 
     const analyticsRetention = await orgRepo.getFeature({

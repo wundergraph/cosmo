@@ -12,6 +12,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
 export function createFederatedGraphToken(
   opts: RouterOptions,
@@ -70,6 +71,17 @@ export function createFederatedGraphToken(
       };
     }
 
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const splitConfigFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'split-config-loading',
+    });
+
+    const features: string[] = [];
+    if (splitConfigFeature?.enabled) {
+      features.push('split-config-loading');
+    }
+
     const tokenValue = await signJwtHS256<GraphApiKeyJwtPayload>({
       secret: opts.jwtSecret,
       token: {
@@ -77,6 +89,7 @@ export function createFederatedGraphToken(
         federated_graph_id: graph.id,
         aud: audiences.cosmoGraphKey, // to distinguish from other tokens
         organization_id: authContext.organizationId,
+        features: features.length > 0 ? features : undefined,
       },
     });
 

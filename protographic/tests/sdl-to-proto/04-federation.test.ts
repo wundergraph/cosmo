@@ -3,8 +3,9 @@ import { compileGraphQLToProto } from '../../src/index.js';
 import { expectValidProto } from '../util.js';
 
 describe('SDL to Proto - Federation and Special Types', () => {
-  test('should handle entity types with @key directive', () => {
-    const sdl = `
+  describe('Entity types with @key directive', () => {
+    test('should handle entity types with @key directive', () => {
+      const sdl = `
       directive @key(fields: String!) on OBJECT | INTERFACE
       
       type Product @key(fields: "id") {
@@ -28,13 +29,13 @@ describe('SDL to Proto - Federation and Special Types', () => {
       union _Entity = Product | User
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    // Check that entity lookup operations are present
-    expect(protoText).toMatchInlineSnapshot(`
+      // Check that entity lookup operations are present
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -136,10 +137,10 @@ describe('SDL to Proto - Federation and Special Types', () => {
         string email = 3;
       }"
     `);
-  });
+    });
 
-  test('should handle entity types with composite key', () => {
-    const sdl = `
+    test('should handle entity types with composite key', () => {
+      const sdl = `
       directive @key(fields: String!) on OBJECT | INTERFACE
       
       type OrderItem @key(fields: "orderId itemId") {
@@ -154,13 +155,13 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    // Check that all required components are present
-    expect(protoText).toMatchInlineSnapshot(`
+      // Check that all required components are present
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -224,10 +225,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
         double price = 4;
       }"
     `);
+    });
   });
 
-  test('should handle directive syntax with interfaces', () => {
-    const sdl = `
+  describe('Interface entities', () => {
+    test('should handle directive syntax with interfaces', () => {
+      const sdl = `
       directive @key(fields: String!) on OBJECT | INTERFACE
       
       interface Node @key(fields: "id") {
@@ -254,23 +257,59 @@ describe('SDL to Proto - Federation and Special Types', () => {
       union _Entity = User | Product
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    // Check that entity lookup operations are present
-    expect(protoText).toMatchInlineSnapshot(`
+      // Check that entity lookup operations are present
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
       // Service definition for DefaultService
       service DefaultService {
+        // Lookup Node entity by id
+        rpc LookupNodeById(LookupNodeByIdRequest) returns (LookupNodeByIdResponse) {}
         // Lookup Product entity by id
         rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
         // Lookup User entity by id
         rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
         rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
+      }
+
+      // Key message for Node entity lookup
+      message LookupNodeByIdRequestKey {
+        // Key field for Node entity lookup.
+        string id = 1;
+      }
+
+      // Request message for Node entity lookup.
+      message LookupNodeByIdRequest {
+        /*
+         * List of keys to look up Node entities.
+         * Order matters - each key maps to one entity in LookupNodeByIdResponse.
+         */
+        repeated LookupNodeByIdRequestKey keys = 1;
+      }
+
+      // Response message for Node entity lookup.
+      message LookupNodeByIdResponse {
+        /*
+         * List of Node entities in the same order as the keys in LookupNodeByIdRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
+        repeated Node result = 1;
       }
 
       // Key message for User entity lookup
@@ -350,6 +389,13 @@ describe('SDL to Proto - Federation and Special Types', () => {
         Node node = 1;
       }
 
+      message Node {
+        oneof instance {
+        User user = 1;
+        Product product = 2;
+        }
+      }
+
       message User {
         string id = 1;
         string name = 2;
@@ -359,19 +405,656 @@ describe('SDL to Proto - Federation and Special Types', () => {
         string id = 1;
         string name = 2;
         double price = 3;
-      }
-
-      message Node {
-        oneof instance {
-        User user = 1;
-        Product product = 2;
-        }
       }"
     `);
+    });
+
+    test('should handle interface entity with @key and multiple implementing types', () => {
+      const sdl = `
+        directive @key(fields: String!) on OBJECT | INTERFACE
+
+        interface Media @key(fields: "id") {
+          id: ID!
+          title: String!
+          duration: Int!
+        }
+
+        type Movie implements Media @key(fields: "id") {
+          id: ID!
+          title: String!
+          duration: Int!
+          director: String!
+        }
+
+        type Song implements Media @key(fields: "id") {
+          id: ID!
+          title: String!
+          duration: Int!
+          artist: String!
+        }
+
+        type Query {
+          media(id: ID!): Media
+          _entities(representations: [_Any!]!): [_Entity]!
+        }
+
+        scalar _Any
+        union _Entity = Movie | Song
+      `;
+
+      const { proto: protoText } = compileGraphQLToProto(sdl);
+
+      expectValidProto(protoText);
+
+      // Should have lookups for concrete types and the interface
+      expect(protoText).toContain('rpc LookupMovieById');
+      expect(protoText).toContain('rpc LookupSongById');
+      expect(protoText).toContain('rpc LookupMediaById');
+
+      // Should have request/response messages for all lookups
+      expect(protoText).toContain('message LookupMovieByIdRequest');
+      expect(protoText).toContain('message LookupMovieByIdResponse');
+      expect(protoText).toContain('message LookupMovieByIdRequestKey');
+      expect(protoText).toContain('message LookupSongByIdRequest');
+      expect(protoText).toContain('message LookupSongByIdResponse');
+      expect(protoText).toContain('message LookupSongByIdRequestKey');
+      expect(protoText).toContain('message LookupMediaByIdRequest');
+      expect(protoText).toContain('message LookupMediaByIdResponse');
+      expect(protoText).toContain('message LookupMediaByIdRequestKey');
+
+      // Should have messages for all types
+      expect(protoText).toContain('message Movie');
+      expect(protoText).toContain('message Song');
+      expect(protoText).toContain('message Media');
+
+      // Interface should use oneof pattern
+      expect(protoText).toContain('oneof instance');
+
+      expect(protoText).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        // Service definition for DefaultService
+        service DefaultService {
+          // Lookup Media entity by id
+          rpc LookupMediaById(LookupMediaByIdRequest) returns (LookupMediaByIdResponse) {}
+          // Lookup Movie entity by id
+          rpc LookupMovieById(LookupMovieByIdRequest) returns (LookupMovieByIdResponse) {}
+          // Lookup Song entity by id
+          rpc LookupSongById(LookupSongByIdRequest) returns (LookupSongByIdResponse) {}
+          rpc QueryMedia(QueryMediaRequest) returns (QueryMediaResponse) {}
+        }
+
+        // Key message for Media entity lookup
+        message LookupMediaByIdRequestKey {
+          // Key field for Media entity lookup.
+          string id = 1;
+        }
+
+        // Request message for Media entity lookup.
+        message LookupMediaByIdRequest {
+          /*
+           * List of keys to look up Media entities.
+           * Order matters - each key maps to one entity in LookupMediaByIdResponse.
+           */
+          repeated LookupMediaByIdRequestKey keys = 1;
+        }
+
+        // Response message for Media entity lookup.
+        message LookupMediaByIdResponse {
+          /*
+           * List of Media entities in the same order as the keys in LookupMediaByIdRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated Media result = 1;
+        }
+
+        // Key message for Movie entity lookup
+        message LookupMovieByIdRequestKey {
+          // Key field for Movie entity lookup.
+          string id = 1;
+        }
+
+        // Request message for Movie entity lookup.
+        message LookupMovieByIdRequest {
+          /*
+           * List of keys to look up Movie entities.
+           * Order matters - each key maps to one entity in LookupMovieByIdResponse.
+           */
+          repeated LookupMovieByIdRequestKey keys = 1;
+        }
+
+        // Response message for Movie entity lookup.
+        message LookupMovieByIdResponse {
+          /*
+           * List of Movie entities in the same order as the keys in LookupMovieByIdRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated Movie result = 1;
+        }
+
+        // Key message for Song entity lookup
+        message LookupSongByIdRequestKey {
+          // Key field for Song entity lookup.
+          string id = 1;
+        }
+
+        // Request message for Song entity lookup.
+        message LookupSongByIdRequest {
+          /*
+           * List of keys to look up Song entities.
+           * Order matters - each key maps to one entity in LookupSongByIdResponse.
+           */
+          repeated LookupSongByIdRequestKey keys = 1;
+        }
+
+        // Response message for Song entity lookup.
+        message LookupSongByIdResponse {
+          /*
+           * List of Song entities in the same order as the keys in LookupSongByIdRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated Song result = 1;
+        }
+
+        // Request message for media operation.
+        message QueryMediaRequest {
+          string id = 1;
+        }
+        // Response message for media operation.
+        message QueryMediaResponse {
+          Media media = 1;
+        }
+
+        message Media {
+          oneof instance {
+          Movie movie = 1;
+          Song song = 2;
+          }
+        }
+
+        message Movie {
+          string id = 1;
+          string title = 2;
+          int32 duration = 3;
+          string director = 4;
+        }
+
+        message Song {
+          string id = 1;
+          string title = 2;
+          int32 duration = 3;
+          string artist = 4;
+        }"
+      `);
+    });
+
+    test('should handle interface entity with different keys on interface vs implementing types', () => {
+      const sdl = `
+        directive @key(fields: String!) on OBJECT | INTERFACE
+
+        interface Account @key(fields: "id") {
+          id: ID!
+          email: String!
+        }
+
+        type PersonalAccount implements Account @key(fields: "id") @key(fields: "email") {
+          id: ID!
+          email: String!
+          firstName: String!
+          lastName: String!
+        }
+
+        type BusinessAccount implements Account @key(fields: "id") {
+          id: ID!
+          email: String!
+          companyName: String!
+          taxId: String!
+        }
+
+        type Query {
+          account(id: ID!): Account
+          _entities(representations: [_Any!]!): [_Entity]!
+        }
+
+        scalar _Any
+        union _Entity = PersonalAccount | BusinessAccount
+      `;
+
+      const { proto: protoText } = compileGraphQLToProto(sdl);
+
+      expectValidProto(protoText);
+
+      // Interface lookup
+      expect(protoText).toContain('rpc LookupAccountById');
+
+      // Concrete type lookups - PersonalAccount has two keys
+      expect(protoText).toContain('rpc LookupPersonalAccountById');
+      expect(protoText).toContain('rpc LookupPersonalAccountByEmail');
+      expect(protoText).toContain('rpc LookupBusinessAccountById');
+
+      // Account should use oneof for implementing types
+      expect(protoText).toContain('oneof instance');
+
+      expect(protoText).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        // Service definition for DefaultService
+        service DefaultService {
+          // Lookup Account entity by id
+          rpc LookupAccountById(LookupAccountByIdRequest) returns (LookupAccountByIdResponse) {}
+          // Lookup BusinessAccount entity by id
+          rpc LookupBusinessAccountById(LookupBusinessAccountByIdRequest) returns (LookupBusinessAccountByIdResponse) {}
+          // Lookup PersonalAccount entity by email
+          rpc LookupPersonalAccountByEmail(LookupPersonalAccountByEmailRequest) returns (LookupPersonalAccountByEmailResponse) {}
+          // Lookup PersonalAccount entity by id
+          rpc LookupPersonalAccountById(LookupPersonalAccountByIdRequest) returns (LookupPersonalAccountByIdResponse) {}
+          rpc QueryAccount(QueryAccountRequest) returns (QueryAccountResponse) {}
+        }
+
+        // Key message for Account entity lookup
+        message LookupAccountByIdRequestKey {
+          // Key field for Account entity lookup.
+          string id = 1;
+        }
+
+        // Request message for Account entity lookup.
+        message LookupAccountByIdRequest {
+          /*
+           * List of keys to look up Account entities.
+           * Order matters - each key maps to one entity in LookupAccountByIdResponse.
+           */
+          repeated LookupAccountByIdRequestKey keys = 1;
+        }
+
+        // Response message for Account entity lookup.
+        message LookupAccountByIdResponse {
+          /*
+           * List of Account entities in the same order as the keys in LookupAccountByIdRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated Account result = 1;
+        }
+
+        // Key message for PersonalAccount entity lookup
+        message LookupPersonalAccountByIdRequestKey {
+          // Key field for PersonalAccount entity lookup.
+          string id = 1;
+        }
+
+        // Request message for PersonalAccount entity lookup.
+        message LookupPersonalAccountByIdRequest {
+          /*
+           * List of keys to look up PersonalAccount entities.
+           * Order matters - each key maps to one entity in LookupPersonalAccountByIdResponse.
+           */
+          repeated LookupPersonalAccountByIdRequestKey keys = 1;
+        }
+
+        // Response message for PersonalAccount entity lookup.
+        message LookupPersonalAccountByIdResponse {
+          /*
+           * List of PersonalAccount entities in the same order as the keys in LookupPersonalAccountByIdRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated PersonalAccount result = 1;
+        }
+
+        // Key message for PersonalAccount entity lookup
+        message LookupPersonalAccountByEmailRequestKey {
+          // Key field for PersonalAccount entity lookup.
+          string email = 1;
+        }
+
+        // Request message for PersonalAccount entity lookup.
+        message LookupPersonalAccountByEmailRequest {
+          /*
+           * List of keys to look up PersonalAccount entities.
+           * Order matters - each key maps to one entity in LookupPersonalAccountByEmailResponse.
+           */
+          repeated LookupPersonalAccountByEmailRequestKey keys = 1;
+        }
+
+        // Response message for PersonalAccount entity lookup.
+        message LookupPersonalAccountByEmailResponse {
+          /*
+           * List of PersonalAccount entities in the same order as the keys in LookupPersonalAccountByEmailRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated PersonalAccount result = 1;
+        }
+
+        // Key message for BusinessAccount entity lookup
+        message LookupBusinessAccountByIdRequestKey {
+          // Key field for BusinessAccount entity lookup.
+          string id = 1;
+        }
+
+        // Request message for BusinessAccount entity lookup.
+        message LookupBusinessAccountByIdRequest {
+          /*
+           * List of keys to look up BusinessAccount entities.
+           * Order matters - each key maps to one entity in LookupBusinessAccountByIdResponse.
+           */
+          repeated LookupBusinessAccountByIdRequestKey keys = 1;
+        }
+
+        // Response message for BusinessAccount entity lookup.
+        message LookupBusinessAccountByIdResponse {
+          /*
+           * List of BusinessAccount entities in the same order as the keys in LookupBusinessAccountByIdRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated BusinessAccount result = 1;
+        }
+
+        // Request message for account operation.
+        message QueryAccountRequest {
+          string id = 1;
+        }
+        // Response message for account operation.
+        message QueryAccountResponse {
+          Account account = 1;
+        }
+
+        message Account {
+          oneof instance {
+          PersonalAccount personal_account = 1;
+          BusinessAccount business_account = 2;
+          }
+        }
+
+        message PersonalAccount {
+          string id = 1;
+          string email = 2;
+          string first_name = 3;
+          string last_name = 4;
+        }
+
+        message BusinessAccount {
+          string id = 1;
+          string email = 2;
+          string company_name = 3;
+          string tax_id = 4;
+        }"
+      `);
+    });
+
+    test('should handle interface entity with composite key', () => {
+      const sdl = `
+        directive @key(fields: String!) on OBJECT | INTERFACE
+
+        interface Vehicle @key(fields: "make model") {
+          make: String!
+          model: String!
+          year: Int!
+        }
+
+        type Car implements Vehicle @key(fields: "make model") {
+          make: String!
+          model: String!
+          year: Int!
+          numDoors: Int!
+        }
+
+        type Truck implements Vehicle @key(fields: "make model") {
+          make: String!
+          model: String!
+          year: Int!
+          payloadCapacity: Float!
+        }
+
+        type Query {
+          vehicle(make: String!, model: String!): Vehicle
+        }
+      `;
+
+      const { proto: protoText } = compileGraphQLToProto(sdl);
+
+      expectValidProto(protoText);
+
+      // Should have lookups with composite keys for all types
+      expect(protoText).toContain('rpc LookupCarByMakeAndModel');
+      expect(protoText).toContain('rpc LookupTruckByMakeAndModel');
+      expect(protoText).toContain('rpc LookupVehicleByMakeAndModel');
+
+      // Composite key messages should have both fields
+      expect(protoText).toContain('message LookupVehicleByMakeAndModelRequestKey');
+
+      // Interface should use oneof
+      expect(protoText).toContain('oneof instance');
+
+      expect(protoText).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        // Service definition for DefaultService
+        service DefaultService {
+          // Lookup Car entity by make and model
+          rpc LookupCarByMakeAndModel(LookupCarByMakeAndModelRequest) returns (LookupCarByMakeAndModelResponse) {}
+          // Lookup Truck entity by make and model
+          rpc LookupTruckByMakeAndModel(LookupTruckByMakeAndModelRequest) returns (LookupTruckByMakeAndModelResponse) {}
+          // Lookup Vehicle entity by make and model
+          rpc LookupVehicleByMakeAndModel(LookupVehicleByMakeAndModelRequest) returns (LookupVehicleByMakeAndModelResponse) {}
+          rpc QueryVehicle(QueryVehicleRequest) returns (QueryVehicleResponse) {}
+        }
+
+        // Key message for Vehicle entity lookup
+        message LookupVehicleByMakeAndModelRequestKey {
+          // Key field for Vehicle entity lookup.
+          string make = 1;
+          // Key field for Vehicle entity lookup.
+          string model = 2;
+        }
+
+        // Request message for Vehicle entity lookup.
+        message LookupVehicleByMakeAndModelRequest {
+          /*
+           * List of keys to look up Vehicle entities.
+           * Order matters - each key maps to one entity in LookupVehicleByMakeAndModelResponse.
+           */
+          repeated LookupVehicleByMakeAndModelRequestKey keys = 1;
+        }
+
+        // Response message for Vehicle entity lookup.
+        message LookupVehicleByMakeAndModelResponse {
+          /*
+           * List of Vehicle entities in the same order as the keys in LookupVehicleByMakeAndModelRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated Vehicle result = 1;
+        }
+
+        // Key message for Car entity lookup
+        message LookupCarByMakeAndModelRequestKey {
+          // Key field for Car entity lookup.
+          string make = 1;
+          // Key field for Car entity lookup.
+          string model = 2;
+        }
+
+        // Request message for Car entity lookup.
+        message LookupCarByMakeAndModelRequest {
+          /*
+           * List of keys to look up Car entities.
+           * Order matters - each key maps to one entity in LookupCarByMakeAndModelResponse.
+           */
+          repeated LookupCarByMakeAndModelRequestKey keys = 1;
+        }
+
+        // Response message for Car entity lookup.
+        message LookupCarByMakeAndModelResponse {
+          /*
+           * List of Car entities in the same order as the keys in LookupCarByMakeAndModelRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated Car result = 1;
+        }
+
+        // Key message for Truck entity lookup
+        message LookupTruckByMakeAndModelRequestKey {
+          // Key field for Truck entity lookup.
+          string make = 1;
+          // Key field for Truck entity lookup.
+          string model = 2;
+        }
+
+        // Request message for Truck entity lookup.
+        message LookupTruckByMakeAndModelRequest {
+          /*
+           * List of keys to look up Truck entities.
+           * Order matters - each key maps to one entity in LookupTruckByMakeAndModelResponse.
+           */
+          repeated LookupTruckByMakeAndModelRequestKey keys = 1;
+        }
+
+        // Response message for Truck entity lookup.
+        message LookupTruckByMakeAndModelResponse {
+          /*
+           * List of Truck entities in the same order as the keys in LookupTruckByMakeAndModelRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated Truck result = 1;
+        }
+
+        // Request message for vehicle operation.
+        message QueryVehicleRequest {
+          string make = 1;
+          string model = 2;
+        }
+        // Response message for vehicle operation.
+        message QueryVehicleResponse {
+          Vehicle vehicle = 1;
+        }
+
+        message Vehicle {
+          oneof instance {
+          Car car = 1;
+          Truck truck = 2;
+          }
+        }
+
+        message Car {
+          string make = 1;
+          string model = 2;
+          int32 year = 3;
+          int32 num_doors = 4;
+        }
+
+        message Truck {
+          string make = 1;
+          string model = 2;
+          int32 year = 3;
+          double payload_capacity = 4;
+        }"
+      `);
+    });
   });
 
-  test('should handle special scalar types', () => {
-    const sdl = `
+  describe('Special scalar types', () => {
+    test('should handle special scalar types', () => {
+      const sdl = `
       scalar DateTime
       scalar JSON
       scalar Upload
@@ -391,13 +1074,13 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    // Check that all required components are present
-    expect(protoText).toMatchInlineSnapshot(`
+      // Check that all required components are present
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -434,10 +1117,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
         google.protobuf.StringValue attachment = 6;
       }"
     `);
+    });
   });
 
-  test('should handle entity types with multiple @key directives', () => {
-    const sdl = `
+  describe('Multiple and compound keys', () => {
+    test('should handle entity types with multiple @key directives', () => {
+      const sdl = `
       directive @key(fields: String!) on OBJECT | INTERFACE
       
       type Product @key(fields: "id") @key(fields: "upc") {
@@ -452,13 +1137,13 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    // Check that both lookup operations are present
-    expect(protoText).toMatchInlineSnapshot(`
+      // Check that both lookup operations are present
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -554,10 +1239,10 @@ describe('SDL to Proto - Federation and Special Types', () => {
         double price = 4;
       }"
     `);
-  });
+    });
 
-  test('should handle entity types with proper compound key fields', () => {
-    const sdl = `
+    test('should handle entity types with proper compound key fields', () => {
+      const sdl = `
       directive @key(fields: String!) on OBJECT | INTERFACE
       
       type OrderItem @key(fields: "orderId itemId") @key(fields: "itemId orderId") {
@@ -572,13 +1257,13 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    // Check that compound key lookup with both fields is present
-    expect(protoText).toMatchInlineSnapshot(`
+      // Check that compound key lookup with both fields is present
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -640,10 +1325,10 @@ describe('SDL to Proto - Federation and Special Types', () => {
         double price = 4;
       }"
     `);
-  });
+    });
 
-  test('should handle entity types with proper compound key fields with extra commas and spaces', () => {
-    const sdl = `
+    test('should handle entity types with proper compound key fields with extra commas and spaces', () => {
+      const sdl = `
       directive @key(fields: String!) on OBJECT | INTERFACE
       
       type OrderItem @key(fields: "     ,orderId,     itemId, ") {
@@ -658,13 +1343,13 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    // Check that compound key lookup with both fields is present
-    expect(protoText).toMatchInlineSnapshot(`
+      // Check that compound key lookup with both fields is present
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -726,10 +1411,10 @@ describe('SDL to Proto - Federation and Special Types', () => {
         double price = 4;
       }"
     `);
-  });
+    });
 
-  test('should handle entity types with mixed multiple and compound keys', () => {
-    const sdl = `
+    test('should handle entity types with mixed multiple and compound keys', () => {
+      const sdl = `
       directive @key(fields: String!) on OBJECT | INTERFACE
       
       type Product @key(fields: "id") @key(fields: "manufacturerId productCode") {
@@ -745,13 +1430,13 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    // Check that both single and compound key lookups are present
-    expect(protoText).toMatchInlineSnapshot(`
+      // Check that both single and compound key lookups are present
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -850,9 +1535,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
         double price = 5;
       }"
     `);
+    });
   });
-  test('should not generate lookup methods for non-resolvable keys', () => {
-    const sdl = `
+
+  describe('Resolvable keys', () => {
+    test('should not generate lookup methods for non-resolvable keys', () => {
+      const sdl = `
       scalar openfed__FieldSet
       directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
       
@@ -869,13 +1557,13 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    // Check that no lookup methods are generated for non-resolvable keys
-    expect(protoText).toMatchInlineSnapshot(`
+      // Check that no lookup methods are generated for non-resolvable keys
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -900,9 +1588,9 @@ describe('SDL to Proto - Federation and Special Types', () => {
         double price = 5;
       }"
     `);
-  });
-  test('should generate lookup methods for resolvable keys', () => {
-    const sdl = `
+    });
+    test('should generate lookup methods for resolvable keys', () => {
+      const sdl = `
       scalar openfed__FieldSet
       directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
       
@@ -919,13 +1607,13 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    // Expect that only the resolvable key is generated
-    expect(protoText).toMatchInlineSnapshot(`
+      // Expect that only the resolvable key is generated
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -988,9 +1676,9 @@ describe('SDL to Proto - Federation and Special Types', () => {
         double price = 5;
       }"
     `);
-  });
-  test('should generate lookup method when resolvable is not specified', () => {
-    const sdl = `
+    });
+    test('should generate lookup method when resolvable is not specified', () => {
+      const sdl = `
       scalar openfed__FieldSet
       directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
       
@@ -1007,13 +1695,13 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    // Expect that only the resolvable key is generated
-    expect(protoText).toMatchInlineSnapshot(`
+      // Expect that only the resolvable key is generated
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -1076,9 +1764,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
         double price = 5;
       }"
     `);
+    });
   });
-  test('should generate rpc method for required field', () => {
-    const sdl = `
+
+  describe('Required fields', () => {
+    test('should generate rpc method for required field', () => {
+      const sdl = `
       type Product @key(fields: "id") {
         id: ID!
         manufacturerId: ID! @external
@@ -1088,12 +1779,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    expect(protoText).toMatchInlineSnapshot(`
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -1167,9 +1858,9 @@ describe('SDL to Proto - Federation and Special Types', () => {
         double price = 2;
       }"
     `);
-  });
-  test('should generate rpc method for required field with nested fields', () => {
-    const sdl = `
+    });
+    test('should generate rpc method for required field with nested fields', () => {
+      const sdl = `
       type Product @key(fields: "id") {
         id: ID!
         manufacturerId: ID! @external
@@ -1191,12 +1882,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    expect(protoText).toMatchInlineSnapshot(`
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -1292,9 +1983,9 @@ describe('SDL to Proto - Federation and Special Types', () => {
         string message = 2;
       }"
     `);
-  });
-  test('should generate rpc method for required field with field arguments', () => {
-    const sdl = `
+    });
+    test('should generate rpc method for required field with field arguments', () => {
+      const sdl = `
       type User @key(fields: "id") {
         id: ID!
         name: String! @external
@@ -1313,12 +2004,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    expect(protoText).toMatchInlineSnapshot(`
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -1411,9 +2102,9 @@ describe('SDL to Proto - Federation and Special Types', () => {
         string title = 3;
       }"
     `);
-  });
-  test('should generate rpc method for required field with list type field argument', () => {
-    const sdl = `
+    });
+    test('should generate rpc method for required field with list type field argument', () => {
+      const sdl = `
       type User @key(fields: "id") {
         id: ID!
         name: String! @external
@@ -1432,12 +2123,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    expect(protoText).toMatchInlineSnapshot(`
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -1530,9 +2221,9 @@ describe('SDL to Proto - Federation and Special Types', () => {
         string title = 3;
       }"
     `);
-  });
-  test('should generate rpc method for required field with input object type field argument', () => {
-    const sdl = `
+    });
+    test('should generate rpc method for required field with input object type field argument', () => {
+      const sdl = `
       input PostFilter {
         authorName: String!
         limit: Int!
@@ -1556,12 +2247,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    expect(protoText).toMatchInlineSnapshot(`
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -1659,9 +2350,9 @@ describe('SDL to Proto - Federation and Special Types', () => {
         string title = 3;
       }"
     `);
-  });
-  test('should generate rpc method for required field with nullable field argument', () => {
-    const sdl = `
+    });
+    test('should generate rpc method for required field with nullable field argument', () => {
+      const sdl = `
       type User @key(fields: "id") {
         id: ID!
         name: String! @external
@@ -1680,12 +2371,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    expect(protoText).toMatchInlineSnapshot(`
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -1780,9 +2471,9 @@ describe('SDL to Proto - Federation and Special Types', () => {
         string title = 3;
       }"
     `);
-  });
-  test('should generate rpc method for required field with randomly ordered fields', () => {
-    const sdl = `
+    });
+    test('should generate rpc method for required field with randomly ordered fields', () => {
+      const sdl = `
       type Product @key(fields: "id") {
         id: ID!
         manufacturerId: ID! @external
@@ -1804,12 +2495,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    expect(protoText).toMatchInlineSnapshot(`
+      expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
 
@@ -1905,9 +2596,9 @@ describe('SDL to Proto - Federation and Special Types', () => {
         string message = 2;
       }"
     `);
-  });
-  test('should generate rpc method for required field with inline fragments and __typename', () => {
-    const sdl = `
+    });
+    test('should generate rpc method for required field with inline fragments and __typename', () => {
+      const sdl = `
       type Storage @key(fields: "id") {
         id: ID!
         primaryItem: StorageItem! @external
@@ -1929,20 +2620,21 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const { proto: protoText } = compileGraphQLToProto(sdl);
+      const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // Validate Proto definition
-    expectValidProto(protoText);
+      // Validate Proto definition
+      expectValidProto(protoText);
 
-    // Should generate a Require RPC with oneof for the interface type
-    // __typename should be skipped in the proto generation
-    expect(protoText).toContain('rpc RequireStorageItemInfoById');
-    expect(protoText).toContain('RequireStorageItemInfoByIdFields');
-    expect(protoText).toContain('oneof instance');
-    expect(protoText).toContain('PalletItem');
-    expect(protoText).toContain('ContainerItem');
-    // __typename should NOT appear in proto
-    expect(protoText).not.toContain('__typename');
-    expect(protoText).not.toContain('typename');
+      // Should generate a Require RPC with oneof for the interface type
+      // __typename should be skipped in the proto generation
+      expect(protoText).toContain('rpc RequireStorageItemInfoById');
+      expect(protoText).toContain('RequireStorageItemInfoByIdFields');
+      expect(protoText).toContain('oneof instance');
+      expect(protoText).toContain('PalletItem');
+      expect(protoText).toContain('ContainerItem');
+      // __typename should NOT appear in proto
+      expect(protoText).not.toContain('__typename');
+      expect(protoText).not.toContain('typename');
+    });
   });
 });

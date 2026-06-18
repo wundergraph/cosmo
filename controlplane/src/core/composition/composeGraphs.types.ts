@@ -66,6 +66,10 @@ export interface ComposeGraphsTaskInput {
   tagOptionsByContractName: SerializedContractTagOptions[];
   compositionOptions?: CompositionOptions;
   skipRouterConfig?: boolean;
+  trace?: {
+    sentryTrace: string | undefined;
+    baggage: string | undefined;
+  };
 }
 
 export interface ComposeGraphsTaskResultItem {

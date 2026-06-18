@@ -5,6 +5,7 @@ import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import { App } from 'octokit';
+import Redlock from 'redlock';
 import * as schema from '../db/schema.js';
 import NodeServiceImpl from './bufservices/NodeService.js';
 import PlatformServiceImpl from './bufservices/PlatformService.js';
@@ -21,6 +22,7 @@ import { DeactivateOrganizationQueue } from './workers/DeactivateOrganizationWor
 import { DeleteUserQueue } from './workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from './workers/ReactivateOrganizationWorker.js';
 import { DeleteOrganizationAuditLogsQueue } from './workers/DeleteOrganizationAuditLogsWorker.js';
+import { DeleteBatchPublishJobDetailsQueue } from './workers/DeleteBatchPublishJobDetailsWorker.js';
 
 export interface RouterOptions {
   db: PostgresJsDatabase<typeof schema>;
@@ -49,9 +51,11 @@ export interface RouterOptions {
     deactivateOrganizationQueue: DeactivateOrganizationQueue;
     reactivateOrganizationQueue: ReactivateOrganizationQueue;
     deleteUserQueue: DeleteUserQueue;
+    deleteBatchPublishJobDetailsQueue: DeleteBatchPublishJobDetailsQueue;
   };
   stripeSecretKey?: string;
   cdnBaseUrl: string;
+  lockAdapter: Redlock;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 80_000,

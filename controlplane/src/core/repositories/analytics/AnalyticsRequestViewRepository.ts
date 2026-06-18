@@ -3,31 +3,30 @@ import {
   AnalyticsFilter,
   AnalyticsViewFilterOperator,
   AnalyticsViewGroupName,
-  AnalyticsViewResult,
-  AnalyticsViewResultFilter,
-  AnalyticsViewRow,
   AnalyticsViewRowValue,
   CustomOptions,
-  Unit,
+  Unit
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { ClickHouseClient } from '../../clickhouse/index.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { ClickHouseClient } from '../../clickhouse/index.js';
+import { traced } from '../../tracing.js';
 import {
   BaseFilters,
+  CoercedFilterValues,
   ColumnMetaData,
   buildAnalyticsViewColumns,
   buildAnalyticsViewFilters,
   buildCoercedFilterSqlStatement,
   buildColumnsFromNames,
   coerceFilterValues,
-  fillColumnMetaData,
-  CoercedFilterValues,
   escapeStringsFromParams,
+  fillColumnMetaData,
 } from './util.js';
 
 /**
  * Repository for clickhouse analytics data
  */
+@traced
 export class AnalyticsRequestViewRepository {
   constructor(private client: ClickHouseClient) {}
 
@@ -555,7 +554,7 @@ export class AnalyticsRequestViewRepository {
     return httpStatusCodes;
   }
 
-  private getBaseFiltersForGroup = (name: AnalyticsViewGroupName) => {
+  private getBaseFiltersForGroup(name: AnalyticsViewGroupName) {
     const filters = { ...this.baseFilters };
 
     let baseFiltersForGroup: BaseFilters = {};
@@ -606,7 +605,7 @@ export class AnalyticsRequestViewRepository {
     }
 
     return baseFiltersForGroup;
-  };
+  }
 
   private getFilters(
     name: AnalyticsViewGroupName,
@@ -677,13 +676,13 @@ export class AnalyticsRequestViewRepository {
     return filters.filter((f) => allowedColumnNames.has(f.field));
   }
 
-  private getSortOrder = (id?: string, desc?: boolean) => {
+  private getSortOrder(id?: string, desc?: boolean) {
     const allowedColumns = Object.keys(this.columnMetadata);
 
     if (id && allowedColumns.includes(id)) {
       return `ORDER BY ${id} ${desc ? 'DESC' : 'ASC'}`;
     }
-  };
+  }
 
   public async getView(
     organizationId: string,

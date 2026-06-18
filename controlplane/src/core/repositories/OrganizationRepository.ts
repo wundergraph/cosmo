@@ -40,6 +40,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { delayForManualOrgDeletionInDays, delayForOrgAuditLogsDeletionInDays } from '../constants.js';
 import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
+import { traced } from '../tracing.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -48,6 +49,7 @@ import { OrganizationGroupRepository } from './OrganizationGroupRepository.js';
 /**
  * Repository for organization related operations.
  */
+@traced
 export class OrganizationRepository {
   protected billing: BillingRepository;
 
@@ -958,33 +960,32 @@ export class OrganizationRepository {
     return result[0];
   }
 
-  public queueOrganizationDeletion(input: {
+  public async queueOrganizationDeletion(input: {
     organizationId: string;
     queuedBy?: string;
     deleteOrganizationQueue: DeleteOrganizationQueue;
+    deleteDelayInDays?: number;
   }) {
-    return this.db.transaction(async (tx) => {
-      const now = new Date();
-      await tx
-        .update(schema.organizations)
-        .set({
-          queuedForDeletionAt: now,
-          queuedForDeletionBy: input.queuedBy,
-        })
-        .where(eq(schema.organizations.id, input.organizationId));
+    const now = new Date();
+    await this.db
+      .update(schema.organizations)
+      .set({
+        queuedForDeletionAt: now,
+        queuedForDeletionBy: input.queuedBy,
+      })
+      .where(eq(schema.organizations.id, input.organizationId));
 
-      const deleteAt = addDays(now, delayForManualOrgDeletionInDays);
-      const delay = Number(deleteAt) - Number(now);
+    const deleteAt = addDays(now, input.deleteDelayInDays || delayForManualOrgDeletionInDays);
+    const delay = Number(deleteAt) - Number(now);
 
-      return await input.deleteOrganizationQueue.addJob(
-        {
-          organizationId: input.organizationId,
-        },
-        {
-          delay,
-        },
-      );
-    });
+    return await input.deleteOrganizationQueue.addJob(
+      {
+        organizationId: input.organizationId,
+      },
+      {
+        delay,
+      },
+    );
   }
 
   public restoreOrganization(input: { organizationId: string; deleteOrganizationQueue: DeleteOrganizationQueue }) {
@@ -1404,6 +1405,7 @@ export class OrganizationRepository {
       'feature-flags': 0,
       'field-pruning-grace-period': 0,
       plugins: 0,
+      'persisted-operations': 3000,
       users: 25,
       requests: 30,
       // Boolean features
@@ -1418,6 +1420,8 @@ export class OrganizationRepository {
       sso: false,
       'subgraph-check-extensions': false,
       support: false,
+      'split-config-loading': false,
+      'login-method-restrictions': false,
     };
 
     for (const feature of features) {

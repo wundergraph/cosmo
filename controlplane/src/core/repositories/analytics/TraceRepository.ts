@@ -1,7 +1,9 @@
 import { Span } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
+import { traced } from '../../tracing.js';
 import { timestampToNanoseconds } from './util.js';
 
+@traced
 export class TraceRepository {
   constructor(private client: ClickHouseClient) {}
 

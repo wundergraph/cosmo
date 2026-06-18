@@ -109,6 +109,7 @@ export type Costs = {
 
 export type FieldWeightConfiguration = {
   argumentWeights: Map<ArgumentName, number>;
+  directiveArgumentWeights: Map<DirectiveArgumentCoords, number>;
   fieldName: FieldName;
   typeName: TypeName;
   weight?: number;

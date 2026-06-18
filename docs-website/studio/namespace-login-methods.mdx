@@ -1,0 +1,80 @@
+---
+title: "Namespace Login Methods"
+description: "Restrict which login methods can access each namespace, so that different environments are reachable only through the identity providers you choose."
+icon: "lock-keyhole"
+---
+
+Namespace login methods let you control which login methods can access each [namespace](/concepts/namespaces) in your organization. A user who authenticates through a login method that a namespace does not allow cannot see or act on that namespace or the graphs inside it.
+
+Login methods must also be allowed at the organization level. See [Organization Login Methods](/studio/organization-login-methods).
+
+<Note>
+  Login method restrictions are an Enterprise plan feature.
+</Note>
+
+This is useful when different environments must be reached through different identities. Map your `production` namespace to a production [SSO](/studio/sso) app and your `staging` namespace to a staging app, and a user who signs in through the staging app no longer has access to production.
+
+## Login methods
+
+A namespace can be mapped to any combination of the following:
+
+- **Password**: email and password login.
+- **Google**: Google social login.
+- **GitHub**: GitHub social login.
+- **SSO apps**: each OIDC provider you have connected. Every connected app is a separate login method, so you can allow one app and not another. See [SSO](/studio/sso) for how to connect providers.
+
+## How the gate works
+
+The mapping is default-open and works per namespace:
+
+- A namespace with **no** configured login methods is open to every login method.
+- A namespace with **one or more** configured login methods is restricted to exactly those methods. Every other login method is denied.
+
+The restriction applies to both visibility and actions. A user whose login method is not allowed for a namespace does not see it in lists and cannot read from or write to it. The gate is based on how the user authenticated, not on their role, so it applies to all members including organization admins.
+
+<Note>
+  API keys are never gated. A request authenticated with an API key has access to every namespace regardless of the mappings. Use API keys for CI and automation that must reach all environments.
+</Note>
+
+## Configure mappings
+
+<Info>
+  Only organization admins can view and change namespace login methods.
+</Info>
+
+<Steps>
+  <Step>
+    Connect the SSO providers and enable the social logins you intend to use. See [SSO](/studio/sso).
+  </Step>
+  <Step>
+    Go to **Login Methods** and use the **Namespaces** section.
+  </Step>
+  <Step>
+    Add a row for each namespace you want to restrict, then select the login methods allowed for it. Namespaces you do not add stay open to all login methods.
+  </Step>
+  <Step>
+    Save. The mappings apply on each user's next request.
+  </Step>
+</Steps>
+
+<Note>
+  The gate applies to admins too, so this page only lists the namespaces your **current login method** can access. If you signed in through the staging SSO app, you see and configure only the namespaces that app can reach; namespaces reachable only through other login methods are hidden from the list and the namespace selector. Sign in through the relevant login method to manage those.
+</Note>
+
+## Behavior
+
+- **Reopening a namespace**: remove all of a namespace's login methods to make it open to every method again.
+- **Deleting an SSO provider**: when you delete a connected provider, it is removed from every namespace mapping. A namespace that allowed only that provider becomes open again.
+- **Unmapped namespaces**: namespaces created after you configure mappings start open until you add them.
+
+## Example
+
+An organization has a `production` and a `staging` namespace, a "Production" SSO app, and a "Staging" SSO app.
+
+| Namespace    | Allowed login methods   |
+| ------------ | ----------------------- |
+| `production` | Production SSO          |
+| `staging`    | Staging SSO, Password   |
+| `default`    | (unmapped, open to all) |
+
+A user who signs in through the Staging app sees `staging` and `default`, but not `production`. A user who signs in with a password sees `staging` and `default`. An API key sees all three.

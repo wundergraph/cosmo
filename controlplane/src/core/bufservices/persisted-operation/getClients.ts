@@ -1,9 +1,15 @@
+import { subDays } from 'date-fns';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetClientsRequest, GetClientsResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
+import { getDateRange } from '../../repositories/analytics/util.js';
 import type { RouterOptions } from '../../routes.js';
+import { defaultRetentionLimitInDays } from '../../constants.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
@@ -29,7 +35,50 @@ export function getClients(
         clients: [],
       };
     }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(federatedGraph)) {
+      throw new UnauthorizedError();
+    }
+
     const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
+
+    if (req.includeTraffic && opts.chClient) {
+      const clients = await operationsRepo.getRegisteredClientsWithOperationMetadata();
+      const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+      const changeRetention = await orgRepo.getFeature({
+        organizationId: authContext.organizationId,
+        featureId: 'breaking-change-retention',
+      });
+      const limit = changeRetention?.limit ?? defaultRetentionLimitInDays;
+      const [start, end] = getDateRange({
+        start: subDays(Date.now(), limit).getTime(),
+        end: Date.now(),
+      });
+
+      const metricsRepo = new MetricsRepository(opts.chClient);
+      const clientNamesWithTraffic = await metricsRepo.getClientsWithPersistedOperationTraffic({
+        organizationId: authContext.organizationId,
+        graphId: federatedGraph.id,
+        start,
+        end,
+      });
+
+      const clientsWithTraffic = [];
+      for (const client of clients) {
+        clientsWithTraffic.push({
+          ...client,
+          hasTraffic: clientNamesWithTraffic.has(client.name),
+        });
+      }
+
+      return {
+        response: {
+          code: EnumStatusCode.OK,
+        },
+        clients: clientsWithTraffic,
+      };
+    }
+
     const clients = await operationsRepo.getRegisteredClients();
 
     return {

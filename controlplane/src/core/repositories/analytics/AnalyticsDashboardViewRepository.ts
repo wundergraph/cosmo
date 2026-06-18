@@ -14,7 +14,10 @@ import {
   SubgraphRequestRateResult,
   TimeFilters,
 } from '../../../types/index.js';
+import { traced } from '../../tracing.js';
+import { ClickHouseUnavailableError } from 'src/core/errors/errors.js';
 
+@traced
 export class AnalyticsDashboardViewRepository {
   constructor(private client: ClickHouseClient) {}
 
@@ -56,7 +59,11 @@ export class AnalyticsDashboardViewRepository {
     return [];
   }
 
-  public async getRequestSeries(federatedGraphId: string, organizationId: string, filter: TimeFilters) {
+  public async getRequestSeries(
+    federatedGraphId: string,
+    organizationId: string,
+    filter: TimeFilters,
+  ): Promise<{ series: PlainMessage<RequestSeriesItem>[]; ok: boolean }> {
     if (filter?.dateRange && filter.dateRange.start > filter.dateRange.end) {
       const tmp = filter.dateRange.start;
       filter.dateRange.start = filter.dateRange.end;
@@ -96,24 +103,36 @@ export class AnalyticsDashboardViewRepository {
       organizationId,
     };
 
-    const seriesRes = await this.client.queryPromise(query, params);
+    const { data: seriesRes, ok } = await this.client.queryPromiseWithDefault<{
+      timestamp: string;
+      totalRequests: number;
+      erroredRequests: number;
+    }>(query, {
+      params,
+    });
 
     if (Array.isArray(seriesRes)) {
-      return seriesRes.map((p) => ({
-        timestamp: p.timestamp,
-        totalRequests: Number(p.totalRequests),
-        erroredRequests: Number(p.erroredRequests),
-      }));
+      return {
+        ok,
+        series: seriesRes.map((p) => ({
+          timestamp: p.timestamp,
+          totalRequests: Number(p.totalRequests),
+          erroredRequests: Number(p.erroredRequests),
+        })),
+      };
     }
 
-    return [];
+    return { ok, series: [] };
   }
 
   private async getMostRequestedOperations(
     federatedGraphId: string,
     organizationId: string,
     dateRange: DateRange<number>,
-  ): Promise<OperationRequestCount[]> {
+  ): Promise<{
+    operations: PlainMessage<OperationRequestCount>[];
+    ok: boolean;
+  }> {
     const query = `
     SELECT
       OperationHash as operationHash,
@@ -134,16 +153,26 @@ export class AnalyticsDashboardViewRepository {
       federatedGraphId,
     };
 
-    const res = await this.client.queryPromise(query, params);
+    const { data: res, ok } = await this.client.queryPromiseWithDefault<{
+      operationHash: string;
+      operationName: string;
+      totalRequests: string;
+    }>(query, { params, defaultValue: [] });
 
     if (Array.isArray(res)) {
-      return res.map((r) => ({
-        ...r,
-        totalRequests: Number(r.totalRequests),
-      }));
+      return {
+        ok,
+        operations: res.map((r) => ({
+          ...r,
+          totalRequests: Number(r.totalRequests),
+        })),
+      };
     }
 
-    return [];
+    return {
+      ok,
+      operations: [],
+    };
   }
 
   private async getFederatedGraphRates(
@@ -151,7 +180,7 @@ export class AnalyticsDashboardViewRepository {
     organizationId: string,
     dateRange: DateRange<number>,
     rangeInHours: number,
-  ): Promise<FederatedGraphRequestRateResult[]> {
+  ): Promise<{ rates: FederatedGraphRequestRateResult[]; ok: boolean }> {
     // to minutes
     const multiplier = rangeInHours * 60;
 
@@ -177,16 +206,26 @@ export class AnalyticsDashboardViewRepository {
       organizationId,
     };
 
-    const res = await this.client.queryPromise(query, params);
+    const { data: res, ok } = await this.client.queryPromiseWithDefault<{
+      federatedGraphID: string;
+      requestRate: number;
+      errorRate: number;
+    }>(query, { params, defaultValue: [] });
     if (Array.isArray(res)) {
-      return res.map((r) => ({
-        federatedGraphID: r.federatedGraphID,
-        requestRate: r.requestRate,
-        errorRate: r.errorRate,
-      }));
+      return {
+        rates: res.map((r) => ({
+          federatedGraphID: r.federatedGraphID,
+          requestRate: r.requestRate,
+          errorRate: r.errorRate,
+        })),
+        ok,
+      };
     }
 
-    return [];
+    return {
+      rates: [],
+      ok,
+    };
   }
 
   private async getFederatedGraphMetricsView(
@@ -194,16 +233,19 @@ export class AnalyticsDashboardViewRepository {
     organizationId: string,
     dateRange: DateRange<number>,
     rangeInHours: number,
-  ) {
+  ): Promise<{ view: PlainMessage<FederatedGraphMetrics>; ok: boolean }> {
     const [requestRates] = await Promise.all([
       this.getFederatedGraphRates(federatedGraphId, organizationId, dateRange, rangeInHours),
     ]);
 
     return {
-      federatedGraphID: federatedGraphId,
-      requestRate: requestRates[0]?.requestRate || 0,
-      errorRate: requestRates[0]?.errorRate || 0,
-      latency: 0,
+      view: {
+        federatedGraphID: federatedGraphId,
+        requestRate: requestRates.rates[0]?.requestRate || 0,
+        errorRate: requestRates.rates[0]?.errorRate || 0,
+        latency: 0,
+      },
+      ok: requestRates.ok,
     };
   }
 
@@ -213,7 +255,7 @@ export class AnalyticsDashboardViewRepository {
     dateRange: DateRange<number>,
     subgraphs: SubgraphDTO[],
     rangeInHours: number,
-  ): Promise<SubgraphRequestRateResult[]> {
+  ): Promise<{ rates: SubgraphRequestRateResult[]; ok: boolean }> {
     // to minutes
     const multiplier = rangeInHours * 60;
 
@@ -242,16 +284,26 @@ export class AnalyticsDashboardViewRepository {
       organizationId,
     };
 
-    const res = await this.client.queryPromise(query, params);
+    const { data: res, ok } = await this.client.queryPromiseWithDefault<{
+      subgraphID: string;
+      requestRate: number;
+      errorRate: number;
+    }>(query, { params, defaultValue: [] });
     if (Array.isArray(res)) {
-      return res.map((r) => ({
-        subgraphID: r.subgraphID,
-        requestRate: r.requestRate,
-        errorRate: r.errorRate,
-      }));
+      return {
+        ok,
+        rates: res.map((r) => ({
+          subgraphID: r.subgraphID,
+          requestRate: r.requestRate,
+          errorRate: r.errorRate,
+        })),
+      };
     }
 
-    return [];
+    return {
+      ok,
+      rates: [],
+    };
   }
 
   private async getSubgraphLatency(
@@ -259,7 +311,7 @@ export class AnalyticsDashboardViewRepository {
     organizationId: string,
     dateRange: DateRange<number>,
     subgraphs: SubgraphDTO[],
-  ): Promise<SubgraphLatencyResult[]> {
+  ): Promise<{ latencies: SubgraphLatencyResult[]; ok: boolean }> {
     // Properly escape subgraph IDs for SQL
     const escapedSubgraphIds = subgraphs.map((s) => `'${s.id.replace(/'/g, "''")}'`).join(',');
 
@@ -296,16 +348,25 @@ export class AnalyticsDashboardViewRepository {
       organizationId,
     };
 
-    const res = await this.client.queryPromise(query, params);
+    const { data: res, ok } = await this.client.queryPromiseWithDefault<{
+      subgraphID: string;
+      latency: number;
+    }>(query, { params, defaultValue: [] });
 
     if (Array.isArray(res)) {
-      return res.map((r) => ({
-        subgraphID: r.subgraphID,
-        latency: r.latency,
-      }));
+      return {
+        ok,
+        latencies: res.map((r) => ({
+          subgraphID: r.subgraphID,
+          latency: r.latency,
+        })),
+      };
     }
 
-    return [];
+    return {
+      ok,
+      latencies: [],
+    };
   }
 
   private async getSubgraphMetricsView(
@@ -314,11 +375,14 @@ export class AnalyticsDashboardViewRepository {
     dateRange: DateRange<number>,
     subgraphs: SubgraphDTO[],
     rangeInHours: number,
-  ) {
+  ): Promise<{ metrics: PlainMessage<SubgraphMetrics>[]; ok: boolean }> {
     const metrics: PlainMessage<SubgraphMetrics>[] = [];
 
     if (subgraphs.length === 0) {
-      return metrics;
+      return {
+        metrics: [],
+        ok: true,
+      };
     }
 
     const [requestRates, latency] = await Promise.all([
@@ -327,8 +391,8 @@ export class AnalyticsDashboardViewRepository {
     ]);
 
     for (const subgraph of subgraphs) {
-      const rate = requestRates.find((r) => r.subgraphID === subgraph.id);
-      const lat = latency.find((l) => l.subgraphID === subgraph.id);
+      const rate = requestRates.rates.find((r) => r.subgraphID === subgraph.id);
+      const lat = latency.latencies.find((l) => l.subgraphID === subgraph.id);
       const metric: PlainMessage<SubgraphMetrics> = {
         subgraphID: subgraph.id,
         requestRate: 0,
@@ -348,7 +412,10 @@ export class AnalyticsDashboardViewRepository {
       metrics.push(metric);
     }
 
-    return metrics;
+    return {
+      metrics,
+      ok: requestRates.ok && latency.ok,
+    };
   }
 
   public async getView(

@@ -1,7 +1,8 @@
 import { randomFill } from 'node:crypto';
 import { isIPv4, isIPv6 } from 'node:net';
 import { S3ClientConfig } from '@aws-sdk/client-s3';
-import { HandlerContext } from '@connectrpc/connect';
+import { Code, ConnectError, HandlerContext } from '@connectrpc/connect';
+import * as Sentry from '@sentry/node';
 import {
   GraphQLSubscriptionProtocol,
   GraphQLWebsocketSubprotocol,
@@ -10,6 +11,8 @@ import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { AxiosError } from 'axios';
 import { isNetworkError, isRetryableError } from 'axios-retry';
 import { formatISO, subHours } from 'date-fns';
+import { inArray, SQL } from 'drizzle-orm';
+import { PgColumn } from 'drizzle-orm/pg-core';
 import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
@@ -17,10 +20,32 @@ import DOMPurify from 'isomorphic-dompurify';
 import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
 import { ProposalOrigin, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole, ProposalOrigin as ProposalOriginEnum, WebsocketSubprotocol } from '../db/models.js';
-import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
+import {
+  AuthContext,
+  DateRange,
+  FederatedGraphDTO,
+  Label,
+  LoginMethod,
+  NamespaceAccess,
+  ResponseMessage,
+  S3StorageOptions,
+  SOCIAL_LOGIN_PROVIDERS,
+  SocialLoginProvider,
+} from '../types/index.js';
 import { paginationDefaults } from './constants.js';
-import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
+import {
+  isAuthenticationError,
+  isAuthorizationError,
+  isClickHouseUnavailableError,
+  isPublicError,
+  LoginMethodNotAllowedError,
+} from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
+import { RBACEvaluator } from './services/RBACEvaluator.js';
+import type { OidcRepository } from './repositories/OidcRepository.js';
+import type { OrganizationRepository } from './repositories/OrganizationRepository.js';
+import type { NamespaceLoginMethodRepository } from './repositories/NamespaceLoginMethodRepository.js';
+import type { OrganizationLoginMethodRepository } from './repositories/OrganizationLoginMethodRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
@@ -65,6 +90,9 @@ export async function handleError<T>(
           details: error.message,
         },
       } as T;
+    } else if (isClickHouseUnavailableError(error)) {
+      logger.error(error);
+      throw new ConnectError(error.message, Code.Unavailable);
     }
 
     logger.error(error);
@@ -74,6 +102,7 @@ export async function handleError<T>(
 }
 
 export const fastifyLoggerId = Symbol('logger');
+export const sentrySpanId = Symbol('sentrySpan');
 
 export const getLogger = (ctx: HandlerContext, defaultLogger: FastifyBaseLogger) => {
   return ctx.values.get<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: defaultLogger });
@@ -94,6 +123,25 @@ export const enrichLogger = (
   });
 
   ctx.values.set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: newLogger }, newLogger);
+
+  Sentry.setUser({
+    id: authContext.userId,
+    username: authContext.userDisplayName,
+  });
+
+  const spanAttributes = Object.fromEntries(
+    Object.entries({
+      'user.id': authContext.userId,
+      'user.displayName': authContext.userDisplayName,
+      'organization.id': authContext.organizationId,
+      'organization.slug': authContext.organizationSlug,
+    }).filter(([, v]) => v),
+  );
+
+  const activeSpan = Sentry.getActiveSpan();
+  if (activeSpan) {
+    Sentry.getRootSpan(activeSpan).setAttributes(spanAttributes);
+  }
 
   return newLogger;
 };
@@ -880,4 +928,229 @@ export function isValidGrpcNamingScheme(url: string): boolean {
       return false;
     }
   }
+}
+
+/**
+ * Applies the IdP namespace gate to a list-query's WHERE conditions, based on
+ * the actor's {@link NamespaceAccess}:
+ *
+ * - `all`        → pushes nothing, returns `true`.
+ * - `none`       → returns `false`; the caller must short-circuit with its own
+ *                  "no rows" value (`[]`, `0`, `false`, …) instead of querying.
+ * - `restricted` → pushes `namespaceColumn IN (...)`, returns `true`.
+ *
+ * `namespaceColumn` is the namespace-id column of the query's FROM table, which
+ * differs per caller (e.g. `targets.namespaceId`, `namespaces.id`,
+ * `featureFlags.namespaceId`).
+ */
+export function applyIdpNamespaceGate(
+  rbac: RBACEvaluator | undefined,
+  namespaceColumn: PgColumn,
+  conditions: (SQL<unknown> | undefined)[],
+): boolean {
+  const access = rbac?.idpNamespaceAccess ?? { kind: 'all' };
+  switch (access.kind) {
+    case 'all': {
+      return true;
+    }
+    case 'none': {
+      return false;
+    }
+    case 'restricted': {
+      conditions.push(inArray(namespaceColumn, [...access.namespaceIds]));
+      return true;
+    }
+  }
+}
+
+/**
+ * Resolves the login method from a session's IdP alias, scoped to a specific
+ * organization. Returns an `sso` method when the alias matches an org OIDC
+ * provider, a `social` method for built-in social brokers, or `password` as
+ * the default. Extracted so callers outside of `buildAuthState` (e.g. the
+ * `/session` endpoint) can reuse the identical resolution logic.
+ */
+export async function resolveLoginMethod(
+  deps: { oidcRepo: OidcRepository },
+  input: { organizationId: string; idpAlias: string | null | undefined },
+): Promise<LoginMethod> {
+  if (input.idpAlias) {
+    const provider = await deps.oidcRepo.getOidcProviderByAlias({
+      alias: input.idpAlias,
+      organizationId: input.organizationId,
+    });
+    if (provider) {
+      return { type: 'sso', ssoProviderId: provider.id, alias: input.idpAlias };
+    }
+    if (isSocialLoginProvider(input.idpAlias)) {
+      return { type: 'social', provider: input.idpAlias, alias: input.idpAlias };
+    }
+  }
+  return { type: 'password' };
+}
+
+/**
+ * Derives the full auth state for an interactive (web-session or access-token)
+ * login from the session's IdP alias:
+ *  1. Resolves the login method — a custom OIDC app when the alias matches an
+ *     org provider, otherwise password (no IdP, or an alias whose provider no
+ *     longer belongs to the org, so default-open namespaces stay reachable).
+ *  2. Applies the IdP namespace gate for that login method.
+ *  3. Builds the RBAC evaluator from the org's member groups plus the gate.
+ *
+ * Returns the login method and the evaluator. The namespace gate is baked into
+ * the evaluator (`rbac.idpNamespaceAccess`), which is the single source of
+ * truth for it. Shared by both authenticators.
+ */
+export async function buildAuthState(
+  deps: {
+    oidcRepo: OidcRepository;
+    orgRepo: OrganizationRepository;
+    namespaceLoginMethodRepo: NamespaceLoginMethodRepository;
+    orgLoginMethodRepo: OrganizationLoginMethodRepository;
+  },
+  input: { organizationId: string; userId: string; idpAlias: string | null | undefined },
+): Promise<{ loginMethod: LoginMethod; rbac: RBACEvaluator }> {
+  const loginMethod = await resolveLoginMethod(
+    { oidcRepo: deps.oidcRepo },
+    { organizationId: input.organizationId, idpAlias: input.idpAlias },
+  );
+
+  // Org-level login-method gate: deny the whole org when the method is not allowed.
+  const isOrgLoginMethodAllowed = await deps.orgLoginMethodRepo.isLoginMethodAllowed({
+    organizationId: input.organizationId,
+    loginMethod,
+  });
+  if (!isOrgLoginMethodAllowed) {
+    throw new LoginMethodNotAllowedError();
+  }
+
+  const namespaceAccess = await deps.namespaceLoginMethodRepo.allowedNamespaces({
+    organizationId: input.organizationId,
+    loginMethod,
+  });
+
+  const rbac = new RBACEvaluator(
+    await deps.orgRepo.getOrganizationMemberGroups({
+      organizationID: input.organizationId,
+      userID: input.userId,
+    }),
+    input.userId,
+    /* isApiKey */ false,
+    namespaceAccess,
+  );
+
+  return { loginMethod, rbac };
+}
+
+/**
+ * Whether an organization allow-list permits the given login method. Used by the
+ * org login-method update to verify the acting admin's method stays allowed (the
+ * self-lockout guard). API keys cannot be the actor — they are rejected before
+ * this is reached — so they are excluded from the parameter type by design.
+ */
+export function isLoginMethodAllowedToUpdate(
+  allow: {
+    allowPasswordLogin: boolean;
+    allowGoogleLogin: boolean;
+    allowGithubLogin: boolean;
+    allowedSsoProviderIds: string[];
+  },
+  method: LoginMethod,
+): boolean {
+  switch (method.type) {
+    case 'sso': {
+      return allow.allowedSsoProviderIds.includes(method.ssoProviderId);
+    }
+    case 'social': {
+      return method.provider === 'google' ? allow.allowGoogleLogin : allow.allowGithubLogin;
+    }
+    case 'password': {
+      return allow.allowPasswordLogin;
+    }
+    case 'api-key': {
+      return false;
+    }
+    default: {
+      throw new Error(`Unhandled login method type: ${JSON.stringify(method)}`);
+    }
+  }
+}
+
+/**
+ * Whether a single login-method config row (from `organization_login_methods` or
+ * `namespace_login_methods`) matches the given login method. Shared by both gates
+ * so the matching rule lives in one place. API keys (and any unknown method) do
+ * not match a row; callers that exempt API keys must short-circuit before this.
+ */
+export function loginMethodMatchesRow(
+  method: LoginMethod,
+  row: {
+    ssoProviderId: string | null;
+    isPasswordLogin: boolean | null;
+    isGoogleLogin: boolean | null;
+    isGithubLogin: boolean | null;
+  },
+): boolean {
+  switch (method.type) {
+    case 'sso': {
+      return row.ssoProviderId === method.ssoProviderId;
+    }
+    case 'social': {
+      return method.provider === 'google' ? !!row.isGoogleLogin : !!row.isGithubLogin;
+    }
+    case 'password': {
+      return !!row.isPasswordLogin;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+/**
+ * Whether a namespace login-method mapping references any method that the given
+ * org allow-list no longer permits. Used to find the namespace mappings an org
+ * restriction would have to prune.
+ */
+export function doesNamespaceMappingExceedsOrgAllowList(
+  mapping: {
+    allowPasswordLogin: boolean;
+    allowGoogleLogin: boolean;
+    allowGithubLogin: boolean;
+    allowedSsoProviderIds: string[];
+  },
+  allow: {
+    allowPasswordLogin: boolean;
+    allowGoogleLogin: boolean;
+    allowGithubLogin: boolean;
+    allowedSsoProviderIds: string[];
+  },
+): boolean {
+  return (
+    (mapping.allowPasswordLogin && !allow.allowPasswordLogin) ||
+    (mapping.allowGoogleLogin && !allow.allowGoogleLogin) ||
+    (mapping.allowGithubLogin && !allow.allowGithubLogin) ||
+    mapping.allowedSsoProviderIds.some((id) => !allow.allowedSsoProviderIds.includes(id))
+  );
+}
+
+/** Whether a specific namespace is reachable under the given {@link NamespaceAccess}. */
+export function isNamespaceAllowed(access: NamespaceAccess, namespaceId: string): boolean {
+  switch (access.kind) {
+    case 'all': {
+      return true;
+    }
+    case 'none': {
+      return false;
+    }
+    case 'restricted': {
+      return access.namespaceIds.has(namespaceId);
+    }
+  }
+}
+
+/** Whether the given IdP alias is one of Keycloak's built-in social brokers. */
+export function isSocialLoginProvider(alias: string): alias is SocialLoginProvider {
+  return (SOCIAL_LOGIN_PROVIDERS as readonly string[]).includes(alias);
 }

@@ -26,6 +26,7 @@ import type { RouterOptions } from '../../routes.js';
 import SchemaGraphPruner from '../../services/SchemaGraphPruner.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getOperations(
   opts: RouterOptions,
@@ -62,6 +63,10 @@ export function getOperations(
         },
         operations: [],
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
     }
 
     req.limit = req.limit ?? 100;

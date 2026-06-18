@@ -6,11 +6,11 @@ import {
   MigrateFromApolloResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import {
-  PlainMessage,
-  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
   GraphApiKeyJwtPayload,
+  PlainMessage,
 } from '../../../types/index.js';
 import { audiences, signJwtHS256 } from '../../crypto/jwt.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
@@ -19,9 +19,9 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { UserRepository } from '../../repositories/UserRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import ApolloMigrator from '../../services/ApolloMigrator.js';
+import { CompositionService } from '../../services/CompositionService.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
-import { UnauthorizedError } from '../../errors/errors.js';
 
 export function migrateFromApollo(
   opts: RouterOptions,
@@ -68,6 +68,10 @@ export function migrateFromApollo(
       };
     }
 
+    if (!authContext.rbac.canCreateFederatedGraph(namespace)) {
+      throw new UnauthorizedError();
+    }
+
     const org = await orgRepo.byId(authContext.organizationId);
     if (!org) {
       return {
@@ -80,7 +84,6 @@ export function migrateFromApollo(
     }
 
     const user = await userRepo.byId(authContext.userId || '');
-
     const apolloMigrator = new ApolloMigrator({
       apiKey: req.apiKey,
       organizationSlug: org.slug,
@@ -102,7 +105,6 @@ export function migrateFromApollo(
     }
 
     const graphDetails = await apolloMigrator.fetchGraphDetails({ graphID: graph.id });
-
     if (!graphDetails.success) {
       return {
         response: {
@@ -135,14 +137,7 @@ export function migrateFromApollo(
       }
     }
 
-    const ignoreExternalKeysFeature = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-    });
-
     await opts.db.transaction(async (tx) => {
-      const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
-
       const federatedGraph = await apolloMigrator.migrateGraphFromApollo({
         fedGraph: {
           name: graph.name,
@@ -156,21 +151,18 @@ export function migrateFromApollo(
         namespaceId: namespace.id,
       });
 
-      await fedGraphRepo.composeAndDeployGraphs({
-        federatedGraphs: [federatedGraph],
-        actorId: authContext.userId,
-        blobStorage: opts.blobStorage,
-        admissionConfig: {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          webhookJWTSecret: opts.admissionWebhookJWTSecret,
-        },
-        chClient: opts.chClient!,
-        compositionOptions: {
-          disableResolvabilityValidation: true,
-          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
-        },
-        webhookProxyUrl: opts.webhookProxyUrl,
-      });
+      const compositionService = new CompositionService(
+        tx,
+        authContext.organizationId,
+        logger,
+        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+        opts.blobStorage,
+        opts.chClient,
+        opts.webhookProxyUrl,
+        true,
+      );
+
+      await compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph });
     });
 
     const migratedGraph = await fedGraphRepo.byName(graph.name, req.namespace);

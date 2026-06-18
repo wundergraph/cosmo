@@ -148,8 +148,15 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		// drain the previous response before retrying
 		rt.drainBody(resp, requestLogger)
 
+		// Clone the request as it is not safe the reuse the original request after RoundTrip
+		retryRequest, cloneErr := cloneRequest(req)
+		if cloneErr != nil {
+			requestLogger.Error("Failed to clone request for retry", zap.Error(err))
+			return resp, cloneErr
+		}
+
 		// Retry the request
-		resp, err = rt.RoundTripper.RoundTrip(req)
+		resp, err = rt.RoundTripper.RoundTrip(retryRequest)
 
 		// Short circuit if the request was successful
 		if err == nil && isResponseOK(resp) {
@@ -179,6 +186,32 @@ func (rt *RetryHTTPTransport) drainBody(resp *http.Response, logger *zap.Logger)
 	if err != nil {
 		logger.Error("Failed draining when discarding the body", zap.Error(err))
 	}
+}
+
+// cloneRequest clones the request and returns a new request with the same context.
+// Reusing a request after RoundTrip is possible but not recommended as it is not safe.
+// Other clients that implement retry logic will clone the request and manually rewind
+// the body. Rewinding the body is generally only done by the standard library when
+// the reader is known to the net/http package. If any round tripper implementation
+// wraps the request body, it will not be rewound.
+func cloneRequest(req *http.Request) (*http.Request, error) {
+	r := req.Clone(req.Context())
+
+	if req.Body == nil || req.Body == http.NoBody {
+		return r, nil
+	}
+
+	if req.GetBody == nil {
+		return r, nil
+	}
+
+	clonedBody, err := req.GetBody()
+	if err != nil {
+		return nil, err
+	}
+
+	r.Body = clonedBody
+	return r, nil
 }
 
 func isResponseOK(resp *http.Response) bool {

@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/cosmo-shared",
-  "version": "0.45.4",
+  "version": "0.46.15",
   "description": "Shared code between WunderGraph Cosmo packages",
   "main": "./dist/index.js",
   "type": "module",
@@ -35,17 +35,17 @@
   "dependencies": {
     "@bufbuild/protobuf": "^2.2.2",
     "@graphql-tools/schema": "^8.5.1",
-    "@graphql-tools/utils": "^11.0.0",
+    "@graphql-tools/utils": "catalog:",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
-    "graphql": "^16.9.0",
-    "pino": "^8.14.1"
+    "graphql": "catalog:",
+    "pino": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^20.3.1",
-    "del-cli": "^5.0.0",
-    "tsx": "^3.14.0",
-    "typescript": "5.5.2",
-    "vitest": "^3.2.4"
+    "@types/node": "catalog:",
+    "del-cli": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

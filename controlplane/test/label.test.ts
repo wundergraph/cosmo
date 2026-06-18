@@ -584,7 +584,7 @@ describe('Labels', (ctx) => {
     expect(graph2AfterSet.subgraphs.length).toBe(1);
   });
 
-  test('Updating subgraph label should result in a single composition', async (testContext) => {
+  test('that updating subgraph labels that still match should not trigger recomposition', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
 
@@ -623,6 +623,68 @@ describe('Labels', (ctx) => {
       name: subgraph1Name,
       namespace: 'default',
       labels: [label2],
+    });
+
+    const updatedGraph = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: 'default',
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addSeconds(new Date(), 5)),
+    });
+    expect(updatedGraph.response?.code).toBe(EnumStatusCode.OK);
+    expect(updatedGraph.compositions.length).toBe(1);
+  });
+
+  test(`that updating a subgraph's labels to labels that do not match should trigger composition`, async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    const fedGraph1Name = genID('fedGraph1');
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const label1 = genUniqueLabel('label1');
+    const label2 = genUniqueLabel('label2');
+    const label3 = genUniqueLabel('label3');
+
+    await createAndPublishSubgraph(
+      client,
+      subgraph1Name,
+      'default',
+      `type Query { name: String! }`,
+      [label1],
+      'http://localhost:8083',
+    );
+
+    await createAndPublishSubgraph(
+      client,
+      subgraph2Name,
+      'default',
+      `type Query { name: String! }`,
+      [label2],
+      'http://localhost:8083',
+    );
+
+    await createFederatedGraph(
+      client,
+      fedGraph1Name,
+      'default',
+      [`${joinLabel(label1)},${joinLabel(label2)}`],
+      'http://localhost:8081',
+    );
+
+    const graph1 = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: 'default',
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addSeconds(new Date(), 5)),
+    });
+    expect(graph1.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph1.compositions.length).toBe(1);
+
+    await client.updateSubgraph({
+      name: subgraph1Name,
+      namespace: 'default',
+      labels: [label3],
     });
 
     const updatedGraph = await client.getCompositions({

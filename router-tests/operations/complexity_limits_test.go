@@ -534,4 +534,203 @@ func TestComplexityLimits(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("measure mode", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("measure mode does not block queries exceeding depth limit", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+						Mode: config.ComplexityLimitsModeMeasure,
+						Depth: &config.ComplexityLimit{
+							Enabled: true,
+							Limit:   2,
+						},
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+			})
+		})
+
+		t.Run("measure mode does not block queries exceeding total fields limit", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+						Mode: config.ComplexityLimitsModeMeasure,
+						TotalFields: &config.ComplexityLimit{
+							Enabled: true,
+							Limit:   1,
+						},
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+			})
+		})
+
+		t.Run("measure mode does not block queries exceeding root fields limit", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+						Mode: config.ComplexityLimitsModeMeasure,
+						RootFields: &config.ComplexityLimit{
+							Enabled: true,
+							Limit:   2,
+						},
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { initialPayload employee(id:1) { id } employees { id } }`,
+				})
+				require.Contains(t, res.Body, `"initialPayload"`)
+			})
+		})
+
+		t.Run("measure mode does not block queries exceeding root field aliases limit", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+						Mode: config.ComplexityLimitsModeMeasure,
+						RootFieldAliases: &config.ComplexityLimit{
+							Enabled: true,
+							Limit:   1,
+						},
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { firstemployee: employee(id:1) { id } employee2: employee(id:2) { id } }`,
+				})
+				require.Equal(t, `{"data":{"firstemployee":{"id":1},"employee2":{"id":2}}}`, res.Body)
+			})
+		})
+
+		t.Run("measure mode still reports complexity in OTel spans", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+						Mode: config.ComplexityLimitsModeMeasure,
+						Depth: &config.ComplexityLimit{
+							Enabled: true,
+							Limit:   2,
+						},
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Query exceeds depth limit of 2 (actual depth is 3) but should succeed in measure mode
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+
+				testSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepth.Int(3))
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
+			})
+		})
+
+		t.Run("measure mode caches complexity and reports cache hit", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+						Mode: config.ComplexityLimitsModeMeasure,
+						Depth: &config.ComplexityLimit{
+							Enabled: true,
+							Limit:   2,
+						},
+					}
+					securityConfiguration.ComplexityCalculationCache = &config.ComplexityCalculationCache{
+						Enabled:   true,
+						CacheSize: 1024,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// First request - should compute and cache
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+
+				testSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepth.Int(3))
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
+				exporter.Reset()
+
+				// Wait for cache consistency
+				time.Sleep(100 * time.Millisecond)
+
+				// Second request - should use cache and still succeed in measure mode
+				res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res2.Body)
+
+				testSpan2 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepth.Int(3))
+				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+			})
+		})
+
+		t.Run("enforce mode still blocks queries (default behavior)", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+						Mode: config.ComplexityLimitsModeEnforce,
+						Depth: &config.ComplexityLimit{
+							Enabled: true,
+							Limit:   2,
+						},
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.Equal(t, 400, res.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}]}`, res.Body)
+			})
+		})
+
+		t.Run("default mode is enforce and blocks queries", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+						Depth: &config.ComplexityLimit{
+							Enabled: true,
+							Limit:   2,
+						},
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.Equal(t, 400, res.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}]}`, res.Body)
+			})
+		})
+	})
 }

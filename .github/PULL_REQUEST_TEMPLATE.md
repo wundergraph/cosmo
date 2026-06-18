@@ -25,6 +25,7 @@ Examples of good PR titles:
 - [ ] I have discussed my proposed changes in an issue and have received approval to proceed.
 - [ ] I have followed the coding standards of the project.
 - [ ] Tests or benchmarks have been added or updated.
+- [ ] If applicable, I have provided instructions for reviewers for [manually validating my changes](https://github.com/wundergraph/cosmo/blob/main/CONTRIBUTING.md#pull-requests-conventions).
 - [ ] Documentation has been updated on [https://github.com/wundergraph/docs-website](https://github.com/wundergraph/docs-website).
 - [ ] I have read the [Contributors Guide](https://github.com/wundergraph/cosmo/blob/main/CONTRIBUTING.md).
 

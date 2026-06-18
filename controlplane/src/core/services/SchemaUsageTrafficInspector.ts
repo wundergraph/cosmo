@@ -10,6 +10,7 @@ import pLimit from 'p-limit';
 import { SchemaCheckChangeAction } from '../../db/models.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
+import { traced } from '../tracing.js';
 
 export enum FieldTypeChangeCategory {
   /**
@@ -167,6 +168,7 @@ export interface InspectorOperationResult {
   isSafeOverride: boolean;
 }
 
+@traced
 export class SchemaUsageTrafficInspector {
   constructor(private client: ClickHouseClient) {}
 

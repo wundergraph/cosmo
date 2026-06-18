@@ -7,6 +7,7 @@ import {
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
@@ -36,6 +37,13 @@ export function getChangelogBySchemaVersion(
           details: 'Could not find composition linked to the changelog',
         },
       };
+    }
+
+    if (composition.targetId) {
+      const graph = await fedRepo.byTargetId(composition.targetId);
+      if (graph && !authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+        throw new UnauthorizedError();
+      }
     }
 
     const changelogs = await fedRepo.fetchChangelogByVersion({

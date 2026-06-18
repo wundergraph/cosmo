@@ -22,7 +22,9 @@ type Options struct {
 	FileInfoProvider func(path string) (os.FileInfo, error)
 }
 
-func New(options Options) (func(ctx context.Context) error, error) {
+type WatcherFunc func(ctx context.Context) error
+
+func New(options Options) (WatcherFunc, error) {
 	if options.Interval <= 0 {
 		return nil, errors.New("interval must be greater than zero")
 	}

@@ -59,6 +59,10 @@ export function computeCacheWarmerOperations(
       };
     }
 
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+      throw new UnauthorizedError();
+    }
+
     const namespace = await namespaceRepository.byId(federatedGraph!.namespaceId);
     if (!namespace?.enableCacheWarmer) {
       return {

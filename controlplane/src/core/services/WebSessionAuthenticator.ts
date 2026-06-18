@@ -8,6 +8,7 @@ import { UserRepository } from '../repositories/UserRepository.js';
 import * as schema from '../../db/schema.js';
 import AuthUtils from '../auth-utils.js';
 import { AuthenticationError } from '../errors/errors.js';
+import { traced } from '../tracing.js';
 
 export const OrganizationSlugHeader = 'cosmo-org-slug';
 
@@ -16,8 +17,11 @@ export type WebAuthAuthContext = {
   userId: string;
   organizationSlug: string;
   userDisplayName: string;
+  sessionId: string;
+  idpAlias: string | null;
 };
 
+@traced
 export default class WebSessionAuthenticator {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
@@ -82,6 +86,8 @@ export default class WebSessionAuthenticator {
           userId: decryptedJwt.iss,
           organizationSlug,
           userDisplayName: user.email,
+          sessionId: existingSessions[0].id,
+          idpAlias: existingSessions[0].idpAlias ?? null,
         };
       }
     }

@@ -139,6 +139,21 @@ export const createFederatedSubgraph = PlatformService.method.createFederatedSub
 export const publishFederatedSubgraph = PlatformService.method.publishFederatedSubgraph;
 
 /**
+ * PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
+ * request. Affected federated graphs (and their contracts / feature flags) are composed exactly once each.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraphs
+ */
+export const publishFederatedSubgraphs = PlatformService.method.publishFederatedSubgraphs;
+
+/**
+ * Gets the status of a batch publish job by the provided job identifier.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetBatchPublishJobStatus
+ */
+export const getBatchPublishJobStatus = PlatformService.method.getBatchPublishJobStatus;
+
+/**
  * CreateFederatedGraph creates a federated graph on the control plane.
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateFederatedGraph
@@ -471,6 +486,13 @@ export const isMemberLimitReached = PlatformService.method.isMemberLimitReached;
 export const inviteUser = PlatformService.method.inviteUser;
 
 /**
+ * InviteUsers invites multiple users to join the organization
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.InviteUsers
+ */
+export const inviteUsers = PlatformService.method.inviteUsers;
+
+/**
  * GetAPIKeys returns a list of API keys of the organization
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAPIKeys
@@ -703,6 +725,13 @@ export const createOIDCProvider = PlatformService.method.createOIDCProvider;
 export const getOIDCProvider = PlatformService.method.getOIDCProvider;
 
 /**
+ * ListOIDCProviders lists all OIDC providers configured for the organization
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.ListOIDCProviders
+ */
+export const listOIDCProviders = PlatformService.method.listOIDCProviders;
+
+/**
  * DeleteOIDCProvider deletes the oidc provider connected the organization
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOIDCProvider
@@ -722,6 +751,20 @@ export const updateIDPMappers = PlatformService.method.updateIDPMappers;
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetClients
  */
 export const getClients = PlatformService.method.getClients;
+
+/**
+ * PreviewDeleteClient returns the affected operation count for deleting a client
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.PreviewDeleteClient
+ */
+export const previewDeleteClient = PlatformService.method.previewDeleteClient;
+
+/**
+ * DeleteClient deletes a registered client and its persisted operations
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteClient
+ */
+export const deleteClient = PlatformService.method.deleteClient;
 
 /**
  * GetRouters returns all active routers of the federated graph
@@ -979,6 +1022,20 @@ export const getFeatureSubgraphs = PlatformService.method.getFeatureSubgraphs;
 export const getFeatureFlagsByFederatedGraph = PlatformService.method.getFeatureFlagsByFederatedGraph;
 
 /**
+ * GetFeatureFlagsInLatestCompositionByFederatedGraph returns only the feature flags that are part of the latest valid composition.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsInLatestCompositionByFederatedGraph
+ */
+export const getFeatureFlagsInLatestCompositionByFederatedGraph = PlatformService.method.getFeatureFlagsInLatestCompositionByFederatedGraph;
+
+/**
+ * GetFeatureSubgraphsByFederatedGraph returns the paginated list of unique feature subgraphs across all feature flags of the federated graph.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFederatedGraph
+ */
+export const getFeatureSubgraphsByFederatedGraph = PlatformService.method.getFeatureSubgraphsByFederatedGraph;
+
+/**
  * GetFederatedGraphById returns the federated graph by id.
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphById
@@ -1133,6 +1190,34 @@ export const configureNamespaceProposalConfig = PlatformService.method.configure
 export const getNamespaceProposalConfig = PlatformService.method.getNamespaceProposalConfig;
 
 /**
+ * UpdateNamespaceLoginMethods replaces the org's per-namespace login-method configuration in one call.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateNamespaceLoginMethods
+ */
+export const updateNamespaceLoginMethods = PlatformService.method.updateNamespaceLoginMethods;
+
+/**
+ * ListNamespaceLoginMethods returns the login-method configuration for every restricted namespace in the org.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.ListNamespaceLoginMethods
+ */
+export const listNamespaceLoginMethods = PlatformService.method.listNamespaceLoginMethods;
+
+/**
+ * GetOrganizationLoginMethods returns the org's allowed login methods (empty restriction = all allowed).
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationLoginMethods
+ */
+export const getOrganizationLoginMethods = PlatformService.method.getOrganizationLoginMethods;
+
+/**
+ * UpdateOrganizationLoginMethods replaces the org's allowed login methods and reconciles namespace mappings.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrganizationLoginMethods
+ */
+export const updateOrganizationLoginMethods = PlatformService.method.updateOrganizationLoginMethods;
+
+/**
  * GetProposalsByFederatedGraph returns proposals for a federated graph.
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph
@@ -1208,3 +1293,27 @@ export const verifyAPIKeyGraphAccess = PlatformService.method.verifyAPIKeyGraphA
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.RecomposeGraph
  */
 export const recomposeGraph = PlatformService.method.recomposeGraph;
+
+/**
+ * RecomposeFeatureFlag triggers a recomposition of the feature flag using its current subgraphs
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.RecomposeFeatureFlag
+ */
+export const recomposeFeatureFlag = PlatformService.method.recomposeFeatureFlag;
+
+/**
+ * Onboarding
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOnboarding
+ */
+export const getOnboarding = PlatformService.method.getOnboarding;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOnboarding
+ */
+export const createOnboarding = PlatformService.method.createOnboarding;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.FinishOnboarding
+ */
+export const finishOnboarding = PlatformService.method.finishOnboarding;

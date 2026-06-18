@@ -1,12 +1,6 @@
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import {
-  CompositionError,
-  CompositionWarning,
-  CreateContractRequest,
-  CreateContractResponse,
-  DeploymentError,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { CreateContractRequest, CreateContractResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, PlainMessage } from '../../../types/index.js';
 import { PublicError, UnauthorizedError } from '../../errors/errors.js';
@@ -17,6 +11,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidGraphName, isValidSchemaTags } from '../../util.js';
+import { CompositionService } from '../../services/CompositionService.js';
 
 export function createContract(
   opts: RouterOptions,
@@ -76,7 +71,6 @@ export function createContract(
       }
 
       req.excludeTags = [...new Set(req.excludeTags)];
-
       if (!isValidSchemaTags(req.excludeTags)) {
         throw new PublicError(EnumStatusCode.ERR, `Provided exclude tags are invalid`);
       }
@@ -99,7 +93,6 @@ export function createContract(
       }
 
       const count = await fedGraphRepo.count();
-
       const feature = await orgRepo.getFeature({
         organizationId: authContext.organizationId,
         featureId: 'federated-graphs',
@@ -110,7 +103,6 @@ export function createContract(
       });
 
       const limit = feature?.limit === -1 ? undefined : feature?.limit;
-
       if (limit && count >= limit) {
         throw new PublicError(
           EnumStatusCode.ERR_LIMIT_REACHED,
@@ -189,55 +181,31 @@ export function createContract(
         targetNamespaceDisplayName: contractGraph.namespace,
       });
 
-      const compositionErrors: PlainMessage<CompositionError>[] = [];
-      const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-      const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
+      const compositionService = new CompositionService(
+        tx,
+        authContext.organizationId,
+        logger,
+        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+        opts.blobStorage,
+        opts.chClient,
+        opts.webhookProxyUrl,
+        req.disableResolvabilityValidation,
+      );
 
-      const composition = await fedGraphRepo.composeAndDeployGraphs({
-        actorId: authContext.userId,
-        admissionConfig: {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          webhookJWTSecret: opts.admissionWebhookJWTSecret,
-        },
-        blobStorage: opts.blobStorage,
-        chClient: opts.chClient!,
-        compositionOptions: {
-          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
-          disableResolvabilityValidation: req.disableResolvabilityValidation,
-        },
-        federatedGraphs: [{ ...contractGraph, contract }],
-        webhookProxyUrl: opts.webhookProxyUrl,
-      });
-
-      compositionErrors.push(...composition.compositionErrors);
-      deploymentErrors.push(...composition.deploymentErrors);
-      compositionWarnings.push(...composition.compositionWarnings);
-
-      if (compositionErrors.length > 0) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-          },
-          compositionErrors,
-          compositionWarnings,
-          deploymentErrors: [],
-        };
-      }
-
-      if (deploymentErrors.length > 0) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-          },
-          compositionErrors: [],
-          compositionWarnings,
-          deploymentErrors,
-        };
-      }
+      const { deploymentErrors, compositionErrors, compositionWarnings } =
+        await compositionService.composeAndDeployFederatedGraph({
+          actorId: authContext.userId,
+          federatedGraph: { ...contractGraph, contract },
+        });
 
       return {
         response: {
-          code: EnumStatusCode.OK,
+          code:
+            compositionErrors.length > 0
+              ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+              : deploymentErrors.length > 0
+                ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+                : EnumStatusCode.OK,
         },
         compositionErrors,
         compositionWarnings,

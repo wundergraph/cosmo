@@ -601,8 +601,8 @@ export class GraphQLToProtoTextVisitor {
         continue;
       }
 
-      // Skip non-object types
-      if (!isObjectType(type)) {
+      // Skip non-entity types
+      if (!isObjectType(type) && !isInterfaceType(type)) {
         continue;
       }
       const keyDirectives = this.getKeyDirectives(type);
@@ -1072,7 +1072,7 @@ Example:
    * @param type - The GraphQL object type to check for key directives
    * @returns Array of all key directives found
    */
-  private getKeyDirectives(type: GraphQLObjectType): DirectiveNode[] {
+  private getKeyDirectives(type: GraphQLObjectType | GraphQLInterfaceType): DirectiveNode[] {
     return type.astNode?.directives?.filter((d) => d.name.value === KEY_DIRECTIVE_NAME) || [];
   }
 

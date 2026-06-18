@@ -1,9 +1,11 @@
 import { Warning } from '../../warnings/types';
 import { QUOTATION_JOIN } from '../../utils/string-constants';
 import {
+  type InvalidRepeatedComposedDirectiveWarningParams,
   type SingleFederatedInputFieldOneOfWarningParams,
   type SingleSubgraphInputFieldOneOfWarningParams,
 } from './params';
+import { type SubgraphName } from '../../types/types';
 
 export function invalidOverrideTargetSubgraphNameWarning(
   targetSubgraphName: string,
@@ -200,6 +202,35 @@ export function singleFederatedInputFieldOneOfWarning({
       `, but only one optional Input field, "${fieldName}", is propagated to` +
       ` the federated graph. Consider removing "@oneOf", changing "${fieldName}"` +
       ` to a required type, and removing any other remaining optional Input fields instead.`,
+    subgraph: {
+      name: '',
+    },
+  });
+}
+
+export function composedOneOfDirectiveWarning(subgraphName: SubgraphName): Warning {
+  return new Warning({
+    message:
+      `A "@composeDirective" directive defines the "name" argument value "@oneOf".` +
+      ` The "@oneOf" directive is now considered built-in and will be automatically included in the federated.` +
+      ` schema. Consider removing the inclusion of "@oneOf" within any "@composeDirective" directives.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function invalidRepeatedComposedDirectiveWarning({
+  directiveCoords,
+  directiveName,
+  printedDirective,
+}: InvalidRepeatedComposedDirectiveWarningParams): Warning {
+  return new Warning({
+    message:
+      `The definition for the composed directive "@${directiveName}" is not defined  as repeatable.` +
+      ` However, the directive "@${directiveName}" is declared on "${directiveCoords}" multiple times with` +
+      ` incompatible arguments. The federated graph will only propagate "${printedDirective}".` +
+      ` Consider updating the directive definition for "${directiveName}" to be repeatable.`,
     subgraph: {
       name: '',
     },

@@ -23,7 +23,6 @@ export function createOIDCProvider(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    const oidcProvider = new OidcProvider();
     if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
       throw new UnauthorizedError();
     }
@@ -58,6 +57,7 @@ export function createOIDCProvider(
 
     const alias = `${authContext.organizationSlug}_${uid(3)}`;
 
+    const oidcProvider = new OidcProvider();
     await oidcProvider.createOidcProvider({
       kcClient: opts.keycloakClient,
       kcRealm: opts.keycloakRealm,
@@ -66,6 +66,7 @@ export function createOIDCProvider(
       alias,
       db: opts.db,
       input: req,
+      abortSignal: ctx.signal,
     });
 
     return {

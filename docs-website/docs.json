@@ -26,10 +26,10 @@
     "codeblocks": "system",
     "eyebrows": "breadcrumbs"
   },
-    "banner": {
-      "content": "Help map how teams scale Federated GraphQL in the State of Federation 2026 Survey. We donate $30 to UNICEF per response → [Take the survey](https://8bxwlo3ot55.typeform.com/to/zIJKRQUe).",
-      "dismissible": false 
-    },
+  "banner": {
+    "content": "Help map how teams scale Federated GraphQL in the State of Federation 2026 Survey. We donate $30 to UNICEF per response → [Take the survey](https://8bxwlo3ot55.typeform.com/to/zIJKRQUe).",
+    "dismissible": false
+  },
   "contextual": {
     "options": ["copy", "view", "chatgpt", "claude"]
   },
@@ -41,13 +41,7 @@
         "groups": [
           {
             "group": " ",
-            "pages": [
-              "overview",
-              "architecture",
-              "enterprise",
-              "security-and-compliance",
-              "self-hosted"
-            ]
+            "pages": ["overview", "architecture", "enterprise", "security-and-compliance", "self-hosted"]
           },
           {
             "group": "Getting Started",
@@ -70,11 +64,7 @@
           },
           {
             "group": "Cosmo Connect",
-            "pages": [
-              "connect/overview",
-              "connect/plugins",
-              "connect/grpc-services"
-            ]
+            "pages": ["connect/overview", "connect/plugins", "connect/grpc-services"]
           },
           {
             "group": "Cosmo ConnectRPC",
@@ -102,14 +92,31 @@
                   "router/configuration/template-expressions"
                 ]
               },
-              "router/mcp",
+              {
+                "group": "MCP Gateway",
+                "icon": "robot",
+                "pages": [
+                  "router/mcp",
+                  "router/mcp/quickstart",
+                  "router/mcp/operations",
+                  "router/mcp/configuration",
+                  {
+                    "group": "OAuth 2.1",
+                    "icon": "shield-check",
+                    "pages": [
+                      "router/mcp/oauth/overview",
+                      "router/mcp/oauth/quickstart",
+                      "router/mcp/oauth/scopes",
+                      "router/mcp/oauth/configuration"
+                    ]
+                  },
+                  "router/mcp/ide-setup"
+                ]
+              },
               {
                 "group": "Custom Modules",
                 "icon": "cubes",
-                "pages": [
-                  "router/custom-modules",
-                  "router/custom-modules-migration"
-                ]
+                "pages": ["router/custom-modules", "router/custom-modules-migration"]
               },
               {
                 "group": "Cosmo Connect",
@@ -155,7 +162,8 @@
                   "router/subscriptions/server-sent-events-sse",
                   "router/subscriptions/multipart-http-requests",
                   "router/subscriptions/websocket-subprotocols",
-                  "router/subscriptions/router-configuration-for-subscriptions"
+                  "router/subscriptions/router-configuration-for-subscriptions",
+                  "router/subscriptions-migration"
                 ]
               },
               {
@@ -184,6 +192,7 @@
                 "pages": [
                   "router/metrics-and-monitoring",
                   "router/metrics-and-monitoring/span-error-status",
+                  "router/metrics-and-monitoring/exemplars",
                   "router/metrics-and-monitoring/prometheus-metric-reference",
                   "router/metrics-and-monitoring/grafana"
                 ]
@@ -215,10 +224,7 @@
               {
                 "group": "Deployment",
                 "icon": "truck-ramp-couch",
-                "pages": [
-                  "router/deployment",
-                  "router/deployment/config-hot-reload"
-                ]
+                "pages": ["router/deployment", "router/deployment/config-hot-reload"]
               },
               {
                 "group": "Security",
@@ -234,11 +240,7 @@
               {
                 "group": "Development",
                 "icon": "flask-round-potion",
-                "pages": [
-                  "router/development",
-                  "router/development/debugging",
-                  "router/development/development-mode"
-                ]
+                "pages": ["router/development", "router/development/debugging", "router/development/development-mode"]
               },
               "router/request-deduplication",
               "router/performance-debugging",
@@ -246,10 +248,7 @@
               {
                 "group": "Query Plan",
                 "icon": "file-contract",
-                "pages": [
-                  "router/query-plan",
-                  "router/query-plan/batch-generate-query-plans"
-                ]
+                "pages": ["router/query-plan", "router/query-plan/batch-generate-query-plans"]
               },
               {
                 "group": "Cosmo Streams (EDFS)",
@@ -281,7 +280,14 @@
               "router/compliance-and-data-management",
               "router/query-batching",
               "router/feature-flags",
-              "router/subgraph-error-propagation",
+              {
+                "group": "Subgraph data propagation",
+                "icon": "share-from-square",
+                "pages": [
+                  "router/subgraph-data-propagation/subgraph-error-propagation",
+                  "router/subgraph-data-propagation/subgraph-extension-propagation"
+                ]
+              },
               "router/relaxed-field-selection-merging-nullability",
               "router/file-upload",
               "router/access-logs",
@@ -338,11 +344,7 @@
               {
                 "group": "API Keys",
                 "icon": "key",
-                "pages": [
-                  "studio/api-keys",
-                  "studio/api-keys/api-key-permissions",
-                  "studio/api-keys/api-key-resources"
-                ]
+                "pages": ["studio/api-keys", "studio/api-keys/api-key-permissions", "studio/api-keys/api-key-resources"]
               },
               "studio/migrate-from-apollo",
               {
@@ -374,14 +376,12 @@
                   "studio/sso/microsoft-entra"
                 ]
               },
+              "studio/namespace-login-methods",
+              "studio/organization-login-methods",
               {
                 "group": "SCIM",
                 "icon": "file-user",
-                "pages": [
-                  "studio/scim",
-                  "studio/scim/okta",
-                  "studio/scim/okta-oin-version"
-                ]
+                "pages": ["studio/scim", "studio/scim/okta", "studio/scim/okta-oin-version"]
               },
               "studio/audit-log",
               "studio/cosmo-ai",
@@ -396,11 +396,7 @@
           },
           {
             "group": "Control Plane",
-            "pages": [
-              "control-plane/intro",
-              "control-plane/configuration",
-              "control-plane/webhooks"
-            ]
+            "pages": ["control-plane/intro", "control-plane/configuration", "control-plane/webhooks"]
           },
           {
             "group": "GraphQL / Federation",
@@ -411,19 +407,21 @@
                 "icon": "sign-post",
                 "pages": [
                   "federation/federation-directives-index",
+                  "federation/directives/authenticated",
+                  "federation/directives/composeddirective",
+                  "federation/directives/connect__fieldresolver",
                   "federation/directives/deprecated",
-                  "federation/directives/specifiedby",
-                  "federation/directives/key",
                   "federation/directives/external",
+                  "federation/directives/key",
+                  "federation/directives/link",
+                  "federation/directives/openfed__configuredescription",
+                  "federation/directives/openfed__requirefetchreasons",
+                  "federation/directives/openfed__subscriptionfilter",
                   "federation/directives/provides",
                   "federation/directives/requires",
                   "federation/directives/shareable",
-                  "federation/directives/authenticated",
-                  "federation/directives/requiresscopes",
-                  "federation/directives/connect__fieldresolver",
-                  "federation/directives/openfed__subscriptionfilter",
-                  "federation/directives/openfed__configuredescription",
-                  "federation/directives/openfed__requirefetchreasons"
+                  "federation/directives/specifiedby",
+                  "federation/directives/requiresscopes"
                 ]
               },
               {
@@ -463,10 +461,7 @@
               {
                 "group": "Terraform",
                 "icon": "road-bridge",
-                "pages": [
-                  "deployments-and-hosting/terraform",
-                  "deployments-and-hosting/terraform/aws-fargate"
-                ]
+                "pages": ["deployments-and-hosting/terraform", "deployments-and-hosting/terraform/aws-fargate"]
               },
               "deployments-and-hosting/docker",
               "deployments-and-hosting/release-management",
@@ -484,6 +479,7 @@
             "pages": [
               "cli/intro",
               "cli/essentials",
+              "cli/demo",
               "cli/api-keys",
               {
                 "group": "Namespace",
@@ -503,6 +499,7 @@
                   "cli/subgraph",
                   "cli/subgraph/create",
                   "cli/subgraph/publish",
+                  "cli/subgraph/batch-publish",
                   "cli/subgraph/list",
                   "cli/subgraph/check",
                   "cli/subgraph/update",
@@ -558,11 +555,7 @@
                   {
                     "group": "Version",
                     "icon": "code-branch",
-                    "pages": [
-                      "cli/monograph/version",
-                      "cli/monograph/version/get",
-                      "cli/monograph/version/set"
-                    ]
+                    "pages": ["cli/monograph/version", "cli/monograph/version/get", "cli/monograph/version/set"]
                   }
                 ]
               },
@@ -592,10 +585,7 @@
                   {
                     "group": "Compatibility version",
                     "icon": "code-compare",
-                    "pages": [
-                      "cli/router/compatibility-version",
-                      "cli/router/compatibility-version/list"
-                    ]
+                    "pages": ["cli/router/compatibility-version", "cli/router/compatibility-version/list"]
                   },
                   {
                     "group": "Router Plugin",
@@ -629,17 +619,17 @@
               {
                 "group": "Auth",
                 "icon": "key",
-                "pages": [
-                  "cli/auth",
-                  "cli/auth/login",
-                  "cli/auth/whoami",
-                  "cli/auth/logout"
-                ]
+                "pages": ["cli/auth", "cli/auth/login", "cli/auth/whoami", "cli/auth/logout"]
               },
               {
                 "group": "Operations",
                 "icon": "get-pocket",
                 "pages": ["cli/operations", "cli/operations/push"]
+              },
+              {
+                "group": "Clients",
+                "icon": "laptop-mobile",
+                "pages": ["cli/clients", "cli/clients/list", "cli/clients/delete"]
               },
               {
                 "group": "Schema Contracts",
@@ -678,11 +668,7 @@
               {
                 "group": "Proposal",
                 "icon": "file-circle-plus",
-                "pages": [
-                  "cli/proposal",
-                  "cli/proposal/create",
-                  "cli/proposal/update"
-                ]
+                "pages": ["cli/proposal", "cli/proposal/create", "cli/proposal/update"]
               }
             ]
           }
@@ -818,6 +804,10 @@
     {
       "source": "/router/proxy-capabilities/response-header-operations",
       "destination": "/router/proxy-capabilities/subgraph-response-header-operations"
+    },
+    {
+      "source": "/router/subgraph-error-propagation",
+      "destination": "/router/subgraph-data-propagation/subgraph-error-propagation"
     }
   ]
 }
