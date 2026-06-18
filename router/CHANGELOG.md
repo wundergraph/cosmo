@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.324.0](https://github.com/wundergraph/cosmo/compare/router@0.323.3...router@0.324.0) (2026-06-18)
+
+### Features
+
+* enable to ignore cost weights on implementing types ([#2976](https://github.com/wundergraph/cosmo/issues/2976)) ([91039af](https://github.com/wundergraph/cosmo/commit/91039af80ce600f8948c68d32eb18c8148d6d9b2)) (@ysmolski)
+
 ## [0.323.3](https://github.com/wundergraph/cosmo/compare/router@0.323.2...router@0.323.3) (2026-06-18)
 
 ### Bug Fixes

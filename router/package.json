@@ -1,6 +1,6 @@
 {
   "name": "router",
-  "version": "0.323.3",
+  "version": "0.324.0",
   "private": true,
   "description": "The WunderGraph Router",
   "keywords": [
