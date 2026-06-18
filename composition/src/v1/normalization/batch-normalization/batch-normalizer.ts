@@ -30,7 +30,7 @@ import { upsertFederatedDirectiveData } from '../utils';
 import { invalidOverrideTargetSubgraphNameWarning } from '../../warnings/warnings';
 import { MAX_OR_SCOPES } from '../../constants/constants';
 import { normalizeSubgraph } from '../normalization-factory';
-import { type LinkImportData } from '../types/types';
+import { type FieldSetCacheEntry, type LinkImportData } from '../types/types';
 import { type HandleOverridesParams } from './types/params';
 import { internalSubgraphFromNormalization } from '../../../subgraph/utils';
 import { type DirectiveDefinitionData } from '../../../directive-definition-data/types/types';
@@ -51,6 +51,8 @@ export class BatchNormalizer {
   subgraphNames = new Set<SubgraphName>();
   invalidORScopesCoords = new Set<string>();
   fieldCoordsByNamedTypeName = new Map<TypeName, Set<string>>();
+  // Shared across all subgraph normalizations of a single batch normalization run
+  fieldSetCacheByRawFieldSet = new Map<string, FieldSetCacheEntry>();
   subgraphs: Array<Subgraph>;
   warnings: Array<Warning> = [];
   validationErrors: Array<Error> = [];
@@ -211,6 +213,7 @@ export class BatchNormalizer {
       const subgraphName = subgraph.name;
       const normalizationResult = normalizeSubgraph({
         document: subgraph.definitions,
+        fieldSetCacheByRawFieldSet: this.fieldSetCacheByRawFieldSet,
         internalGraph,
         options: this.options,
         subgraphName,
@@ -229,10 +232,14 @@ export class BatchNormalizer {
         upsertAuthorizationData(this.authorizationDataByParentTypeName, authorizationData, this.invalidORScopesCoords);
       }
       for (const [namedTypeName, fieldCoords] of normalizationResult.fieldCoordsByNamedTypeName) {
-        addIterableToSet({
-          source: fieldCoords,
-          target: getValueOrDefault(this.fieldCoordsByNamedTypeName, namedTypeName, () => new Set<string>()),
-        });
+        const existingFieldCoords = this.fieldCoordsByNamedTypeName.get(namedTypeName);
+        if (existingFieldCoords) {
+          for (const fieldCoord of fieldCoords) {
+            existingFieldCoords.add(fieldCoord);
+          }
+        } else {
+          this.fieldCoordsByNamedTypeName.set(namedTypeName, new Set<string>(fieldCoords));
+        }
       }
       mergeSetValueMap({
         source: normalizationResult.concreteTypeNamesByAbstractTypeName,

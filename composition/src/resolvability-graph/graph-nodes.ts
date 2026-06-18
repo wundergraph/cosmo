@@ -1,4 +1,4 @@
-import { add, getEntriesNotInHashSet, getValueOrDefault } from '../utils/utils';
+import { add } from '../utils/utils';
 import { type GraphFieldData } from '../utils/types';
 import { type FieldName, type NodeName, type SubgraphName, type TypeName } from './types/types';
 
@@ -8,8 +8,9 @@ export class Edge {
   isAbstractEdge: boolean;
   isExternal = false;
   isInaccessible = false;
+  // The index of the last walker to visit the edge; walker indices only ever increase.
+  lastVisitedIndex = -1;
   node: GraphNode;
-  visitedIndices = new Set<number>();
 
   constructor(id: number, node: GraphNode, edgeName: string, isAbstractEdge = false) {
     this.edgeName = isAbstractEdge ? `... on ${edgeName}` : edgeName;
@@ -29,17 +30,20 @@ export type GraphNodeOptions = {
 };
 
 export class GraphNode {
-  externalFieldSets = new Set<string>();
+  // Lazily allocated on first write because most nodes never populate it.
+  externalFieldSets?: Set<string>;
   fieldDataByName = new Map<FieldName, GraphFieldData>();
   headToTailEdges = new Map<string, Edge>();
-  entityEdges = new Array<Edge>();
+  // Lazily allocated on first write because most nodes never populate it.
+  entityEdges?: Array<Edge>;
   nodeName: NodeName;
   hasEntitySiblings = false;
   isAbstract: boolean;
   isInaccessible = false;
   isLeaf = false;
   isRootNode = false;
-  satisfiedFieldSets = new Set<string>();
+  // Lazily allocated on first write because most nodes never populate it.
+  satisfiedFieldSets?: Set<string>;
   subgraphName: SubgraphName;
   typeName: TypeName;
 
@@ -55,13 +59,10 @@ export class GraphNode {
     if (this.isAbstract) {
       return;
     }
-    const inaccessibleFieldNames = getEntriesNotInHashSet(this.headToTailEdges.keys(), this.fieldDataByName);
-    for (const fieldName of inaccessibleFieldNames) {
-      const headToTailEdge = this.headToTailEdges.get(fieldName);
-      if (!headToTailEdge) {
-        continue;
+    for (const [fieldName, headToTailEdge] of this.headToTailEdges) {
+      if (!this.fieldDataByName.has(fieldName)) {
+        headToTailEdge.isInaccessible = true;
       }
-      headToTailEdge.isInaccessible = true;
     }
   }
 
@@ -73,6 +74,9 @@ export class GraphNode {
   }
 
   getAccessibleEntityNodeNames(node: GraphNode, accessibleEntityNodeNames: Set<NodeName>) {
+    if (!node.entityEdges) {
+      return;
+    }
     for (const edge of node.entityEdges) {
       if (!add(accessibleEntityNodeNames, edge.node.nodeName)) {
         continue;
@@ -115,9 +119,17 @@ export class EntityDataNode {
   }
 
   addTargetSubgraphByFieldSet(fieldSet: string, targetSubgraphName: SubgraphName) {
-    getValueOrDefault(this.targetSubgraphNamesByFieldSet, fieldSet, () => new Set<SubgraphName>()).add(
-      targetSubgraphName,
-    );
-    getValueOrDefault(this.fieldSetsByTargetSubgraphName, targetSubgraphName, () => new Set<string>()).add(fieldSet);
+    let targetSubgraphNames = this.targetSubgraphNamesByFieldSet.get(fieldSet);
+    if (!targetSubgraphNames) {
+      targetSubgraphNames = new Set<SubgraphName>();
+      this.targetSubgraphNamesByFieldSet.set(fieldSet, targetSubgraphNames);
+    }
+    targetSubgraphNames.add(targetSubgraphName);
+    let fieldSets = this.fieldSetsByTargetSubgraphName.get(targetSubgraphName);
+    if (!fieldSets) {
+      fieldSets = new Set<string>();
+      this.fieldSetsByTargetSubgraphName.set(targetSubgraphName, fieldSets);
+    }
+    fieldSets.add(fieldSet);
   }
 }

@@ -1,4 +1,5 @@
-import { BREAK, type ConstDirectiveNode, Kind, type StringValueNode, visit } from 'graphql';
+import { BREAK, type ConstDirectiveNode, Kind, type StringValueNode } from 'graphql';
+import { walkFieldSetDocument } from '../../ast/field-set-walker';
 import { type FieldSetConditionData, type RequiredFieldConfiguration } from '../../router-configuration/types';
 import {
   type CompositeOutputData,
@@ -69,6 +70,11 @@ export type InterfaceObjectForInternalGraphOptions = {
   subgraphName: string;
 };
 
+export type ImplicitKeyFieldSetValidationResult = {
+  fieldSetConditions: Array<FieldSetConditionData>;
+  shouldAddKeyFieldSet: boolean;
+};
+
 export type VisitFieldSetOptions = {
   conditionalFieldDataByCoords: Map<string, ConditionalFieldData>;
   currentSubgraphName: string;
@@ -77,6 +83,7 @@ export type VisitFieldSetOptions = {
   objectData: ObjectDefinitionData | InterfaceDefinitionData;
   parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
   graphNode?: GraphNode;
+  implicitKeyFieldSetValidationResultByCacheKey?: Map<string, ImplicitKeyFieldSetValidationResult>;
 };
 
 export function validateImplicitFieldSets({
@@ -87,6 +94,7 @@ export function validateImplicitFieldSets({
   objectData,
   parentDefinitionDataByTypeName,
   graphNode,
+  implicitKeyFieldSetValidationResultByCacheKey,
 }: VisitFieldSetOptions) {
   const keyFieldSetDataByFieldSet = getValueOrDefault(
     entityData.keyFieldSetDatasBySubgraphName,
@@ -98,120 +106,132 @@ export function validateImplicitFieldSets({
     if (keyFieldSetDataByFieldSet.has(keyFieldSet)) {
       continue;
     }
+    /* The validation result is fully determined by the entity, the target composite type, the key FieldSet, and the
+     * subgraph data; consequently, the result can be memoized for repeated validations of the same combination. */
+    const cacheKey = `${currentSubgraphName}.${entityData.typeName}.${objectData.name}|${keyFieldSet}`;
+    const cachedResult = implicitKeyFieldSetValidationResultByCacheKey?.get(cacheKey);
+    if (cachedResult) {
+      if (!cachedResult.shouldAddKeyFieldSet) {
+        continue;
+      }
+      implicitKeys.push({
+        fieldName: '',
+        selectionSet: keyFieldSet,
+        ...(cachedResult.fieldSetConditions.length > 0 ? { conditions: [...cachedResult.fieldSetConditions] } : {}),
+        disableEntityResolver: true,
+      });
+      if (graphNode) {
+        (graphNode.satisfiedFieldSets ??= new Set<string>()).add(keyFieldSet);
+      }
+      continue;
+    }
     const parentDatas: Array<CompositeOutputData> = [objectData];
     const definedFields: Array<Set<string>> = [];
     const fieldSetConditions: Array<FieldSetConditionData> = [];
     let currentDepth = -1;
     let shouldDefineSelectionSet = true;
     let shouldAddKeyFieldSet = true;
-    visit(documentNode, {
-      Argument: {
-        enter() {
-          // Fields that define arguments are never allowed in a key FieldSet
-          // However, at this stage, it actually means the argument is undefined on the field
+    walkFieldSetDocument(documentNode, {
+      argumentEnter() {
+        // Fields that define arguments are never allowed in a key FieldSet
+        // However, at this stage, it actually means the argument is undefined on the field
+        shouldAddKeyFieldSet = false;
+        return BREAK;
+      },
+      fieldEnter(node) {
+        const parentData = parentDatas[currentDepth];
+        // If an object-like was just visited, a selection set should have been entered
+        if (shouldDefineSelectionSet) {
           shouldAddKeyFieldSet = false;
           return BREAK;
-        },
-      },
-      Field: {
-        enter(node) {
-          const parentData = parentDatas[currentDepth];
-          // If an object-like was just visited, a selection set should have been entered
-          if (shouldDefineSelectionSet) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
-          const fieldName = node.name.value;
-          if (fieldName === TYPENAME) {
-            return;
-          }
-          const fieldData = parentData.fieldDataByName.get(fieldName);
-          // undefined if the field does not exist on the parent
-          if (!fieldData || fieldData.argumentDataByName.size || definedFields[currentDepth].has(fieldName)) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
-          const { isUnconditionallyProvided } = getOrThrowError(
-            fieldData.externalFieldDataBySubgraphName,
-            currentSubgraphName,
-            `${fieldData.originalParentTypeName}.${fieldName}.externalFieldDataBySubgraphName`,
-          );
-          const conditionalData = conditionalFieldDataByCoords.get(`${fieldData.renamedParentTypeName}.${fieldName}`);
-          if (conditionalData) {
-            if (conditionalData.providedBy.length > 0) {
-              fieldSetConditions.push(...conditionalData.providedBy);
-            } else if (conditionalData.requiredBy.length > 0) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-          } else if (!isUnconditionallyProvided) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
-          // @TODO breaking in V1
-          // if (!isUnconditionallyProvided) {
-          //   if (!conditionalData || conditionalData.providedBy.length < 1) {
-          //     shouldAddKeyFieldSet = false;
-          //     return BREAK;
-          //   }
-          //   fieldSetConditions.push(...conditionalData.providedBy);
-          // }
-          definedFields[currentDepth].add(fieldName);
-          const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-          // The base scalars are not in the parents map
-          if (BASE_SCALARS.has(namedTypeName)) {
-            return;
-          }
-          // The child could itself be a parent
-          const fieldNamedTypeData = parentDefinitionDataByTypeName.get(namedTypeName);
-          if (!fieldNamedTypeData) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
-          if (fieldNamedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
-            shouldDefineSelectionSet = true;
-            parentDatas.push(fieldNamedTypeData);
-            return;
-          }
-          // interfaces and unions are invalid in a key directive
-          if (isKindAbstract(fieldNamedTypeData.kind)) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
-        },
-      },
-      InlineFragment: {
-        enter() {
+        }
+        const fieldName = node.name.value;
+        if (fieldName === TYPENAME) {
+          return;
+        }
+        const fieldData = parentData.fieldDataByName.get(fieldName);
+        // undefined if the field does not exist on the parent
+        if (!fieldData || fieldData.argumentDataByName?.size || definedFields[currentDepth].has(fieldName)) {
           shouldAddKeyFieldSet = false;
           return BREAK;
-        },
+        }
+        const { isUnconditionallyProvided } = getOrThrowError(
+          fieldData.externalFieldDataBySubgraphName,
+          currentSubgraphName,
+          `${fieldData.originalParentTypeName}.${fieldName}.externalFieldDataBySubgraphName`,
+        );
+        const conditionalData = conditionalFieldDataByCoords.get(`${fieldData.renamedParentTypeName}.${fieldName}`);
+        if (conditionalData) {
+          if (conditionalData.providedBy.length > 0) {
+            fieldSetConditions.push(...conditionalData.providedBy);
+          } else if (conditionalData.requiredBy.length > 0) {
+            shouldAddKeyFieldSet = false;
+            return BREAK;
+          }
+        } else if (!isUnconditionallyProvided) {
+          shouldAddKeyFieldSet = false;
+          return BREAK;
+        }
+        // @TODO breaking in V1
+        // if (!isUnconditionallyProvided) {
+        //   if (!conditionalData || conditionalData.providedBy.length < 1) {
+        //     shouldAddKeyFieldSet = false;
+        //     return BREAK;
+        //   }
+        //   fieldSetConditions.push(...conditionalData.providedBy);
+        // }
+        definedFields[currentDepth].add(fieldName);
+        const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+        // The base scalars are not in the parents map
+        if (BASE_SCALARS.has(namedTypeName)) {
+          return;
+        }
+        // The child could itself be a parent
+        const fieldNamedTypeData = parentDefinitionDataByTypeName.get(namedTypeName);
+        if (!fieldNamedTypeData) {
+          shouldAddKeyFieldSet = false;
+          return BREAK;
+        }
+        if (fieldNamedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
+          shouldDefineSelectionSet = true;
+          parentDatas.push(fieldNamedTypeData);
+          return;
+        }
+        // interfaces and unions are invalid in a key directive
+        if (isKindAbstract(fieldNamedTypeData.kind)) {
+          shouldAddKeyFieldSet = false;
+          return BREAK;
+        }
       },
-      SelectionSet: {
-        enter() {
-          if (!shouldDefineSelectionSet) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
-          currentDepth += 1;
-          shouldDefineSelectionSet = false;
-          if (currentDepth < 0 || currentDepth >= parentDatas.length) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
-          definedFields.push(new Set<string>());
-        },
-        leave() {
-          if (shouldDefineSelectionSet) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
-          // Empty selection sets would be a parse error, so it is unnecessary to handle them
-          currentDepth -= 1;
-          parentDatas.pop();
-          definedFields.pop();
-        },
+      inlineFragmentEnter() {
+        shouldAddKeyFieldSet = false;
+        return BREAK;
+      },
+      selectionSetEnter() {
+        if (!shouldDefineSelectionSet) {
+          shouldAddKeyFieldSet = false;
+          return BREAK;
+        }
+        currentDepth += 1;
+        shouldDefineSelectionSet = false;
+        if (currentDepth < 0 || currentDepth >= parentDatas.length) {
+          shouldAddKeyFieldSet = false;
+          return BREAK;
+        }
+        definedFields.push(new Set<string>());
+      },
+      selectionSetLeave() {
+        if (shouldDefineSelectionSet) {
+          shouldAddKeyFieldSet = false;
+          return BREAK;
+        }
+        // Empty selection sets would be a parse error, so it is unnecessary to handle them
+        currentDepth -= 1;
+        parentDatas.pop();
+        definedFields.pop();
       },
     });
+    implicitKeyFieldSetValidationResultByCacheKey?.set(cacheKey, { fieldSetConditions, shouldAddKeyFieldSet });
     if (!shouldAddKeyFieldSet) {
       continue;
     }
@@ -222,7 +242,7 @@ export function validateImplicitFieldSets({
       disableEntityResolver: true,
     });
     if (graphNode) {
-      graphNode.satisfiedFieldSets.add(keyFieldSet);
+      (graphNode.satisfiedFieldSets ??= new Set<string>()).add(keyFieldSet);
     }
   }
 }
