@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.323.3](https://github.com/wundergraph/cosmo/compare/router@0.323.2...router@0.323.3) (2026-06-18)
+
+### Bug Fixes
+
+* **router:** allow from_file header to be propagated ([#2979](https://github.com/wundergraph/cosmo/issues/2979)) ([60b55da](https://github.com/wundergraph/cosmo/commit/60b55da9223379ef1f5a2a6e74a13f2fe6b9d24e)) (@Noroth)
+
 ## [0.323.2](https://github.com/wundergraph/cosmo/compare/router@0.323.1...router@0.323.2) (2026-06-16)
 
 ### Bug Fixes
