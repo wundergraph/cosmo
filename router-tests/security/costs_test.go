@@ -221,10 +221,10 @@ func TestOperationCost(t *testing.T) {
 				require.Contains(t, res.Body, `"data":`)
 				require.NotContains(t, res.Body, `"errors":`)
 
-				// 50 * (employees(1) + id(0) + 1 * (role(1) + 3 * departments(1) + 5 * title(1)))
-				require.Equal(t, "500", res.Response.Header.Get(core.CostEstimatedHeader))
-				// 10 * (employees(1) + id(0) + 1 * (role(1) + 1.2 * departments(1) + 1.4 * title(1)))
-				require.Equal(t, "46", res.Response.Header.Get(core.CostActualHeader))
+				// 50 * (employees(1) + id(0) + 1 * (role(1) + 3 * departments(1) + 5 * title(0)))
+				require.Equal(t, "250", res.Response.Header.Get(core.CostEstimatedHeader))
+				// 10 * (employees(1) + id(0) + 1 * (role(1) + 1.2 * departments(1) + 1.4 * title(0)))
+				require.Equal(t, "32", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 
