@@ -149,8 +149,14 @@ export type ComposeDirectiveArgumentNode = {
 
 export type EntityCacheDirectiveNode = {
   readonly arguments:
-    readonly [MaxAgeArgumentNode] |
-    readonly [MaxAgeArgumentNode, NegativeCacheTtlArgumentNode?, IncludeHeadersArgumentNode?, PartialCacheLoadArgumentNode?, ShadowModeArgumentNode?];
+    | readonly [MaxAgeArgumentNode]
+    | readonly [
+        MaxAgeArgumentNode,
+        NegativeCacheTtlArgumentNode?,
+        IncludeHeadersArgumentNode?,
+        PartialCacheLoadArgumentNode?,
+        ShadowModeArgumentNode?,
+      ];
   readonly kind: Kind.DIRECTIVE;
   readonly name: NameNode & { readonly value: typeof OPENFED_ENTITY_CACHE };
   readonly loc?: Location;
