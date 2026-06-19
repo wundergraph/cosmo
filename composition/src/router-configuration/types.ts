@@ -130,6 +130,36 @@ export type EntityCacheConfig = {
   shadowMode: boolean;
 };
 
+// Maps a single query argument to an entity's @key field. Every mapping is declared explicitly with
+// @openfed__is; an argument is never matched to a @key field by name alone.
+// Example: product(productId: ID! @openfed__is(fields: "id")) on a @openfed__queryCache field
+//   → entityKeyField: "id", argumentPath: ["productId"]
+export type FieldMappingConfig = {
+  entityKeyField: FieldName;
+  argumentPath: Array<string>;
+  isBatch?: boolean;
+};
+
+// Groups field mappings for a single entity type returned by a @openfed__queryCache field.
+export type EntityKeyMappingConfig = {
+  entityTypeName: TypeName;
+  fieldMappings: Array<FieldMappingConfig>;
+};
+
+// Extracted from @openfed__queryCache(maxAge: Int!, includeHeaders: Boolean, shadowMode: Boolean)
+// on Query fields. Tells the router which query fields can serve entities from cache.
+export type QueryCacheConfig = {
+  fieldName: FieldName;
+  maxAgeSeconds: number;
+  includeHeaders: boolean;
+  shadowMode: boolean;
+  // The entity type this query field returns (must have @openfed__entityCache).
+  entityTypeName: TypeName;
+  // Maps query arguments to entity @key fields so the router can construct cache keys from query
+  // arguments. Empty for list-returning fields without batch mappings (cache reads are skipped).
+  entityKeyMappings: Array<EntityKeyMappingConfig>;
+};
+
 // Extracted from @openfed__cacheInvalidate on Mutation/Subscription fields.
 // Tells the router to evict the returned entity from the cache after the operation completes.
 export type CacheInvalidateConfig = {
@@ -156,6 +186,8 @@ export type EntityCachingConfiguration = {
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cachePopulate.
   cachePopulateConfigurations?: Array<CachePopulateConfig>;
   requestScopedFields?: Array<RequestScopedFieldConfig>;
+  // Attached to the Query type's ConfigurationData from @openfed__queryCache.
+  queryCacheConfigurations?: Array<QueryCacheConfig>;
 };
 
 export type Costs = {

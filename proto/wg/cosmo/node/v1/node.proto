@@ -105,6 +105,8 @@ message EntityCaching {
   repeated CachePopulateConfiguration cache_populate_configurations = 3;
   // Request-scoped field configurations (from @openfed__requestScoped directive)
   repeated RequestScopedFieldConfiguration request_scoped_fields = 4;
+  // Per-Query-field cache configurations (from @openfed__queryCache / @openfed__is directives)
+  repeated QueryCacheConfiguration query_cache_configurations = 5;
 }
 
 // Per-entity declaration for @openfed__entityCache. Marks a @key entity type as cacheable so the
@@ -151,6 +153,30 @@ message RequestScopedFieldConfiguration {
   string field_name = 1;
   string type_name = 2;
   string l1_key = 3;
+}
+
+// Per-Query-field declaration for @openfed__queryCache. Tells the router a query field can serve
+// its returned entity from the entity cache, with argument-to-@key mappings for cache-key construction.
+message QueryCacheConfiguration {
+  string field_name = 1;
+  // TTL for cached root-field responses. Required: composition rejects values
+  // <= 0. Interpreted in seconds.
+  int64 max_age_seconds = 2;
+  bool include_headers = 3;
+  bool shadow_mode = 4;
+  string entity_type_name = 5;
+  repeated EntityKeyMapping entity_key_mappings = 6;
+}
+
+message EntityKeyMapping {
+  string entity_type_name = 1;
+  repeated EntityCacheFieldMapping field_mappings = 2;
+}
+
+message EntityCacheFieldMapping {
+  string entity_key_field = 1;
+  repeated string argument_path = 2;
+  bool is_batch = 3;
 }
 
 message CostConfiguration {

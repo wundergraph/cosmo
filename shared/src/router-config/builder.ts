@@ -28,7 +28,9 @@ import {
   DataSourceKind,
   EngineConfiguration,
   EntityCacheConfiguration,
+  EntityCacheFieldMapping,
   EntityCaching,
+  EntityKeyMapping,
   FieldListSizeConfiguration,
   FieldWeightConfiguration,
   GraphQLSubscriptionConfiguration,
@@ -39,6 +41,7 @@ import {
   InternedString,
   PluginConfiguration,
   RequestScopedFieldConfiguration,
+  QueryCacheConfiguration,
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
@@ -88,6 +91,7 @@ function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): Ent
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
   const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
   const requestScopedFields: RequestScopedFieldConfiguration[] = [];
+  const queryCacheConfigurations: QueryCacheConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
     for (const ec of data.entityCaching?.entityCacheConfigurations ?? []) {
       entityCacheConfigurations.push(
@@ -129,12 +133,38 @@ function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): Ent
         }),
       );
     }
+    for (const rfc of data.entityCaching?.queryCacheConfigurations ?? []) {
+      queryCacheConfigurations.push(
+        new QueryCacheConfiguration({
+          fieldName: rfc.fieldName,
+          maxAgeSeconds: BigInt(rfc.maxAgeSeconds),
+          includeHeaders: rfc.includeHeaders,
+          shadowMode: rfc.shadowMode,
+          entityTypeName: rfc.entityTypeName,
+          entityKeyMappings: rfc.entityKeyMappings.map(
+            (m) =>
+              new EntityKeyMapping({
+                entityTypeName: m.entityTypeName,
+                fieldMappings: m.fieldMappings.map(
+                  (fm) =>
+                    new EntityCacheFieldMapping({
+                      entityKeyField: fm.entityKeyField,
+                      argumentPath: fm.argumentPath,
+                      isBatch: fm.isBatch || false,
+                    }),
+                ),
+              }),
+          ),
+        }),
+      );
+    }
   }
   if (
     entityCacheConfigurations.length === 0 &&
     cacheInvalidateConfigurations.length === 0 &&
     cachePopulateConfigurations.length === 0 &&
-    requestScopedFields.length === 0
+    requestScopedFields.length === 0 &&
+    queryCacheConfigurations.length === 0
   ) {
     return undefined;
   }
@@ -143,6 +173,7 @@ function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): Ent
     cacheInvalidateConfigurations,
     cachePopulateConfigurations,
     requestScopedFields,
+    queryCacheConfigurations,
   });
 }
 

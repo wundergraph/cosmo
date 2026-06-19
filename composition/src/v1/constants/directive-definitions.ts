@@ -81,14 +81,16 @@ import {
   UNION_UPPER,
   URL_LOWER,
   WEIGHT,
-  CACHE_INVALIDATE,
-  CACHE_POPULATE,
-  ENTITY_CACHE,
+  OPENFED_CACHE_INVALIDATE,
+  OPENFED_CACHE_POPULATE,
+  OPENFED_ENTITY_CACHE,
   INCLUDE_HEADERS,
+  OPENFED_IS,
   MAX_AGE,
   NEGATIVE_CACHE_TTL,
   PARTIAL_CACHE_LOAD,
-  REQUEST_SCOPED,
+  OPENFED_QUERY_CACHE,
+  OPENFED_REQUEST_SCOPED,
   SHADOW_MODE,
 } from '../../utils/string-constants';
 import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_INT_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from './type-nodes';
@@ -829,7 +831,7 @@ export const TAG_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // @openfed__entityCache(maxAge: Int!, negativeCacheTTL: Int = 0, includeHeaders: Boolean = false, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT
-export const ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
+export const OPENFED_ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -863,20 +865,20 @@ export const ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([OBJECT_UPPER]),
-  name: stringToNameNode(ENTITY_CACHE),
+  name: stringToNameNode(OPENFED_ENTITY_CACHE),
   repeatable: false,
 };
 
 // @openfed__cacheInvalidate on FIELD_DEFINITION
-export const CACHE_INVALIDATE_DEFINITION: DirectiveDefinitionNode = {
+export const OPENFED_CACHE_INVALIDATE_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
-  name: stringToNameNode(CACHE_INVALIDATE),
+  name: stringToNameNode(OPENFED_CACHE_INVALIDATE),
   repeatable: false,
 };
 
 // @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
-export const CACHE_POPULATE_DEFINITION: DirectiveDefinitionNode = {
+export const OPENFED_CACHE_POPULATE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -886,10 +888,54 @@ export const CACHE_POPULATE_DEFINITION: DirectiveDefinitionNode = {
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
-  name: stringToNameNode(CACHE_POPULATE),
+  name: stringToNameNode(OPENFED_CACHE_POPULATE),
   repeatable: false,
 };
-export const REQUEST_SCOPED_DEFINITION: DirectiveDefinitionNode = {
+
+// @openfed__queryCache(maxAge: Int!, includeHeaders: Boolean = false, shadowMode: Boolean = false) on FIELD_DEFINITION
+export const OPENFED_QUERY_CACHE_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(MAX_AGE),
+      type: REQUIRED_INT_TYPE_NODE,
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(INCLUDE_HEADERS),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      defaultValue: { kind: Kind.BOOLEAN, value: false },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(SHADOW_MODE),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      defaultValue: { kind: Kind.BOOLEAN, value: false },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(OPENFED_QUERY_CACHE),
+  repeatable: false,
+};
+
+// @openfed__is(fields: String!) on ARGUMENT_DEFINITION
+export const OPENFED_IS_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(FIELDS),
+      type: REQUIRED_STRING_TYPE_NODE,
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([ARGUMENT_DEFINITION_UPPER]),
+  name: stringToNameNode(OPENFED_IS),
+  repeatable: false,
+};
+
+// @openfed__requestScoped(key: String!) on FIELD_DEFINITION
+export const OPENFED_REQUEST_SCOPED_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -902,7 +948,6 @@ export const REQUEST_SCOPED_DEFINITION: DirectiveDefinitionNode = {
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
-  name: stringToNameNode(REQUEST_SCOPED),
+  name: stringToNameNode(OPENFED_REQUEST_SCOPED),
   repeatable: false,
 };
-

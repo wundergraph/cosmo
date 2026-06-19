@@ -22,3 +22,9 @@ export type RequestScopedSingleFieldWarningParams = {
   key: string;
   fieldCoords: FieldName;
 };
+
+export type QueryCacheReturnEntityMissingEntityCacheWarningParams = {
+  subgraphName: SubgraphName;
+  fieldCoords: FieldName;
+  entityType: TypeName;
+};
