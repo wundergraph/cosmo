@@ -74,8 +74,7 @@ describe('@openfed__queryCache', () => {
         `),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      const rootFieldConfigs =
-        result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
+      const rootFieldConfigs = result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
       expect(rootFieldConfigs![0]).toMatchObject({
         fieldName: 'user',
         maxAgeSeconds: 120,
@@ -96,8 +95,7 @@ describe('@openfed__queryCache', () => {
         `),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      const rootFieldConfigs =
-        result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
+      const rootFieldConfigs = result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
       expect(rootFieldConfigs![0].entityKeyMappings).toEqual([
         {
           entityTypeName: 'User',
@@ -122,8 +120,7 @@ describe('@openfed__queryCache', () => {
         `),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      const rootFieldConfigs =
-        result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
+      const rootFieldConfigs = result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
       expect(rootFieldConfigs).toHaveLength(2);
       expect(rootFieldConfigs!.map((c) => c.fieldName)).toEqual(['user', 'product']);
     });
@@ -145,8 +142,7 @@ describe('@openfed__queryCache', () => {
         `),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      const rootFieldConfigs =
-        result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
+      const rootFieldConfigs = result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
       expect(rootFieldConfigs![0].entityKeyMappings).toEqual([
         {
           entityTypeName: 'Product',
@@ -171,8 +167,7 @@ describe('@openfed__queryCache', () => {
         `),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      const rootFieldConfigs =
-        result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
+      const rootFieldConfigs = result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
       expect(rootFieldConfigs![0].entityKeyMappings).toEqual([
         {
           entityTypeName: 'Product',
@@ -205,8 +200,7 @@ describe('@openfed__queryCache', () => {
         `),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      const rootFieldConfigs =
-        result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
+      const rootFieldConfigs = result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
       expect(rootFieldConfigs![0].entityKeyMappings).toEqual([
         {
           entityTypeName: 'Review',
@@ -232,8 +226,7 @@ describe('@openfed__queryCache', () => {
         `),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      const rootFieldConfigs =
-        result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
+      const rootFieldConfigs = result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
       expect(rootFieldConfigs![0].entityKeyMappings).toEqual([
         {
           entityTypeName: 'Product',
@@ -258,8 +251,7 @@ describe('@openfed__queryCache', () => {
         `),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      const rootFieldConfigs =
-        result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
+      const rootFieldConfigs = result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
       expect(rootFieldConfigs![0].entityKeyMappings).toEqual([
         {
           entityTypeName: 'User',
@@ -309,8 +301,7 @@ describe('@openfed__queryCache', () => {
         `),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      const rootFieldConfigs =
-        result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
+      const rootFieldConfigs = result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
       expect(rootFieldConfigs![0].entityKeyMappings).toEqual([
         {
           entityTypeName: 'User',
@@ -331,8 +322,7 @@ describe('@openfed__queryCache', () => {
         `),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      const rootFieldConfigs =
-        result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
+      const rootFieldConfigs = result.configurationDataByTypeName.get('Query')!.entityCaching?.queryCacheConfigurations;
       expect(rootFieldConfigs![0].entityKeyMappings).toEqual([
         {
           entityTypeName: 'Product',

@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest';
-import { federateSubgraphs, FederationSuccess, LATEST_ROUTER_COMPATIBILITY_VERSION, parse } from '@wundergraph/composition';
+import {
+  federateSubgraphs,
+  FederationSuccess,
+  LATEST_ROUTER_COMPATIBILITY_VERSION,
+  parse,
+} from '@wundergraph/composition';
 import { EntityCaching } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { buildRouterConfig, ComposedSubgraph, SubgraphKind } from '../src';
 
