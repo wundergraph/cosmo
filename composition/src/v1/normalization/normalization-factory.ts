@@ -188,7 +188,7 @@ import {
   type NatsEventType,
   type RequiredFieldConfiguration,
   type CacheInvalidateConfig,
-  type EntityCacheConfig,
+  type EntityCacheConfiguration,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
@@ -460,10 +460,10 @@ export class NormalizationFactory {
   directiveDefinitionDataByName = initializeDirectiveDefinitionDatas();
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
-  // Cached entity configs keyed by type name, populated by extractEntityCacheDirectives() from
+  // Cached entity configs keyed by type name, populated by extractEntityCacheDirective() from
   // @openfed__entityCache. Future caching directives (@openfed__queryCache etc.) use this as a lookup
   // to verify a field's return type is a cached entity.
-  entityCacheConfigByTypeName = new Map<TypeName, EntityCacheConfig>();
+  entityCacheConfigByTypeName = new Map<TypeName, EntityCacheConfiguration>();
   errors = new Array<Error>();
   entityDataByTypeName = new Map<TypeName, EntityData>();
   entityInterfaceDataByTypeName = new Map<TypeName, EntityInterfaceSubgraphData>();
@@ -4004,88 +4004,107 @@ export class NormalizationFactory {
     }
   }
 
-  extractEntityCacheDirectives() {
-    for (const [typeName, parentData] of this.parentDefinitionDataByTypeName) {
-      if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-        continue;
-      }
-      const entityCacheDirectives = parentData.directivesByName.get(OPENFED_ENTITY_CACHE);
-      if (!entityCacheDirectives) {
-        continue;
-      }
-      if (!this.keyFieldSetDatasByTypeName.has(typeName)) {
-        this.errors.push(
-          invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-            entityCacheWithoutKeyErrorMessage(typeName),
-          ]),
-        );
-        continue;
-      }
-      // validateDirectives() (run earlier in normalize()) has already guaranteed each argument's type —
-      // Int for maxAge/negativeCacheTTL, Boolean for the flags — so the generic ConstDirectiveNode is
-      // narrowed once to the precise typed node, mirroring RequestScopedDirectiveNode/ComposeDirectiveNode.
-      // Optional arguments may be absent (definition defaults are not materialized onto the usage AST),
-      // so the config starts at the directive's documented defaults and each present argument overrides it.
-      const directive = entityCacheDirectives[0] as EntityCacheDirectiveNode;
-      const config: EntityCacheConfig = {
-        typeName,
-        maxAgeSeconds: 0,
-        notFoundCacheTtlSeconds: 0,
-        includeHeaders: false,
-        partialCacheLoad: false,
-        shadowMode: false,
-      };
+  extractEntityCacheDirective(typeName: string, parentData: ParentDefinitionData) {
+    if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+      return;
+    }
+    const entityCacheDirectives = parentData.directivesByName.get(OPENFED_ENTITY_CACHE);
+    if (!entityCacheDirectives || entityCacheDirectives.length == 0) {
+      return;
+    }
+    if (!this.keyFieldSetDatasByTypeName.has(typeName)) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+          entityCacheWithoutKeyErrorMessage(typeName),
+        ]),
+      );
+      return;
+    }
+    // validateDirectives() (run earlier in normalize()) has already guaranteed each argument's type —
+    // Int for maxAge/negativeCacheTTL, Boolean for the flags — so the generic ConstDirectiveNode is
+    // narrowed once to the precise typed node, mirroring RequestScopedDirectiveNode/ComposeDirectiveNode.
+    // Optional arguments may be absent (definition defaults are not materialized onto the usage AST),
+    // so the config starts at the directive's documented defaults and each present argument overrides it.
+    const directive = entityCacheDirectives[0] as EntityCacheDirectiveNode;
+    const config: EntityCacheConfiguration = {
+      typeName,
+      maxAgeSeconds: 0,
+      notFoundCacheTtlSeconds: 0,
+      includeHeaders: false,
+      partialCacheLoad: false,
+      shadowMode: false,
+    };
 
-      for (const { name, value } of directive.arguments ?? []) {
-        switch (name.value) {
-          case MAX_AGE:
-            if (value.kind === Kind.INT) config.maxAgeSeconds = parseInt(value.value, 10);
-            break;
-          case NEGATIVE_CACHE_TTL:
-            if (value.kind === Kind.INT) config.notFoundCacheTtlSeconds = parseInt(value.value, 10);
-            break;
-          case INCLUDE_HEADERS:
-            if (value.kind === Kind.BOOLEAN) config.includeHeaders = value.value;
-            break;
-          case PARTIAL_CACHE_LOAD:
-            if (value.kind === Kind.BOOLEAN) config.partialCacheLoad = value.value;
-            break;
-          case SHADOW_MODE:
-            if (value.kind === Kind.BOOLEAN) config.shadowMode = value.value;
-            break;
+    for (const arg of directive.arguments) {
+      if (!arg) {
+        continue;
+      }
+
+      const { name, value } = arg;
+
+      switch (value.kind) {
+        case Kind.INT: {
+          switch (name.value) {
+            case MAX_AGE: {
+              config.maxAgeSeconds = parseInt(value.value, 10);
+              break;
+            }
+            case NEGATIVE_CACHE_TTL: {
+              config.notFoundCacheTtlSeconds = parseInt(value.value, 10);
+              break;
+            }
+          }
+          break;
+        }
+        default: {
+          switch (name.value) {
+            case INCLUDE_HEADERS: {
+              config.includeHeaders = value.value;
+              break;
+            }
+            case PARTIAL_CACHE_LOAD: {
+              config.partialCacheLoad = value.value;
+              break;
+            }
+            case SHADOW_MODE: {
+              config.shadowMode = value.value;
+              break;
+            }
+          }
+          break;
         }
       }
-
-      if (config.maxAgeSeconds <= 0) {
-        this.errors.push(
-          invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-            maxAgeNotPositiveIntegerErrorMessage(OPENFED_ENTITY_CACHE, config.maxAgeSeconds),
-          ]),
-        );
-        continue;
-      }
-
-      if (config.notFoundCacheTtlSeconds < 0) {
-        this.errors.push(
-          invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-            negativeCacheTTLNotNonNegativeIntegerErrorMessage(OPENFED_ENTITY_CACHE, config.notFoundCacheTtlSeconds),
-          ]),
-        );
-        continue;
-      }
-
-      this.entityCacheConfigByTypeName.set(typeName, config);
-      const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
-        newConfigurationData(true, typeName),
-      );
-      configurationData.entityCaching = {
-        ...configurationData.entityCaching,
-        entityCacheConfigurations: [...(configurationData.entityCaching?.entityCacheConfigurations ?? []), config],
-      };
     }
+
+    if (config.maxAgeSeconds <= 0) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_ENTITY_CACHE, value: config.maxAgeSeconds }),
+        ]),
+      );
+      return;
+    }
+
+    if (config.notFoundCacheTtlSeconds < 0) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+          negativeCacheTTLNotNonNegativeIntegerErrorMessage(config.notFoundCacheTtlSeconds),
+        ]),
+      );
+      return;
+    }
+
+    this.entityCacheConfigByTypeName.set(typeName, config);
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
+      newConfigurationData(true, typeName),
+    );
+    configurationData.entityCaching = {
+      ...configurationData.entityCaching,
+      entityCacheConfigurations: [...(configurationData.entityCaching?.entityCacheConfigurations ?? []), config],
+    };
   }
 
-  // Dispatches the per-field caching directives. Must run after extractEntityCacheDirectives() (reads
+  // Dispatches the per-field caching directives. Must run after extractEntityCacheDirective() (reads
   // entityCacheConfigByTypeName). All object types are walked, not just root operation types: these
   // directives are declared `on FIELD_DEFINITION`, so they can be (mis)placed on any field.
   // getOperationTypeNodeForRootTypeName() returns undefined for non-root types; each extractor then reports
@@ -4316,6 +4335,10 @@ export class NormalizationFactory {
           const isEntity = this.entityDataByTypeName.has(parentTypeName);
           const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
           const isObject = parentData.kind === Kind.OBJECT_TYPE_DEFINITION;
+
+          // Extract @openfed__entityCache here (Object-only) so we reuse this iterator instead of a separate pass.
+          this.extractEntityCacheDirective(parentTypeName, parentData);
+
           if (this.isSubgraphVersionTwo && parentData.extensionType === ExtensionType.EXTENDS) {
             // @extends is essentially ignored in V2. It was only propagated to handle @external key fields.
             parentData.extensionType = ExtensionType.NONE;
@@ -4421,11 +4444,9 @@ export class NormalizationFactory {
     this.addValidConditionalFieldSetConfigurations();
     // this is where @key configurations are added to the ConfigurationData
     this.addValidKeyFieldSetConfigurations();
-    // this is where @openfed__entityCache configurations are added to the ConfigurationData
-    // (runs after key-field-set configs so keyFieldSetDatasByTypeName is populated for the @key check)
-    this.extractEntityCacheDirectives();
     // per-field caching directives (@openfed__cacheInvalidate etc.) — must run after entityCache
-    // (reads entityCacheConfigByTypeName)
+    // (entityCacheConfigByTypeName is populated earlier by extractEntityCacheDirective() during the
+    // parentDefinitionData iteration in normalize())
     this.processRootFieldCacheDirectives();
     // Check that explicitly defined operations types are valid objects and that their fields are also valid
     for (const operationType of Object.values(OperationTypeNode)) {

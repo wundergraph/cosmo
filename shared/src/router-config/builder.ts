@@ -27,7 +27,7 @@ import {
   DataSourceKind,
   EngineConfiguration,
   EntityCacheConfiguration,
-  EntityCaching,
+  EntityCachingConfiguration,
   FieldListSizeConfiguration,
   FieldWeightConfiguration,
   GraphQLSubscriptionConfiguration,
@@ -78,15 +78,15 @@ function costsToCostConfiguration(costs?: Costs): CostConfiguration | undefined 
  * @returns The `EntityCaching` message, or `undefined` when empty so the field is omitted (like
  * `costsToCostConfiguration`).
  */
-function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): EntityCaching | undefined {
+function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, ConfigurationData>): EntityCachingConfiguration | undefined {
   if (!dataByTypeName) {
-    return undefined;
+    return;
   }
-  const entityCacheConfigurations: EntityCacheConfiguration[] = [];
+  const entityCache: EntityCacheConfiguration[] = [];
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
     for (const ec of data.entityCaching?.entityCacheConfigurations ?? []) {
-      entityCacheConfigurations.push(
+      entityCache.push(
         new EntityCacheConfiguration({
           typeName: ec.typeName,
           maxAgeSeconds: BigInt(ec.maxAgeSeconds),
@@ -107,11 +107,11 @@ function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): Ent
       );
     }
   }
-  if (entityCacheConfigurations.length === 0 && cacheInvalidateConfigurations.length === 0) {
-    return undefined;
+  if (entityCache.length === 0 && cacheInvalidateConfigurations.length === 0) {
+    return;
   }
-  return new EntityCaching({
-    entityCacheConfigurations,
+  return new EntityCachingConfiguration({
+    entityCache,
     cacheInvalidateConfigurations,
   });
 }
@@ -364,12 +364,12 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       customGraphql,
       directives: [],
       entityInterfaces,
+      entityCachingConfiguration: extractEntityCachingConfiguration(subgraph.configurationDataByTypeName),
       interfaceObjects,
       keys,
       kind,
       overrideFieldPathFromAlias: true,
       provides,
-      entityCaching: toEntityCaching(subgraph.configurationDataByTypeName),
       requestTimeoutSeconds: BigInt(10),
       requires,
       rootNodes,

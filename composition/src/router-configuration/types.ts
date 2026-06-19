@@ -103,7 +103,7 @@ export type ConfigurationData = {
 
 // Extracted from @openfed__entityCache(maxAge: Int!, negativeCacheTTL: Int, includeHeaders: Boolean,
 // partialCacheLoad: Boolean, shadowMode: Boolean) on OBJECT types. Defines per-entity cache TTL and behavior.
-export type EntityCacheConfig = {
+export type EntityCacheConfiguration = {
   typeName: TypeName;
   maxAgeSeconds: number;
   // TTL (in seconds) for caching "not found" entity responses (entity returned null
@@ -129,7 +129,7 @@ export type CacheInvalidateConfig = {
 
 export type EntityCachingConfiguration = {
   // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
-  entityCacheConfigurations?: Array<EntityCacheConfig>;
+  entityCacheConfigurations?: Array<EntityCacheConfiguration>;
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cacheInvalidate.
   cacheInvalidateConfigurations?: Array<CacheInvalidateConfig>;
 };
