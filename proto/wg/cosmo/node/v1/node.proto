@@ -99,6 +99,8 @@ message DataSourceConfiguration {
 message EntityCaching {
   // Per-entity cache configurations (from @openfed__entityCache directive)
   repeated EntityCacheConfiguration entity_cache_configurations = 1;
+  // Per-Mutation/Subscription-field cache eviction configs (from @openfed__cacheInvalidate)
+  repeated CacheInvalidateConfiguration cache_invalidate_configurations = 2;
 }
 
 // Per-entity declaration for @openfed__entityCache. Marks a @key entity type as cacheable so the
@@ -116,6 +118,14 @@ message EntityCacheConfiguration {
   // responses are not cached. Positive values are seconds. Composition rejects
   // negative values at schema validation time.
   int64 not_found_cache_ttl_seconds = 6;
+}
+
+// Per-field declaration for @openfed__cacheInvalidate. Tells the router to evict the returned
+// entity from the cache after the (Mutation/Subscription) operation completes.
+message CacheInvalidateConfiguration {
+  string field_name = 1;
+  string operation_type = 2;
+  string entity_type_name = 3;
 }
 
 message CostConfiguration {

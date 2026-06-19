@@ -2062,3 +2062,11 @@ export function maxAgeNotPositiveIntegerErrorMessage(directiveName: string, valu
 export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(directiveName: string, value: number): string {
   return `@${directiveName} negativeCacheTTL must be zero or a positive integer, got "${value}".`;
 }
+
+export function cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
+  return `@openfed__cacheInvalidate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
+}
+
+export function cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
+  return `Field "${fieldCoords}" has @openfed__cacheInvalidate but returns non-entity type "${returnType}".`;
+}
