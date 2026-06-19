@@ -351,15 +351,15 @@ import {
   TOPICS,
   TYPENAME,
   WEIGHT,
-  CACHE_INVALIDATE,
-  CACHE_POPULATE,
-  ENTITY_CACHE,
+  OPENFED_CACHE_INVALIDATE,
+  OPENFED_CACHE_POPULATE,
+  OPENFED_ENTITY_CACHE,
   FIRST_ORDINAL,
   INCLUDE_HEADERS,
   MAX_AGE,
   NEGATIVE_CACHE_TTL,
   PARTIAL_CACHE_LOAD,
-  REQUEST_SCOPED,
+  OPENFED_REQUEST_SCOPED,
   SHADOW_MODE,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
@@ -4019,13 +4019,15 @@ export class NormalizationFactory {
       if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
         continue;
       }
-      const entityCacheDirectives = parentData.directivesByName.get(ENTITY_CACHE);
+      const entityCacheDirectives = parentData.directivesByName.get(OPENFED_ENTITY_CACHE);
       if (!entityCacheDirectives) {
         continue;
       }
       if (!this.keyFieldSetDatasByTypeName.has(typeName)) {
         this.errors.push(
-          invalidDirectiveError(ENTITY_CACHE, typeName, FIRST_ORDINAL, [entityCacheWithoutKeyErrorMessage(typeName)]),
+          invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+            entityCacheWithoutKeyErrorMessage(typeName),
+          ]),
         );
         continue;
       }
@@ -4066,8 +4068,8 @@ export class NormalizationFactory {
 
       if (config.maxAgeSeconds <= 0) {
         this.errors.push(
-          invalidDirectiveError(ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-            maxAgeNotPositiveIntegerErrorMessage(ENTITY_CACHE, config.maxAgeSeconds),
+          invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+            maxAgeNotPositiveIntegerErrorMessage(OPENFED_ENTITY_CACHE, config.maxAgeSeconds),
           ]),
         );
         continue;
@@ -4075,8 +4077,8 @@ export class NormalizationFactory {
 
       if (config.notFoundCacheTtlSeconds < 0) {
         this.errors.push(
-          invalidDirectiveError(ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-            negativeCacheTTLNotNonNegativeIntegerErrorMessage(ENTITY_CACHE, config.notFoundCacheTtlSeconds),
+          invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+            negativeCacheTTLNotNonNegativeIntegerErrorMessage(OPENFED_ENTITY_CACHE, config.notFoundCacheTtlSeconds),
           ]),
         );
         continue;
@@ -4112,13 +4114,13 @@ export class NormalizationFactory {
 
       for (const [fieldName, fieldData] of parentData.fieldDataByName) {
         const fieldCoords = `${parentTypeName}.${fieldName}`;
-        const hasCacheInvalidate = fieldData.directivesByName.has(CACHE_INVALIDATE);
-        const hasCachePopulate = fieldData.directivesByName.has(CACHE_POPULATE);
+        const hasCacheInvalidate = fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE);
+        const hasCachePopulate = fieldData.directivesByName.has(OPENFED_CACHE_POPULATE);
 
         // A field cannot both populate and invalidate the cache — they are contradictory operations.
         if (hasCacheInvalidate && hasCachePopulate) {
           this.errors.push(
-            invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
+            invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
               cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords),
             ]),
           );
@@ -4148,7 +4150,7 @@ export class NormalizationFactory {
     const fieldCoords = `${parentTypeName}.${fieldName}`;
     if (operationType !== OperationTypeNode.MUTATION && operationType !== OperationTypeNode.SUBSCRIPTION) {
       this.errors.push(
-        invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
+        invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
           cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
         ]),
       );
@@ -4157,7 +4159,7 @@ export class NormalizationFactory {
     const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
     if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
       this.errors.push(
-        invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
+        invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
           cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
         ]),
       );
@@ -4192,7 +4194,7 @@ export class NormalizationFactory {
     const fieldCoords = `${parentTypeName}.${fieldName}`;
     if (operationType !== OperationTypeNode.MUTATION && operationType !== OperationTypeNode.SUBSCRIPTION) {
       this.errors.push(
-        invalidDirectiveError(CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+        invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
           cachePopulateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
         ]),
       );
@@ -4201,7 +4203,7 @@ export class NormalizationFactory {
     const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
     if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
       this.errors.push(
-        invalidDirectiveError(CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+        invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
           cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
         ]),
       );
@@ -4210,7 +4212,9 @@ export class NormalizationFactory {
     // validateDirectives() has already guaranteed maxAge is an Int when present, so the generic
     // ConstDirectiveNode is narrowed once to the precise typed node — mirroring the other caching
     // directives. maxAge is the only argument and is optional.
-    const cachePopulateDirective = fieldData.directivesByName.get(CACHE_POPULATE)![0] as CachePopulateDirectiveNode;
+    const cachePopulateDirective = fieldData.directivesByName.get(
+      OPENFED_CACHE_POPULATE,
+    )![0] as CachePopulateDirectiveNode;
     const maxAgeArgument = cachePopulateDirective.arguments.find((arg) => arg.name.value === MAX_AGE);
 
     let maxAgeSeconds: number | undefined;
@@ -4218,8 +4222,8 @@ export class NormalizationFactory {
       const maxAgeRaw = parseInt(maxAgeArgument.value.value, 10);
       if (maxAgeRaw <= 0) {
         this.errors.push(
-          invalidDirectiveError(CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
-            maxAgeNotPositiveIntegerErrorMessage(CACHE_POPULATE, maxAgeRaw),
+          invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+            maxAgeNotPositiveIntegerErrorMessage(OPENFED_CACHE_POPULATE, maxAgeRaw),
           ]),
         );
         return;
@@ -4263,7 +4267,7 @@ export class NormalizationFactory {
       }
       const typeName = getParentTypeName(parentData);
       for (const [fieldName, fieldData] of parentData.fieldDataByName) {
-        const directives = fieldData.directivesByName.get(REQUEST_SCOPED);
+        const directives = fieldData.directivesByName.get(OPENFED_REQUEST_SCOPED);
         if (!directives) {
           continue;
         }

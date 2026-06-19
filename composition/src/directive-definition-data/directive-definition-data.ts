@@ -81,14 +81,14 @@ import {
   UNION_UPPER,
   URL_LOWER,
   WEIGHT,
-  CACHE_INVALIDATE,
-  CACHE_POPULATE,
-  ENTITY_CACHE,
+  OPENFED_CACHE_INVALIDATE,
+  OPENFED_CACHE_POPULATE,
+  OPENFED_ENTITY_CACHE,
   INCLUDE_HEADERS,
   MAX_AGE,
   NEGATIVE_CACHE_TTL,
   PARTIAL_CACHE_LOAD,
-  REQUEST_SCOPED,
+  OPENFED_REQUEST_SCOPED,
   SHADOW_MODE,
 } from '../utils/string-constants';
 import {
@@ -121,10 +121,10 @@ import {
   REQUIRES_SCOPES_DEFINITION,
   SEMANTIC_NON_NULL_DEFINITION,
   SHAREABLE_DEFINITION,
-  CACHE_INVALIDATE_DEFINITION,
-  CACHE_POPULATE_DEFINITION,
-  ENTITY_CACHE_DEFINITION,
-  REQUEST_SCOPED_DEFINITION,
+  OPENFED_CACHE_INVALIDATE_DEFINITION,
+  OPENFED_CACHE_POPULATE_DEFINITION,
+  OPENFED_ENTITY_CACHE_DEFINITION,
+  OPENFED_REQUEST_SCOPED_DEFINITION,
   SPECIFIED_BY_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
   TAG_DEFINITION,
@@ -968,7 +968,7 @@ export const ENTITY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
     [
       MAX_AGE,
       newDirectiveArgumentData({
-        directive: `@${ENTITY_CACHE}`,
+        directive: `@${OPENFED_ENTITY_CACHE}`,
         name: MAX_AGE,
         namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
         typeNode: REQUIRED_INT_TYPE_NODE,
@@ -977,7 +977,7 @@ export const ENTITY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
     [
       NEGATIVE_CACHE_TTL,
       newDirectiveArgumentData({
-        directive: `@${ENTITY_CACHE}`,
+        directive: `@${OPENFED_ENTITY_CACHE}`,
         defaultValue: { kind: Kind.INT, value: '0' },
         name: NEGATIVE_CACHE_TTL,
         namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
@@ -987,7 +987,7 @@ export const ENTITY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
     [
       INCLUDE_HEADERS,
       newDirectiveArgumentData({
-        directive: `@${ENTITY_CACHE}`,
+        directive: `@${OPENFED_ENTITY_CACHE}`,
         defaultValue: { kind: Kind.BOOLEAN, value: false },
         name: INCLUDE_HEADERS,
         namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
@@ -997,7 +997,7 @@ export const ENTITY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
     [
       PARTIAL_CACHE_LOAD,
       newDirectiveArgumentData({
-        directive: `@${ENTITY_CACHE}`,
+        directive: `@${OPENFED_ENTITY_CACHE}`,
         defaultValue: { kind: Kind.BOOLEAN, value: false },
         name: PARTIAL_CACHE_LOAD,
         namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
@@ -1007,7 +1007,7 @@ export const ENTITY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
     [
       SHADOW_MODE,
       newDirectiveArgumentData({
-        directive: `@${ENTITY_CACHE}`,
+        directive: `@${OPENFED_ENTITY_CACHE}`,
         defaultValue: { kind: Kind.BOOLEAN, value: false },
         name: SHADOW_MODE,
         namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
@@ -1016,8 +1016,8 @@ export const ENTITY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
     ],
   ]),
   locations: new Set<DirectiveLocation>([OBJECT_UPPER]),
-  name: ENTITY_CACHE,
-  node: ENTITY_CACHE_DEFINITION,
+  name: OPENFED_ENTITY_CACHE,
+  node: OPENFED_ENTITY_CACHE_DEFINITION,
   optionalArgumentNames: new Set<ArgumentName>([NEGATIVE_CACHE_TTL, INCLUDE_HEADERS, PARTIAL_CACHE_LOAD, SHADOW_MODE]),
   requiredArgumentNames: new Set<ArgumentName>([MAX_AGE]),
 });
@@ -1025,8 +1025,8 @@ export const ENTITY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
 export const CACHE_INVALIDATE_DEFINITION_DATA = newDirectiveDefinitionData({
   argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>(),
   locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
-  name: CACHE_INVALIDATE,
-  node: CACHE_INVALIDATE_DEFINITION,
+  name: OPENFED_CACHE_INVALIDATE,
+  node: OPENFED_CACHE_INVALIDATE_DEFINITION,
 });
 
 export const CACHE_POPULATE_DEFINITION_DATA = newDirectiveDefinitionData({
@@ -1034,7 +1034,7 @@ export const CACHE_POPULATE_DEFINITION_DATA = newDirectiveDefinitionData({
     [
       MAX_AGE,
       newDirectiveArgumentData({
-        directive: `@${CACHE_POPULATE}`,
+        directive: `@${OPENFED_CACHE_POPULATE}`,
         name: MAX_AGE,
         namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
         typeNode: stringToNamedTypeNode(INT_SCALAR),
@@ -1042,8 +1042,8 @@ export const CACHE_POPULATE_DEFINITION_DATA = newDirectiveDefinitionData({
     ],
   ]),
   locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
-  name: CACHE_POPULATE,
-  node: CACHE_POPULATE_DEFINITION,
+  name: OPENFED_CACHE_POPULATE,
+  node: OPENFED_CACHE_POPULATE_DEFINITION,
   optionalArgumentNames: new Set<ArgumentName>([MAX_AGE]),
 });
 export const REQUEST_SCOPED_DEFINITION_DATA = newDirectiveDefinitionData({
@@ -1051,7 +1051,7 @@ export const REQUEST_SCOPED_DEFINITION_DATA = newDirectiveDefinitionData({
     [
       KEY,
       newDirectiveArgumentData({
-        directive: `@${REQUEST_SCOPED}`,
+        directive: `@${OPENFED_REQUEST_SCOPED}`,
         name: KEY,
         namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
         typeNode: REQUIRED_STRING_TYPE_NODE,
@@ -1059,8 +1059,7 @@ export const REQUEST_SCOPED_DEFINITION_DATA = newDirectiveDefinitionData({
     ],
   ]),
   locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
-  name: REQUEST_SCOPED,
-  node: REQUEST_SCOPED_DEFINITION,
+  name: OPENFED_REQUEST_SCOPED,
+  node: OPENFED_REQUEST_SCOPED_DEFINITION,
   requiredArgumentNames: new Set<ArgumentName>([KEY]),
 });
-
