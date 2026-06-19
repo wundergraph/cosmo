@@ -154,6 +154,22 @@ export type EntityCacheArgumentNode = {
   readonly value: IntValueNode | BooleanValueNode;
   readonly loc?: Location;
 };
+
+export type CachePopulateDirectiveNode = {
+  readonly arguments: ReadonlyArray<CachePopulateArgumentNode>;
+  readonly kind: Kind.DIRECTIVE;
+  readonly name: NameNode;
+  readonly loc?: Location;
+};
+
+export type CachePopulateArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode;
+  // maxAge: Int (optional). validateDirectives() guarantees it's an Int literal when present.
+  readonly value: IntValueNode;
+  readonly loc?: Location;
+};
+
 export type LinkImportData = {
   name: DirectiveName;
   coreUrl: string;

@@ -24,6 +24,7 @@ import {
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
   CacheInvalidateConfiguration,
+  CachePopulateConfiguration,
   DataSourceKind,
   EngineConfiguration,
   EntityCacheConfiguration,
@@ -84,6 +85,7 @@ function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): Ent
   }
   const entityCacheConfigurations: EntityCacheConfiguration[] = [];
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
+  const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
     for (const ec of data.entityCaching?.entityCacheConfigurations ?? []) {
       entityCacheConfigurations.push(
@@ -106,16 +108,28 @@ function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): Ent
         }),
       );
     }
+    for (const cp of data.entityCaching?.cachePopulateConfigurations ?? []) {
+      cachePopulateConfigurations.push(
+        new CachePopulateConfiguration({
+          fieldName: cp.fieldName,
+          operationType: cp.operationType,
+          entityTypeName: cp.entityTypeName,
+          maxAgeSeconds: cp.maxAgeSeconds === undefined ? undefined : BigInt(cp.maxAgeSeconds),
+        }),
+      );
+    }
   }
   if (
     entityCacheConfigurations.length === 0 &&
-    cacheInvalidateConfigurations.length === 0
+    cacheInvalidateConfigurations.length === 0 &&
+    cachePopulateConfigurations.length === 0
   ) {
     return undefined;
   }
   return new EntityCaching({
     entityCacheConfigurations,
     cacheInvalidateConfigurations,
+    cachePopulateConfigurations,
   });
 }
 

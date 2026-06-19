@@ -167,8 +167,11 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
+  cacheInvalidateAndPopulateMutualExclusionErrorMessage,
   cacheInvalidateOnNonEntityReturnTypeErrorMessage,
   cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage,
+  cachePopulateOnNonEntityReturnTypeErrorMessage,
+  cachePopulateOnNonMutationSubscriptionFieldErrorMessage,
   entityCacheWithoutKeyErrorMessage,
   maxAgeNotPositiveIntegerErrorMessage,
   negativeCacheTTLNotNonNegativeIntegerErrorMessage,
@@ -188,6 +191,7 @@ import {
   type NatsEventType,
   type RequiredFieldConfiguration,
   type CacheInvalidateConfig,
+  type CachePopulateConfig,
   type EntityCacheConfig,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
@@ -346,6 +350,7 @@ import {
   TYPENAME,
   WEIGHT,
   CACHE_INVALIDATE,
+  CACHE_POPULATE,
   ENTITY_CACHE,
   FIRST_ORDINAL,
   INCLUDE_HEADERS,
@@ -383,6 +388,7 @@ import {
   type LinkImportData,
   type UpsertInputObjectResult,
   type ValidateDirectiveParams,
+  type CachePopulateDirectiveNode,
   type EntityCacheDirectiveNode,
 } from './types/types';
 import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
@@ -4101,8 +4107,25 @@ export class NormalizationFactory {
       const configurationTypeName = getParentTypeName(parentData);
 
       for (const [fieldName, fieldData] of parentData.fieldDataByName) {
-        if (fieldData.directivesByName.has(CACHE_INVALIDATE)) {
+        const fieldCoords = `${parentTypeName}.${fieldName}`;
+        const hasCacheInvalidate = fieldData.directivesByName.has(CACHE_INVALIDATE);
+        const hasCachePopulate = fieldData.directivesByName.has(CACHE_POPULATE);
+
+        // A field cannot both populate and invalidate the cache — they are contradictory operations.
+        if (hasCacheInvalidate && hasCachePopulate) {
+          this.errors.push(
+            invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
+              cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords),
+            ]),
+          );
+          continue;
+        }
+
+        if (hasCacheInvalidate) {
           this.extractCacheInvalidateConfig(parentTypeName, configurationTypeName, fieldName, fieldData, operationType);
+        }
+        if (hasCachePopulate) {
+          this.extractCachePopulateConfig(parentTypeName, configurationTypeName, fieldName, fieldData, operationType);
         }
       }
     }
@@ -4149,6 +4172,70 @@ export class NormalizationFactory {
     configurationData.entityCaching = {
       ...configurationData.entityCaching,
       cacheInvalidateConfigurations: [...existingCacheInvalidates, config],
+    };
+  }
+
+  // Extracts @openfed__cachePopulate from Mutation/Subscription fields. The return type must be a cached
+  // entity (@key + @openfed__entityCache). maxAge is optional — when absent the router falls back to the
+  // entity's @openfed__entityCache TTL; when present it must be positive.
+  extractCachePopulateConfig(
+    parentTypeName: string,
+    configurationTypeName: string,
+    fieldName: string,
+    fieldData: FieldData,
+    operationType: OperationTypeNode | undefined,
+  ) {
+    const fieldCoords = `${parentTypeName}.${fieldName}`;
+    if (operationType !== OperationTypeNode.MUTATION && operationType !== OperationTypeNode.SUBSCRIPTION) {
+      this.errors.push(
+        invalidDirectiveError(CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+          cachePopulateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
+        ]),
+      );
+      return;
+    }
+    const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+    if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
+      this.errors.push(
+        invalidDirectiveError(CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+          cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
+        ]),
+      );
+      return;
+    }
+    // validateDirectives() has already guaranteed maxAge is an Int when present, so the generic
+    // ConstDirectiveNode is narrowed once to the precise typed node — mirroring the other caching
+    // directives. maxAge is the only argument and is optional.
+    const cachePopulateDirective = fieldData.directivesByName.get(CACHE_POPULATE)![0] as CachePopulateDirectiveNode;
+    const maxAgeArgument = cachePopulateDirective.arguments.find((arg) => arg.name.value === MAX_AGE);
+
+    let maxAgeSeconds: number | undefined;
+    if (maxAgeArgument) {
+      const maxAgeRaw = parseInt(maxAgeArgument.value.value, 10);
+      if (maxAgeRaw <= 0) {
+        this.errors.push(
+          invalidDirectiveError(CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+            maxAgeNotPositiveIntegerErrorMessage(CACHE_POPULATE, maxAgeRaw),
+          ]),
+        );
+        return;
+      }
+      maxAgeSeconds = maxAgeRaw;
+    }
+    const config: CachePopulateConfig = {
+      fieldName,
+      operationType: operationType === OperationTypeNode.MUTATION ? MUTATION : SUBSCRIPTION,
+      entityTypeName: returnTypeName,
+      maxAgeSeconds,
+    };
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, configurationTypeName, () =>
+      newConfigurationData(false, configurationTypeName),
+    );
+
+    const existingCachePopulates = configurationData.entityCaching?.cachePopulateConfigurations ?? [];
+    configurationData.entityCaching = {
+      ...configurationData.entityCaching,
+      cachePopulateConfigurations: [...existingCachePopulates, config],
     };
   }
 
