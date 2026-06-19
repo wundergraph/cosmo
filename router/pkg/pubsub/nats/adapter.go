@@ -141,7 +141,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 							if nakErr := msg.Nak(); nakErr != nil {
 								log.Debug("negative-acknowledging message after subscription cancellation", zap.String("message_subject", msg.Subject()), zap.Error(nakErr))
 							}
-							return
+							continue
 						}
 
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
@@ -192,11 +192,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 		return datasource.NewError("failed to flush NATS connection", err)
 	}
 
-	p.closeWg.Add(1)
-
-	go func() {
-		defer p.closeWg.Done()
-
+	p.closeWg.Go(func() {
 		for {
 			select {
 			case msg := <-msgChan:
@@ -235,7 +231,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 				return
 			}
 		}
-	}()
+	})
 
 	return nil
 }
