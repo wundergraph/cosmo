@@ -4000,11 +4000,11 @@ export class NormalizationFactory {
     }
   }
 
-  extractEntityCacheDirective(typeName: string, parentData: ParentDefinitionData) {
-    if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+  extractEntityCacheDirective({ directivesByName, kind, name: typeName }: ParentDefinitionData) {
+    if (kind !== Kind.OBJECT_TYPE_DEFINITION) {
       return;
     }
-    const entityCacheDirectives = parentData.directivesByName.get(OPENFED_ENTITY_CACHE);
+    const entityCacheDirectives = directivesByName.get(OPENFED_ENTITY_CACHE);
     if (!entityCacheDirectives || entityCacheDirectives.length == 0) {
       return;
     }
