@@ -128,6 +128,7 @@ import {
   SPECIFIED_BY_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
   TAG_DEFINITION,
+  BOOLEAN_FALSE_VALUE_NODE,
 } from '../v1/constants/directive-definitions';
 import {
   REQUIRED_FIELDSET_TYPE_NODE,
@@ -988,7 +989,7 @@ export const ENTITY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
       INCLUDE_HEADERS,
       newDirectiveArgumentData({
         directive: `@${OPENFED_ENTITY_CACHE}`,
-        defaultValue: { kind: Kind.BOOLEAN, value: false },
+        defaultValue: BOOLEAN_FALSE_VALUE_NODE,
         name: INCLUDE_HEADERS,
         namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
         typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
@@ -998,7 +999,7 @@ export const ENTITY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
       PARTIAL_CACHE_LOAD,
       newDirectiveArgumentData({
         directive: `@${OPENFED_ENTITY_CACHE}`,
-        defaultValue: { kind: Kind.BOOLEAN, value: false },
+        defaultValue: BOOLEAN_FALSE_VALUE_NODE,
         name: PARTIAL_CACHE_LOAD,
         namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
         typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
@@ -1008,7 +1009,7 @@ export const ENTITY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
       SHADOW_MODE,
       newDirectiveArgumentData({
         directive: `@${OPENFED_ENTITY_CACHE}`,
-        defaultValue: { kind: Kind.BOOLEAN, value: false },
+        defaultValue: BOOLEAN_FALSE_VALUE_NODE,
         name: SHADOW_MODE,
         namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
         typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),

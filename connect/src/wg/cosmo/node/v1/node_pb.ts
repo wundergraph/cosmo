@@ -846,9 +846,9 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
   /**
    * Entity caching configuration (e.g. request-scoped fields from @openfed__requestScoped).
    *
-   * @generated from field: wg.cosmo.node.v1.EntityCaching entity_caching = 17;
+   * @generated from field: wg.cosmo.node.v1.EntityCachingConfiguration entity_caching_configuration = 17;
    */
-  entityCaching?: EntityCaching;
+  entityCachingConfiguration?: EntityCachingConfiguration;
 
   constructor(data?: PartialMessage<DataSourceConfiguration>) {
     super();
@@ -874,7 +874,7 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
     { no: 14, name: "entity_interfaces", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
     { no: 15, name: "interface_objects", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
     { no: 16, name: "cost_configuration", kind: "message", T: CostConfiguration },
-    { no: 17, name: "entity_caching", kind: "message", T: EntityCaching },
+    { no: 17, name: "entity_caching_configuration", kind: "message", T: EntityCachingConfiguration },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceConfiguration {
@@ -897,15 +897,15 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
 /**
  * Entity caching configuration for a subgraph data source.
  *
- * @generated from message wg.cosmo.node.v1.EntityCaching
+ * @generated from message wg.cosmo.node.v1.EntityCachingConfiguration
  */
-export class EntityCaching extends Message<EntityCaching> {
+export class EntityCachingConfiguration extends Message<EntityCachingConfiguration> {
   /**
    * Per-entity cache configurations (from @openfed__entityCache directive)
    *
-   * @generated from field: repeated wg.cosmo.node.v1.EntityCacheConfiguration entity_cache_configurations = 1;
+   * @generated from field: repeated wg.cosmo.node.v1.EntityCacheConfiguration entity_cache = 1;
    */
-  entityCacheConfigurations: EntityCacheConfiguration[] = [];
+  entityCache: EntityCacheConfiguration[] = [];
 
   /**
    * Per-Mutation/Subscription-field cache eviction configs (from @openfed__cacheInvalidate)
@@ -928,34 +928,34 @@ export class EntityCaching extends Message<EntityCaching> {
    */
   requestScopedFields: RequestScopedFieldConfiguration[] = [];
 
-  constructor(data?: PartialMessage<EntityCaching>) {
+  constructor(data?: PartialMessage<EntityCachingConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.EntityCaching";
+  static readonly typeName = "wg.cosmo.node.v1.EntityCachingConfiguration";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "entity_cache_configurations", kind: "message", T: EntityCacheConfiguration, repeated: true },
+    { no: 1, name: "entity_cache", kind: "message", T: EntityCacheConfiguration, repeated: true },
     { no: 2, name: "cache_invalidate_configurations", kind: "message", T: CacheInvalidateConfiguration, repeated: true },
     { no: 3, name: "cache_populate_configurations", kind: "message", T: CachePopulateConfiguration, repeated: true },
     { no: 4, name: "request_scoped_fields", kind: "message", T: RequestScopedFieldConfiguration, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EntityCaching {
-    return new EntityCaching().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EntityCachingConfiguration {
+    return new EntityCachingConfiguration().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EntityCaching {
-    return new EntityCaching().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EntityCachingConfiguration {
+    return new EntityCachingConfiguration().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EntityCaching {
-    return new EntityCaching().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EntityCachingConfiguration {
+    return new EntityCachingConfiguration().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EntityCaching | PlainMessage<EntityCaching> | undefined, b: EntityCaching | PlainMessage<EntityCaching> | undefined): boolean {
-    return proto3.util.equals(EntityCaching, a, b);
+  static equals(a: EntityCachingConfiguration | PlainMessage<EntityCachingConfiguration> | undefined, b: EntityCachingConfiguration | PlainMessage<EntityCachingConfiguration> | undefined): boolean {
+    return proto3.util.equals(EntityCachingConfiguration, a, b);
   }
 }
 

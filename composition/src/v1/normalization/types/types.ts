@@ -32,6 +32,14 @@ import {
   type DirectiveArgumentData,
   type DirectiveDefinitionData,
 } from '../../../directive-definition-data/types/types';
+import {
+  type INCLUDE_HEADERS,
+  type MAX_AGE,
+  type NEGATIVE_CACHE_TTL,
+  type OPENFED_ENTITY_CACHE,
+  type PARTIAL_CACHE_LOAD,
+  type SHADOW_MODE,
+} from '../../../utils/string-constants';
 
 export type KeyFieldSetData = {
   documentNode: DocumentNode;
@@ -154,18 +162,48 @@ export type RequestScopedArgumentNode = {
 };
 
 export type EntityCacheDirectiveNode = {
-  readonly arguments: ReadonlyArray<EntityCacheArgumentNode>;
+  readonly arguments: [EntityCacheRequiredArgumentNodes, EntityCacheOptionalArgumentNodes?];
   readonly kind: Kind.DIRECTIVE;
-  readonly name: NameNode;
+  readonly name: NameNode & { readonly value: typeof OPENFED_ENTITY_CACHE };
   readonly loc?: Location;
 };
 
-export type EntityCacheArgumentNode = {
+export type EntityCacheRequiredArgumentNodes = MaxAgeArgumentNode;
+
+export type EntityCacheOptionalArgumentNodes =
+  | NegativeCacheTtlArgumentNode
+  | IncludeHeadersArgumentNode
+  | PartialCacheLoadArgumentNode
+  | ShadowModeArgumentNode;
+
+export type MaxAgeArgumentNode = {
   readonly kind: Kind.ARGUMENT;
-  readonly name: NameNode;
-  // maxAge/negativeCacheTTL are Int; includeHeaders/partialCacheLoad/shadowMode are Boolean.
-  // validateDirectives() guarantees each argument's value matches its declared type.
-  readonly value: IntValueNode | BooleanValueNode;
+  readonly name: NameNode & { readonly value: typeof MAX_AGE };
+  readonly value: IntValueNode;
+  readonly loc?: Location;
+};
+export type NegativeCacheTtlArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode & { readonly value: typeof NEGATIVE_CACHE_TTL };
+  readonly value: IntValueNode;
+  readonly loc?: Location;
+};
+export type IncludeHeadersArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode & { readonly value: typeof INCLUDE_HEADERS };
+  readonly value: BooleanValueNode;
+  readonly loc?: Location;
+};
+export type PartialCacheLoadArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode & { readonly value: typeof PARTIAL_CACHE_LOAD };
+  readonly value: BooleanValueNode;
+  readonly loc?: Location;
+};
+export type ShadowModeArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode & { readonly value: typeof SHADOW_MODE };
+  readonly value: BooleanValueNode;
   readonly loc?: Location;
 };
 
