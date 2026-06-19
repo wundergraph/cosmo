@@ -23,6 +23,7 @@ import {
   DataSourceConfiguration,
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
+  CacheInvalidateConfiguration,
   DataSourceKind,
   EngineConfiguration,
   EntityCacheConfiguration,
@@ -82,6 +83,7 @@ function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): Ent
     return undefined;
   }
   const entityCacheConfigurations: EntityCacheConfiguration[] = [];
+  const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
     for (const ec of data.entityCaching?.entityCacheConfigurations ?? []) {
       entityCacheConfigurations.push(
@@ -95,14 +97,25 @@ function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): Ent
         }),
       );
     }
+    for (const ci of data.entityCaching?.cacheInvalidateConfigurations ?? []) {
+      cacheInvalidateConfigurations.push(
+        new CacheInvalidateConfiguration({
+          fieldName: ci.fieldName,
+          operationType: ci.operationType,
+          entityTypeName: ci.entityTypeName,
+        }),
+      );
+    }
   }
   if (
-    entityCacheConfigurations.length === 0
+    entityCacheConfigurations.length === 0 &&
+    cacheInvalidateConfigurations.length === 0
   ) {
     return undefined;
   }
   return new EntityCaching({
     entityCacheConfigurations,
+    cacheInvalidateConfigurations,
   });
 }
 
