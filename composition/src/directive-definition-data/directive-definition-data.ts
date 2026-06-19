@@ -88,6 +88,7 @@ import {
   MAX_AGE,
   NEGATIVE_CACHE_TTL,
   PARTIAL_CACHE_LOAD,
+  REQUEST_SCOPED,
   SHADOW_MODE,
 } from '../utils/string-constants';
 import {
@@ -123,6 +124,7 @@ import {
   CACHE_INVALIDATE_DEFINITION,
   CACHE_POPULATE_DEFINITION,
   ENTITY_CACHE_DEFINITION,
+  REQUEST_SCOPED_DEFINITION,
   SPECIFIED_BY_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
   TAG_DEFINITION,
@@ -1044,3 +1046,21 @@ export const CACHE_POPULATE_DEFINITION_DATA = newDirectiveDefinitionData({
   node: CACHE_POPULATE_DEFINITION,
   optionalArgumentNames: new Set<ArgumentName>([MAX_AGE]),
 });
+export const REQUEST_SCOPED_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      KEY,
+      newDirectiveArgumentData({
+        directive: `@${REQUEST_SCOPED}`,
+        name: KEY,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: REQUEST_SCOPED,
+  node: REQUEST_SCOPED_DEFINITION,
+  requiredArgumentNames: new Set<ArgumentName>([KEY]),
+});
+

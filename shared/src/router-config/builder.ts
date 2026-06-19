@@ -38,6 +38,7 @@ import {
   ImageReference,
   InternedString,
   PluginConfiguration,
+  RequestScopedFieldConfiguration,
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
@@ -86,6 +87,7 @@ function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): Ent
   const entityCacheConfigurations: EntityCacheConfiguration[] = [];
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
   const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
+  const requestScopedFields: RequestScopedFieldConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
     for (const ec of data.entityCaching?.entityCacheConfigurations ?? []) {
       entityCacheConfigurations.push(
@@ -118,11 +120,21 @@ function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): Ent
         }),
       );
     }
+    for (const field of data.entityCaching?.requestScopedFields ?? []) {
+      requestScopedFields.push(
+        new RequestScopedFieldConfiguration({
+          fieldName: field.fieldName,
+          typeName: field.typeName,
+          l1Key: field.l1Key,
+        }),
+      );
+    }
   }
   if (
     entityCacheConfigurations.length === 0 &&
     cacheInvalidateConfigurations.length === 0 &&
-    cachePopulateConfigurations.length === 0
+    cachePopulateConfigurations.length === 0 &&
+    requestScopedFields.length === 0
   ) {
     return undefined;
   }
@@ -130,6 +142,7 @@ function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): Ent
     entityCacheConfigurations,
     cacheInvalidateConfigurations,
     cachePopulateConfigurations,
+    requestScopedFields,
   });
 }
 

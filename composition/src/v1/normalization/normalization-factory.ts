@@ -193,6 +193,7 @@ import {
   type CacheInvalidateConfig,
   type CachePopulateConfig,
   type EntityCacheConfig,
+  type RequestScopedFieldConfig,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
@@ -205,6 +206,7 @@ import {
   nonExternalConditionalFieldWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
+  requestScopedSingleFieldWarning,
 } from '../warnings/warnings';
 import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
 import {
@@ -357,6 +359,7 @@ import {
   MAX_AGE,
   NEGATIVE_CACHE_TTL,
   PARTIAL_CACHE_LOAD,
+  REQUEST_SCOPED,
   SHADOW_MODE,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
@@ -390,6 +393,7 @@ import {
   type ValidateDirectiveParams,
   type CachePopulateDirectiveNode,
   type EntityCacheDirectiveNode,
+  type RequestScopedDirectiveNode,
 } from './types/types';
 import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
 import { type ImplementationErrors, type InvalidFieldImplementation } from '../../utils/types';
@@ -4239,6 +4243,83 @@ export class NormalizationFactory {
     };
   }
 
+  extractRequestScopedFields() {
+    // Gather fields annotated with @openfed__requestScoped across all types in this subgraph.
+    // A field is both a reader and writer of the coordinate L1 — no receiver/provider.
+    // Fields with the same `key` share the same L1 entry: whichever is resolved first
+    // populates it, subsequent ones inject from it.
+    type Collected = {
+      typeName: string;
+      fieldName: string;
+      fieldCoords: string;
+      key: string;
+      l1Key: string;
+    };
+    const collected: Array<Collected> = [];
+
+    for (const [, parentData] of this.parentDefinitionDataByTypeName) {
+      if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION && parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+        continue;
+      }
+      const typeName = getParentTypeName(parentData);
+      for (const [fieldName, fieldData] of parentData.fieldDataByName) {
+        const directives = fieldData.directivesByName.get(REQUEST_SCOPED);
+        if (!directives) {
+          continue;
+        }
+        // validateDirectives() (run earlier in normalize()) has already guaranteed a single, non-repeated
+        // @openfed__requestScoped with a required String `key`, so the generic ConstDirectiveNode can be
+        // narrowed to the precise typed node — mirroring handleComposeDirective()/ComposeDirectiveNode.
+        const directive = directives[0] as RequestScopedDirectiveNode;
+        const keyArg = directive.arguments.find((arg) => arg.name.value === KEY);
+        if (!keyArg) {
+          continue;
+        }
+
+        const fieldCoords = `${typeName}.${fieldName}`;
+        const key = keyArg.value.value;
+        const l1Key = `${this.subgraphName}.${key}`;
+        collected.push({ typeName, fieldName, fieldCoords, key, l1Key });
+      }
+    }
+
+    if (collected.length === 0) {
+      return;
+    }
+
+    // Warn when a key is used on only one field — @openfed__requestScoped is meaningless
+    // unless >= 2 fields share the key (there'd be no second reader to benefit).
+    const coordsByKey = new Map<string, Array<string>>();
+    for (const c of collected) {
+      getValueOrDefault(coordsByKey, c.key, () => []).push(c.fieldCoords);
+    }
+    for (const [key, coordsList] of coordsByKey) {
+      if (coordsList.length == 1) {
+        this.warnings.push(
+          requestScopedSingleFieldWarning({
+            subgraphName: this.subgraphName,
+            key,
+            fieldCoords: coordsList[0],
+          }),
+        );
+      }
+    }
+
+    // Group by type and attach to configurationData.
+    const byType = new Map<string, Array<RequestScopedFieldConfig>>();
+    for (const c of collected) {
+      const list = byType.get(c.typeName) ?? [];
+      list.push({ fieldName: c.fieldName, typeName: c.typeName, l1Key: c.l1Key });
+      byType.set(c.typeName, list);
+    }
+    for (const [typeName, fields] of byType) {
+      const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
+        newConfigurationData(false, typeName),
+      );
+      configurationData.entityCaching = { ...configurationData.entityCaching, requestScopedFields: fields };
+    }
+  }
+
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
     const externalFieldNames = new Set<string>();
     for (const [fieldName, fieldData] of fieldDataByFieldName) {
@@ -4512,6 +4593,8 @@ export class NormalizationFactory {
     // per-field caching directives (@openfed__cacheInvalidate etc.) — must run after entityCache
     // (reads entityCacheConfigByTypeName)
     this.processRootFieldCacheDirectives();
+    // this is where @openfed__requestScoped configurations are added to the ConfigurationData
+    this.extractRequestScopedFields();
     // Check that explicitly defined operations types are valid objects and that their fields are also valid
     for (const operationType of Object.values(OperationTypeNode)) {
       const operationTypeNode = this.schemaData.operationTypes.get(operationType);

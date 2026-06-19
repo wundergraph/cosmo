@@ -921,6 +921,13 @@ export class EntityCaching extends Message<EntityCaching> {
    */
   cachePopulateConfigurations: CachePopulateConfiguration[] = [];
 
+  /**
+   * Request-scoped field configurations (from @openfed__requestScoped directive)
+   *
+   * @generated from field: repeated wg.cosmo.node.v1.RequestScopedFieldConfiguration request_scoped_fields = 4;
+   */
+  requestScopedFields: RequestScopedFieldConfiguration[] = [];
+
   constructor(data?: PartialMessage<EntityCaching>) {
     super();
     proto3.util.initPartial(data, this);
@@ -932,6 +939,7 @@ export class EntityCaching extends Message<EntityCaching> {
     { no: 1, name: "entity_cache_configurations", kind: "message", T: EntityCacheConfiguration, repeated: true },
     { no: 2, name: "cache_invalidate_configurations", kind: "message", T: CacheInvalidateConfiguration, repeated: true },
     { no: 3, name: "cache_populate_configurations", kind: "message", T: CachePopulateConfiguration, repeated: true },
+    { no: 4, name: "request_scoped_fields", kind: "message", T: RequestScopedFieldConfiguration, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EntityCaching {
@@ -1139,6 +1147,60 @@ export class CachePopulateConfiguration extends Message<CachePopulateConfigurati
 
   static equals(a: CachePopulateConfiguration | PlainMessage<CachePopulateConfiguration> | undefined, b: CachePopulateConfiguration | PlainMessage<CachePopulateConfiguration> | undefined): boolean {
     return proto3.util.equals(CachePopulateConfiguration, a, b);
+  }
+}
+
+/**
+ * Per-field declaration for @openfed__requestScoped. All fields in the same subgraph declaring
+ * @openfed__requestScoped(key: "X") share L1 key "{subgraphName}.X". The first field to resolve
+ * populates L1; subsequent fields with the same key inject from L1 and can skip their
+ * fetch when all required sub-fields are present.
+ *
+ * @generated from message wg.cosmo.node.v1.RequestScopedFieldConfiguration
+ */
+export class RequestScopedFieldConfiguration extends Message<RequestScopedFieldConfiguration> {
+  /**
+   * @generated from field: string field_name = 1;
+   */
+  fieldName = "";
+
+  /**
+   * @generated from field: string type_name = 2;
+   */
+  typeName = "";
+
+  /**
+   * @generated from field: string l1_key = 3;
+   */
+  l1Key = "";
+
+  constructor(data?: PartialMessage<RequestScopedFieldConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.RequestScopedFieldConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "l1_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RequestScopedFieldConfiguration {
+    return new RequestScopedFieldConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RequestScopedFieldConfiguration {
+    return new RequestScopedFieldConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RequestScopedFieldConfiguration {
+    return new RequestScopedFieldConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RequestScopedFieldConfiguration | PlainMessage<RequestScopedFieldConfiguration> | undefined, b: RequestScopedFieldConfiguration | PlainMessage<RequestScopedFieldConfiguration> | undefined): boolean {
+    return proto3.util.equals(RequestScopedFieldConfiguration, a, b);
   }
 }
 

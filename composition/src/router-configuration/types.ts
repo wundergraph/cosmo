@@ -86,6 +86,17 @@ export type RequiredFieldConfiguration = {
   disableEntityResolver?: boolean;
 };
 
+export type RequestScopedFieldConfig = {
+  fieldName: FieldName;
+  typeName: TypeName;
+  // L1 cache key used to store/lookup this field's value for the duration of a request.
+  // Format: "{subgraphName}.{key}" where `key` is the @openfed__requestScoped(key:) argument.
+  // All fields in the same subgraph declaring @openfed__requestScoped with the same key share
+  // the same L1 entry — the first one to resolve populates it, subsequent ones inject
+  // from it (subject to widening checks and alias-aware normalization).
+  l1Key: string;
+};
+
 export type ConfigurationData = {
   fieldNames: Set<FieldName>;
   isRootNode: boolean;
@@ -144,6 +155,7 @@ export type EntityCachingConfiguration = {
   cacheInvalidateConfigurations?: Array<CacheInvalidateConfig>;
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cachePopulate.
   cachePopulateConfigurations?: Array<CachePopulateConfig>;
+  requestScopedFields?: Array<RequestScopedFieldConfig>;
 };
 
 export type Costs = {
