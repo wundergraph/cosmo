@@ -1,4 +1,4 @@
-import { DEFAULT_DEPRECATION_REASON, type DirectiveDefinitionNode, Kind } from 'graphql';
+import { type ConstValueNode, DEFAULT_DEPRECATION_REASON, type DirectiveDefinitionNode, Kind } from 'graphql';
 import { stringArrayToNameNodeArray, stringToNamedTypeNode, stringToNameNode } from '../../ast/utils';
 import {
   ARGUMENT_DEFINITION_UPPER,
@@ -105,6 +105,8 @@ export const AUTHENTICATED_DEFINITION: DirectiveDefinitionNode = {
   name: stringToNameNode(AUTHENTICATED),
   repeatable: false,
 };
+
+export const BOOLEAN_FALSE_VALUE_NODE: ConstValueNode = { kind: Kind.BOOLEAN, value: false };
 
 // @composeDirective is currently unimplemented
 /* directive @composeDirective(name: String!) repeatable on SCHEMA */
@@ -845,19 +847,19 @@ export const OPENFED_ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(INCLUDE_HEADERS),
       type: stringToNamedTypeNode(BOOLEAN_SCALAR),
-      defaultValue: { kind: Kind.BOOLEAN, value: false },
+      defaultValue: BOOLEAN_FALSE_VALUE_NODE,
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(PARTIAL_CACHE_LOAD),
       type: stringToNamedTypeNode(BOOLEAN_SCALAR),
-      defaultValue: { kind: Kind.BOOLEAN, value: false },
+      defaultValue: BOOLEAN_FALSE_VALUE_NODE,
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(SHADOW_MODE),
       type: stringToNamedTypeNode(BOOLEAN_SCALAR),
-      defaultValue: { kind: Kind.BOOLEAN, value: false },
+      defaultValue: BOOLEAN_FALSE_VALUE_NODE,
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
