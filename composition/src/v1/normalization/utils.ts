@@ -839,8 +839,3 @@ export function extractLinkArgs(
     success: true,
   };
 }
-
-export function mergeHigherVersionComposedDirective(
-  existingData: DirectiveDefinitionData,
-  incomingData: DirectiveDefinitionData,
-): void {}
