@@ -121,7 +121,7 @@ import {
   TYPENAME,
   URL_LOWER,
 } from '../../utils/string-constants';
-import { addIterableToSet, getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
+import { getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
 import { type FieldSetData, type KeyFieldSetData, type LinkImportData } from './types/types';
 import { type DirectiveName } from '../../types/types';
 import {
