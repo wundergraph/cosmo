@@ -91,6 +91,31 @@ message DataSourceConfiguration {
   repeated EntityInterfaceConfiguration entity_interfaces = 14;
   repeated EntityInterfaceConfiguration interface_objects = 15;
   CostConfiguration cost_configuration = 16;
+  // Entity caching configuration (e.g. request-scoped fields from @openfed__requestScoped).
+  EntityCaching entity_caching = 17;
+}
+
+// Entity caching configuration for a subgraph data source.
+message EntityCaching {
+  // Per-entity cache configurations (from @openfed__entityCache directive)
+  repeated EntityCacheConfiguration entity_cache_configurations = 1;
+}
+
+// Per-entity declaration for @openfed__entityCache. Marks a @key entity type as cacheable so the
+// router can store/serve resolved entities from an external store (e.g. Redis).
+message EntityCacheConfiguration {
+  string type_name = 1;
+  // TTL for cached entity values. Required: composition rejects values <= 0,
+  // so omit (zero) does not occur in practice. Interpreted in seconds.
+  int64 max_age_seconds = 2;
+  bool include_headers = 3;
+  bool partial_cache_load = 4;
+  bool shadow_mode = 5;
+  // TTL for caching "not found" entity responses (entity returned null from
+  // _entities without errors). Omit or 0 disables negative caching and null
+  // responses are not cached. Positive values are seconds. Composition rejects
+  // negative values at schema validation time.
+  int64 not_found_cache_ttl_seconds = 6;
 }
 
 message CostConfiguration {

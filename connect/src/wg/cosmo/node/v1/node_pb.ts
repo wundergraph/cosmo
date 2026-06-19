@@ -843,6 +843,13 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
    */
   costConfiguration?: CostConfiguration;
 
+  /**
+   * Entity caching configuration (e.g. request-scoped fields from @openfed__requestScoped).
+   *
+   * @generated from field: wg.cosmo.node.v1.EntityCaching entity_caching = 17;
+   */
+  entityCaching?: EntityCaching;
+
   constructor(data?: PartialMessage<DataSourceConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -867,6 +874,7 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
     { no: 14, name: "entity_interfaces", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
     { no: 15, name: "interface_objects", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
     { no: 16, name: "cost_configuration", kind: "message", T: CostConfiguration },
+    { no: 17, name: "entity_caching", kind: "message", T: EntityCaching },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceConfiguration {
@@ -883,6 +891,125 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
 
   static equals(a: DataSourceConfiguration | PlainMessage<DataSourceConfiguration> | undefined, b: DataSourceConfiguration | PlainMessage<DataSourceConfiguration> | undefined): boolean {
     return proto3.util.equals(DataSourceConfiguration, a, b);
+  }
+}
+
+/**
+ * Entity caching configuration for a subgraph data source.
+ *
+ * @generated from message wg.cosmo.node.v1.EntityCaching
+ */
+export class EntityCaching extends Message<EntityCaching> {
+  /**
+   * Per-entity cache configurations (from @openfed__entityCache directive)
+   *
+   * @generated from field: repeated wg.cosmo.node.v1.EntityCacheConfiguration entity_cache_configurations = 1;
+   */
+  entityCacheConfigurations: EntityCacheConfiguration[] = [];
+
+  constructor(data?: PartialMessage<EntityCaching>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.EntityCaching";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "entity_cache_configurations", kind: "message", T: EntityCacheConfiguration, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EntityCaching {
+    return new EntityCaching().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EntityCaching {
+    return new EntityCaching().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EntityCaching {
+    return new EntityCaching().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EntityCaching | PlainMessage<EntityCaching> | undefined, b: EntityCaching | PlainMessage<EntityCaching> | undefined): boolean {
+    return proto3.util.equals(EntityCaching, a, b);
+  }
+}
+
+/**
+ * Per-entity declaration for @openfed__entityCache. Marks a @key entity type as cacheable so the
+ * router can store/serve resolved entities from an external store (e.g. Redis).
+ *
+ * @generated from message wg.cosmo.node.v1.EntityCacheConfiguration
+ */
+export class EntityCacheConfiguration extends Message<EntityCacheConfiguration> {
+  /**
+   * @generated from field: string type_name = 1;
+   */
+  typeName = "";
+
+  /**
+   * TTL for cached entity values. Required: composition rejects values <= 0,
+   * so omit (zero) does not occur in practice. Interpreted in seconds.
+   *
+   * @generated from field: int64 max_age_seconds = 2;
+   */
+  maxAgeSeconds = protoInt64.zero;
+
+  /**
+   * @generated from field: bool include_headers = 3;
+   */
+  includeHeaders = false;
+
+  /**
+   * @generated from field: bool partial_cache_load = 4;
+   */
+  partialCacheLoad = false;
+
+  /**
+   * @generated from field: bool shadow_mode = 5;
+   */
+  shadowMode = false;
+
+  /**
+   * TTL for caching "not found" entity responses (entity returned null from
+   * _entities without errors). Omit or 0 disables negative caching and null
+   * responses are not cached. Positive values are seconds. Composition rejects
+   * negative values at schema validation time.
+   *
+   * @generated from field: int64 not_found_cache_ttl_seconds = 6;
+   */
+  notFoundCacheTtlSeconds = protoInt64.zero;
+
+  constructor(data?: PartialMessage<EntityCacheConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.EntityCacheConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "max_age_seconds", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "include_headers", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "partial_cache_load", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "shadow_mode", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "not_found_cache_ttl_seconds", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EntityCacheConfiguration {
+    return new EntityCacheConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EntityCacheConfiguration {
+    return new EntityCacheConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EntityCacheConfiguration {
+    return new EntityCacheConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EntityCacheConfiguration | PlainMessage<EntityCacheConfiguration> | undefined, b: EntityCacheConfiguration | PlainMessage<EntityCacheConfiguration> | undefined): boolean {
+    return proto3.util.equals(EntityCacheConfiguration, a, b);
   }
 }
 

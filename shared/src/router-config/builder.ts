@@ -25,6 +25,8 @@ import {
   DataSourceCustomEvents,
   DataSourceKind,
   EngineConfiguration,
+  EntityCacheConfiguration,
+  EntityCaching,
   FieldListSizeConfiguration,
   FieldWeightConfiguration,
   GraphQLSubscriptionConfiguration,
@@ -64,6 +66,43 @@ function costsToCostConfiguration(costs?: Costs): CostConfiguration | undefined 
     listSizes: [...costs.listSizes.values()].map((ls) => new FieldListSizeConfiguration(ls)),
     typeWeights: Object.fromEntries(costs.typeWeights),
     directiveArgumentWeights: Object.fromEntries(costs.directiveArgumentWeights),
+  });
+}
+
+/**
+ * Convert the entity-caching configuration spread across a subgraph's `ConfigurationData` into the
+ * `EntityCaching` message. Add new entity-caching field types to the collection loop and the
+ * emptiness check below.
+ *
+ * @returns The `EntityCaching` message, or `undefined` when empty so the field is omitted (like
+ * `costsToCostConfiguration`).
+ */
+function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): EntityCaching | undefined {
+  if (!dataByTypeName) {
+    return undefined;
+  }
+  const entityCacheConfigurations: EntityCacheConfiguration[] = [];
+  for (const data of dataByTypeName.values()) {
+    for (const ec of data.entityCaching?.entityCacheConfigurations ?? []) {
+      entityCacheConfigurations.push(
+        new EntityCacheConfiguration({
+          typeName: ec.typeName,
+          maxAgeSeconds: BigInt(ec.maxAgeSeconds),
+          notFoundCacheTtlSeconds: BigInt(ec.notFoundCacheTtlSeconds),
+          includeHeaders: ec.includeHeaders,
+          partialCacheLoad: ec.partialCacheLoad,
+          shadowMode: ec.shadowMode,
+        }),
+      );
+    }
+  }
+  if (
+    entityCacheConfigurations.length === 0
+  ) {
+    return undefined;
+  }
+  return new EntityCaching({
+    entityCacheConfigurations,
   });
 }
 
@@ -320,6 +359,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       kind,
       overrideFieldPathFromAlias: true,
       provides,
+      entityCaching: toEntityCaching(subgraph.configurationDataByTypeName),
       requestTimeoutSeconds: BigInt(10),
       requires,
       rootNodes,

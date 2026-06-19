@@ -167,6 +167,9 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
+  entityCacheWithoutKeyErrorMessage,
+  maxAgeNotPositiveIntegerErrorMessage,
+  negativeCacheTTLNotNonNegativeIntegerErrorMessage,
 } from '../../errors/errors';
 import {
   DEPENDENCIES_BY_DIRECTIVE_NAME,
@@ -182,6 +185,7 @@ import {
   type FieldWeightConfiguration,
   type NatsEventType,
   type RequiredFieldConfiguration,
+  type EntityCacheConfig,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
@@ -338,6 +342,13 @@ import {
   TOPICS,
   TYPENAME,
   WEIGHT,
+  ENTITY_CACHE,
+  FIRST_ORDINAL,
+  INCLUDE_HEADERS,
+  MAX_AGE,
+  NEGATIVE_CACHE_TTL,
+  PARTIAL_CACHE_LOAD,
+  SHADOW_MODE,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
 import {
@@ -368,6 +379,7 @@ import {
   type LinkImportData,
   type UpsertInputObjectResult,
   type ValidateDirectiveParams,
+  type EntityCacheDirectiveNode,
 } from './types/types';
 import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
 import { type ImplementationErrors, type InvalidFieldImplementation } from '../../utils/types';
@@ -444,6 +456,10 @@ export class NormalizationFactory {
   directiveDefinitionDataByName = initializeDirectiveDefinitionDatas();
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
+  // Cached entity configs keyed by type name, populated by extractEntityCacheDirectives() from
+  // @openfed__entityCache. Future caching directives (@openfed__queryCache etc.) use this as a lookup
+  // to verify a field's return type is a cached entity.
+  entityCacheConfigByTypeName = new Map<TypeName, EntityCacheConfig>();
   errors = new Array<Error>();
   entityDataByTypeName = new Map<TypeName, EntityData>();
   entityInterfaceDataByTypeName = new Map<TypeName, EntityInterfaceSubgraphData>();
@@ -3984,6 +4000,85 @@ export class NormalizationFactory {
     }
   }
 
+  extractEntityCacheDirectives() {
+    for (const [typeName, parentData] of this.parentDefinitionDataByTypeName) {
+      if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+        continue;
+      }
+      const entityCacheDirectives = parentData.directivesByName.get(ENTITY_CACHE);
+      if (!entityCacheDirectives) {
+        continue;
+      }
+      if (!this.keyFieldSetDatasByTypeName.has(typeName)) {
+        this.errors.push(
+          invalidDirectiveError(ENTITY_CACHE, typeName, FIRST_ORDINAL, [entityCacheWithoutKeyErrorMessage(typeName)]),
+        );
+        continue;
+      }
+      // validateDirectives() (run earlier in normalize()) has already guaranteed each argument's type —
+      // Int for maxAge/negativeCacheTTL, Boolean for the flags — so the generic ConstDirectiveNode is
+      // narrowed once to the precise typed node, mirroring RequestScopedDirectiveNode/ComposeDirectiveNode.
+      // Optional arguments may be absent (definition defaults are not materialized onto the usage AST),
+      // so the config starts at the directive's documented defaults and each present argument overrides it.
+      const directive = entityCacheDirectives[0] as EntityCacheDirectiveNode;
+      const config: EntityCacheConfig = {
+        typeName,
+        maxAgeSeconds: 0,
+        notFoundCacheTtlSeconds: 0,
+        includeHeaders: false,
+        partialCacheLoad: false,
+        shadowMode: false,
+      };
+
+      for (const { name, value } of directive.arguments ?? []) {
+        switch (name.value) {
+          case MAX_AGE:
+            if (value.kind === Kind.INT) config.maxAgeSeconds = parseInt(value.value, 10);
+            break;
+          case NEGATIVE_CACHE_TTL:
+            if (value.kind === Kind.INT) config.notFoundCacheTtlSeconds = parseInt(value.value, 10);
+            break;
+          case INCLUDE_HEADERS:
+            if (value.kind === Kind.BOOLEAN) config.includeHeaders = value.value;
+            break;
+          case PARTIAL_CACHE_LOAD:
+            if (value.kind === Kind.BOOLEAN) config.partialCacheLoad = value.value;
+            break;
+          case SHADOW_MODE:
+            if (value.kind === Kind.BOOLEAN) config.shadowMode = value.value;
+            break;
+        }
+      }
+
+      if (config.maxAgeSeconds <= 0) {
+        this.errors.push(
+          invalidDirectiveError(ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+            maxAgeNotPositiveIntegerErrorMessage(ENTITY_CACHE, config.maxAgeSeconds),
+          ]),
+        );
+        continue;
+      }
+
+      if (config.notFoundCacheTtlSeconds < 0) {
+        this.errors.push(
+          invalidDirectiveError(ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+            negativeCacheTTLNotNonNegativeIntegerErrorMessage(ENTITY_CACHE, config.notFoundCacheTtlSeconds),
+          ]),
+        );
+        continue;
+      }
+
+      this.entityCacheConfigByTypeName.set(typeName, config);
+      const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
+        newConfigurationData(true, typeName),
+      );
+      configurationData.entityCaching = {
+        ...configurationData.entityCaching,
+        entityCacheConfigurations: [...(configurationData.entityCaching?.entityCacheConfigurations ?? []), config],
+      };
+    }
+  }
+
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
     const externalFieldNames = new Set<string>();
     for (const [fieldName, fieldData] of fieldDataByFieldName) {
@@ -4251,6 +4346,9 @@ export class NormalizationFactory {
     this.addValidConditionalFieldSetConfigurations();
     // this is where @key configurations are added to the ConfigurationData
     this.addValidKeyFieldSetConfigurations();
+    // this is where @openfed__entityCache configurations are added to the ConfigurationData
+    // (runs after key-field-set configs so keyFieldSetDatasByTypeName is populated for the @key check)
+    this.extractEntityCacheDirectives();
     // Check that explicitly defined operations types are valid objects and that their fields are also valid
     for (const operationType of Object.values(OperationTypeNode)) {
       const operationTypeNode = this.schemaData.operationTypes.get(operationType);
