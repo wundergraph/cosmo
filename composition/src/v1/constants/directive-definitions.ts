@@ -90,7 +90,7 @@ import {
   SHADOW_MODE,
 } from '../../utils/string-constants';
 import {
-  BOOLEAN_FALSE_VALUE_NODE,
+  FALSE_BOOLEAN_VALUE_NODE,
   REQUIRED_FIELDSET_TYPE_NODE,
   REQUIRED_INT_TYPE_NODE,
   REQUIRED_STRING_TYPE_NODE,
@@ -849,19 +849,19 @@ export const OPENFED_ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(INCLUDE_HEADERS),
       type: stringToNamedTypeNode(BOOLEAN_SCALAR),
-      defaultValue: BOOLEAN_FALSE_VALUE_NODE,
+      defaultValue: FALSE_BOOLEAN_VALUE_NODE,
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(PARTIAL_CACHE_LOAD),
       type: stringToNamedTypeNode(BOOLEAN_SCALAR),
-      defaultValue: BOOLEAN_FALSE_VALUE_NODE,
+      defaultValue: FALSE_BOOLEAN_VALUE_NODE,
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(SHADOW_MODE),
       type: stringToNamedTypeNode(BOOLEAN_SCALAR),
-      defaultValue: BOOLEAN_FALSE_VALUE_NODE,
+      defaultValue: FALSE_BOOLEAN_VALUE_NODE,
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,

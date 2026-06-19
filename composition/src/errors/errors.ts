@@ -17,7 +17,6 @@ import {
   type InvalidRepeatedDirectiveErrorParams,
   type InvalidSubValueFieldLinkDirectiveImportErrorParams,
   type invalidVersionLinkDirectiveUrlErrorParams,
-  type MaxAgeNotPositiveIntegerErrorParams,
   type NonExternalConditionalFieldErrorParams,
   type OneOfRequiredFieldsErrorParams,
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
@@ -2056,15 +2055,12 @@ export function entityCacheWithoutKeyErrorMessage(typeName: TypeName): string {
   return `Type "${typeName}" declares the directive "@openfed__entityCache" but does not define a "@key" directive.`;
 }
 
-export function maxAgeNotPositiveIntegerErrorMessage({
-  directiveName,
-  value,
-}: MaxAgeNotPositiveIntegerErrorParams): string {
-  return `The directive "@${directiveName}" argument "maxAge" must be provided a positive integer; received "${value}".`;
+export function maxAgeNotPositiveIntegerErrorMessage(value: number): string {
+  return `The argument "maxAge" must be provided a positive integer; received "${value}".`;
 }
 
 export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(value: number): string {
-  return `The directive "@openfed__entityCache" argument "negativeCacheTTL" must be provided a zero or positive integer; received "${value}".`;
+  return `The argument "negativeCacheTTL" must be provided a zero or positive integer; received "${value}".`;
 }
 
 export function cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
