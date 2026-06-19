@@ -1164,7 +1164,7 @@ describe('@composeDirective tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that an error is returned if a composed directive does not conform to the highest definition version', () => {
+    test('that an error is returned if a composed directive does not satisfy the directive definition with the highest version', () => {
       const aaaaa = createSubgraph(
         'aaaaa',
         `
