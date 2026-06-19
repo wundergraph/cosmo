@@ -4111,43 +4111,36 @@ export class NormalizationFactory {
     };
   }
 
-  // Dispatches the per-field caching directives. Must run after extractEntityCacheDirective() (reads
-  // entityCacheConfigByTypeName). All object types are walked, not just root operation types: these
-  // directives are declared `on FIELD_DEFINITION`, so they can be (mis)placed on any field.
-  // getOperationTypeNodeForRootTypeName() returns undefined for non-root types; each extractor then reports
-  // the misplacement via its operation-type check, rather than silently ignoring it.
-  processRootFieldCacheDirectives() {
-    for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
-      if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-        continue;
-      }
-      const operationType = this.getOperationTypeNodeForRootTypeName(parentTypeName);
-      // A renamed root type (e.g. `schema { query: MyQuery }`) is keyed in configurationDataByTypeName under
-      // its federated/canonical name (Query/Mutation/Subscription) by every other config writer (keys, provides,
-      // the root-node lookup). Cache configs must use the same key, or the router reads the canonical node and
-      // never sees them.
-      const configurationTypeName = getParentTypeName(parentData);
-
-      for (const [fieldName, fieldData] of parentData.fieldDataByName) {
-        if (fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE)) {
-          this.extractCacheInvalidateConfig(parentTypeName, configurationTypeName, fieldName, fieldData, operationType);
-        }
-      }
-    }
-  }
-
   // Extracts @openfed__cacheInvalidate from Mutation/Subscription fields. The return type must be a cached
   // entity (@key + @openfed__entityCache). A non-Mutation/Subscription placement (including non-root fields,
   // where operationType is undefined) is reported, never silently ignored.
+  extractFieldCacheInvalidateConfig(
+    parentData: CompositeOutputData,
+    configurationTypeName: string,
+    fieldName: string,
+    fieldData: FieldData,
+  ) {
+    if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+      return;
+    }
+    if (fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE)) {
+      this.extractCacheInvalidateConfig(parentData.name, configurationTypeName, fieldName, fieldData);
+    }
+  }
+
   extractCacheInvalidateConfig(
     parentTypeName: string,
     configurationTypeName: string,
     fieldName: string,
     fieldData: FieldData,
-    operationType: OperationTypeNode | undefined,
   ) {
+    if (!fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE)) {
+      return;
+    }
+
+    const operationType = this.getOperationTypeNodeForRootTypeName(parentTypeName);
     const fieldCoords = `${parentTypeName}.${fieldName}`;
-    if (operationType !== OperationTypeNode.MUTATION && operationType !== OperationTypeNode.SUBSCRIPTION) {
+    if (!operationType || operationType === OperationTypeNode.QUERY) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
           cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
@@ -4159,14 +4152,14 @@ export class NormalizationFactory {
     if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
-          cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
+          cacheInvalidateOnNonEntityReturnTypeErrorMessage({ fieldCoords, returnType: returnTypeName }),
         ]),
       );
       return;
     }
     const config: CacheInvalidateConfig = {
       fieldName,
-      operationType: operationType === OperationTypeNode.MUTATION ? MUTATION : SUBSCRIPTION,
+      operationType: operationType,
       entityTypeName: returnTypeName,
     };
     const configurationData = getValueOrDefault(this.configurationDataByTypeName, configurationTypeName, () =>
@@ -4174,10 +4167,11 @@ export class NormalizationFactory {
     );
 
     const existingCacheInvalidates = configurationData.entityCaching?.cacheInvalidateConfigurations ?? [];
-    configurationData.entityCaching = {
-      ...configurationData.entityCaching,
-      cacheInvalidateConfigurations: [...existingCacheInvalidates, config],
-    };
+
+    if (!configurationData.entityCaching) {
+      configurationData.entityCaching = {};
+    }
+    configurationData.entityCaching.cacheInvalidateConfigurations = [...existingCacheInvalidates, config];
   }
 
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
@@ -4353,8 +4347,13 @@ export class NormalizationFactory {
             parentData.fieldDataByName.delete(SERVICE_FIELD);
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
           }
+
+          const newParentTypeName = getParentTypeName(parentData);
+
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
+            this.extractFieldCacheInvalidateConfig(parentData, newParentTypeName, fieldName, fieldData);
+
             if (!isObject && fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
             }
@@ -4391,7 +4390,6 @@ export class NormalizationFactory {
                   externalInterfaceFieldsWarning(this.subgraphName, parentTypeName, [...externalInterfaceFieldNames]),
                 );
           }
-          const newParentTypeName = getParentTypeName(parentData);
           const configurationData = getValueOrDefault(this.configurationDataByTypeName, newParentTypeName, () =>
             newConfigurationData(isEntity, parentTypeName),
           );
@@ -4453,7 +4451,6 @@ export class NormalizationFactory {
     // per-field caching directives (@openfed__cacheInvalidate etc.) — must run after entityCache
     // (entityCacheConfigByTypeName is populated earlier by extractEntityCacheDirective() during the
     // parentDefinitionData iteration in normalize())
-    this.processRootFieldCacheDirectives();
     // Check that explicitly defined operations types are valid objects and that their fields are also valid
     for (const operationType of Object.values(OperationTypeNode)) {
       const operationTypeNode = this.schemaData.operationTypes.get(operationType);

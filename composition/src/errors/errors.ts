@@ -6,6 +6,7 @@ import {
   type ObjectDefinitionData,
 } from '../schema-building/types/types';
 import {
+  type CacheInvalidateOnNonEntityReturnTypeErrorParams,
   type IncompatibleMergedTypesErrorParams,
   type IncompatibleParentTypeMergeErrorParams,
   type IncompatibleTypeWithProvidesErrorMessageParams,
@@ -2064,9 +2065,12 @@ export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(value: number)
 }
 
 export function cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
-  return `@openfed__cacheInvalidate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
+  return `Coordinates "${fieldCoords}" are not a Mutation or Subscription root field.`;
 }
 
-export function cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
-  return `Field "${fieldCoords}" has @openfed__cacheInvalidate but returns non-entity type "${returnType}".`;
+export function cacheInvalidateOnNonEntityReturnTypeErrorMessage({
+  fieldCoords,
+  returnType,
+}: CacheInvalidateOnNonEntityReturnTypeErrorParams): string {
+  return `Coordinates "${fieldCoords}" return non-entity type "${returnType}".`;
 }

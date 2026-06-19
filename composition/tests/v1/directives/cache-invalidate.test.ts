@@ -17,30 +17,13 @@ import {
   cacheInvalidateOnNonEntityReturnTypeErrorMessage,
   cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage,
 } from '../../../src/errors/errors';
-import { createSubgraphWithDefault, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
+import { createSubgraphWithDefaultName, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
 
-describe('@openfed__cacheInvalidate', () => {
-  describe('on Mutation fields', () => {
-    test('normalizes a Mutation field returning a cached entity', () => {
-      const { schema } = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
-            type Query { dummy: String! }
-            type Mutation {
-              updateProduct(id: ID!): Product @openfed__cacheInvalidate
-            }
-            type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
-              id: ID!
-              name: String!
-            }
-          `),
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(schema).toBeDefined();
-    });
-
-    test('produces a CacheInvalidateConfig', () => {
+describe('@openfed__cacheInvalidate directive tests', () => {
+  describe('Mutation field tests', () => {
+    test('that a valid CacheInvalidateConfig is produced', () => {
       const config = getConfigForType(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query { dummy: String! }
             type Mutation {
               updateProduct(id: ID!): Product @openfed__cacheInvalidate
@@ -63,27 +46,10 @@ describe('@openfed__cacheInvalidate', () => {
     });
   });
 
-  describe('on Subscription fields', () => {
-    test('normalizes a Subscription field returning a cached entity', () => {
-      const { schema } = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
-            type Query { dummy: String! }
-            type Subscription {
-              itemUpdated: Product @openfed__cacheInvalidate
-            }
-            type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
-              id: ID!
-              name: String!
-            }
-          `),
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(schema).toBeDefined();
-    });
-
-    test('produces a CacheInvalidateConfig', () => {
+  describe('Subscription field tests', () => {
+    test('that a valid CacheInvalidateConfig is produced', () => {
       const config = getConfigForType(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query { dummy: String! }
             type Subscription {
               itemUpdated: Product @openfed__cacheInvalidate
@@ -106,10 +72,10 @@ describe('@openfed__cacheInvalidate', () => {
     });
   });
 
-  describe('validation errors', () => {
-    test('rejects placement on a Query field', () => {
+  describe('validation error tests', () => {
+    test('that a placement on a Query field is rejected', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query {
               product(id: ID!): Product @openfed__cacheInvalidate
             }
@@ -128,9 +94,9 @@ describe('@openfed__cacheInvalidate', () => {
       );
     });
 
-    test('rejects a return type that is not a cached entity', () => {
+    test('that a return type that is not a cached entity is rejected', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query { dummy: String! }
             type Mutation {
               updateProduct(id: ID!): Result @openfed__cacheInvalidate
@@ -146,14 +112,17 @@ describe('@openfed__cacheInvalidate', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, 'Mutation.updateProduct', FIRST_ORDINAL, [
-          cacheInvalidateOnNonEntityReturnTypeErrorMessage('Mutation.updateProduct', 'Result'),
+          cacheInvalidateOnNonEntityReturnTypeErrorMessage({
+            fieldCoords: 'Mutation.updateProduct',
+            returnType: 'Result',
+          }),
         ]),
       );
     });
 
-    test('rejects a @key entity without @openfed__entityCache', () => {
+    test('that a @key entity without @openfed__entityCache is rejected', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query { dummy: String! }
             type Mutation {
               updateProduct(id: ID!): Product @openfed__cacheInvalidate
@@ -168,14 +137,17 @@ describe('@openfed__cacheInvalidate', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, 'Mutation.updateProduct', FIRST_ORDINAL, [
-          cacheInvalidateOnNonEntityReturnTypeErrorMessage('Mutation.updateProduct', 'Product'),
+          cacheInvalidateOnNonEntityReturnTypeErrorMessage({
+            fieldCoords: 'Mutation.updateProduct',
+            returnType: 'Product',
+          }),
         ]),
       );
     });
 
-    test('rejects placement on a non-root object-type field', () => {
+    test('that a placement on a non-root object-type field is rejected', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query {
               product: Product
             }
