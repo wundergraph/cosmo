@@ -95,7 +95,3 @@ export type InvalidArgumentValueErrorParams = {
   expectedTypeString: string;
 };
 
-export type MaxAgeNotPositiveIntegerErrorParams = {
-  directiveName: DirectiveName;
-  value: number;
-};

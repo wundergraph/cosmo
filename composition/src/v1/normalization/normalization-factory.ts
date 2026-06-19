@@ -4072,21 +4072,26 @@ export class NormalizationFactory {
       }
     }
 
+    const entityCacheErrors = [];
+
     if (config.maxAgeSeconds <= 0) {
-      this.errors.push(
+      entityCacheErrors.push(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_ENTITY_CACHE, value: config.maxAgeSeconds }),
+          maxAgeNotPositiveIntegerErrorMessage(config.maxAgeSeconds),
         ]),
       );
-      return;
     }
 
     if (config.notFoundCacheTtlSeconds < 0) {
-      this.errors.push(
+      entityCacheErrors.push(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
           negativeCacheTTLNotNonNegativeIntegerErrorMessage(config.notFoundCacheTtlSeconds),
         ]),
       );
+    }
+
+    if (entityCacheErrors.length > 0) {
+      this.errors.push(...entityCacheErrors)
       return;
     }
 
