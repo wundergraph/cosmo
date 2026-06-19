@@ -11,6 +11,7 @@ export const ARGUMENT_DEFINITION_UPPER = 'ARGUMENT_DEFINITION';
 export const BOOLEAN = 'boolean';
 export const BOOLEAN_SCALAR = 'Boolean';
 export const CACHE_INVALIDATE = 'openfed__cacheInvalidate';
+export const CACHE_POPULATE = 'openfed__cachePopulate';
 export const CHANNEL = 'channel';
 export const CHANNELS = 'channels';
 export const COMPOSE_DIRECTIVE = 'composeDirective';

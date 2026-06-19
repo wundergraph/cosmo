@@ -82,6 +82,7 @@ import {
   URL_LOWER,
   WEIGHT,
   CACHE_INVALIDATE,
+  CACHE_POPULATE,
   ENTITY_CACHE,
   INCLUDE_HEADERS,
   MAX_AGE,
@@ -870,5 +871,20 @@ export const CACHE_INVALIDATE_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
   name: stringToNameNode(CACHE_INVALIDATE),
+  repeatable: false,
+};
+
+// @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
+export const CACHE_POPULATE_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(MAX_AGE),
+      type: stringToNamedTypeNode(INT_SCALAR),
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(CACHE_POPULATE),
   repeatable: false,
 };

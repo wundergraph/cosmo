@@ -2070,3 +2070,18 @@ export function cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldC
 export function cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
   return `Field "${fieldCoords}" has @openfed__cacheInvalidate but returns non-entity type "${returnType}".`;
 }
+
+export function cachePopulateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
+  return `@openfed__cachePopulate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
+}
+
+export function cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
+  return `Field "${fieldCoords}" has @openfed__cachePopulate but returns non-entity type "${returnType}".`;
+}
+
+export function cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords: string): string {
+  return (
+    `Field "${fieldCoords}" has both @openfed__cacheInvalidate and @openfed__cachePopulate.` +
+    ` A field must use one or the other, not both.`
+  );
+}

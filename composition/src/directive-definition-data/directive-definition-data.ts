@@ -82,6 +82,7 @@ import {
   URL_LOWER,
   WEIGHT,
   CACHE_INVALIDATE,
+  CACHE_POPULATE,
   ENTITY_CACHE,
   INCLUDE_HEADERS,
   MAX_AGE,
@@ -120,6 +121,7 @@ import {
   SEMANTIC_NON_NULL_DEFINITION,
   SHAREABLE_DEFINITION,
   CACHE_INVALIDATE_DEFINITION,
+  CACHE_POPULATE_DEFINITION,
   ENTITY_CACHE_DEFINITION,
   SPECIFIED_BY_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
@@ -1023,4 +1025,22 @@ export const CACHE_INVALIDATE_DEFINITION_DATA = newDirectiveDefinitionData({
   locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
   name: CACHE_INVALIDATE,
   node: CACHE_INVALIDATE_DEFINITION,
+});
+
+export const CACHE_POPULATE_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      MAX_AGE,
+      newDirectiveArgumentData({
+        directive: `@${CACHE_POPULATE}`,
+        name: MAX_AGE,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(INT_SCALAR),
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: CACHE_POPULATE,
+  node: CACHE_POPULATE_DEFINITION,
+  optionalArgumentNames: new Set<ArgumentName>([MAX_AGE]),
 });
