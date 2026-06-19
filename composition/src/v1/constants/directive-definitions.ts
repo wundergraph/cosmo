@@ -81,7 +81,7 @@ import {
   UNION_UPPER,
   URL_LOWER,
   WEIGHT,
-  ENTITY_CACHE,
+  OPENFED_ENTITY_CACHE,
   INCLUDE_HEADERS,
   MAX_AGE,
   NEGATIVE_CACHE_TTL,
@@ -826,7 +826,7 @@ export const TAG_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // @openfed__entityCache(maxAge: Int!, negativeCacheTTL: Int = 0, includeHeaders: Boolean = false, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT
-export const ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
+export const OPENFED_ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -860,6 +860,6 @@ export const ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([OBJECT_UPPER]),
-  name: stringToNameNode(ENTITY_CACHE),
+  name: stringToNameNode(OPENFED_ENTITY_CACHE),
   repeatable: false,
 };

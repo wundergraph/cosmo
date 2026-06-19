@@ -6,6 +6,7 @@ import {
   FIRST_ORDINAL,
   invalidDirectiveError,
   maxAgeNotPositiveIntegerErrorMessage,
+  negativeCacheTTLNotNonNegativeIntegerErrorMessage,
   ROUTER_COMPATIBILITY_VERSION_ONE,
 } from '../../../src';
 import { createSubgraphWithDefault, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
@@ -83,7 +84,12 @@ describe('@openfed__entityCache', () => {
         `),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(errors.some((e) => e.message.includes('negativeCacheTTL must be a non-negative integer'))).toBe(true);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(OPENFED_ENTITY_CACHE, 'Product', FIRST_ORDINAL, [
+          negativeCacheTTLNotNonNegativeIntegerErrorMessage(OPENFED_ENTITY_CACHE, -1),
+        ]),
+      );
     });
   });
 

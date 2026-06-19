@@ -342,7 +342,7 @@ import {
   TOPICS,
   TYPENAME,
   WEIGHT,
-  ENTITY_CACHE,
+  OPENFED_ENTITY_CACHE,
   FIRST_ORDINAL,
   INCLUDE_HEADERS,
   MAX_AGE,
@@ -4005,13 +4005,15 @@ export class NormalizationFactory {
       if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
         continue;
       }
-      const entityCacheDirectives = parentData.directivesByName.get(ENTITY_CACHE);
+      const entityCacheDirectives = parentData.directivesByName.get(OPENFED_ENTITY_CACHE);
       if (!entityCacheDirectives) {
         continue;
       }
       if (!this.keyFieldSetDatasByTypeName.has(typeName)) {
         this.errors.push(
-          invalidDirectiveError(ENTITY_CACHE, typeName, FIRST_ORDINAL, [entityCacheWithoutKeyErrorMessage(typeName)]),
+          invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+            entityCacheWithoutKeyErrorMessage(typeName),
+          ]),
         );
         continue;
       }
@@ -4052,8 +4054,8 @@ export class NormalizationFactory {
 
       if (config.maxAgeSeconds <= 0) {
         this.errors.push(
-          invalidDirectiveError(ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-            maxAgeNotPositiveIntegerErrorMessage(ENTITY_CACHE, config.maxAgeSeconds),
+          invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+            maxAgeNotPositiveIntegerErrorMessage(OPENFED_ENTITY_CACHE, config.maxAgeSeconds),
           ]),
         );
         continue;
@@ -4061,8 +4063,8 @@ export class NormalizationFactory {
 
       if (config.notFoundCacheTtlSeconds < 0) {
         this.errors.push(
-          invalidDirectiveError(ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-            negativeCacheTTLNotNonNegativeIntegerErrorMessage(ENTITY_CACHE, config.notFoundCacheTtlSeconds),
+          invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+            negativeCacheTTLNotNonNegativeIntegerErrorMessage(OPENFED_ENTITY_CACHE, config.notFoundCacheTtlSeconds),
           ]),
         );
         continue;
