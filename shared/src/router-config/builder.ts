@@ -96,9 +96,7 @@ function toEntityCaching(dataByTypeName?: Map<TypeName, ConfigurationData>): Ent
       );
     }
   }
-  if (
-    entityCacheConfigurations.length === 0
-  ) {
+  if (entityCacheConfigurations.length === 0) {
     return undefined;
   }
   return new EntityCaching({
