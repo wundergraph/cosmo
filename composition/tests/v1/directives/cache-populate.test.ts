@@ -216,7 +216,7 @@ describe('@openfed__cachePopulate', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Mutation.createProduct', FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage(OPENFED_CACHE_POPULATE, 0),
+          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_CACHE_POPULATE, value: 0 }),
         ]),
       );
     });
@@ -244,7 +244,7 @@ describe('@openfed__cachePopulate', () => {
       expect(result.errors[0]).toStrictEqual(
         subgraphValidationError('subgraph-default-a', [
           invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Mutation.createProduct', FIRST_ORDINAL, [
-            maxAgeNotPositiveIntegerErrorMessage(OPENFED_CACHE_POPULATE, 0),
+            maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_CACHE_POPULATE, value: 0 }),
           ]),
         ]),
       );

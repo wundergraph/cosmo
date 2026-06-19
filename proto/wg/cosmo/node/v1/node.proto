@@ -92,13 +92,13 @@ message DataSourceConfiguration {
   repeated EntityInterfaceConfiguration interface_objects = 15;
   CostConfiguration cost_configuration = 16;
   // Entity caching configuration (e.g. request-scoped fields from @openfed__requestScoped).
-  EntityCaching entity_caching = 17;
+  EntityCachingConfiguration entity_caching_configuration = 17;
 }
 
 // Entity caching configuration for a subgraph data source.
-message EntityCaching {
+message EntityCachingConfiguration {
   // Per-entity cache configurations (from @openfed__entityCache directive)
-  repeated EntityCacheConfiguration entity_cache_configurations = 1;
+  repeated EntityCacheConfiguration entity_cache = 1;
   // Per-Mutation/Subscription-field cache eviction configs (from @openfed__cacheInvalidate)
   repeated CacheInvalidateConfiguration cache_invalidate_configurations = 2;
   // Per-Mutation/Subscription-field cache population configs (from @openfed__cachePopulate)

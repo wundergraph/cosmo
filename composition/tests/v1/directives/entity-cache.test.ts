@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   OPENFED_ENTITY_CACHE,
-  type EntityCacheConfig,
+  type EntityCacheConfiguration,
   entityCacheWithoutKeyErrorMessage,
   FIRST_ORDINAL,
   invalidDirectiveError,
@@ -15,7 +15,7 @@ import { createSubgraphWithDefault, normalizeSubgraphFailure, normalizeSubgraphS
 // construct cache keys) and a positive maxAge (TTL in seconds).
 describe('@openfed__entityCache', () => {
   describe('validation', () => {
-    test('errors without @key — the router needs @key fields to construct cache keys', () => {
+    test('that an error is raised without @key — the router needs @key fields to construct cache keys', () => {
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefault(`
           type Query { product(id: ID!): Product }
@@ -35,7 +35,7 @@ describe('@openfed__entityCache', () => {
       );
     });
 
-    test('rejects a maxAge of zero — TTL must be at least 1 second', () => {
+    test('that a maxAge of zero is rejected — TTL must be at least 1 second', () => {
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefault(`
           type Query { product(id: ID!): Product }
@@ -49,12 +49,12 @@ describe('@openfed__entityCache', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, 'Product', FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage(OPENFED_ENTITY_CACHE, 0),
+          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_ENTITY_CACHE, value: 0 }),
         ]),
       );
     });
 
-    test('rejects a negative maxAge', () => {
+    test('that a negative maxAge is rejected', () => {
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefault(`
           type Query { product(id: ID!): Product }
@@ -68,12 +68,12 @@ describe('@openfed__entityCache', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, 'Product', FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage(OPENFED_ENTITY_CACHE, -5),
+          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_ENTITY_CACHE, value: -5 }),
         ]),
       );
     });
 
-    test('rejects a negative negativeCacheTTL', () => {
+    test('that a negative negativeCacheTTL is rejected', () => {
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefault(`
           type Query { product(id: ID!): Product }
@@ -87,14 +87,14 @@ describe('@openfed__entityCache', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, 'Product', FIRST_ORDINAL, [
-          negativeCacheTTLNotNonNegativeIntegerErrorMessage(OPENFED_ENTITY_CACHE, -1),
+          negativeCacheTTLNotNonNegativeIntegerErrorMessage(-1),
         ]),
       );
     });
   });
 
   describe('configuration extraction', () => {
-    test('with defaults produces the correct EntityCacheConfig', () => {
+    test('that defaults produce the correct EntityCacheConfig', () => {
       // Only maxAge is required; includeHeaders, partialCacheLoad, shadowMode default to false
       const configs = getEntityCacheConfigs(
         `
@@ -115,10 +115,10 @@ describe('@openfed__entityCache', () => {
           partialCacheLoad: false,
           shadowMode: false,
         },
-      ] satisfies EntityCacheConfig[]);
+      ] satisfies EntityCacheConfiguration[]);
     });
 
-    test('every argument propagates to the EntityCacheConfig', () => {
+    test('that every argument propagates to the EntityCacheConfig', () => {
       const configs = getEntityCacheConfigs(
         `
           type Query { product(id: ID!): Product }
@@ -138,14 +138,14 @@ describe('@openfed__entityCache', () => {
           partialCacheLoad: true,
           shadowMode: true,
         },
-      ] satisfies EntityCacheConfig[]);
+      ] satisfies EntityCacheConfiguration[]);
     });
   });
 });
 
 // Helper: normalizes the subgraph and returns the entityCache config array attached to `typeName`.
 // On this branch entity-caching config is nested under ConfigurationData.entityCaching.
-function getEntityCacheConfigs(sdl: string, typeName: string): Array<EntityCacheConfig> | undefined {
+function getEntityCacheConfigs(sdl: string, typeName: string): Array<EntityCacheConfiguration> | undefined {
   const result = normalizeSubgraphSuccess(createSubgraphWithDefault(sdl), ROUTER_COMPATIBILITY_VERSION_ONE);
   return result.configurationDataByTypeName.get(typeName)?.entityCaching?.entityCacheConfigurations;
 }
