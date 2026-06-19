@@ -10,6 +10,7 @@ import {
   type ConstDirectiveNode,
   type DocumentNode,
   type InputValueDefinitionNode,
+  type IntValueNode,
   type Kind,
   type Location,
   type NameNode,
@@ -137,6 +138,21 @@ export type ComposeDirectiveArgumentNode = {
   readonly loc?: Location;
 };
 
+export type EntityCacheDirectiveNode = {
+  readonly arguments: ReadonlyArray<EntityCacheArgumentNode>;
+  readonly kind: Kind.DIRECTIVE;
+  readonly name: NameNode;
+  readonly loc?: Location;
+};
+
+export type EntityCacheArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode;
+  // maxAge/negativeCacheTTL are Int; includeHeaders/partialCacheLoad/shadowMode are Boolean.
+  // validateDirectives() guarantees each argument's value matches its declared type.
+  readonly value: IntValueNode | BooleanValueNode;
+  readonly loc?: Location;
+};
 export type LinkImportData = {
   name: DirectiveName;
   coreUrl: string;

@@ -2050,3 +2050,15 @@ export function nonEqualComposeDirectiveMajorVersionError(directiveName: Directi
 export function unknownSubgraphNameError(subgraphName: SubgraphName): Error {
   return new Error(`Internal Error: Expected subgraph "${subgraphName}" to be a valid record.`);
 }
+
+export function entityCacheWithoutKeyErrorMessage(typeName: string): string {
+  return `Type "${typeName}" has @openfed__entityCache but no @key directive.`;
+}
+
+export function maxAgeNotPositiveIntegerErrorMessage(directiveName: string, value: number): string {
+  return `@${directiveName} maxAge must be a positive integer, got "${value}".`;
+}
+
+export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(directiveName: string, value: number): string {
+  return `@${directiveName} negativeCacheTTL must be zero or a positive integer, got "${value}".`;
+}

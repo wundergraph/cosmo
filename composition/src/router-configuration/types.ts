@@ -98,6 +98,30 @@ export type ConfigurationData = {
   keys?: RequiredFieldConfiguration[];
   requireFetchReasonsFieldNames?: Array<FieldName>;
   requires?: RequiredFieldConfiguration[];
+  entityCaching?: EntityCachingConfiguration;
+};
+
+// Extracted from @openfed__entityCache(maxAge: Int!, negativeCacheTTL: Int, includeHeaders: Boolean,
+// partialCacheLoad: Boolean, shadowMode: Boolean) on OBJECT types. Defines per-entity cache TTL and behavior.
+export type EntityCacheConfig = {
+  typeName: TypeName;
+  maxAgeSeconds: number;
+  // TTL (in seconds) for caching "not found" entity responses (entity returned null
+  // from _entities without errors). 0 disables negative caching; composition rejects
+  // negative values at validation time.
+  notFoundCacheTtlSeconds: number;
+  // When true, request headers are included in the cache key (useful for user-specific entities).
+  includeHeaders: boolean;
+  // When true, allows partial cache hits — the router fetches only missing entities from the subgraph.
+  partialCacheLoad: boolean;
+  // When true, the cache runs in shadow mode — cache reads/writes happen but responses always come
+  // from the subgraph. Useful for warming caches or validating correctness without affecting traffic.
+  shadowMode: boolean;
+};
+
+export type EntityCachingConfiguration = {
+  // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
+  entityCacheConfigurations?: Array<EntityCacheConfig>;
 };
 
 export type Costs = {

@@ -81,6 +81,12 @@ import {
   UNION_UPPER,
   URL_LOWER,
   WEIGHT,
+  ENTITY_CACHE,
+  INCLUDE_HEADERS,
+  MAX_AGE,
+  NEGATIVE_CACHE_TTL,
+  PARTIAL_CACHE_LOAD,
+  SHADOW_MODE,
 } from '../utils/string-constants';
 import {
   AUTHENTICATED_DEFINITION,
@@ -112,11 +118,16 @@ import {
   REQUIRES_SCOPES_DEFINITION,
   SEMANTIC_NON_NULL_DEFINITION,
   SHAREABLE_DEFINITION,
+  ENTITY_CACHE_DEFINITION,
   SPECIFIED_BY_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
   TAG_DEFINITION,
 } from '../v1/constants/directive-definitions';
-import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from '../v1/constants/type-nodes';
+import {
+  REQUIRED_FIELDSET_TYPE_NODE,
+  REQUIRED_INT_TYPE_NODE,
+  REQUIRED_STRING_TYPE_NODE,
+} from '../v1/constants/type-nodes';
 import { type ArgumentName, type DirectiveLocation } from '../types/types';
 import { newDirectiveArgumentData, newDirectiveDefinitionData } from './utils';
 import { type DirectiveArgumentData, DirectiveDefinitionData } from './types/types';
@@ -944,4 +955,63 @@ export const TAG_DEFINITION_DATA = newDirectiveDefinitionData({
   name: TAG,
   node: TAG_DEFINITION,
   requiredArgumentNames: new Set<ArgumentName>([NAME]),
+});
+
+export const ENTITY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      MAX_AGE,
+      newDirectiveArgumentData({
+        directive: `@${ENTITY_CACHE}`,
+        name: MAX_AGE,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_INT_TYPE_NODE,
+      }),
+    ],
+    [
+      NEGATIVE_CACHE_TTL,
+      newDirectiveArgumentData({
+        directive: `@${ENTITY_CACHE}`,
+        defaultValue: { kind: Kind.INT, value: '0' },
+        name: NEGATIVE_CACHE_TTL,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(INT_SCALAR),
+      }),
+    ],
+    [
+      INCLUDE_HEADERS,
+      newDirectiveArgumentData({
+        directive: `@${ENTITY_CACHE}`,
+        defaultValue: { kind: Kind.BOOLEAN, value: false },
+        name: INCLUDE_HEADERS,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      }),
+    ],
+    [
+      PARTIAL_CACHE_LOAD,
+      newDirectiveArgumentData({
+        directive: `@${ENTITY_CACHE}`,
+        defaultValue: { kind: Kind.BOOLEAN, value: false },
+        name: PARTIAL_CACHE_LOAD,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      }),
+    ],
+    [
+      SHADOW_MODE,
+      newDirectiveArgumentData({
+        directive: `@${ENTITY_CACHE}`,
+        defaultValue: { kind: Kind.BOOLEAN, value: false },
+        name: SHADOW_MODE,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([OBJECT_UPPER]),
+  name: ENTITY_CACHE,
+  node: ENTITY_CACHE_DEFINITION,
+  optionalArgumentNames: new Set<ArgumentName>([NEGATIVE_CACHE_TTL, INCLUDE_HEADERS, PARTIAL_CACHE_LOAD, SHADOW_MODE]),
+  requiredArgumentNames: new Set<ArgumentName>([MAX_AGE]),
 });

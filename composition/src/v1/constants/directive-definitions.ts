@@ -81,8 +81,14 @@ import {
   UNION_UPPER,
   URL_LOWER,
   WEIGHT,
+  ENTITY_CACHE,
+  INCLUDE_HEADERS,
+  MAX_AGE,
+  NEGATIVE_CACHE_TTL,
+  PARTIAL_CACHE_LOAD,
+  SHADOW_MODE,
 } from '../../utils/string-constants';
-import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from './type-nodes';
+import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_INT_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from './type-nodes';
 
 // @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 export const AUTHENTICATED_DEFINITION: DirectiveDefinitionNode = {
@@ -817,4 +823,43 @@ export const TAG_DEFINITION: DirectiveDefinitionNode = {
   ]),
   name: stringToNameNode(TAG),
   repeatable: true,
+};
+
+// @openfed__entityCache(maxAge: Int!, negativeCacheTTL: Int = 0, includeHeaders: Boolean = false, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT
+export const ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(MAX_AGE),
+      type: REQUIRED_INT_TYPE_NODE,
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(NEGATIVE_CACHE_TTL),
+      type: stringToNamedTypeNode(INT_SCALAR),
+      defaultValue: { kind: Kind.INT, value: '0' },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(INCLUDE_HEADERS),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      defaultValue: { kind: Kind.BOOLEAN, value: false },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(PARTIAL_CACHE_LOAD),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      defaultValue: { kind: Kind.BOOLEAN, value: false },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(SHADOW_MODE),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      defaultValue: { kind: Kind.BOOLEAN, value: false },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([OBJECT_UPPER]),
+  name: stringToNameNode(ENTITY_CACHE),
+  repeatable: false,
 };
