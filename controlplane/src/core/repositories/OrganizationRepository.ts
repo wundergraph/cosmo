@@ -1118,7 +1118,6 @@ export class OrganizationRepository {
               case 'federatedGraphSchemaUpdated':
               case 'monographSchemaUpdated': {
                 const ids = eventMeta.meta.value.graphIds;
-
                 if (ids.length === 0) {
                   continue;
                 }
@@ -1131,6 +1130,9 @@ export class OrganizationRepository {
                 );
                 break;
               }
+              case 'proposalStateUpdated': {
+                break;
+              }
               default: {
                 throw new Error(`This event ${eventMeta.meta.case} does not exist`);
               }
@@ -1141,64 +1143,16 @@ export class OrganizationRepository {
     });
   }
 
-  public async getIntegrationByName(organizationId: string, integrationName: string): Promise<Integration | undefined> {
+  public async integrationExists(organizationId: string, integrationName: string): Promise<boolean> {
     const res = await this.db.query.organizationIntegrations.findFirst({
+      columns: { id: true },
       where: and(
         eq(organizationIntegrations.organizationId, organizationId),
         eq(organizationIntegrations.name, integrationName),
       ),
     });
 
-    if (!res) {
-      return undefined;
-    }
-
-    switch (res.type) {
-      case integrationTypeEnum.enumValues[0]: {
-        const slackIntegrationConfig = await this.db.query.slackIntegrationConfigs.findFirst({
-          where: eq(slackIntegrationConfigs.integrationId, res.id),
-          with: {
-            slackSchemaUpdateEventConfigs: true,
-          },
-        });
-
-        if (!slackIntegrationConfig) {
-          return undefined;
-        }
-
-        const config: PartialMessage<IntegrationConfig> = {
-          type: IntegrationType.SLACK,
-          config: {
-            case: 'slackIntegrationConfig',
-            value: {
-              endpoint: slackIntegrationConfig.endpoint,
-            },
-          },
-        };
-
-        return {
-          id: res.id,
-          name: res.name,
-          type: res.type,
-          events: res.events || [],
-          integrationConfig: config,
-          eventsMeta: [
-            {
-              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-              meta: {
-                case: 'federatedGraphSchemaUpdated',
-                value: {
-                  graphIds: slackIntegrationConfig.slackSchemaUpdateEventConfigs.map((i) => i.federatedGraphId),
-                },
-              },
-            },
-          ],
-        } as Integration;
-      }
-      default: {
-        throw new Error(`The type of the integration ${res.type} doesnt exist`);
-      }
-    }
+    return !!res?.id;
   }
 
   public async getIntegrations(organizationId: string): Promise<Integration[]> {
