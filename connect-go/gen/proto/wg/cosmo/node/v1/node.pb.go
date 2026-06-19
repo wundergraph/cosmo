@@ -1071,9 +1071,9 @@ type DataSourceConfiguration struct {
 	InterfaceObjects           []*EntityInterfaceConfiguration `protobuf:"bytes,15,rep,name=interface_objects,json=interfaceObjects,proto3" json:"interface_objects,omitempty"`
 	CostConfiguration          *CostConfiguration              `protobuf:"bytes,16,opt,name=cost_configuration,json=costConfiguration,proto3" json:"cost_configuration,omitempty"`
 	// Entity caching configuration (e.g. request-scoped fields from @openfed__requestScoped).
-	EntityCaching *EntityCaching `protobuf:"bytes,17,opt,name=entity_caching,json=entityCaching,proto3" json:"entity_caching,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	EntityCachingConfiguration *EntityCachingConfiguration `protobuf:"bytes,17,opt,name=entity_caching_configuration,json=entityCachingConfiguration,proto3" json:"entity_caching_configuration,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *DataSourceConfiguration) Reset() {
@@ -1218,36 +1218,36 @@ func (x *DataSourceConfiguration) GetCostConfiguration() *CostConfiguration {
 	return nil
 }
 
-func (x *DataSourceConfiguration) GetEntityCaching() *EntityCaching {
+func (x *DataSourceConfiguration) GetEntityCachingConfiguration() *EntityCachingConfiguration {
 	if x != nil {
-		return x.EntityCaching
+		return x.EntityCachingConfiguration
 	}
 	return nil
 }
 
 // Entity caching configuration for a subgraph data source.
-type EntityCaching struct {
+type EntityCachingConfiguration struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Per-entity cache configurations (from @openfed__entityCache directive)
-	EntityCacheConfigurations []*EntityCacheConfiguration `protobuf:"bytes,1,rep,name=entity_cache_configurations,json=entityCacheConfigurations,proto3" json:"entity_cache_configurations,omitempty"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	EntityCache   []*EntityCacheConfiguration `protobuf:"bytes,1,rep,name=entity_cache,json=entityCache,proto3" json:"entity_cache,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *EntityCaching) Reset() {
-	*x = EntityCaching{}
+func (x *EntityCachingConfiguration) Reset() {
+	*x = EntityCachingConfiguration{}
 	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *EntityCaching) String() string {
+func (x *EntityCachingConfiguration) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*EntityCaching) ProtoMessage() {}
+func (*EntityCachingConfiguration) ProtoMessage() {}
 
-func (x *EntityCaching) ProtoReflect() protoreflect.Message {
+func (x *EntityCachingConfiguration) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1259,14 +1259,14 @@ func (x *EntityCaching) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use EntityCaching.ProtoReflect.Descriptor instead.
-func (*EntityCaching) Descriptor() ([]byte, []int) {
+// Deprecated: Use EntityCachingConfiguration.ProtoReflect.Descriptor instead.
+func (*EntityCachingConfiguration) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *EntityCaching) GetEntityCacheConfigurations() []*EntityCacheConfiguration {
+func (x *EntityCachingConfiguration) GetEntityCache() []*EntityCacheConfiguration {
 	if x != nil {
-		return x.EntityCacheConfigurations
+		return x.EntityCache
 	}
 	return nil
 }
@@ -4816,7 +4816,7 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\x12StringStorageEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x18\n" +
-	"\x16_graphql_client_schema\"\x96\t\n" +
+	"\x16_graphql_client_schema\"\xbe\t\n" +
 	"\x17DataSourceConfiguration\x124\n" +
 	"\x04kind\x18\x01 \x01(\x0e2 .wg.cosmo.node.v1.DataSourceKindR\x04kind\x12:\n" +
 	"\n" +
@@ -4838,10 +4838,10 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\rcustom_events\x18\r \x01(\v2(.wg.cosmo.node.v1.DataSourceCustomEventsR\fcustomEvents\x12[\n" +
 	"\x11entity_interfaces\x18\x0e \x03(\v2..wg.cosmo.node.v1.EntityInterfaceConfigurationR\x10entityInterfaces\x12[\n" +
 	"\x11interface_objects\x18\x0f \x03(\v2..wg.cosmo.node.v1.EntityInterfaceConfigurationR\x10interfaceObjects\x12R\n" +
-	"\x12cost_configuration\x18\x10 \x01(\v2#.wg.cosmo.node.v1.CostConfigurationR\x11costConfiguration\x12F\n" +
-	"\x0eentity_caching\x18\x11 \x01(\v2\x1f.wg.cosmo.node.v1.EntityCachingR\rentityCaching\"{\n" +
-	"\rEntityCaching\x12j\n" +
-	"\x1bentity_cache_configurations\x18\x01 \x03(\v2*.wg.cosmo.node.v1.EntityCacheConfigurationR\x19entityCacheConfigurations\"\x95\x02\n" +
+	"\x12cost_configuration\x18\x10 \x01(\v2#.wg.cosmo.node.v1.CostConfigurationR\x11costConfiguration\x12n\n" +
+	"\x1centity_caching_configuration\x18\x11 \x01(\v2,.wg.cosmo.node.v1.EntityCachingConfigurationR\x1aentityCachingConfiguration\"k\n" +
+	"\x1aEntityCachingConfiguration\x12M\n" +
+	"\fentity_cache\x18\x01 \x03(\v2*.wg.cosmo.node.v1.EntityCacheConfigurationR\ventityCache\"\x95\x02\n" +
 	"\x18EntityCacheConfiguration\x12\x1b\n" +
 	"\ttype_name\x18\x01 \x01(\tR\btypeName\x12&\n" +
 	"\x0fmax_age_seconds\x18\x02 \x01(\x03R\rmaxAgeSeconds\x12'\n" +
@@ -5210,7 +5210,7 @@ var file_wg_cosmo_node_v1_node_proto_goTypes = []any{
 	(*SelfRegisterResponse)(nil),              // 17: wg.cosmo.node.v1.SelfRegisterResponse
 	(*EngineConfiguration)(nil),               // 18: wg.cosmo.node.v1.EngineConfiguration
 	(*DataSourceConfiguration)(nil),           // 19: wg.cosmo.node.v1.DataSourceConfiguration
-	(*EntityCaching)(nil),                     // 20: wg.cosmo.node.v1.EntityCaching
+	(*EntityCachingConfiguration)(nil),        // 20: wg.cosmo.node.v1.EntityCachingConfiguration
 	(*EntityCacheConfiguration)(nil),          // 21: wg.cosmo.node.v1.EntityCacheConfiguration
 	(*CostConfiguration)(nil),                 // 22: wg.cosmo.node.v1.CostConfiguration
 	(*FieldWeightConfiguration)(nil),          // 23: wg.cosmo.node.v1.FieldWeightConfiguration
@@ -5306,8 +5306,8 @@ var file_wg_cosmo_node_v1_node_proto_depIdxs = []int32{
 	34,  // 24: wg.cosmo.node.v1.DataSourceConfiguration.entity_interfaces:type_name -> wg.cosmo.node.v1.EntityInterfaceConfiguration
 	34,  // 25: wg.cosmo.node.v1.DataSourceConfiguration.interface_objects:type_name -> wg.cosmo.node.v1.EntityInterfaceConfiguration
 	22,  // 26: wg.cosmo.node.v1.DataSourceConfiguration.cost_configuration:type_name -> wg.cosmo.node.v1.CostConfiguration
-	20,  // 27: wg.cosmo.node.v1.DataSourceConfiguration.entity_caching:type_name -> wg.cosmo.node.v1.EntityCaching
-	21,  // 28: wg.cosmo.node.v1.EntityCaching.entity_cache_configurations:type_name -> wg.cosmo.node.v1.EntityCacheConfiguration
+	20,  // 27: wg.cosmo.node.v1.DataSourceConfiguration.entity_caching_configuration:type_name -> wg.cosmo.node.v1.EntityCachingConfiguration
+	21,  // 28: wg.cosmo.node.v1.EntityCachingConfiguration.entity_cache:type_name -> wg.cosmo.node.v1.EntityCacheConfiguration
 	23,  // 29: wg.cosmo.node.v1.CostConfiguration.field_weights:type_name -> wg.cosmo.node.v1.FieldWeightConfiguration
 	24,  // 30: wg.cosmo.node.v1.CostConfiguration.list_sizes:type_name -> wg.cosmo.node.v1.FieldListSizeConfiguration
 	79,  // 31: wg.cosmo.node.v1.CostConfiguration.type_weights:type_name -> wg.cosmo.node.v1.CostConfiguration.TypeWeightsEntry
