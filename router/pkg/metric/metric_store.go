@@ -489,11 +489,11 @@ func (h *Metrics) Shutdown(ctx context.Context) error {
 	}
 
 	errProm := h.promRequestMetrics.Shutdown()
-	if err != nil {
+	if errProm != nil {
 		err = errors.Join(err, fmt.Errorf("failed to shutdown prom metrics: %w", errProm))
 	}
 	errOtlp := h.otlpRequestMetrics.Shutdown()
-	if err != nil {
+	if errOtlp != nil {
 		err = errors.Join(err, fmt.Errorf("failed to shutdown otlp metrics: %w", errOtlp))
 	}
 
