@@ -121,7 +121,7 @@ import {
   TYPENAME,
   URL_LOWER,
 } from '../../utils/string-constants';
-import { getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
+import { addIterableToSet, getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
 import { type FieldSetData, type KeyFieldSetData, type LinkImportData } from './types/types';
 import { type DirectiveName } from '../../types/types';
 import {
@@ -535,8 +535,6 @@ export function upsertFederatedDirectiveData({
       continue;
     }
 
-    existingData.isReferenced ||= directiveData.isReferenced;
-
     /* If at least one subgraph includes the directive name in a `@composeDirective` directive, the definition of
      * the custom directive should be propagated in the federated graph.
      * The directive itself must be referenced in at least once in one of those subgraphs to propagate also the usages
@@ -546,7 +544,11 @@ export function upsertFederatedDirectiveData({
      *  could be set in one one subgraph and removed in another subgraph with a imported higher version.
      */
     if (existingData.minorVersion < directiveData.minorVersion) {
-      existingDataByName.set(directiveName, copyDirectiveDefinitionData(directiveData));
+      const copiedData = copyDirectiveDefinitionData(directiveData);
+      copiedData.isReferenced ||= existingData.isReferenced;
+      existingDataByName.set(directiveName, copiedData);
+    } else {
+      existingData.isReferenced ||= directiveData.isReferenced;
     }
   }
 }
@@ -837,3 +839,8 @@ export function extractLinkArgs(
     success: true,
   };
 }
+
+export function mergeHigherVersionComposedDirective(
+  existingData: DirectiveDefinitionData,
+  incomingData: DirectiveDefinitionData,
+): void {}
