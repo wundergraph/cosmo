@@ -1033,5 +1033,68 @@ describe('@composeDirective tests', () => {
       );
       expect(warnings).toHaveLength(0);
     });
+
+    test('that subgraph order does not affect the propagation of a composed directive', () => {
+      const aaaaa = createSubgraph(
+        'aaaaa',
+        `
+        schema
+        @link(import: ["@a"], url: "https://a/a/v1.0")
+        @composeDirective(name: "@a")  {
+          query: Query
+        }
+        
+        directive @a on FIELD_DEFINITION
+        
+        type Query @shareable {
+          a: ID
+        }
+        `,
+      );
+      const aaaab = createSubgraph(
+        'aaaab',
+        `
+        schema
+        @link(import: ["@a"], url: "https://a/a/v1.0")
+        @composeDirective(name: "@a")  {
+          query: Query
+        }
+        
+        directive @a on FIELD_DEFINITION
+        
+        type Query @shareable {
+          a: ID @a
+        }
+        `,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+        [aaaaa, aaaab],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+      
+      type Query {
+        a: ID
+      }
+    `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+      directive @a on FIELD_DEFINITION
+      
+      type Query {
+        a: ID @a
+      }
+    `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
   });
 });

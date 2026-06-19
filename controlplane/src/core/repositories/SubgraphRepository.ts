@@ -680,10 +680,10 @@ export class SubgraphRepository {
     const namespaceId = items[0].namespaceId;
 
     const orgRepo = new OrganizationRepository(this.logger, this.db, this.organizationId);
-    const splitConfigFeature = await orgRepo.getFeature({
+    const splitConfigFeature = (await orgRepo.getFeature({
       organizationId: this.organizationId,
       featureId: 'split-config-loading',
-    });
+    })) || { id: 'split-config-loading', enabled: false };
 
     await this.db.transaction(async (tx) => {
       // Write every schema version and collect the affected graphs/flags. NO composition happens here.
