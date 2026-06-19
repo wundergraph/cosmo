@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -562,7 +563,7 @@ Important Notes:
 				requestBody, err := json.Marshal(mcpRequest)
 				require.NoError(t, err)
 
-				req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+				req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
 				require.NoError(t, err)
 
 				// Add cross-origin headers
@@ -743,7 +744,7 @@ Important Notes:
 				requestBody, err := json.Marshal(mcpRequest)
 				require.NoError(t, err)
 
-				req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+				req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json; charset=utf-8")
 				req.Header.Set("Accept", "application/json, text/event-stream")
@@ -1023,7 +1024,7 @@ input UserInput {
 				requestBody, err := json.Marshal(mcpRequest)
 				require.NoError(t, err)
 
-				req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+				req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
 				require.NoError(t, err)
 
 				// Add various headers to test forwarding
@@ -1133,7 +1134,7 @@ input UserInput {
 				requestBody, err := json.Marshal(mcpRequest)
 				require.NoError(t, err)
 
-				req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+				req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
 				require.NoError(t, err)
 
 				// Set headers that should be filtered
@@ -1219,7 +1220,7 @@ input UserInput {
 					requestBody, err := json.Marshal(mcpRequest)
 					require.NoError(t, err)
 
-					req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+					req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
 					require.NoError(t, err)
 					req.Header.Set("Content-Type", "application/json; foo=bar")
 					req.Header.Set("Accept", "application/json, text/event-stream")
