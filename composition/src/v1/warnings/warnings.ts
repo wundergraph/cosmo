@@ -2,6 +2,7 @@ import { Warning } from '../../warnings/types';
 import { QUOTATION_JOIN } from '../../utils/string-constants';
 import {
   type InvalidRepeatedComposedDirectiveWarningParams,
+  type QueryCacheReturnEntityMissingEntityCacheWarningParams,
   type RequestScopedSingleFieldWarningParams,
   type SingleFederatedInputFieldOneOfWarningParams,
   type SingleSubgraphInputFieldOneOfWarningParams,
@@ -248,6 +249,23 @@ export function requestScopedSingleFieldWarning({
       `@openfed__requestScoped(key: "${key}") is declared on only one field ("${fieldCoords}") in this subgraph.` +
       ` The directive is meaningless unless at least 2 fields share the same key so that the second` +
       ` and subsequent fields can be served from the per-request L1 cache populated by the first.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function queryCacheReturnEntityMissingEntityCacheWarning({
+  subgraphName,
+  fieldCoords,
+  entityType,
+}: QueryCacheReturnEntityMissingEntityCacheWarningParams): Warning {
+  return new Warning({
+    message:
+      `Field "${fieldCoords}" has @openfed__queryCache and returns entity "${entityType}",` +
+      ` but "${entityType}" has no @openfed__entityCache directive. Add @openfed__entityCache(maxAge: ...)` +
+      ` to "${entityType}" to enable caching, or remove @openfed__queryCache from "${fieldCoords}".` +
+      ' The @openfed__queryCache config for this field was not extracted.',
     subgraph: {
       name: subgraphName,
     },

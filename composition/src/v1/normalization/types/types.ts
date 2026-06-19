@@ -7,6 +7,7 @@ import {
   type SchemaData,
 } from '../../../schema-building/types/types';
 import {
+  type BooleanValueNode,
   type ConstDirectiveNode,
   type DocumentNode,
   type InputValueDefinitionNode,
@@ -163,6 +164,22 @@ export type EntityCacheArgumentNode = {
   readonly kind: Kind.ARGUMENT;
   readonly name: NameNode;
   // maxAge/negativeCacheTTL are Int; includeHeaders/partialCacheLoad/shadowMode are Boolean.
+  // validateDirectives() guarantees each argument's value matches its declared type.
+  readonly value: IntValueNode | BooleanValueNode;
+  readonly loc?: Location;
+};
+
+export type QueryCacheDirectiveNode = {
+  readonly arguments: ReadonlyArray<QueryCacheArgumentNode>;
+  readonly kind: Kind.DIRECTIVE;
+  readonly name: NameNode;
+  readonly loc?: Location;
+};
+
+export type QueryCacheArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode;
+  // maxAge is Int; includeHeaders/shadowMode are Boolean.
   // validateDirectives() guarantees each argument's value matches its declared type.
   readonly value: IntValueNode | BooleanValueNode;
   readonly loc?: Location;
