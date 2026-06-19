@@ -28110,12 +28110,13 @@ func (x *GetProposalsByFederatedGraphRequest) GetOffset() int32 {
 }
 
 type GetProposalsByFederatedGraphResponse struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Response           *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
-	Proposals          []*Proposal            `protobuf:"bytes,2,rep,name=proposals,proto3" json:"proposals,omitempty"`
-	IsProposalsEnabled bool                   `protobuf:"varint,3,opt,name=isProposalsEnabled,proto3" json:"isProposalsEnabled,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Response            *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	Proposals           []*Proposal            `protobuf:"bytes,2,rep,name=proposals,proto3" json:"proposals,omitempty"`
+	IsProposalsEnabled  bool                   `protobuf:"varint,3,opt,name=isProposalsEnabled,proto3" json:"isProposalsEnabled,omitempty"`
+	TotalProposalsCount int32                  `protobuf:"varint,4,opt,name=totalProposalsCount,proto3" json:"totalProposalsCount,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *GetProposalsByFederatedGraphResponse) Reset() {
@@ -28167,6 +28168,13 @@ func (x *GetProposalsByFederatedGraphResponse) GetIsProposalsEnabled() bool {
 		return x.IsProposalsEnabled
 	}
 	return false
+}
+
+func (x *GetProposalsByFederatedGraphResponse) GetTotalProposalsCount() int32 {
+	if x != nil {
+		return x.TotalProposalsCount
+	}
+	return 0
 }
 
 type GetProposalChecksRequest struct {
@@ -35994,11 +36002,12 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\tstartDate\x18\x03 \x01(\tR\tstartDate\x12\x18\n" +
 	"\aendDate\x18\x04 \x01(\tR\aendDate\x12\x14\n" +
 	"\x05limit\x18\x05 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06offset\x18\x06 \x01(\x05R\x06offset\"\xd0\x01\n" +
+	"\x06offset\x18\x06 \x01(\x05R\x06offset\"\x82\x02\n" +
 	"$GetProposalsByFederatedGraphResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12<\n" +
 	"\tproposals\x18\x02 \x03(\v2\x1e.wg.cosmo.platform.v1.ProposalR\tproposals\x12.\n" +
-	"\x12isProposalsEnabled\x18\x03 \x01(\bR\x12isProposalsEnabled\"\xa0\x01\n" +
+	"\x12isProposalsEnabled\x18\x03 \x01(\bR\x12isProposalsEnabled\x120\n" +
+	"\x13totalProposalsCount\x18\x04 \x01(\x05R\x13totalProposalsCount\"\xa0\x01\n" +
 	"\x18GetProposalChecksRequest\x12\x1e\n" +
 	"\n" +
 	"proposalId\x18\x01 \x01(\tR\n" +
