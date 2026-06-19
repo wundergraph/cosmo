@@ -1,0 +1,30 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.7",
+        import: ["@key", "@external", "@shareable"])
+
+interface Publishable {
+  id: ID!
+  title: String!
+  publishedAt: String!
+}
+
+# recommendations returns Article/Podcast it does not own (abstract type across subgraphs)
+# NOTE: `implements` MUST come BEFORE directives (GraphQL grammar) — verified via wgc/rover.
+type Article implements Publishable @key(fields: "id") {
+  id: ID!
+  title: String! @external
+  publishedAt: String! @external
+  relatedContent: [Publishable!]!   # deferred -> abstract type, cross-subgraph
+}
+
+type Podcast implements Publishable @key(fields: "id") {
+  id: ID!
+  title: String! @external
+  publishedAt: String! @external
+}
+
+type User @key(fields: "id") {
+  id: ID!
+  displayName: String! @shareable
+  recommendedArticles: [Article!]!  # deferred -> expensive ML mock
+}

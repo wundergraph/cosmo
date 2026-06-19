@@ -1,0 +1,53 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.7",
+        import: ["@key", "@shareable", "@provides", "@external", "@tag"])
+
+type Query {
+  article(id: ID!): Article
+  articleBySlug(slug: String!, locale: String!): Article
+  articles: [Article!]!
+  podcast(id: ID!): Podcast
+  search(term: String!): [SearchResult!]!
+  featuredArticle: Article @provides(fields: "author { displayName }")
+  firstArticle: Article @tag(name: "internal")
+}
+
+interface Publishable {
+  id: ID!
+  title: String!
+  publishedAt: String!
+}
+
+interface ContentItem @key(fields: "id") {
+  id: ID!
+}
+
+union SearchResult = Article | Podcast
+
+type Article implements Publishable & ContentItem
+    @key(fields: "id")
+    @key(fields: "slug locale") {
+  id: ID!
+  slug: String!
+  locale: String!
+  title: String! @shareable
+  body: String!
+  wordCount: Int!
+  publishedAt: String!
+  heroImageUrl: String!
+  author: User!
+}
+
+type Podcast implements Publishable & ContentItem @key(fields: "id") {
+  id: ID!
+  title: String!
+  publishedAt: String!
+  durationSeconds: Int!
+  host: User!
+}
+
+# Referenced (home in accounts). author.displayName is provided inline by featuredArticle.
+type User @key(fields: "id") {
+  id: ID!
+  displayName: String! @external
+}

@@ -1,0 +1,38 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.7",
+        import: ["@key", "@override", "@inaccessible"])
+
+type Query {
+  asset(id: ID!): Asset
+}
+
+# Entity interface: members are entities resolvable via the interface @key.
+interface Asset @key(fields: "id") {
+  id: ID!
+  url: String!
+}
+
+type ImageAsset implements Asset @key(fields: "id") {
+  id: ID!
+  url: String!
+  width: Int!
+  height: Int!
+}
+
+type VideoAsset implements Asset @key(fields: "id") {
+  id: ID!
+  url: String!
+  durationSeconds: Int!
+  transcodeProgress: Float!   # deferred -> slow transcode mock
+}
+
+type MediaAsset @key(fields: "id") {
+  id: ID!
+  storageKey: String! @inaccessible
+}
+
+# Takes ownership of heroImageUrl from content via @override.
+type Article @key(fields: "id") {
+  id: ID!
+  heroImageUrl: String! @override(from: "content")
+}

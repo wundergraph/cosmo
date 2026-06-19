@@ -1,0 +1,13 @@
+# gqlgen scaffolding only (NOT part of the DESIGN §2.7 billing SDL).
+# Reason: gqlgen/gqlparser treats a type literally named `Subscription` as the
+# subscription ROOT operation unless an explicit `schema {}` block is present,
+# which breaks federation entity generation for the `Subscription` entity.
+# This block disables root-name inference and provides a Query root for the
+# federation plugin to extend with `_service`/`_entities`.
+schema {
+  query: Query
+}
+
+type Query {
+  _empty: Boolean
+}

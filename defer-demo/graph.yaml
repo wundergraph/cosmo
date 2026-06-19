@@ -1,0 +1,30 @@
+version: 1
+subgraphs:
+  - name: accounts
+    routing_url: http://localhost:4101/graphql
+    schema:
+      file: ./subgraphs/accounts/schema.graphqls
+  - name: content
+    routing_url: http://localhost:4102/graphql
+    schema:
+      file: ./subgraphs/content/schema.graphqls
+  - name: reviews
+    routing_url: http://localhost:4103/graphql
+    schema:
+      file: ./subgraphs/reviews/schema.graphqls
+  - name: recommendations
+    routing_url: http://localhost:4104/graphql
+    schema:
+      file: ./subgraphs/recommendations/schema.graphqls
+  - name: metrics
+    routing_url: http://localhost:4105/graphql
+    schema:
+      file: ./subgraphs/metrics/schema.graphqls
+  - name: media
+    routing_url: http://localhost:4106/graphql
+    schema:
+      file: ./subgraphs/media/schema.graphqls
+  - name: billing
+    routing_url: http://localhost:4107/graphql
+    schema:
+      file: ./subgraphs/billing/schema.graphqls

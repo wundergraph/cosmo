@@ -1,0 +1,8 @@
+# compiled subgraph binaries (rebuild with: go build -o bin/<name> ./subgraphs/<name>)
+bin/
+
+# node dependencies (reinstall with: cd tests && pnpm install)
+node_modules/
+
+# go test binaries
+*.test

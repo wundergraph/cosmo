@@ -1,0 +1,16 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.7",
+        import: ["@key", "@interfaceObject", "@shareable", "@tag"])
+
+# Interface object: metrics contributes `stats` to ALL ContentItem implementers
+# (Article, Podcast) without knowing the concrete types.
+type ContentItem @key(fields: "id") @interfaceObject {
+  id: ID!
+  stats: ContentStats!     # deferred -> expensive aggregation, onto @interfaceObject
+}
+
+type ContentStats @shareable @tag(name: "analytics") {
+  views: Int!
+  shares: Int!
+  avgReadSeconds: Float!
+}

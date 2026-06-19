@@ -1,0 +1,30 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.7",
+        import: ["@key", "@requires", "@external", "@tag", "@inaccessible"])
+
+type Organization @key(fields: "id") {
+  id: ID!
+  memberCount: Int! @external
+  subscription: Subscription           # deferred -> cross-subgraph entity fetch
+  invoices: [Invoice!]!                # deferred -> slow mock
+}
+
+type Subscription
+    @key(fields: "orgId planId")
+    @key(fields: "id")
+    @tag(name: "billing") {
+  id: ID!
+  orgId: ID!
+  planId: ID!
+  status: String!
+  internalLedgerRef: String! @inaccessible
+  # @requires pulls Organization.memberCount from accounts.
+  seatUtilization: Float! @requires(fields: "org { memberCount }")
+  org: Organization!
+}
+
+type Invoice @key(fields: "id") {
+  id: ID!
+  amountCents: Int!
+  paid: Boolean!
+}

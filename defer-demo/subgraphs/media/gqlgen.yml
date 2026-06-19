@@ -1,0 +1,34 @@
+schema:
+  - schema.graphqls
+
+exec:
+  filename: graph/generated.go
+  package: graph
+
+model:
+  filename: graph/model/models_gen.go
+  package: model
+
+resolver:
+  layout: follow-schema
+  dir: graph
+  package: graph
+  filename_template: "{name}.resolvers.go"
+  type: Resolver
+
+federation:
+  filename: graph/federation.go
+  package: graph
+  version: 2
+  options:
+    computed_requires: true
+
+call_argument_directives_with_null: true
+
+# transcodeProgress is the slow defer target (DESIGN §6) — force a field
+# resolver so we can inject mock transcode latency.
+models:
+  VideoAsset:
+    fields:
+      transcodeProgress:
+        resolver: true

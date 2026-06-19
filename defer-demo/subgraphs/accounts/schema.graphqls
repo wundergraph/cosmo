@@ -1,0 +1,29 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.7",
+        import: ["@key", "@shareable", "@inaccessible", "@tag", "@external"])
+
+type Query {
+  user(id: ID!): User
+  users: [User!]!
+  organization(id: ID!): Organization
+  node(id: ID!): Node
+}
+
+interface Node @key(fields: "id") {
+  id: ID!
+}
+
+type User implements Node @key(fields: "id") @tag(name: "pii") {
+  id: ID!
+  username: String!
+  displayName: String! @shareable
+  email: String!
+  internalAuthToken: String! @inaccessible
+  organization: Organization
+}
+
+type Organization @key(fields: "id") {
+  id: ID!
+  name: String!
+  memberCount: Int!
+}

@@ -1,0 +1,30 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.7",
+        import: ["@key", "@requires", "@external", "@shareable"])
+
+type Review @key(fields: "id") {
+  id: ID!
+  rating: Int!
+  body: String!
+  author: User!
+  article: Article!
+  # @requires pulls Article.wordCount from the content subgraph.
+  readingTimeAdjusted: Int! @requires(fields: "article { wordCount }")
+}
+
+type Article @key(fields: "id") {
+  id: ID!
+  wordCount: Int! @external
+  reviews: [Review!]!          # deferred -> cross-subgraph entity fetch into reviews
+}
+
+type Podcast @key(fields: "id") {
+  id: ID!
+  reviews: [Review!]!
+}
+
+type User @key(fields: "id") {
+  id: ID!
+  displayName: String! @shareable
+  reviews: [Review!]!
+}
