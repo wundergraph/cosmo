@@ -81,8 +81,8 @@ import {
   UNION_UPPER,
   URL_LOWER,
   WEIGHT,
-  CACHE_INVALIDATE,
-  ENTITY_CACHE,
+  OPENFED_CACHE_INVALIDATE,
+  OPENFED_ENTITY_CACHE,
   INCLUDE_HEADERS,
   MAX_AGE,
   NEGATIVE_CACHE_TTL,
@@ -827,7 +827,7 @@ export const TAG_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // @openfed__entityCache(maxAge: Int!, negativeCacheTTL: Int = 0, includeHeaders: Boolean = false, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT
-export const ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
+export const OPENFED_ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -861,14 +861,14 @@ export const ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([OBJECT_UPPER]),
-  name: stringToNameNode(ENTITY_CACHE),
+  name: stringToNameNode(OPENFED_ENTITY_CACHE),
   repeatable: false,
 };
 
 // @openfed__cacheInvalidate on FIELD_DEFINITION
-export const CACHE_INVALIDATE_DEFINITION: DirectiveDefinitionNode = {
+export const OPENFED_CACHE_INVALIDATE_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
-  name: stringToNameNode(CACHE_INVALIDATE),
+  name: stringToNameNode(OPENFED_CACHE_INVALIDATE),
   repeatable: false,
 };
