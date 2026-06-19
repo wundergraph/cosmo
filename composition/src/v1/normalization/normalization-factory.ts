@@ -4298,7 +4298,7 @@ export class NormalizationFactory {
       getValueOrDefault(coordsByKey, c.key, () => []).push(c.fieldCoords);
     }
     for (const [key, coordsList] of coordsByKey) {
-      if (coordsList.length == 1) {
+      if (coordsList.length === 1) {
         this.warnings.push(
           requestScopedSingleFieldWarning({
             subgraphName: this.subgraphName,
