@@ -17,7 +17,6 @@ import {
   type InvalidRepeatedDirectiveErrorParams,
   type InvalidSubValueFieldLinkDirectiveImportErrorParams,
   type invalidVersionLinkDirectiveUrlErrorParams,
-  type MaxAgeNotPositiveIntegerErrorParams,
   type NonExternalConditionalFieldErrorParams,
   type OneOfRequiredFieldsErrorParams,
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
