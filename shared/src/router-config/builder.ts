@@ -78,7 +78,9 @@ function costsToCostConfiguration(costs?: Costs): CostConfiguration | undefined 
  * @returns The `EntityCaching` message, or `undefined` when empty so the field is omitted (like
  * `costsToCostConfiguration`).
  */
-function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, ConfigurationData>): EntityCachingConfiguration | undefined {
+function extractEntityCachingConfiguration(
+  dataByTypeName?: Map<TypeName, ConfigurationData>,
+): EntityCachingConfiguration | undefined {
   if (!dataByTypeName) {
     return;
   }

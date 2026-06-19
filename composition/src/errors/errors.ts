@@ -2053,7 +2053,7 @@ export function unknownSubgraphNameError(subgraphName: SubgraphName): Error {
 }
 
 export function entityCacheWithoutKeyErrorMessage(typeName: TypeName): string {
-  return `Type "${typeName}" declares the @openfed__entityCache directive but does not define a @key directive.`;
+  return `Type "${typeName}" declares the directive "@openfed__entityCache" but does not define a "@key" directive.`;
 }
 
 export function maxAgeNotPositiveIntegerErrorMessage({
