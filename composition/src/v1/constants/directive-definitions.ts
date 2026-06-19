@@ -88,6 +88,7 @@ import {
   MAX_AGE,
   NEGATIVE_CACHE_TTL,
   PARTIAL_CACHE_LOAD,
+  REQUEST_SCOPED,
   SHADOW_MODE,
 } from '../../utils/string-constants';
 import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_INT_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from './type-nodes';
@@ -888,3 +889,20 @@ export const CACHE_POPULATE_DEFINITION: DirectiveDefinitionNode = {
   name: stringToNameNode(CACHE_POPULATE),
   repeatable: false,
 };
+export const REQUEST_SCOPED_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(KEY),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(REQUEST_SCOPED),
+  repeatable: false,
+};
+
