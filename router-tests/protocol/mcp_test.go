@@ -714,10 +714,9 @@ Important Notes:
 	})
 
 	t.Run("Content-Type Handling", func(t *testing.T) {
-		// Some MCP clients (notably JVM-based HTTP stacks) send
-		// `Content-Type: application/json; charset=utf-8`. The router must accept JSON
-		// media types that carry parameters by parsing the media type rather than doing
-		// a strict string comparison against "application/json".
+		// Regression test: a Content-Type with parameters, such as
+		// "application/json; charset=utf-8", must be accepted. Guards against upstream
+		// MCP go-sdk changes.
 		t.Run("JSON Content-Type with charset parameter is accepted", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				MCP: config.MCPConfiguration{
@@ -1192,10 +1191,9 @@ input UserInput {
 				assert.Empty(t, capturedSubgraphRequest.Header.Get("Proxy-Connection"))
 			})
 
-			// The StreamableHTTPHandler parses the Content-Type media type rather than doing a
-			// strict string comparison, so JSON requests that carry parameters (e.g.
-			// "application/json; foo=bar") are accepted. Only the base media type must be
-			// "application/json"; any parameters are ignored.
+			// Regression test: a Content-Type with extra parameters, such as
+			// "application/json; foo=bar", must be accepted as long as the base media type
+			// is application/json. Guards against upstream MCP go-sdk changes.
 			t.Run("Content-Type params are accepted", func(t *testing.T) {
 				testenv.Run(t, &testenv.Config{
 					MCP: config.MCPConfiguration{
