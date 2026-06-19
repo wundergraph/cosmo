@@ -162,7 +162,6 @@ export type EntityCacheOptionalArgumentNodes =
   | PartialCacheLoadArgumentNode
   | ShadowModeArgumentNode;
 
-// string
 export type MaxAgeArgumentNode = {
   readonly kind: Kind.ARGUMENT;
   readonly name: NameNode & { readonly value: typeof MAX_AGE };
