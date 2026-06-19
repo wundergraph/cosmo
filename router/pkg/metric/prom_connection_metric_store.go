@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -89,10 +90,6 @@ func (m *promConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Con
 
 func (m *promConnectionMetrics) MeasureMaxConnections(ctx context.Context, count int64, opts ...otelmetric.RecordOption) {
 	m.instruments.maxConnections.Record(ctx, count, opts...)
-}
-
-func (m *promConnectionMetrics) Flush(ctx context.Context) error {
-	return m.meterProvider.ForceFlush(ctx)
 }
 
 func (h *promConnectionMetrics) Shutdown() error {

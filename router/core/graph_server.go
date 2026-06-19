@@ -997,12 +997,6 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	if s.streamMetricStore != nil {
-		if aErr := s.streamMetricStore.Shutdown(ctx); aErr != nil {
-			err = errors.Join(err, aErr)
-		}
-	}
-
 	if s.prometheusMetricsExporter != nil {
 		if aErr := s.prometheusMetricsExporter.Shutdown(ctx); aErr != nil {
 			err = errors.Join(err, aErr)
@@ -2100,6 +2094,44 @@ func (s *graphServer) wait(ctx context.Context) error {
 	}
 }
 
+// metricsFlushTimeout bounds the single, central flush of the shared meter
+// providers during graph server shutdown.
+const metricsFlushTimeout = 30 * time.Second
+
+// flushMeterProviders flushes the OTLP and Prometheus meter providers once. These
+// providers are shared by every metric store (request, connection, stream,
+// engine, runtime), so a single flush drains all of their metrics.
+func (s *graphServer) flushMeterProviders(ctx context.Context) error {
+	wg := &sync.WaitGroup{}
+	errorChan := make(chan error, 2)
+	if s.otlpMeterProvider != nil {
+		wg.Go(func() {
+			if err := s.otlpMeterProvider.ForceFlush(ctx); err != nil {
+				errorChan <- fmt.Errorf("failed to flush otlp metrics: %w", err)
+			}
+		})
+	}
+	if s.promMeterProvider != nil {
+		wg.Go(func() {
+			if err := s.promMeterProvider.ForceFlush(ctx); err != nil {
+				errorChan <- fmt.Errorf("failed to flush prometheus metrics: %w", err)
+			}
+		})
+	}
+	wg.Wait()
+	close(errorChan)
+
+	var resErr error
+
+	for err := range errorChan {
+		if err != nil {
+			resErr = errors.Join(resErr, err)
+		}
+	}
+
+	return resErr
+}
+
 // Shutdown gracefully shutdown the server and waits for all in-flight requests to finish.
 // After all requests are done, it will shut down the metric store and runtime metrics.
 // Shutdown does cancel the context after all non-hijacked requests such as WebSockets has been handled.
@@ -2124,6 +2156,16 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		zap.String("grace_period", s.routerGracePeriod.String()),
 		zap.String("config_version", s.baseRouterConfigVersion),
 	)
+
+	// Flush the meter providers exactly once, with their own timeout,
+	// before tearing down the individual metric stores.
+	// As all the stores share the same meter providers, we only need to flush once
+	// before initiating the shutdown of the individual stores.
+	flushCtx, flushCancel := context.WithTimeout(ctx, metricsFlushTimeout)
+	if err := s.flushMeterProviders(flushCtx); err != nil {
+		finalErr = errors.Join(finalErr, fmt.Errorf("failed to flush metrics: %w", err))
+	}
+	flushCancel()
 
 	// Ensure that we don't wait indefinitely for shutdown
 	if s.routerGracePeriod > 0 {

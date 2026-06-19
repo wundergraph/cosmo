@@ -479,21 +479,16 @@ func (h *Metrics) Flush(ctx context.Context) error {
 	return err
 }
 
-// Shutdown flushes the metrics and stops the runtime metrics.
-func (h *Metrics) Shutdown(ctx context.Context) error {
-
+// Shutdown stops the metric instruments. It does not flush: the shared meter
+// providers are flushed once centrally during graph server shutdown to avoid
+// redundant ForceFlush calls that all compete for a single shutdown deadline.
+func (h *Metrics) Shutdown(_ context.Context) error {
 	var err error
 
-	if errFlush := h.Flush(ctx); errFlush != nil {
-		err = errors.Join(err, fmt.Errorf("failed to flush metrics: %w", errFlush))
-	}
-
-	errProm := h.promRequestMetrics.Shutdown()
-	if errProm != nil {
+	if errProm := h.promRequestMetrics.Shutdown(); errProm != nil {
 		err = errors.Join(err, fmt.Errorf("failed to shutdown prom metrics: %w", errProm))
 	}
-	errOtlp := h.otlpRequestMetrics.Shutdown()
-	if errOtlp != nil {
+	if errOtlp := h.otlpRequestMetrics.Shutdown(); errOtlp != nil {
 		err = errors.Join(err, fmt.Errorf("failed to shutdown otlp metrics: %w", errOtlp))
 	}
 
