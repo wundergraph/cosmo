@@ -459,12 +459,17 @@ export function getRouterSchemaDirectiveNodes({
   const errors: Array<Error> = [];
   const warnings: Array<Warning> = [];
   for (const [directiveName, directiveNodes] of data.federatedDirectivesData.directivesByName) {
+    if (directiveNodes.length < 1) {
+      continue;
+    }
+
     if (directiveName === SEMANTIC_NON_NULL && isFieldData(data)) {
       nodes.push(
         generateSemanticNonNullDirective(getFirstEntry(data.nullLevelsBySubgraphName) ?? new Set<number>([0])),
       );
       continue;
     }
+
     const directiveData = federatedDirectiveDataByName.get(directiveName);
     if (!directiveData) {
       continue;
@@ -482,17 +487,12 @@ export function getRouterSchemaDirectiveNodes({
       continue;
     }
 
-    if (directiveNodes.length < 2) {
-      nodes.push(...directiveNodes);
-      continue;
-    }
-
-    const uniqueDirectiveNodes = extractUniqueDirectiveNodes(directiveNodes);
+    const incomingNodes = directiveNodes.length > 1 ? extractUniqueDirectiveNodes(directiveNodes) : directiveNodes;
     const validationResult = validateDirectives({
       data,
       directiveCoords: coords,
       directiveDefinitionData: directiveData,
-      directiveNodes: uniqueDirectiveNodes,
+      directiveNodes: incomingNodes,
       parentDefinitionDataByTypeName,
     });
     if (!validationResult.success) {
@@ -500,19 +500,19 @@ export function getRouterSchemaDirectiveNodes({
       continue;
     }
 
-    if (uniqueDirectiveNodes.length > 1 && directiveData.isComposed && !directiveData.isRepeatable) {
+    if (incomingNodes.length > 1 && directiveData.isComposed && !directiveData.isRepeatable) {
       warnings.push(
         invalidRepeatedComposedDirectiveWarning({
           directiveCoords: coords,
           directiveName,
-          printedDirective: print(uniqueDirectiveNodes[0]),
+          printedDirective: print(incomingNodes[0]),
         }),
       );
-      nodes.push(uniqueDirectiveNodes[0]);
+      nodes.push(incomingNodes[0]);
       continue;
     }
 
-    nodes.push(...uniqueDirectiveNodes);
+    nodes.push(...incomingNodes);
   }
 
   if (errors.length > 0) {
