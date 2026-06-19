@@ -291,11 +291,7 @@ export class OrganizationWebhookService {
         return config.meta.value.graphIds?.includes(eventData.payload.monograph.id);
       }
       case OrganizationEventName.PROPOSAL_STATE_UPDATED: {
-        if (
-          config.meta.case !== 'proposalStateUpdated' ||
-          config.meta.value.graphIds?.length === 0 ||
-          config.type === 'slack'
-        ) {
+        if (config.meta.case !== 'proposalStateUpdated' || config.meta.value.graphIds?.length === 0) {
           return false;
         }
 
