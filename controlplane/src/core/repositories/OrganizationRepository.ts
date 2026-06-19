@@ -22,6 +22,7 @@ import {
   organizationsMembers,
   organizationWebhooks,
   slackIntegrationConfigs,
+  slackProposalStateUpdate,
   slackSchemaUpdateEventConfigs,
   users,
 } from '../../db/schema.js';
@@ -1131,6 +1132,17 @@ export class OrganizationRepository {
                 break;
               }
               case 'proposalStateUpdated': {
+                const ids = eventMeta.meta.value.graphIds;
+                if (ids.length === 0) {
+                  continue;
+                }
+
+                await tx.insert(slackProposalStateUpdate).values(
+                  ids.map((id) => ({
+                    slackIntegrationConfigId: slackIntegrationConfig[0].id,
+                    federatedGraphId: id,
+                  })),
+                );
                 break;
               }
               default: {
@@ -1170,6 +1182,7 @@ export class OrganizationRepository {
             where: eq(slackIntegrationConfigs.integrationId, r.id),
             with: {
               slackSchemaUpdateEventConfigs: true,
+              slackProposalStateUpdate: true,
             },
           });
           if (!slackIntegrationConfig) {
@@ -1187,12 +1200,11 @@ export class OrganizationRepository {
           };
 
           const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
-          const federatedGraphIds = [];
-          const monographIds = [];
+          const federatedGraphIds: string[] = [];
+          const monographIds: string[] = [];
 
           for (const graphId of slackIntegrationConfig.slackSchemaUpdateEventConfigs.map((i) => i.federatedGraphId)) {
             const graph = await fedGraphRepo.byId(graphId);
-
             if (!graph) {
               continue;
             }
@@ -1226,6 +1238,15 @@ export class OrganizationRepository {
                   case: 'monographSchemaUpdated',
                   value: {
                     graphIds: monographIds,
+                  },
+                },
+              },
+              {
+                eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+                meta: {
+                  case: 'proposalStateUpdated',
+                  value: {
+                    graphIds: slackIntegrationConfig.slackProposalStateUpdate.map((spsu) => spsu.federatedGraphId),
                   },
                 },
               },
@@ -1281,11 +1302,17 @@ export class OrganizationRepository {
             .execute();
 
           const graphIds: string[] = [];
+          const v: string[] = [];
           for (const eventMeta of input.eventsMeta) {
             switch (eventMeta.meta.case) {
               case 'federatedGraphSchemaUpdated':
               case 'monographSchemaUpdated': {
                 graphIds.push(...eventMeta.meta.value.graphIds);
+                break;
+              }
+              case 'proposalStateUpdated': {
+                v.push(...eventMeta.meta.value.graphIds);
+                break;
               }
             }
           }
@@ -1296,8 +1323,17 @@ export class OrganizationRepository {
               and(
                 eq(slackSchemaUpdateEventConfigs.slackIntegrationConfigId, slackIntegrationConfig[0].id),
                 graphIds.length > 0
-                  ? not(inArray(schema.slackSchemaUpdateEventConfigs.federatedGraphId, graphIds))
+                  ? not(inArray(slackSchemaUpdateEventConfigs.federatedGraphId, graphIds))
                   : undefined,
+              ),
+            );
+
+          await tx
+            .delete(slackProposalStateUpdate)
+            .where(
+              and(
+                eq(slackProposalStateUpdate.slackIntegrationConfigId, slackIntegrationConfig[0].id),
+                v.length > 0 ? not(inArray(slackProposalStateUpdate.federatedGraphId, v)) : undefined,
               ),
             );
 
@@ -1321,6 +1357,24 @@ export class OrganizationRepository {
                   .onConflictDoNothing()
                   .execute();
 
+                break;
+              }
+              case 'proposalStateUpdated': {
+                const ids = eventMeta.meta.value.graphIds;
+                if (ids.length === 0) {
+                  break;
+                }
+
+                await tx
+                  .insert(slackProposalStateUpdate)
+                  .values(
+                    ids.map((id) => ({
+                      slackIntegrationConfigId: slackIntegrationConfig[0].id,
+                      federatedGraphId: id,
+                    })),
+                  )
+                  .onConflictDoNothing()
+                  .execute();
                 break;
               }
             }
