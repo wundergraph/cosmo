@@ -2103,33 +2103,27 @@ const metricsFlushTimeout = 30 * time.Second
 // engine, runtime), so a single flush drains all of their metrics.
 func (s *graphServer) flushMeterProviders(ctx context.Context) error {
 	wg := &sync.WaitGroup{}
-	errorChan := make(chan error, 2)
+
+	var otlpErr error
+	var promErr error
+
 	if s.otlpMeterProvider != nil {
 		wg.Go(func() {
 			if err := s.otlpMeterProvider.ForceFlush(ctx); err != nil {
-				errorChan <- fmt.Errorf("failed to flush otlp metrics: %w", err)
+				otlpErr = errors.Join(otlpErr, fmt.Errorf("failed to flush otlp metrics: %w", err))
 			}
 		})
 	}
 	if s.promMeterProvider != nil {
 		wg.Go(func() {
 			if err := s.promMeterProvider.ForceFlush(ctx); err != nil {
-				errorChan <- fmt.Errorf("failed to flush prometheus metrics: %w", err)
+				promErr = errors.Join(promErr, fmt.Errorf("failed to flush prometheus metrics: %w", err))
 			}
 		})
 	}
 	wg.Wait()
-	close(errorChan)
 
-	var resErr error
-
-	for err := range errorChan {
-		if err != nil {
-			resErr = errors.Join(resErr, err)
-		}
-	}
-
-	return resErr
+	return errors.Join(otlpErr, promErr)
 }
 
 // Shutdown gracefully shutdown the server and waits for all in-flight requests to finish.
