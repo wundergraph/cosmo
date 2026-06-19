@@ -4091,7 +4091,7 @@ export class NormalizationFactory {
     }
 
     if (entityCacheErrors.length > 0) {
-      this.errors.push(...entityCacheErrors)
+      this.errors.push(...entityCacheErrors);
       return;
     }
 
