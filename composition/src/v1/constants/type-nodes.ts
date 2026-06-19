@@ -17,4 +17,4 @@ export const REQUIRED_FIELDSET_TYPE_NODE: TypeNode = {
   type: stringToNamedTypeNode(FIELD_SET_SCALAR),
 };
 
-export const BOOLEAN_FALSE_VALUE_NODE: ConstValueNode = { kind: Kind.BOOLEAN, value: false };
+export const FALSE_BOOLEAN_VALUE_NODE: ConstValueNode = { kind: Kind.BOOLEAN, value: false };

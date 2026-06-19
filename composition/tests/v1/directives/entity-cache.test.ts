@@ -9,15 +9,15 @@ import {
   negativeCacheTTLNotNonNegativeIntegerErrorMessage,
   ROUTER_COMPATIBILITY_VERSION_ONE,
 } from '../../../src';
-import { createSubgraphWithDefault, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
+import { createSubgraphWithDefaultName, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
 
 // @openfed__entityCache marks an entity type as cacheable. It requires @key (so the router can
 // construct cache keys) and a positive maxAge (TTL in seconds).
-describe('@openfed__entityCache', () => {
-  describe('validation', () => {
+describe('@openfed__entityCache tests', () => {
+  describe('validation tests', () => {
     test('that an error is raised without @key — the router needs @key fields to construct cache keys', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query { product(id: ID!): Product }
           # Product has @openfed__entityCache but no @key — there's no cache key to use
           type Product @openfed__entityCache(maxAge: 60) {
@@ -37,7 +37,7 @@ describe('@openfed__entityCache', () => {
 
     test('that a maxAge of zero is rejected — TTL must be at least 1 second', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query { product(id: ID!): Product }
           type Product @key(fields: "id") @openfed__entityCache(maxAge: 0) {
             id: ID!
@@ -56,7 +56,7 @@ describe('@openfed__entityCache', () => {
 
     test('that a negative maxAge is rejected', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query { product(id: ID!): Product }
           type Product @key(fields: "id") @openfed__entityCache(maxAge: -5) {
             id: ID!
@@ -75,7 +75,7 @@ describe('@openfed__entityCache', () => {
 
     test('that a negative negativeCacheTTL is rejected', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query { product(id: ID!): Product }
           type Product @key(fields: "id") @openfed__entityCache(maxAge: 300, negativeCacheTTL: -1) {
             id: ID!
@@ -93,7 +93,7 @@ describe('@openfed__entityCache', () => {
     });
   });
 
-  describe('configuration extraction', () => {
+  describe('configuration extraction tests', () => {
     test('that defaults produce the correct EntityCacheConfig', () => {
       // Only maxAge is required; includeHeaders, partialCacheLoad, shadowMode default to false
       const configs = getEntityCacheConfigs(
@@ -146,6 +146,6 @@ describe('@openfed__entityCache', () => {
 // Helper: normalizes the subgraph and returns the entityCache config array attached to `typeName`.
 // On this branch entity-caching config is nested under ConfigurationData.entityCaching.
 function getEntityCacheConfigs(sdl: string, typeName: string): Array<EntityCacheConfiguration> | undefined {
-  const result = normalizeSubgraphSuccess(createSubgraphWithDefault(sdl), ROUTER_COMPATIBILITY_VERSION_ONE);
+  const result = normalizeSubgraphSuccess(createSubgraphWithDefaultName(sdl), ROUTER_COMPATIBILITY_VERSION_ONE);
   return result.configurationDataByTypeName.get(typeName)?.entityCaching?.entityCacheConfigurations;
 }

@@ -456,9 +456,10 @@ export class NormalizationFactory {
   directiveDefinitionDataByName = initializeDirectiveDefinitionDatas();
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
-  // Cached entity configs keyed by type name, populated by extractEntityCacheDirective() from
-  // @openfed__entityCache. Future caching directives (@openfed__queryCache etc.) use this as a lookup
-  // to verify a field's return type is a cached entity.
+  /* Cached entity configs keyed by type name, populated by extractEntityCacheDirective() from
+   * @openfed__entityCache. Future caching directives (@openfed__queryCache etc.) use this as a lookup
+   * to verify a field's return type is a cached entity.
+   */
   entityCacheConfigByTypeName = new Map<TypeName, EntityCacheConfiguration>();
   errors = new Array<Error>();
   entityDataByTypeName = new Map<TypeName, EntityData>();
@@ -4016,11 +4017,12 @@ export class NormalizationFactory {
       );
       return;
     }
-    // validateDirectives() (run earlier in normalize()) has already guaranteed each argument's type —
-    // Int for maxAge/negativeCacheTTL, Boolean for the flags — so the generic ConstDirectiveNode is
-    // narrowed once to the precise typed node, mirroring RequestScopedDirectiveNode/ComposeDirectiveNode.
-    // Optional arguments may be absent (definition defaults are not materialized onto the usage AST),
-    // so the config starts at the directive's documented defaults and each present argument overrides it.
+    /* validateDirectives() (run earlier in normalize()) has already guaranteed each argument's type —
+     * Int for maxAge/negativeCacheTTL, Boolean for the flags — so the generic ConstDirectiveNode is
+     * narrowed once to the precise typed node, mirroring RequestScopedDirectiveNode/ComposeDirectiveNode.
+     * Optional arguments may be absent (definition defaults are not materialized onto the usage AST),
+     * so the config starts at the directive's documented defaults and each present argument overrides it.
+     */
     const directive = entityCacheDirectives[0] as EntityCacheDirectiveNode;
     const config: EntityCacheConfiguration = {
       typeName,
@@ -4268,7 +4270,6 @@ export class NormalizationFactory {
           const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
           const isObject = parentData.kind === Kind.OBJECT_TYPE_DEFINITION;
 
-          // Extract @openfed__entityCache here (Object-only) so we reuse this iterator instead of a separate pass.
           this.extractEntityCacheDirective(parentData);
 
           if (this.isSubgraphVersionTwo && parentData.extensionType === ExtensionType.EXTENDS) {
