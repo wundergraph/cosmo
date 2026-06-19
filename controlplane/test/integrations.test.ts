@@ -22,7 +22,7 @@ import {
 
 let dbname = '';
 
-describe('Federated Graph', (ctx) => {
+describe('Integration tests', (ctx) => {
   const mockServer = setupServer(
     http.post('https://slack.com/api/oauth.v2.access', () => {
       return HttpResponse.json({
@@ -296,6 +296,13 @@ describe('Federated Graph', (ctx) => {
           value: {
             graphIds: [monographRes.graph!.id],
           },
+        },
+      },
+      {
+        eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+        meta: {
+          case: 'proposalStateUpdated',
+          value: { graphIds: [] },
         },
       },
     ];
