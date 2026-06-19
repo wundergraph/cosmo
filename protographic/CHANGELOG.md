@@ -4,6 +4,32 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.23.16](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.15...@wundergraph/protographic@0.23.16) (2026-06-18)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.15](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.14...@wundergraph/protographic@0.23.15) (2026-06-16)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.14](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.13...@wundergraph/protographic@0.23.14) (2026-06-12)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.13](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.12...@wundergraph/protographic@0.23.13) (2026-06-08)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.12](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.11...@wundergraph/protographic@0.23.12) (2026-06-06)
+
+### Bug Fixes
+
+* resolve high severity vulnerabilities ([#2914](https://github.com/wundergraph/cosmo/issues/2914)) ([9fa886b](https://github.com/wundergraph/cosmo/commit/9fa886b1eba9c22cea103b8fcee8828030f9f54f)) (@pepol)
+
+## [0.23.11](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.10...@wundergraph/protographic@0.23.11) (2026-06-01)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
 ## [0.23.10](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.9...@wundergraph/protographic@0.23.10) (2026-05-29)
 
 **Note:** Version bump only for package @wundergraph/protographic

@@ -192,6 +192,7 @@
                 "pages": [
                   "router/metrics-and-monitoring",
                   "router/metrics-and-monitoring/span-error-status",
+                  "router/metrics-and-monitoring/exemplars",
                   "router/metrics-and-monitoring/prometheus-metric-reference",
                   "router/metrics-and-monitoring/grafana"
                 ]
@@ -376,6 +377,7 @@
                 ]
               },
               "studio/namespace-login-methods",
+              "studio/organization-login-methods",
               {
                 "group": "SCIM",
                 "icon": "file-user",
@@ -497,6 +499,7 @@
                   "cli/subgraph",
                   "cli/subgraph/create",
                   "cli/subgraph/publish",
+                  "cli/subgraph/batch-publish",
                   "cli/subgraph/list",
                   "cli/subgraph/check",
                   "cli/subgraph/update",
@@ -622,6 +625,11 @@
                 "group": "Operations",
                 "icon": "get-pocket",
                 "pages": ["cli/operations", "cli/operations/push"]
+              },
+              {
+                "group": "Clients",
+                "icon": "laptop-mobile",
+                "pages": ["cli/clients", "cli/clients/list", "cli/clients/delete"]
               },
               {
                 "group": "Schema Contracts",

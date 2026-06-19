@@ -2,16 +2,28 @@ package core
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
+
+// writeHeaderSourceFile writes contents to a fresh temp file and returns its path.
+// Used by FromFile header rule tests.
+func writeHeaderSourceFile(t *testing.T, contents string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "header-source")
+	require.NoError(t, os.WriteFile(path, []byte(contents), 0o600))
+	return path
+}
 
 func TestCreateMostRestrictivePolicy(t *testing.T) {
 	t.Parallel()
@@ -341,7 +353,16 @@ func TestPropagatedHeaders(t *testing.T) {
 		})
 		require.Error(t, err)
 	})
-
+	t.Run("set with FromFile returns header name", func(t *testing.T) {
+		t.Parallel()
+		path := writeHeaderSourceFile(t, "secret-value")
+		names, regexps, err := PropagatedHeaders([]*config.RequestHeaderRule{
+			{Operation: config.HeaderRuleOperationSet, Name: "X-Secret", FromFile: &config.FileHeaderSource{Path: path}},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, []string{"X-Secret"}, names)
+		assert.Nil(t, regexps)
+	})
 	t.Run("propagate with no name or match errors", func(t *testing.T) {
 		t.Parallel()
 		_, _, err := PropagatedHeaders([]*config.RequestHeaderRule{
@@ -372,21 +393,21 @@ func TestNewHeaderPropagation(t *testing.T) {
 
 	t.Run("nil rules returns nil", func(t *testing.T) {
 		t.Parallel()
-		hp, err := NewHeaderPropagation(nil, nil)
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), nil, nil)
 		require.NoError(t, err)
 		assert.Nil(t, hp)
 	})
 
 	t.Run("empty rules returns valid instance", func(t *testing.T) {
 		t.Parallel()
-		hp, err := NewHeaderPropagation(&config.HeaderRules{}, nil)
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{}, nil)
 		require.NoError(t, err)
 		require.NotNil(t, hp)
 	})
 
 	t.Run("invalid regex in request rule returns error", func(t *testing.T) {
 		t.Parallel()
-		_, err := NewHeaderPropagation(&config.HeaderRules{
+		_, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{Operation: config.HeaderRuleOperationPropagate, Matching: "[invalid"},
@@ -398,7 +419,7 @@ func TestNewHeaderPropagation(t *testing.T) {
 
 	t.Run("invalid regex in response rule returns error", func(t *testing.T) {
 		t.Parallel()
-		_, err := NewHeaderPropagation(&config.HeaderRules{
+		_, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Response: []*config.ResponseHeaderRule{
 					{Operation: config.HeaderRuleOperationPropagate, Matching: "[invalid"},
@@ -413,5 +434,186 @@ func TestNewHeaderPropagation(t *testing.T) {
 		var hp *HeaderPropagation
 		assert.False(t, hp.HasRequestRules())
 		assert.False(t, hp.HasResponseRules())
+	})
+}
+
+func TestNewHeaderPropagation_FromFile(t *testing.T) {
+	t.Parallel()
+
+	t.Run("loads file contents into memory at startup", func(t *testing.T) {
+		t.Parallel()
+
+		path := writeHeaderSourceFile(t, "secret-token")
+
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationSet,
+						Name:      "X-Auth",
+						FromFile:  &config.FileHeaderSource{Path: path, RefreshInterval: time.Second},
+					},
+				},
+			},
+		}, nil)
+		require.NoError(t, err)
+		require.NotNil(t, hp)
+
+		// The buffered content must be the file's exact bytes — no trimming, no decoding.
+		content, ok := hp.fileSourceContents[path]
+		require.True(t, ok, "expected file source content to be cached under the file path")
+		assert.Equal(t, "secret-token", content.buffer.String())
+	})
+
+	t.Run("missing file returns error", func(t *testing.T) {
+		t.Parallel()
+
+		missing := filepath.Join(t.TempDir(), "does-not-exist")
+		_, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationSet,
+						Name:      "X-Auth",
+						FromFile:  &config.FileHeaderSource{Path: missing, RefreshInterval: time.Second},
+					},
+				},
+			},
+		}, nil)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "does not exist")
+	})
+
+	t.Run("multiple rules referencing the same path share one in-memory copy", func(t *testing.T) {
+		t.Parallel()
+
+		path := writeHeaderSourceFile(t, "shared-value")
+
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{Operation: config.HeaderRuleOperationSet, Name: "X-A", FromFile: &config.FileHeaderSource{Path: path, RefreshInterval: time.Second}},
+					{Operation: config.HeaderRuleOperationSet, Name: "X-B", FromFile: &config.FileHeaderSource{Path: path, RefreshInterval: time.Second}},
+				},
+			},
+		}, nil)
+		require.NoError(t, err)
+
+		assert.Len(t, hp.fileSourceContents, 1, "expected the file to be loaded once and shared across rules")
+	})
+
+	t.Run("zero refresh_interval is defaulted to 30s", func(t *testing.T) {
+		t.Parallel()
+
+		path := writeHeaderSourceFile(t, "x")
+		rule := &config.RequestHeaderRule{
+			Operation: config.HeaderRuleOperationSet,
+			Name:      "X-A",
+			FromFile:  &config.FileHeaderSource{Path: path},
+		}
+
+		_, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{Request: []*config.RequestHeaderRule{rule}},
+		}, nil)
+		require.NoError(t, err)
+		assert.Equal(t, 30*time.Second, rule.FromFile.RefreshInterval, "engine must apply the 30s default for rules built outside YAML loading")
+	})
+
+	t.Run("subgraph-scoped FromFile rule is loaded", func(t *testing.T) {
+		t.Parallel()
+
+		path := writeHeaderSourceFile(t, "sg-secret")
+
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			Subgraphs: map[string]*config.GlobalHeaderRule{
+				"sg-1": {
+					Request: []*config.RequestHeaderRule{
+						{Operation: config.HeaderRuleOperationSet, Name: "X-Auth", FromFile: &config.FileHeaderSource{Path: path, RefreshInterval: time.Second}},
+					},
+				},
+			},
+		}, nil)
+		require.NoError(t, err)
+
+		content, ok := hp.fileSourceContents[path]
+		require.True(t, ok)
+		assert.Equal(t, "sg-secret", content.buffer.String())
+	})
+
+	t.Run("Set rule mixing Expression and FromFile skips file watcher but still compiles expression", func(t *testing.T) {
+		t.Parallel()
+
+		path := writeHeaderSourceFile(t, "file-value")
+		expression := "request.header.Get('X-Origin')"
+
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Operation:  config.HeaderRuleOperationSet,
+						Name:       "X-Auth",
+						Expression: expression,
+						FromFile:   &config.FileHeaderSource{Path: path, RefreshInterval: time.Second},
+					},
+				},
+			},
+		}, nil)
+		require.NoError(t, err)
+		require.NotNil(t, hp)
+
+		_, watcherCreated := hp.fileSourceContents[path]
+		assert.False(t, watcherCreated, "mixed Expression+FromFile rule must not register a file source / watcher")
+		assert.Empty(t, hp.fileSourceContents, "no file source content should be cached for mixed rules")
+
+		_, compiled := hp.compiledRules[expression]
+		assert.True(t, compiled, "expression compilation is independent of file source validation — the expression is still compiled and wins at apply time (see applyRequestRuleToHeader)")
+	})
+
+	t.Run("Propagate rule with FromFile skips file watcher", func(t *testing.T) {
+		t.Parallel()
+
+		path := writeHeaderSourceFile(t, "ignored")
+
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "X-Auth",
+						FromFile:  &config.FileHeaderSource{Path: path, RefreshInterval: time.Second},
+					},
+				},
+			},
+		}, nil)
+		require.NoError(t, err)
+		require.NotNil(t, hp)
+
+		assert.Empty(t, hp.fileSourceContents, "FromFile is only meaningful for set rules — propagate rules must not register a file source")
+	})
+
+	t.Run("missing file is not statted when rule is invalid", func(t *testing.T) {
+		t.Parallel()
+
+		// If validation didn't skip invalid rules, this would error because the file
+		// doesn't exist. NewHeaderPropagation must succeed — proving the file is never
+		// touched for mixed rules.
+		missing := filepath.Join(t.TempDir(), "never-read")
+		expression := "request.header.Get('X-Origin')"
+
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Operation:  config.HeaderRuleOperationSet,
+						Name:       "X-Auth",
+						Expression: expression,
+						FromFile:   &config.FileHeaderSource{Path: missing, RefreshInterval: time.Second},
+					},
+				},
+			},
+		}, nil)
+		require.NoError(t, err, "validation must short-circuit before os.Stat for mixed rules")
+		require.NotNil(t, hp)
+		assert.Empty(t, hp.fileSourceContents)
 	})
 }

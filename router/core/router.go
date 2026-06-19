@@ -202,7 +202,7 @@ func (r *SubgraphCircuitBreakerOptions) IsEnabled() bool {
 
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
 // Alternatively, use Router.NewServer() to create a new server instance without starting it.
-func NewRouter(opts ...Option) (*Router, error) {
+func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 	r := &Router{
 		EngineStats: statistics.NewNoopEngineStats(),
 	}
@@ -324,7 +324,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	postRules := CreateCacheControlPolicyHeaderRules(r.cacheControlPolicy)
 	var err error
-	r.headerPropagation, err = NewHeaderPropagation(r.headerRules, postRules)
+	r.headerPropagation, err = NewHeaderPropagation(ctx, r.logger, r.headerRules, postRules)
 	if err != nil {
 		return nil, err
 	}
@@ -2738,6 +2738,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		CardinalityLimit:   cfg.Metrics.CardinalityLimit,
 		OpenTelemetry: rmetric.OpenTelemetry{
 			Enabled:         cfg.Metrics.OTLP.Enabled,
+			ExemplarFilter:  rmetric.ExemplarFilter(cfg.Metrics.OTLP.ExemplarFilter),
 			RouterRuntime:   cfg.Metrics.OTLP.RouterRuntime,
 			GraphqlCache:    cfg.Metrics.OTLP.GraphqlCache,
 			ConnectionStats: cfg.Metrics.OTLP.ConnectionStats,
@@ -2758,6 +2759,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		},
 		Prometheus: rmetric.PrometheusConfig{
 			Enabled:         cfg.Metrics.Prometheus.Enabled,
+			ExemplarFilter:  rmetric.ExemplarFilter(cfg.Metrics.Prometheus.ExemplarFilter),
 			ListenAddr:      cfg.Metrics.Prometheus.ListenAddr,
 			Path:            cfg.Metrics.Prometheus.Path,
 			GraphqlCache:    cfg.Metrics.Prometheus.GraphqlCache,

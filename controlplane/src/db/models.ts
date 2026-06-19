@@ -18,6 +18,8 @@ import {
   proposalMatchEnum,
   schemaChangeTypeEnum,
   subgraphTypeEnum,
+  batchPublishJobStatusEnum,
+  batchPublishJobDetails,
 } from './schema.js';
 
 export type FederatedGraph = typeof federatedGraphs.$inferSelect;
@@ -39,6 +41,8 @@ export type ProposalMatch = (typeof proposalMatchEnum.enumValues)[number];
 export type WebhookDeliveryInfo = typeof webhookDeliveries.$inferInsert;
 export type DBSchemaChangeType = (typeof schemaChangeTypeEnum.enumValues)[number];
 export type DBSubgraphType = (typeof subgraphTypeEnum.enumValues)[number];
+export type BatchPublishJobStatus = (typeof batchPublishJobStatusEnum.enumValues)[number];
+export type NewBatchPublishJobDetails = typeof batchPublishJobDetails.$inferInsert;
 
 export type AuditableType =
   | 'organization'
@@ -61,7 +65,8 @@ export type AuditableType =
   | 'operation_change_override'
   | 'operation_ignore_all_override'
   | 'proposal'
-  | 'namespace_sso_mapping';
+  | 'namespace_sso_mapping'
+  | 'organization_login_methods';
 
 export type AuditTargetType =
   | 'organization'
@@ -175,6 +180,7 @@ export type AuditLogFullAction =
   | 'proposal.disabled'
   | 'namespace_proposal_config.updated'
   | 'namespace_sso_mapping.updated'
+  | 'organization_login_methods.updated'
   | 'scim.organization_invitation_created'
   | 'scim.update_organization_member'
   | 'scim.activate_organization_member'

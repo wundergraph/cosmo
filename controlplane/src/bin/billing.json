@@ -33,7 +33,8 @@
           "id": "plugins",
           "description": "3 Plugins",
           "limit": 3
-        }
+        },
+        { "id": "persisted-operations", "limit": 3000 }
       ]
     },
     "launch@1": {
@@ -80,6 +81,7 @@
           "description": "10 Plugins",
           "limit": 10
         },
+        { "id": "persisted-operations", "limit": 3000 },
         { "id": "proposals", "description": "Proposals" }
       ]
     },
@@ -133,6 +135,7 @@
           "description": "20 Plugins",
           "limit": 20
         },
+        { "id": "persisted-operations", "limit": 3000 },
         { "id": "proposals", "description": "Proposals" }
       ]
     },
@@ -189,10 +192,15 @@
           "description": "Custom Number of Plugins",
           "limit": 30
         },
+        { "id": "persisted-operations", "limit": 3000 },
         { "id": "proposals", "description": "Proposals" },
         {
           "id": "subgraph-check-extensions",
           "description": "Subgraph Check Extensions"
+        },
+        {
+          "id": "login-method-restrictions",
+          "description": "Restrict login methods per organization and namespace"
         }
       ]
     }

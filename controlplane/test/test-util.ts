@@ -20,7 +20,7 @@ import database from '../src/core/plugins/database.js';
 import fastifyRedis from '../src/core/plugins/redis.js';
 import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
 import { BillingRepository, billingSchema } from '../src/core/repositories/BillingRepository.js';
-import { NamespaceSsoMappingRepository } from '../src/core/repositories/NamespaceSsoMappingRepository.js';
+import { NamespaceLoginMethodRepository } from '../src/core/repositories/NamespaceLoginMethodRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import { RBACEvaluator } from '../src/core/services/RBACEvaluator.js';
@@ -47,6 +47,14 @@ import { DeactivateOrganizationQueue } from '../src/core/workers/DeactivateOrgan
 import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
 import { DeleteOrganizationAuditLogsQueue } from '../src/core/workers/DeleteOrganizationAuditLogsWorker.js';
+import { retryWithBackoff } from '../src/core/util/timers.js';
+import { DeleteBatchPublishJobDetailsQueue } from '../src/core/workers/DeleteBatchPublishJobDetailsWorker.js';
+import {
+  isAlreadyExistsError,
+  isRealmNotReadyError,
+  keycloakClientOptions,
+  TEST_REALM,
+} from './keycloak-test-utils.js';
 
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
@@ -117,23 +125,12 @@ export const SetupTest = async function ({
     users.adminJimCompanyB = createTestContext('company-b', randomUUID());
   }
 
-  const realm = 'test';
-  const loginRealm = 'master';
-  const apiUrl = process.env.KC_API_URL || 'http://localhost:8080';
-  const clientId = 'studio';
-  const adminUser = 'admin';
-  const adminPassword = 'changeme';
+  const realm = TEST_REALM;
+  const apiUrl = keycloakClientOptions.apiUrl;
   const webBaseUrl = 'http://localhost:3000';
 
   const authenticator = createTestAuthenticator(users, apiUrl, realm);
-  const keycloakClient = new Keycloak({
-    apiUrl,
-    realm: loginRealm,
-    clientId,
-    adminUser,
-    adminPassword,
-    logger: log,
-  });
+  const keycloakClient = new Keycloak({ ...keycloakClientOptions, logger: log });
 
   const platformWebhooks = new MockPlatformWebhookService();
   const mailerClient = new Mailer({
@@ -156,6 +153,7 @@ export const SetupTest = async function ({
   const deactivateOrganizationQueue = new DeactivateOrganizationQueue(log, server.redisForQueue);
   const deleteUserQueue = new DeleteUserQueue(log, server.redisForQueue);
   const reactivateOrganizationQueue = new ReactivateOrganizationQueue(log, server.redisForQueue);
+  const deleteBatchPublishJobDetailsQueue = new DeleteBatchPublishJobDetailsQueue(log, server.redisForQueue);
 
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
@@ -186,7 +184,9 @@ export const SetupTest = async function ({
         deactivateOrganizationQueue,
         reactivateOrganizationQueue,
         deleteUserQueue,
+        deleteBatchPublishJobDetailsQueue,
       },
+      lockAdapter: server.lockAdapter,
     }),
   });
 
@@ -418,6 +418,7 @@ export const SetupTest = async function ({
       deactivateOrganizationQueue,
       deleteUserQueue,
       reactivateOrganizationQueue,
+      deleteBatchPublishJobDetailsQueue,
     },
   };
 };
@@ -440,10 +441,11 @@ export const SetupKeycloak = async ({
       displayName: realmName,
       registrationEmailAsUsername: true,
     });
-  } catch (e: any) {
-    if (e.response?.status !== 409) {
-      e.message = `Failed to create keycloak realm: ${realmName}.` + e.message;
-      throw e;
+  } catch (e: unknown) {
+    // Ignore an existing realm (e.g. created by global setup).
+    if (!isAlreadyExistsError(e)) {
+      const message = e instanceof Error ? e.message : String(e);
+      throw new Error(`Failed to create keycloak realm: ${realmName}. ${message}`, { cause: e });
     }
   }
 
@@ -499,28 +501,54 @@ export const addKeycloakUser = async ({
 }): Promise<[string, string | undefined]> => {
   await keycloakClient.authenticateClient();
 
-  let id = '';
+  let id: string;
   try {
-    id = await keycloakClient.addKeycloakUser({
-      email: userTestData.email,
-      firstName: 'Test',
-      lastName: 'User',
-      realm: realmName,
-      isPasswordTemp: false,
-      password: 'wunder@123',
-      id: userTestData.userId,
-    });
-  } catch (e: any) {
-    if (e.response?.status === 409) {
-      const res = await keycloakClient.client.users.find({
-        realm: realmName,
-        email: userTestData.email,
-      });
-      id = res[0].id!;
-    } else {
-      e.message = `Failed to add keycloak user: ${userTestData.email}.` + e.message;
-      throw e;
-    }
+    // Keycloak's caches can briefly lag behind the realm created in global setup ("Realm not found"),
+    // and the exact-match lookup below can likewise lag behind a conflicting write — both are transient.
+    id = await retryWithBackoff(
+      async () => {
+        try {
+          return await keycloakClient.addKeycloakUser({
+            email: userTestData.email,
+            firstName: 'Test',
+            lastName: 'User',
+            realm: realmName,
+            isPasswordTemp: false,
+            password: 'wunder@123',
+            id: userTestData.userId,
+          });
+        } catch (e: unknown) {
+          if (!isAlreadyExistsError(e)) {
+            throw e;
+          }
+
+          const existingUser = await keycloakClient.findUserByEmail({
+            realm: realmName,
+            email: userTestData.email,
+          });
+
+          if (existingUser?.id) {
+            return existingUser.id;
+          }
+
+          throw new Error(
+            `Keycloak reported a duplicate user for ${userTestData.email}, but no exact match was readable yet`,
+          );
+        }
+      },
+      {
+        attempts: 5,
+        baseInterval: 200,
+        maxInterval: 1000,
+        shouldRetry: (e) => {
+          const message = e instanceof Error ? e.message : String(e);
+          return isRealmNotReadyError(e) || /no exact match was readable/i.test(message);
+        },
+      },
+    );
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    throw new Error(`Failed to add keycloak user: ${userTestData.email}. ${message}`, { cause: e });
   }
 
   let kcRootGroupId: string | undefined;
@@ -532,10 +560,11 @@ export const addKeycloakUser = async ({
     });
 
     kcRootGroupId = rootGroupId;
-  } catch (e: any) {
-    if (e.response?.status !== 409) {
-      e.message = `Failed to seed group: ${userTestData.organizationSlug}.` + e.message;
-      throw e;
+  } catch (e: unknown) {
+    // Ignore an already-seeded group.
+    if (!isAlreadyExistsError(e)) {
+      const message = e instanceof Error ? e.message : String(e);
+      throw new Error(`Failed to seed group: ${userTestData.organizationSlug}. ${message}`, { cause: e });
     }
   }
 
@@ -650,7 +679,7 @@ export const createFederatedGraph = async (
  * The mocked test authenticator returns a static context, so the part of
  * `Authentication.authenticate()` that derives the IdP gate from the session's
  * idp_alias never runs. This reproduces exactly that step — resolving the
- * allowed-namespace set via the same `NamespaceSsoMappingRepository` the real
+ * allowed-namespace set via the same `NamespaceLoginMethodRepository` the real
  * code uses — and injects the result into the auth context's RBACEvaluator so
  * every RPC enforces the gate. Pass `base = users.<someUser>` as the identity.
  */
@@ -665,7 +694,7 @@ export async function loginAs({
   base: UserTestData & AuthContext;
   loginMethod: LoginMethod;
 }) {
-  const ssoMappingRepo = new NamespaceSsoMappingRepository(db);
+  const ssoMappingRepo = new NamespaceLoginMethodRepository(db);
   const namespaceAccess = await ssoMappingRepo.allowedNamespaces({
     organizationId: base.organizationId,
     loginMethod,

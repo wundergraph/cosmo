@@ -101,6 +101,12 @@ const (
 	// PlatformServicePublishFederatedSubgraphProcedure is the fully-qualified name of the
 	// PlatformService's PublishFederatedSubgraph RPC.
 	PlatformServicePublishFederatedSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraph"
+	// PlatformServicePublishFederatedSubgraphsProcedure is the fully-qualified name of the
+	// PlatformService's PublishFederatedSubgraphs RPC.
+	PlatformServicePublishFederatedSubgraphsProcedure = "/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraphs"
+	// PlatformServiceGetBatchPublishJobStatusProcedure is the fully-qualified name of the
+	// PlatformService's GetBatchPublishJobStatus RPC.
+	PlatformServiceGetBatchPublishJobStatusProcedure = "/wg.cosmo.platform.v1.PlatformService/GetBatchPublishJobStatus"
 	// PlatformServiceCreateFederatedGraphProcedure is the fully-qualified name of the PlatformService's
 	// CreateFederatedGraph RPC.
 	PlatformServiceCreateFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateFederatedGraph"
@@ -358,6 +364,12 @@ const (
 	// PlatformServiceGetClientsProcedure is the fully-qualified name of the PlatformService's
 	// GetClients RPC.
 	PlatformServiceGetClientsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetClients"
+	// PlatformServicePreviewDeleteClientProcedure is the fully-qualified name of the PlatformService's
+	// PreviewDeleteClient RPC.
+	PlatformServicePreviewDeleteClientProcedure = "/wg.cosmo.platform.v1.PlatformService/PreviewDeleteClient"
+	// PlatformServiceDeleteClientProcedure is the fully-qualified name of the PlatformService's
+	// DeleteClient RPC.
+	PlatformServiceDeleteClientProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteClient"
 	// PlatformServiceGetRoutersProcedure is the fully-qualified name of the PlatformService's
 	// GetRouters RPC.
 	PlatformServiceGetRoutersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetRouters"
@@ -547,12 +559,18 @@ const (
 	// PlatformServiceGetNamespaceProposalConfigProcedure is the fully-qualified name of the
 	// PlatformService's GetNamespaceProposalConfig RPC.
 	PlatformServiceGetNamespaceProposalConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespaceProposalConfig"
-	// PlatformServiceUpdateNamespaceSSOMappingsProcedure is the fully-qualified name of the
-	// PlatformService's UpdateNamespaceSSOMappings RPC.
-	PlatformServiceUpdateNamespaceSSOMappingsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateNamespaceSSOMappings"
-	// PlatformServiceListNamespaceSSOMappingsProcedure is the fully-qualified name of the
-	// PlatformService's ListNamespaceSSOMappings RPC.
-	PlatformServiceListNamespaceSSOMappingsProcedure = "/wg.cosmo.platform.v1.PlatformService/ListNamespaceSSOMappings"
+	// PlatformServiceUpdateNamespaceLoginMethodsProcedure is the fully-qualified name of the
+	// PlatformService's UpdateNamespaceLoginMethods RPC.
+	PlatformServiceUpdateNamespaceLoginMethodsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateNamespaceLoginMethods"
+	// PlatformServiceListNamespaceLoginMethodsProcedure is the fully-qualified name of the
+	// PlatformService's ListNamespaceLoginMethods RPC.
+	PlatformServiceListNamespaceLoginMethodsProcedure = "/wg.cosmo.platform.v1.PlatformService/ListNamespaceLoginMethods"
+	// PlatformServiceGetOrganizationLoginMethodsProcedure is the fully-qualified name of the
+	// PlatformService's GetOrganizationLoginMethods RPC.
+	PlatformServiceGetOrganizationLoginMethodsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationLoginMethods"
+	// PlatformServiceUpdateOrganizationLoginMethodsProcedure is the fully-qualified name of the
+	// PlatformService's UpdateOrganizationLoginMethods RPC.
+	PlatformServiceUpdateOrganizationLoginMethodsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateOrganizationLoginMethods"
 	// PlatformServiceGetProposalsByFederatedGraphProcedure is the fully-qualified name of the
 	// PlatformService's GetProposalsByFederatedGraph RPC.
 	PlatformServiceGetProposalsByFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposalsByFederatedGraph"
@@ -635,6 +653,11 @@ type PlatformServiceClient interface {
 	CreateFederatedSubgraph(context.Context, *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error)
 	// PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
 	PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error)
+	// PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
+	// request. Affected federated graphs (and their contracts / feature flags) are composed exactly once each.
+	PublishFederatedSubgraphs(context.Context, *connect.Request[v1.PublishFederatedSubgraphsRequest]) (*connect.Response[v1.PublishFederatedSubgraphsResponse], error)
+	// Gets the status of a batch publish job by the provided job identifier.
+	GetBatchPublishJobStatus(context.Context, *connect.Request[v1.GetBatchPublishJobStatusRequest]) (*connect.Response[v1.GetBatchPublishJobStatusResponse], error)
 	// CreateFederatedGraph creates a federated graph on the control plane.
 	CreateFederatedGraph(context.Context, *connect.Request[v1.CreateFederatedGraphRequest]) (*connect.Response[v1.CreateFederatedGraphResponse], error)
 	// DeleteFederatedGraph deletes a federated graph from the control plane.
@@ -806,6 +829,10 @@ type PlatformServiceClient interface {
 	UpdateIDPMappers(context.Context, *connect.Request[v1.UpdateIDPMappersRequest]) (*connect.Response[v1.UpdateIDPMappersResponse], error)
 	// GetClients returns all the clients of the federated graph
 	GetClients(context.Context, *connect.Request[v1.GetClientsRequest]) (*connect.Response[v1.GetClientsResponse], error)
+	// PreviewDeleteClient returns the affected operation count for deleting a client
+	PreviewDeleteClient(context.Context, *connect.Request[v1.PreviewDeleteClientRequest]) (*connect.Response[v1.PreviewDeleteClientResponse], error)
+	// DeleteClient deletes a registered client and its persisted operations
+	DeleteClient(context.Context, *connect.Request[v1.DeleteClientRequest]) (*connect.Response[v1.DeleteClientResponse], error)
 	// GetRouters returns all active routers of the federated graph
 	GetRouters(context.Context, *connect.Request[v1.GetRoutersRequest]) (*connect.Response[v1.GetRoutersResponse], error)
 	// GetInvitations returns all the invitations a user has received
@@ -924,10 +951,14 @@ type PlatformServiceClient interface {
 	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
 	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
 	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
-	// UpdateNamespaceSSOMappings replaces the org's namespace SSO mapping configuration in one call.
-	UpdateNamespaceSSOMappings(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error)
-	// ListNamespaceSSOMappings returns the SSO mapping configuration for every restricted namespace in the org.
-	ListNamespaceSSOMappings(context.Context, *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error)
+	// UpdateNamespaceLoginMethods replaces the org's per-namespace login-method configuration in one call.
+	UpdateNamespaceLoginMethods(context.Context, *connect.Request[v1.UpdateNamespaceLoginMethodsRequest]) (*connect.Response[v1.UpdateNamespaceLoginMethodsResponse], error)
+	// ListNamespaceLoginMethods returns the login-method configuration for every restricted namespace in the org.
+	ListNamespaceLoginMethods(context.Context, *connect.Request[v1.ListNamespaceLoginMethodsRequest]) (*connect.Response[v1.ListNamespaceLoginMethodsResponse], error)
+	// GetOrganizationLoginMethods returns the org's allowed login methods (empty restriction = all allowed).
+	GetOrganizationLoginMethods(context.Context, *connect.Request[v1.GetOrganizationLoginMethodsRequest]) (*connect.Response[v1.GetOrganizationLoginMethodsResponse], error)
+	// UpdateOrganizationLoginMethods replaces the org's allowed login methods and reconciles namespace mappings.
+	UpdateOrganizationLoginMethods(context.Context, *connect.Request[v1.UpdateOrganizationLoginMethodsRequest]) (*connect.Response[v1.UpdateOrganizationLoginMethodsResponse], error)
 	// GetProposalsByFederatedGraph returns proposals for a federated graph.
 	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
 	// GetProposalChecks returns checks for a proposal.
@@ -1099,6 +1130,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServicePublishFederatedSubgraphProcedure,
 			connect.WithSchema(platformServiceMethods.ByName("PublishFederatedSubgraph")),
+			connect.WithClientOptions(opts...),
+		),
+		publishFederatedSubgraphs: connect.NewClient[v1.PublishFederatedSubgraphsRequest, v1.PublishFederatedSubgraphsResponse](
+			httpClient,
+			baseURL+PlatformServicePublishFederatedSubgraphsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("PublishFederatedSubgraphs")),
+			connect.WithClientOptions(opts...),
+		),
+		getBatchPublishJobStatus: connect.NewClient[v1.GetBatchPublishJobStatusRequest, v1.GetBatchPublishJobStatusResponse](
+			httpClient,
+			baseURL+PlatformServiceGetBatchPublishJobStatusProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetBatchPublishJobStatus")),
 			connect.WithClientOptions(opts...),
 		),
 		createFederatedGraph: connect.NewClient[v1.CreateFederatedGraphRequest, v1.CreateFederatedGraphResponse](
@@ -1617,6 +1660,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("GetClients")),
 			connect.WithClientOptions(opts...),
 		),
+		previewDeleteClient: connect.NewClient[v1.PreviewDeleteClientRequest, v1.PreviewDeleteClientResponse](
+			httpClient,
+			baseURL+PlatformServicePreviewDeleteClientProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("PreviewDeleteClient")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteClient: connect.NewClient[v1.DeleteClientRequest, v1.DeleteClientResponse](
+			httpClient,
+			baseURL+PlatformServiceDeleteClientProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("DeleteClient")),
+			connect.WithClientOptions(opts...),
+		),
 		getRouters: connect.NewClient[v1.GetRoutersRequest, v1.GetRoutersResponse](
 			httpClient,
 			baseURL+PlatformServiceGetRoutersProcedure,
@@ -2002,16 +2057,28 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("GetNamespaceProposalConfig")),
 			connect.WithClientOptions(opts...),
 		),
-		updateNamespaceSSOMappings: connect.NewClient[v1.UpdateNamespaceSSOMappingsRequest, v1.UpdateNamespaceSSOMappingsResponse](
+		updateNamespaceLoginMethods: connect.NewClient[v1.UpdateNamespaceLoginMethodsRequest, v1.UpdateNamespaceLoginMethodsResponse](
 			httpClient,
-			baseURL+PlatformServiceUpdateNamespaceSSOMappingsProcedure,
-			connect.WithSchema(platformServiceMethods.ByName("UpdateNamespaceSSOMappings")),
+			baseURL+PlatformServiceUpdateNamespaceLoginMethodsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("UpdateNamespaceLoginMethods")),
 			connect.WithClientOptions(opts...),
 		),
-		listNamespaceSSOMappings: connect.NewClient[v1.ListNamespaceSSOMappingsRequest, v1.ListNamespaceSSOMappingsResponse](
+		listNamespaceLoginMethods: connect.NewClient[v1.ListNamespaceLoginMethodsRequest, v1.ListNamespaceLoginMethodsResponse](
 			httpClient,
-			baseURL+PlatformServiceListNamespaceSSOMappingsProcedure,
-			connect.WithSchema(platformServiceMethods.ByName("ListNamespaceSSOMappings")),
+			baseURL+PlatformServiceListNamespaceLoginMethodsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("ListNamespaceLoginMethods")),
+			connect.WithClientOptions(opts...),
+		),
+		getOrganizationLoginMethods: connect.NewClient[v1.GetOrganizationLoginMethodsRequest, v1.GetOrganizationLoginMethodsResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOrganizationLoginMethodsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetOrganizationLoginMethods")),
+			connect.WithClientOptions(opts...),
+		),
+		updateOrganizationLoginMethods: connect.NewClient[v1.UpdateOrganizationLoginMethodsRequest, v1.UpdateOrganizationLoginMethodsResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateOrganizationLoginMethodsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("UpdateOrganizationLoginMethods")),
 			connect.WithClientOptions(opts...),
 		),
 		getProposalsByFederatedGraph: connect.NewClient[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse](
@@ -2131,6 +2198,8 @@ type platformServiceClient struct {
 	migrateMonograph                                   *connect.Client[v1.MigrateMonographRequest, v1.MigrateMonographResponse]
 	createFederatedSubgraph                            *connect.Client[v1.CreateFederatedSubgraphRequest, v1.CreateFederatedSubgraphResponse]
 	publishFederatedSubgraph                           *connect.Client[v1.PublishFederatedSubgraphRequest, v1.PublishFederatedSubgraphResponse]
+	publishFederatedSubgraphs                          *connect.Client[v1.PublishFederatedSubgraphsRequest, v1.PublishFederatedSubgraphsResponse]
+	getBatchPublishJobStatus                           *connect.Client[v1.GetBatchPublishJobStatusRequest, v1.GetBatchPublishJobStatusResponse]
 	createFederatedGraph                               *connect.Client[v1.CreateFederatedGraphRequest, v1.CreateFederatedGraphResponse]
 	deleteFederatedGraph                               *connect.Client[v1.DeleteFederatedGraphRequest, v1.DeleteFederatedGraphResponse]
 	deleteFederatedSubgraph                            *connect.Client[v1.DeleteFederatedSubgraphRequest, v1.DeleteFederatedSubgraphResponse]
@@ -2217,6 +2286,8 @@ type platformServiceClient struct {
 	deleteOIDCProvider                                 *connect.Client[v1.DeleteOIDCProviderRequest, v1.DeleteOIDCProviderResponse]
 	updateIDPMappers                                   *connect.Client[v1.UpdateIDPMappersRequest, v1.UpdateIDPMappersResponse]
 	getClients                                         *connect.Client[v1.GetClientsRequest, v1.GetClientsResponse]
+	previewDeleteClient                                *connect.Client[v1.PreviewDeleteClientRequest, v1.PreviewDeleteClientResponse]
+	deleteClient                                       *connect.Client[v1.DeleteClientRequest, v1.DeleteClientResponse]
 	getRouters                                         *connect.Client[v1.GetRoutersRequest, v1.GetRoutersResponse]
 	getInvitations                                     *connect.Client[v1.GetInvitationsRequest, v1.GetInvitationsResponse]
 	acceptOrDeclineInvitation                          *connect.Client[v1.AcceptOrDeclineInvitationRequest, v1.AcceptOrDeclineInvitationResponse]
@@ -2280,8 +2351,10 @@ type platformServiceClient struct {
 	enableProposalsForNamespace                        *connect.Client[v1.EnableProposalsForNamespaceRequest, v1.EnableProposalsForNamespaceResponse]
 	configureNamespaceProposalConfig                   *connect.Client[v1.ConfigureNamespaceProposalConfigRequest, v1.ConfigureNamespaceProposalConfigResponse]
 	getNamespaceProposalConfig                         *connect.Client[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse]
-	updateNamespaceSSOMappings                         *connect.Client[v1.UpdateNamespaceSSOMappingsRequest, v1.UpdateNamespaceSSOMappingsResponse]
-	listNamespaceSSOMappings                           *connect.Client[v1.ListNamespaceSSOMappingsRequest, v1.ListNamespaceSSOMappingsResponse]
+	updateNamespaceLoginMethods                        *connect.Client[v1.UpdateNamespaceLoginMethodsRequest, v1.UpdateNamespaceLoginMethodsResponse]
+	listNamespaceLoginMethods                          *connect.Client[v1.ListNamespaceLoginMethodsRequest, v1.ListNamespaceLoginMethodsResponse]
+	getOrganizationLoginMethods                        *connect.Client[v1.GetOrganizationLoginMethodsRequest, v1.GetOrganizationLoginMethodsResponse]
+	updateOrganizationLoginMethods                     *connect.Client[v1.UpdateOrganizationLoginMethodsRequest, v1.UpdateOrganizationLoginMethodsResponse]
 	getProposalsByFederatedGraph                       *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
 	getProposalChecks                                  *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
 	getOperations                                      *connect.Client[v1.GetOperationsRequest, v1.GetOperationsResponse]
@@ -2407,6 +2480,16 @@ func (c *platformServiceClient) CreateFederatedSubgraph(ctx context.Context, req
 // PublishFederatedSubgraph calls wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph.
 func (c *platformServiceClient) PublishFederatedSubgraph(ctx context.Context, req *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error) {
 	return c.publishFederatedSubgraph.CallUnary(ctx, req)
+}
+
+// PublishFederatedSubgraphs calls wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraphs.
+func (c *platformServiceClient) PublishFederatedSubgraphs(ctx context.Context, req *connect.Request[v1.PublishFederatedSubgraphsRequest]) (*connect.Response[v1.PublishFederatedSubgraphsResponse], error) {
+	return c.publishFederatedSubgraphs.CallUnary(ctx, req)
+}
+
+// GetBatchPublishJobStatus calls wg.cosmo.platform.v1.PlatformService.GetBatchPublishJobStatus.
+func (c *platformServiceClient) GetBatchPublishJobStatus(ctx context.Context, req *connect.Request[v1.GetBatchPublishJobStatusRequest]) (*connect.Response[v1.GetBatchPublishJobStatusResponse], error) {
+	return c.getBatchPublishJobStatus.CallUnary(ctx, req)
 }
 
 // CreateFederatedGraph calls wg.cosmo.platform.v1.PlatformService.CreateFederatedGraph.
@@ -2856,6 +2939,16 @@ func (c *platformServiceClient) GetClients(ctx context.Context, req *connect.Req
 	return c.getClients.CallUnary(ctx, req)
 }
 
+// PreviewDeleteClient calls wg.cosmo.platform.v1.PlatformService.PreviewDeleteClient.
+func (c *platformServiceClient) PreviewDeleteClient(ctx context.Context, req *connect.Request[v1.PreviewDeleteClientRequest]) (*connect.Response[v1.PreviewDeleteClientResponse], error) {
+	return c.previewDeleteClient.CallUnary(ctx, req)
+}
+
+// DeleteClient calls wg.cosmo.platform.v1.PlatformService.DeleteClient.
+func (c *platformServiceClient) DeleteClient(ctx context.Context, req *connect.Request[v1.DeleteClientRequest]) (*connect.Response[v1.DeleteClientResponse], error) {
+	return c.deleteClient.CallUnary(ctx, req)
+}
+
 // GetRouters calls wg.cosmo.platform.v1.PlatformService.GetRouters.
 func (c *platformServiceClient) GetRouters(ctx context.Context, req *connect.Request[v1.GetRoutersRequest]) (*connect.Response[v1.GetRoutersResponse], error) {
 	return c.getRouters.CallUnary(ctx, req)
@@ -3191,14 +3284,27 @@ func (c *platformServiceClient) GetNamespaceProposalConfig(ctx context.Context, 
 	return c.getNamespaceProposalConfig.CallUnary(ctx, req)
 }
 
-// UpdateNamespaceSSOMappings calls wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMappings.
-func (c *platformServiceClient) UpdateNamespaceSSOMappings(ctx context.Context, req *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error) {
-	return c.updateNamespaceSSOMappings.CallUnary(ctx, req)
+// UpdateNamespaceLoginMethods calls
+// wg.cosmo.platform.v1.PlatformService.UpdateNamespaceLoginMethods.
+func (c *platformServiceClient) UpdateNamespaceLoginMethods(ctx context.Context, req *connect.Request[v1.UpdateNamespaceLoginMethodsRequest]) (*connect.Response[v1.UpdateNamespaceLoginMethodsResponse], error) {
+	return c.updateNamespaceLoginMethods.CallUnary(ctx, req)
 }
 
-// ListNamespaceSSOMappings calls wg.cosmo.platform.v1.PlatformService.ListNamespaceSSOMappings.
-func (c *platformServiceClient) ListNamespaceSSOMappings(ctx context.Context, req *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error) {
-	return c.listNamespaceSSOMappings.CallUnary(ctx, req)
+// ListNamespaceLoginMethods calls wg.cosmo.platform.v1.PlatformService.ListNamespaceLoginMethods.
+func (c *platformServiceClient) ListNamespaceLoginMethods(ctx context.Context, req *connect.Request[v1.ListNamespaceLoginMethodsRequest]) (*connect.Response[v1.ListNamespaceLoginMethodsResponse], error) {
+	return c.listNamespaceLoginMethods.CallUnary(ctx, req)
+}
+
+// GetOrganizationLoginMethods calls
+// wg.cosmo.platform.v1.PlatformService.GetOrganizationLoginMethods.
+func (c *platformServiceClient) GetOrganizationLoginMethods(ctx context.Context, req *connect.Request[v1.GetOrganizationLoginMethodsRequest]) (*connect.Response[v1.GetOrganizationLoginMethodsResponse], error) {
+	return c.getOrganizationLoginMethods.CallUnary(ctx, req)
+}
+
+// UpdateOrganizationLoginMethods calls
+// wg.cosmo.platform.v1.PlatformService.UpdateOrganizationLoginMethods.
+func (c *platformServiceClient) UpdateOrganizationLoginMethods(ctx context.Context, req *connect.Request[v1.UpdateOrganizationLoginMethodsRequest]) (*connect.Response[v1.UpdateOrganizationLoginMethodsResponse], error) {
+	return c.updateOrganizationLoginMethods.CallUnary(ctx, req)
 }
 
 // GetProposalsByFederatedGraph calls
@@ -3313,6 +3419,11 @@ type PlatformServiceHandler interface {
 	CreateFederatedSubgraph(context.Context, *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error)
 	// PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
 	PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error)
+	// PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
+	// request. Affected federated graphs (and their contracts / feature flags) are composed exactly once each.
+	PublishFederatedSubgraphs(context.Context, *connect.Request[v1.PublishFederatedSubgraphsRequest]) (*connect.Response[v1.PublishFederatedSubgraphsResponse], error)
+	// Gets the status of a batch publish job by the provided job identifier.
+	GetBatchPublishJobStatus(context.Context, *connect.Request[v1.GetBatchPublishJobStatusRequest]) (*connect.Response[v1.GetBatchPublishJobStatusResponse], error)
 	// CreateFederatedGraph creates a federated graph on the control plane.
 	CreateFederatedGraph(context.Context, *connect.Request[v1.CreateFederatedGraphRequest]) (*connect.Response[v1.CreateFederatedGraphResponse], error)
 	// DeleteFederatedGraph deletes a federated graph from the control plane.
@@ -3484,6 +3595,10 @@ type PlatformServiceHandler interface {
 	UpdateIDPMappers(context.Context, *connect.Request[v1.UpdateIDPMappersRequest]) (*connect.Response[v1.UpdateIDPMappersResponse], error)
 	// GetClients returns all the clients of the federated graph
 	GetClients(context.Context, *connect.Request[v1.GetClientsRequest]) (*connect.Response[v1.GetClientsResponse], error)
+	// PreviewDeleteClient returns the affected operation count for deleting a client
+	PreviewDeleteClient(context.Context, *connect.Request[v1.PreviewDeleteClientRequest]) (*connect.Response[v1.PreviewDeleteClientResponse], error)
+	// DeleteClient deletes a registered client and its persisted operations
+	DeleteClient(context.Context, *connect.Request[v1.DeleteClientRequest]) (*connect.Response[v1.DeleteClientResponse], error)
 	// GetRouters returns all active routers of the federated graph
 	GetRouters(context.Context, *connect.Request[v1.GetRoutersRequest]) (*connect.Response[v1.GetRoutersResponse], error)
 	// GetInvitations returns all the invitations a user has received
@@ -3602,10 +3717,14 @@ type PlatformServiceHandler interface {
 	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
 	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
 	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
-	// UpdateNamespaceSSOMappings replaces the org's namespace SSO mapping configuration in one call.
-	UpdateNamespaceSSOMappings(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error)
-	// ListNamespaceSSOMappings returns the SSO mapping configuration for every restricted namespace in the org.
-	ListNamespaceSSOMappings(context.Context, *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error)
+	// UpdateNamespaceLoginMethods replaces the org's per-namespace login-method configuration in one call.
+	UpdateNamespaceLoginMethods(context.Context, *connect.Request[v1.UpdateNamespaceLoginMethodsRequest]) (*connect.Response[v1.UpdateNamespaceLoginMethodsResponse], error)
+	// ListNamespaceLoginMethods returns the login-method configuration for every restricted namespace in the org.
+	ListNamespaceLoginMethods(context.Context, *connect.Request[v1.ListNamespaceLoginMethodsRequest]) (*connect.Response[v1.ListNamespaceLoginMethodsResponse], error)
+	// GetOrganizationLoginMethods returns the org's allowed login methods (empty restriction = all allowed).
+	GetOrganizationLoginMethods(context.Context, *connect.Request[v1.GetOrganizationLoginMethodsRequest]) (*connect.Response[v1.GetOrganizationLoginMethodsResponse], error)
+	// UpdateOrganizationLoginMethods replaces the org's allowed login methods and reconciles namespace mappings.
+	UpdateOrganizationLoginMethods(context.Context, *connect.Request[v1.UpdateOrganizationLoginMethodsRequest]) (*connect.Response[v1.UpdateOrganizationLoginMethodsResponse], error)
 	// GetProposalsByFederatedGraph returns proposals for a federated graph.
 	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
 	// GetProposalChecks returns checks for a proposal.
@@ -3773,6 +3892,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServicePublishFederatedSubgraphProcedure,
 		svc.PublishFederatedSubgraph,
 		connect.WithSchema(platformServiceMethods.ByName("PublishFederatedSubgraph")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServicePublishFederatedSubgraphsHandler := connect.NewUnaryHandler(
+		PlatformServicePublishFederatedSubgraphsProcedure,
+		svc.PublishFederatedSubgraphs,
+		connect.WithSchema(platformServiceMethods.ByName("PublishFederatedSubgraphs")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetBatchPublishJobStatusHandler := connect.NewUnaryHandler(
+		PlatformServiceGetBatchPublishJobStatusProcedure,
+		svc.GetBatchPublishJobStatus,
+		connect.WithSchema(platformServiceMethods.ByName("GetBatchPublishJobStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateFederatedGraphHandler := connect.NewUnaryHandler(
@@ -4291,6 +4422,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("GetClients")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServicePreviewDeleteClientHandler := connect.NewUnaryHandler(
+		PlatformServicePreviewDeleteClientProcedure,
+		svc.PreviewDeleteClient,
+		connect.WithSchema(platformServiceMethods.ByName("PreviewDeleteClient")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceDeleteClientHandler := connect.NewUnaryHandler(
+		PlatformServiceDeleteClientProcedure,
+		svc.DeleteClient,
+		connect.WithSchema(platformServiceMethods.ByName("DeleteClient")),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetRoutersHandler := connect.NewUnaryHandler(
 		PlatformServiceGetRoutersProcedure,
 		svc.GetRouters,
@@ -4676,16 +4819,28 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("GetNamespaceProposalConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceUpdateNamespaceSSOMappingsHandler := connect.NewUnaryHandler(
-		PlatformServiceUpdateNamespaceSSOMappingsProcedure,
-		svc.UpdateNamespaceSSOMappings,
-		connect.WithSchema(platformServiceMethods.ByName("UpdateNamespaceSSOMappings")),
+	platformServiceUpdateNamespaceLoginMethodsHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateNamespaceLoginMethodsProcedure,
+		svc.UpdateNamespaceLoginMethods,
+		connect.WithSchema(platformServiceMethods.ByName("UpdateNamespaceLoginMethods")),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceListNamespaceSSOMappingsHandler := connect.NewUnaryHandler(
-		PlatformServiceListNamespaceSSOMappingsProcedure,
-		svc.ListNamespaceSSOMappings,
-		connect.WithSchema(platformServiceMethods.ByName("ListNamespaceSSOMappings")),
+	platformServiceListNamespaceLoginMethodsHandler := connect.NewUnaryHandler(
+		PlatformServiceListNamespaceLoginMethodsProcedure,
+		svc.ListNamespaceLoginMethods,
+		connect.WithSchema(platformServiceMethods.ByName("ListNamespaceLoginMethods")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetOrganizationLoginMethodsHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOrganizationLoginMethodsProcedure,
+		svc.GetOrganizationLoginMethods,
+		connect.WithSchema(platformServiceMethods.ByName("GetOrganizationLoginMethods")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateOrganizationLoginMethodsHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateOrganizationLoginMethodsProcedure,
+		svc.UpdateOrganizationLoginMethods,
+		connect.WithSchema(platformServiceMethods.ByName("UpdateOrganizationLoginMethods")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetProposalsByFederatedGraphHandler := connect.NewUnaryHandler(
@@ -4824,6 +4979,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceCreateFederatedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServicePublishFederatedSubgraphProcedure:
 			platformServicePublishFederatedSubgraphHandler.ServeHTTP(w, r)
+		case PlatformServicePublishFederatedSubgraphsProcedure:
+			platformServicePublishFederatedSubgraphsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetBatchPublishJobStatusProcedure:
+			platformServiceGetBatchPublishJobStatusHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateFederatedGraphProcedure:
 			platformServiceCreateFederatedGraphHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteFederatedGraphProcedure:
@@ -4996,6 +5155,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceUpdateIDPMappersHandler.ServeHTTP(w, r)
 		case PlatformServiceGetClientsProcedure:
 			platformServiceGetClientsHandler.ServeHTTP(w, r)
+		case PlatformServicePreviewDeleteClientProcedure:
+			platformServicePreviewDeleteClientHandler.ServeHTTP(w, r)
+		case PlatformServiceDeleteClientProcedure:
+			platformServiceDeleteClientHandler.ServeHTTP(w, r)
 		case PlatformServiceGetRoutersProcedure:
 			platformServiceGetRoutersHandler.ServeHTTP(w, r)
 		case PlatformServiceGetInvitationsProcedure:
@@ -5122,10 +5285,14 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceConfigureNamespaceProposalConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceGetNamespaceProposalConfigProcedure:
 			platformServiceGetNamespaceProposalConfigHandler.ServeHTTP(w, r)
-		case PlatformServiceUpdateNamespaceSSOMappingsProcedure:
-			platformServiceUpdateNamespaceSSOMappingsHandler.ServeHTTP(w, r)
-		case PlatformServiceListNamespaceSSOMappingsProcedure:
-			platformServiceListNamespaceSSOMappingsHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateNamespaceLoginMethodsProcedure:
+			platformServiceUpdateNamespaceLoginMethodsHandler.ServeHTTP(w, r)
+		case PlatformServiceListNamespaceLoginMethodsProcedure:
+			platformServiceListNamespaceLoginMethodsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOrganizationLoginMethodsProcedure:
+			platformServiceGetOrganizationLoginMethodsHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateOrganizationLoginMethodsProcedure:
+			platformServiceUpdateOrganizationLoginMethodsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetProposalsByFederatedGraphProcedure:
 			platformServiceGetProposalsByFederatedGraphHandler.ServeHTTP(w, r)
 		case PlatformServiceGetProposalChecksProcedure:
@@ -5251,6 +5418,14 @@ func (UnimplementedPlatformServiceHandler) CreateFederatedSubgraph(context.Conte
 
 func (UnimplementedPlatformServiceHandler) PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) PublishFederatedSubgraphs(context.Context, *connect.Request[v1.PublishFederatedSubgraphsRequest]) (*connect.Response[v1.PublishFederatedSubgraphsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraphs is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetBatchPublishJobStatus(context.Context, *connect.Request[v1.GetBatchPublishJobStatusRequest]) (*connect.Response[v1.GetBatchPublishJobStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetBatchPublishJobStatus is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) CreateFederatedGraph(context.Context, *connect.Request[v1.CreateFederatedGraphRequest]) (*connect.Response[v1.CreateFederatedGraphResponse], error) {
@@ -5597,6 +5772,14 @@ func (UnimplementedPlatformServiceHandler) GetClients(context.Context, *connect.
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetClients is not implemented"))
 }
 
+func (UnimplementedPlatformServiceHandler) PreviewDeleteClient(context.Context, *connect.Request[v1.PreviewDeleteClientRequest]) (*connect.Response[v1.PreviewDeleteClientResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.PreviewDeleteClient is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) DeleteClient(context.Context, *connect.Request[v1.DeleteClientRequest]) (*connect.Response[v1.DeleteClientResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteClient is not implemented"))
+}
+
 func (UnimplementedPlatformServiceHandler) GetRouters(context.Context, *connect.Request[v1.GetRoutersRequest]) (*connect.Response[v1.GetRoutersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetRouters is not implemented"))
 }
@@ -5849,12 +6032,20 @@ func (UnimplementedPlatformServiceHandler) GetNamespaceProposalConfig(context.Co
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig is not implemented"))
 }
 
-func (UnimplementedPlatformServiceHandler) UpdateNamespaceSSOMappings(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMappings is not implemented"))
+func (UnimplementedPlatformServiceHandler) UpdateNamespaceLoginMethods(context.Context, *connect.Request[v1.UpdateNamespaceLoginMethodsRequest]) (*connect.Response[v1.UpdateNamespaceLoginMethodsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateNamespaceLoginMethods is not implemented"))
 }
 
-func (UnimplementedPlatformServiceHandler) ListNamespaceSSOMappings(context.Context, *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ListNamespaceSSOMappings is not implemented"))
+func (UnimplementedPlatformServiceHandler) ListNamespaceLoginMethods(context.Context, *connect.Request[v1.ListNamespaceLoginMethodsRequest]) (*connect.Response[v1.ListNamespaceLoginMethodsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ListNamespaceLoginMethods is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOrganizationLoginMethods(context.Context, *connect.Request[v1.GetOrganizationLoginMethodsRequest]) (*connect.Response[v1.GetOrganizationLoginMethodsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOrganizationLoginMethods is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateOrganizationLoginMethods(context.Context, *connect.Request[v1.UpdateOrganizationLoginMethodsRequest]) (*connect.Response[v1.UpdateOrganizationLoginMethodsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateOrganizationLoginMethods is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error) {

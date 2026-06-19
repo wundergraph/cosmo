@@ -4,6 +4,80 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.236.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.236.1...controlplane@0.236.2) (2026-06-18)
+
+**Note:** Version bump only for package controlplane
+
+## [0.236.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.236.0...controlplane@0.236.1) (2026-06-17)
+
+### Bug Fixes
+
+* **controlplane:** handle unpublished subgraph in proposal update ([#2975](https://github.com/wundergraph/cosmo/issues/2975)) ([7532f9a](https://github.com/wundergraph/cosmo/commit/7532f9a7248ac9cd8369ccfdec43692befa14f35)) (@thisisnithin)
+
+# [0.236.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.235.0...controlplane@0.236.0) (2026-06-16)
+
+### Features
+
+* add script to delete data older than 90 days ([#2693](https://github.com/wundergraph/cosmo/issues/2693)) ([068592b](https://github.com/wundergraph/cosmo/commit/068592b99aaf5650327b7db7a5d0c4d421b345cc)) (@wilsonrivera)
+* controlpanel move to a accept first strategy for batch ([#2963](https://github.com/wundergraph/cosmo/issues/2963)) ([f54ef2a](https://github.com/wundergraph/cosmo/commit/f54ef2a4de3f218810eb2f800ad4e1c8c864496e)) (@wilsonrivera)
+* cron to enqueue inactive organizations for deletion ([#2418](https://github.com/wundergraph/cosmo/issues/2418)) ([1658315](https://github.com/wundergraph/cosmo/commit/1658315cb996954dd00c5c1af1bf2edf3509bb27)) (@wilsonrivera)
+
+# [0.235.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.234.0...controlplane@0.235.0) (2026-06-15)
+
+### Features
+
+* **controlplane:** always sample batch subgraph publish traces ([#2957](https://github.com/wundergraph/cosmo/issues/2957)) ([2665d95](https://github.com/wundergraph/cosmo/commit/2665d9550139e2ad5aa38ad737076e3da09c6fc7)) (@gausie)
+
+# [0.234.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.233.0...controlplane@0.234.0) (2026-06-12)
+
+### Features
+
+* delete & list clients using wgc ([#2795](https://github.com/wundergraph/cosmo/issues/2795)) ([9aef4ca](https://github.com/wundergraph/cosmo/commit/9aef4cad767748accc70a5fa87f3d8f7c5062ea6)) (@comatory)
+
+# [0.233.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.232.1...controlplane@0.233.0) (2026-06-10)
+
+### Features
+
+* controlplane improve composition queries ([#2903](https://github.com/wundergraph/cosmo/issues/2903)) ([deb6f17](https://github.com/wundergraph/cosmo/commit/deb6f17e25d7f5e7438aaee088b54253efa0054c)) (@wilsonrivera)
+* improve performance for subgraph batch publishing ([#2949](https://github.com/wundergraph/cosmo/issues/2949)) ([746c876](https://github.com/wundergraph/cosmo/commit/746c876a71929c2aef075a81ccff508f2f7cf44b)) (@wilsonrivera)
+
+## [0.232.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.232.0...controlplane@0.232.1) (2026-06-10)
+
+### Bug Fixes
+
+* dedupe and exclude disabled feature flags in schema page dropdown ([#2938](https://github.com/wundergraph/cosmo/issues/2938)) ([8887e60](https://github.com/wundergraph/cosmo/commit/8887e60f469714793b9ed9247eb3e76961111e2b)) (@JivusAyrus)
+
+# [0.232.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.231.0...controlplane@0.232.0) (2026-06-08)
+
+### Bug Fixes
+
+* serve latest feature flag schema version after republishing a feature subgraph ([#2930](https://github.com/wundergraph/cosmo/issues/2930)) ([111e98f](https://github.com/wundergraph/cosmo/commit/111e98f4dee089cabf3a4b59ed786fbe4099b1c3)) (@JivusAyrus)
+
+### Features
+
+* implement early stop for feature flag updates with no changes ([#2932](https://github.com/wundergraph/cosmo/issues/2932)) ([ccbcb76](https://github.com/wundergraph/cosmo/commit/ccbcb76839c0c5f37af19fddd0b7c872332fb275)) (@JivusAyrus)
+
+# [0.231.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.230.0...controlplane@0.231.0) (2026-06-06)
+
+### Features
+
+* **cli:** add subgraph batch-publish command ([#2899](https://github.com/wundergraph/cosmo/issues/2899)) ([9361a30](https://github.com/wundergraph/cosmo/commit/9361a3073dc207ae9bfb5b9661108c09b42028c8)) (@thisisnithin)
+
+# [0.230.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.229.0...controlplane@0.230.0) (2026-06-02)
+
+### Features
+
+* add more tracing instrumentation to the composition worker pool ([#2905](https://github.com/wundergraph/cosmo/issues/2905)) ([81f82e7](https://github.com/wundergraph/cosmo/commit/81f82e7fc78e136436aa04944d5a463a4fd0b469)) (@wilsonrivera)
+
+# [0.229.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.228.0...controlplane@0.229.0) (2026-06-01)
+
+### Features
+
+* add functionality to restrict the login methods of an organization ([#2896](https://github.com/wundergraph/cosmo/issues/2896)) ([2c2cb71](https://github.com/wundergraph/cosmo/commit/2c2cb717f485666aa0bc94297d7c94469e0ce894)) (@JivusAyrus)
+* add span for `composeGraphsInWorker` ([#2901](https://github.com/wundergraph/cosmo/issues/2901)) ([254810f](https://github.com/wundergraph/cosmo/commit/254810f7edf14fab284f25d0f09c0fb8c62e7ded)) (@wilsonrivera)
+* make persisted operations limit configurable per organization plan ([#2894](https://github.com/wundergraph/cosmo/issues/2894)) ([c395857](https://github.com/wundergraph/cosmo/commit/c395857d7c0b36234890d0d0c788f25185b565b9)) (@JivusAyrus)
+* restrict proposal matching to approved and draft states ([#2898](https://github.com/wundergraph/cosmo/issues/2898)) ([0da10d7](https://github.com/wundergraph/cosmo/commit/0da10d7d4750baed13cbb140495df8ae68f34e61)) (@JivusAyrus)
+
 # [0.228.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.227.0...controlplane@0.228.0) (2026-05-29)
 
 ### Features

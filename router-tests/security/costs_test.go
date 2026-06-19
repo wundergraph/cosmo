@@ -221,10 +221,10 @@ func TestOperationCost(t *testing.T) {
 				require.Contains(t, res.Body, `"data":`)
 				require.NotContains(t, res.Body, `"errors":`)
 
-				// 50 * (employees(1) + id(0) + 1 * (role(1) + 3 * departments(1) + 5 * title(1)))
-				require.Equal(t, "500", res.Response.Header.Get(core.CostEstimatedHeader))
-				// 10 * (employees(1) + id(0) + 1 * (role(1) + 1.2 * departments(1) + 1.4 * title(1)))
-				require.Equal(t, "46", res.Response.Header.Get(core.CostActualHeader))
+				// 50 * (employees(1) + id(0) + 1 * (role(1) + 3 * departments(1) + 5 * title(0)))
+				require.Equal(t, "250", res.Response.Header.Get(core.CostEstimatedHeader))
+				// 10 * (employees(1) + id(0) + 1 * (role(1) + 1.2 * departments(1) + 1.4 * title(0)))
+				require.Equal(t, "32", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 
@@ -287,7 +287,7 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, "230", estimated)
 
 				actual := res.Response.Header.Get(core.CostActualHeader)
-				require.Equal(t, "46", actual) // (7/3 + 13) * 3
+				require.Equal(t, "24", actual) // 3 * (5.67 + 1*7/3)
 
 				// Query 2: only employees-subgraph fields — Cosmo @cost(weight: 5) from employees applies
 				res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -300,7 +300,7 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, "150", estimated2)
 
 				actual2 := res2.Response.Header.Get(core.CostActualHeader)
-				require.Equal(t, "22", actual2)
+				require.Equal(t, "14", actual2)
 			})
 		})
 
@@ -381,6 +381,37 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, "40", res.Response.Header.Get(core.CostEstimatedHeader))
 				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + @expensiveOp.applied(22) + 7 * employees(1)))
 				require.Equal(t, "37", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+
+		t.Run("ignore_implementing_type_weights excludes implementing-type weights on abstract fields", func(t *testing.T) {
+			t.Parallel()
+			// The RoleType interface field "employees" has no weight of its own.
+			// With the flag on, that implementing-type weight is skipped (Apollo behavior).
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:                       true,
+						Mode:                          config.CostControlModeMeasure,
+						MaxEstimatedLimit:             10000,
+						EstimatedListSize:             10,
+						ExposeHeaders:                 true,
+						IgnoreImplementingTypeWeights: true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { role { employees { id } } } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"errors":`)
+
+				// "@expensiveOp(coefficient: Int = 2 @cost(weight: 22))" should not be used!
+
+				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + 10 * employees(1)))
+				require.Equal(t, "18", res.Response.Header.Get(core.CostEstimatedHeader))
+				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + 7 * employees(1)))
+				require.Equal(t, "15", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 
