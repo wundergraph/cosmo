@@ -4143,11 +4143,6 @@ export class NormalizationFactory {
       );
       return;
     }
-    const config: CacheInvalidateConfig = {
-      fieldName: fieldData.name,
-      operationType: operationType,
-      entityTypeName: returnTypeName,
-    };
     const configurationData = getValueOrDefault(this.configurationDataByTypeName, configurationTypeName, () =>
       newConfigurationData(false, configurationTypeName),
     );
@@ -4155,6 +4150,13 @@ export class NormalizationFactory {
     if (!configurationData.entityCaching) {
       configurationData.entityCaching = {};
     }
+
+    const config: CacheInvalidateConfig = {
+      fieldName: fieldData.name,
+      operationType: operationType,
+      entityTypeName: returnTypeName,
+    };
+
     const existingCacheInvalidates = configurationData.entityCaching?.cacheInvalidateConfigurations ?? [];
     configurationData.entityCaching.cacheInvalidateConfigurations = [...existingCacheInvalidates, config];
   }

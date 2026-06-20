@@ -1,3 +1,4 @@
+import { type OperationTypeNode } from 'graphql';
 import {
   type ArgumentName,
   type DirectiveArgumentCoords,
@@ -123,7 +124,7 @@ export type EntityCacheConfiguration = {
 // Tells the router to evict the returned entity from the cache after the operation completes.
 export type CacheInvalidateConfig = {
   fieldName: FieldName;
-  operationType: string;
+  operationType: OperationTypeNode;
   entityTypeName: TypeName;
 };
 
