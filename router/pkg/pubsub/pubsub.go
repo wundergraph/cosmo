@@ -66,6 +66,13 @@ func BuildProvidersAndDataSources(
 	if store == nil {
 		store = metric.NewNoopStreamMetricStore()
 	}
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	if config.SkipMissingProviders {
+		logger.Warn("EDFS lenient mode is enabled (events.skip_missing_providers=true): the router will start even if an event provider referenced by the execution config is not defined, disabling only the affected fields")
+	}
 
 	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
@@ -79,7 +86,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetKafka(),
 		})
 	}
-	kafkaPubSubProviders, kafkaOuts, err := build(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents, store, hooks)
+	kafkaPubSubProviders, kafkaOuts, err := build(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents, store, hooks, logger, config.SkipMissingProviders)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -97,7 +104,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetNats(),
 		})
 	}
-	natsPubSubProviders, natsOuts, err := build(ctx, natsBuilder, config.Providers.Nats, natsDsConfsWithEvents, store, hooks)
+	natsPubSubProviders, natsOuts, err := build(ctx, natsBuilder, config.Providers.Nats, natsDsConfsWithEvents, store, hooks, logger, config.SkipMissingProviders)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -115,7 +122,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetRedis(),
 		})
 	}
-	redisPubSubProviders, redisOuts, err := build(ctx, redisBuilder, config.Providers.Redis, redisDsConfsWithEvents, store, hooks)
+	redisPubSubProviders, redisOuts, err := build(ctx, redisBuilder, config.Providers.Redis, redisDsConfsWithEvents, store, hooks, logger, config.SkipMissingProviders)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -133,6 +140,8 @@ func build[P GetID, E GetEngineEventConfiguration](
 	providersData []P, dsConfs []dsConfAndEvents[E],
 	store metric.StreamMetricStore,
 	hooks pubsub_datasource.Hooks,
+	logger *zap.Logger,
+	skipMissingProviders bool,
 ) (map[string]pubsub_datasource.Provider, []plan.DataSource, error) {
 	pubSubProviders := make(map[string]pubsub_datasource.Provider)
 	var outs []plan.DataSource
@@ -163,18 +172,36 @@ func build[P GetID, E GetEngineEventConfiguration](
 	}
 
 	// check if all used providers are initialized
+	missingProviderIds := make(map[string]struct{})
 	for _, providerId := range usedProviderIds {
-		if _, ok := pubSubProviders[providerId]; !ok {
-			return pubSubProviders, nil, &ProviderNotDefinedError{
-				ProviderID:     providerId,
-				ProviderTypeID: builder.TypeID(),
-			}
+		if _, ok := pubSubProviders[providerId]; ok {
+			continue
 		}
+		err := &ProviderNotDefinedError{
+			ProviderID:     providerId,
+			ProviderTypeID: builder.TypeID(),
+		}
+		if !skipMissingProviders {
+			return pubSubProviders, nil, err
+		}
+		// Lenient mode: do not prevent the router from starting. Log the error so it
+		// surfaces in alerting, record the provider as missing, and skip the data
+		// sources that depend on it. Only the affected fields become unavailable.
+		logger.Error("Event provider referenced by the execution config is not defined; skipping affected data sources, the corresponding fields will be unavailable",
+			zap.String("provider_id", providerId),
+			zap.String("provider_type", builder.TypeID()),
+		)
+		missingProviderIds[providerId] = struct{}{}
 	}
 
 	// build data sources for each event
 	for _, dsConf := range dsConfs {
 		for i, event := range dsConf.events {
+			// Skip events that reference a provider which could not be initialized
+			// (only possible when skipMissingProviders is enabled).
+			if _, ok := missingProviderIds[event.GetEngineEventConfiguration().GetProviderId()]; ok {
+				continue
+			}
 			plannerConfig := pubsub_datasource.NewPlannerConfig(
 				builder,
 				event,

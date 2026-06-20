@@ -2891,6 +2891,11 @@
       "description": "The configuration for EDFS. See https://cosmo-docs.wundergraph.com/router/event-driven-federated-subscriptions-edfs for more information.",
       "additionalProperties": false,
       "properties": {
+        "skip_missing_providers": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip the data sources that reference an event provider not defined in this configuration, instead of aborting startup. When enabled, the router logs an error and starts anyway, leaving only the affected fields unavailable. Use this when a missing provider should not prevent the router from serving the rest of the graph. Defaults to false, in which case a missing provider prevents the router from starting."
+        },
         "providers": {
           "type": "object",
           "description": "The provider configuration. The provider configuration is used to configure the event-driven federated subscriptions.",

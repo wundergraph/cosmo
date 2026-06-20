@@ -186,6 +186,21 @@ We've intentionally moved this part of the configuration out of the Schema to ke
 
 If you run `make edfs-demo` in the Cosmo Monorepo, you'll automatically get a NATS instance running on the default port (4222) using Docker.
 
+### Missing providers
+
+If the execution config references a provider ID that is not defined under `events.providers`, the router fails to start with an error such as `redis provider with ID my-provider is not defined`. This stops a router from coming up with a partially-configured event setup.
+
+Set `skip_missing_providers: true` (or the `EVENTS_SKIP_MISSING_PROVIDERS` environment variable) to start the router anyway. The router logs the error and disables only the fields backed by the missing provider. The rest of the graph keeps serving traffic, and requests to the affected fields fail at query time. Set up an alert on the logged error to detect the missing configuration.
+
+```yaml config.yaml
+events:
+  skip_missing_providers: true
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+```
+
 ## Example Configuration
 
 Below, you'll find an example Schema that use the NATS provider directives to connect the `@edfs__natsRequest` directive to a Query root field (employeeFromEvent), a Mutation root field (updateEmployee) that's connected to another topic using `@edfs__natsPublish` and a Subscription root field (employeeUpdated) that's connected via `@edfs__natsSubscribe`. Each of these fields is completely independent. Important to notice is that you can't implement this subgraph because the engine will implement the resolvers based on the router configuration.
