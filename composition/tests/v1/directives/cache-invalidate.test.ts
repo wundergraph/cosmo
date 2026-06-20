@@ -215,10 +215,10 @@ describe('@openfed__cacheInvalidate directive tests', () => {
 });
 
 // Returns the ConfigurationData for a type. Entity-caching config is nested under `.entityCaching`.
-function getConfigForType(sg: Subgraph, typeName: string): ConfigurationData | undefined {
+function getConfigForType(sg: Subgraph, typeName: TypeName): ConfigurationData | undefined {
   const result = new BatchNormalizer({ subgraphs: [sg] }).batchNormalize() as BatchNormalizationSuccess;
   expect(result.success).toBe(true);
   const internal = result.internalSubgraphByName.get(sg.name);
   expect(internal).toBeDefined();
-  return internal!.configurationDataByTypeName.get(typeName as TypeName);
+  return internal!.configurationDataByTypeName.get(typeName);
 }

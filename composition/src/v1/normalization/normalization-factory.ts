@@ -4135,7 +4135,7 @@ export class NormalizationFactory {
       return;
     }
     const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-    if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
+    if (!this.entityCacheConfigByTypeName.has(returnTypeName)) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
           cacheInvalidateOnNonEntityReturnTypeErrorMessage({ fieldCoords, returnType: returnTypeName }),
