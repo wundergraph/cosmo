@@ -4111,35 +4111,21 @@ export class NormalizationFactory {
     };
   }
 
-  // Extracts @openfed__cacheInvalidate from Mutation/Subscription fields. The return type must be a cached
-  // entity (@key + @openfed__entityCache). A non-Mutation/Subscription placement (including non-root fields,
-  // where operationType is undefined) is reported, never silently ignored.
-  extractFieldCacheInvalidateConfig(
+  extractCacheInvalidateConfig(
     parentData: CompositeOutputData,
     configurationTypeName: string,
-    fieldName: string,
-    fieldData: FieldData,
-  ) {
-    if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-      return;
-    }
-    if (fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE)) {
-      this.extractCacheInvalidateConfig(parentData.name, configurationTypeName, fieldName, fieldData);
-    }
-  }
-
-  extractCacheInvalidateConfig(
-    parentTypeName: string,
-    configurationTypeName: string,
-    fieldName: string,
     fieldData: FieldData,
   ) {
     if (!fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE)) {
       return;
     }
 
-    const operationType = this.getOperationTypeNodeForRootTypeName(parentTypeName);
-    const fieldCoords = `${parentTypeName}.${fieldName}`;
+    if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+      return;
+    }
+
+    const operationType = this.getOperationTypeNodeForRootTypeName(parentData.name);
+    const fieldCoords = `${parentData.name}.${fieldData.name}`;
     if (!operationType || operationType === OperationTypeNode.QUERY) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
@@ -4158,7 +4144,7 @@ export class NormalizationFactory {
       return;
     }
     const config: CacheInvalidateConfig = {
-      fieldName,
+      fieldName: fieldData.name,
       operationType: operationType,
       entityTypeName: returnTypeName,
     };
@@ -4166,11 +4152,10 @@ export class NormalizationFactory {
       newConfigurationData(false, configurationTypeName),
     );
 
-    const existingCacheInvalidates = configurationData.entityCaching?.cacheInvalidateConfigurations ?? [];
-
     if (!configurationData.entityCaching) {
       configurationData.entityCaching = {};
     }
+    const existingCacheInvalidates = configurationData.entityCaching?.cacheInvalidateConfigurations ?? [];
     configurationData.entityCaching.cacheInvalidateConfigurations = [...existingCacheInvalidates, config];
   }
 
@@ -4279,6 +4264,14 @@ export class NormalizationFactory {
     }
     // Check all key field sets for @external fields to assess whether they are conditional
     this.evaluateExternalKeyFields();
+    /*
+     * Register every @openfed__entityCache config before the main loop below extracts @openfed__cacheInvalidate.
+     * cacheInvalidate validation requires the return type's entity-cache config to already exist
+     * (see extractCacheInvalidateConfig), and the return type may be iterated after the field that references it.
+     */
+    for (const parentData of this.parentDefinitionDataByTypeName.values()) {
+      this.extractEntityCacheDirective(parentData);
+    }
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       switch (parentData.kind) {
         case Kind.ENUM_TYPE_DEFINITION: {
@@ -4337,8 +4330,6 @@ export class NormalizationFactory {
           const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
           const isObject = parentData.kind === Kind.OBJECT_TYPE_DEFINITION;
 
-          this.extractEntityCacheDirective(parentData);
-
           if (this.isSubgraphVersionTwo && parentData.extensionType === ExtensionType.EXTENDS) {
             // @extends is essentially ignored in V2. It was only propagated to handle @external key fields.
             parentData.extensionType = ExtensionType.NONE;
@@ -4352,7 +4343,7 @@ export class NormalizationFactory {
 
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
-            this.extractFieldCacheInvalidateConfig(parentData, newParentTypeName, fieldName, fieldData);
+            this.extractCacheInvalidateConfig(parentData, newParentTypeName, fieldData);
 
             if (!isObject && fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);

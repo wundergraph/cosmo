@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { OperationTypeNode } from 'graphql';
 import {
   type BatchNormalizationSuccess,
   BatchNormalizer,
@@ -39,8 +40,50 @@ describe('@openfed__cacheInvalidate directive tests', () => {
       expect(config!.entityCaching?.cacheInvalidateConfigurations).toStrictEqual([
         {
           fieldName: 'updateProduct',
-          operationType: MUTATION,
+          operationType: OperationTypeNode.MUTATION,
           entityTypeName: 'Product',
+        },
+      ] satisfies CacheInvalidateConfig[]);
+    });
+
+    test('that multiple cacheInvalidate fields on the same type accumulate into one config array', () => {
+      const config = getConfigForType(
+        createSubgraphWithDefaultName(`
+            type Query { dummy: String! }
+            type Mutation {
+              updateProduct(id: ID!): Product @openfed__cacheInvalidate
+              deleteProduct(id: ID!): Product @openfed__cacheInvalidate
+              updateReview(id: ID!): Review @openfed__cacheInvalidate
+            }
+            type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+              id: ID!
+              name: String!
+            }
+            type Review @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+              id: ID!
+              body: String!
+            }
+          `),
+        MUTATION,
+      );
+      expect(config).toBeDefined();
+      // Each field on Mutation shares the same configurationData, so configs accumulate via
+      // `[...existingCacheInvalidates, config]` — the 2nd and 3rd fields see existing length > 0.
+      expect(config!.entityCaching?.cacheInvalidateConfigurations).toStrictEqual([
+        {
+          fieldName: 'updateProduct',
+          operationType: OperationTypeNode.MUTATION,
+          entityTypeName: 'Product',
+        },
+        {
+          fieldName: 'deleteProduct',
+          operationType: OperationTypeNode.MUTATION,
+          entityTypeName: 'Product',
+        },
+        {
+          fieldName: 'updateReview',
+          operationType: OperationTypeNode.MUTATION,
+          entityTypeName: 'Review',
         },
       ] satisfies CacheInvalidateConfig[]);
     });
@@ -65,7 +108,7 @@ describe('@openfed__cacheInvalidate directive tests', () => {
       expect(config!.entityCaching?.cacheInvalidateConfigurations).toStrictEqual([
         {
           fieldName: 'itemUpdated',
-          operationType: SUBSCRIPTION,
+          operationType: OperationTypeNode.SUBSCRIPTION,
           entityTypeName: 'Product',
         },
       ] satisfies CacheInvalidateConfig[]);
