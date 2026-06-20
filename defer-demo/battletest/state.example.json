@@ -1,0 +1,10 @@
+{
+  "startedAt": "2026-06-20T00:00:00Z",
+  "round": 0,
+  "dryStreak": 0,
+  "escalation": 0,
+  "knownSignatures": [
+    "comment: pre-seed with the known B1-B7 signatures if you want the loop to treat them as already-found and hunt only NEW territory. Leave empty to let the loop rediscover/confirm them in round 1."
+  ],
+  "interesting": []
+}

@@ -1,0 +1,786 @@
+==================
+WARNING: DATA RACE
+Write at 0x00c001fc2350 by goroutine 628:
+  github.com/wundergraph/astjson.(*Object).getKV()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/parser.go:620 +0x130
+  github.com/wundergraph/astjson.(*Object).Set()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/update.go:74 +0x29c
+  github.com/wundergraph/astjson.MergeValues()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/mergevalues.go:63 +0xa18
+  github.com/wundergraph/astjson.MergeValuesWithPath()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/mergevalues.go:137 +0x90
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).mergeResult()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:657 +0x8c4
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).resolveSingle()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:376 +0x700
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).ResolveFetchNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:262 +0x7c
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).resolveSerial()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:329 +0x68
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).ResolveFetchNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:264 +0x104
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferSingle()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:578 +0x554
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:620 +0x124
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree.func1()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:645 +0x54
+  golang.org/x/sync/errgroup.(*Group).Go.func1()
+      /Users/jens/go/pkg/mod/golang.org/x/sync@v0.19.0/errgroup/errgroup.go:93 +0x70
+
+Previous read at 0x00c001fc2350 by goroutine 629:
+  github.com/wundergraph/astjson.(*Object).Get()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/parser.go:647 +0xd0
+  github.com/wundergraph/astjson.(*Value).Get()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/parser.go:807 +0x228
+  github.com/wundergraph/astjson.(*Value).GetStringBytes()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/parser.go:929 +0x40
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolvable).walkObject()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolvable.go:906 +0x4f8
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolvable).walkNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolvable.go:853 +0x244
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolvable).ResolveNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolvable.go:199 +0x128
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*GraphQLVariableResolveRenderer).RenderVariable()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/variables_renderer.go:369 +0xd4
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*InputTemplate).renderResolvableObjectVariable()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/inputtemplate.go:132 +0x4d8
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*InputTemplate).renderSegments()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/inputtemplate.go:98 +0x354
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*InputTemplate).Render()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/inputtemplate.go:70 +0x6c
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).loadEntityFetch()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:1412 +0x558
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).resolveSingle()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:371 +0x5ec
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).ResolveFetchNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:262 +0x7c
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).resolveSerial()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:329 +0x68
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).ResolveFetchNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:264 +0x104
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferSingle()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:578 +0x554
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:620 +0x124
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree.func1()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:645 +0x54
+  golang.org/x/sync/errgroup.(*Group).Go.func1()
+      /Users/jens/go/pkg/mod/golang.org/x/sync@v0.19.0/errgroup/errgroup.go:93 +0x70
+
+Goroutine 628 (running) created at:
+  golang.org/x/sync/errgroup.(*Group).Go()
+      /Users/jens/go/pkg/mod/golang.org/x/sync@v0.19.0/errgroup/errgroup.go:78 +0x104
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:639 +0x1d0
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).ResolveGraphQLDeferResponse()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:523 +0x100c
+  github.com/wundergraph/cosmo/router/core.(*GraphQLHandler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graphql_handler.go:354 +0xc00
+  github.com/wundergraph/cosmo/router/core.(*GraphQLHandler).ServeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:478 +0x3d4
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func9.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1720 +0x4e0
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*PreHandler).Handler-fm.(*PreHandler).Handler.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graphql_prehandler.go:458 +0x1a40
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.NewWebsocketMiddleware.func1.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/websocket.go:144 +0x88
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/requestlogger.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/requestlogger/requestlogger.go:188 +0x1fc
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func4.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1190 +0x468
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func3.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1165 +0x438
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/recoveryhandler.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/recoveryhandler/recovery.go:59 +0xc0
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func1.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1102 +0x74c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:73 +0x508
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.func2.CookieWhitelist.2.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/cookie_filter.go:12 +0xc0
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/klauspost/compress/gzhttp.NewWrapper.func1.1()
+      /Users/jens/go/pkg/mod/github.com/klauspost/compress@v1.18.0/gzhttp/compress.go:517 +0x704
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/chain.go:31 +0x5c
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:478 +0x3d4
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/pkg/trace.(*Middleware).Handler.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/pkg/trace/middleware.go:54 +0x2cc
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.(*middleware).serveHTTP()
+      /Users/jens/go/pkg/mod/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.46.1/handler.go:229 +0x14dc
+  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.NewMiddleware.func1.1()
+      /Users/jens/go/pkg/mod/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.46.1/handler.go:81 +0x58
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/pkg/cors.(*cors).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/pkg/cors/config.go:68 +0x508
+  github.com/go-chi/chi/v5/middleware.RealIP.func1()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/middleware/realip.go:36 +0xac
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5/middleware.RequestID.func1()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/middleware/request_id.go:76 +0x244
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.RequestSize.func6.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/request_size.go:14 +0x104
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.HandleCompression.func5.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/compression.go:62 +0x2a8
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/recoveryhandler.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/recoveryhandler/recovery.go:59 +0xc0
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:90 +0x4b0
+  github.com/wundergraph/cosmo/router/core.newServer.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/http_server.go:114 +0x6c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:3340 +0x270
+  net/http.(*conn).serve()
+      /usr/local/go/src/net/http/server.go:2109 +0x9b0
+  net/http.(*Server).Serve.gowrap3()
+      /usr/local/go/src/net/http/server.go:3493 +0x48
+
+Goroutine 629 (running) created at:
+  golang.org/x/sync/errgroup.(*Group).Go()
+      /Users/jens/go/pkg/mod/golang.org/x/sync@v0.19.0/errgroup/errgroup.go:78 +0x104
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:639 +0x1d0
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).ResolveGraphQLDeferResponse()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:523 +0x100c
+  github.com/wundergraph/cosmo/router/core.(*GraphQLHandler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graphql_handler.go:354 +0xc00
+  github.com/wundergraph/cosmo/router/core.(*GraphQLHandler).ServeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:478 +0x3d4
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func9.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1720 +0x4e0
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*PreHandler).Handler-fm.(*PreHandler).Handler.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graphql_prehandler.go:458 +0x1a40
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.NewWebsocketMiddleware.func1.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/websocket.go:144 +0x88
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/requestlogger.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/requestlogger/requestlogger.go:188 +0x1fc
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func4.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1190 +0x468
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func3.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1165 +0x438
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/recoveryhandler.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/recoveryhandler/recovery.go:59 +0xc0
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func1.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1102 +0x74c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:73 +0x508
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.func2.CookieWhitelist.2.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/cookie_filter.go:12 +0xc0
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/klauspost/compress/gzhttp.NewWrapper.func1.1()
+      /Users/jens/go/pkg/mod/github.com/klauspost/compress@v1.18.0/gzhttp/compress.go:517 +0x704
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/chain.go:31 +0x5c
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:478 +0x3d4
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/pkg/trace.(*Middleware).Handler.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/pkg/trace/middleware.go:54 +0x2cc
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.(*middleware).serveHTTP()
+      /Users/jens/go/pkg/mod/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.46.1/handler.go:229 +0x14dc
+  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.NewMiddleware.func1.1()
+      /Users/jens/go/pkg/mod/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.46.1/handler.go:81 +0x58
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/pkg/cors.(*cors).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/pkg/cors/config.go:68 +0x508
+  github.com/go-chi/chi/v5/middleware.RealIP.func1()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/middleware/realip.go:36 +0xac
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5/middleware.RequestID.func1()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/middleware/request_id.go:76 +0x244
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.RequestSize.func6.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/request_size.go:14 +0x104
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.HandleCompression.func5.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/compression.go:62 +0x2a8
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/recoveryhandler.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/recoveryhandler/recovery.go:59 +0xc0
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:90 +0x4b0
+  github.com/wundergraph/cosmo/router/core.newServer.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/http_server.go:114 +0x6c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:3340 +0x270
+  net/http.(*conn).serve()
+      /usr/local/go/src/net/http/server.go:2109 +0x9b0
+  net/http.(*Server).Serve.gowrap3()
+      /usr/local/go/src/net/http/server.go:3493 +0x48
+==================
+
+==================
+WARNING: DATA RACE
+Write at 0x00c0028f1e80 by goroutine 15889:
+  github.com/wundergraph/astjson.(*Object).getKV()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/parser.go:620 +0x130
+  github.com/wundergraph/astjson.(*Object).Set()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/update.go:74 +0x29c
+  github.com/wundergraph/astjson.MergeValues()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/mergevalues.go:63 +0xa18
+  github.com/wundergraph/astjson.MergeValues()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/mergevalues.go:88 +0x71c
+  github.com/wundergraph/astjson.MergeValues()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/mergevalues.go:66 +0xa30
+  github.com/wundergraph/astjson.MergeValuesWithPath()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/mergevalues.go:137 +0x90
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).mergeResult()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:657 +0x8c4
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).resolveSingle()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:353 +0x1e8
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).ResolveFetchNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:262 +0x7c
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).resolveSerial()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:329 +0x68
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).ResolveFetchNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:264 +0x104
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferSingle()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:578 +0x554
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:620 +0x124
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree.func1()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:645 +0x54
+  golang.org/x/sync/errgroup.(*Group).Go.func1()
+      /Users/jens/go/pkg/mod/golang.org/x/sync@v0.19.0/errgroup/errgroup.go:93 +0x70
+
+Previous read at 0x00c0028f1e80 by goroutine 15897:
+  github.com/wundergraph/astjson.(*Object).Get()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/parser.go:647 +0xd0
+  github.com/wundergraph/astjson.(*Value).Get()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/parser.go:807 +0x228
+  github.com/wundergraph/astjson.(*Value).GetStringBytes()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/parser.go:929 +0x40
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolvable).walkObject()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolvable.go:906 +0x4f8
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolvable).walkNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolvable.go:853 +0x244
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolvable).ResolveNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolvable.go:199 +0x128
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*GraphQLVariableResolveRenderer).RenderVariable()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/variables_renderer.go:369 +0xd4
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*InputTemplate).renderResolvableObjectVariable()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/inputtemplate.go:132 +0x4d8
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*InputTemplate).renderSegments()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/inputtemplate.go:98 +0x354
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*InputTemplate).Render()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/inputtemplate.go:70 +0x6c
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).loadBatchEntityFetch()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:1555 +0x1098
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).loadFetch()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:508 +0x100
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).resolveParallel.func2()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:295 +0x88
+  golang.org/x/sync/errgroup.(*Group).Go.func1()
+      /Users/jens/go/pkg/mod/golang.org/x/sync@v0.19.0/errgroup/errgroup.go:93 +0x70
+
+Goroutine 15889 (running) created at:
+  golang.org/x/sync/errgroup.(*Group).Go()
+      /Users/jens/go/pkg/mod/golang.org/x/sync@v0.19.0/errgroup/errgroup.go:78 +0x104
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:639 +0x1d0
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).ResolveGraphQLDeferResponse()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:523 +0x100c
+  github.com/wundergraph/cosmo/router/core.(*GraphQLHandler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graphql_handler.go:354 +0xc00
+  github.com/wundergraph/cosmo/router/core.(*GraphQLHandler).ServeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:478 +0x3d4
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func9.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1720 +0x4e0
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*PreHandler).Handler-fm.(*PreHandler).Handler.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graphql_prehandler.go:458 +0x1a40
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.NewWebsocketMiddleware.func1.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/websocket.go:144 +0x88
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/requestlogger.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/requestlogger/requestlogger.go:188 +0x1fc
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func4.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1190 +0x468
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func3.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1165 +0x438
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/recoveryhandler.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/recoveryhandler/recovery.go:59 +0xc0
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func1.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1102 +0x74c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:73 +0x508
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.func2.CookieWhitelist.2.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/cookie_filter.go:12 +0xc0
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/klauspost/compress/gzhttp.NewWrapper.func1.1()
+      /Users/jens/go/pkg/mod/github.com/klauspost/compress@v1.18.0/gzhttp/compress.go:517 +0x704
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/chain.go:31 +0x5c
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:478 +0x3d4
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/pkg/trace.(*Middleware).Handler.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/pkg/trace/middleware.go:54 +0x2cc
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.(*middleware).serveHTTP()
+      /Users/jens/go/pkg/mod/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.46.1/handler.go:229 +0x14dc
+  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.NewMiddleware.func1.1()
+      /Users/jens/go/pkg/mod/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.46.1/handler.go:81 +0x58
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/pkg/cors.(*cors).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/pkg/cors/config.go:68 +0x508
+  github.com/go-chi/chi/v5/middleware.RealIP.func1()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/middleware/realip.go:36 +0xac
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5/middleware.RequestID.func1()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/middleware/request_id.go:76 +0x244
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.RequestSize.func6.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/request_size.go:14 +0x104
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.HandleCompression.func5.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/compression.go:62 +0x2a8
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/recoveryhandler.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/recoveryhandler/recovery.go:59 +0xc0
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:90 +0x4b0
+  github.com/wundergraph/cosmo/router/core.newServer.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/http_server.go:114 +0x6c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:3340 +0x270
+  net/http.(*conn).serve()
+      /usr/local/go/src/net/http/server.go:2109 +0x9b0
+  net/http.(*Server).Serve.gowrap3()
+      /usr/local/go/src/net/http/server.go:3493 +0x48
+
+Goroutine 15897 (running) created at:
+  golang.org/x/sync/errgroup.(*Group).Go()
+      /Users/jens/go/pkg/mod/golang.org/x/sync@v0.19.0/errgroup/errgroup.go:78 +0x104
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).resolveParallel()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:294 +0x244
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).ResolveFetchNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:266 +0x150
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).resolveSerial()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:329 +0x68
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).ResolveFetchNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:264 +0x104
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferSingle()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:578 +0x554
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:620 +0x124
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree.func1()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:645 +0x54
+  golang.org/x/sync/errgroup.(*Group).Go.func1()
+      /Users/jens/go/pkg/mod/golang.org/x/sync@v0.19.0/errgroup/errgroup.go:93 +0x70
+==================
+
+==================
+WARNING: DATA RACE
+Write at 0x00c0028f1ac0 by goroutine 15888:
+  github.com/wundergraph/astjson.(*Object).getKV()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/parser.go:620 +0x130
+  github.com/wundergraph/astjson.(*Object).Set()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/update.go:74 +0x29c
+  github.com/wundergraph/astjson.MergeValues()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/mergevalues.go:63 +0xa18
+  github.com/wundergraph/astjson.MergeValuesWithPath()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/mergevalues.go:137 +0x90
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).mergeResult()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:683 +0x106c
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).resolveSingle()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:365 +0x4a8
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).ResolveFetchNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:262 +0x7c
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).resolveSerial()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:329 +0x68
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).ResolveFetchNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:264 +0x104
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferSingle()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:578 +0x554
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:620 +0x124
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree.func1()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:645 +0x54
+  golang.org/x/sync/errgroup.(*Group).Go.func1()
+      /Users/jens/go/pkg/mod/golang.org/x/sync@v0.19.0/errgroup/errgroup.go:93 +0x70
+
+Previous read at 0x00c0028f1ac0 by goroutine 15889:
+  github.com/wundergraph/astjson.(*Object).Get()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/parser.go:647 +0xd0
+  github.com/wundergraph/astjson.(*Value).Get()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/parser.go:807 +0x228
+  github.com/wundergraph/astjson.(*Value).GetStringBytes()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/astjson@v1.1.0/parser.go:929 +0x40
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolvable).walkObject()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolvable.go:906 +0x4f8
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolvable).walkNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolvable.go:853 +0x244
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolvable).ResolveNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolvable.go:199 +0x128
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*GraphQLVariableResolveRenderer).RenderVariable()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/variables_renderer.go:369 +0xd4
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*InputTemplate).renderResolvableObjectVariable()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/inputtemplate.go:132 +0x4d8
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*InputTemplate).renderSegments()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/inputtemplate.go:98 +0x354
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*InputTemplate).Render()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/inputtemplate.go:70 +0x6c
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).loadBatchEntityFetch()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:1555 +0x1098
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).resolveSingle()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:360 +0x394
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).ResolveFetchNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:262 +0x7c
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).resolveSerial()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:329 +0x68
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Loader).ResolveFetchNode()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/loader.go:264 +0x104
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferSingle()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:578 +0x554
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:620 +0x124
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree.func1()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:645 +0x54
+  golang.org/x/sync/errgroup.(*Group).Go.func1()
+      /Users/jens/go/pkg/mod/golang.org/x/sync@v0.19.0/errgroup/errgroup.go:93 +0x70
+
+Goroutine 15888 (running) created at:
+  golang.org/x/sync/errgroup.(*Group).Go()
+      /Users/jens/go/pkg/mod/golang.org/x/sync@v0.19.0/errgroup/errgroup.go:78 +0x104
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:639 +0x1d0
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).ResolveGraphQLDeferResponse()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:523 +0x100c
+  github.com/wundergraph/cosmo/router/core.(*GraphQLHandler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graphql_handler.go:354 +0xc00
+  github.com/wundergraph/cosmo/router/core.(*GraphQLHandler).ServeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:478 +0x3d4
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func9.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1720 +0x4e0
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*PreHandler).Handler-fm.(*PreHandler).Handler.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graphql_prehandler.go:458 +0x1a40
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.NewWebsocketMiddleware.func1.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/websocket.go:144 +0x88
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/requestlogger.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/requestlogger/requestlogger.go:188 +0x1fc
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func4.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1190 +0x468
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func3.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1165 +0x438
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/recoveryhandler.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/recoveryhandler/recovery.go:59 +0xc0
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func1.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1102 +0x74c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:73 +0x508
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.func2.CookieWhitelist.2.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/cookie_filter.go:12 +0xc0
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/klauspost/compress/gzhttp.NewWrapper.func1.1()
+      /Users/jens/go/pkg/mod/github.com/klauspost/compress@v1.18.0/gzhttp/compress.go:517 +0x704
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/chain.go:31 +0x5c
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:478 +0x3d4
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/pkg/trace.(*Middleware).Handler.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/pkg/trace/middleware.go:54 +0x2cc
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.(*middleware).serveHTTP()
+      /Users/jens/go/pkg/mod/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.46.1/handler.go:229 +0x14dc
+  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.NewMiddleware.func1.1()
+      /Users/jens/go/pkg/mod/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.46.1/handler.go:81 +0x58
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/pkg/cors.(*cors).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/pkg/cors/config.go:68 +0x508
+  github.com/go-chi/chi/v5/middleware.RealIP.func1()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/middleware/realip.go:36 +0xac
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5/middleware.RequestID.func1()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/middleware/request_id.go:76 +0x244
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.RequestSize.func6.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/request_size.go:14 +0x104
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.HandleCompression.func5.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/compression.go:62 +0x2a8
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/recoveryhandler.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/recoveryhandler/recovery.go:59 +0xc0
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:90 +0x4b0
+  github.com/wundergraph/cosmo/router/core.newServer.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/http_server.go:114 +0x6c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:3340 +0x270
+  net/http.(*conn).serve()
+      /usr/local/go/src/net/http/server.go:2109 +0x9b0
+  net/http.(*Server).Serve.gowrap3()
+      /usr/local/go/src/net/http/server.go:3493 +0x48
+
+Goroutine 15889 (running) created at:
+  golang.org/x/sync/errgroup.(*Group).Go()
+      /Users/jens/go/pkg/mod/golang.org/x/sync@v0.19.0/errgroup/errgroup.go:78 +0x104
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).resolveDeferTree()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:639 +0x1d0
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve.(*Resolver).ResolveGraphQLDeferResponse()
+      /Users/jens/go/pkg/mod/github.com/wundergraph/graphql-go-tools/v2@v2.0.0-rc.267.0.20260609212651-7b85e925b804/pkg/engine/resolve/resolve.go:523 +0x100c
+  github.com/wundergraph/cosmo/router/core.(*GraphQLHandler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graphql_handler.go:354 +0xc00
+  github.com/wundergraph/cosmo/router/core.(*GraphQLHandler).ServeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:478 +0x3d4
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func9.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1720 +0x4e0
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*PreHandler).Handler-fm.(*PreHandler).Handler.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graphql_prehandler.go:458 +0x1a40
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.NewWebsocketMiddleware.func1.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/websocket.go:144 +0x88
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/requestlogger.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/requestlogger/requestlogger.go:188 +0x1fc
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func4.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1190 +0x468
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func3.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1165 +0x438
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/recoveryhandler.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/recoveryhandler/recovery.go:59 +0xc0
+  github.com/wundergraph/cosmo/router/core.(*graphServer).buildGraphMux.func1.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/graph_server.go:1102 +0x74c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:73 +0x508
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.func2.CookieWhitelist.2.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/cookie_filter.go:12 +0xc0
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/klauspost/compress/gzhttp.NewWrapper.func1.1()
+      /Users/jens/go/pkg/mod/github.com/klauspost/compress@v1.18.0/gzhttp/compress.go:517 +0x704
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/chain.go:31 +0x5c
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:478 +0x3d4
+  github.com/go-chi/chi/v5.(*Mux).routeHTTP-fm()
+      <autogenerated>:1 +0x4c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/pkg/trace.(*Middleware).Handler.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/pkg/trace/middleware.go:54 +0x2cc
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.(*middleware).serveHTTP()
+      /Users/jens/go/pkg/mod/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.46.1/handler.go:229 +0x14dc
+  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.NewMiddleware.func1.1()
+      /Users/jens/go/pkg/mod/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.46.1/handler.go:81 +0x58
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/pkg/cors.(*cors).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/pkg/cors/config.go:68 +0x508
+  github.com/go-chi/chi/v5/middleware.RealIP.func1()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/middleware/realip.go:36 +0xac
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/go-chi/chi/v5/middleware.RequestID.func1()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/middleware/request_id.go:76 +0x244
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.RequestSize.func6.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/request_size.go:14 +0x104
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/core.newGraphServer.HandleCompression.func5.1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/middleware/compression.go:62 +0x2a8
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  github.com/wundergraph/cosmo/router/internal/recoveryhandler.(*handler).ServeHTTP()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/internal/recoveryhandler/recovery.go:59 +0xc0
+  github.com/go-chi/chi/v5.(*Mux).ServeHTTP()
+      /Users/jens/go/pkg/mod/github.com/go-chi/chi/v5@v5.2.2/mux.go:90 +0x4b0
+  github.com/wundergraph/cosmo/router/core.newServer.func1()
+      /Users/jens/.superset/worktrees/cosmo/dazed-geology/router/core/http_server.go:114 +0x6c
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:2322 +0x48
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/go/src/net/http/server.go:3340 +0x270
+  net/http.(*conn).serve()
+      /usr/local/go/src/net/http/server.go:2109 +0x9b0
+  net/http.(*Server).Serve.gowrap3()
+      /usr/local/go/src/net/http/server.go:3493 +0x48
+==================

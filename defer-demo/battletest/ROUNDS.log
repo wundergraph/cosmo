@@ -1,0 +1,6 @@
+round 1, strategies=generate-new,mutate,defer-placement-matrix,error-and-null, candidates=172, newConfirmed=1 (BT-1), dryStreak=0, escalation=0, elapsed=10min
+round 2, strategies=generate-new,directive-combinatorics,mutate,defer-placement-matrix, candidates=172, newConfirmed=0 (DRY), dryStreak=1/3, escalation=1, elapsed=18min
+round 3, strategies=generate-new,validation-abuse,concurrency,escalate, candidates=170, newConfirmed=2 (BT-2 data-race, BT-3 nested-defer-never-delivers), dryStreak=0/3, escalation=0, elapsed=26min
+round 4, strategies=mutate,defer-placement-matrix,generate-new,concurrency, candidates=162, newConfirmed=0 (1 new sig 178b1b1c deduped as BT-3/B4 family: union+nested type-conditional defer announces 4 pending, completes 2, premature terminal), dryStreak=1/3, escalation=1, elapsed=35min
+round 5, strategies=escalate,directive-combinatorics,validation-abuse,generate-new, candidates=170, newConfirmed=0 (orthogonal territory: 0 new query-sigs; race 4->5 but same BT-2 loader/astjson root cause), dryStreak=2/3, escalation=2, elapsed=42min
+round 6, strategies=escalate x3,generate-new, candidates=177, newConfirmed=0 (max-escalation DRY; 3 known sigs, no new race), dryStreak=3/3, escalation=3 -> CONVERGED, elapsed=47min

@@ -1,0 +1,21 @@
+{"id":"seed-article-full","tags":["parent","federation"],"query":"{ article(id:\"a1\"){ id title author{ id displayName } heroImageUrl reviews{ id rating readingTimeAdjusted } stats{ views shares } } }"}
+{"id":"seed-article-defer","tags":["parent","defer"],"query":"{ article(id:\"a1\"){ id title ... @defer { reviews{ id rating } } } }"}
+{"id":"seed-search-union","tags":["parent","union"],"query":"{ search(term:\"x\"){ __typename ... on Article{ id title } ... on Podcast{ id durationSeconds } } }"}
+{"id":"seed-related-interface","tags":["parent","interface"],"query":"{ article(id:\"a1\"){ relatedContent{ __typename ... on Article{ title } ... on Podcast{ title } } } }"}
+{"id":"seed-asset-entity-iface","tags":["parent","entity-interface"],"query":"{ asset(id:\"v1\"){ __typename id url ... on VideoAsset{ transcodeProgress } } }"}
+{"id":"seed-org-billing","tags":["parent","composite-key","requires"],"query":"{ organization(id:\"o1\"){ id name memberCount subscription{ status seatUtilization } invoices{ id amountCents paid } } }"}
+{"id":"seed-user-deep","tags":["parent","multi-hop"],"query":"{ user(id:\"u1\"){ id displayName reviews{ rating } recommendedArticles{ title } } }"}
+{"id":"seed-defer-nested","tags":["parent","defer","nested"],"query":"{ user(id:\"u1\"){ id ... @defer { recommendedArticles{ id ... @defer { reviews{ rating } } } } } }"}
+{"id":"seed-defer-list","tags":["parent","defer","list"],"query":"{ articles{ id ... @defer { reviews{ id } } } }"}
+{"id":"seed-defer-interfaceObject","tags":["parent","defer","interfaceObject"],"query":"{ article(id:\"a1\"){ id ... @defer { stats{ views shares avgReadSeconds } } } }"}
+{"id":"seed-defer-provides","tags":["parent","defer","provides"],"query":"{ featuredArticle{ id ... @defer { author{ displayName } } } }"}
+{"id":"seed-defer-requires","tags":["parent","defer","requires"],"query":"{ article(id:\"a1\"){ id wordCount ... @defer { reviews{ readingTimeAdjusted } } } }"}
+{"id":"known-B1-if-var-false","tags":["known:B1","defer","if","variable"],"query":"query($d:Boolean!){ article(id:\"a1\"){ id title ... @defer(if:$d){ reviews{ id } } } }","variables":{"d":false}}
+{"id":"known-B2-two-if-var","tags":["known:B2","crash","defer","if","variable"],"query":"query($a:Boolean!,$b:Boolean!){ article(id:\"a1\"){ id ...@defer(if:$a){ reviews{id} } ...@defer(if:$b){ relatedContent{__typename} } } }","variables":{"a":true,"b":true}}
+{"id":"known-B3-label-var","tags":["known:B3","crash","defer","label","variable"],"query":"query($l:String!){ article(id:\"a1\"){ id ...@defer(label:$l){ reviews{id} } } }","variables":{"l":"x"}}
+{"id":"known-B4-iface-sibling","tags":["known:B4","defer","interfaceObject","abstract"],"query":"{ article(id:\"a1\"){ id ... @defer { relatedContent { __typename id ... on Article @defer { stats { views } } ... on Podcast @defer { stats { views } } } } } }"}
+{"id":"known-B5-error-swallow","tags":["known:B5","defer","errors","nullability"],"query":"{ user(id:\"u1\"){ id ... @defer { reviews{ id rating readingTimeAdjusted } } } }"}
+{"id":"known-B6-dup-label","tags":["known:B6","validation","label"],"query":"{ article(id:\"a1\"){ id ...@defer(label:\"dup\"){ reviews{id} } ...@defer(label:\"dup\"){ relatedContent{__typename} } } }"}
+{"id":"known-B7-string-if","tags":["known:B7","validation","if","variable"],"query":"query($l:String!){ article(id:\"a1\"){ id ...@defer(if:$l){ reviews{id} } } }","variables":{"l":"x"}}
+{"id":"bt1-neighborhood","tags":["parent","nested","defer"],"query":"{ article(id:\"a1\"){ id title ... @defer { __typename } reviews{ id ... @defer { __typename author{ __typename id displayName } } } } }"}
+{"id":"bt3-neighborhood","tags":["parent","nested","defer","overlap"],"query":"{ user(id:\"u1\"){ id recommendedArticles{ id title } ... @defer { recommendedArticles{ id title ... @defer { heroImageUrl stats{ views } reviews{ id rating } } } } } }"}

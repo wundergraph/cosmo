@@ -1,0 +1,2 @@
+# intermediate per-worker codex dumps (merged into round-00N.jsonl)
+rounds/r*-w*.txt
