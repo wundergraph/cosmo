@@ -4116,7 +4116,6 @@ export class NormalizationFactory {
       return;
     }
 
-    // Silently skip non-object parents (e.g. interface fields) rather than erroring on them.
     if (parentKind !== Kind.OBJECT_TYPE_DEFINITION) {
       return;
     }
