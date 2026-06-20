@@ -4111,21 +4111,18 @@ export class NormalizationFactory {
     };
   }
 
-  extractCacheInvalidateConfig(
-    parentData: CompositeOutputData,
-    configurationTypeName: string,
-    fieldData: FieldData,
-  ) {
+  extractCacheInvalidateConfig(parentKind: Kind, fieldData: FieldData) {
     if (!fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE)) {
       return;
     }
 
-    if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+    // Silently skip non-object parents (e.g. interface fields) rather than erroring on them.
+    if (parentKind !== Kind.OBJECT_TYPE_DEFINITION) {
       return;
     }
 
-    const operationType = this.getOperationTypeNodeForRootTypeName(parentData.name);
-    const fieldCoords = `${parentData.name}.${fieldData.name}`;
+    const operationType = this.getOperationTypeNodeForRootTypeName(fieldData.originalParentTypeName);
+    const fieldCoords = `${fieldData.originalParentTypeName}.${fieldData.name}`;
     if (!operationType || operationType === OperationTypeNode.QUERY) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
@@ -4143,8 +4140,8 @@ export class NormalizationFactory {
       );
       return;
     }
-    const configurationData = getValueOrDefault(this.configurationDataByTypeName, configurationTypeName, () =>
-      newConfigurationData(false, configurationTypeName),
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, fieldData.renamedParentTypeName, () =>
+      newConfigurationData(false, fieldData.renamedParentTypeName),
     );
 
     if (!configurationData.entityCaching) {
@@ -4345,7 +4342,7 @@ export class NormalizationFactory {
 
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
-            this.extractCacheInvalidateConfig(parentData, newParentTypeName, fieldData);
+            this.extractCacheInvalidateConfig(parentData.kind, fieldData);
 
             if (!isObject && fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
