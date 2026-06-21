@@ -381,7 +381,11 @@ import {
   type ValidateDirectiveParams,
   type EntityCacheDirectiveNode,
 } from './types/types';
-import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
+import {
+  getOrInitializeEntityCaching,
+  newConfigurationData,
+  newFieldSetConditionData,
+} from '../../router-configuration/utils';
 import { type ImplementationErrors, type InvalidFieldImplementation } from '../../utils/types';
 import {
   type AbstractTypeName,
@@ -4002,7 +4006,6 @@ export class NormalizationFactory {
   }
 
   extractEntityCacheDirective({ directivesByName, name: typeName }: ObjectDefinitionData) {
-
     const entityCacheDirectives = directivesByName.get(OPENFED_ENTITY_CACHE);
     if (!entityCacheDirectives || entityCacheDirectives.length == 0) {
       return;
@@ -4099,10 +4102,9 @@ export class NormalizationFactory {
     const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
       newConfigurationData(true, typeName),
     );
-    configurationData.entityCaching = {
-      ...configurationData.entityCaching,
-      entityCacheConfigurations: [...(configurationData.entityCaching?.entityCacheConfigurations ?? []), config],
-    };
+
+    const entityCaching = getOrInitializeEntityCaching(configurationData);
+    entityCaching.entityCacheConfigurations.push(config);
   }
 
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {

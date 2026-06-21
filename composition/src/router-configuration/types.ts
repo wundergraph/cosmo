@@ -121,7 +121,7 @@ export type EntityCacheConfiguration = {
 
 export type EntityCachingConfiguration = {
   // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
-  entityCacheConfigurations?: Array<EntityCacheConfiguration>;
+  entityCacheConfigurations: Array<EntityCacheConfiguration>;
 };
 
 export type Costs = {
