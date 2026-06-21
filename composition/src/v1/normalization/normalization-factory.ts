@@ -4111,12 +4111,8 @@ export class NormalizationFactory {
     entityCaching.entityCacheConfigurations.push(config);
   }
 
-  extractCacheInvalidateConfig(parentKind: Kind, fieldData: FieldData) {
+  extractCacheInvalidateConfig(fieldData: FieldData) {
     if (!fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE)) {
-      return;
-    }
-
-    if (parentKind !== Kind.OBJECT_TYPE_DEFINITION) {
       return;
     }
 
@@ -4142,7 +4138,6 @@ export class NormalizationFactory {
     const configurationData = getValueOrDefault(this.configurationDataByTypeName, fieldData.renamedParentTypeName, () =>
       newConfigurationData(false, fieldData.renamedParentTypeName),
     );
-
 
     const config: CacheInvalidateConfig = {
       fieldName: fieldData.name,
@@ -4342,7 +4337,9 @@ export class NormalizationFactory {
 
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
-            this.extractCacheInvalidateConfig(parentData.kind, fieldData);
+            if (isObject) {
+              this.extractCacheInvalidateConfig(fieldData);
+            }
 
             if (!isObject && fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
