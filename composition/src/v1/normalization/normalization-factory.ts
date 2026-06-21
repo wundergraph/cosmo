@@ -4001,10 +4001,8 @@ export class NormalizationFactory {
     }
   }
 
-  extractEntityCacheDirective({ directivesByName, kind, name: typeName }: ParentDefinitionData) {
-    if (kind !== Kind.OBJECT_TYPE_DEFINITION) {
-      return;
-    }
+  extractEntityCacheDirective({ directivesByName, name: typeName }: ObjectDefinitionData) {
+
     const entityCacheDirectives = directivesByName.get(OPENFED_ENTITY_CACHE);
     if (!entityCacheDirectives || entityCacheDirectives.length == 0) {
       return;
@@ -4270,7 +4268,9 @@ export class NormalizationFactory {
           const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
           const isObject = parentData.kind === Kind.OBJECT_TYPE_DEFINITION;
 
-          this.extractEntityCacheDirective(parentData);
+          if (isObject) {
+            this.extractEntityCacheDirective(parentData);
+          }
 
           if (this.isSubgraphVersionTwo && parentData.extensionType === ExtensionType.EXTENDS) {
             // @extends is essentially ignored in V2. It was only propagated to handle @external key fields.
