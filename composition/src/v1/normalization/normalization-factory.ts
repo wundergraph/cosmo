@@ -4009,7 +4009,7 @@ export class NormalizationFactory {
     }
   }
 
-  extractEntityCacheDirective({ directivesByName, name: typeName }: ParentDefinitionData) {
+  extractEntityCacheDirective({ directivesByName, name: typeName }: ObjectDefinitionData) {
     const entityCacheDirectives = directivesByName.get(OPENFED_ENTITY_CACHE);
     if (!entityCacheDirectives || entityCacheDirectives.length == 0) {
       return;
@@ -4332,8 +4332,6 @@ export class NormalizationFactory {
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
           }
 
-          const newParentTypeName = getParentTypeName(parentData);
-
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
             if (isObject) {
@@ -4376,6 +4374,7 @@ export class NormalizationFactory {
                   externalInterfaceFieldsWarning(this.subgraphName, parentTypeName, [...externalInterfaceFieldNames]),
                 );
           }
+          const newParentTypeName = getParentTypeName(parentData);
           const configurationData = getValueOrDefault(this.configurationDataByTypeName, newParentTypeName, () =>
             newConfigurationData(isEntity, parentTypeName),
           );
@@ -4434,10 +4433,6 @@ export class NormalizationFactory {
     this.addValidConditionalFieldSetConfigurations();
     // this is where @key configurations are added to the ConfigurationData
     this.addValidKeyFieldSetConfigurations();
-    // per-field caching directives (@openfed__cacheInvalidate etc.) — must run after entityCache
-    // (entityCacheConfigByTypeName is populated earlier by extractEntityCacheDirective() during the
-    // parentDefinitionData iteration in normalize())
-    // Check that explicitly defined operations types are valid objects and that their fields are also valid
     for (const operationType of Object.values(OperationTypeNode)) {
       const operationTypeNode = this.schemaData.operationTypes.get(operationType);
       const defaultTypeName = getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT);
