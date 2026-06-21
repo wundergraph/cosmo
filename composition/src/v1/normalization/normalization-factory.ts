@@ -4009,7 +4009,7 @@ export class NormalizationFactory {
     }
   }
 
-  extractEntityCacheDirective({ directivesByName, name: typeName }: ObjectDefinitionData) {
+  extractEntityCacheDirective({ directivesByName, name: typeName }: ParentDefinitionData) {
     const entityCacheDirectives = directivesByName.get(OPENFED_ENTITY_CACHE);
     if (!entityCacheDirectives || entityCacheDirectives.length == 0) {
       return;
@@ -4260,8 +4260,11 @@ export class NormalizationFactory {
      * (see extractCacheInvalidateConfig), and the return type may be iterated after the field that references it.
      */
     for (const parentData of this.parentDefinitionDataByTypeName.values()) {
-      this.extractEntityCacheDirective(parentData);
+      if (parentData.kind === Kind.OBJECT_TYPE_DEFINITION) {
+        this.extractEntityCacheDirective(parentData);
+      }
     }
+
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       switch (parentData.kind) {
         case Kind.ENUM_TYPE_DEFINITION: {
@@ -4319,10 +4322,6 @@ export class NormalizationFactory {
           const isEntity = this.entityDataByTypeName.has(parentTypeName);
           const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
           const isObject = parentData.kind === Kind.OBJECT_TYPE_DEFINITION;
-
-          if (isObject) {
-            this.extractEntityCacheDirective(parentData);
-          }
 
           if (this.isSubgraphVersionTwo && parentData.extensionType === ExtensionType.EXTENDS) {
             // @extends is essentially ignored in V2. It was only propagated to handle @external key fields.
