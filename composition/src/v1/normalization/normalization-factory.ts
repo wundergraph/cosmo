@@ -385,7 +385,11 @@ import {
   type ValidateDirectiveParams,
   type EntityCacheDirectiveNode,
 } from './types/types';
-import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
+import {
+  getOrInitializeEntityCaching,
+  newConfigurationData,
+  newFieldSetConditionData,
+} from '../../router-configuration/utils';
 import { type ImplementationErrors, type InvalidFieldImplementation } from '../../utils/types';
 import {
   type AbstractTypeName,
@@ -4005,10 +4009,7 @@ export class NormalizationFactory {
     }
   }
 
-  extractEntityCacheDirective({ directivesByName, kind, name: typeName }: ParentDefinitionData) {
-    if (kind !== Kind.OBJECT_TYPE_DEFINITION) {
-      return;
-    }
+  extractEntityCacheDirective({ directivesByName, name: typeName }: ObjectDefinitionData) {
     const entityCacheDirectives = directivesByName.get(OPENFED_ENTITY_CACHE);
     if (!entityCacheDirectives || entityCacheDirectives.length == 0) {
       return;
@@ -4105,10 +4106,9 @@ export class NormalizationFactory {
     const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
       newConfigurationData(true, typeName),
     );
-    configurationData.entityCaching = {
-      ...configurationData.entityCaching,
-      entityCacheConfigurations: [...(configurationData.entityCaching?.entityCacheConfigurations ?? []), config],
-    };
+
+    const entityCaching = getOrInitializeEntityCaching(configurationData);
+    entityCaching.entityCacheConfigurations.push(config);
   }
 
   extractCacheInvalidateConfig(parentKind: Kind, fieldData: FieldData) {
@@ -4143,9 +4143,6 @@ export class NormalizationFactory {
       newConfigurationData(false, fieldData.renamedParentTypeName),
     );
 
-    if (!configurationData.entityCaching) {
-      configurationData.entityCaching = {};
-    }
 
     const config: CacheInvalidateConfig = {
       fieldName: fieldData.name,
@@ -4153,8 +4150,8 @@ export class NormalizationFactory {
       entityTypeName: returnTypeName,
     };
 
-    const existingCacheInvalidates = configurationData.entityCaching?.cacheInvalidateConfigurations ?? [];
-    configurationData.entityCaching.cacheInvalidateConfigurations = [...existingCacheInvalidates, config];
+    const entityCaching = getOrInitializeEntityCaching(configurationData);
+    entityCaching.cacheInvalidateConfigurations.push(config);
   }
 
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
@@ -4327,6 +4324,10 @@ export class NormalizationFactory {
           const isEntity = this.entityDataByTypeName.has(parentTypeName);
           const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
           const isObject = parentData.kind === Kind.OBJECT_TYPE_DEFINITION;
+
+          if (isObject) {
+            this.extractEntityCacheDirective(parentData);
+          }
 
           if (this.isSubgraphVersionTwo && parentData.extensionType === ExtensionType.EXTENDS) {
             // @extends is essentially ignored in V2. It was only propagated to handle @external key fields.

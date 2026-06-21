@@ -2053,7 +2053,7 @@ export function unknownSubgraphNameError(subgraphName: SubgraphName): Error {
 }
 
 export function entityCacheWithoutKeyErrorMessage(typeName: TypeName): string {
-  return `Type "${typeName}" declares the directive "@openfed__entityCache" but does not define a "@key" directive.`;
+  return `Object "${typeName}" does not define a "@key" directive.`;
 }
 
 export function maxAgeNotPositiveIntegerErrorMessage(value: number): string {
@@ -2061,7 +2061,7 @@ export function maxAgeNotPositiveIntegerErrorMessage(value: number): string {
 }
 
 export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(value: number): string {
-  return `The argument "negativeCacheTTL" must be provided a zero or positive integer; received "${value}".`;
+  return `The argument "negativeCacheTTL" must be provided zero or a positive integer; received "${value}".`;
 }
 
 export function cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {

@@ -130,9 +130,9 @@ export type CacheInvalidateConfig = {
 
 export type EntityCachingConfiguration = {
   // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
-  entityCacheConfigurations?: Array<EntityCacheConfiguration>;
+  entityCacheConfigurations: Array<EntityCacheConfiguration>;
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cacheInvalidate.
-  cacheInvalidateConfigurations?: Array<CacheInvalidateConfig>;
+  cacheInvalidateConfigurations: Array<CacheInvalidateConfig>;
 };
 
 export type Costs = {

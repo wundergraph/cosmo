@@ -1,4 +1,9 @@
-import { type ConfigurationData, type FieldSetConditionData, type FieldSetConditionDataParams } from './types';
+import {
+  type ConfigurationData,
+  type EntityCachingConfiguration,
+  type FieldSetConditionData,
+  type FieldSetConditionDataParams,
+} from './types';
 import { type FieldName } from '../types/types';
 
 export function newFieldSetConditionData({
@@ -9,6 +14,15 @@ export function newFieldSetConditionData({
     fieldCoordinatesPath,
     fieldPath,
   };
+}
+
+export function getOrInitializeEntityCaching(configurationData: ConfigurationData): EntityCachingConfiguration {
+  if (!configurationData.entityCaching) {
+    configurationData.entityCaching = {
+      entityCacheConfigurations: [],
+    };
+  }
+  return configurationData.entityCaching;
 }
 
 export function newConfigurationData(isEntity: boolean, renamedTypeName: string): ConfigurationData {
