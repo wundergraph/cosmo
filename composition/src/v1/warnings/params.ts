@@ -16,9 +16,3 @@ export type InvalidRepeatedComposedDirectiveWarningParams = {
   directiveName: DirectiveName;
   printedDirective: string;
 };
-
-export type RequestScopedSingleFieldWarningParams = {
-  subgraphName: SubgraphName;
-  key: string;
-  fieldCoords: FieldName;
-};
