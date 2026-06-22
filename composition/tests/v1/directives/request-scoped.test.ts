@@ -6,6 +6,7 @@ import {
   invalidRepeatedDirectiveErrorMessage,
   OPENFED_REQUEST_SCOPED,
   OPENFED_REQUEST_SCOPED_DEFINITION,
+  requestScopedSingleFieldWarning,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   undefinedRequiredArgumentsErrorMessage,
 } from '../../../src';
@@ -72,7 +73,7 @@ describe('@openfed__requestScoped', () => {
       expect(config!.entityCaching!.requestScopedConfigurations![0].l1Key).toBe('subgraph-default-a.locale');
     });
 
-    test('a key declared on only one field still populates config', () => {
+    test('a key declared on only one field still populates config but emits a warning', () => {
       const result = normalizeSubgraphSuccess(
         createSubgraphWithDefaultName(`
           type Query {
@@ -87,6 +88,13 @@ describe('@openfed__requestScoped', () => {
       const config = result.configurationDataByTypeName.get('Query');
       expect(config!.entityCaching?.requestScopedConfigurations).toHaveLength(1);
       expect(config!.entityCaching!.requestScopedConfigurations![0].l1Key).toBe('subgraph-default-a.lonely');
+      expect(result.warnings).toStrictEqual([
+        requestScopedSingleFieldWarning({
+          subgraphName: 'subgraph-default-a',
+          key: 'lonely',
+          fieldCoords: 'Query.currentUser',
+        }),
+      ]);
     });
   });
 

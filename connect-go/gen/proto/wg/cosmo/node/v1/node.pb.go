@@ -1235,9 +1235,9 @@ type EntityCachingConfiguration struct {
 	// Per-Mutation/Subscription-field cache population configs (from @openfed__cachePopulate)
 	CachePopulateConfigurations []*CachePopulateConfiguration `protobuf:"bytes,3,rep,name=cache_populate_configurations,json=cachePopulateConfigurations,proto3" json:"cache_populate_configurations,omitempty"`
 	// Request-scoped field configurations (from @openfed__requestScoped directive)
-	RequestScopedFields []*RequestScopedFieldConfiguration `protobuf:"bytes,4,rep,name=request_scoped_fields,json=requestScopedFields,proto3" json:"request_scoped_fields,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	RequestScopedConfigurations []*RequestScopedConfiguration `protobuf:"bytes,4,rep,name=request_scoped_configurations,json=requestScopedConfigurations,proto3" json:"request_scoped_configurations,omitempty"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *EntityCachingConfiguration) Reset() {
@@ -1291,9 +1291,9 @@ func (x *EntityCachingConfiguration) GetCachePopulateConfigurations() []*CachePo
 	return nil
 }
 
-func (x *EntityCachingConfiguration) GetRequestScopedFields() []*RequestScopedFieldConfiguration {
+func (x *EntityCachingConfiguration) GetRequestScopedConfigurations() []*RequestScopedConfiguration {
 	if x != nil {
-		return x.RequestScopedFields
+		return x.RequestScopedConfigurations
 	}
 	return nil
 }
@@ -1526,7 +1526,7 @@ func (x *CachePopulateConfiguration) GetEntityTypeName() string {
 // @openfed__requestScoped(key: "X") share L1 key "{subgraphName}.X". The first field to resolve
 // populates L1; subsequent fields with the same key inject from L1 and can skip their
 // fetch when all required sub-fields are present.
-type RequestScopedFieldConfiguration struct {
+type RequestScopedConfiguration struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	FieldName     string                 `protobuf:"bytes,1,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
 	TypeName      string                 `protobuf:"bytes,2,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
@@ -1535,20 +1535,20 @@ type RequestScopedFieldConfiguration struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RequestScopedFieldConfiguration) Reset() {
-	*x = RequestScopedFieldConfiguration{}
+func (x *RequestScopedConfiguration) Reset() {
+	*x = RequestScopedConfiguration{}
 	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RequestScopedFieldConfiguration) String() string {
+func (x *RequestScopedConfiguration) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RequestScopedFieldConfiguration) ProtoMessage() {}
+func (*RequestScopedConfiguration) ProtoMessage() {}
 
-func (x *RequestScopedFieldConfiguration) ProtoReflect() protoreflect.Message {
+func (x *RequestScopedConfiguration) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1560,26 +1560,26 @@ func (x *RequestScopedFieldConfiguration) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RequestScopedFieldConfiguration.ProtoReflect.Descriptor instead.
-func (*RequestScopedFieldConfiguration) Descriptor() ([]byte, []int) {
+// Deprecated: Use RequestScopedConfiguration.ProtoReflect.Descriptor instead.
+func (*RequestScopedConfiguration) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{16}
 }
 
-func (x *RequestScopedFieldConfiguration) GetFieldName() string {
+func (x *RequestScopedConfiguration) GetFieldName() string {
 	if x != nil {
 		return x.FieldName
 	}
 	return ""
 }
 
-func (x *RequestScopedFieldConfiguration) GetTypeName() string {
+func (x *RequestScopedConfiguration) GetTypeName() string {
 	if x != nil {
 		return x.TypeName
 	}
 	return ""
 }
 
-func (x *RequestScopedFieldConfiguration) GetL1Key() string {
+func (x *RequestScopedConfiguration) GetL1Key() string {
 	if x != nil {
 		return x.L1Key
 	}
@@ -5062,12 +5062,12 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\x11entity_interfaces\x18\x0e \x03(\v2..wg.cosmo.node.v1.EntityInterfaceConfigurationR\x10entityInterfaces\x12[\n" +
 	"\x11interface_objects\x18\x0f \x03(\v2..wg.cosmo.node.v1.EntityInterfaceConfigurationR\x10interfaceObjects\x12R\n" +
 	"\x12cost_configuration\x18\x10 \x01(\v2#.wg.cosmo.node.v1.CostConfigurationR\x11costConfiguration\x12n\n" +
-	"\x1centity_caching_configuration\x18\x11 \x01(\v2,.wg.cosmo.node.v1.EntityCachingConfigurationR\x1aentityCachingConfiguration\"\xbc\x03\n" +
+	"\x1centity_caching_configuration\x18\x11 \x01(\v2,.wg.cosmo.node.v1.EntityCachingConfigurationR\x1aentityCachingConfiguration\"\xc7\x03\n" +
 	"\x1aEntityCachingConfiguration\x12M\n" +
 	"\fentity_cache\x18\x01 \x03(\v2*.wg.cosmo.node.v1.EntityCacheConfigurationR\ventityCache\x12v\n" +
 	"\x1fcache_invalidate_configurations\x18\x02 \x03(\v2..wg.cosmo.node.v1.CacheInvalidateConfigurationR\x1dcacheInvalidateConfigurations\x12p\n" +
-	"\x1dcache_populate_configurations\x18\x03 \x03(\v2,.wg.cosmo.node.v1.CachePopulateConfigurationR\x1bcachePopulateConfigurations\x12e\n" +
-	"\x15request_scoped_fields\x18\x04 \x03(\v21.wg.cosmo.node.v1.RequestScopedFieldConfigurationR\x13requestScopedFields\"\x95\x02\n" +
+	"\x1dcache_populate_configurations\x18\x03 \x03(\v2,.wg.cosmo.node.v1.CachePopulateConfigurationR\x1bcachePopulateConfigurations\x12p\n" +
+	"\x1drequest_scoped_configurations\x18\x04 \x03(\v2,.wg.cosmo.node.v1.RequestScopedConfigurationR\x1brequestScopedConfigurations\"\x95\x02\n" +
 	"\x18EntityCacheConfiguration\x12\x1b\n" +
 	"\ttype_name\x18\x01 \x01(\tR\btypeName\x12&\n" +
 	"\x0fmax_age_seconds\x18\x02 \x01(\x03R\rmaxAgeSeconds\x12'\n" +
@@ -5086,8 +5086,8 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"field_name\x18\x01 \x01(\tR\tfieldName\x12%\n" +
 	"\x0eoperation_type\x18\x02 \x01(\tR\roperationType\x12&\n" +
 	"\x0fmax_age_seconds\x18\x03 \x01(\x03R\rmaxAgeSeconds\x12(\n" +
-	"\x10entity_type_name\x18\x04 \x01(\tR\x0eentityTypeName\"t\n" +
-	"\x1fRequestScopedFieldConfiguration\x12\x1d\n" +
+	"\x10entity_type_name\x18\x04 \x01(\tR\x0eentityTypeName\"o\n" +
+	"\x1aRequestScopedConfiguration\x12\x1d\n" +
 	"\n" +
 	"field_name\x18\x01 \x01(\tR\tfieldName\x12\x1b\n" +
 	"\ttype_name\x18\x02 \x01(\tR\btypeName\x12\x15\n" +
@@ -5456,7 +5456,7 @@ var file_wg_cosmo_node_v1_node_proto_goTypes = []any{
 	(*EntityCacheConfiguration)(nil),          // 21: wg.cosmo.node.v1.EntityCacheConfiguration
 	(*CacheInvalidateConfiguration)(nil),      // 22: wg.cosmo.node.v1.CacheInvalidateConfiguration
 	(*CachePopulateConfiguration)(nil),        // 23: wg.cosmo.node.v1.CachePopulateConfiguration
-	(*RequestScopedFieldConfiguration)(nil),   // 24: wg.cosmo.node.v1.RequestScopedFieldConfiguration
+	(*RequestScopedConfiguration)(nil),        // 24: wg.cosmo.node.v1.RequestScopedConfiguration
 	(*CostConfiguration)(nil),                 // 25: wg.cosmo.node.v1.CostConfiguration
 	(*FieldWeightConfiguration)(nil),          // 26: wg.cosmo.node.v1.FieldWeightConfiguration
 	(*FieldListSizeConfiguration)(nil),        // 27: wg.cosmo.node.v1.FieldListSizeConfiguration
@@ -5555,7 +5555,7 @@ var file_wg_cosmo_node_v1_node_proto_depIdxs = []int32{
 	21,  // 28: wg.cosmo.node.v1.EntityCachingConfiguration.entity_cache:type_name -> wg.cosmo.node.v1.EntityCacheConfiguration
 	22,  // 29: wg.cosmo.node.v1.EntityCachingConfiguration.cache_invalidate_configurations:type_name -> wg.cosmo.node.v1.CacheInvalidateConfiguration
 	23,  // 30: wg.cosmo.node.v1.EntityCachingConfiguration.cache_populate_configurations:type_name -> wg.cosmo.node.v1.CachePopulateConfiguration
-	24,  // 31: wg.cosmo.node.v1.EntityCachingConfiguration.request_scoped_fields:type_name -> wg.cosmo.node.v1.RequestScopedFieldConfiguration
+	24,  // 31: wg.cosmo.node.v1.EntityCachingConfiguration.request_scoped_configurations:type_name -> wg.cosmo.node.v1.RequestScopedConfiguration
 	26,  // 32: wg.cosmo.node.v1.CostConfiguration.field_weights:type_name -> wg.cosmo.node.v1.FieldWeightConfiguration
 	27,  // 33: wg.cosmo.node.v1.CostConfiguration.list_sizes:type_name -> wg.cosmo.node.v1.FieldListSizeConfiguration
 	82,  // 34: wg.cosmo.node.v1.CostConfiguration.type_weights:type_name -> wg.cosmo.node.v1.CostConfiguration.TypeWeightsEntry

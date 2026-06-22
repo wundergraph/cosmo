@@ -193,7 +193,7 @@ import {
   type NatsEventType,
   type RequiredFieldConfiguration,
   type CachePopulateConfig,
-  type RequestScopedFieldConfiguration,
+  type RequestScopedConfiguration,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
@@ -204,6 +204,7 @@ import {
   fieldAlreadyProvidedWarning,
   invalidExternalFieldWarning,
   nonExternalConditionalFieldWarning,
+  requestScopedSingleFieldWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
 } from '../warnings/warnings';
@@ -4232,7 +4233,7 @@ export class NormalizationFactory {
   // Attaches a single field annotated with @openfed__requestScoped to its type's configurationData. A field
   // is both a reader and writer of the coordinate L1 — no receiver/provider. Fields with the same `key` share
   // the same L1 entry: whichever is resolved first populates it, subsequent ones inject from it.
-  extractRequestScopedConfig(fieldData: FieldData, typeName: string) {
+  extractRequestScopedConfig(fieldData: FieldData) {
     const directives = fieldData.directivesByName.get(OPENFED_REQUEST_SCOPED);
     if (!directives) {
       return;
@@ -4246,13 +4247,13 @@ export class NormalizationFactory {
       return;
     }
 
-    const config: RequestScopedFieldConfiguration = {
+    const config: RequestScopedConfiguration = {
       fieldName: fieldData.name,
-      typeName,
+      typeName: fieldData.renamedParentTypeName,
       l1Key: `${this.subgraphName}.${keyArg.value.value}`,
     };
-    const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
-      newConfigurationData(false, typeName),
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, fieldData.renamedParentTypeName, () =>
+      newConfigurationData(false, fieldData.renamedParentTypeName),
     );
     getOrInitializeEntityCaching(configurationData).requestScopedConfigurations.push(config);
   }
@@ -4433,8 +4434,6 @@ export class NormalizationFactory {
           const newParentTypeName = getParentTypeName(parentData);
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
-            // @openfed__requestScoped is valid on both object and interface fields.
-            this.extractRequestScopedConfig(fieldData, newParentTypeName);
             if (isObject) {
               // A field can't both evict (@openfed__cacheInvalidate) and write (@openfed__cachePopulate)
               // the cache for the same entity, so the two directives are mutually exclusive.
@@ -4452,6 +4451,8 @@ export class NormalizationFactory {
                 this.extractCacheInvalidateConfig(fieldData);
                 this.extractCachePopulateConfig(fieldData);
               }
+
+              this.extractRequestScopedConfig(fieldData);
             } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
             }

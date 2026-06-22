@@ -38,7 +38,7 @@ import {
   ImageReference,
   InternedString,
   PluginConfiguration,
-  RequestScopedFieldConfiguration,
+  RequestScopedConfiguration,
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
@@ -87,9 +87,13 @@ function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, Config
   const entityCache: EntityCacheConfiguration[] = [];
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
   const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
-  const requestScopedFields: RequestScopedFieldConfiguration[] = [];
+  const requestScopedConfigurations: RequestScopedConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
-    for (const ec of data.entityCaching?.entityCacheConfigurations ?? []) {
+    if (!data.entityCaching) {
+      continue;
+    }
+
+    for (const ec of data.entityCaching?.entityCacheConfigurations) {
       entityCache.push(
         new EntityCacheConfiguration({
           typeName: ec.typeName,
@@ -101,7 +105,7 @@ function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, Config
         }),
       );
     }
-    for (const ci of data.entityCaching?.cacheInvalidateConfigurations ?? []) {
+    for (const ci of data.entityCaching?.cacheInvalidateConfigurations) {
       cacheInvalidateConfigurations.push(
         new CacheInvalidateConfiguration({
           fieldName: ci.fieldName,
@@ -110,7 +114,7 @@ function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, Config
         }),
       );
     }
-    for (const cp of data.entityCaching?.cachePopulateConfigurations ?? []) {
+    for (const cp of data.entityCaching?.cachePopulateConfigurations) {
       cachePopulateConfigurations.push(
         new CachePopulateConfiguration({
           fieldName: cp.fieldName,
@@ -120,9 +124,9 @@ function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, Config
         }),
       );
     }
-    for (const field of data.entityCaching?.requestScopedFields ?? []) {
-      requestScopedFields.push(
-        new RequestScopedFieldConfiguration({
+    for (const field of data.entityCaching?.requestScopedConfigurations) {
+      requestScopedConfigurations.push(
+        new RequestScopedConfiguration({
           fieldName: field.fieldName,
           typeName: field.typeName,
           l1Key: field.l1Key,
@@ -130,20 +134,14 @@ function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, Config
       );
     }
   }
-  if (
-    entityCache.length === 0 &&
-    cacheInvalidateConfigurations.length === 0 &&
-    cachePopulateConfigurations.length === 0 &&
-    requestScopedFields.length === 0
-  ) {
-    return;
+  if (entityCache.length > 0 || cacheInvalidateConfigurations.length > 0 || cachePopulateConfigurations.length > 0 || requestScopedConfigurations.length > 0) {
+     return new EntityCachingConfiguration({
+      entityCache,
+      cacheInvalidateConfigurations,
+      cachePopulateConfigurations,
+      requestScopedConfigurations,
+    });
   }
-  return new EntityCachingConfiguration({
-    entityCache,
-    cacheInvalidateConfigurations,
-    cachePopulateConfigurations,
-    requestScopedFields,
-  });
 }
 
 export interface Input {

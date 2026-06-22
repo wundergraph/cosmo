@@ -104,7 +104,7 @@ message EntityCachingConfiguration {
   // Per-Mutation/Subscription-field cache population configs (from @openfed__cachePopulate)
   repeated CachePopulateConfiguration cache_populate_configurations = 3;
   // Request-scoped field configurations (from @openfed__requestScoped directive)
-  repeated RequestScopedFieldConfiguration request_scoped_fields = 4;
+  repeated RequestScopedConfiguration request_scoped_configurations = 4;
 }
 
 // Per-entity declaration for @openfed__entityCache. Marks a @key entity type as cacheable so the
@@ -145,7 +145,7 @@ message CachePopulateConfiguration {
 // @openfed__requestScoped(key: "X") share L1 key "{subgraphName}.X". The first field to resolve
 // populates L1; subsequent fields with the same key inject from L1 and can skip their
 // fetch when all required sub-fields are present.
-message RequestScopedFieldConfiguration {
+message RequestScopedConfiguration {
   string field_name = 1;
   string type_name = 2;
   string l1_key = 3;
