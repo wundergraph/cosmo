@@ -103,7 +103,7 @@ function extractEntityCachingConfiguration(
         }),
       );
     }
-    for (const ci of data.entityCaching?.cacheInvalidateConfigurations ?? []) {
+    for (const ci of data.entityCaching?.cacheInvalidationConfigurations) {
       cacheInvalidateConfigurations.push(
         new CacheInvalidateConfiguration({
           fieldName: ci.fieldName,
