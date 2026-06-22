@@ -1455,13 +1455,11 @@ func (x *CacheInvalidateConfiguration) GetEntityTypeName() string {
 // Per-field declaration for @openfed__cachePopulate. Tells the router to populate the entity cache
 // with the (Mutation/Subscription) operation's return value.
 type CachePopulateConfiguration struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FieldName     string                 `protobuf:"bytes,1,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
-	OperationType string                 `protobuf:"bytes,2,opt,name=operation_type,json=operationType,proto3" json:"operation_type,omitempty"`
-	// Optional override TTL. When omitted, falls back to the target entity's max_age_seconds.
-	// Composition rejects non-positive values.
-	MaxAgeSeconds  *int64 `protobuf:"varint,3,opt,name=max_age_seconds,json=maxAgeSeconds,proto3,oneof" json:"max_age_seconds,omitempty"`
-	EntityTypeName string `protobuf:"bytes,4,opt,name=entity_type_name,json=entityTypeName,proto3" json:"entity_type_name,omitempty"`
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	FieldName      string                 `protobuf:"bytes,1,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
+	OperationType  string                 `protobuf:"bytes,2,opt,name=operation_type,json=operationType,proto3" json:"operation_type,omitempty"`
+	MaxAgeSeconds  int64                  `protobuf:"varint,3,opt,name=max_age_seconds,json=maxAgeSeconds,proto3" json:"max_age_seconds,omitempty"`
+	EntityTypeName string                 `protobuf:"bytes,4,opt,name=entity_type_name,json=entityTypeName,proto3" json:"entity_type_name,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1511,8 +1509,8 @@ func (x *CachePopulateConfiguration) GetOperationType() string {
 }
 
 func (x *CachePopulateConfiguration) GetMaxAgeSeconds() int64 {
-	if x != nil && x.MaxAgeSeconds != nil {
-		return *x.MaxAgeSeconds
+	if x != nil {
+		return x.MaxAgeSeconds
 	}
 	return 0
 }
@@ -5082,14 +5080,13 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\n" +
 	"field_name\x18\x01 \x01(\tR\tfieldName\x12%\n" +
 	"\x0eoperation_type\x18\x02 \x01(\tR\roperationType\x12(\n" +
-	"\x10entity_type_name\x18\x03 \x01(\tR\x0eentityTypeName\"\xcd\x01\n" +
+	"\x10entity_type_name\x18\x03 \x01(\tR\x0eentityTypeName\"\xb4\x01\n" +
 	"\x1aCachePopulateConfiguration\x12\x1d\n" +
 	"\n" +
 	"field_name\x18\x01 \x01(\tR\tfieldName\x12%\n" +
-	"\x0eoperation_type\x18\x02 \x01(\tR\roperationType\x12+\n" +
-	"\x0fmax_age_seconds\x18\x03 \x01(\x03H\x00R\rmaxAgeSeconds\x88\x01\x01\x12(\n" +
-	"\x10entity_type_name\x18\x04 \x01(\tR\x0eentityTypeNameB\x12\n" +
-	"\x10_max_age_seconds\"t\n" +
+	"\x0eoperation_type\x18\x02 \x01(\tR\roperationType\x12&\n" +
+	"\x0fmax_age_seconds\x18\x03 \x01(\x03R\rmaxAgeSeconds\x12(\n" +
+	"\x10entity_type_name\x18\x04 \x01(\tR\x0eentityTypeName\"t\n" +
 	"\x1fRequestScopedFieldConfiguration\x12\x1d\n" +
 	"\n" +
 	"field_name\x18\x01 \x01(\tR\tfieldName\x12\x1b\n" +
@@ -5650,7 +5647,6 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 	file_wg_cosmo_node_v1_node_proto_msgTypes[4].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[9].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[10].OneofWrappers = []any{}
-	file_wg_cosmo_node_v1_node_proto_msgTypes[15].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[18].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[19].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[23].OneofWrappers = []any{}

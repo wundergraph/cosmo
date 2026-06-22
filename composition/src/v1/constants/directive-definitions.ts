@@ -91,7 +91,12 @@ import {
   OPENFED_REQUEST_SCOPED,
   SHADOW_MODE,
 } from '../../utils/string-constants';
-import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_INT_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from './type-nodes';
+import {
+  FALSE_BOOLEAN_VALUE_NODE,
+  REQUIRED_FIELDSET_TYPE_NODE,
+  REQUIRED_INT_TYPE_NODE,
+  REQUIRED_STRING_TYPE_NODE,
+} from './type-nodes';
 
 // @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 export const AUTHENTICATED_DEFINITION: DirectiveDefinitionNode = {
@@ -106,8 +111,6 @@ export const AUTHENTICATED_DEFINITION: DirectiveDefinitionNode = {
   name: stringToNameNode(AUTHENTICATED),
   repeatable: false,
 };
-
-export const BOOLEAN_FALSE_VALUE_NODE: ConstValueNode = { kind: Kind.BOOLEAN, value: false };
 
 // @composeDirective is currently unimplemented
 /* directive @composeDirective(name: String!) repeatable on SCHEMA */
@@ -848,19 +851,19 @@ export const OPENFED_ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(INCLUDE_HEADERS),
       type: stringToNamedTypeNode(BOOLEAN_SCALAR),
-      defaultValue: BOOLEAN_FALSE_VALUE_NODE,
+      defaultValue: FALSE_BOOLEAN_VALUE_NODE,
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(PARTIAL_CACHE_LOAD),
       type: stringToNamedTypeNode(BOOLEAN_SCALAR),
-      defaultValue: BOOLEAN_FALSE_VALUE_NODE,
+      defaultValue: FALSE_BOOLEAN_VALUE_NODE,
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(SHADOW_MODE),
       type: stringToNamedTypeNode(BOOLEAN_SCALAR),
-      defaultValue: BOOLEAN_FALSE_VALUE_NODE,
+      defaultValue: FALSE_BOOLEAN_VALUE_NODE,
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,

@@ -10,13 +10,13 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   undefinedRequiredArgumentsErrorMessage,
 } from '../../../src';
-import { createSubgraphWithDefault, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
+import { createSubgraphWithDefaultName, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
 
 describe('@openfed__requestScoped', () => {
   describe('registry', () => {
     test('the directive is materialized in the normalized subgraph output', () => {
       const { directiveDefinitionByName } = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             me: User @openfed__requestScoped(key: "u")
             viewer: User @openfed__requestScoped(key: "u")
@@ -35,7 +35,7 @@ describe('@openfed__requestScoped', () => {
   describe('configuration extraction', () => {
     test('≥ 2 fields sharing the same key produce a subgraph-prefixed l1Key and no warning', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             me: User @openfed__requestScoped(key: "me")
             viewer: User @openfed__requestScoped(key: "me")
@@ -58,7 +58,7 @@ describe('@openfed__requestScoped', () => {
 
     test('works on a non-entity object type field', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             currentLocale: String @openfed__requestScoped(key: "locale")
             articleLocale: String @openfed__requestScoped(key: "locale")
@@ -75,7 +75,7 @@ describe('@openfed__requestScoped', () => {
 
     test('a key declared on only one field still populates config but emits a warning', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             currentUser: User @openfed__requestScoped(key: "lonely")
           }
@@ -101,7 +101,7 @@ describe('@openfed__requestScoped', () => {
   describe('validation', () => {
     test('missing key argument is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             currentUser: User @openfed__requestScoped
           }
@@ -120,7 +120,7 @@ describe('@openfed__requestScoped', () => {
 
     test('the directive is not repeatable — two on the same field fails', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             currentUser: User @openfed__requestScoped(key: "a") @openfed__requestScoped(key: "b")
           }

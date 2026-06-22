@@ -104,6 +104,9 @@ const (
 	// PlatformServicePublishFederatedSubgraphsProcedure is the fully-qualified name of the
 	// PlatformService's PublishFederatedSubgraphs RPC.
 	PlatformServicePublishFederatedSubgraphsProcedure = "/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraphs"
+	// PlatformServiceGetBatchPublishJobStatusProcedure is the fully-qualified name of the
+	// PlatformService's GetBatchPublishJobStatus RPC.
+	PlatformServiceGetBatchPublishJobStatusProcedure = "/wg.cosmo.platform.v1.PlatformService/GetBatchPublishJobStatus"
 	// PlatformServiceCreateFederatedGraphProcedure is the fully-qualified name of the PlatformService's
 	// CreateFederatedGraph RPC.
 	PlatformServiceCreateFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateFederatedGraph"
@@ -653,6 +656,8 @@ type PlatformServiceClient interface {
 	// PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
 	// request. Affected federated graphs (and their contracts / feature flags) are composed exactly once each.
 	PublishFederatedSubgraphs(context.Context, *connect.Request[v1.PublishFederatedSubgraphsRequest]) (*connect.Response[v1.PublishFederatedSubgraphsResponse], error)
+	// Gets the status of a batch publish job by the provided job identifier.
+	GetBatchPublishJobStatus(context.Context, *connect.Request[v1.GetBatchPublishJobStatusRequest]) (*connect.Response[v1.GetBatchPublishJobStatusResponse], error)
 	// CreateFederatedGraph creates a federated graph on the control plane.
 	CreateFederatedGraph(context.Context, *connect.Request[v1.CreateFederatedGraphRequest]) (*connect.Response[v1.CreateFederatedGraphResponse], error)
 	// DeleteFederatedGraph deletes a federated graph from the control plane.
@@ -1131,6 +1136,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServicePublishFederatedSubgraphsProcedure,
 			connect.WithSchema(platformServiceMethods.ByName("PublishFederatedSubgraphs")),
+			connect.WithClientOptions(opts...),
+		),
+		getBatchPublishJobStatus: connect.NewClient[v1.GetBatchPublishJobStatusRequest, v1.GetBatchPublishJobStatusResponse](
+			httpClient,
+			baseURL+PlatformServiceGetBatchPublishJobStatusProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetBatchPublishJobStatus")),
 			connect.WithClientOptions(opts...),
 		),
 		createFederatedGraph: connect.NewClient[v1.CreateFederatedGraphRequest, v1.CreateFederatedGraphResponse](
@@ -2188,6 +2199,7 @@ type platformServiceClient struct {
 	createFederatedSubgraph                            *connect.Client[v1.CreateFederatedSubgraphRequest, v1.CreateFederatedSubgraphResponse]
 	publishFederatedSubgraph                           *connect.Client[v1.PublishFederatedSubgraphRequest, v1.PublishFederatedSubgraphResponse]
 	publishFederatedSubgraphs                          *connect.Client[v1.PublishFederatedSubgraphsRequest, v1.PublishFederatedSubgraphsResponse]
+	getBatchPublishJobStatus                           *connect.Client[v1.GetBatchPublishJobStatusRequest, v1.GetBatchPublishJobStatusResponse]
 	createFederatedGraph                               *connect.Client[v1.CreateFederatedGraphRequest, v1.CreateFederatedGraphResponse]
 	deleteFederatedGraph                               *connect.Client[v1.DeleteFederatedGraphRequest, v1.DeleteFederatedGraphResponse]
 	deleteFederatedSubgraph                            *connect.Client[v1.DeleteFederatedSubgraphRequest, v1.DeleteFederatedSubgraphResponse]
@@ -2473,6 +2485,11 @@ func (c *platformServiceClient) PublishFederatedSubgraph(ctx context.Context, re
 // PublishFederatedSubgraphs calls wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraphs.
 func (c *platformServiceClient) PublishFederatedSubgraphs(ctx context.Context, req *connect.Request[v1.PublishFederatedSubgraphsRequest]) (*connect.Response[v1.PublishFederatedSubgraphsResponse], error) {
 	return c.publishFederatedSubgraphs.CallUnary(ctx, req)
+}
+
+// GetBatchPublishJobStatus calls wg.cosmo.platform.v1.PlatformService.GetBatchPublishJobStatus.
+func (c *platformServiceClient) GetBatchPublishJobStatus(ctx context.Context, req *connect.Request[v1.GetBatchPublishJobStatusRequest]) (*connect.Response[v1.GetBatchPublishJobStatusResponse], error) {
+	return c.getBatchPublishJobStatus.CallUnary(ctx, req)
 }
 
 // CreateFederatedGraph calls wg.cosmo.platform.v1.PlatformService.CreateFederatedGraph.
@@ -3405,6 +3422,8 @@ type PlatformServiceHandler interface {
 	// PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
 	// request. Affected federated graphs (and their contracts / feature flags) are composed exactly once each.
 	PublishFederatedSubgraphs(context.Context, *connect.Request[v1.PublishFederatedSubgraphsRequest]) (*connect.Response[v1.PublishFederatedSubgraphsResponse], error)
+	// Gets the status of a batch publish job by the provided job identifier.
+	GetBatchPublishJobStatus(context.Context, *connect.Request[v1.GetBatchPublishJobStatusRequest]) (*connect.Response[v1.GetBatchPublishJobStatusResponse], error)
 	// CreateFederatedGraph creates a federated graph on the control plane.
 	CreateFederatedGraph(context.Context, *connect.Request[v1.CreateFederatedGraphRequest]) (*connect.Response[v1.CreateFederatedGraphResponse], error)
 	// DeleteFederatedGraph deletes a federated graph from the control plane.
@@ -3879,6 +3898,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServicePublishFederatedSubgraphsProcedure,
 		svc.PublishFederatedSubgraphs,
 		connect.WithSchema(platformServiceMethods.ByName("PublishFederatedSubgraphs")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetBatchPublishJobStatusHandler := connect.NewUnaryHandler(
+		PlatformServiceGetBatchPublishJobStatusProcedure,
+		svc.GetBatchPublishJobStatus,
+		connect.WithSchema(platformServiceMethods.ByName("GetBatchPublishJobStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateFederatedGraphHandler := connect.NewUnaryHandler(
@@ -4956,6 +4981,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServicePublishFederatedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServicePublishFederatedSubgraphsProcedure:
 			platformServicePublishFederatedSubgraphsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetBatchPublishJobStatusProcedure:
+			platformServiceGetBatchPublishJobStatusHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateFederatedGraphProcedure:
 			platformServiceCreateFederatedGraphHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteFederatedGraphProcedure:
@@ -5395,6 +5422,10 @@ func (UnimplementedPlatformServiceHandler) PublishFederatedSubgraph(context.Cont
 
 func (UnimplementedPlatformServiceHandler) PublishFederatedSubgraphs(context.Context, *connect.Request[v1.PublishFederatedSubgraphsRequest]) (*connect.Response[v1.PublishFederatedSubgraphsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraphs is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetBatchPublishJobStatus(context.Context, *connect.Request[v1.GetBatchPublishJobStatusRequest]) (*connect.Response[v1.GetBatchPublishJobStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetBatchPublishJobStatus is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) CreateFederatedGraph(context.Context, *connect.Request[v1.CreateFederatedGraphRequest]) (*connect.Response[v1.CreateFederatedGraphResponse], error) {

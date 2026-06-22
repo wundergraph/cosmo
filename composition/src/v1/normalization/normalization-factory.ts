@@ -67,6 +67,8 @@ import {
   newFieldAuthorizationData,
 } from '../utils/utils';
 import {
+  cacheInvalidateOnNonEntityReturnTypeErrorMessage,
+  cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage,
   configureDescriptionNoDescriptionError,
   costOnInterfaceFieldErrorMessage,
   duplicateArgumentsError,
@@ -77,6 +79,7 @@ import {
   duplicateImplementedInterfaceError,
   duplicateTypeDefinitionError,
   duplicateUnionMemberDefinitionError,
+  entityCacheWithoutKeyErrorMessage,
   equivalentSourceAndTargetOverrideErrorMessage,
   expectedEntityError,
   externalInterfaceFieldsError,
@@ -131,7 +134,9 @@ import {
   listSizeSlicingArgumentNotIntErrorMessage,
   listSizeSlicingArgumentSegmentNotFoundErrorMessage,
   listSizeSlicingArgumentSegmentNotInputObjectErrorMessage,
+  maxAgeNotPositiveIntegerErrorMessage,
   multipleNamedTypeDefinitionError,
+  negativeCacheTTLNotNonNegativeIntegerErrorMessage,
   noBaseScalarDefinitionError,
   noDefinedEnumValuesError,
   noDefinedUnionMembersError,
@@ -168,13 +173,8 @@ import {
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
   cacheInvalidateAndPopulateMutualExclusionErrorMessage,
-  cacheInvalidateOnNonEntityReturnTypeErrorMessage,
-  cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage,
   cachePopulateOnNonEntityReturnTypeErrorMessage,
   cachePopulateOnNonMutationSubscriptionFieldErrorMessage,
-  entityCacheWithoutKeyErrorMessage,
-  maxAgeNotPositiveIntegerErrorMessage,
-  negativeCacheTTLNotNonNegativeIntegerErrorMessage,
 } from '../../errors/errors';
 import {
   DEPENDENCIES_BY_DIRECTIVE_NAME,
@@ -183,16 +183,16 @@ import {
 } from '../constants/strings';
 import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
+  type CacheInvalidateConfiguration,
   type ConfigurationData,
   type Costs,
+  type EntityCacheConfiguration,
   type EventConfiguration,
   type FieldListSizeConfiguration,
   type FieldWeightConfiguration,
   type NatsEventType,
   type RequiredFieldConfiguration,
-  type CacheInvalidateConfig,
   type CachePopulateConfig,
-  type EntityCacheConfiguration,
   type RequestScopedFieldConfig,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
@@ -294,12 +294,13 @@ import {
   EDFS_REDIS_PUBLISH,
   EDFS_REDIS_SUBSCRIBE,
   ENTITIES_FIELD,
-  EXECUTABLE_DIRECTIVE_LOCATIONS,
   EXTENDS,
   EXTERNAL,
   FIELDS,
+  FIRST_ORDINAL,
   HYPHEN_JOIN,
   INACCESSIBLE,
+  INCLUDE_HEADERS,
   INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
   INT_SCALAR,
@@ -309,15 +310,20 @@ import {
   LIST_SIZE,
   LITERAL_AT,
   LITERAL_PERIOD,
+  MAX_AGE,
   MUTATION,
+  NEGATIVE_CACHE_TTL,
   NON_NULLABLE_BOOLEAN,
   NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
   NON_NULLABLE_INT,
   NON_NULLABLE_STRING,
   NOT_APPLICABLE,
   ONE_OF,
+  OPENFED_CACHE_INVALIDATE,
+  OPENFED_ENTITY_CACHE,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
+  PARTIAL_CACHE_LOAD,
   PROPAGATE,
   PROVIDER_ID,
   PROVIDER_TYPE_KAFKA,
@@ -335,6 +341,7 @@ import {
   SCOPES,
   SEMANTIC_NON_NULL,
   SERVICE_FIELD,
+  SHADOW_MODE,
   SHAREABLE,
   SIZED_FIELDS,
   SLICING_ARGUMENTS,
@@ -351,16 +358,8 @@ import {
   TOPICS,
   TYPENAME,
   WEIGHT,
-  OPENFED_CACHE_INVALIDATE,
   OPENFED_CACHE_POPULATE,
-  OPENFED_ENTITY_CACHE,
-  FIRST_ORDINAL,
-  INCLUDE_HEADERS,
-  MAX_AGE,
-  NEGATIVE_CACHE_TTL,
-  PARTIAL_CACHE_LOAD,
   OPENFED_REQUEST_SCOPED,
-  SHADOW_MODE,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
 import {
@@ -378,24 +377,28 @@ import {
   type AddInputValueDataByNodeParams,
   type ComposeDirectiveNode,
   type ConditionalFieldSetValidationResult,
+  type EntityCacheDirectiveNode,
   type ExtractDirectiveArgumentDataResult,
   type FieldSetData,
   type FieldSetParentResult,
   type HandleCostDirectiveParams,
   type HandleListSizeDirectiveParams,
-  type RecordDirectiveWeightOnFieldParams,
   type HandleOverrideDirectiveParams,
   type HandleRequiresScopesDirectiveParams,
   type HandleSemanticNonNullDirectiveParams,
   type KeyFieldSetData,
   type LinkImportData,
+  type RecordDirectiveWeightOnFieldParams,
   type UpsertInputObjectResult,
   type ValidateDirectiveParams,
   type CachePopulateDirectiveNode,
-  type EntityCacheDirectiveNode,
   type RequestScopedDirectiveNode,
 } from './types/types';
-import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
+import {
+  getOrInitializeEntityCaching,
+  newConfigurationData,
+  newFieldSetConditionData,
+} from '../../router-configuration/utils';
 import { type ImplementationErrors, type InvalidFieldImplementation } from '../../utils/types';
 import {
   type AbstractTypeName,
@@ -470,9 +473,10 @@ export class NormalizationFactory {
   directiveDefinitionDataByName = initializeDirectiveDefinitionDatas();
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
-  // Cached entity configs keyed by type name, populated by extractEntityCacheDirective() from
-  // @openfed__entityCache. Future caching directives (@openfed__queryCache etc.) use this as a lookup
-  // to verify a field's return type is a cached entity.
+  /* Cached entity configs keyed by type name, populated by extractEntityCacheDirective() from
+   * @openfed__entityCache. Future caching directives (@openfed__queryCache etc.) use this as a lookup
+   * to verify a field's return type is a cached entity.
+   */
   entityCacheConfigByTypeName = new Map<TypeName, EntityCacheConfiguration>();
   errors = new Array<Error>();
   entityDataByTypeName = new Map<TypeName, EntityData>();
@@ -837,14 +841,17 @@ export class NormalizationFactory {
         }
         continue;
       }
+
       if (definitionData.isComposed) {
         definitionData.isReferenced = true;
       }
+
       const definitionErrorMessages: Array<string> = [];
       const directiveLocation = nodeKindToDirectiveLocation(data.kind);
       if (!definitionData.locations.has(directiveLocation)) {
         definitionErrorMessages.push(invalidDirectiveLocationErrorMessage(directiveName, directiveLocation));
       }
+
       if (directiveNodes.length > 1 && !definitionData.isRepeatable) {
         const handledDirectiveNames = getValueOrDefault(
           this.invalidRepeatedDirectiveNameByCoords,
@@ -1467,13 +1474,11 @@ export class NormalizationFactory {
       this.updateCompositeOutputDataByNode(node, parentData, extensionType);
       if (!directivesByName.has(INTERFACE_OBJECT)) {
         this.addConcreteTypeNamesForImplementedInterfaces(parentData.implementedInterfaceTypeNames, typeName);
+        this.extractEntityCacheDirective(parentData);
       }
       return;
     }
     const implementedInterfaceTypeNames = this.extractImplementedInterfaceTypeNames(node, new Set<AbstractTypeName>());
-    if (!directivesByName.has(INTERFACE_OBJECT)) {
-      this.addConcreteTypeNamesForImplementedInterfaces(implementedInterfaceTypeNames, typeName);
-    }
     const newParentData: ObjectDefinitionData = {
       configureDescriptionDataBySubgraphName: new Map<SubgraphName, ConfigureDescriptionData>(),
       directivesByName: directivesByName,
@@ -1492,6 +1497,10 @@ export class NormalizationFactory {
       subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     };
+    if (!directivesByName.has(INTERFACE_OBJECT)) {
+      this.addConcreteTypeNamesForImplementedInterfaces(implementedInterfaceTypeNames, typeName);
+      this.extractEntityCacheDirective(newParentData);
+    }
     this.extractConfigureDescriptionsData(newParentData);
     this.parentDefinitionDataByTypeName.set(typeName, newParentData);
   }
@@ -4014,14 +4023,12 @@ export class NormalizationFactory {
     }
   }
 
-  extractEntityCacheDirective(typeName: string, parentData: ParentDefinitionData) {
-    if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+  extractEntityCacheDirective({ directivesByName, name: typeName }: ObjectDefinitionData) {
+    const entityCacheDirectives = directivesByName.get(OPENFED_ENTITY_CACHE);
+    if (!entityCacheDirectives || entityCacheDirectives.length === 0) {
       return;
     }
-    const entityCacheDirectives = parentData.directivesByName.get(OPENFED_ENTITY_CACHE);
-    if (!entityCacheDirectives || entityCacheDirectives.length == 0) {
-      return;
-    }
+
     if (!this.keyFieldSetDatasByTypeName.has(typeName)) {
       this.errors.push(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
@@ -4030,12 +4037,19 @@ export class NormalizationFactory {
       );
       return;
     }
-    // validateDirectives() (run earlier in normalize()) has already guaranteed each argument's type —
-    // Int for maxAge/negativeCacheTTL, Boolean for the flags — so the generic ConstDirectiveNode is
-    // narrowed once to the precise typed node, mirroring RequestScopedDirectiveNode/ComposeDirectiveNode.
-    // Optional arguments may be absent (definition defaults are not materialized onto the usage AST),
-    // so the config starts at the directive's documented defaults and each present argument overrides it.
+
+    /* validateDirectives() (run earlier in normalize()) has already guaranteed each argument's type —
+     * Int for maxAge/negativeCacheTTL, Boolean for the flags — so the generic ConstDirectiveNode is
+     * narrowed once to the precise typed node, mirroring RequestScopedDirectiveNode/ComposeDirectiveNode.
+     * Optional arguments may be absent (definition defaults are not materialized onto the usage AST),
+     * so the config starts at the directive's documented defaults and each present argument overrides it.
+     */
     const directive = entityCacheDirectives[0] as EntityCacheDirectiveNode;
+    if (this.entityCacheConfigByTypeName.has(typeName)) {
+      // The error would be caught in directive validation as an invalid repeated directive use.
+      return;
+    }
+
     const config: EntityCacheConfiguration = {
       typeName,
       maxAgeSeconds: 0,
@@ -4086,21 +4100,26 @@ export class NormalizationFactory {
       }
     }
 
+    const entityCacheErrors: Array<Error> = [];
+
     if (config.maxAgeSeconds <= 0) {
-      this.errors.push(
+      entityCacheErrors.push(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_ENTITY_CACHE, value: config.maxAgeSeconds }),
+          maxAgeNotPositiveIntegerErrorMessage(config.maxAgeSeconds),
         ]),
       );
-      return;
     }
 
     if (config.notFoundCacheTtlSeconds < 0) {
-      this.errors.push(
+      entityCacheErrors.push(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
           negativeCacheTTLNotNonNegativeIntegerErrorMessage(config.notFoundCacheTtlSeconds),
         ]),
       );
+    }
+
+    if (entityCacheErrors.length > 0) {
+      this.errors.push(...entityCacheErrors);
       return;
     }
 
@@ -4108,66 +4127,18 @@ export class NormalizationFactory {
     const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
       newConfigurationData(true, typeName),
     );
-    configurationData.entityCaching = {
-      ...configurationData.entityCaching,
-      entityCacheConfigurations: [...(configurationData.entityCaching?.entityCacheConfigurations ?? []), config],
-    };
+
+    getOrInitializeEntityCaching(configurationData).entityCacheConfigurations.push(config);
   }
 
-  // Dispatches the per-field caching directives. Must run after extractEntityCacheDirective() (reads
-  // entityCacheConfigByTypeName). All object types are walked, not just root operation types: these
-  // directives are declared `on FIELD_DEFINITION`, so they can be (mis)placed on any field.
-  // getOperationTypeNodeForRootTypeName() returns undefined for non-root types; each extractor then reports
-  // the misplacement via its operation-type check, rather than silently ignoring it.
-  processRootFieldCacheDirectives() {
-    for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
-      if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-        continue;
-      }
-      const operationType = this.getOperationTypeNodeForRootTypeName(parentTypeName);
-      // A renamed root type (e.g. `schema { query: MyQuery }`) is keyed in configurationDataByTypeName under
-      // its federated/canonical name (Query/Mutation/Subscription) by every other config writer (keys, provides,
-      // the root-node lookup). Cache configs must use the same key, or the router reads the canonical node and
-      // never sees them.
-      const configurationTypeName = getParentTypeName(parentData);
-
-      for (const [fieldName, fieldData] of parentData.fieldDataByName) {
-        const fieldCoords = `${parentTypeName}.${fieldName}`;
-        const hasCacheInvalidate = fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE);
-        const hasCachePopulate = fieldData.directivesByName.has(OPENFED_CACHE_POPULATE);
-
-        // A field cannot both populate and invalidate the cache — they are contradictory operations.
-        if (hasCacheInvalidate && hasCachePopulate) {
-          this.errors.push(
-            invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
-              cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords),
-            ]),
-          );
-          continue;
-        }
-
-        if (hasCacheInvalidate) {
-          this.extractCacheInvalidateConfig(parentTypeName, configurationTypeName, fieldName, fieldData, operationType);
-        }
-        if (hasCachePopulate) {
-          this.extractCachePopulateConfig(parentTypeName, configurationTypeName, fieldName, fieldData, operationType);
-        }
-      }
+  extractCacheInvalidateConfig(fieldData: FieldData) {
+    if (!fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE)) {
+      return;
     }
-  }
 
-  // Extracts @openfed__cacheInvalidate from Mutation/Subscription fields. The return type must be a cached
-  // entity (@key + @openfed__entityCache). A non-Mutation/Subscription placement (including non-root fields,
-  // where operationType is undefined) is reported, never silently ignored.
-  extractCacheInvalidateConfig(
-    parentTypeName: string,
-    configurationTypeName: string,
-    fieldName: string,
-    fieldData: FieldData,
-    operationType: OperationTypeNode | undefined,
-  ) {
-    const fieldCoords = `${parentTypeName}.${fieldName}`;
-    if (operationType !== OperationTypeNode.MUTATION && operationType !== OperationTypeNode.SUBSCRIPTION) {
+    const operationType = this.getOperationTypeNodeForRootTypeName(fieldData.originalParentTypeName);
+    const fieldCoords = `${fieldData.originalParentTypeName}.${fieldData.name}`;
+    if (!operationType || operationType === OperationTypeNode.QUERY) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
           cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
@@ -4176,41 +4147,37 @@ export class NormalizationFactory {
       return;
     }
     const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-    if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
+    if (!this.entityCacheConfigByTypeName.has(returnTypeName)) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
-          cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
+          cacheInvalidateOnNonEntityReturnTypeErrorMessage({ fieldCoords, returnType: returnTypeName }),
         ]),
       );
       return;
     }
-    const config: CacheInvalidateConfig = {
-      fieldName,
-      operationType: operationType === OperationTypeNode.MUTATION ? MUTATION : SUBSCRIPTION,
-      entityTypeName: returnTypeName,
-    };
-    const configurationData = getValueOrDefault(this.configurationDataByTypeName, configurationTypeName, () =>
-      newConfigurationData(false, configurationTypeName),
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, fieldData.renamedParentTypeName, () =>
+      newConfigurationData(false, fieldData.renamedParentTypeName),
     );
 
-    const existingCacheInvalidates = configurationData.entityCaching?.cacheInvalidateConfigurations ?? [];
-    configurationData.entityCaching = {
-      ...configurationData.entityCaching,
-      cacheInvalidateConfigurations: [...existingCacheInvalidates, config],
+    const config: CacheInvalidateConfiguration = {
+      entityTypeName: returnTypeName,
+      fieldName: fieldData.name,
+      operationType: operationType,
     };
+
+    getOrInitializeEntityCaching(configurationData).cacheInvalidateConfigurations.push(config);
   }
 
   // Extracts @openfed__cachePopulate from Mutation/Subscription fields. The return type must be a cached
   // entity (@key + @openfed__entityCache). maxAge is optional — when absent the router falls back to the
   // entity's @openfed__entityCache TTL; when present it must be positive.
-  extractCachePopulateConfig(
-    parentTypeName: string,
-    configurationTypeName: string,
-    fieldName: string,
-    fieldData: FieldData,
-    operationType: OperationTypeNode | undefined,
-  ) {
-    const fieldCoords = `${parentTypeName}.${fieldName}`;
+  extractCachePopulateConfig(fieldData: FieldData) {
+    if (!fieldData.directivesByName.has(OPENFED_CACHE_POPULATE)) {
+      return;
+    }
+
+    const fieldCoords = `${fieldData.originalParentTypeName}.${fieldData.name}`;
+    const operationType = this.getOperationTypeNodeForRootTypeName(fieldData.originalParentTypeName);
     if (operationType !== OperationTypeNode.MUTATION && operationType !== OperationTypeNode.SUBSCRIPTION) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
@@ -4223,7 +4190,7 @@ export class NormalizationFactory {
     if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
-          cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
+          cachePopulateOnNonEntityReturnTypeErrorMessage(returnTypeName),
         ]),
       );
       return;
@@ -4242,7 +4209,7 @@ export class NormalizationFactory {
       if (maxAgeRaw <= 0) {
         this.errors.push(
           invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
-            maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_CACHE_POPULATE, value: maxAgeRaw }),
+            maxAgeNotPositiveIntegerErrorMessage(maxAgeRaw),
           ]),
         );
         return;
@@ -4250,20 +4217,17 @@ export class NormalizationFactory {
       maxAgeSeconds = maxAgeRaw;
     }
     const config: CachePopulateConfig = {
-      fieldName,
+      fieldName: fieldData.name,
       operationType: operationType === OperationTypeNode.MUTATION ? MUTATION : SUBSCRIPTION,
       entityTypeName: returnTypeName,
       maxAgeSeconds,
     };
-    const configurationData = getValueOrDefault(this.configurationDataByTypeName, configurationTypeName, () =>
-      newConfigurationData(false, configurationTypeName),
+
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, fieldData.renamedParentTypeName, () =>
+      newConfigurationData(false, fieldData.renamedParentTypeName),
     );
 
-    const existingCachePopulates = configurationData.entityCaching?.cachePopulateConfigurations ?? [];
-    configurationData.entityCaching = {
-      ...configurationData.entityCaching,
-      cachePopulateConfigurations: [...existingCachePopulates, config],
-    };
+    getOrInitializeEntityCaching(configurationData).cachePopulateConfigurations.push(config);
   }
 
   extractRequestScopedFields() {
@@ -4339,7 +4303,7 @@ export class NormalizationFactory {
       const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
         newConfigurationData(false, typeName),
       );
-      configurationData.entityCaching = { ...configurationData.entityCaching, requestScopedFields: fields };
+      getOrInitializeEntityCaching(configurationData).requestScopedFields = fields;
     }
   }
 
@@ -4448,6 +4412,7 @@ export class NormalizationFactory {
     }
     // Check all key field sets for @external fields to assess whether they are conditional
     this.evaluateExternalKeyFields();
+
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       switch (parentData.kind) {
         case Kind.ENUM_TYPE_DEFINITION: {
@@ -4506,9 +4471,6 @@ export class NormalizationFactory {
           const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
           const isObject = parentData.kind === Kind.OBJECT_TYPE_DEFINITION;
 
-          // Extract @openfed__entityCache here (Object-only) so we reuse this iterator instead of a separate pass.
-          this.extractEntityCacheDirective(parentTypeName, parentData);
-
           if (this.isSubgraphVersionTwo && parentData.extensionType === ExtensionType.EXTENDS) {
             // @extends is essentially ignored in V2. It was only propagated to handle @external key fields.
             parentData.extensionType = ExtensionType.NONE;
@@ -4517,9 +4479,27 @@ export class NormalizationFactory {
             parentData.fieldDataByName.delete(SERVICE_FIELD);
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
           }
+
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
-            if (!isObject && fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
+            if (isObject) {
+              // A field can't both evict (@openfed__cacheInvalidate) and write (@openfed__cachePopulate)
+              // the cache for the same entity, so the two directives are mutually exclusive.
+              if (
+                fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE) &&
+                fieldData.directivesByName.has(OPENFED_CACHE_POPULATE)
+              ) {
+                const fieldCoords = `${fieldData.originalParentTypeName}.${fieldData.name}`;
+                this.errors.push(
+                  invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
+                    cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords),
+                  ]),
+                );
+              } else {
+                this.extractCacheInvalidateConfig(fieldData);
+                this.extractCachePopulateConfig(fieldData);
+              }
+            } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
             }
             // Arguments can only be fully validated once all parents types are known
@@ -4614,10 +4594,6 @@ export class NormalizationFactory {
     this.addValidConditionalFieldSetConfigurations();
     // this is where @key configurations are added to the ConfigurationData
     this.addValidKeyFieldSetConfigurations();
-    // per-field caching directives (@openfed__cacheInvalidate etc.) — must run after entityCache
-    // (entityCacheConfigByTypeName is populated earlier by extractEntityCacheDirective() during the
-    // parentDefinitionData iteration in normalize())
-    this.processRootFieldCacheDirectives();
     // this is where @openfed__requestScoped configurations are added to the ConfigurationData
     this.extractRequestScopedFields();
     // Check that explicitly defined operations types are valid objects and that their fields are also valid

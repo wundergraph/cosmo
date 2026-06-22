@@ -871,7 +871,8 @@
       "Mode": "enforce",
       "MaxEstimatedLimit": 1000,
       "EstimatedListSize": 10,
-      "ExposeHeaders": false
+      "ExposeHeaders": false,
+      "IgnoreImplementingTypeWeights": false
     },
     "DepthLimit": null,
     "ParserLimits": {
