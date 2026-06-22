@@ -674,7 +674,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 	}
 
 	// Entity caching configurations
-	for _, ec := range in.EntityCacheConfigurations {
+	for _, ec := range in.GetEntityCachingConfiguration().GetEntityCache() {
 		cacheName := resolveEntityCacheProviderID(l.entityCachingConfig, subgraphName, ec.TypeName)
 		out.FederationMetaData.EntityCaching = append(out.FederationMetaData.EntityCaching, plan.EntityCacheConfiguration{
 			TypeName:                    ec.TypeName,
@@ -688,7 +688,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 	}
 
 	// Root field cache configurations
-	for _, rfc := range in.RootFieldCacheConfigurations {
+	for _, rfc := range in.GetEntityCachingConfiguration().GetQueryCacheConfigurations() {
 		cacheName := resolveEntityCacheProviderID(l.entityCachingConfig, subgraphName, rfc.EntityTypeName)
 		var mappings []plan.EntityKeyMapping
 		for _, m := range rfc.EntityKeyMappings {
@@ -718,10 +718,10 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 	}
 
 	// Mutation/subscription cache populate
-	for _, cp := range in.CachePopulateConfigurations {
+	for _, cp := range in.GetEntityCachingConfiguration().GetCachePopulateConfigurations() {
 		if cp.OperationType == protoOperationTypeSubscription {
 			var targetEntity *nodev1.EntityCacheConfiguration
-			for _, ec := range in.EntityCacheConfigurations {
+			for _, ec := range in.GetEntityCachingConfiguration().GetEntityCache() {
 				if ec.TypeName == cp.EntityTypeName {
 					targetEntity = ec
 					break
@@ -731,8 +731,8 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 				continue
 			}
 			ttl := time.Duration(targetEntity.MaxAgeSeconds) * time.Second
-			if cp.MaxAgeSeconds != nil {
-				ttl = time.Duration(*cp.MaxAgeSeconds) * time.Second
+			if cp.MaxAgeSeconds != 0 {
+				ttl = time.Duration(cp.MaxAgeSeconds) * time.Second
 			}
 			cacheName := resolveEntityCacheProviderID(l.entityCachingConfig, subgraphName, targetEntity.TypeName)
 			out.FederationMetaData.SubscriptionEntityPopulation = append(
@@ -750,8 +750,8 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 			// mutation-time writes. Without this, the populate path falls back to the
 			// cache implementation's default TTL.
 			var mutationTTL time.Duration
-			if cp.MaxAgeSeconds != nil {
-				mutationTTL = time.Duration(*cp.MaxAgeSeconds) * time.Second
+			if cp.MaxAgeSeconds != 0 {
+				mutationTTL = time.Duration(cp.MaxAgeSeconds) * time.Second
 			}
 			out.FederationMetaData.MutationFieldCaching = append(out.FederationMetaData.MutationFieldCaching, plan.MutationFieldCacheConfiguration{
 				FieldName:                     cp.FieldName,
@@ -762,11 +762,11 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 	}
 
 	// Mutation/subscription cache invalidation
-	for _, ci := range in.CacheInvalidateConfigurations {
+	for _, ci := range in.GetEntityCachingConfiguration().GetCacheInvalidateConfigurations() {
 		if ci.OperationType == protoOperationTypeSubscription {
 			cacheName := resolveEntityCacheProviderID(l.entityCachingConfig, subgraphName, ci.EntityTypeName)
 			var includeHeaders bool
-			for _, ec := range in.EntityCacheConfigurations {
+			for _, ec := range in.GetEntityCachingConfiguration().GetEntityCache() {
 				if ec.TypeName == ci.EntityTypeName {
 					includeHeaders = ec.IncludeHeaders
 					break
@@ -793,7 +793,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 	// Request-scoped field configurations. Every field annotated with @requestScoped
 	// in the subgraph is both a potential reader and writer of the coordinate L1 under
 	// its L1Key. The planner emits both a hint (read) and an export (write) for each.
-	for _, rsf := range in.RequestScopedFields {
+	for _, rsf := range in.GetEntityCachingConfiguration().GetRequestScopedConfigurations() {
 		out.FederationMetaData.RequestScopedFields = append(out.FederationMetaData.RequestScopedFields, plan.RequestScopedField{
 			FieldName: rsf.FieldName,
 			TypeName:  rsf.TypeName,
