@@ -265,7 +265,11 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	if routerEngineCfg.CostControl != nil && routerEngineCfg.CostControl.Enabled {
 		planConfig.ComputeCosts = true
 		planConfig.StaticCostDefaultListSize = routerEngineCfg.CostControl.EstimatedListSize
-		planConfig.IgnoreImplementingTypeWeights = routerEngineCfg.CostControl.IgnoreImplementingTypeWeights
+		// TODO(entity-caching): the entity-caching graphql-go-tools fork pinned by this
+		// branch (v2.4.5-0.20260610...) predates plan.Configuration.IgnoreImplementingTypeWeights,
+		// which only exists in released v2.5.0. Restore this assignment once the fork is
+		// rebased onto v2.5.0. Until then this CostControl toggle is a no-op.
+		// planConfig.IgnoreImplementingTypeWeights = routerEngineCfg.CostControl.IgnoreImplementingTypeWeights
 	}
 
 	return planConfig, providers, nil
