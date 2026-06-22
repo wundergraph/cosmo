@@ -6,6 +6,7 @@ import {
   type ObjectDefinitionData,
 } from '../schema-building/types/types';
 import {
+  type CacheInvalidateOnNonEntityReturnTypeErrorParams,
   type IncompatibleMergedTypesErrorParams,
   type IncompatibleParentTypeMergeErrorParams,
   type IncompatibleTypeWithProvidesErrorMessageParams,
@@ -2053,7 +2054,7 @@ export function unknownSubgraphNameError(subgraphName: SubgraphName): Error {
 }
 
 export function entityCacheWithoutKeyErrorMessage(typeName: TypeName): string {
-  return `Type "${typeName}" declares the @openfed__entityCache directive but does not define a @key directive.`;
+  return `Object "${typeName}" does not define a "@key" directive.`;
 }
 
 export function maxAgeNotPositiveIntegerErrorMessage({
@@ -2064,7 +2065,7 @@ export function maxAgeNotPositiveIntegerErrorMessage({
 }
 
 export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(value: number): string {
-  return `The directive "@openfed__entityCache" argument "negativeCacheTTL" must be provided a zero or positive integer; received "${value}".`;
+  return `The argument "negativeCacheTTL" must be provided zero or a positive integer; received "${value}".`;
 }
 
 export function queryCacheOnNonQueryFieldErrorMessage(fieldCoords: string): string {
@@ -2082,19 +2083,22 @@ export function queryCacheOnNonEntityReturnTypeErrorMessage(fieldCoords: string,
 }
 
 export function cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
-  return `@openfed__cacheInvalidate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
+  return `Coordinates "${fieldCoords}" are not a Mutation or Subscription root field.`;
 }
 
-export function cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
-  return `Field "${fieldCoords}" has @openfed__cacheInvalidate but returns non-entity type "${returnType}".`;
+export function cacheInvalidateOnNonEntityReturnTypeErrorMessage({
+  fieldCoords,
+  returnType,
+}: CacheInvalidateOnNonEntityReturnTypeErrorParams): string {
+  return `Coordinates "${fieldCoords}" return non-entity type "${returnType}".`;
 }
 
 export function cachePopulateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
   return `@openfed__cachePopulate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
 }
 
-export function cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
-  return `Field "${fieldCoords}" has @openfed__cachePopulate but returns non-entity type "${returnType}".`;
+export function cachePopulateOnNonEntityReturnTypeErrorMessage(returnType: string): string {
+  return `@openfed__cachePopulate returns non-entity type "${returnType}".`;
 }
 
 export function cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords: string): string {

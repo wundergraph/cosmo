@@ -1,4 +1,4 @@
-import { Kind, type TypeNode } from 'graphql';
+import { type ConstValueNode, Kind, type TypeNode } from 'graphql';
 import { stringToNamedTypeNode } from '../../ast/utils';
 import { FIELD_SET_SCALAR, INT_SCALAR, STRING_SCALAR } from '../../utils/string-constants';
 
@@ -16,3 +16,5 @@ export const REQUIRED_FIELDSET_TYPE_NODE: TypeNode = {
   kind: Kind.NON_NULL_TYPE,
   type: stringToNamedTypeNode(FIELD_SET_SCALAR),
 };
+
+export const FALSE_BOOLEAN_VALUE_NODE: ConstValueNode = { kind: Kind.BOOLEAN, value: false };

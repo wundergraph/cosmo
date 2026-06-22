@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.324.1](https://github.com/wundergraph/cosmo/compare/router@0.324.0...router@0.324.1) (2026-06-19)
+
+### Bug Fixes
+
+* **router:** accept JSON content type with parameters in MCP requests ([#2988](https://github.com/wundergraph/cosmo/issues/2988)) ([060ecbe](https://github.com/wundergraph/cosmo/commit/060ecbef1501ac512efd13be47c4de9becb53634)) (@asoorm)
+
+# [0.324.0](https://github.com/wundergraph/cosmo/compare/router@0.323.3...router@0.324.0) (2026-06-18)
+
+### Features
+
+* enable to ignore cost weights on implementing types ([#2976](https://github.com/wundergraph/cosmo/issues/2976)) ([91039af](https://github.com/wundergraph/cosmo/commit/91039af80ce600f8948c68d32eb18c8148d6d9b2)) (@ysmolski)
+
+## [0.323.3](https://github.com/wundergraph/cosmo/compare/router@0.323.2...router@0.323.3) (2026-06-18)
+
+### Bug Fixes
+
+* **router:** allow from_file header to be propagated ([#2979](https://github.com/wundergraph/cosmo/issues/2979)) ([60b55da](https://github.com/wundergraph/cosmo/commit/60b55da9223379ef1f5a2a6e74a13f2fe6b9d24e)) (@Noroth)
+
+## [0.323.2](https://github.com/wundergraph/cosmo/compare/router@0.323.1...router@0.323.2) (2026-06-16)
+
+### Bug Fixes
+
+* **router:** close redis connections on unsubscribe ([#2917](https://github.com/wundergraph/cosmo/issues/2917)) ([48e901d](https://github.com/wundergraph/cosmo/commit/48e901da424169980136b697fe900aba90cbff6a)) (@dkorittki)
+
 ## [0.323.1](https://github.com/wundergraph/cosmo/compare/router@0.323.0...router@0.323.1) (2026-06-15)
 
 ### Bug Fixes

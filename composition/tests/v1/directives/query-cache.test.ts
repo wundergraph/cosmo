@@ -32,13 +32,13 @@ import {
   scalarArgumentToListKeySpecErrorMessage,
   undefinedRequiredArgumentsErrorMessage,
 } from '../../../src';
-import { createSubgraphWithDefault, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
+import { createSubgraphWithDefaultName, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
 
 describe('@openfed__queryCache', () => {
   describe('configuration extraction', () => {
     test('a queryCache field returning a cached entity produces a rootFieldCacheConfiguration with defaults', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user: User @openfed__queryCache(maxAge: 60)
           }
@@ -64,7 +64,7 @@ describe('@openfed__queryCache', () => {
 
     test('explicit includeHeaders and shadowMode are reflected in the extracted config', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user: User @openfed__queryCache(maxAge: 120, includeHeaders: true, shadowMode: true)
           }
@@ -85,7 +85,7 @@ describe('@openfed__queryCache', () => {
 
     test('@openfed__is maps an argument to the returned entity @key field', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user(id: ID! @openfed__is(fields: "id")): User @openfed__queryCache(maxAge: 60)
           }
@@ -106,7 +106,7 @@ describe('@openfed__queryCache', () => {
 
     test('multiple queryCache fields each produce a rootFieldCacheConfiguration', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user: User @openfed__queryCache(maxAge: 60)
             product: Product @openfed__queryCache(maxAge: 30)
@@ -127,7 +127,7 @@ describe('@openfed__queryCache', () => {
 
     test('a composite @openfed__is via an input-object argument maps every nested key field', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             product(key: ProductKey! @openfed__is(fields: "id sku")): Product @openfed__queryCache(maxAge: 60)
           }
@@ -156,7 +156,7 @@ describe('@openfed__queryCache', () => {
 
     test('separate scalar arguments together cover a composite @key', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             product(id: ID! @openfed__is(fields: "id"), sku: String! @openfed__is(fields: "sku")): Product @openfed__queryCache(maxAge: 60)
           }
@@ -181,7 +181,7 @@ describe('@openfed__queryCache', () => {
 
     test('a nested @openfed__is selection maps through an input object to a nested @key field', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             review(key: ReviewKey! @openfed__is(fields: "store{id}")): Review @openfed__queryCache(maxAge: 60)
           }
@@ -211,7 +211,7 @@ describe('@openfed__queryCache', () => {
 
     test('a composite @key containing a list-valued field maps through an input object', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             product(key: ProductKey! @openfed__is(fields: "id tags")): Product @openfed__queryCache(maxAge: 60)
           }
@@ -240,7 +240,7 @@ describe('@openfed__queryCache', () => {
 
     test('an entity with multiple @keys maps only the @key fully covered by arguments', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user(id: ID! @openfed__is(fields: "id")): User @openfed__queryCache(maxAge: 60)
           }
@@ -262,7 +262,7 @@ describe('@openfed__queryCache', () => {
 
     test('a list-returning field with a list of input objects produces a batch composite mapping', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             products(keys: [ProductKey!]! @openfed__is(fields: "id sku")): [Product] @openfed__queryCache(maxAge: 60)
           }
@@ -291,7 +291,7 @@ describe('@openfed__queryCache', () => {
 
     test('a list-returning field with a list argument produces a batch mapping', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             users(ids: [ID!]! @openfed__is(fields: "id")): [User] @openfed__queryCache(maxAge: 60)
           }
@@ -312,7 +312,7 @@ describe('@openfed__queryCache', () => {
 
     test('a batch lookup against a list-valued @key field accepts a list-of-lists argument', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             products(tags: [[String!]!]! @openfed__is(fields: "tags")): [Product] @openfed__queryCache(maxAge: 60)
           }
@@ -333,7 +333,7 @@ describe('@openfed__queryCache', () => {
 
     test('a returned entity without @openfed__entityCache skips extraction and emits a warning', () => {
       const result = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user: User @openfed__queryCache(maxAge: 60)
           }
@@ -358,7 +358,7 @@ describe('@openfed__queryCache', () => {
   describe('validation', () => {
     test('the required maxAge argument missing is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user: User @openfed__queryCache
           }
@@ -377,7 +377,7 @@ describe('@openfed__queryCache', () => {
 
     test('a non-positive maxAge is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user: User @openfed__queryCache(maxAge: 0)
           }
@@ -396,7 +396,7 @@ describe('@openfed__queryCache', () => {
 
     test('@openfed__queryCache on a non-Query field is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user: User
           }
@@ -416,7 +416,7 @@ describe('@openfed__queryCache', () => {
 
     test('@openfed__queryCache on a field returning a non-entity type is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user: User @openfed__queryCache(maxAge: 60)
           }
@@ -435,7 +435,7 @@ describe('@openfed__queryCache', () => {
 
     test('the directive is not repeatable — two on the same field fails', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user: User @openfed__queryCache(maxAge: 60) @openfed__queryCache(maxAge: 120)
           }
@@ -458,7 +458,7 @@ describe('@openfed__is', () => {
   describe('validation', () => {
     test('@openfed__is without @openfed__queryCache on the same field is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user(id: ID! @openfed__is(fields: "id")): User
           }
@@ -477,7 +477,7 @@ describe('@openfed__is', () => {
 
     test('@openfed__is without @openfed__queryCache still fails when other plain arguments are present', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user(name: String, id: ID! @openfed__is(fields: "id")): User
           }
@@ -497,7 +497,7 @@ describe('@openfed__is', () => {
 
     test('@openfed__is targeting a non-@key field is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user(name: String! @openfed__is(fields: "name")): User @openfed__queryCache(maxAge: 60)
           }
@@ -517,7 +517,7 @@ describe('@openfed__is', () => {
 
     test('@openfed__is with an argument type that mismatches the @key field type is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user(id: String! @openfed__is(fields: "id")): User @openfed__queryCache(maxAge: 60)
           }
@@ -536,7 +536,7 @@ describe('@openfed__is', () => {
 
     test('@openfed__is referencing a field absent from the entity is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user(key: ID! @openfed__is(fields: "missing")): User @openfed__queryCache(maxAge: 60)
           }
@@ -555,7 +555,7 @@ describe('@openfed__is', () => {
 
     test('two arguments mapping to the same @key field is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user(a: ID! @openfed__is(fields: "id"), b: ID! @openfed__is(fields: "id")): User @openfed__queryCache(maxAge: 60)
           }
@@ -574,7 +574,7 @@ describe('@openfed__is', () => {
 
     test('an incompletely-mapped composite @key is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             product(id: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 60)
           }
@@ -594,7 +594,7 @@ describe('@openfed__is', () => {
 
     test('an additional non-key argument alongside @openfed__is is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user(id: ID! @openfed__is(fields: "id"), locale: String): User @openfed__queryCache(maxAge: 60)
           }
@@ -613,7 +613,7 @@ describe('@openfed__is', () => {
 
     test('a single argument covering only part of a composite @key plus an extra argument is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             product(id: ID! @openfed__is(fields: "id"), x: String): Product @openfed__queryCache(maxAge: 60)
           }
@@ -633,7 +633,7 @@ describe('@openfed__is', () => {
 
     test('@openfed__is arguments mapping across two alternative @keys with an extra argument is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user(
               id: ID! @openfed__is(fields: "id")
@@ -657,7 +657,7 @@ describe('@openfed__is', () => {
 
     test('a list argument mapping to a scalar @key field on a singular return is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user(ids: [ID!]! @openfed__is(fields: "id")): User @openfed__queryCache(maxAge: 60)
           }
@@ -676,7 +676,7 @@ describe('@openfed__is', () => {
 
     test('a scalar argument mapping to a list-valued @key field on a singular return is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             product(tag: String! @openfed__is(fields: "tags")): Product @openfed__queryCache(maxAge: 60)
           }
@@ -695,7 +695,7 @@ describe('@openfed__is', () => {
 
     test('a non-input-object argument cannot target a composite @key', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             product(key: ID! @openfed__is(fields: "id sku")): Product @openfed__queryCache(maxAge: 60)
           }
@@ -715,7 +715,7 @@ describe('@openfed__is', () => {
 
     test('a composite @openfed__is selection that matches no @key is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             product(key: ProductKey! @openfed__is(fields: "id name")): Product @openfed__queryCache(maxAge: 60)
           }
@@ -740,7 +740,7 @@ describe('@openfed__is', () => {
 
     test('a composite @key with an additional non-key argument is a failure', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             product(
               id: ID! @openfed__is(fields: "id")
@@ -772,7 +772,7 @@ describe('@openfed__is', () => {
     describe('batch (list-returning) mappings', () => {
       test('only scalar @openfed__is arguments cannot establish a batch mapping', () => {
         const { errors } = normalizeSubgraphFailure(
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
             type Query {
               users(id: ID! @openfed__is(fields: "id")): [User] @openfed__queryCache(maxAge: 60)
             }
@@ -791,7 +791,7 @@ describe('@openfed__is', () => {
 
       test('a scalar argument to a list-valued @key field requires nested lists', () => {
         const { errors } = normalizeSubgraphFailure(
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
             type Query {
               products(tag: String! @openfed__is(fields: "tags")): [Product] @openfed__queryCache(maxAge: 60)
             }
@@ -815,7 +815,7 @@ describe('@openfed__is', () => {
 
       test('a single list argument to a list-valued @key field requires nested lists', () => {
         const { errors } = normalizeSubgraphFailure(
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
             type Query {
               products(tags: [String!]! @openfed__is(fields: "tags")): [Product] @openfed__queryCache(maxAge: 60)
             }
@@ -839,7 +839,7 @@ describe('@openfed__is', () => {
 
       test('a list-of-lists argument whose inner type mismatches the list @key field is a failure', () => {
         const { errors } = normalizeSubgraphFailure(
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
             type Query {
               products(tags: [[Int!]!]! @openfed__is(fields: "tags")): [Product] @openfed__queryCache(maxAge: 60)
             }
@@ -858,7 +858,7 @@ describe('@openfed__is', () => {
 
       test('a list argument whose element type mismatches the scalar @key field is a failure', () => {
         const { errors } = normalizeSubgraphFailure(
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
             type Query {
               users(ids: [String!]! @openfed__is(fields: "id")): [User] @openfed__queryCache(maxAge: 60)
             }
@@ -877,7 +877,7 @@ describe('@openfed__is', () => {
 
       test('an additional non-key argument alongside a batch mapping is a failure', () => {
         const { errors } = normalizeSubgraphFailure(
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
             type Query {
               users(ids: [ID!]! @openfed__is(fields: "id"), filter: String): [User] @openfed__queryCache(maxAge: 60)
             }
@@ -896,7 +896,7 @@ describe('@openfed__is', () => {
 
       test('multiple list arguments for a batch lookup is a failure', () => {
         const { errors } = normalizeSubgraphFailure(
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
             type Query {
               products(
                 ids: [ID!]! @openfed__is(fields: "id")
@@ -921,7 +921,7 @@ describe('@openfed__is', () => {
     describe('input-object composite mappings', () => {
       test('an input-object field whose type mismatches a flat composite @key field is a failure', () => {
         const { errors } = normalizeSubgraphFailure(
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
             type Query {
               product(key: ProductKey! @openfed__is(fields: "id sku")): Product @openfed__queryCache(maxAge: 60)
             }
@@ -955,7 +955,7 @@ describe('@openfed__is', () => {
 
       test('an input-object field whose nullability differs from the composite @key field is a failure', () => {
         const { errors } = normalizeSubgraphFailure(
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
             type Query {
               product(key: ProductKey! @openfed__is(fields: "id sku")): Product @openfed__queryCache(maxAge: 60)
             }
@@ -989,7 +989,7 @@ describe('@openfed__is', () => {
 
       test('an input object missing a flat composite @key field is a failure', () => {
         const { errors } = normalizeSubgraphFailure(
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
             type Query {
               product(key: ProductKey! @openfed__is(fields: "id sku")): Product @openfed__queryCache(maxAge: 60)
             }
@@ -1019,7 +1019,7 @@ describe('@openfed__is', () => {
 
       test('a nested @key selection backed by a scalar input field is a failure', () => {
         const { errors } = normalizeSubgraphFailure(
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
             type Query {
               review(key: ReviewKey! @openfed__is(fields: "store{id}")): Review @openfed__queryCache(maxAge: 60)
             }
@@ -1044,7 +1044,7 @@ describe('@openfed__is', () => {
 
       test('a nested input object missing the nested @key field is a failure', () => {
         const { errors } = normalizeSubgraphFailure(
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
             type Query {
               review(key: ReviewKey! @openfed__is(fields: "store{id}")): Review @openfed__queryCache(maxAge: 60)
             }
@@ -1079,7 +1079,7 @@ describe('@openfed__is', () => {
 
       test('a nested input object field whose type mismatches the nested @key field is a failure', () => {
         const { errors } = normalizeSubgraphFailure(
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
             type Query {
               review(key: ReviewKey! @openfed__is(fields: "store{id}")): Review @openfed__queryCache(maxAge: 60)
             }
@@ -1118,7 +1118,7 @@ describe('@openfed__is', () => {
 
     test('the directive is not repeatable — two on the same argument fails', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
           type Query {
             user(id: ID! @openfed__is(fields: "id") @openfed__is(fields: "id")): User @openfed__queryCache(maxAge: 60)
           }

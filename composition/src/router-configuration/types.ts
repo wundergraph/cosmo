@@ -1,3 +1,4 @@
+import { type OperationTypeNode } from 'graphql';
 import {
   type ArgumentName,
   type DirectiveArgumentCoords,
@@ -162,29 +163,29 @@ export type QueryCacheConfig = {
 
 // Extracted from @openfed__cacheInvalidate on Mutation/Subscription fields.
 // Tells the router to evict the returned entity from the cache after the operation completes.
-export type CacheInvalidateConfig = {
-  fieldName: FieldName;
-  operationType: string;
+export type CacheInvalidateConfiguration = {
   entityTypeName: TypeName;
+  fieldName: FieldName;
+  operationType: OperationTypeNode;
 };
 
 // Extracted from @openfed__cachePopulate on Mutation/Subscription fields.
 // Tells the router to populate the entity cache with the operation's return value.
 // maxAgeSeconds overrides the entity's default TTL when provided.
 export type CachePopulateConfig = {
-  fieldName: FieldName;
-  operationType: string;
   entityTypeName: TypeName;
+  fieldName: FieldName;
   maxAgeSeconds?: number;
+  operationType: string;
 };
 
 export type EntityCachingConfiguration = {
-  // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
-  entityCacheConfigurations?: Array<EntityCacheConfiguration>;
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cacheInvalidate.
-  cacheInvalidateConfigurations?: Array<CacheInvalidateConfig>;
+  cacheInvalidateConfigurations: Array<CacheInvalidateConfiguration>;
+  // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
+  entityCacheConfigurations: Array<EntityCacheConfiguration>;
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cachePopulate.
-  cachePopulateConfigurations?: Array<CachePopulateConfig>;
+  cachePopulateConfigurations: Array<CachePopulateConfig>;
   requestScopedFields?: Array<RequestScopedFieldConfig>;
   // Attached to the Query type's ConfigurationData from @openfed__queryCache.
   queryCacheConfigurations?: Array<QueryCacheConfig>;

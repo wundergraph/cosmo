@@ -1115,12 +1115,9 @@ export class CachePopulateConfiguration extends Message<CachePopulateConfigurati
   operationType = "";
 
   /**
-   * Optional override TTL. When omitted, falls back to the target entity's max_age_seconds.
-   * Composition rejects non-positive values.
-   *
-   * @generated from field: optional int64 max_age_seconds = 3;
+   * @generated from field: int64 max_age_seconds = 3;
    */
-  maxAgeSeconds?: bigint;
+  maxAgeSeconds = protoInt64.zero;
 
   /**
    * @generated from field: string entity_type_name = 4;
@@ -1137,7 +1134,7 @@ export class CachePopulateConfiguration extends Message<CachePopulateConfigurati
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "operation_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "max_age_seconds", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 3, name: "max_age_seconds", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 4, name: "entity_type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
