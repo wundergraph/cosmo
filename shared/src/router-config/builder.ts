@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { create, type MessageInitShape } from '@bufbuild/protobuf';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
   COMPOSITION_VERSION,
@@ -15,17 +16,18 @@ import {
   GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
-import { create, type MessageInitShape } from '@bufbuild/protobuf';
-
 import {
-  ConfigurationVariableSchema,
+  CacheInvalidateConfigurationSchema,
   ConfigurationVariableKind,
+  ConfigurationVariableSchema,
   CostConfigurationSchema,
   DataSourceConfigurationSchema,
   DataSourceCustom_GraphQLSchema,
   DataSourceCustomEventsSchema,
   DataSourceKind,
   EngineConfigurationSchema,
+  EntityCacheConfigurationSchema,
+  EntityCachingConfigurationSchema,
   FieldListSizeConfigurationSchema,
   FieldWeightConfigurationSchema,
   GraphQLSubscriptionConfigurationSchema,
@@ -37,22 +39,19 @@ import {
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 import type {
-  ConfigurationVariable,
+  CacheInvalidateConfiguration,
   CostConfiguration,
-  DataSourceConfiguration,
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
   EngineConfiguration,
-  FieldListSizeConfiguration,
-  FieldWeightConfiguration,
-  GraphQLSubscriptionConfiguration,
+  EntityCacheConfiguration,
+  EntityCachingConfiguration,
   GRPCConfiguration,
   GRPCMapping,
   ImageReference,
   InternedString,
-  PluginConfiguration,
   RouterConfig,
-  TypeField,
+  TypeField
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 import { invalidRouterCompatibilityVersion, normalizationFailureError } from './errors.js';
@@ -82,6 +81,57 @@ function costsToCostConfiguration(costs?: Costs): CostConfiguration | undefined 
     typeWeights: Object.fromEntries(costs.typeWeights),
     directiveArgumentWeights: Object.fromEntries(costs.directiveArgumentWeights),
   });
+}
+
+/**
+ * Convert the entity-caching configuration spread across a subgraph's `ConfigurationData` into the
+ * `EntityCaching` message. Add new entity-caching field types to the collection loop and the
+ * emptiness check below.
+ *
+ * @returns The `EntityCaching` message, or `undefined` when empty so the field is omitted (like
+ * `costsToCostConfiguration`).
+ */
+function extractEntityCachingConfiguration(
+  dataByTypeName?: Map<TypeName, ConfigurationData>,
+): EntityCachingConfiguration | undefined {
+  if (!dataByTypeName) {
+    return;
+  }
+  const entityCache: EntityCacheConfiguration[] = [];
+  const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
+  for (const data of dataByTypeName.values()) {
+    if (!data.entityCaching) {
+      continue;
+    }
+
+    for (const ec of data.entityCaching.entityCacheConfigurations) {
+      entityCache.push(
+        create(EntityCacheConfigurationSchema, {
+          typeName: ec.typeName,
+          maxAgeSeconds: BigInt(ec.maxAgeSeconds),
+          notFoundCacheTtlSeconds: BigInt(ec.notFoundCacheTtlSeconds),
+          includeHeaders: ec.includeHeaders,
+          partialCacheLoad: ec.partialCacheLoad,
+          shadowMode: ec.shadowMode,
+        }),
+      );
+    }
+    for (const ci of data.entityCaching?.cacheInvalidateConfigurations) {
+      cacheInvalidateConfigurations.push(
+        create(CacheInvalidateConfigurationSchema, {
+          entityTypeName: ci.entityTypeName,
+          fieldName: ci.fieldName,
+          operationType: ci.operationType,
+        }),
+      );
+    }
+  }
+  if (entityCache.length > 0 || cacheInvalidateConfigurations.length > 0) {
+    return create(EntityCachingConfigurationSchema, {
+      cacheInvalidateConfigurations,
+      entityCache,
+    });
+  }
 }
 
 export interface Input {
@@ -332,6 +382,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       customGraphql,
       directives: [],
       entityInterfaces,
+      entityCachingConfiguration: extractEntityCachingConfiguration(subgraph.configurationDataByTypeName),
       interfaceObjects,
       keys,
       kind,

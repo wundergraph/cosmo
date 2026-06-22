@@ -45,12 +45,14 @@ import { type CompositeOutputData, type InputValueData } from '../../schema-buil
 import { getTypeNodeNamedTypeName } from '../../schema-building/ast';
 import {
   AUTHENTICATED_DEFINITION_DATA,
+  CACHE_INVALIDATE_DEFINITION_DATA,
   COMPOSE_DIRECTIVE_DEFINITION_DATA,
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA,
   CONFIGURE_DESCRIPTION_DEFINITION_DATA,
   CONNECT_FIELD_RESOLVER_DEFINITION_DATA,
   COST_DEFINITION_DATA,
   DEPRECATED_DEFINITION_DATA,
+  ENTITY_CACHE_DEFINITION_DATA,
   EXTENDS_DEFINITION_DATA,
   EXTERNAL_DEFINITION_DATA,
   INACCESSIBLE_DEFINITION_DATA,
@@ -106,6 +108,8 @@ import {
   LITERAL_PERIOD,
   NAME,
   ONE_OF,
+  OPENFED_CACHE_INVALIDATE,
+  OPENFED_ENTITY_CACHE,
   OVERRIDE,
   PROVIDES,
   QUERY,
@@ -473,6 +477,8 @@ export function initializeDirectiveDefinitionDatas(): Map<string, DirectiveDefin
     [CONFIGURE_CHILD_DESCRIPTIONS, CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA],
     [CONNECT_FIELD_RESOLVER, CONNECT_FIELD_RESOLVER_DEFINITION_DATA],
     [COST, COST_DEFINITION_DATA],
+    [OPENFED_ENTITY_CACHE, ENTITY_CACHE_DEFINITION_DATA],
+    [OPENFED_CACHE_INVALIDATE, CACHE_INVALIDATE_DEFINITION_DATA],
     [DEPRECATED, DEPRECATED_DEFINITION_DATA],
     [EDFS_KAFKA_PUBLISH, KAFKA_PUBLISH_DEFINITION_DATA],
     [EDFS_KAFKA_SUBSCRIBE, KAFKA_SUBSCRIBE_DEFINITION_DATA],
@@ -544,7 +550,11 @@ export function upsertFederatedDirectiveData({
      *  could be set in one one subgraph and removed in another subgraph with a imported higher version.
      */
     if (existingData.minorVersion < directiveData.minorVersion) {
-      existingDataByName.set(directiveName, copyDirectiveDefinitionData(directiveData));
+      const copiedData = copyDirectiveDefinitionData(directiveData);
+      copiedData.isReferenced ||= existingData.isReferenced;
+      existingDataByName.set(directiveName, copiedData);
+    } else {
+      existingData.isReferenced ||= directiveData.isReferenced;
     }
   }
 }
