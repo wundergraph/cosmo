@@ -47,22 +47,20 @@ describe('@openfed__cacheInvalidate directive tests', () => {
     });
 
     test('that a renamed Mutation root type keys the config under the canonical name', () => {
-      const config = getConfigForType(
-        createSubgraphWithDefaultName(`
+      const subgraph = createSubgraphWithDefaultName(`
             schema {
-              mutation: Mutations
+              mutation: NewMutations
             }
             type Query { dummy: String! }
-            type Mutations {
+            type NewMutations {
               updateProduct(id: ID!): Product @openfed__cacheInvalidate
             }
             type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
               id: ID!
               name: String!
             }
-          `),
-        MUTATION,
-      );
+          `);
+      const config = getConfigForType(subgraph, MUTATION);
       // The config must be keyed under the renamed root name `Mutation`, not the original `Mutations`.
       expect(config).toBeDefined();
       expect(config!.typeName).toBe(MUTATION);
@@ -73,6 +71,7 @@ describe('@openfed__cacheInvalidate directive tests', () => {
           entityTypeName: 'Product',
         },
       ] satisfies CacheInvalidationConfiguration[]);
+      expect(getConfigForType(subgraph, 'NewMutations')).toBeUndefined();
     });
 
     test('that multiple cacheInvalidate fields on the same type accumulate into one config array', () => {
