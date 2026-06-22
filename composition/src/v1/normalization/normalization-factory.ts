@@ -4150,9 +4150,9 @@ export class NormalizationFactory {
     );
 
     const config: CacheInvalidateConfiguration = {
+      entityTypeName: returnTypeName,
       fieldName: fieldData.name,
       operationType: operationType,
-      entityTypeName: returnTypeName,
     };
 
     getOrInitializeEntityCaching(configurationData).cacheInvalidateConfigurations.push(config);

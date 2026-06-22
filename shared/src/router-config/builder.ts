@@ -115,8 +115,8 @@ function extractEntityCachingConfiguration(
   }
   if (entityCache.length > 0 || cacheInvalidateConfigurations.length > 0) {
     return new EntityCachingConfiguration({
-      entityCache,
       cacheInvalidateConfigurations,
+      entityCache,
     });
   }
 }

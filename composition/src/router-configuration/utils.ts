@@ -19,8 +19,8 @@ export function newFieldSetConditionData({
 export function getOrInitializeEntityCaching(configurationData: ConfigurationData): EntityCachingConfiguration {
   if (!configurationData.entityCaching) {
     configurationData.entityCaching = {
-      entityCacheConfigurations: [],
       cacheInvalidateConfigurations: [],
+      entityCacheConfigurations: [],
     };
   }
   return configurationData.entityCaching;
