@@ -21,6 +21,8 @@ import {
 } from '../../src';
 import { expect } from 'vitest';
 
+const DEFAULT_SUBGRAPH_NAME = 'subgraph-default-a';
+
 export function normalizeString(input: string): string {
   return input.replace(/\s+/g, ' ').trim();
 }
@@ -134,5 +136,5 @@ export function createSubgraph(name: SubgraphName, sdlString: string): Subgraph 
 }
 
 export function createSubgraphWithDefaultName(sdlString: string): Subgraph {
-  return createSubgraph('subgraph-default-a', sdlString);
+  return createSubgraph(DEFAULT_SUBGRAPH_NAME, sdlString);
 }
