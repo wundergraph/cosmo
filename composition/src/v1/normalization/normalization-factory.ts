@@ -4101,7 +4101,7 @@ export class NormalizationFactory {
     if (config.maxAgeSeconds <= 0) {
       entityCacheErrors.push(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage(config.maxAgeSeconds),
+          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_ENTITY_CACHE, value: config.maxAgeSeconds }),
         ]),
       );
     }
@@ -4205,7 +4205,7 @@ export class NormalizationFactory {
       if (maxAgeRaw <= 0) {
         this.errors.push(
           invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
-            maxAgeNotPositiveIntegerErrorMessage(maxAgeRaw),
+            maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_CACHE_POPULATE, value: maxAgeRaw }),
           ]),
         );
         return;
@@ -4402,8 +4402,22 @@ export class NormalizationFactory {
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
             if (isObject) {
-              this.extractCacheInvalidateConfig(fieldData);
-              this.extractCachePopulateConfig(fieldData);
+              // A field can't both evict (@openfed__cacheInvalidate) and write (@openfed__cachePopulate)
+              // the cache for the same entity, so the two directives are mutually exclusive.
+              if (
+                fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE) &&
+                fieldData.directivesByName.has(OPENFED_CACHE_POPULATE)
+              ) {
+                const fieldCoords = `${fieldData.originalParentTypeName}.${fieldData.name}`;
+                this.errors.push(
+                  invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
+                    cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords),
+                  ]),
+                );
+              } else {
+                this.extractCacheInvalidateConfig(fieldData);
+                this.extractCachePopulateConfig(fieldData);
+              }
             }
 
             if (!isObject && fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {

@@ -2056,8 +2056,14 @@ export function entityCacheWithoutKeyErrorMessage(typeName: TypeName): string {
   return `Object "${typeName}" does not define a "@key" directive.`;
 }
 
-export function maxAgeNotPositiveIntegerErrorMessage(value: number): string {
-  return `The argument "maxAge" must be provided a positive integer; received "${value}".`;
+export function maxAgeNotPositiveIntegerErrorMessage({
+  directiveName,
+  value,
+}: {
+  directiveName: string;
+  value: number;
+}): string {
+  return `The argument "maxAge" of "@${directiveName}" must be provided a positive integer; received "${value}".`;
 }
 
 export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(value: number): string {

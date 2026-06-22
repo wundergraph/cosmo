@@ -21,13 +21,13 @@ import {
   cachePopulateOnNonMutationSubscriptionFieldErrorMessage,
   maxAgeNotPositiveIntegerErrorMessage,
 } from '../../../src/errors/errors';
-import { createSubgraphWithDefault, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
+import { createSubgraphWithDefaultName, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
 
 describe('@openfed__cachePopulate', () => {
   describe('on Mutation fields', () => {
     test("normalizes without maxAge (uses the entity's default TTL)", () => {
       const { schema } = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query { dummy: String! }
             type Mutation {
               createProduct(name: String!): Product @openfed__cachePopulate
@@ -44,7 +44,7 @@ describe('@openfed__cachePopulate', () => {
 
     test('normalizes with an explicit maxAge override', () => {
       const { schema } = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query { dummy: String! }
             type Mutation {
               createProduct(name: String!): Product @openfed__cachePopulate(maxAge: 120)
@@ -61,7 +61,7 @@ describe('@openfed__cachePopulate', () => {
 
     test('config without maxAge leaves maxAgeSeconds undefined', () => {
       const config = getConfigForType(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query { dummy: String! }
             type Mutation {
               createProduct(name: String!): Product @openfed__cachePopulate
@@ -86,7 +86,7 @@ describe('@openfed__cachePopulate', () => {
 
     test('config with an explicit maxAge override', () => {
       const config = getConfigForType(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query { dummy: String! }
             type Mutation {
               createProduct(name: String!): Product @openfed__cachePopulate(maxAge: 120)
@@ -113,7 +113,7 @@ describe('@openfed__cachePopulate', () => {
   describe('on Subscription fields', () => {
     test('normalizes a Subscription field', () => {
       const { schema } = normalizeSubgraphSuccess(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query { dummy: String! }
             type Subscription {
               itemCreated: Product @openfed__cachePopulate
@@ -130,7 +130,7 @@ describe('@openfed__cachePopulate', () => {
 
     test('produces the correct config', () => {
       const config = getConfigForType(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query { dummy: String! }
             type Subscription {
               itemCreated: Product @openfed__cachePopulate
@@ -157,7 +157,7 @@ describe('@openfed__cachePopulate', () => {
   describe('validation errors', () => {
     test('rejects placement on a Query field', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query {
               product(id: ID!): Product @openfed__cachePopulate
             }
@@ -178,7 +178,7 @@ describe('@openfed__cachePopulate', () => {
 
     test('rejects a return type that is not a cached entity', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query { dummy: String! }
             type Mutation {
               createProduct(name: String!): Result @openfed__cachePopulate
@@ -201,7 +201,7 @@ describe('@openfed__cachePopulate', () => {
 
     test('rejects a maxAge of zero', () => {
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query { dummy: String! }
             type Mutation {
               createProduct(name: String!): Product @openfed__cachePopulate(maxAge: 0)
@@ -226,7 +226,7 @@ describe('@openfed__cachePopulate', () => {
       // Composition now fails outright, so assert exactly the one @openfed__cachePopulate error.
       const result = new BatchNormalizer({
         subgraphs: [
-          createSubgraphWithDefault(`
+          createSubgraphWithDefaultName(`
               type Query { dummy: String! }
               type Mutation {
                 createProduct(name: String!): Product @openfed__cachePopulate(maxAge: 0)
@@ -253,7 +253,7 @@ describe('@openfed__cachePopulate', () => {
     test('rejects coexisting @openfed__cacheInvalidate and @openfed__cachePopulate on the same field', () => {
       // A mutation can't both evict and write to the cache for the same entity
       const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefault(`
+        createSubgraphWithDefaultName(`
             type Query { dummy: String! }
             type Mutation {
               updateProduct(id: ID!): Product @openfed__cacheInvalidate @openfed__cachePopulate
