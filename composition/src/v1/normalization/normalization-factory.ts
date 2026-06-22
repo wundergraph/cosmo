@@ -4335,9 +4335,7 @@ export class NormalizationFactory {
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
             if (isObject) {
               this.extractCacheInvalidateConfig(fieldData);
-            }
-
-            if (!isObject && fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
+            } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
             }
             // Arguments can only be fully validated once all parents types are known
