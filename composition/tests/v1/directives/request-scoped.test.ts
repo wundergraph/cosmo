@@ -6,7 +6,6 @@ import {
   invalidRepeatedDirectiveErrorMessage,
   OPENFED_REQUEST_SCOPED,
   OPENFED_REQUEST_SCOPED_DEFINITION,
-  requestScopedSingleFieldWarning,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   undefinedRequiredArgumentsErrorMessage,
 } from '../../../src';
@@ -47,9 +46,9 @@ describe('@openfed__requestScoped', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       const config = result.configurationDataByTypeName.get('Query');
-      expect(config!.entityCaching?.requestScopedFields).toBeDefined();
-      expect(config!.entityCaching?.requestScopedFields).toHaveLength(2);
-      expect(config!.entityCaching!.requestScopedFields!.map((f) => f.l1Key)).toEqual([
+      expect(config!.entityCaching?.requestScopedConfigurations).toBeDefined();
+      expect(config!.entityCaching?.requestScopedConfigurations).toHaveLength(2);
+      expect(config!.entityCaching!.requestScopedConfigurations!.map((f) => f.l1Key)).toEqual([
         'subgraph-default-a.me',
         'subgraph-default-a.me',
       ]);
@@ -67,13 +66,13 @@ describe('@openfed__requestScoped', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       const config = result.configurationDataByTypeName.get('Query');
-      expect(config!.entityCaching?.requestScopedFields).toBeDefined();
-      expect(config!.entityCaching?.requestScopedFields).toHaveLength(2);
-      expect(config!.entityCaching!.requestScopedFields![0].fieldName).toBe('currentLocale');
-      expect(config!.entityCaching!.requestScopedFields![0].l1Key).toBe('subgraph-default-a.locale');
+      expect(config!.entityCaching?.requestScopedConfigurations).toBeDefined();
+      expect(config!.entityCaching?.requestScopedConfigurations).toHaveLength(2);
+      expect(config!.entityCaching!.requestScopedConfigurations![0].fieldName).toBe('currentLocale');
+      expect(config!.entityCaching!.requestScopedConfigurations![0].l1Key).toBe('subgraph-default-a.locale');
     });
 
-    test('a key declared on only one field still populates config but emits a warning', () => {
+    test('a key declared on only one field still populates config', () => {
       const result = normalizeSubgraphSuccess(
         createSubgraphWithDefaultName(`
           type Query {
@@ -86,15 +85,8 @@ describe('@openfed__requestScoped', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       const config = result.configurationDataByTypeName.get('Query');
-      expect(config!.entityCaching?.requestScopedFields).toHaveLength(1);
-      expect(config!.entityCaching!.requestScopedFields![0].l1Key).toBe('subgraph-default-a.lonely');
-      expect(result.warnings).toStrictEqual([
-        requestScopedSingleFieldWarning({
-          subgraphName: 'subgraph-default-a',
-          key: 'lonely',
-          fieldCoords: 'Query.currentUser',
-        }),
-      ]);
+      expect(config!.entityCaching?.requestScopedConfigurations).toHaveLength(1);
+      expect(config!.entityCaching!.requestScopedConfigurations![0].l1Key).toBe('subgraph-default-a.lonely');
     });
   });
 
