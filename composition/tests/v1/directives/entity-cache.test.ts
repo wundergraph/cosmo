@@ -8,8 +8,15 @@ import {
   maxAgeNotPositiveIntegerErrorMessage,
   negativeCacheTTLNotNonNegativeIntegerErrorMessage,
   ROUTER_COMPATIBILITY_VERSION_ONE,
+  invalidRepeatedDirectiveError,
+  invalidRepeatedDirectiveErrorMessage,
 } from '../../../src';
-import { createSubgraphWithDefaultName, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
+import {
+  createSubgraph,
+  createSubgraphWithDefaultName,
+  normalizeSubgraphFailure,
+  normalizeSubgraphSuccess,
+} from '../../utils/utils';
 
 // @openfed__entityCache marks an entity type as cacheable. It requires @key (so the router can
 // construct cache keys) and a positive maxAge (TTL in seconds).
@@ -115,7 +122,7 @@ describe('@openfed__entityCache tests', () => {
           partialCacheLoad: false,
           shadowMode: false,
         },
-      ] satisfies EntityCacheConfiguration[]);
+      ] satisfies Array<EntityCacheConfiguration>);
     });
 
     test('that every argument propagates to the EntityCacheConfig', () => {
@@ -138,7 +145,32 @@ describe('@openfed__entityCache tests', () => {
           partialCacheLoad: true,
           shadowMode: true,
         },
-      ] satisfies EntityCacheConfiguration[]);
+      ] satisfies Array<EntityCacheConfiguration>);
+    });
+
+    test('that @openfed__entityCache is non-repeatable', () => {
+      const { errors, warnings } = normalizeSubgraphFailure(
+        createSubgraph(
+          'a',
+          `
+          type Entity @key(fields: "id") @openfed__entityCache(maxAge: 1) {
+            id: ID!
+          }
+          
+          extend type Entity @openfed__entityCache(maxAge: 1) {
+            name: String!
+          }
+        `,
+        ),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(OPENFED_ENTITY_CACHE, 'Entity', FIRST_ORDINAL, [
+          invalidRepeatedDirectiveErrorMessage(OPENFED_ENTITY_CACHE),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(0);
     });
   });
 });

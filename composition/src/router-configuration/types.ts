@@ -122,7 +122,7 @@ export type EntityCacheConfiguration = {
 
 // Extracted from @openfed__cacheInvalidate on Mutation/Subscription fields.
 // Tells the router to evict the returned entity from the cache after the operation completes.
-export type CacheInvalidateConfig = {
+export type CacheInvalidateConfiguration = {
   fieldName: FieldName;
   operationType: OperationTypeNode;
   entityTypeName: TypeName;
@@ -140,7 +140,7 @@ export type CachePopulateConfig = {
 
 export type EntityCachingConfiguration = {
   entityCacheConfigurations: Array<EntityCacheConfiguration>;
-  cacheInvalidateConfigurations: Array<CacheInvalidateConfig>;
+  cacheInvalidateConfigurations: Array<CacheInvalidateConfiguration>;
   cachePopulateConfigurations: Array<CachePopulateConfig>;
 };
 

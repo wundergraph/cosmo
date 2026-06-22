@@ -4,7 +4,7 @@ import {
   type BatchNormalizationSuccess,
   BatchNormalizer,
   OPENFED_CACHE_INVALIDATE,
-  type CacheInvalidateConfig,
+  type CacheInvalidateConfiguration,
   type ConfigurationData,
   FIRST_ORDINAL,
   invalidDirectiveError,
@@ -22,7 +22,7 @@ import { createSubgraphWithDefaultName, normalizeSubgraphFailure, normalizeSubgr
 
 describe('@openfed__cacheInvalidate directive tests', () => {
   describe('Mutation field tests', () => {
-    test('that a valid CacheInvalidateConfig is produced', () => {
+    test('that a valid CacheInvalidateConfiguration is produced', () => {
       const config = getConfigForType(
         createSubgraphWithDefaultName(`
             type Query { dummy: String! }
@@ -43,7 +43,35 @@ describe('@openfed__cacheInvalidate directive tests', () => {
           operationType: OperationTypeNode.MUTATION,
           entityTypeName: 'Product',
         },
-      ] satisfies CacheInvalidateConfig[]);
+      ] satisfies CacheInvalidateConfiguration[]);
+    });
+
+    test('that a renamed Mutation root type keys the config under the canonical name', () => {
+      const subgraph = createSubgraphWithDefaultName(`
+            schema {
+              mutation: NewMutations
+            }
+            type Query { dummy: String! }
+            type NewMutations {
+              updateProduct(id: ID!): Product @openfed__cacheInvalidate
+            }
+            type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+              id: ID!
+              name: String!
+            }
+          `);
+      const config = getConfigForType(subgraph, MUTATION);
+      // The config must be keyed under the renamed root name `Mutation`, not the original `Mutations`.
+      expect(config).toBeDefined();
+      expect(config!.typeName).toBe(MUTATION);
+      expect(config!.entityCaching?.cacheInvalidateConfigurations).toStrictEqual([
+        {
+          fieldName: 'updateProduct',
+          operationType: OperationTypeNode.MUTATION,
+          entityTypeName: 'Product',
+        },
+      ] satisfies CacheInvalidateConfiguration[]);
+      expect(getConfigForType(subgraph, 'NewMutations')).toBeUndefined();
     });
 
     test('that multiple cacheInvalidate fields on the same type accumulate into one config array', () => {
@@ -85,12 +113,12 @@ describe('@openfed__cacheInvalidate directive tests', () => {
           operationType: OperationTypeNode.MUTATION,
           entityTypeName: 'Review',
         },
-      ] satisfies CacheInvalidateConfig[]);
+      ] satisfies CacheInvalidateConfiguration[]);
     });
   });
 
   describe('Subscription field tests', () => {
-    test('that a valid CacheInvalidateConfig is produced', () => {
+    test('that a valid CacheInvalidateConfiguration is produced', () => {
       const config = getConfigForType(
         createSubgraphWithDefaultName(`
             type Query { dummy: String! }
@@ -111,7 +139,7 @@ describe('@openfed__cacheInvalidate directive tests', () => {
           operationType: OperationTypeNode.SUBSCRIPTION,
           entityTypeName: 'Product',
         },
-      ] satisfies CacheInvalidateConfig[]);
+      ] satisfies CacheInvalidateConfiguration[]);
     });
   });
 

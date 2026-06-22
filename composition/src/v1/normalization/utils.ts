@@ -45,12 +45,14 @@ import { type CompositeOutputData, type InputValueData } from '../../schema-buil
 import { getTypeNodeNamedTypeName } from '../../schema-building/ast';
 import {
   AUTHENTICATED_DEFINITION_DATA,
+  CACHE_INVALIDATE_DEFINITION_DATA,
   COMPOSE_DIRECTIVE_DEFINITION_DATA,
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA,
   CONFIGURE_DESCRIPTION_DEFINITION_DATA,
   CONNECT_FIELD_RESOLVER_DEFINITION_DATA,
   COST_DEFINITION_DATA,
   DEPRECATED_DEFINITION_DATA,
+  ENTITY_CACHE_DEFINITION_DATA,
   EXTENDS_DEFINITION_DATA,
   EXTERNAL_DEFINITION_DATA,
   INACCESSIBLE_DEFINITION_DATA,
@@ -76,9 +78,7 @@ import {
   SPECIFIED_BY_DEFINITION_DATA,
   SUBSCRIPTION_FILTER_DEFINITION_DATA,
   TAG_DEFINITION_DATA,
-  CACHE_INVALIDATE_DEFINITION_DATA,
   CACHE_POPULATE_DEFINITION_DATA,
-  ENTITY_CACHE_DEFINITION_DATA,
 } from '../../directive-definition-data/directive-definition-data';
 import {
   AS,
@@ -87,10 +87,8 @@ import {
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
   CONNECT_FIELD_RESOLVER,
-  OPENFED_CACHE_INVALIDATE,
   OPENFED_CACHE_POPULATE,
   COST,
-  OPENFED_ENTITY_CACHE,
   DEPRECATED,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
@@ -112,6 +110,8 @@ import {
   LITERAL_PERIOD,
   NAME,
   ONE_OF,
+  OPENFED_CACHE_INVALIDATE,
+  OPENFED_ENTITY_CACHE,
   OVERRIDE,
   PROVIDES,
   QUERY,
@@ -553,7 +553,11 @@ export function upsertFederatedDirectiveData({
      *  could be set in one one subgraph and removed in another subgraph with a imported higher version.
      */
     if (existingData.minorVersion < directiveData.minorVersion) {
-      existingDataByName.set(directiveName, copyDirectiveDefinitionData(directiveData));
+      const copiedData = copyDirectiveDefinitionData(directiveData);
+      copiedData.isReferenced ||= existingData.isReferenced;
+      existingDataByName.set(directiveName, copiedData);
+    } else {
+      existingData.isReferenced ||= directiveData.isReferenced;
     }
   }
 }

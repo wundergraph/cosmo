@@ -16,8 +16,13 @@ import {
   json,
   real,
 } from 'drizzle-orm/pg-core';
-import type { JSONContent } from '@tiptap/core';
 import { AxiosHeaderValue } from 'axios';
+import type { PlainMessage } from '@bufbuild/protobuf';
+import type {
+  CompositionError,
+  CompositionWarning,
+  DeploymentError,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FeatureIds } from '../types/index.js';
 import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction } from './models.js';
 
@@ -828,6 +833,7 @@ export const schemaChecks = pgTable(
   (t) => {
     return {
       targetIdIndex: index('sc_target_id_idx').on(t.targetId),
+      sceWebhookDeliveryIdIndex: index('sce_webhook_delivery_id_idx').on(t.checkExtensionDeliveryId),
     };
   },
 );
@@ -884,6 +890,7 @@ export const schemaCheckSubgraphs = pgTable(
     return {
       schemaCheckIdIndex: index('scs_schema_check_id_idx').on(t.schemaCheckId),
       subgraphIdIndex: index('scs_subgraph_id_idx').on(t.subgraphId),
+      namespaceIdIndex: index('scs_namespace_id_idx').on(t.namespaceId),
     };
   },
 );
@@ -1090,6 +1097,7 @@ export const schemaCheckChangeAction = pgTable(
   (t) => {
     return {
       schemaCheckIdIndex: index('scca_schema_check_id_idx').on(t.schemaCheckId),
+      schemaCheckSubgraphIdIndex: index('scca_schema_check_subgraph_id_idx').on(t.schemaCheckSubgraphId),
     };
   },
 );
@@ -2341,6 +2349,7 @@ export const schemaCheckLintAction = pgTable(
   (t) => {
     return {
       schemaCheckIdIndex: index('sclact_schema_check_id_idx').on(t.schemaCheckId),
+      schemaCheckSubgraphIdIndex: index('sclact_schema_check_subgraph_id_idx').on(t.schemaCheckSubgraphId),
     };
   },
 );
@@ -2386,6 +2395,7 @@ export const schemaCheckGraphPruningAction = pgTable(
     return {
       schemaCheckIdIndex: index('scgpa_schema_check_id_idx').on(t.schemaCheckId),
       federatedGraphIdIndex: index('scgpa_federated_graph_id_idx').on(t.federatedGraphId),
+      schemaCheckSubgraphIdIndex: index('scgpa_schema_check_subgraph_id_idx').on(t.schemaCheckSubgraphId),
     };
   },
 );
@@ -2755,3 +2765,27 @@ export const onboarding = pgTable(
     };
   },
 );
+
+export const batchPublishJobStatusEnum = pgEnum('batch_publish_job_status', [
+  'pending',
+  'processing',
+  'failed',
+  'completed',
+] as const);
+
+export const batchPublishJobDetails = pgTable('batch_publish_job_details', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  status: batchPublishJobStatusEnum('status').notNull(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  failureReason: text('failure_reason'),
+  compositionResult: json('composition_result').$type<{
+    deploymentErrors: PlainMessage<DeploymentError>[];
+    compositionWarnings: PlainMessage<CompositionWarning>[];
+    compositionErrors: PlainMessage<CompositionError>[];
+    updatedSubgraphNames: string[];
+  }>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+});

@@ -89,7 +89,11 @@ function extractEntityCachingConfiguration(
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
   const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
-    for (const ec of data.entityCaching?.entityCacheConfigurations ?? []) {
+    if (!data.entityCaching) {
+      continue;
+    }
+
+    for (const ec of data.entityCaching.entityCacheConfigurations) {
       entityCache.push(
         new EntityCacheConfiguration({
           typeName: ec.typeName,
@@ -101,7 +105,7 @@ function extractEntityCachingConfiguration(
         }),
       );
     }
-    for (const ci of data.entityCaching?.cacheInvalidateConfigurations ?? []) {
+    for (const ci of data.entityCaching?.cacheInvalidateConfigurations) {
       cacheInvalidateConfigurations.push(
         new CacheInvalidateConfiguration({
           fieldName: ci.fieldName,
