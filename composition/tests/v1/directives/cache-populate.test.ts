@@ -108,6 +108,35 @@ describe('@openfed__cachePopulate tests', () => {
         },
       ] satisfies CachePopulateConfig[]);
     });
+
+    test('that a renamed Mutation root type keys the config under the canonical name', () => {
+      const subgraph = createSubgraphWithDefaultName(`
+            schema {
+              mutation: NewMutations
+            }
+            type Query { dummy: String! }
+            type NewMutations {
+              createProduct(name: String!): Product @openfed__cachePopulate
+            }
+            type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+              id: ID!
+              name: String!
+            }
+          `);
+      const config = getConfigForType(subgraph, MUTATION);
+      // The config must be keyed under the renamed root name `Mutation`, not the original `NewMutations`.
+      expect(config).toBeDefined();
+      expect(config!.typeName).toBe(MUTATION);
+      expect(config!.entityCaching?.cachePopulateConfigurations).toStrictEqual([
+        {
+          fieldName: 'createProduct',
+          operationType: MUTATION,
+          entityTypeName: 'Product',
+          maxAgeSeconds: undefined,
+        },
+      ] satisfies CachePopulateConfig[]);
+      expect(getConfigForType(subgraph, 'NewMutations')).toBeUndefined();
+    });
   });
 
   describe('Subscription fields tests', () => {
