@@ -87,7 +87,7 @@ export type RequiredFieldConfiguration = {
   disableEntityResolver?: boolean;
 };
 
-export type RequestScopedFieldConfig = {
+export type RequestScopedConfiguration = {
   fieldName: FieldName;
   typeName: TypeName;
   // L1 cache key used to store/lookup this field's value for the duration of a request.
@@ -186,7 +186,7 @@ export type EntityCachingConfiguration = {
   entityCacheConfigurations: Array<EntityCacheConfiguration>;
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cachePopulate.
   cachePopulateConfigurations: Array<CachePopulateConfig>;
-  requestScopedFields?: Array<RequestScopedFieldConfig>;
+  requestScopedConfigurations: Array<RequestScopedConfiguration>;
   // Attached to the Query type's ConfigurationData from @openfed__queryCache.
   queryCacheConfigurations?: Array<QueryCacheConfig>;
 };

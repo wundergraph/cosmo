@@ -217,8 +217,8 @@ import {
   type CachePopulateConfig,
   type EntityKeyMappingConfig,
   type FieldMappingConfig,
-  type RequestScopedFieldConfig,
   type QueryCacheConfig,
+  type RequestScopedConfiguration,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
@@ -229,10 +229,10 @@ import {
   fieldAlreadyProvidedWarning,
   invalidExternalFieldWarning,
   nonExternalConditionalFieldWarning,
+  requestScopedSingleFieldWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
   queryCacheReturnEntityMissingEntityCacheWarning,
-  requestScopedSingleFieldWarning,
 } from '../warnings/warnings';
 import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
 import {
@@ -542,6 +542,7 @@ export class NormalizationFactory {
   referencedDirectiveNames = new Set<DirectiveName>();
   referencedTypeNames = new Set<TypeName>();
   renamedParentTypeName = '';
+  requestScopedFieldCoordsByL1Key = new Map<string, Array<string>>();
   schemaData: SchemaData;
   subgraphName: SubgraphName;
   unvalidatedExternalFieldCoords = new Set<string>();
@@ -5214,81 +5215,36 @@ export class NormalizationFactory {
     return [];
   }
 
-  extractRequestScopedFields() {
-    // Gather fields annotated with @openfed__requestScoped across all types in this subgraph.
-    // A field is both a reader and writer of the coordinate L1 — no receiver/provider.
-    // Fields with the same `key` share the same L1 entry: whichever is resolved first
-    // populates it, subsequent ones inject from it.
-    type Collected = {
-      typeName: string;
-      fieldName: string;
-      fieldCoords: string;
-      key: string;
-      l1Key: string;
-    };
-    const collected: Array<Collected> = [];
-
-    for (const [, parentData] of this.parentDefinitionDataByTypeName) {
-      if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION && parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
-        continue;
-      }
-      const typeName = getParentTypeName(parentData);
-      for (const [fieldName, fieldData] of parentData.fieldDataByName) {
-        const directives = fieldData.directivesByName.get(OPENFED_REQUEST_SCOPED);
-        if (!directives) {
-          continue;
-        }
-        // validateDirectives() (run earlier in normalize()) has already guaranteed a single, non-repeated
-        // @openfed__requestScoped with a required String `key`, so the generic ConstDirectiveNode can be
-        // narrowed to the precise typed node — mirroring handleComposeDirective()/ComposeDirectiveNode.
-        const directive = directives[0] as RequestScopedDirectiveNode;
-        const keyArg = directive.arguments.find((arg) => arg.name.value === KEY);
-        if (!keyArg) {
-          continue;
-        }
-
-        const fieldCoords = `${typeName}.${fieldName}`;
-        const key = keyArg.value.value;
-        const l1Key = `${this.subgraphName}.${key}`;
-        collected.push({ typeName, fieldName, fieldCoords, key, l1Key });
-      }
+  // Attaches a single field annotated with @openfed__requestScoped to its type's configurationData. A field
+  // is both a reader and writer of the coordinate L1 — no receiver/provider. Fields with the same `key` share
+  // the same L1 entry: whichever is resolved first populates it, subsequent ones inject from it.
+  extractRequestScopedConfig(fieldData: FieldData) {
+    const directives = fieldData.directivesByName.get(OPENFED_REQUEST_SCOPED);
+    if (!directives) {
+      return;
     }
-
-    if (collected.length === 0) {
+    // validateDirectives() (run earlier in normalize()) has already guaranteed a single, non-repeated
+    // @openfed__requestScoped with a required String `key`, so the generic ConstDirectiveNode can be
+    // narrowed to the precise typed node — mirroring handleComposeDirective()/ComposeDirectiveNode.
+    const directive = directives[0] as RequestScopedDirectiveNode;
+    const keyArg = directive.arguments.find((arg) => arg.name.value === KEY);
+    if (!keyArg) {
       return;
     }
 
-    // Warn when a key is used on only one field — @openfed__requestScoped is meaningless
-    // unless >= 2 fields share the key (there'd be no second reader to benefit).
-    const coordsByKey = new Map<string, Array<string>>();
-    for (const c of collected) {
-      getValueOrDefault(coordsByKey, c.key, () => []).push(c.fieldCoords);
-    }
-    for (const [key, coordsList] of coordsByKey) {
-      if (coordsList.length === 1) {
-        this.warnings.push(
-          requestScopedSingleFieldWarning({
-            subgraphName: this.subgraphName,
-            key,
-            fieldCoords: coordsList[0],
-          }),
-        );
-      }
-    }
-
-    // Group by type and attach to configurationData.
-    const byType = new Map<string, Array<RequestScopedFieldConfig>>();
-    for (const c of collected) {
-      const list = byType.get(c.typeName) ?? [];
-      list.push({ fieldName: c.fieldName, typeName: c.typeName, l1Key: c.l1Key });
-      byType.set(c.typeName, list);
-    }
-    for (const [typeName, fields] of byType) {
-      const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
-        newConfigurationData(false, typeName),
-      );
-      getOrInitializeEntityCaching(configurationData).requestScopedFields = fields;
-    }
+    const config: RequestScopedConfiguration = {
+      fieldName: fieldData.name,
+      typeName: fieldData.renamedParentTypeName,
+      l1Key: `${this.subgraphName}.${keyArg.value.value}`,
+    };
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, fieldData.renamedParentTypeName, () =>
+      newConfigurationData(false, fieldData.renamedParentTypeName),
+    );
+    getOrInitializeEntityCaching(configurationData).requestScopedConfigurations.push(config);
+    // Track field coords per L1 key so the single-field warning can be emitted after the walk completes.
+    getValueOrDefault(this.requestScopedFieldCoordsByL1Key, config.l1Key, () => []).push(
+      `${config.typeName}.${config.fieldName}`,
+    );
   }
 
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
@@ -5483,6 +5439,8 @@ export class NormalizationFactory {
                 this.extractCacheInvalidateConfig(fieldData);
                 this.extractCachePopulateConfig(fieldData);
               }
+
+              this.extractRequestScopedConfig(fieldData);
             } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
             }
@@ -5573,6 +5531,21 @@ export class NormalizationFactory {
         }
       }
     }
+    // @openfed__requestScoped is meaningless unless >= 2 fields share a key (there'd be no second reader to
+    // benefit), so warn for any key used on only one field across the subgraph. extractRequestScopedConfig()
+    // populated requestScopedFieldCoordsByL1Key during the type walk above.
+    for (const [l1Key, fieldCoordsList] of this.requestScopedFieldCoordsByL1Key) {
+      if (fieldCoordsList.length === 1) {
+        this.warnings.push(
+          requestScopedSingleFieldWarning({
+            subgraphName: this.subgraphName,
+            // l1Key is `${this.subgraphName}.${key}`, so strip the prefix to recover the original key.
+            key: l1Key.slice(this.subgraphName.length + 1),
+            fieldCoords: fieldCoordsList[0],
+          }),
+        );
+      }
+    }
     this.isSubgraphEventDrivenGraph = this.edfsDirectiveReferences.size > 0;
     // this is where @provides and @requires configurations are added to the ConfigurationData
     this.addValidConditionalFieldSetConfigurations();
@@ -5581,8 +5554,6 @@ export class NormalizationFactory {
     // @openfed__queryCache extraction and @openfed__is placement validation — must run after key field sets
     // are available (queryCache reads keyFieldSetDatasByTypeName to build argument→key mappings)
     this.processRootFieldCacheDirectives();
-    // this is where @openfed__requestScoped configurations are added to the ConfigurationData
-    this.extractRequestScopedFields();
     // Check that explicitly defined operations types are valid objects and that their fields are also valid
     for (const operationType of Object.values(OperationTypeNode)) {
       const operationTypeNode = this.schemaData.operationTypes.get(operationType);

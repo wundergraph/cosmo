@@ -40,7 +40,7 @@ import {
   ImageReference,
   InternedString,
   PluginConfiguration,
-  RequestScopedFieldConfiguration,
+  RequestScopedConfiguration,
   QueryCacheConfiguration,
   RouterConfig,
   TypeField,
@@ -83,17 +83,23 @@ function costsToCostConfiguration(costs?: Costs): CostConfiguration | undefined 
  * @returns The `EntityCaching` message, or `undefined` when empty so the field is omitted (like
  * `costsToCostConfiguration`).
  */
-function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, ConfigurationData>): EntityCachingConfiguration | undefined {
+function extractEntityCachingConfiguration(
+  dataByTypeName?: Map<TypeName, ConfigurationData>,
+): EntityCachingConfiguration | undefined {
   if (!dataByTypeName) {
     return;
   }
   const entityCache: EntityCacheConfiguration[] = [];
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
   const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
-  const requestScopedFields: RequestScopedFieldConfiguration[] = [];
+  const requestScopedConfigurations: RequestScopedConfiguration[] = [];
   const queryCacheConfigurations: QueryCacheConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
-    for (const ec of data.entityCaching?.entityCacheConfigurations ?? []) {
+    if (!data.entityCaching) {
+      continue;
+    }
+
+    for (const ec of data.entityCaching?.entityCacheConfigurations) {
       entityCache.push(
         new EntityCacheConfiguration({
           typeName: ec.typeName,
@@ -105,7 +111,7 @@ function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, Config
         }),
       );
     }
-    for (const ci of data.entityCaching?.cacheInvalidateConfigurations ?? []) {
+    for (const ci of data.entityCaching?.cacheInvalidateConfigurations) {
       cacheInvalidateConfigurations.push(
         new CacheInvalidateConfiguration({
           fieldName: ci.fieldName,
@@ -114,7 +120,7 @@ function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, Config
         }),
       );
     }
-    for (const cp of data.entityCaching?.cachePopulateConfigurations ?? []) {
+    for (const cp of data.entityCaching?.cachePopulateConfigurations) {
       cachePopulateConfigurations.push(
         new CachePopulateConfiguration({
           fieldName: cp.fieldName,
@@ -124,9 +130,9 @@ function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, Config
         }),
       );
     }
-    for (const field of data.entityCaching?.requestScopedFields ?? []) {
-      requestScopedFields.push(
-        new RequestScopedFieldConfiguration({
+    for (const field of data.entityCaching?.requestScopedConfigurations) {
+      requestScopedConfigurations.push(
+        new RequestScopedConfiguration({
           fieldName: field.fieldName,
           typeName: field.typeName,
           l1Key: field.l1Key,
@@ -160,21 +166,20 @@ function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, Config
     }
   }
   if (
-    entityCache.length === 0 &&
-    cacheInvalidateConfigurations.length === 0 &&
-    cachePopulateConfigurations.length === 0 &&
-    requestScopedFields.length === 0 &&
-    queryCacheConfigurations.length === 0
+    entityCache.length > 0 ||
+    cacheInvalidateConfigurations.length > 0 ||
+    cachePopulateConfigurations.length > 0 ||
+    requestScopedConfigurations.length > 0 ||
+    queryCacheConfigurations.length > 0
   ) {
-    return;
+    return new EntityCachingConfiguration({
+      entityCache,
+      cacheInvalidateConfigurations,
+      cachePopulateConfigurations,
+      requestScopedConfigurations,
+      queryCacheConfigurations,
+    });
   }
-  return new EntityCachingConfiguration({
-    entityCache,
-    cacheInvalidateConfigurations,
-    cachePopulateConfigurations,
-    requestScopedFields,
-    queryCacheConfigurations,
-  });
 }
 
 export interface Input {

@@ -20,7 +20,7 @@ export type InvalidRepeatedComposedDirectiveWarningParams = {
 export type RequestScopedSingleFieldWarningParams = {
   subgraphName: SubgraphName;
   key: string;
-  fieldCoords: FieldName;
+  fieldCoords: string;
 };
 
 export type QueryCacheReturnEntityMissingEntityCacheWarningParams = {
