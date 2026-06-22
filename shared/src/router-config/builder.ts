@@ -85,7 +85,11 @@ function extractEntityCachingConfiguration(
   }
   const entityCache: EntityCacheConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
-    for (const ec of data.entityCaching?.entityCacheConfigurations ?? []) {
+    if (!data.entityCaching) {
+      continue;
+    }
+
+    for (const ec of data.entityCaching.entityCacheConfigurations) {
       entityCache.push(
         new EntityCacheConfiguration({
           typeName: ec.typeName,

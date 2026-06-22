@@ -4103,8 +4103,7 @@ export class NormalizationFactory {
       newConfigurationData(true, typeName),
     );
 
-    const entityCaching = getOrInitializeEntityCaching(configurationData);
-    entityCaching.entityCacheConfigurations.push(config);
+    getOrInitializeEntityCaching(configurationData).entityCacheConfigurations.push(config);
   }
 
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
