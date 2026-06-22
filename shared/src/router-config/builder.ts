@@ -23,8 +23,11 @@ import {
   DataSourceConfiguration,
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
+  CacheInvalidateConfiguration,
   DataSourceKind,
   EngineConfiguration,
+  EntityCacheConfiguration,
+  EntityCachingConfiguration,
   FieldListSizeConfiguration,
   FieldWeightConfiguration,
   GraphQLSubscriptionConfiguration,
@@ -65,6 +68,57 @@ function costsToCostConfiguration(costs?: Costs): CostConfiguration | undefined 
     typeWeights: Object.fromEntries(costs.typeWeights),
     directiveArgumentWeights: Object.fromEntries(costs.directiveArgumentWeights),
   });
+}
+
+/**
+ * Convert the entity-caching configuration spread across a subgraph's `ConfigurationData` into the
+ * `EntityCaching` message. Add new entity-caching field types to the collection loop and the
+ * emptiness check below.
+ *
+ * @returns The `EntityCaching` message, or `undefined` when empty so the field is omitted (like
+ * `costsToCostConfiguration`).
+ */
+function extractEntityCachingConfiguration(
+  dataByTypeName?: Map<TypeName, ConfigurationData>,
+): EntityCachingConfiguration | undefined {
+  if (!dataByTypeName) {
+    return;
+  }
+  const entityCache: EntityCacheConfiguration[] = [];
+  const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
+  for (const data of dataByTypeName.values()) {
+    if (!data.entityCaching) {
+      continue;
+    }
+
+    for (const ec of data.entityCaching.entityCacheConfigurations) {
+      entityCache.push(
+        new EntityCacheConfiguration({
+          typeName: ec.typeName,
+          maxAgeSeconds: BigInt(ec.maxAgeSeconds),
+          notFoundCacheTtlSeconds: BigInt(ec.notFoundCacheTtlSeconds),
+          includeHeaders: ec.includeHeaders,
+          partialCacheLoad: ec.partialCacheLoad,
+          shadowMode: ec.shadowMode,
+        }),
+      );
+    }
+    for (const ci of data.entityCaching?.cacheInvalidateConfigurations) {
+      cacheInvalidateConfigurations.push(
+        new CacheInvalidateConfiguration({
+          entityTypeName: ci.entityTypeName,
+          fieldName: ci.fieldName,
+          operationType: ci.operationType,
+        }),
+      );
+    }
+  }
+  if (entityCache.length > 0 || cacheInvalidateConfigurations.length > 0) {
+    return new EntityCachingConfiguration({
+      cacheInvalidateConfigurations,
+      entityCache,
+    });
+  }
 }
 
 export interface Input {
@@ -315,6 +369,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       customGraphql,
       directives: [],
       entityInterfaces,
+      entityCachingConfiguration: extractEntityCachingConfiguration(subgraph.configurationDataByTypeName),
       interfaceObjects,
       keys,
       kind,
