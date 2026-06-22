@@ -36,6 +36,7 @@ import {
   type INCLUDE_HEADERS,
   type MAX_AGE,
   type NEGATIVE_CACHE_TTL,
+  type OPENFED_CACHE_POPULATE,
   type OPENFED_ENTITY_CACHE,
   type PARTIAL_CACHE_LOAD,
   type SHADOW_MODE,
@@ -206,13 +207,13 @@ export type ShadowModeArgumentNode = {
 export type CachePopulateDirectiveNode = {
   readonly arguments: ReadonlyArray<CachePopulateArgumentNode>;
   readonly kind: Kind.DIRECTIVE;
-  readonly name: NameNode;
+  readonly name: NameNode & { readonly value: typeof OPENFED_CACHE_POPULATE };
   readonly loc?: Location;
 };
 
 export type CachePopulateArgumentNode = {
   readonly kind: Kind.ARGUMENT;
-  readonly name: NameNode;
+  readonly name: NameNode & { readonly value: typeof MAX_AGE };
   // maxAge: Int (optional). validateDirectives() guarantees it's an Int literal when present.
   readonly value: IntValueNode;
   readonly loc?: Location;

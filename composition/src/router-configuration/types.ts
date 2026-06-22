@@ -131,20 +131,20 @@ export type CacheInvalidateConfiguration = {
 // Extracted from @openfed__cachePopulate on Mutation/Subscription fields.
 // Tells the router to populate the entity cache with the operation's return value.
 // maxAgeSeconds overrides the entity's default TTL when provided.
-export type CachePopulateConfig = {
+export type CachePopulateConfiguration = {
   entityTypeName: TypeName;
   fieldName: FieldName;
-  maxAgeSeconds?: number;
-  operationType: string;
+  maxAgeSeconds: number;
+  operationType: OperationTypeNode;
 };
 
 export type EntityCachingConfiguration = {
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cacheInvalidate.
   cacheInvalidateConfigurations: Array<CacheInvalidateConfiguration>;
+  // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cachePopulate.
+  cachePopulateConfigurations: Array<CachePopulateConfiguration>;
   // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
   entityCacheConfigurations: Array<EntityCacheConfiguration>;
-  // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cachePopulate.
-  cachePopulateConfigurations: Array<CachePopulateConfig>;
 };
 
 export type Costs = {
