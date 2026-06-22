@@ -4011,7 +4011,7 @@ export class NormalizationFactory {
 
   extractEntityCacheDirective({ directivesByName, name: typeName }: ObjectDefinitionData) {
     const entityCacheDirectives = directivesByName.get(OPENFED_ENTITY_CACHE);
-    if (!entityCacheDirectives || entityCacheDirectives.length == 0) {
+    if (!entityCacheDirectives || entityCacheDirectives.length === 0) {
       return;
     }
     if (!this.keyFieldSetDatasByTypeName.has(typeName)) {
@@ -4107,8 +4107,7 @@ export class NormalizationFactory {
       newConfigurationData(true, typeName),
     );
 
-    const entityCaching = getOrInitializeEntityCaching(configurationData);
-    entityCaching.entityCacheConfigurations.push(config);
+    getOrInitializeEntityCaching(configurationData).entityCacheConfigurations.push(config);
   }
 
   extractCacheInvalidateConfig(fieldData: FieldData) {
