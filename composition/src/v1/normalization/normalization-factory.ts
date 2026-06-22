@@ -4156,9 +4156,9 @@ export class NormalizationFactory {
     );
 
     const config: CacheInvalidateConfiguration = {
+      entityTypeName: returnTypeName,
       fieldName: fieldData.name,
       operationType: operationType,
-      entityTypeName: returnTypeName,
     };
 
     getOrInitializeEntityCaching(configurationData).cacheInvalidateConfigurations.push(config);
@@ -4418,9 +4418,7 @@ export class NormalizationFactory {
                 this.extractCacheInvalidateConfig(fieldData);
                 this.extractCachePopulateConfig(fieldData);
               }
-            }
-
-            if (!isObject && fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
+            } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
             }
             // Arguments can only be fully validated once all parents types are known

@@ -108,9 +108,9 @@ function extractEntityCachingConfiguration(
     for (const ci of data.entityCaching?.cacheInvalidateConfigurations) {
       cacheInvalidateConfigurations.push(
         new CacheInvalidateConfiguration({
+          entityTypeName: ci.entityTypeName,
           fieldName: ci.fieldName,
           operationType: ci.operationType,
-          entityTypeName: ci.entityTypeName,
         }),
       );
     }
