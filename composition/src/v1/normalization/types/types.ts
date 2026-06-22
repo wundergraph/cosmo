@@ -214,7 +214,6 @@ export type CachePopulateDirectiveNode = {
 export type CachePopulateArgumentNode = {
   readonly kind: Kind.ARGUMENT;
   readonly name: NameNode & { readonly value: typeof MAX_AGE };
-  // maxAge: Int (optional). validateDirectives() guarantees it's an Int literal when present.
   readonly value: IntValueNode;
   readonly loc?: Location;
 };
