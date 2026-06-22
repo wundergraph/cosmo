@@ -4430,7 +4430,6 @@ export class NormalizationFactory {
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
           }
 
-          const newParentTypeName = getParentTypeName(parentData);
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
             if (isObject) {
@@ -4488,6 +4487,7 @@ export class NormalizationFactory {
                   externalInterfaceFieldsWarning(this.subgraphName, parentTypeName, [...externalInterfaceFieldNames]),
                 );
           }
+          const newParentTypeName = getParentTypeName(parentData);
           const configurationData = getValueOrDefault(this.configurationDataByTypeName, newParentTypeName, () =>
             newConfigurationData(isEntity, parentTypeName),
           );
