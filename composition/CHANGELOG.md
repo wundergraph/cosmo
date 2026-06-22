@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.60.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.59.2...@wundergraph/composition@0.60.0) (2026-06-22)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cacheInvalidate directive (2/5) ([#2983](https://github.com/wundergraph/cosmo/issues/2983)) ([19bbbe5](https://github.com/wundergraph/cosmo/commit/19bbbe5659011ef4536fe43edbb1ae313bda91e3)) (@SkArchon)
+* **composition:** [@openfed](https://github.com/openfed)__entityCache directive (1/5) ([#2980](https://github.com/wundergraph/cosmo/issues/2980)) ([2075164](https://github.com/wundergraph/cosmo/commit/2075164f18ee0cf953effdef2a031c59b3e8d112)) (@SkArchon)
+
 ## [0.59.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.59.1...@wundergraph/composition@0.59.2) (2026-06-19)
 
 ### Bug Fixes
