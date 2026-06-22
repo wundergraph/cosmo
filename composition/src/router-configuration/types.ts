@@ -1,3 +1,4 @@
+import { type OperationTypeNode } from 'graphql';
 import {
   type ArgumentName,
   type DirectiveArgumentCoords,
@@ -123,7 +124,7 @@ export type EntityCacheConfiguration = {
 // Tells the router to evict the returned entity from the cache after the operation completes.
 export type CacheInvalidateConfig = {
   fieldName: FieldName;
-  operationType: string;
+  operationType: OperationTypeNode;
   entityTypeName: TypeName;
 };
 
@@ -138,12 +139,9 @@ export type CachePopulateConfig = {
 };
 
 export type EntityCachingConfiguration = {
-  // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
-  entityCacheConfigurations?: Array<EntityCacheConfiguration>;
-  // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cacheInvalidate.
-  cacheInvalidateConfigurations?: Array<CacheInvalidateConfig>;
-  // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cachePopulate.
-  cachePopulateConfigurations?: Array<CachePopulateConfig>;
+  entityCacheConfigurations: Array<EntityCacheConfiguration>;
+  cacheInvalidateConfigurations: Array<CacheInvalidateConfig>;
+  cachePopulateConfigurations: Array<CachePopulateConfig>;
 };
 
 export type Costs = {

@@ -133,6 +133,6 @@ export function createSubgraph(name: SubgraphName, sdlString: string): Subgraph 
   };
 }
 
-export function createSubgraphWithDefault(sdlString: string): Subgraph {
+export function createSubgraphWithDefaultName(sdlString: string): Subgraph {
   return createSubgraph('subgraph-default-a', sdlString);
 }
