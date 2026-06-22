@@ -4164,38 +4164,6 @@ export class NormalizationFactory {
     getOrInitializeEntityCaching(configurationData).entityCacheConfigurations.push(config);
   }
 
-  /**
-   * Dispatches per-field @openfed__queryCache extraction and @openfed__is placement validation. Must run
-   * after {@link extractEntityCacheDirective} (reads {@link entityCacheConfigByTypeName}) and after key field
-   * sets are available. @openfed__cacheInvalidate/@openfed__cachePopulate are extracted inline during the
-   * parent walk (see {@link extractCacheInvalidateConfig}/{@link extractCachePopulateConfig}). All object types
-   * are walked, not just root operation types: @openfed__queryCache is declared `on FIELD_DEFINITION`, so it
-   * can be (mis)placed on any field. `getOperationTypeNodeForRootTypeName()` returns undefined for non-root
-   * types; the extractor then reports the misplacement via its operation-type check.
-   */
-  processRootFieldCacheDirectives() {
-    for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
-      if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-        continue;
-      }
-      const operationType = this.getOperationTypeNodeForRootTypeName(parentTypeName);
-      // A renamed root type (e.g. `schema { query: MyQuery }`) is keyed in configurationDataByTypeName under
-      // its federated/canonical name (Query/Mutation/Subscription) by every other config writer (keys, provides,
-      // the root-node lookup). Cache configs must use the same key, or the router reads the canonical node and
-      // never sees them.
-      const configurationTypeName = getParentTypeName(parentData);
-
-      for (const [fieldName, fieldData] of parentData.fieldDataByName) {
-        const fieldCoords = `${parentTypeName}.${fieldName}`;
-        const hasQueryCache = fieldData.directivesByName.has(OPENFED_QUERY_CACHE);
-        if (hasQueryCache) {
-          this.extractQueryCacheConfig(parentTypeName, configurationTypeName, fieldName, fieldData, operationType);
-        }
-        this.validateIsDirectivePlacement(fieldCoords, fieldData, hasQueryCache);
-      }
-    }
-  }
-
   extractCacheInvalidateConfig(fieldData: FieldData) {
     if (!fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE)) {
       return;
@@ -5441,6 +5409,26 @@ export class NormalizationFactory {
               }
 
               this.extractRequestScopedConfig(fieldData);
+
+              // @openfed__queryCache extraction and @openfed__is placement validation. Key field sets and
+              // entity-cache configs are already finalized at this point in normalize() (populated by
+              // upsertParentsAndChildren and extractEntityCacheDirective, invalid keys pruned by
+              // evaluateExternalKeyFields), so queryCache can read keyFieldSetDatasByTypeName to build
+              // argument→key mappings.
+              const hasQueryCache = fieldData.directivesByName.has(OPENFED_QUERY_CACHE);
+              if (hasQueryCache) {
+                // A renamed root type (e.g. `schema { query: MyQuery }`) is keyed in configurationDataByTypeName
+                // under its federated/canonical name (Query/Mutation/Subscription) by every other config writer.
+                // Cache configs must use the same key, or the router reads the canonical node and never sees them.
+                this.extractQueryCacheConfig(
+                  parentTypeName,
+                  getParentTypeName(parentData),
+                  fieldName,
+                  fieldData,
+                  this.getOperationTypeNodeForRootTypeName(parentTypeName),
+                );
+              }
+              this.validateIsDirectivePlacement(`${parentTypeName}.${fieldName}`, fieldData, hasQueryCache);
             } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
             }
@@ -5551,9 +5539,6 @@ export class NormalizationFactory {
     this.addValidConditionalFieldSetConfigurations();
     // this is where @key configurations are added to the ConfigurationData
     this.addValidKeyFieldSetConfigurations();
-    // @openfed__queryCache extraction and @openfed__is placement validation — must run after key field sets
-    // are available (queryCache reads keyFieldSetDatasByTypeName to build argument→key mappings)
-    this.processRootFieldCacheDirectives();
     // Check that explicitly defined operations types are valid objects and that their fields are also valid
     for (const operationType of Object.values(OperationTypeNode)) {
       const operationTypeNode = this.schemaData.operationTypes.get(operationType);
