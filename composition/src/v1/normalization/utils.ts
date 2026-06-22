@@ -547,7 +547,11 @@ export function upsertFederatedDirectiveData({
      *  could be set in one one subgraph and removed in another subgraph with a imported higher version.
      */
     if (existingData.minorVersion < directiveData.minorVersion) {
-      existingDataByName.set(directiveName, copyDirectiveDefinitionData(directiveData));
+      const copiedData = copyDirectiveDefinitionData(directiveData);
+      copiedData.isReferenced ||= existingData.isReferenced;
+      existingDataByName.set(directiveName, copiedData);
+    } else {
+      existingData.isReferenced ||= directiveData.isReferenced;
     }
   }
 }

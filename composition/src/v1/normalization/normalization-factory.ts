@@ -828,14 +828,17 @@ export class NormalizationFactory {
         }
         continue;
       }
+
       if (definitionData.isComposed) {
         definitionData.isReferenced = true;
       }
+
       const definitionErrorMessages: Array<string> = [];
       const directiveLocation = nodeKindToDirectiveLocation(data.kind);
       if (!definitionData.locations.has(directiveLocation)) {
         definitionErrorMessages.push(invalidDirectiveLocationErrorMessage(directiveName, directiveLocation));
       }
+
       if (directiveNodes.length > 1 && !definitionData.isRepeatable) {
         const handledDirectiveNames = getValueOrDefault(
           this.invalidRepeatedDirectiveNameByCoords,
