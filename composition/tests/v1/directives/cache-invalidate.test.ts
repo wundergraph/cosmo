@@ -4,7 +4,7 @@ import {
   type BatchNormalizationSuccess,
   BatchNormalizer,
   OPENFED_CACHE_INVALIDATE,
-  type CacheInvalidateConfig,
+  type CacheInvalidationConfiguration,
   type ConfigurationData,
   FIRST_ORDINAL,
   invalidDirectiveError,
@@ -22,7 +22,7 @@ import { createSubgraphWithDefaultName, normalizeSubgraphFailure, normalizeSubgr
 
 describe('@openfed__cacheInvalidate directive tests', () => {
   describe('Mutation field tests', () => {
-    test('that a valid CacheInvalidateConfig is produced', () => {
+    test('that a valid CacheInvalidationConfiguration is produced', () => {
       const config = getConfigForType(
         createSubgraphWithDefaultName(`
             type Query { dummy: String! }
@@ -37,13 +37,42 @@ describe('@openfed__cacheInvalidate directive tests', () => {
         MUTATION,
       );
       expect(config).toBeDefined();
-      expect(config!.entityCaching?.cacheInvalidateConfigurations).toStrictEqual([
+      expect(config!.entityCaching?.cacheInvalidationConfigurations).toStrictEqual([
         {
           fieldName: 'updateProduct',
           operationType: OperationTypeNode.MUTATION,
           entityTypeName: 'Product',
         },
-      ] satisfies CacheInvalidateConfig[]);
+      ] satisfies CacheInvalidationConfiguration[]);
+    });
+
+    test('that a renamed Mutation root type keys the config under the canonical name', () => {
+      const config = getConfigForType(
+        createSubgraphWithDefaultName(`
+            schema {
+              mutation: Mutations
+            }
+            type Query { dummy: String! }
+            type Mutations {
+              updateProduct(id: ID!): Product @openfed__cacheInvalidate
+            }
+            type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+              id: ID!
+              name: String!
+            }
+          `),
+        MUTATION,
+      );
+      // The config must be keyed under the renamed root name `Mutation`, not the original `Mutations`.
+      expect(config).toBeDefined();
+      expect(config!.typeName).toBe(MUTATION);
+      expect(config!.entityCaching?.cacheInvalidationConfigurations).toStrictEqual([
+        {
+          fieldName: 'updateProduct',
+          operationType: OperationTypeNode.MUTATION,
+          entityTypeName: 'Product',
+        },
+      ] satisfies CacheInvalidationConfiguration[]);
     });
 
     test('that multiple cacheInvalidate fields on the same type accumulate into one config array', () => {
@@ -69,7 +98,7 @@ describe('@openfed__cacheInvalidate directive tests', () => {
       expect(config).toBeDefined();
       // Each field on Mutation shares the same configurationData, so configs accumulate via
       // `[...existingCacheInvalidates, config]` — the 2nd and 3rd fields see existing length > 0.
-      expect(config!.entityCaching?.cacheInvalidateConfigurations).toStrictEqual([
+      expect(config!.entityCaching?.cacheInvalidationConfigurations).toStrictEqual([
         {
           fieldName: 'updateProduct',
           operationType: OperationTypeNode.MUTATION,
@@ -85,12 +114,12 @@ describe('@openfed__cacheInvalidate directive tests', () => {
           operationType: OperationTypeNode.MUTATION,
           entityTypeName: 'Review',
         },
-      ] satisfies CacheInvalidateConfig[]);
+      ] satisfies CacheInvalidationConfiguration[]);
     });
   });
 
   describe('Subscription field tests', () => {
-    test('that a valid CacheInvalidateConfig is produced', () => {
+    test('that a valid CacheInvalidationConfiguration is produced', () => {
       const config = getConfigForType(
         createSubgraphWithDefaultName(`
             type Query { dummy: String! }
@@ -105,13 +134,13 @@ describe('@openfed__cacheInvalidate directive tests', () => {
         SUBSCRIPTION,
       );
       expect(config).toBeDefined();
-      expect(config!.entityCaching?.cacheInvalidateConfigurations).toStrictEqual([
+      expect(config!.entityCaching?.cacheInvalidationConfigurations).toStrictEqual([
         {
           fieldName: 'itemUpdated',
           operationType: OperationTypeNode.SUBSCRIPTION,
           entityTypeName: 'Product',
         },
-      ] satisfies CacheInvalidateConfig[]);
+      ] satisfies CacheInvalidationConfiguration[]);
     });
   });
 

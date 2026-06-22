@@ -187,7 +187,7 @@ import {
   type FieldWeightConfiguration,
   type NatsEventType,
   type RequiredFieldConfiguration,
-  type CacheInvalidateConfig,
+  type CacheInvalidationConfiguration,
   type EntityCacheConfiguration,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
@@ -4143,14 +4143,13 @@ export class NormalizationFactory {
       newConfigurationData(false, fieldData.renamedParentTypeName),
     );
 
-    const config: CacheInvalidateConfig = {
+    const config: CacheInvalidationConfiguration = {
       fieldName: fieldData.name,
       operationType: operationType,
       entityTypeName: returnTypeName,
     };
 
-    const entityCaching = getOrInitializeEntityCaching(configurationData);
-    entityCaching.cacheInvalidateConfigurations.push(config);
+    getOrInitializeEntityCaching(configurationData).cacheInvalidationConfigurations.push(config);
   }
 
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
