@@ -4353,10 +4353,7 @@ export class NormalizationFactory {
     entityCaching.queryCacheConfigurations = [...(entityCaching.queryCacheConfigurations ?? []), config];
   }
 
-  validateIsDirectivePlacement(fieldCoords: string, fieldData: FieldData, hasQueryCache: boolean) {
-    if (hasQueryCache) {
-      return;
-    }
+  validateIsDirectivePlacement(fieldCoords: string, fieldData: FieldData) {
     for (const [argumentName, argumentData] of fieldData.argumentDataByName) {
       if (!argumentData.directivesByName.has(OPENFED_IS)) {
         continue;
@@ -5415,8 +5412,7 @@ export class NormalizationFactory {
               // upsertParentsAndChildren and extractEntityCacheDirective, invalid keys pruned by
               // evaluateExternalKeyFields), so queryCache can read keyFieldSetDatasByTypeName to build
               // argument→key mappings.
-              const hasQueryCache = fieldData.directivesByName.has(OPENFED_QUERY_CACHE);
-              if (hasQueryCache) {
+              if (fieldData.directivesByName.has(OPENFED_QUERY_CACHE)) {
                 // A renamed root type (e.g. `schema { query: MyQuery }`) is keyed in configurationDataByTypeName
                 // under its federated/canonical name (Query/Mutation/Subscription) by every other config writer.
                 // Cache configs must use the same key, or the router reads the canonical node and never sees them.
@@ -5427,8 +5423,11 @@ export class NormalizationFactory {
                   fieldData,
                   this.getOperationTypeNodeForRootTypeName(parentTypeName),
                 );
+              } else {
+                // @openfed__is on an argument is only valid alongside @openfed__queryCache on the field, so any
+                // @openfed__is here (no queryCache) is a misplacement.
+                this.validateIsDirectivePlacement(`${parentTypeName}.${fieldName}`, fieldData);
               }
-              this.validateIsDirectivePlacement(`${parentTypeName}.${fieldName}`, fieldData, hasQueryCache);
             } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
             }
