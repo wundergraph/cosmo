@@ -23,8 +23,14 @@ import {
   DataSourceConfiguration,
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
+  CacheInvalidateConfiguration,
+  CachePopulateConfiguration,
   DataSourceKind,
   EngineConfiguration,
+  EntityCacheConfiguration,
+  EntityCacheFieldMapping,
+  EntityCachingConfiguration,
+  EntityKeyMapping,
   FieldListSizeConfiguration,
   FieldWeightConfiguration,
   GraphQLSubscriptionConfiguration,
@@ -34,6 +40,8 @@ import {
   ImageReference,
   InternedString,
   PluginConfiguration,
+  RequestScopedConfiguration,
+  QueryCacheConfiguration,
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
@@ -65,6 +73,113 @@ function costsToCostConfiguration(costs?: Costs): CostConfiguration | undefined 
     typeWeights: Object.fromEntries(costs.typeWeights),
     directiveArgumentWeights: Object.fromEntries(costs.directiveArgumentWeights),
   });
+}
+
+/**
+ * Convert the entity-caching configuration spread across a subgraph's `ConfigurationData` into the
+ * `EntityCaching` message. Add new entity-caching field types to the collection loop and the
+ * emptiness check below.
+ *
+ * @returns The `EntityCaching` message, or `undefined` when empty so the field is omitted (like
+ * `costsToCostConfiguration`).
+ */
+function extractEntityCachingConfiguration(
+  dataByTypeName?: Map<TypeName, ConfigurationData>,
+): EntityCachingConfiguration | undefined {
+  if (!dataByTypeName) {
+    return;
+  }
+  const entityCache: EntityCacheConfiguration[] = [];
+  const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
+  const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
+  const requestScopedConfigurations: RequestScopedConfiguration[] = [];
+  const queryCacheConfigurations: QueryCacheConfiguration[] = [];
+  for (const data of dataByTypeName.values()) {
+    if (!data.entityCaching) {
+      continue;
+    }
+
+    for (const ec of data.entityCaching?.entityCacheConfigurations) {
+      entityCache.push(
+        new EntityCacheConfiguration({
+          typeName: ec.typeName,
+          maxAgeSeconds: BigInt(ec.maxAgeSeconds),
+          notFoundCacheTtlSeconds: BigInt(ec.notFoundCacheTtlSeconds),
+          includeHeaders: ec.includeHeaders,
+          partialCacheLoad: ec.partialCacheLoad,
+          shadowMode: ec.shadowMode,
+        }),
+      );
+    }
+    for (const ci of data.entityCaching?.cacheInvalidateConfigurations) {
+      cacheInvalidateConfigurations.push(
+        new CacheInvalidateConfiguration({
+          fieldName: ci.fieldName,
+          operationType: ci.operationType,
+          entityTypeName: ci.entityTypeName,
+        }),
+      );
+    }
+    for (const cp of data.entityCaching?.cachePopulateConfigurations) {
+      cachePopulateConfigurations.push(
+        new CachePopulateConfiguration({
+          fieldName: cp.fieldName,
+          operationType: cp.operationType,
+          entityTypeName: cp.entityTypeName,
+          maxAgeSeconds: cp.maxAgeSeconds === undefined ? undefined : BigInt(cp.maxAgeSeconds),
+        }),
+      );
+    }
+    for (const field of data.entityCaching?.requestScopedConfigurations) {
+      requestScopedConfigurations.push(
+        new RequestScopedConfiguration({
+          fieldName: field.fieldName,
+          typeName: field.typeName,
+          l1Key: field.l1Key,
+        }),
+      );
+    }
+    for (const rfc of data.entityCaching?.queryCacheConfigurations ?? []) {
+      queryCacheConfigurations.push(
+        new QueryCacheConfiguration({
+          fieldName: rfc.fieldName,
+          maxAgeSeconds: BigInt(rfc.maxAgeSeconds),
+          includeHeaders: rfc.includeHeaders,
+          shadowMode: rfc.shadowMode,
+          entityTypeName: rfc.entityTypeName,
+          entityKeyMappings: rfc.entityKeyMappings.map(
+            (m) =>
+              new EntityKeyMapping({
+                entityTypeName: m.entityTypeName,
+                fieldMappings: m.fieldMappings.map(
+                  (fm) =>
+                    new EntityCacheFieldMapping({
+                      entityKeyField: fm.entityKeyField,
+                      argumentPath: fm.argumentPath,
+                      isBatch: fm.isBatch || false,
+                    }),
+                ),
+              }),
+          ),
+        }),
+      );
+    }
+  }
+  if (
+    entityCache.length > 0 ||
+    cacheInvalidateConfigurations.length > 0 ||
+    cachePopulateConfigurations.length > 0 ||
+    requestScopedConfigurations.length > 0 ||
+    queryCacheConfigurations.length > 0
+  ) {
+    return new EntityCachingConfiguration({
+      entityCache,
+      cacheInvalidateConfigurations,
+      cachePopulateConfigurations,
+      requestScopedConfigurations,
+      queryCacheConfigurations,
+    });
+  }
 }
 
 export interface Input {
@@ -328,6 +443,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       customGraphql,
       directives: [],
       entityInterfaces,
+      entityCachingConfiguration: extractEntityCachingConfiguration(subgraph.configurationDataByTypeName),
       interfaceObjects,
       keys,
       kind,

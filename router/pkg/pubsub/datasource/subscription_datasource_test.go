@@ -39,7 +39,7 @@ func testSubscriptionDataSourceEventBuilder(data []byte) MutableStreamEvent {
 
 func TestPubSubSubscriptionDataSource_SubscriptionEventConfiguration_Success(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
@@ -64,7 +64,7 @@ func TestPubSubSubscriptionDataSource_SubscriptionEventConfiguration_Success(t *
 
 func TestPubSubSubscriptionDataSource_SubscriptionEventConfiguration_InvalidJSON(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
@@ -78,7 +78,7 @@ func TestPubSubSubscriptionDataSource_SubscriptionEventConfiguration_InvalidJSON
 
 func TestPubSubSubscriptionDataSource_Start_Success(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
@@ -103,7 +103,7 @@ func TestPubSubSubscriptionDataSource_Start_Success(t *testing.T) {
 
 func TestPubSubSubscriptionDataSource_Start_NoConfiguration(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
@@ -120,7 +120,7 @@ func TestPubSubSubscriptionDataSource_Start_NoConfiguration(t *testing.T) {
 
 func TestPubSubSubscriptionDataSource_Start_SubscribeError(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
@@ -147,7 +147,7 @@ func TestPubSubSubscriptionDataSource_Start_SubscribeError(t *testing.T) {
 
 func TestPubSubSubscriptionDataSource_SubscriptionOnStart_Success(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
@@ -171,7 +171,7 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_Success(t *testing.T) 
 
 func TestPubSubSubscriptionDataSource_SubscriptionOnStart_WithHooks(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
@@ -227,7 +227,7 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_WithHooks(t *testing.T
 
 func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsClose(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
@@ -262,7 +262,7 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsClose(t *te
 
 func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsError(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
@@ -299,7 +299,7 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsError(t *te
 
 func TestPubSubSubscriptionDataSource_SetSubscriptionOnStartFns(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
@@ -333,7 +333,7 @@ func TestPubSubSubscriptionDataSource_SetSubscriptionOnStartFns(t *testing.T) {
 
 func TestNewPubSubSubscriptionDataSource(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
@@ -341,13 +341,13 @@ func TestNewPubSubSubscriptionDataSource(t *testing.T) {
 
 	assert.NotNil(t, dataSource)
 	assert.Equal(t, mockAdapter, dataSource.pubSub)
-	assert.NotNil(t, dataSource.uniqueRequestID)
+	assert.NotNil(t, dataSource.triggerHashInput)
 	assert.Empty(t, dataSource.hooks.SubscriptionOnStart.Handlers)
 }
 
 func TestPubSubSubscriptionDataSource_InterfaceCompliance(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
@@ -362,7 +362,7 @@ func TestPubSubSubscriptionDataSource_InterfaceCompliance(t *testing.T) {
 
 func TestPubSubSubscriptionDataSource_SubscriptionOnStart_InvalidEventConfigInput(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
@@ -423,7 +423,7 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_PanicRecovery(t *testi
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAdapter := NewMockProvider(t)
-			uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+			uniqueRequestIDFn := func(input []byte, xxh *xxhash.Digest) error {
 				return nil
 			}
 

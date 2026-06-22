@@ -137,6 +137,7 @@ func (b BuildGraphMuxOptions) IsBaseGraph() bool {
 type buildMultiGraphHandlerOptions struct {
 	baseMux               *chi.Mux
 	featureFlagConfigs    map[string]*nodev1.FeatureFlagRouterExecutionConfig
+	hashes                map[string]routerconfig.HashInfo
 	reloadPersistentState *ReloadPersistentState
 	currentGraphMuxes     map[string]*graphMux
 	changes               *routerconfig.Changes
@@ -366,7 +367,11 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 
 	if needNewBaseGraphMux {
 		// build new base grap mux
-		s.logger.Debug("Will build a new base graph mux for new graph server")
+		s.logger.With(
+			zap.String("old_execution_config_hash", response.Hashes[""].OldHash), // empty on router boot
+			zap.String("new_execution_config_hash", response.Hashes[""].NewHash),
+		).Debug("Will build a new base graph mux for new graph server")
+
 		gm, err = s.buildGraphMux(BuildGraphMuxOptions{
 			RouterConfigVersion:   s.baseRouterConfigVersion,
 			EngineConfig:          response.Config.GetEngineConfig(),
@@ -380,7 +385,9 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 			return nil, fmt.Errorf("failed to build base mux: %w", err)
 		}
 	} else {
-		s.logger.Debug("Will reuse old base graph mux for new graph server")
+		s.logger.With(zap.String("execution_config_hash", response.Hashes[""].NewHash)).
+			Debug("Will reuse old base graph mux for new graph server")
+
 		gm = mux
 		reusedMuxes = append(reusedMuxes, reusedGraphMux{key: "", mux: mux})
 	}
@@ -396,6 +403,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		reloadPersistentState: r.reloadPersistentState,
 		currentGraphMuxes:     currentMuxes,
 		changes:               response.Changes,
+		hashes:                response.Hashes,
 		defaultClientTLS:      defaultGRPCClientTLS,
 		perSubgraphTLS:        perSubgraphGRPCTLS,
 	})
@@ -600,8 +608,10 @@ func (s *graphServer) buildMultiGraphHandler(
 			if !hasChanged && !wasAdded {
 				oldGraphMux, exists := opts.currentGraphMuxes[featureFlagName]
 				if exists {
-					s.logger.Debug("will reuse feature flag mux for new graph server",
-						zap.String("flag", featureFlagName))
+					s.logger.Debug("Will reuse feature flag mux for new graph server",
+						zap.String("flag", featureFlagName),
+						zap.String("execution_config_hash", opts.hashes[featureFlagName].NewHash),
+					)
 					featureFlagToMux[featureFlagName] = oldGraphMux.mux
 					reused = append(reused, reusedGraphMux{key: featureFlagName, mux: oldGraphMux})
 					continue
@@ -609,8 +619,11 @@ func (s *graphServer) buildMultiGraphHandler(
 			}
 		}
 
-		s.logger.Debug("will create a new feature flag mux for new graph server",
-			zap.String("flag", featureFlagName))
+		s.logger.Debug("Will create a new feature flag mux for new graph server",
+			zap.String("flag", featureFlagName),
+			zap.String("old_execution_config_hash", opts.hashes[featureFlagName].OldHash), // empty on router boot
+			zap.String("new_execution_config_hash", opts.hashes[featureFlagName].NewHash),
+		)
 
 		gm, err := s.buildGraphMux(BuildGraphMuxOptions{
 			FeatureFlagName:       featureFlagName,

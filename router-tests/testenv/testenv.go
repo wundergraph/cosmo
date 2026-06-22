@@ -173,6 +173,7 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	}
 	b.StartTimer()
 	f(b, env)
+	b.StopTimer()
 	if cfg.AssertCacheMetrics != nil {
 		assertCacheMetrics(b, env, cfg.AssertCacheMetrics.BaseGraphAssertions, "")
 
@@ -180,6 +181,7 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 			assertCacheMetrics(b, env, v, ff)
 		}
 	}
+	b.StartTimer()
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -296,6 +298,8 @@ type MetricOptions struct {
 	LogExporter                           MetricsLogExporterOptions
 	OTLPCostStats                         config.CostStats
 	PrometheusCostStats                   config.CostStats
+	OTLPExemplarFilter                    config.ExemplarFilter
+	PrometheusExemplarFilter              config.ExemplarFilter
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -1657,6 +1661,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 
 		prometheusConfig = rmetric.PrometheusConfig{
 			Enabled:         true,
+			ExemplarFilter:  rmetric.ExemplarFilter(testConfig.MetricOptions.PrometheusExemplarFilter),
 			ListenAddr:      fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
 			Path:            "/metrics",
 			TestRegistry:    testConfig.PrometheusRegistry,
@@ -1687,6 +1692,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 				},
 				OTLP: config.MetricsOTLP{
 					Enabled:         true,
+					ExemplarFilter:  testConfig.MetricOptions.OTLPExemplarFilter,
 					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
 					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
 					Streams:         testConfig.MetricOptions.EnableOTLPStreamMetrics,
@@ -2943,6 +2949,15 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 		}
 		e.t.Fatalf("timed out waiting for trigger count, got %d, want at least %d", got, desiredCount)
 	}
+}
+
+// RequireTriggerCount asserts that the current trigger count equals desiredCount exactly.
+// Call this after WaitForSubscriptionCount has confirmed all subscriptions are active;
+// trigger creation is synchronous with subscription registration so no additional waiting is needed.
+func (e *Environment) RequireTriggerCount(desiredCount uint64) {
+	e.t.Helper()
+	report := e.syncReporter().GetReport()
+	require.Equal(e.t, desiredCount, report.Triggers, "expected exactly %d triggers, got %d", desiredCount, report.Triggers)
 }
 
 // NATSPublishUntilMinMessagesSent publishes a NATS message repeatedly until the

@@ -6,6 +6,8 @@ import {
   PublishFederatedSubgraphsRequest,
   PublishFederatedSubgraphsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { FastifyBaseLogger } from 'fastify';
+import * as Sentry from '@sentry/node';
 import { maxRowLimitForChecks } from '../../constants.js';
 import { buildSchema } from '../../composition/composition.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -14,7 +16,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository, UpdateSubgraphSchemaData } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { FederatedGraphDTO, SubgraphDTO } from '../../../types/index.js';
+import type { AuthContext, FederatedGraphDTO, SubgraphDTO } from '../../../types/index.js';
 import {
   clamp,
   enrichLogger,
@@ -24,6 +26,8 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { withSpan } from '../../tracing.js';
+import { BatchPublishJobDetailsRepository } from '../../repositories/BatchPublishJobDetailsRepository.js';
 
 /**
  * PublishFederatedSubgraphs publishes the schemas of multiple existing subgraphs (and feature subgraphs) in a single
@@ -46,15 +50,6 @@ export function publishFederatedSubgraphs(
       throw new UnauthorizedError();
     }
 
-    const orgWebhooks = new OrganizationWebhookService(
-      opts.db,
-      authContext.organizationId,
-      opts.logger,
-      opts.billingDefaultPlanId,
-      opts.webhookProxyUrl,
-    );
-    const auditLogRepo = new AuditLogRepository(opts.db);
-    const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
 
@@ -115,15 +110,11 @@ export function publishFederatedSubgraphs(
 
     // Resolve every requested subgraph; all of them must already exist.
     const resolved: { subgraph: SubgraphDTO; schema: string }[] = [];
-    const notFound: string[] = [];
     const typeErrors: string[] = [];
-    for (const entry of requestedEntries) {
-      const subgraph = await subgraphRepo.byName(entry.name, req.namespace);
-      if (!subgraph) {
-        notFound.push(entry.name);
-        continue;
-      }
-
+    for (const subgraph of await subgraphRepo.getSubgraphsByNames(
+      requestedEntries.map((e) => e.name),
+      namespace.id,
+    )) {
       if (subgraph.type === 'grpc_plugin') {
         typeErrors.push(
           `Subgraph "${subgraph.name}" is a plugin. Please use the 'wgc router plugin publish' command to publish it.`,
@@ -137,14 +128,22 @@ export function publishFederatedSubgraphs(
         continue;
       }
 
-      resolved.push({ subgraph, schema: entry.schema });
+      const schema = requestedEntries
+        .find((re) => re.name.toLowerCase() === subgraph.name.toLowerCase())!
+        .schema.trimEnd();
+
+      resolved.push({ subgraph, schema });
     }
 
-    if (notFound.length > 0) {
+    const resolvedSubgraphNames = new Set(resolved.map((re) => re.subgraph.name));
+    const requestedSubgraphNames = new Set(requestedEntries.map((re) => re.name));
+    const notFoundSubgraphNames = [...requestedSubgraphNames.difference(resolvedSubgraphNames)];
+
+    if (notFoundSubgraphNames.length > 0) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `The following subgraphs do not exist in the namespace "${req.namespace}": ${notFound.join(', ')}`,
+          details: `The following subgraphs do not exist in the namespace "${req.namespace}": ${notFoundSubgraphNames.join(', ')}`,
         },
         compositionErrors: [],
         deploymentErrors: [],
@@ -166,29 +165,27 @@ export function publishFederatedSubgraphs(
       };
     }
 
-    // The user must be authorized to publish each of the subgraphs.
-    for (const { subgraph } of resolved) {
-      await opts.authorizer.authorize({
-        db: opts.db,
-        graph: {
-          targetId: subgraph.targetId,
-          targetType: 'subgraph',
-        },
-        headers: ctx.requestHeader,
-        authContext,
-      });
-    }
+    withSpan('RBACEvaluator.hasSubGraphWriteAccess', () => {
+      for (const { subgraph } of resolved) {
+        if (!authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
+          throw new UnauthorizedError();
+        }
+      }
+    });
 
     // Validate every schema as a subgraph SDL before writing anything.
     const schemaErrors: string[] = [];
     const items: (UpdateSubgraphSchemaData & { name: string })[] = [];
-    for (const { subgraph, schema } of resolved) {
-      const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
-        labels: subgraph.labels,
-        namespaceId: namespace.id,
-      });
-      const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
 
+    /**
+     * @TODO:
+     *
+     * As of 2026-06-10 we only support v1, so instead of loading the federated graphs just to get that value we are
+     * going to pass no federated graphs to this method which will return the latest supported version. In the future,
+     * when we support different versions, we need to revisit this.
+     */
+    const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion([]);
+    for (const { subgraph, schema } of resolved) {
       let isEventDrivenGraph = false;
       let isV2Graph: boolean | undefined;
       try {
@@ -223,6 +220,7 @@ export function publishFederatedSubgraphs(
         updatedBy: authContext.userId,
         namespaceId: namespace.id,
         isV2Graph,
+        subgraph,
       });
     }
 
@@ -239,88 +237,101 @@ export function publishFederatedSubgraphs(
       };
     }
 
-    // Phase 1: persist all schema versions and collect the deduplicated union of affected graphs/flags in a single
-    // short transaction.
-    const { affectedFederatedGraphs, affectedFeatureFlags, changedSubgraphNames } =
-      await subgraphRepo.batchWriteAndCollect(items);
-
-    // Phase 2: compose and deploy the affected graphs OUTSIDE the transaction. Composition is long-running (worker
-    // composition, blob uploads, admission webhooks); holding a DB transaction open across it — for the whole batch —
-    // would tie up a connection and risk timeouts and lock contention.
-    const compositionService = new CompositionService(
-      opts.db,
-      authContext.organizationId,
+    const runBatchPublishParams: RunBatchPublishParams = {
+      opts,
       logger,
-      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-      opts.blobStorage,
-      opts.chClient,
-      opts.webhookProxyUrl,
-      req.disableResolvabilityValidation,
-    );
+      authContext,
+      disableResolvabilityValidation: req.disableResolvabilityValidation,
+      items,
+    };
 
-    const { compositionErrors, compositionWarnings, deploymentErrors } =
-      await compositionService.recomposeAndDeployAffected({
-        actorId: authContext.userId,
-        affectedFederatedGraphs,
-        affectedFeatureFlags,
-        isFeatureSubgraph: false,
-      });
+    if (req.async) {
+      const jobRepo = new BatchPublishJobDetailsRepository(opts.db, opts.lockAdapter, authContext.organizationId);
+      const jobId = await jobRepo.create();
+      try {
+        await opts.queues.deleteBatchPublishJobDetailsQueue.addJob({
+          jobId,
+          organizationId: authContext.organizationId,
+        });
+      } catch (err) {
+        await jobRepo.delete(jobId);
+        logger.error(err, 'Failed to add job to delete batch publish job details queue');
 
-    // Re-fetch the affected federated graphs to pick up the updated composedSchemaVersionId for the webhook payloads.
-    const updatedFederatedGraphs = (
-      await Promise.all(affectedFederatedGraphs.map((graph) => fedGraphRepo.byId(graph.id)))
-    ).filter((graph): graph is FederatedGraphDTO => graph !== undefined);
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: 'Failed to add job to delete batch publish job details queue',
+          },
+          deploymentErrors: [],
+          compositionErrors: [],
+          compositionWarnings: [],
+          counts: {
+            compositionErrors: 0,
+            compositionWarnings: 0,
+            deploymentErrors: 0,
+          },
+          updatedSubgraphNames: [],
+        };
+      }
 
-    // Send a schema-updated webhook for each federated graph that was recomposed.
-    for (const graph of updatedFederatedGraphs) {
-      const hasErrors =
-        compositionErrors.some((error) => error.federatedGraphName === graph.name) ||
-        deploymentErrors.some((error) => error.federatedGraphName === graph.name);
-      orgWebhooks.send(
+      Sentry.startSpan(
         {
-          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-          payload: {
-            federated_graph: {
-              id: graph.id,
-              name: graph.name,
-              namespace: graph.namespace,
-              composedSchemaVersionId: graph.composedSchemaVersionId,
-            },
-            organization: {
-              id: authContext.organizationId,
-              slug: authContext.organizationSlug,
-            },
-            errors: hasErrors,
-            actor_id: authContext.userId,
+          name: 'PublishFederatedSubgraphs.runBatchPublish',
+          parentSpan: Sentry.getActiveSpan(),
+          attributes: {
+            jobId,
+            actorId: authContext.userId,
+            organizationId: authContext.organizationId,
+            namespace: namespace.name,
+            numberOfItems: items.length,
           },
         },
-        authContext.userId,
-      );
-    }
+        async () => {
+          try {
+            const result = await jobRepo.withNamespaceLock(namespace.id, async () => {
+              await jobRepo.update(jobId, { status: 'processing' });
+              return runBatchPublish({ ...runBatchPublishParams, shouldRefreshSubgraphs: true });
+            });
 
-    // Audit log per subgraph that actually changed.
-    const changedSet = new Set(changedSubgraphNames);
-    for (const { subgraph } of resolved) {
-      if (!changedSet.has(subgraph.name)) {
-        continue;
-      }
-      await auditLogRepo.addAuditLog({
-        organizationId: authContext.organizationId,
-        organizationSlug: authContext.organizationSlug,
-        auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.updated' : 'subgraph.updated',
-        action: 'updated',
-        actorId: authContext.userId,
-        auditableType: subgraph.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
-        auditableDisplayName: subgraph.name,
-        actorDisplayName: authContext.userDisplayName,
-        apiKeyName: authContext.apiKeyName,
-        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-        targetNamespaceId: subgraph.namespaceId,
-        targetNamespaceDisplayName: subgraph.namespace,
-      });
+            await jobRepo.update(jobId, {
+              status: 'completed',
+              compositionResult: {
+                deploymentErrors: result.deploymentErrors,
+                compositionWarnings: result.compositionWarnings,
+                compositionErrors: result.compositionErrors,
+                updatedSubgraphNames: result.changedSubgraphNames,
+              },
+            });
+          } catch (err) {
+            Sentry.captureException(err);
+            await jobRepo.update(jobId, {
+              status: 'failed',
+              failureReason: err instanceof Error ? err.message : null,
+            });
+          } finally {
+            await Sentry.flush(2000);
+          }
+        },
+      );
+
+      return {
+        response: { code: EnumStatusCode.OK },
+        deploymentErrors: [],
+        compositionErrors: [],
+        compositionWarnings: [],
+        counts: {
+          compositionErrors: 0,
+          compositionWarnings: 0,
+          deploymentErrors: 0,
+        },
+        updatedSubgraphNames: [],
+        jobId,
+      };
     }
 
     const boundedLimit = req.limit === undefined ? maxRowLimitForChecks : clamp(req.limit, 1, maxRowLimitForChecks);
+    const { deploymentErrors, compositionErrors, compositionWarnings, changedSubgraphNames } =
+      await runBatchPublish(runBatchPublishParams);
 
     const counts = {
       compositionErrors: compositionErrors.length,
@@ -344,4 +355,153 @@ export function publishFederatedSubgraphs(
       updatedSubgraphNames: changedSubgraphNames,
     };
   });
+}
+
+type RunBatchPublishParams = {
+  opts: RouterOptions;
+  logger: FastifyBaseLogger;
+  authContext: AuthContext;
+  disableResolvabilityValidation: boolean | undefined;
+  items: (UpdateSubgraphSchemaData & { name: string })[];
+  shouldRefreshSubgraphs?: boolean;
+};
+
+async function runBatchPublish({
+  opts,
+  logger,
+  authContext,
+  disableResolvabilityValidation,
+  items,
+  shouldRefreshSubgraphs,
+}: RunBatchPublishParams) {
+  const auditLogRepo = new AuditLogRepository(opts.db);
+  const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
+  const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+  const orgWebhooks = new OrganizationWebhookService(
+    opts.db,
+    authContext.organizationId,
+    opts.logger,
+    opts.billingDefaultPlanId,
+    opts.webhookProxyUrl,
+  );
+
+  if (shouldRefreshSubgraphs) {
+    /**
+     * Because the subgraphs can be updated by a job that started before this one, we need to ensure that we
+     * have the latest version of the subgraph before running the composition
+     */
+    const updatedSubgraphs = await subgraphRepo.getSubgraphsByTargetIds(
+      items.filter((item) => item.subgraph).map((item) => item.subgraph!.targetId),
+    );
+
+    for (const currentItem of items) {
+      if (!currentItem.subgraph) {
+        continue;
+      }
+
+      const updatedSubgraph = updatedSubgraphs.find((subgraph) => subgraph.targetId === currentItem.subgraph?.targetId);
+      if (!updatedSubgraph) {
+        throw new Error(`Updated subgraph "${currentItem.subgraph.name}" not found`);
+      }
+
+      currentItem.subgraph = updatedSubgraph;
+      currentItem.labels = updatedSubgraph.labels;
+    }
+  }
+
+  /**
+   * Phase 1: persist all schema versions and collect the deduplicated union of affected graphs/flags in a single
+   * short transaction.
+   */
+  const { affectedFederatedGraphs, affectedFeatureFlags, changedSubgraphNames } =
+    await subgraphRepo.batchWriteAndCollect(items);
+
+  /**
+   * Phase 2: compose and deploy the affected graphs OUTSIDE the transaction. Composition is long-running (worker
+   * composition, blob uploads, admission webhooks); holding a DB transaction open across it — for the whole batch —
+   * would tie up a connection and risk timeouts and lock contention.
+   *
+   * This comment is true only for when we are not using async composition as to guarantee that the compositions are
+   * processed in the correct order, we need to have a transaction lock.
+   */
+  const compositionService = new CompositionService(
+    opts.db,
+    authContext.organizationId,
+    logger,
+    { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+    opts.blobStorage,
+    opts.chClient,
+    opts.webhookProxyUrl,
+    disableResolvabilityValidation,
+  );
+
+  const { compositionErrors, compositionWarnings, deploymentErrors } =
+    await compositionService.recomposeAndDeployAffected({
+      actorId: authContext.userId,
+      affectedFederatedGraphs,
+      affectedFeatureFlags,
+      isFeatureSubgraph: false,
+    });
+
+  // Re-fetch the affected federated graphs to pick up the updated composedSchemaVersionId for the webhook payloads.
+  const updatedFederatedGraphs = (
+    await Promise.all(affectedFederatedGraphs.map((graph) => fedGraphRepo.byId(graph.id)))
+  ).filter((graph): graph is FederatedGraphDTO => graph !== undefined);
+
+  // Send a schema-updated webhook for each federated graph that was recomposed.
+  for (const graph of updatedFederatedGraphs) {
+    const hasErrors =
+      compositionErrors.some((error) => error.federatedGraphName === graph.name) ||
+      deploymentErrors.some((error) => error.federatedGraphName === graph.name);
+    orgWebhooks.send(
+      {
+        eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+        payload: {
+          federated_graph: {
+            id: graph.id,
+            name: graph.name,
+            namespace: graph.namespace,
+            composedSchemaVersionId: graph.composedSchemaVersionId,
+          },
+          organization: {
+            id: authContext.organizationId,
+            slug: authContext.organizationSlug,
+          },
+          errors: hasErrors,
+          actor_id: authContext.userId,
+        },
+      },
+      authContext.userId,
+    );
+  }
+
+  // Audit log per subgraph that actually changed.
+  const changedSet = new Set(changedSubgraphNames);
+  for (const { subgraph } of items) {
+    if (!subgraph || !changedSet.has(subgraph.name)) {
+      continue;
+    }
+
+    await auditLogRepo.addAuditLog({
+      organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
+      auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.updated' : 'subgraph.updated',
+      action: 'updated',
+      actorId: authContext.userId,
+      auditableType: subgraph.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
+      auditableDisplayName: subgraph.name,
+      actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
+      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+      targetNamespaceId: subgraph.namespaceId,
+      targetNamespaceDisplayName: subgraph.namespace,
+    });
+  }
+
+  return {
+    deploymentErrors,
+    compositionErrors,
+    compositionWarnings,
+    changedSubgraphNames,
+  };
 }

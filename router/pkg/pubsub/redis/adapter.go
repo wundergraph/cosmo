@@ -100,9 +100,8 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	msgChan := sub.Channel()
 
 	cleanup := func() {
-		err := sub.PUnsubscribe(ctx, subConf.Channels...)
-		if err != nil {
-			log.Error(fmt.Sprintf("error unsubscribing from redis for topics %v", subConf.Channels), zap.Error(err))
+		if err := sub.Close(); err != nil {
+			log.Error("error closing redis subscription", zap.Error(err))
 		}
 	}
 
@@ -110,6 +109,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 
 	go func() {
 		defer p.closeWg.Done()
+		defer cleanup()
 
 		for {
 			select {
@@ -137,12 +137,10 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscription if it is not already done
 				log.Debug("application context done, stopping subscription")
-				cleanup()
 				return
 			case <-ctx.Done():
 				// When the subscription context is done, we stop the subscription if it is not already done
 				log.Debug("subscription context done, stopping subscription")
-				cleanup()
 				return
 			}
 		}

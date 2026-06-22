@@ -90,7 +90,8 @@
             "server\\.uptime"
           ],
           "IncludeMetrics": null
-        }
+        },
+        "ExemplarFilter": "trace_based"
       },
       "Prometheus": {
         "Enabled": true,
@@ -119,7 +120,8 @@
             "Interval": 2000000000,
             "ExportTimeout": 10000000000
           }
-        }
+        },
+        "ExemplarFilter": "trace_based"
       },
       "CardinalityLimit": 2000
     }
@@ -869,7 +871,8 @@
       "Mode": "enforce",
       "MaxEstimatedLimit": 1000,
       "EstimatedListSize": 10,
-      "ExposeHeaders": false
+      "ExposeHeaders": false,
+      "IgnoreImplementingTypeWeights": false
     },
     "DepthLimit": null,
     "ParserLimits": {

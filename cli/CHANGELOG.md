@@ -4,6 +4,33 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.125.3](https://github.com/wundergraph/cosmo/compare/wgc@0.125.2...wgc@0.125.3) (2026-06-19)
+
+**Note:** Version bump only for package wgc
+
+## [0.125.2](https://github.com/wundergraph/cosmo/compare/wgc@0.125.1...wgc@0.125.2) (2026-06-18)
+
+**Note:** Version bump only for package wgc
+
+## [0.125.1](https://github.com/wundergraph/cosmo/compare/wgc@0.125.0...wgc@0.125.1) (2026-06-18)
+
+### Bug Fixes
+
+* **cli:** correctly pass batch publish job status ([#2977](https://github.com/wundergraph/cosmo/issues/2977)) ([6e4ed19](https://github.com/wundergraph/cosmo/commit/6e4ed1954c72a3c34a8ca0a0e8e3aa39df88625d)) (@wilsonrivera)
+
+# [0.125.0](https://github.com/wundergraph/cosmo/compare/wgc@0.124.0...wgc@0.125.0) (2026-06-16)
+
+### Features
+
+* controlpanel move to a accept first strategy for batch ([#2963](https://github.com/wundergraph/cosmo/issues/2963)) ([f54ef2a](https://github.com/wundergraph/cosmo/commit/f54ef2a4de3f218810eb2f800ad4e1c8c864496e)) (@wilsonrivera)
+
+# [0.124.0](https://github.com/wundergraph/cosmo/compare/wgc@0.123.0...wgc@0.124.0) (2026-06-12)
+
+### Features
+
+* check auth before sending `WhoAmI` request for telemetry ([#2922](https://github.com/wundergraph/cosmo/issues/2922)) ([f2f5502](https://github.com/wundergraph/cosmo/commit/f2f5502b59307fea15149c59c88d10702f3af695)) (@wilsonrivera)
+* delete & list clients using wgc ([#2795](https://github.com/wundergraph/cosmo/issues/2795)) ([9aef4ca](https://github.com/wundergraph/cosmo/commit/9aef4cad767748accc70a5fa87f3d8f7c5062ea6)) (@comatory)
+
 # [0.123.0](https://github.com/wundergraph/cosmo/compare/wgc@0.122.0...wgc@0.123.0) (2026-06-08)
 
 ### Features

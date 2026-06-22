@@ -1659,6 +1659,12 @@
                   "not": {
                     "required": ["exclude_metrics", "include_metrics"]
                   }
+                },
+                "exemplar_filter": {
+                  "type": "string",
+                  "default": "always_off",
+                  "enum": ["trace_based", "always_off", "always_on"],
+                  "description": "Controls which metric measurements are eligible to record exemplars. 'always_off' records no exemplars (the default). 'trace_based' only records exemplars for measurements taken within a sampled trace context. 'always_on' records exemplars for all measurements. See https://opentelemetry.io/docs/specs/otel/metrics/sdk/#exemplarfilter."
                 }
               }
             },
@@ -1799,6 +1805,12 @@
                       }
                     }
                   }
+                },
+                "exemplar_filter": {
+                  "type": "string",
+                  "default": "always_off",
+                  "enum": ["trace_based", "always_off", "always_on"],
+                  "description": "Controls which metric measurements are eligible to record exemplars. 'always_off' records no exemplars (the default). 'trace_based' only records exemplars for measurements taken within a sampled trace context. 'always_on' records exemplars for all measurements. See https://opentelemetry.io/docs/specs/otel/metrics/sdk/#exemplarfilter."
                 }
               }
             }
@@ -3666,6 +3678,11 @@
             "expose_headers": {
               "type": "boolean",
               "description": "Enable costs response headers for estimated and actuals operation costs."
+            },
+            "ignore_implementing_type_weights": {
+              "type": "boolean",
+              "default": false,
+              "description": "When enabled, ignores @cost weights from implementing types on abstract (interface/union) fields that have no weight of their own. Emulates Apollo's cost behavior."
             }
           }
         },

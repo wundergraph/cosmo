@@ -57,7 +57,8 @@
           "Enabled": false,
           "ExcludeMetrics": null,
           "IncludeMetrics": null
-        }
+        },
+        "ExemplarFilter": "always_off"
       },
       "Prometheus": {
         "Enabled": true,
@@ -86,7 +87,8 @@
             "Interval": 2000000000,
             "ExportTimeout": 10000000000
           }
-        }
+        },
+        "ExemplarFilter": "always_off"
       },
       "CardinalityLimit": 2000
     }

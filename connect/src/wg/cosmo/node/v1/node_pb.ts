@@ -844,33 +844,11 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
   costConfiguration?: CostConfiguration;
 
   /**
-   * Entity caching configurations (from composition directives)
+   * Entity caching configuration (e.g. request-scoped fields from @openfed__requestScoped).
    *
-   * @generated from field: repeated wg.cosmo.node.v1.EntityCacheConfiguration entity_cache_configurations = 17;
+   * @generated from field: wg.cosmo.node.v1.EntityCachingConfiguration entity_caching_configuration = 17;
    */
-  entityCacheConfigurations: EntityCacheConfiguration[] = [];
-
-  /**
-   * @generated from field: repeated wg.cosmo.node.v1.RootFieldCacheConfiguration root_field_cache_configurations = 18;
-   */
-  rootFieldCacheConfigurations: RootFieldCacheConfiguration[] = [];
-
-  /**
-   * @generated from field: repeated wg.cosmo.node.v1.CachePopulateConfiguration cache_populate_configurations = 19;
-   */
-  cachePopulateConfigurations: CachePopulateConfiguration[] = [];
-
-  /**
-   * @generated from field: repeated wg.cosmo.node.v1.CacheInvalidateConfiguration cache_invalidate_configurations = 20;
-   */
-  cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
-
-  /**
-   * Request-scoped field configurations (from @openfed__requestScoped directive)
-   *
-   * @generated from field: repeated wg.cosmo.node.v1.RequestScopedFieldConfiguration request_scoped_fields = 21;
-   */
-  requestScopedFields: RequestScopedFieldConfiguration[] = [];
+  entityCachingConfiguration?: EntityCachingConfiguration;
 
   constructor(data?: PartialMessage<DataSourceConfiguration>) {
     super();
@@ -896,11 +874,7 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
     { no: 14, name: "entity_interfaces", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
     { no: 15, name: "interface_objects", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
     { no: 16, name: "cost_configuration", kind: "message", T: CostConfiguration },
-    { no: 17, name: "entity_cache_configurations", kind: "message", T: EntityCacheConfiguration, repeated: true },
-    { no: 18, name: "root_field_cache_configurations", kind: "message", T: RootFieldCacheConfiguration, repeated: true },
-    { no: 19, name: "cache_populate_configurations", kind: "message", T: CachePopulateConfiguration, repeated: true },
-    { no: 20, name: "cache_invalidate_configurations", kind: "message", T: CacheInvalidateConfiguration, repeated: true },
-    { no: 21, name: "request_scoped_fields", kind: "message", T: RequestScopedFieldConfiguration, repeated: true },
+    { no: 17, name: "entity_caching_configuration", kind: "message", T: EntityCachingConfiguration },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceConfiguration {
@@ -921,60 +895,82 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
 }
 
 /**
- * Per-field declaration for @openfed__requestScoped. All fields in the same subgraph declaring
- * @openfed__requestScoped(key: "X") share L1 key "{subgraphName}.X". The first field to resolve
- * populates L1; subsequent fields with the same key inject from L1 and can skip their
- * fetch when all required sub-fields are present.
+ * Entity caching configuration for a subgraph data source.
  *
- * @generated from message wg.cosmo.node.v1.RequestScopedFieldConfiguration
+ * @generated from message wg.cosmo.node.v1.EntityCachingConfiguration
  */
-export class RequestScopedFieldConfiguration extends Message<RequestScopedFieldConfiguration> {
+export class EntityCachingConfiguration extends Message<EntityCachingConfiguration> {
   /**
-   * @generated from field: string field_name = 1;
+   * Per-entity cache configurations (from @openfed__entityCache directive)
+   *
+   * @generated from field: repeated wg.cosmo.node.v1.EntityCacheConfiguration entity_cache = 1;
    */
-  fieldName = "";
+  entityCache: EntityCacheConfiguration[] = [];
 
   /**
-   * @generated from field: string type_name = 2;
+   * Per-Mutation/Subscription-field cache eviction configs (from @openfed__cacheInvalidate)
+   *
+   * @generated from field: repeated wg.cosmo.node.v1.CacheInvalidateConfiguration cache_invalidate_configurations = 2;
    */
-  typeName = "";
+  cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
 
   /**
-   * @generated from field: string l1_key = 3;
+   * Per-Mutation/Subscription-field cache population configs (from @openfed__cachePopulate)
+   *
+   * @generated from field: repeated wg.cosmo.node.v1.CachePopulateConfiguration cache_populate_configurations = 3;
    */
-  l1Key = "";
+  cachePopulateConfigurations: CachePopulateConfiguration[] = [];
 
-  constructor(data?: PartialMessage<RequestScopedFieldConfiguration>) {
+  /**
+   * Request-scoped field configurations (from @openfed__requestScoped directive)
+   *
+   * @generated from field: repeated wg.cosmo.node.v1.RequestScopedConfiguration request_scoped_configurations = 4;
+   */
+  requestScopedConfigurations: RequestScopedConfiguration[] = [];
+
+  /**
+   * Per-Query-field cache configurations (from @openfed__queryCache / @openfed__is directives)
+   *
+   * @generated from field: repeated wg.cosmo.node.v1.QueryCacheConfiguration query_cache_configurations = 5;
+   */
+  queryCacheConfigurations: QueryCacheConfiguration[] = [];
+
+  constructor(data?: PartialMessage<EntityCachingConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.RequestScopedFieldConfiguration";
+  static readonly typeName = "wg.cosmo.node.v1.EntityCachingConfiguration";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "l1_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "entity_cache", kind: "message", T: EntityCacheConfiguration, repeated: true },
+    { no: 2, name: "cache_invalidate_configurations", kind: "message", T: CacheInvalidateConfiguration, repeated: true },
+    { no: 3, name: "cache_populate_configurations", kind: "message", T: CachePopulateConfiguration, repeated: true },
+    { no: 4, name: "request_scoped_configurations", kind: "message", T: RequestScopedConfiguration, repeated: true },
+    { no: 5, name: "query_cache_configurations", kind: "message", T: QueryCacheConfiguration, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RequestScopedFieldConfiguration {
-    return new RequestScopedFieldConfiguration().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EntityCachingConfiguration {
+    return new EntityCachingConfiguration().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RequestScopedFieldConfiguration {
-    return new RequestScopedFieldConfiguration().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EntityCachingConfiguration {
+    return new EntityCachingConfiguration().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RequestScopedFieldConfiguration {
-    return new RequestScopedFieldConfiguration().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EntityCachingConfiguration {
+    return new EntityCachingConfiguration().fromJsonString(jsonString, options);
   }
 
-  static equals(a: RequestScopedFieldConfiguration | PlainMessage<RequestScopedFieldConfiguration> | undefined, b: RequestScopedFieldConfiguration | PlainMessage<RequestScopedFieldConfiguration> | undefined): boolean {
-    return proto3.util.equals(RequestScopedFieldConfiguration, a, b);
+  static equals(a: EntityCachingConfiguration | PlainMessage<EntityCachingConfiguration> | undefined, b: EntityCachingConfiguration | PlainMessage<EntityCachingConfiguration> | undefined): boolean {
+    return proto3.util.equals(EntityCachingConfiguration, a, b);
   }
 }
 
 /**
+ * Per-entity declaration for @openfed__entityCache. Marks a @key entity type as cacheable so the
+ * router can store/serve resolved entities from an external store (e.g. Redis).
+ *
  * @generated from message wg.cosmo.node.v1.EntityCacheConfiguration
  */
 export class EntityCacheConfiguration extends Message<EntityCacheConfiguration> {
@@ -1050,9 +1046,176 @@ export class EntityCacheConfiguration extends Message<EntityCacheConfiguration> 
 }
 
 /**
- * @generated from message wg.cosmo.node.v1.RootFieldCacheConfiguration
+ * Per-field declaration for @openfed__cacheInvalidate. Tells the router to evict the returned
+ * entity from the cache after the (Mutation/Subscription) operation completes.
+ *
+ * @generated from message wg.cosmo.node.v1.CacheInvalidateConfiguration
  */
-export class RootFieldCacheConfiguration extends Message<RootFieldCacheConfiguration> {
+export class CacheInvalidateConfiguration extends Message<CacheInvalidateConfiguration> {
+  /**
+   * @generated from field: string field_name = 1;
+   */
+  fieldName = "";
+
+  /**
+   * @generated from field: string operation_type = 2;
+   */
+  operationType = "";
+
+  /**
+   * @generated from field: string entity_type_name = 3;
+   */
+  entityTypeName = "";
+
+  constructor(data?: PartialMessage<CacheInvalidateConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.CacheInvalidateConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "operation_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "entity_type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CacheInvalidateConfiguration {
+    return new CacheInvalidateConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CacheInvalidateConfiguration {
+    return new CacheInvalidateConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CacheInvalidateConfiguration {
+    return new CacheInvalidateConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CacheInvalidateConfiguration | PlainMessage<CacheInvalidateConfiguration> | undefined, b: CacheInvalidateConfiguration | PlainMessage<CacheInvalidateConfiguration> | undefined): boolean {
+    return proto3.util.equals(CacheInvalidateConfiguration, a, b);
+  }
+}
+
+/**
+ * Per-field declaration for @openfed__cachePopulate. Tells the router to populate the entity cache
+ * with the (Mutation/Subscription) operation's return value.
+ *
+ * @generated from message wg.cosmo.node.v1.CachePopulateConfiguration
+ */
+export class CachePopulateConfiguration extends Message<CachePopulateConfiguration> {
+  /**
+   * @generated from field: string field_name = 1;
+   */
+  fieldName = "";
+
+  /**
+   * @generated from field: string operation_type = 2;
+   */
+  operationType = "";
+
+  /**
+   * @generated from field: int64 max_age_seconds = 3;
+   */
+  maxAgeSeconds = protoInt64.zero;
+
+  /**
+   * @generated from field: string entity_type_name = 4;
+   */
+  entityTypeName = "";
+
+  constructor(data?: PartialMessage<CachePopulateConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.CachePopulateConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "operation_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "max_age_seconds", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "entity_type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CachePopulateConfiguration {
+    return new CachePopulateConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CachePopulateConfiguration {
+    return new CachePopulateConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CachePopulateConfiguration {
+    return new CachePopulateConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CachePopulateConfiguration | PlainMessage<CachePopulateConfiguration> | undefined, b: CachePopulateConfiguration | PlainMessage<CachePopulateConfiguration> | undefined): boolean {
+    return proto3.util.equals(CachePopulateConfiguration, a, b);
+  }
+}
+
+/**
+ * Per-field declaration for @openfed__requestScoped. All fields in the same subgraph declaring
+ * @openfed__requestScoped(key: "X") share L1 key "{subgraphName}.X". The first field to resolve
+ * populates L1; subsequent fields with the same key inject from L1 and can skip their
+ * fetch when all required sub-fields are present.
+ *
+ * @generated from message wg.cosmo.node.v1.RequestScopedConfiguration
+ */
+export class RequestScopedConfiguration extends Message<RequestScopedConfiguration> {
+  /**
+   * @generated from field: string field_name = 1;
+   */
+  fieldName = "";
+
+  /**
+   * @generated from field: string type_name = 2;
+   */
+  typeName = "";
+
+  /**
+   * @generated from field: string l1_key = 3;
+   */
+  l1Key = "";
+
+  constructor(data?: PartialMessage<RequestScopedConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.RequestScopedConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "l1_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RequestScopedConfiguration {
+    return new RequestScopedConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RequestScopedConfiguration {
+    return new RequestScopedConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RequestScopedConfiguration {
+    return new RequestScopedConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RequestScopedConfiguration | PlainMessage<RequestScopedConfiguration> | undefined, b: RequestScopedConfiguration | PlainMessage<RequestScopedConfiguration> | undefined): boolean {
+    return proto3.util.equals(RequestScopedConfiguration, a, b);
+  }
+}
+
+/**
+ * Per-Query-field declaration for @openfed__queryCache. Tells the router a query field can serve
+ * its returned entity from the entity cache, with argument-to-@key mappings for cache-key construction.
+ *
+ * @generated from message wg.cosmo.node.v1.QueryCacheConfiguration
+ */
+export class QueryCacheConfiguration extends Message<QueryCacheConfiguration> {
   /**
    * @generated from field: string field_name = 1;
    */
@@ -1086,13 +1249,13 @@ export class RootFieldCacheConfiguration extends Message<RootFieldCacheConfigura
    */
   entityKeyMappings: EntityKeyMapping[] = [];
 
-  constructor(data?: PartialMessage<RootFieldCacheConfiguration>) {
+  constructor(data?: PartialMessage<QueryCacheConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.RootFieldCacheConfiguration";
+  static readonly typeName = "wg.cosmo.node.v1.QueryCacheConfiguration";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "max_age_seconds", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
@@ -1102,20 +1265,20 @@ export class RootFieldCacheConfiguration extends Message<RootFieldCacheConfigura
     { no: 6, name: "entity_key_mappings", kind: "message", T: EntityKeyMapping, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RootFieldCacheConfiguration {
-    return new RootFieldCacheConfiguration().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): QueryCacheConfiguration {
+    return new QueryCacheConfiguration().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RootFieldCacheConfiguration {
-    return new RootFieldCacheConfiguration().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): QueryCacheConfiguration {
+    return new QueryCacheConfiguration().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RootFieldCacheConfiguration {
-    return new RootFieldCacheConfiguration().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): QueryCacheConfiguration {
+    return new QueryCacheConfiguration().fromJsonString(jsonString, options);
   }
 
-  static equals(a: RootFieldCacheConfiguration | PlainMessage<RootFieldCacheConfiguration> | undefined, b: RootFieldCacheConfiguration | PlainMessage<RootFieldCacheConfiguration> | undefined): boolean {
-    return proto3.util.equals(RootFieldCacheConfiguration, a, b);
+  static equals(a: QueryCacheConfiguration | PlainMessage<QueryCacheConfiguration> | undefined, b: QueryCacheConfiguration | PlainMessage<QueryCacheConfiguration> | undefined): boolean {
+    return proto3.util.equals(QueryCacheConfiguration, a, b);
   }
 }
 
@@ -1208,115 +1371,6 @@ export class EntityCacheFieldMapping extends Message<EntityCacheFieldMapping> {
 
   static equals(a: EntityCacheFieldMapping | PlainMessage<EntityCacheFieldMapping> | undefined, b: EntityCacheFieldMapping | PlainMessage<EntityCacheFieldMapping> | undefined): boolean {
     return proto3.util.equals(EntityCacheFieldMapping, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.node.v1.CachePopulateConfiguration
- */
-export class CachePopulateConfiguration extends Message<CachePopulateConfiguration> {
-  /**
-   * @generated from field: string field_name = 1;
-   */
-  fieldName = "";
-
-  /**
-   * @generated from field: string operation_type = 2;
-   */
-  operationType = "";
-
-  /**
-   * Optional override TTL for mutation/subscription populate writes. When omit,
-   * falls back to the target entity's max_age_seconds (for subscriptions) or
-   * the cache's default TTL (for mutations). Zero is treated as "no override".
-   * Composition rejects negative values.
-   *
-   * @generated from field: optional int64 max_age_seconds = 3;
-   */
-  maxAgeSeconds?: bigint;
-
-  /**
-   * @generated from field: string entity_type_name = 4;
-   */
-  entityTypeName = "";
-
-  constructor(data?: PartialMessage<CachePopulateConfiguration>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.CachePopulateConfiguration";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "operation_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "max_age_seconds", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
-    { no: 4, name: "entity_type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CachePopulateConfiguration {
-    return new CachePopulateConfiguration().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CachePopulateConfiguration {
-    return new CachePopulateConfiguration().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CachePopulateConfiguration {
-    return new CachePopulateConfiguration().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: CachePopulateConfiguration | PlainMessage<CachePopulateConfiguration> | undefined, b: CachePopulateConfiguration | PlainMessage<CachePopulateConfiguration> | undefined): boolean {
-    return proto3.util.equals(CachePopulateConfiguration, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.node.v1.CacheInvalidateConfiguration
- */
-export class CacheInvalidateConfiguration extends Message<CacheInvalidateConfiguration> {
-  /**
-   * @generated from field: string field_name = 1;
-   */
-  fieldName = "";
-
-  /**
-   * @generated from field: string operation_type = 2;
-   */
-  operationType = "";
-
-  /**
-   * @generated from field: string entity_type_name = 3;
-   */
-  entityTypeName = "";
-
-  constructor(data?: PartialMessage<CacheInvalidateConfiguration>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.CacheInvalidateConfiguration";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "operation_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "entity_type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CacheInvalidateConfiguration {
-    return new CacheInvalidateConfiguration().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CacheInvalidateConfiguration {
-    return new CacheInvalidateConfiguration().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CacheInvalidateConfiguration {
-    return new CacheInvalidateConfiguration().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: CacheInvalidateConfiguration | PlainMessage<CacheInvalidateConfiguration> | undefined, b: CacheInvalidateConfiguration | PlainMessage<CacheInvalidateConfiguration> | undefined): boolean {
-    return proto3.util.equals(CacheInvalidateConfiguration, a, b);
   }
 }
 

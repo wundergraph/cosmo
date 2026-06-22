@@ -115,6 +115,7 @@ overrides:
   mdast-util-to-hast: '>=13.2.1'
   js-yaml: '>=4.1.1'
   fast-uri: 3.1.2
+  tmp: 0.2.7
   fast-xml-parser: 5.8.0
   '@aws-sdk/client-sesv2': ^3.996.0
   handlebars: 4.7.9
@@ -130,6 +131,7 @@ overrides:
   markdown-it: 14.1.1
   rollup@3.29.5: 3.30.0
   '@rollup/pluginutils@5.3.0>rollup': 4.59.0
+  shell-quote: 1.8.4
 
 patchedDependencies:
   graphql@16.9.0:
@@ -615,8 +617,8 @@ importers:
         specifier: ^4.5.0
         version: 4.5.0(axios@1.17.0)
       bullmq:
-        specifier: ^5.10.0
-        version: 5.10.0
+        specifier: 5.66.4
+        version: 5.66.4
       cookie:
         specifier: ^0.7.2
         version: 0.7.2
@@ -660,8 +662,8 @@ importers:
         specifier: 8.0.0
         version: 8.0.0
       ioredis:
-        specifier: ^5.4.1
-        version: 5.4.1
+        specifier: 5.8.2
+        version: 5.8.2
       isomorphic-dompurify:
         specifier: ^2.33.0
         version: 2.33.0
@@ -698,6 +700,9 @@ importers:
       prom-client:
         specifier: ^15.1.3
         version: 15.1.3
+      redlock:
+        specifier: 5.0.0-beta.2
+        version: 5.0.0-beta.2
       rxjs:
         specifier: ^7.8.1
         version: 7.8.1
@@ -3916,8 +3921,8 @@ packages:
       '@types/node':
         optional: true
 
-  '@ioredis/commands@1.2.0':
-    resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
+  '@ioredis/commands@1.4.0':
+    resolution: {integrity: sha512-aFT2yemJJo+TZCmieA7qnYGQooOS7QfNmYrzGtsYd3g9j5iDP8AimYYAesf79ohjbLG12XxC4nG5DyEnC88AsQ==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -8348,8 +8353,8 @@ packages:
   builtins@5.0.1:
     resolution: {integrity: sha512-qwVpFEHNfhYJIzNRBvd2C1kyo6jz3ZSMPyyuR47OPdiKWlbYnZNyDWuyR175qDnAJLiCo5fBBqPb3RiXgWlkOQ==}
 
-  bullmq@5.10.0:
-    resolution: {integrity: sha512-bu8lGvgXLwMhBrKeE0ntH+IWBZFVISJBm5njYtPL8u9Qm3AekEONinKRftiIP66r/Y45ljxg9dp9EahoJ6L9wA==}
+  bullmq@5.66.4:
+    resolution: {integrity: sha512-y2VRk2z7d1YNI2JQDD7iThoD0X/0iZZ3VEp8lqT5s5U0XDl9CIjXp1LQgmE9EKy6ReHtzmYXS1f328PnUbZGtQ==}
 
   bun-types@1.2.12:
     resolution: {integrity: sha512-tvWMx5vPqbRXgE8WUZI94iS1xAYs8bkqESR9cxBB1Wi+urvfTrF1uzuDgBHFAdO0+d2lmsbG3HmeKMvUyj6pWA==}
@@ -10661,8 +10666,8 @@ packages:
   invariant@2.2.4:
     resolution: {integrity: sha512-phJfQVBuaJM5raOpJjSfkiD6BpbCE4Ns//LaXl6wGYtUBY83nWS6Rf9tXm2e8VaK60JEjYldbPif/A2B1C2gNA==}
 
-  ioredis@5.4.1:
-    resolution: {integrity: sha512-2YZsvl7jopIa1gaePkeMtd9rAcSjOOjPtpcLlOeusyO+XH2SK5ZcT+UCrElPP+WVIInh2TzeI4XW9ENaSLVVHA==}
+  ioredis@5.8.2:
+    resolution: {integrity: sha512-C6uC+kleiIMmjViJINWk80sOQw5lEzse1ZmvD+S/s8p8CWapftSaC+kocGTx6xrbrJ4WmYQGC08ffHLr6ToR6Q==}
     engines: {node: '>=12.22.0'}
 
   ip-address@10.1.0:
@@ -11706,8 +11711,8 @@ packages:
     resolution: {integrity: sha512-SdzXp4kD/Qf8agZ9+iTu6eql0m3kWm1A2y1hkpTeVNENutaB0BwHlSvAIaMxwntmRUAUjon2V4L8Z/njd0Ct8A==}
     hasBin: true
 
-  msgpackr@1.10.1:
-    resolution: {integrity: sha512-r5VRLv9qouXuLiIBrLpl2d5ZvPt8svdQTl5/vMvE4nzDMyEX4sgW5yWhuBBj5UmgwOTWj8CIdSXn5sAfsHAWIQ==}
+  msgpackr@1.11.5:
+    resolution: {integrity: sha512-UjkUHN0yqp9RWKy0Lplhh+wlpdt9oQBYgULZOiFhV3VclSF1JnSQWZ5r9gORQlNYaUKQoR8itv7g7z1xDDuACA==}
 
   msw@2.2.11:
     resolution: {integrity: sha512-XtIoewF7XWLT0a39Ftkazt9PprBA1bxHZ4CSlomN74sCBJOJU2w5VwLmGlswwsOBhGoF7jovt6bxrSIESxA1KA==}
@@ -12025,10 +12030,6 @@ packages:
 
   orderedmap@2.1.1:
     resolution: {integrity: sha512-TvAWxi0nDe1j/rtMcWcIj94+Ffe6n7zhow33h40SKxmsmozs6dz/e+EajymfoFcHd7sxNn8yHM8839uixMOV6g==}
-
-  os-tmpdir@1.0.2:
-    resolution: {integrity: sha512-D2FR03Vir7FIu45XBY20mTb+/ZSWB00sjU9jdQXt83gDrI4Ztz5Fs7/yy74g2N5SVQY4xY1qDr4rNddwYRVX0g==}
-    engines: {node: '>=0.10.0'}
 
   outvariant@1.4.2:
     resolution: {integrity: sha512-Ou3dJ6bA/UJ5GVHxah4LnqDwZRwAmWxrG3wtrHrbGnP4RnLCtA64A4F+ae7Y8ww660JaddSoArUR5HjipWSHAQ==}
@@ -12997,6 +12998,10 @@ packages:
     resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
     engines: {node: '>=4'}
 
+  redlock@5.0.0-beta.2:
+    resolution: {integrity: sha512-2RDWXg5jgRptDrB1w9O/JgSZC0j7y4SlaXnor93H/UJm/QyDiFgBKNtrh0TI6oCXqYSaSoXxFh6Sd3VtYfhRXw==}
+    engines: {node: '>=12'}
+
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
     engines: {node: '>= 0.4'}
@@ -13237,6 +13242,11 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
+  semver@7.7.3:
+    resolution: {integrity: sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q==}
+    engines: {node: '>=10'}
+    hasBin: true
+
   semver@7.7.4:
     resolution: {integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==}
     engines: {node: '>=10'}
@@ -13317,8 +13327,8 @@ packages:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
 
-  shell-quote@1.8.3:
-    resolution: {integrity: sha512-ObmnIF4hXNg1BqhnHmgbDETF8dLPCggZWBjkQfhZpbszZnYur5DUljTcCHii5LC3J5E0yeO/1LIMyH+UvHQgyw==}
+  shell-quote@1.8.4:
+    resolution: {integrity: sha512-VsC6n6vz1ihYYyZZwX7YZSF5l5x36ca17OC+a69h94YqB7X6XLwf+5MOgynYir2SLFUbl8gIYvBo8K8RoNQ6bQ==}
     engines: {node: '>= 0.4'}
 
   shimmer@1.2.1:
@@ -13809,9 +13819,9 @@ packages:
     resolution: {integrity: sha512-keinCnPbwXEUG3ilrWQZU+CqcTTzHq9m2HhoUP2l7Xmi8l1LuijAXLpAJ5zRW+ifKTNscs4NdCkfkDCBYm352w==}
     hasBin: true
 
-  tmp@0.0.33:
-    resolution: {integrity: sha512-jRCJlojKnZ3addtTOjdIqoRuPEKBvNXcGYqzO6zWZX8KfKEpnGY5jfggJQ3EjKuu8D4bJRr0y+cYJFmYbImXGw==}
-    engines: {node: '>=0.6.0'}
+  tmp@0.2.7:
+    resolution: {integrity: sha512-e0votIpp4Uo2AJYSzVHV6xCcawuiez3DzqDAbrTc3YxBkplN6e+dM13ZeIcZnDg/QpSuU2zfZ3rzwY8ukEnaXw==}
+    engines: {node: '>=14.14'}
 
   to-buffer@1.1.1:
     resolution: {integrity: sha512-lx9B5iv7msuFYE3dytT+KE5tap+rNYw+K4jVkb9R/asAb+pbBSM17jtunHplhBe6RRJdZx3Pn2Jph24O32mOVg==}
@@ -14205,6 +14215,10 @@ packages:
   uuid@10.0.0:
     resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
     deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+    hasBin: true
+
+  uuid@11.1.0:
+    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
     hasBin: true
 
   uuid@13.0.0:
@@ -17646,7 +17660,7 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.17.0
 
-  '@ioredis/commands@1.2.0': {}
+  '@ioredis/commands@1.4.0': {}
 
   '@isaacs/cliui@8.0.2':
     dependencies:
@@ -23167,15 +23181,15 @@ snapshots:
     dependencies:
       semver: 7.7.1
 
-  bullmq@5.10.0:
+  bullmq@5.66.4:
     dependencies:
       cron-parser: 4.9.0
-      ioredis: 5.4.1
-      msgpackr: 1.10.1
+      ioredis: 5.8.2
+      msgpackr: 1.11.5
       node-abort-controller: 3.1.1
-      semver: 7.7.1
-      tslib: 2.6.2
-      uuid: 9.0.1
+      semver: 7.7.3
+      tslib: 2.8.1
+      uuid: 11.1.0
     transitivePeerDependencies:
       - supports-color
 
@@ -24988,7 +25002,7 @@ snapshots:
     dependencies:
       chardet: 0.7.0
       iconv-lite: 0.4.24
-      tmp: 0.0.33
+      tmp: 0.2.7
 
   extract-files@11.0.0: {}
 
@@ -25968,11 +25982,11 @@ snapshots:
     dependencies:
       loose-envify: 1.4.0
 
-  ioredis@5.4.1:
+  ioredis@5.8.2:
     dependencies:
-      '@ioredis/commands': 1.2.0
+      '@ioredis/commands': 1.4.0
       cluster-key-slot: 1.1.2
-      debug: 4.3.7
+      debug: 4.4.1
       denque: 2.1.0
       lodash.defaults: 4.2.0
       lodash.isarguments: 3.1.0
@@ -26443,7 +26457,7 @@ snapshots:
   launch-editor@2.13.2:
     dependencies:
       picocolors: 1.1.1
-      shell-quote: 1.8.3
+      shell-quote: 1.8.4
 
   leac@0.6.0: {}
 
@@ -27213,7 +27227,7 @@ snapshots:
       '@msgpackr-extract/msgpackr-extract-win32-x64': 3.0.2
     optional: true
 
-  msgpackr@1.10.1:
+  msgpackr@1.11.5:
     optionalDependencies:
       msgpackr-extract: 3.0.2
 
@@ -27615,8 +27629,6 @@ snapshots:
       strip-ansi: 7.1.2
 
   orderedmap@2.1.1: {}
-
-  os-tmpdir@1.0.2: {}
 
   outvariant@1.4.2: {}
 
@@ -28665,6 +28677,10 @@ snapshots:
     dependencies:
       redis-errors: 1.2.0
 
+  redlock@5.0.0-beta.2:
+    dependencies:
+      node-abort-controller: 3.1.1
+
   reflect.getprototypeof@1.0.10:
     dependencies:
       call-bind: 1.0.9
@@ -28959,6 +28975,8 @@ snapshots:
 
   semver@7.7.1: {}
 
+  semver@7.7.3: {}
+
   semver@7.7.4: {}
 
   send@1.2.0:
@@ -29118,7 +29136,7 @@ snapshots:
 
   shebang-regex@3.0.0: {}
 
-  shell-quote@1.8.3: {}
+  shell-quote@1.8.4: {}
 
   shimmer@1.2.1: {}
 
@@ -29655,9 +29673,7 @@ snapshots:
     dependencies:
       tldts-core: 7.0.25
 
-  tmp@0.0.33:
-    dependencies:
-      os-tmpdir: 1.0.2
+  tmp@0.2.7: {}
 
   to-buffer@1.1.1: {}
 
@@ -30027,6 +30043,8 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   uuid@10.0.0: {}
+
+  uuid@11.1.0: {}
 
   uuid@13.0.0: {}
 

@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.151.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.150.0...@wundergraph/cosmo-connect@0.151.0) (2026-06-16)
+
+### Features
+
+* controlpanel move to a accept first strategy for batch ([#2963](https://github.com/wundergraph/cosmo/issues/2963)) ([f54ef2a](https://github.com/wundergraph/cosmo/commit/f54ef2a4de3f218810eb2f800ad4e1c8c864496e)) (@wilsonrivera)
+
+# [0.150.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.149.0...@wundergraph/cosmo-connect@0.150.0) (2026-06-12)
+
+### Features
+
+* delete & list clients using wgc ([#2795](https://github.com/wundergraph/cosmo/issues/2795)) ([9aef4ca](https://github.com/wundergraph/cosmo/commit/9aef4cad767748accc70a5fa87f3d8f7c5062ea6)) (@comatory)
+
 # [0.149.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.148.0...@wundergraph/cosmo-connect@0.149.0) (2026-06-08)
 
 ### Features
