@@ -67,6 +67,8 @@ import {
   newFieldAuthorizationData,
 } from '../utils/utils';
 import {
+  cacheInvalidateOnNonEntityReturnTypeErrorMessage,
+  cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage,
   configureDescriptionNoDescriptionError,
   costOnInterfaceFieldErrorMessage,
   duplicateArgumentsError,
@@ -77,6 +79,7 @@ import {
   duplicateImplementedInterfaceError,
   duplicateTypeDefinitionError,
   duplicateUnionMemberDefinitionError,
+  entityCacheWithoutKeyErrorMessage,
   equivalentSourceAndTargetOverrideErrorMessage,
   expectedEntityError,
   externalInterfaceFieldsError,
@@ -131,7 +134,9 @@ import {
   listSizeSlicingArgumentNotIntErrorMessage,
   listSizeSlicingArgumentSegmentNotFoundErrorMessage,
   listSizeSlicingArgumentSegmentNotInputObjectErrorMessage,
+  maxAgeNotPositiveIntegerErrorMessage,
   multipleNamedTypeDefinitionError,
+  negativeCacheTTLNotNonNegativeIntegerErrorMessage,
   noBaseScalarDefinitionError,
   noDefinedEnumValuesError,
   noDefinedUnionMembersError,
@@ -167,11 +172,6 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
-  cacheInvalidateOnNonEntityReturnTypeErrorMessage,
-  cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage,
-  entityCacheWithoutKeyErrorMessage,
-  maxAgeNotPositiveIntegerErrorMessage,
-  negativeCacheTTLNotNonNegativeIntegerErrorMessage,
 } from '../../errors/errors';
 import {
   DEPENDENCIES_BY_DIRECTIVE_NAME,
@@ -180,15 +180,15 @@ import {
 } from '../constants/strings';
 import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
+  type CacheInvalidationConfiguration,
   type ConfigurationData,
   type Costs,
+  type EntityCacheConfiguration,
   type EventConfiguration,
   type FieldListSizeConfiguration,
   type FieldWeightConfiguration,
   type NatsEventType,
   type RequiredFieldConfiguration,
-  type CacheInvalidationConfiguration,
-  type EntityCacheConfiguration,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
@@ -288,12 +288,13 @@ import {
   EDFS_REDIS_PUBLISH,
   EDFS_REDIS_SUBSCRIBE,
   ENTITIES_FIELD,
-  EXECUTABLE_DIRECTIVE_LOCATIONS,
   EXTENDS,
   EXTERNAL,
   FIELDS,
+  FIRST_ORDINAL,
   HYPHEN_JOIN,
   INACCESSIBLE,
+  INCLUDE_HEADERS,
   INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
   INT_SCALAR,
@@ -303,15 +304,20 @@ import {
   LIST_SIZE,
   LITERAL_AT,
   LITERAL_PERIOD,
+  MAX_AGE,
   MUTATION,
+  NEGATIVE_CACHE_TTL,
   NON_NULLABLE_BOOLEAN,
   NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
   NON_NULLABLE_INT,
   NON_NULLABLE_STRING,
   NOT_APPLICABLE,
   ONE_OF,
+  OPENFED_CACHE_INVALIDATE,
+  OPENFED_ENTITY_CACHE,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
+  PARTIAL_CACHE_LOAD,
   PROPAGATE,
   PROVIDER_ID,
   PROVIDER_TYPE_KAFKA,
@@ -329,6 +335,7 @@ import {
   SCOPES,
   SEMANTIC_NON_NULL,
   SERVICE_FIELD,
+  SHADOW_MODE,
   SHAREABLE,
   SIZED_FIELDS,
   SLICING_ARGUMENTS,
@@ -345,14 +352,6 @@ import {
   TOPICS,
   TYPENAME,
   WEIGHT,
-  OPENFED_CACHE_INVALIDATE,
-  OPENFED_ENTITY_CACHE,
-  FIRST_ORDINAL,
-  INCLUDE_HEADERS,
-  MAX_AGE,
-  NEGATIVE_CACHE_TTL,
-  PARTIAL_CACHE_LOAD,
-  SHADOW_MODE,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
 import {
@@ -370,20 +369,20 @@ import {
   type AddInputValueDataByNodeParams,
   type ComposeDirectiveNode,
   type ConditionalFieldSetValidationResult,
+  type EntityCacheDirectiveNode,
   type ExtractDirectiveArgumentDataResult,
   type FieldSetData,
   type FieldSetParentResult,
   type HandleCostDirectiveParams,
   type HandleListSizeDirectiveParams,
-  type RecordDirectiveWeightOnFieldParams,
   type HandleOverrideDirectiveParams,
   type HandleRequiresScopesDirectiveParams,
   type HandleSemanticNonNullDirectiveParams,
   type KeyFieldSetData,
   type LinkImportData,
+  type RecordDirectiveWeightOnFieldParams,
   type UpsertInputObjectResult,
   type ValidateDirectiveParams,
-  type EntityCacheDirectiveNode,
 } from './types/types';
 import {
   getOrInitializeEntityCaching,
@@ -4019,6 +4018,7 @@ export class NormalizationFactory {
     if (!entityCacheDirectives || entityCacheDirectives.length === 0) {
       return;
     }
+
     if (!this.keyFieldSetDatasByTypeName.has(typeName)) {
       this.errors.push(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
@@ -4027,6 +4027,7 @@ export class NormalizationFactory {
       );
       return;
     }
+
     /* validateDirectives() (run earlier in normalize()) has already guaranteed each argument's type —
      * Int for maxAge/negativeCacheTTL, Boolean for the flags — so the generic ConstDirectiveNode is
      * narrowed once to the precise typed node, mirroring RequestScopedDirectiveNode/ComposeDirectiveNode.
@@ -4034,6 +4035,11 @@ export class NormalizationFactory {
      * so the config starts at the directive's documented defaults and each present argument overrides it.
      */
     const directive = entityCacheDirectives[0] as EntityCacheDirectiveNode;
+    if (this.entityCacheConfigByTypeName.has(typeName)) {
+      // The error would be caught in directive validation as an invalid repeated directive use.
+      return;
+    }
+
     const config: EntityCacheConfiguration = {
       typeName,
       maxAgeSeconds: 0,
@@ -4084,7 +4090,7 @@ export class NormalizationFactory {
       }
     }
 
-    const entityCacheErrors = [];
+    const entityCacheErrors: Array<Error> = [];
 
     if (config.maxAgeSeconds <= 0) {
       entityCacheErrors.push(
