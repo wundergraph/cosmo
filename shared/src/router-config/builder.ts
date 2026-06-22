@@ -103,7 +103,7 @@ function extractEntityCachingConfiguration(
         }),
       );
     }
-    for (const ci of data.entityCaching?.cacheInvalidationConfigurations) {
+    for (const ci of data.entityCaching?.cacheInvalidateConfigurations) {
       cacheInvalidateConfigurations.push(
         new CacheInvalidateConfiguration({
           fieldName: ci.fieldName,
@@ -113,13 +113,12 @@ function extractEntityCachingConfiguration(
       );
     }
   }
-  if (entityCache.length === 0 && cacheInvalidateConfigurations.length === 0) {
-    return;
+  if (entityCache.length > 0 || cacheInvalidateConfigurations.length > 0) {
+    return new EntityCachingConfiguration({
+      entityCache,
+      cacheInvalidateConfigurations,
+    });
   }
-  return new EntityCachingConfiguration({
-    entityCache,
-    cacheInvalidateConfigurations,
-  });
 }
 
 export interface Input {

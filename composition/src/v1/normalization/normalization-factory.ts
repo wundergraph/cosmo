@@ -180,7 +180,7 @@ import {
 } from '../constants/strings';
 import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
-  type CacheInvalidationConfiguration,
+  type CacheInvalidateConfiguration,
   type ConfigurationData,
   type Costs,
   type EntityCacheConfiguration,
@@ -4149,13 +4149,13 @@ export class NormalizationFactory {
       newConfigurationData(false, fieldData.renamedParentTypeName),
     );
 
-    const config: CacheInvalidationConfiguration = {
+    const config: CacheInvalidateConfiguration = {
       fieldName: fieldData.name,
       operationType: operationType,
       entityTypeName: returnTypeName,
     };
 
-    getOrInitializeEntityCaching(configurationData).cacheInvalidationConfigurations.push(config);
+    getOrInitializeEntityCaching(configurationData).cacheInvalidateConfigurations.push(config);
   }
 
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
