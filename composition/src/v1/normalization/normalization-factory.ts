@@ -4229,7 +4229,7 @@ export class NormalizationFactory {
 
     config.maxAgeSeconds = parseInt(maxAgeArgument.value.value, 10);
     // This syntax handles possible NaN.
-    if (!(config.maxAgeSeconds > 0)) {
+    if (isNaN(config.maxAgeSeconds) || config.maxAgeSeconds <= 0) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
           // If null is explicitly provided in GraphQL the value in JS is undefined.

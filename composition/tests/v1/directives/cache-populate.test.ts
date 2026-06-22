@@ -311,7 +311,7 @@ describe('@openfed__cachePopulate tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Mutation.updateProduct', FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage('null'),
+          maxAgeNotPositiveIntegerErrorMessage(null),
         ]),
       );
     });
