@@ -204,6 +204,7 @@ import {
   fieldAlreadyProvidedWarning,
   invalidExternalFieldWarning,
   nonExternalConditionalFieldWarning,
+  requestScopedSingleFieldWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
 } from '../warnings/warnings';
@@ -509,6 +510,7 @@ export class NormalizationFactory {
   referencedDirectiveNames = new Set<DirectiveName>();
   referencedTypeNames = new Set<TypeName>();
   renamedParentTypeName = '';
+  requestScopedFieldCoordsByL1Key = new Map<string, Array<string>>();
   schemaData: SchemaData;
   subgraphName: SubgraphName;
   unvalidatedExternalFieldCoords = new Set<string>();
@@ -4255,6 +4257,10 @@ export class NormalizationFactory {
       newConfigurationData(false, fieldData.renamedParentTypeName),
     );
     getOrInitializeEntityCaching(configurationData).requestScopedConfigurations.push(config);
+    // Track field coords per L1 key so the single-field warning can be emitted after the walk completes.
+    getValueOrDefault(this.requestScopedFieldCoordsByL1Key, config.l1Key, () => []).push(
+      `${config.typeName}.${config.fieldName}`,
+    );
   }
 
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
@@ -4539,6 +4545,21 @@ export class NormalizationFactory {
         default: {
           throw unexpectedKindFatalError(parentTypeName);
         }
+      }
+    }
+    // @openfed__requestScoped is meaningless unless >= 2 fields share a key (there'd be no second reader to
+    // benefit), so warn for any key used on only one field across the subgraph. extractRequestScopedConfig()
+    // populated requestScopedFieldCoordsByL1Key during the type walk above.
+    for (const [l1Key, fieldCoordsList] of this.requestScopedFieldCoordsByL1Key) {
+      if (fieldCoordsList.length === 1) {
+        this.warnings.push(
+          requestScopedSingleFieldWarning({
+            subgraphName: this.subgraphName,
+            // l1Key is `${this.subgraphName}.${key}`, so strip the prefix to recover the original key.
+            key: l1Key.slice(this.subgraphName.length + 1),
+            fieldCoords: fieldCoordsList[0],
+          }),
+        );
       }
     }
     this.isSubgraphEventDrivenGraph = this.edfsDirectiveReferences.size > 0;
