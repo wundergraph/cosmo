@@ -80,7 +80,9 @@ function costsToCostConfiguration(costs?: Costs): CostConfiguration | undefined 
  * @returns The `EntityCaching` message, or `undefined` when empty so the field is omitted (like
  * `costsToCostConfiguration`).
  */
-function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, ConfigurationData>): EntityCachingConfiguration | undefined {
+function extractEntityCachingConfiguration(
+  dataByTypeName?: Map<TypeName, ConfigurationData>,
+): EntityCachingConfiguration | undefined {
   if (!dataByTypeName) {
     return;
   }
@@ -134,8 +136,13 @@ function extractEntityCachingConfiguration(dataByTypeName?: Map<TypeName, Config
       );
     }
   }
-  if (entityCache.length > 0 || cacheInvalidateConfigurations.length > 0 || cachePopulateConfigurations.length > 0 || requestScopedConfigurations.length > 0) {
-     return new EntityCachingConfiguration({
+  if (
+    entityCache.length > 0 ||
+    cacheInvalidateConfigurations.length > 0 ||
+    cachePopulateConfigurations.length > 0 ||
+    requestScopedConfigurations.length > 0
+  ) {
+    return new EntityCachingConfiguration({
       entityCache,
       cacheInvalidateConfigurations,
       cachePopulateConfigurations,
