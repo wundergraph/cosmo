@@ -832,14 +832,17 @@ export class NormalizationFactory {
         }
         continue;
       }
+
       if (definitionData.isComposed) {
         definitionData.isReferenced = true;
       }
+
       const definitionErrorMessages: Array<string> = [];
       const directiveLocation = nodeKindToDirectiveLocation(data.kind);
       if (!definitionData.locations.has(directiveLocation)) {
         definitionErrorMessages.push(invalidDirectiveLocationErrorMessage(directiveName, directiveLocation));
       }
+
       if (directiveNodes.length > 1 && !definitionData.isRepeatable) {
         const handledDirectiveNames = getValueOrDefault(
           this.invalidRepeatedDirectiveNameByCoords,
@@ -1462,13 +1465,11 @@ export class NormalizationFactory {
       this.updateCompositeOutputDataByNode(node, parentData, extensionType);
       if (!directivesByName.has(INTERFACE_OBJECT)) {
         this.addConcreteTypeNamesForImplementedInterfaces(parentData.implementedInterfaceTypeNames, typeName);
+        this.extractEntityCacheDirective(parentData);
       }
       return;
     }
     const implementedInterfaceTypeNames = this.extractImplementedInterfaceTypeNames(node, new Set<AbstractTypeName>());
-    if (!directivesByName.has(INTERFACE_OBJECT)) {
-      this.addConcreteTypeNamesForImplementedInterfaces(implementedInterfaceTypeNames, typeName);
-    }
     const newParentData: ObjectDefinitionData = {
       configureDescriptionDataBySubgraphName: new Map<SubgraphName, ConfigureDescriptionData>(),
       directivesByName: directivesByName,
@@ -1487,6 +1488,10 @@ export class NormalizationFactory {
       subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     };
+    if (!directivesByName.has(INTERFACE_OBJECT)) {
+      this.addConcreteTypeNamesForImplementedInterfaces(implementedInterfaceTypeNames, typeName);
+      this.extractEntityCacheDirective(newParentData);
+    }
     this.extractConfigureDescriptionsData(newParentData);
     this.parentDefinitionDataByTypeName.set(typeName, newParentData);
   }
