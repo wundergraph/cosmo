@@ -3103,7 +3103,7 @@ message GetProposalsByFederatedGraphResponse {
   Response response = 1;
   repeated Proposal proposals = 2;
   bool isProposalsEnabled = 3;
-  int32 totalProposalsCount = 4;
+  int32 totalCount = 4;
 }
 
 message GetProposalChecksRequest {

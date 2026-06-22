@@ -41,7 +41,7 @@ export function getProposalsByFederatedGraph(
         },
         proposals: [],
         isProposalsEnabled: false,
-        totalProposalsCount: 0,
+        totalCount: 0,
       };
     }
 
@@ -53,7 +53,7 @@ export function getProposalsByFederatedGraph(
         },
         proposals: [],
         isProposalsEnabled: false,
-        totalProposalsCount: 0,
+        totalCount: 0,
       };
     }
 
@@ -66,7 +66,7 @@ export function getProposalsByFederatedGraph(
         },
         proposals: [],
         isProposalsEnabled: namespace.enableProposals,
-        totalProposalsCount: 0,
+        totalCount: 0,
       };
     }
 
@@ -95,7 +95,7 @@ export function getProposalsByFederatedGraph(
         },
         proposals: [],
         isProposalsEnabled: namespace.enableProposals,
-        totalProposalsCount: 0,
+        totalCount: 0,
       };
     }
 
@@ -111,7 +111,7 @@ export function getProposalsByFederatedGraph(
       offset: req.offset,
     });
 
-    const totalProposalsCount = await proposalRepo.countByFederatedGraphId({
+    const totalCount = await proposalRepo.countByFederatedGraphId({
       federatedGraphId: federatedGraph.id,
       startDate: dateRange.start,
       endDate: dateRange.end,
@@ -156,7 +156,7 @@ export function getProposalsByFederatedGraph(
           }),
       ),
       isProposalsEnabled: true,
-      totalProposalsCount,
+      totalCount,
     };
   });
 }

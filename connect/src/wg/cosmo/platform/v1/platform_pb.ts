@@ -24151,9 +24151,9 @@ export class GetProposalsByFederatedGraphResponse extends Message<GetProposalsBy
   isProposalsEnabled = false;
 
   /**
-   * @generated from field: int32 totalProposalsCount = 4;
+   * @generated from field: int32 totalCount = 4;
    */
-  totalProposalsCount = 0;
+  totalCount = 0;
 
   constructor(data?: PartialMessage<GetProposalsByFederatedGraphResponse>) {
     super();
@@ -24166,7 +24166,7 @@ export class GetProposalsByFederatedGraphResponse extends Message<GetProposalsBy
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "proposals", kind: "message", T: Proposal, repeated: true },
     { no: 3, name: "isProposalsEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 4, name: "totalProposalsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "totalCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProposalsByFederatedGraphResponse {

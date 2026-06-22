@@ -106,7 +106,7 @@ const ProposalsPage: NextPageWithLayout = () => {
     );
 
   const paginatedProposals = data.proposals;
-  const noOfPages = Math.ceil((data.totalProposalsCount ?? 0) / limit);
+  const noOfPages = Math.ceil((data.totalCount ?? 0) / limit);
 
   return (
     <div className="flex h-full flex-col gap-y-3">
