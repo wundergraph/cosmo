@@ -23,9 +23,9 @@ import {
 } from '../../../src/errors/errors';
 import { createSubgraphWithDefaultName, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
 
-describe('@openfed__cachePopulate', () => {
-  describe('on Mutation fields', () => {
-    test("normalizes without maxAge (uses the entity's default TTL)", () => {
+describe('@openfed__cachePopulate tests', () => {
+  describe('Mutation fields tests', () => {
+    test("that it normalizes without maxAge (uses the entity's default TTL)", () => {
       const { schema } = normalizeSubgraphSuccess(
         createSubgraphWithDefaultName(`
             type Query { dummy: String! }
@@ -42,7 +42,7 @@ describe('@openfed__cachePopulate', () => {
       expect(schema).toBeDefined();
     });
 
-    test('normalizes with an explicit maxAge override', () => {
+    test('that it normalizes with an explicit maxAge override', () => {
       const { schema } = normalizeSubgraphSuccess(
         createSubgraphWithDefaultName(`
             type Query { dummy: String! }
@@ -59,7 +59,7 @@ describe('@openfed__cachePopulate', () => {
       expect(schema).toBeDefined();
     });
 
-    test('config without maxAge leaves maxAgeSeconds undefined', () => {
+    test('that a config without maxAge leaves maxAgeSeconds undefined', () => {
       const config = getConfigForType(
         createSubgraphWithDefaultName(`
             type Query { dummy: String! }
@@ -84,7 +84,7 @@ describe('@openfed__cachePopulate', () => {
       ] satisfies CachePopulateConfig[]);
     });
 
-    test('config with an explicit maxAge override', () => {
+    test('that a config with an explicit maxAge override is produced', () => {
       const config = getConfigForType(
         createSubgraphWithDefaultName(`
             type Query { dummy: String! }
@@ -110,8 +110,8 @@ describe('@openfed__cachePopulate', () => {
     });
   });
 
-  describe('on Subscription fields', () => {
-    test('normalizes a Subscription field', () => {
+  describe('Subscription fields tests', () => {
+    test('that it normalizes a Subscription field', () => {
       const { schema } = normalizeSubgraphSuccess(
         createSubgraphWithDefaultName(`
             type Query { dummy: String! }
@@ -128,7 +128,7 @@ describe('@openfed__cachePopulate', () => {
       expect(schema).toBeDefined();
     });
 
-    test('produces the correct config', () => {
+    test('that it produces the correct config', () => {
       const config = getConfigForType(
         createSubgraphWithDefaultName(`
             type Query { dummy: String! }
@@ -154,8 +154,8 @@ describe('@openfed__cachePopulate', () => {
     });
   });
 
-  describe('validation errors', () => {
-    test('rejects placement on a Query field', () => {
+  describe('Validation errors tests', () => {
+    test('that it rejects placement on a Query field', () => {
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefaultName(`
             type Query {
@@ -176,7 +176,7 @@ describe('@openfed__cachePopulate', () => {
       );
     });
 
-    test('rejects a return type that is not a cached entity', () => {
+    test('that it rejects a return type that is not a cached entity', () => {
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefaultName(`
             type Query { dummy: String! }
@@ -194,12 +194,12 @@ describe('@openfed__cachePopulate', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Mutation.createProduct', FIRST_ORDINAL, [
-          cachePopulateOnNonEntityReturnTypeErrorMessage('Mutation.createProduct', 'Result'),
+          cachePopulateOnNonEntityReturnTypeErrorMessage('Result'),
         ]),
       );
     });
 
-    test('rejects a maxAge of zero', () => {
+    test('that it rejects a maxAge of zero', () => {
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefaultName(`
             type Query { dummy: String! }
@@ -216,12 +216,12 @@ describe('@openfed__cachePopulate', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Mutation.createProduct', FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_CACHE_POPULATE, value: 0 }),
+          maxAgeNotPositiveIntegerErrorMessage(0),
         ]),
       );
     });
 
-    test('an invalid maxAge does not produce a config (regression)', () => {
+    test('that an invalid maxAge does not produce a config (regression)', () => {
       // Regression: a maxAge of 0 once emitted a cachePopulate config despite failing validation.
       // Composition now fails outright, so assert exactly the one @openfed__cachePopulate error.
       const result = new BatchNormalizer({
@@ -244,13 +244,13 @@ describe('@openfed__cachePopulate', () => {
       expect(result.errors[0]).toStrictEqual(
         subgraphValidationError('subgraph-default-a', [
           invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Mutation.createProduct', FIRST_ORDINAL, [
-            maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_CACHE_POPULATE, value: 0 }),
+            maxAgeNotPositiveIntegerErrorMessage(0),
           ]),
         ]),
       );
     });
 
-    test('rejects coexisting @openfed__cacheInvalidate and @openfed__cachePopulate on the same field', () => {
+    test('that it rejects coexisting @openfed__cacheInvalidate and @openfed__cachePopulate on the same field', () => {
       // A mutation can't both evict and write to the cache for the same entity
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefaultName(`
@@ -276,10 +276,10 @@ describe('@openfed__cachePopulate', () => {
 });
 
 // Returns the ConfigurationData for a type. Entity-caching config is nested under `.entityCaching`.
-function getConfigForType(sg: Subgraph, typeName: string): ConfigurationData | undefined {
+function getConfigForType(sg: Subgraph, typeName: TypeName): ConfigurationData | undefined {
   const result = new BatchNormalizer({ subgraphs: [sg] }).batchNormalize() as BatchNormalizationSuccess;
   expect(result.success).toBe(true);
   const internal = result.internalSubgraphByName.get(sg.name);
   expect(internal).toBeDefined();
-  return internal!.configurationDataByTypeName.get(typeName as TypeName);
+  return internal!.configurationDataByTypeName.get(typeName);
 }

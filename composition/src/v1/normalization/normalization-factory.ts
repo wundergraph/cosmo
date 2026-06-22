@@ -4101,7 +4101,7 @@ export class NormalizationFactory {
     if (config.maxAgeSeconds <= 0) {
       entityCacheErrors.push(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_ENTITY_CACHE, value: config.maxAgeSeconds }),
+          maxAgeNotPositiveIntegerErrorMessage(config.maxAgeSeconds),
         ]),
       );
     }
@@ -4168,7 +4168,7 @@ export class NormalizationFactory {
   // entity (@key + @openfed__entityCache). maxAge is optional — when absent the router falls back to the
   // entity's @openfed__entityCache TTL; when present it must be positive.
   extractCachePopulateConfig(fieldData: FieldData) {
-     if (!fieldData.directivesByName.has(OPENFED_CACHE_POPULATE)) {
+    if (!fieldData.directivesByName.has(OPENFED_CACHE_POPULATE)) {
       return;
     }
 
@@ -4186,7 +4186,7 @@ export class NormalizationFactory {
     if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
-          cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
+          cachePopulateOnNonEntityReturnTypeErrorMessage(returnTypeName),
         ]),
       );
       return;
@@ -4205,7 +4205,7 @@ export class NormalizationFactory {
       if (maxAgeRaw <= 0) {
         this.errors.push(
           invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
-            maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_CACHE_POPULATE, value: maxAgeRaw }),
+            maxAgeNotPositiveIntegerErrorMessage(maxAgeRaw),
           ]),
         );
         return;

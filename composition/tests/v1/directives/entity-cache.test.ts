@@ -56,7 +56,7 @@ describe('@openfed__entityCache tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, 'Product', FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_ENTITY_CACHE, value: 0 }),
+          maxAgeNotPositiveIntegerErrorMessage(0),
         ]),
       );
     });
@@ -75,7 +75,7 @@ describe('@openfed__entityCache tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, 'Product', FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_ENTITY_CACHE, value: -5 }),
+          maxAgeNotPositiveIntegerErrorMessage(-5),
         ]),
       );
     });

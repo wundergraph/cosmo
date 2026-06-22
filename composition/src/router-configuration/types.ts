@@ -132,10 +132,10 @@ export type CacheInvalidateConfiguration = {
 // Tells the router to populate the entity cache with the operation's return value.
 // maxAgeSeconds overrides the entity's default TTL when provided.
 export type CachePopulateConfig = {
-  fieldName: FieldName;
-  operationType: string;
   entityTypeName: TypeName;
+  fieldName: FieldName;
   maxAgeSeconds?: number;
+  operationType: string;
 };
 
 export type EntityCachingConfiguration = {

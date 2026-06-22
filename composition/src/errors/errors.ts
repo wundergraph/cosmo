@@ -2056,14 +2056,8 @@ export function entityCacheWithoutKeyErrorMessage(typeName: TypeName): string {
   return `Object "${typeName}" does not define a "@key" directive.`;
 }
 
-export function maxAgeNotPositiveIntegerErrorMessage({
-  directiveName,
-  value,
-}: {
-  directiveName: string;
-  value: number;
-}): string {
-  return `The argument "maxAge" of "@${directiveName}" must be provided a positive integer; received "${value}".`;
+export function maxAgeNotPositiveIntegerErrorMessage(value: number): string {
+  return `The argument "maxAge" must be provided a positive integer; received "${value}".`;
 }
 
 export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(value: number): string {
@@ -2085,8 +2079,8 @@ export function cachePopulateOnNonMutationSubscriptionFieldErrorMessage(fieldCoo
   return `@openfed__cachePopulate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
 }
 
-export function cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
-  return `Field "${fieldCoords}" has @openfed__cachePopulate but returns non-entity type "${returnType}".`;
+export function cachePopulateOnNonEntityReturnTypeErrorMessage(returnType: string): string {
+  return `@openfed__cachePopulate returns non-entity type "${returnType}".`;
 }
 
 export function cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords: string): string {

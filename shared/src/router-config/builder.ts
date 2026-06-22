@@ -114,29 +114,24 @@ function extractEntityCachingConfiguration(
         }),
       );
     }
-    for (const cp of data.entityCaching?.cachePopulateConfigurations ?? []) {
+    for (const cp of data.entityCaching?.cachePopulateConfigurations) {
       cachePopulateConfigurations.push(
         new CachePopulateConfiguration({
+          entityTypeName: cp.entityTypeName,
           fieldName: cp.fieldName,
           operationType: cp.operationType,
-          entityTypeName: cp.entityTypeName,
           maxAgeSeconds: cp.maxAgeSeconds === undefined ? undefined : BigInt(cp.maxAgeSeconds),
         }),
       );
     }
   }
-  if (
-    entityCache.length === 0 &&
-    cacheInvalidateConfigurations.length === 0 &&
-    cachePopulateConfigurations.length === 0
-  ) {
-    return;
+  if (entityCache.length > 0 || cacheInvalidateConfigurations.length > 0 || cachePopulateConfigurations.length > 0) {
+    return new EntityCachingConfiguration({
+      cacheInvalidateConfigurations,
+      cachePopulateConfigurations,
+      entityCache,
+    });
   }
-  return new EntityCachingConfiguration({
-    entityCache,
-    cacheInvalidateConfigurations,
-    cachePopulateConfigurations,
-  });
 }
 
 export interface Input {
