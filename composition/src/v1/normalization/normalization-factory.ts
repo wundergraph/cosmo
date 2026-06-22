@@ -4258,16 +4258,6 @@ export class NormalizationFactory {
     }
     // Check all key field sets for @external fields to assess whether they are conditional
     this.evaluateExternalKeyFields();
-    /*
-     * Register every @openfed__entityCache config before the main loop below extracts @openfed__cacheInvalidate.
-     * cacheInvalidate validation requires the return type's entity-cache config to already exist
-     * (see extractCacheInvalidateConfig), and the return type may be iterated after the field that references it.
-     */
-    for (const parentData of this.parentDefinitionDataByTypeName.values()) {
-      if (parentData.kind === Kind.OBJECT_TYPE_DEFINITION) {
-        this.extractEntityCacheDirective(parentData);
-      }
-    }
 
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       switch (parentData.kind) {
