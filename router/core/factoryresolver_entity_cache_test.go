@@ -20,14 +20,16 @@ func TestDataSourceMetaDataMapsNegativeEntityCacheTTL(t *testing.T) {
 	}
 
 	meta := loader.dataSourceMetaData(&nodev1.DataSourceConfiguration{
-		EntityCacheConfigurations: []*nodev1.EntityCacheConfiguration{
-			{
-				TypeName:                "Item",
-				MaxAgeSeconds:           300,
-				NotFoundCacheTtlSeconds: 15,
-				IncludeHeaders:          true,
-				PartialCacheLoad:        true,
-				ShadowMode:              true,
+		EntityCachingConfiguration: &nodev1.EntityCachingConfiguration{
+			EntityCache: []*nodev1.EntityCacheConfiguration{
+				{
+					TypeName:                "Item",
+					MaxAgeSeconds:           300,
+					NotFoundCacheTtlSeconds: 15,
+					IncludeHeaders:          true,
+					PartialCacheLoad:        true,
+					ShadowMode:              true,
+				},
 			},
 		},
 	}, "items")
@@ -74,64 +76,66 @@ func TestDataSourceMetaDataMapsRootFieldMutationSubscriptionAndRequestScopedCach
 			{TypeName: "Mutation", FieldNames: []string{"createItem", "deleteItem"}},
 			{TypeName: "Subscription", FieldNames: []string{"itemCreated", "itemDeleted"}},
 		},
-		EntityCacheConfigurations: []*nodev1.EntityCacheConfiguration{
-			{
-				TypeName:       "Item",
-				MaxAgeSeconds:  60,
-				IncludeHeaders: true,
+		EntityCachingConfiguration: &nodev1.EntityCachingConfiguration{
+			EntityCache: []*nodev1.EntityCacheConfiguration{
+				{
+					TypeName:       "Item",
+					MaxAgeSeconds:  60,
+					IncludeHeaders: true,
+				},
 			},
-		},
-		RootFieldCacheConfigurations: []*nodev1.RootFieldCacheConfiguration{
-			{
-				FieldName:      "item",
-				EntityTypeName: "Item",
-				MaxAgeSeconds:  30,
-				IncludeHeaders: true,
-				ShadowMode:     true,
-				EntityKeyMappings: []*nodev1.EntityKeyMapping{
-					{
-						EntityTypeName: "Item",
-						FieldMappings: []*nodev1.EntityCacheFieldMapping{
-							{
-								EntityKeyField: "id",
-								ArgumentPath:   []string{"id"},
-								IsBatch:        true,
+			QueryCacheConfigurations: []*nodev1.QueryCacheConfiguration{
+				{
+					FieldName:      "item",
+					EntityTypeName: "Item",
+					MaxAgeSeconds:  30,
+					IncludeHeaders: true,
+					ShadowMode:     true,
+					EntityKeyMappings: []*nodev1.EntityKeyMapping{
+						{
+							EntityTypeName: "Item",
+							FieldMappings: []*nodev1.EntityCacheFieldMapping{
+								{
+									EntityKeyField: "id",
+									ArgumentPath:   []string{"id"},
+									IsBatch:        true,
+								},
 							},
 						},
 					},
 				},
 			},
-		},
-		CachePopulateConfigurations: []*nodev1.CachePopulateConfiguration{
-			{
-				FieldName:      "createItem",
-				EntityTypeName: "Item",
-				OperationType:  "Mutation",
-				MaxAgeSeconds:  &mutationTTL,
+			CachePopulateConfigurations: []*nodev1.CachePopulateConfiguration{
+				{
+					FieldName:      "createItem",
+					EntityTypeName: "Item",
+					OperationType:  "Mutation",
+					MaxAgeSeconds:  mutationTTL,
+				},
+				{
+					FieldName:      "itemCreated",
+					EntityTypeName: "Item",
+					OperationType:  "Subscription",
+				},
 			},
-			{
-				FieldName:      "itemCreated",
-				EntityTypeName: "Item",
-				OperationType:  "Subscription",
+			CacheInvalidateConfigurations: []*nodev1.CacheInvalidateConfiguration{
+				{
+					FieldName:      "deleteItem",
+					EntityTypeName: "Item",
+					OperationType:  "Mutation",
+				},
+				{
+					FieldName:      "itemDeleted",
+					EntityTypeName: "Item",
+					OperationType:  "Subscription",
+				},
 			},
-		},
-		CacheInvalidateConfigurations: []*nodev1.CacheInvalidateConfiguration{
-			{
-				FieldName:      "deleteItem",
-				EntityTypeName: "Item",
-				OperationType:  "Mutation",
-			},
-			{
-				FieldName:      "itemDeleted",
-				EntityTypeName: "Item",
-				OperationType:  "Subscription",
-			},
-		},
-		RequestScopedFields: []*nodev1.RequestScopedFieldConfiguration{
-			{
-				FieldName: "currentViewer",
-				TypeName:  "Query",
-				L1Key:     "items.currentViewer",
+			RequestScopedConfigurations: []*nodev1.RequestScopedConfiguration{
+				{
+					FieldName: "currentViewer",
+					TypeName:  "Query",
+					L1Key:     "items.currentViewer",
+				},
 			},
 		},
 	}, "items")

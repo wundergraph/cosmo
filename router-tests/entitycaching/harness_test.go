@@ -285,17 +285,14 @@ func entityCachingDisabledOptions() []core.Option {
 // clearEntityCacheConfigs removes all entity cache configs from the router config.
 func clearEntityCacheConfigs(rc *nodev1.RouterConfig) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		ds.EntityCacheConfigurations = nil
-		ds.RootFieldCacheConfigurations = nil
-		ds.CacheInvalidateConfigurations = nil
-		ds.CachePopulateConfigurations = nil
+		ds.EntityCachingConfiguration = nil
 	}
 }
 
 // setEntityCacheTTL overrides MaxAgeSeconds on all entity cache configs.
 func setEntityCacheTTL(rc *nodev1.RouterConfig, ttl int64) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		for _, ec := range ds.EntityCacheConfigurations {
+		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCache() {
 			ec.MaxAgeSeconds = ttl
 		}
 	}
@@ -304,7 +301,7 @@ func setEntityCacheTTL(rc *nodev1.RouterConfig, ttl int64) {
 // setEntityCacheShadowMode sets ShadowMode on all entity cache configs.
 func setEntityCacheShadowMode(rc *nodev1.RouterConfig, enabled bool) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		for _, ec := range ds.EntityCacheConfigurations {
+		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCache() {
 			ec.ShadowMode = enabled
 		}
 	}
@@ -313,7 +310,7 @@ func setEntityCacheShadowMode(rc *nodev1.RouterConfig, enabled bool) {
 // setEntityCachePartialLoad sets PartialCacheLoad on all entity cache configs.
 func setEntityCachePartialLoad(rc *nodev1.RouterConfig, enabled bool) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		for _, ec := range ds.EntityCacheConfigurations {
+		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCache() {
 			ec.PartialCacheLoad = enabled
 		}
 	}
@@ -322,7 +319,7 @@ func setEntityCachePartialLoad(rc *nodev1.RouterConfig, enabled bool) {
 // setEntityCacheIncludeHeaders sets IncludeHeaders on all entity cache configs.
 func setEntityCacheIncludeHeaders(rc *nodev1.RouterConfig, enabled bool) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		for _, ec := range ds.EntityCacheConfigurations {
+		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCache() {
 			ec.IncludeHeaders = enabled
 		}
 	}
@@ -331,7 +328,7 @@ func setEntityCacheIncludeHeaders(rc *nodev1.RouterConfig, enabled bool) {
 // setNotFoundCacheTTL sets NotFoundCacheTtlSeconds on all entity cache configs.
 func setNotFoundCacheTTL(rc *nodev1.RouterConfig, ttl int64) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		for _, ec := range ds.EntityCacheConfigurations {
+		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCache() {
 			ec.NotFoundCacheTtlSeconds = ttl
 		}
 	}
@@ -340,7 +337,7 @@ func setNotFoundCacheTTL(rc *nodev1.RouterConfig, ttl int64) {
 // setQueryCacheShadowMode sets ShadowMode on all root field cache configs.
 func setQueryCacheShadowMode(rc *nodev1.RouterConfig, enabled bool) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		for _, rfc := range ds.RootFieldCacheConfigurations {
+		for _, rfc := range ds.GetEntityCachingConfiguration().GetQueryCacheConfigurations() {
 			rfc.ShadowMode = enabled
 		}
 	}
@@ -349,7 +346,7 @@ func setQueryCacheShadowMode(rc *nodev1.RouterConfig, enabled bool) {
 // setQueryCacheIncludeHeaders sets IncludeHeaders on all root field cache configs.
 func setQueryCacheIncludeHeaders(rc *nodev1.RouterConfig, enabled bool) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		for _, rfc := range ds.RootFieldCacheConfigurations {
+		for _, rfc := range ds.GetEntityCachingConfiguration().GetQueryCacheConfigurations() {
 			rfc.IncludeHeaders = enabled
 		}
 	}
@@ -358,8 +355,8 @@ func setQueryCacheIncludeHeaders(rc *nodev1.RouterConfig, enabled bool) {
 // setCachePopulateTTL overrides MaxAgeSeconds on all cache populate configs.
 func setCachePopulateTTL(rc *nodev1.RouterConfig, ttl int64) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		for _, cp := range ds.CachePopulateConfigurations {
-			cp.MaxAgeSeconds = &ttl
+		for _, cp := range ds.GetEntityCachingConfiguration().GetCachePopulateConfigurations() {
+			cp.MaxAgeSeconds = ttl
 		}
 	}
 }

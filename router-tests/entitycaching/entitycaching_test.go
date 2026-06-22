@@ -888,7 +888,7 @@ func TestEntityCaching(t *testing.T) {
 			RouterOptions:            entityCachingL2OnlyOptions(cache),
 			ModifyRouterConfig: func(rc *nodev1.RouterConfig) {
 				for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-					for _, cp := range ds.CachePopulateConfigurations {
+					for _, cp := range ds.GetEntityCachingConfiguration().GetCachePopulateConfigurations() {
 						if cp.OperationType == "Subscription" && cp.FieldName == "itemCreated" {
 							itemCreatedPopulate = cp
 						}

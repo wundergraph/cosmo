@@ -117,14 +117,18 @@ func TestBuildEntityCacheInvalidationConfigs(t *testing.T) {
 			DatasourceConfigurations: []*nodev1.DataSourceConfiguration{
 				{
 					Id: "ds-unknown", // no matching subgraph
-					EntityCacheConfigurations: []*nodev1.EntityCacheConfiguration{
-						{TypeName: "Mystery", MaxAgeSeconds: 60},
+					EntityCachingConfiguration: &nodev1.EntityCachingConfiguration{
+						EntityCache: []*nodev1.EntityCacheConfiguration{
+							{TypeName: "Mystery", MaxAgeSeconds: 60},
+						},
 					},
 				},
 				{
 					Id: "ds-known",
-					EntityCacheConfigurations: []*nodev1.EntityCacheConfiguration{
-						{TypeName: "Product", MaxAgeSeconds: 60},
+					EntityCachingConfiguration: &nodev1.EntityCachingConfiguration{
+						EntityCache: []*nodev1.EntityCacheConfiguration{
+							{TypeName: "Product", MaxAgeSeconds: 60},
+						},
 					},
 				},
 			},
@@ -164,14 +168,18 @@ func TestBuildEntityCacheInvalidationConfigs(t *testing.T) {
 			DatasourceConfigurations: []*nodev1.DataSourceConfiguration{
 				{
 					Id: "ds-1",
-					EntityCacheConfigurations: []*nodev1.EntityCacheConfiguration{
-						{TypeName: "Product", MaxAgeSeconds: 60, IncludeHeaders: true},
+					EntityCachingConfiguration: &nodev1.EntityCachingConfiguration{
+						EntityCache: []*nodev1.EntityCacheConfiguration{
+							{TypeName: "Product", MaxAgeSeconds: 60, IncludeHeaders: true},
+						},
 					},
 				},
 				{
 					Id: "ds-2",
-					EntityCacheConfigurations: []*nodev1.EntityCacheConfiguration{
-						{TypeName: "Review", MaxAgeSeconds: 30},
+					EntityCachingConfiguration: &nodev1.EntityCachingConfiguration{
+						EntityCache: []*nodev1.EntityCacheConfiguration{
+							{TypeName: "Review", MaxAgeSeconds: 30},
+						},
 					},
 				},
 			},

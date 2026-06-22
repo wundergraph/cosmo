@@ -13,16 +13,18 @@ func TestDataSourceMetaData_RequestScopedFields(t *testing.T) {
 	l := &Loader{}
 
 	in := &nodev1.DataSourceConfiguration{
-		RequestScopedFields: []*nodev1.RequestScopedFieldConfiguration{
-			{
-				FieldName: "currentUser",
-				TypeName:  "Query",
-				L1Key:     "viewer.user",
-			},
-			{
-				FieldName: "currentUser",
-				TypeName:  "Personalized",
-				L1Key:     "viewer.user",
+		EntityCachingConfiguration: &nodev1.EntityCachingConfiguration{
+			RequestScopedConfigurations: []*nodev1.RequestScopedConfiguration{
+				{
+					FieldName: "currentUser",
+					TypeName:  "Query",
+					L1Key:     "viewer.user",
+				},
+				{
+					FieldName: "currentUser",
+					TypeName:  "Personalized",
+					L1Key:     "viewer.user",
+				},
 			},
 		},
 	}

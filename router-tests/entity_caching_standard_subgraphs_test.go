@@ -48,7 +48,10 @@ func addEntityCacheConfig(routerConfig *nodev1.RouterConfig, ttlSeconds int64) {
 			if key.DisableEntityResolver {
 				continue
 			}
-			ds.EntityCacheConfigurations = append(ds.EntityCacheConfigurations, &nodev1.EntityCacheConfiguration{
+			if ds.EntityCachingConfiguration == nil {
+				ds.EntityCachingConfiguration = &nodev1.EntityCachingConfiguration{}
+			}
+			ds.EntityCachingConfiguration.EntityCache = append(ds.EntityCachingConfiguration.EntityCache, &nodev1.EntityCacheConfiguration{
 				TypeName:      key.TypeName,
 				MaxAgeSeconds: ttlSeconds,
 			})
@@ -210,7 +213,10 @@ func TestEntityCaching(t *testing.T) {
 						if key.DisableEntityResolver {
 							continue
 						}
-						ds.EntityCacheConfigurations = append(ds.EntityCacheConfigurations, &nodev1.EntityCacheConfiguration{
+						if ds.EntityCachingConfiguration == nil {
+							ds.EntityCachingConfiguration = &nodev1.EntityCachingConfiguration{}
+						}
+						ds.EntityCachingConfiguration.EntityCache = append(ds.EntityCachingConfiguration.EntityCache, &nodev1.EntityCacheConfiguration{
 							TypeName:      key.TypeName,
 							MaxAgeSeconds: 300,
 							ShadowMode:    true,
