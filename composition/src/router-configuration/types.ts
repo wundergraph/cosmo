@@ -1,3 +1,4 @@
+import { type OperationTypeNode } from 'graphql';
 import {
   type ArgumentName,
   type DirectiveArgumentCoords,
@@ -119,7 +120,17 @@ export type EntityCacheConfiguration = {
   shadowMode: boolean;
 };
 
+// Extracted from @openfed__cacheInvalidate on Mutation/Subscription fields.
+// Tells the router to evict the returned entity from the cache after the operation completes.
+export type CacheInvalidateConfiguration = {
+  entityTypeName: TypeName;
+  fieldName: FieldName;
+  operationType: OperationTypeNode;
+};
+
 export type EntityCachingConfiguration = {
+  // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cacheInvalidate.
+  cacheInvalidateConfigurations: Array<CacheInvalidateConfiguration>;
   // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
   entityCacheConfigurations: Array<EntityCacheConfiguration>;
 };

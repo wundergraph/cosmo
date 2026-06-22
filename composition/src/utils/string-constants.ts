@@ -10,6 +10,7 @@ export const AUTHENTICATED = 'authenticated';
 export const ARGUMENT_DEFINITION_UPPER = 'ARGUMENT_DEFINITION';
 export const BOOLEAN = 'boolean';
 export const BOOLEAN_SCALAR = 'Boolean';
+export const OPENFED_CACHE_INVALIDATE = 'openfed__cacheInvalidate';
 export const CHANNEL = 'channel';
 export const CHANNELS = 'channels';
 export const COMPOSE_DIRECTIVE = 'composeDirective';

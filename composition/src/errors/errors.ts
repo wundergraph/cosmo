@@ -6,6 +6,7 @@ import {
   type ObjectDefinitionData,
 } from '../schema-building/types/types';
 import {
+  type CacheInvalidateOnNonEntityReturnTypeErrorParams,
   type IncompatibleMergedTypesErrorParams,
   type IncompatibleParentTypeMergeErrorParams,
   type IncompatibleTypeWithProvidesErrorMessageParams,
@@ -2061,4 +2062,15 @@ export function maxAgeNotPositiveIntegerErrorMessage(value: number): string {
 
 export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(value: number): string {
   return `The argument "negativeCacheTTL" must be provided zero or a positive integer; received "${value}".`;
+}
+
+export function cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
+  return `Coordinates "${fieldCoords}" are not a Mutation or Subscription root field.`;
+}
+
+export function cacheInvalidateOnNonEntityReturnTypeErrorMessage({
+  fieldCoords,
+  returnType,
+}: CacheInvalidateOnNonEntityReturnTypeErrorParams): string {
+  return `Coordinates "${fieldCoords}" return non-entity type "${returnType}".`;
 }

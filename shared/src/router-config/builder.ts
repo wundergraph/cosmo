@@ -23,6 +23,7 @@ import {
   DataSourceConfiguration,
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
+  CacheInvalidateConfiguration,
   DataSourceKind,
   EngineConfiguration,
   EntityCacheConfiguration,
@@ -84,6 +85,7 @@ function extractEntityCachingConfiguration(
     return;
   }
   const entityCache: EntityCacheConfiguration[] = [];
+  const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
     if (!data.entityCaching) {
       continue;
@@ -101,13 +103,22 @@ function extractEntityCachingConfiguration(
         }),
       );
     }
+    for (const ci of data.entityCaching?.cacheInvalidateConfigurations) {
+      cacheInvalidateConfigurations.push(
+        new CacheInvalidateConfiguration({
+          entityTypeName: ci.entityTypeName,
+          fieldName: ci.fieldName,
+          operationType: ci.operationType,
+        }),
+      );
+    }
   }
-  if (entityCache.length === 0) {
-    return;
+  if (entityCache.length > 0 || cacheInvalidateConfigurations.length > 0) {
+    return new EntityCachingConfiguration({
+      cacheInvalidateConfigurations,
+      entityCache,
+    });
   }
-  return new EntityCachingConfiguration({
-    entityCache,
-  });
 }
 
 export interface Input {

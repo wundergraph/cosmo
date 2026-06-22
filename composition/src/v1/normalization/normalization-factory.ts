@@ -67,6 +67,8 @@ import {
   newFieldAuthorizationData,
 } from '../utils/utils';
 import {
+  cacheInvalidateOnNonEntityReturnTypeErrorMessage,
+  cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage,
   configureDescriptionNoDescriptionError,
   costOnInterfaceFieldErrorMessage,
   duplicateArgumentsError,
@@ -77,6 +79,7 @@ import {
   duplicateImplementedInterfaceError,
   duplicateTypeDefinitionError,
   duplicateUnionMemberDefinitionError,
+  entityCacheWithoutKeyErrorMessage,
   equivalentSourceAndTargetOverrideErrorMessage,
   expectedEntityError,
   externalInterfaceFieldsError,
@@ -131,7 +134,9 @@ import {
   listSizeSlicingArgumentNotIntErrorMessage,
   listSizeSlicingArgumentSegmentNotFoundErrorMessage,
   listSizeSlicingArgumentSegmentNotInputObjectErrorMessage,
+  maxAgeNotPositiveIntegerErrorMessage,
   multipleNamedTypeDefinitionError,
+  negativeCacheTTLNotNonNegativeIntegerErrorMessage,
   noBaseScalarDefinitionError,
   noDefinedEnumValuesError,
   noDefinedUnionMembersError,
@@ -167,9 +172,6 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
-  entityCacheWithoutKeyErrorMessage,
-  maxAgeNotPositiveIntegerErrorMessage,
-  negativeCacheTTLNotNonNegativeIntegerErrorMessage,
 } from '../../errors/errors';
 import {
   DEPENDENCIES_BY_DIRECTIVE_NAME,
@@ -178,14 +180,15 @@ import {
 } from '../constants/strings';
 import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
+  type CacheInvalidateConfiguration,
   type ConfigurationData,
   type Costs,
+  type EntityCacheConfiguration,
   type EventConfiguration,
   type FieldListSizeConfiguration,
   type FieldWeightConfiguration,
   type NatsEventType,
   type RequiredFieldConfiguration,
-  type EntityCacheConfiguration,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
@@ -285,12 +288,13 @@ import {
   EDFS_REDIS_PUBLISH,
   EDFS_REDIS_SUBSCRIBE,
   ENTITIES_FIELD,
-  EXECUTABLE_DIRECTIVE_LOCATIONS,
   EXTENDS,
   EXTERNAL,
   FIELDS,
+  FIRST_ORDINAL,
   HYPHEN_JOIN,
   INACCESSIBLE,
+  INCLUDE_HEADERS,
   INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
   INT_SCALAR,
@@ -300,15 +304,20 @@ import {
   LIST_SIZE,
   LITERAL_AT,
   LITERAL_PERIOD,
+  MAX_AGE,
   MUTATION,
+  NEGATIVE_CACHE_TTL,
   NON_NULLABLE_BOOLEAN,
   NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
   NON_NULLABLE_INT,
   NON_NULLABLE_STRING,
   NOT_APPLICABLE,
   ONE_OF,
+  OPENFED_CACHE_INVALIDATE,
+  OPENFED_ENTITY_CACHE,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
+  PARTIAL_CACHE_LOAD,
   PROPAGATE,
   PROVIDER_ID,
   PROVIDER_TYPE_KAFKA,
@@ -326,6 +335,7 @@ import {
   SCOPES,
   SEMANTIC_NON_NULL,
   SERVICE_FIELD,
+  SHADOW_MODE,
   SHAREABLE,
   SIZED_FIELDS,
   SLICING_ARGUMENTS,
@@ -342,13 +352,6 @@ import {
   TOPICS,
   TYPENAME,
   WEIGHT,
-  OPENFED_ENTITY_CACHE,
-  FIRST_ORDINAL,
-  INCLUDE_HEADERS,
-  MAX_AGE,
-  NEGATIVE_CACHE_TTL,
-  PARTIAL_CACHE_LOAD,
-  SHADOW_MODE,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
 import {
@@ -366,20 +369,20 @@ import {
   type AddInputValueDataByNodeParams,
   type ComposeDirectiveNode,
   type ConditionalFieldSetValidationResult,
+  type EntityCacheDirectiveNode,
   type ExtractDirectiveArgumentDataResult,
   type FieldSetData,
   type FieldSetParentResult,
   type HandleCostDirectiveParams,
   type HandleListSizeDirectiveParams,
-  type RecordDirectiveWeightOnFieldParams,
   type HandleOverrideDirectiveParams,
   type HandleRequiresScopesDirectiveParams,
   type HandleSemanticNonNullDirectiveParams,
   type KeyFieldSetData,
   type LinkImportData,
+  type RecordDirectiveWeightOnFieldParams,
   type UpsertInputObjectResult,
   type ValidateDirectiveParams,
-  type EntityCacheDirectiveNode,
 } from './types/types';
 import {
   getOrInitializeEntityCaching,
@@ -4015,6 +4018,7 @@ export class NormalizationFactory {
     if (!entityCacheDirectives || entityCacheDirectives.length === 0) {
       return;
     }
+
     if (!this.keyFieldSetDatasByTypeName.has(typeName)) {
       this.errors.push(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
@@ -4023,6 +4027,7 @@ export class NormalizationFactory {
       );
       return;
     }
+
     /* validateDirectives() (run earlier in normalize()) has already guaranteed each argument's type —
      * Int for maxAge/negativeCacheTTL, Boolean for the flags — so the generic ConstDirectiveNode is
      * narrowed once to the precise typed node, mirroring RequestScopedDirectiveNode/ComposeDirectiveNode.
@@ -4030,6 +4035,11 @@ export class NormalizationFactory {
      * so the config starts at the directive's documented defaults and each present argument overrides it.
      */
     const directive = entityCacheDirectives[0] as EntityCacheDirectiveNode;
+    if (this.entityCacheConfigByTypeName.has(typeName)) {
+      // The error would be caught in directive validation as an invalid repeated directive use.
+      return;
+    }
+
     const config: EntityCacheConfiguration = {
       typeName,
       maxAgeSeconds: 0,
@@ -4080,7 +4090,7 @@ export class NormalizationFactory {
       }
     }
 
-    const entityCacheErrors = [];
+    const entityCacheErrors: Array<Error> = [];
 
     if (config.maxAgeSeconds <= 0) {
       entityCacheErrors.push(
@@ -4109,6 +4119,43 @@ export class NormalizationFactory {
     );
 
     getOrInitializeEntityCaching(configurationData).entityCacheConfigurations.push(config);
+  }
+
+  extractCacheInvalidateConfig(fieldData: FieldData) {
+    if (!fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE)) {
+      return;
+    }
+
+    const operationType = this.getOperationTypeNodeForRootTypeName(fieldData.originalParentTypeName);
+    const fieldCoords = `${fieldData.originalParentTypeName}.${fieldData.name}`;
+    if (!operationType || operationType === OperationTypeNode.QUERY) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
+          cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
+        ]),
+      );
+      return;
+    }
+    const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+    if (!this.entityCacheConfigByTypeName.has(returnTypeName)) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
+          cacheInvalidateOnNonEntityReturnTypeErrorMessage({ fieldCoords, returnType: returnTypeName }),
+        ]),
+      );
+      return;
+    }
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, fieldData.renamedParentTypeName, () =>
+      newConfigurationData(false, fieldData.renamedParentTypeName),
+    );
+
+    const config: CacheInvalidateConfiguration = {
+      entityTypeName: returnTypeName,
+      fieldName: fieldData.name,
+      operationType: operationType,
+    };
+
+    getOrInitializeEntityCaching(configurationData).cacheInvalidateConfigurations.push(config);
   }
 
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
@@ -4216,6 +4263,7 @@ export class NormalizationFactory {
     }
     // Check all key field sets for @external fields to assess whether they are conditional
     this.evaluateExternalKeyFields();
+
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       switch (parentData.kind) {
         case Kind.ENUM_TYPE_DEFINITION: {
@@ -4282,9 +4330,12 @@ export class NormalizationFactory {
             parentData.fieldDataByName.delete(SERVICE_FIELD);
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
           }
+
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
-            if (!isObject && fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
+            if (isObject) {
+              this.extractCacheInvalidateConfig(fieldData);
+            } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
             }
             // Arguments can only be fully validated once all parents types are known
