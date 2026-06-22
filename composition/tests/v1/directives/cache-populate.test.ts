@@ -1,27 +1,22 @@
 import { describe, expect, test } from 'vitest';
 import {
-  type BatchNormalizationSuccess,
-  BatchNormalizer,
-  OPENFED_CACHE_INVALIDATE,
-  OPENFED_CACHE_POPULATE,
-  type CachePopulateConfig,
+  type CachePopulateConfiguration,
   type ConfigurationData,
   FIRST_ORDINAL,
   invalidDirectiveError,
+  invalidEntityReturnTypeErrorMessage,
+  invalidMutationOrSubscriptionFieldCoordsErrorMessage,
+  invalidMutuallyExclusiveCacheDirectivesError,
+  maxAgeNotPositiveIntegerErrorMessage,
   MUTATION,
+  OPENFED_CACHE_POPULATE,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
-  subgraphValidationError,
   SUBSCRIPTION,
   type TypeName,
 } from '../../../src';
-import {
-  cacheInvalidateAndPopulateMutualExclusionErrorMessage,
-  cachePopulateOnNonEntityReturnTypeErrorMessage,
-  cachePopulateOnNonMutationSubscriptionFieldErrorMessage,
-  maxAgeNotPositiveIntegerErrorMessage,
-} from '../../../src/errors/errors';
 import { createSubgraphWithDefaultName, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
+import { OperationTypeNode } from 'graphql';
 
 describe('@openfed__cachePopulate tests', () => {
   describe('Mutation fields tests', () => {
@@ -59,31 +54,6 @@ describe('@openfed__cachePopulate tests', () => {
       expect(schema).toBeDefined();
     });
 
-    test('that a config without maxAge leaves maxAgeSeconds undefined', () => {
-      const config = getConfigForType(
-        createSubgraphWithDefaultName(`
-            type Query { dummy: String! }
-            type Mutation {
-              createProduct(name: String!): Product @openfed__cachePopulate
-            }
-            type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
-              id: ID!
-              name: String!
-            }
-          `),
-        MUTATION,
-      );
-      expect(config).toBeDefined();
-      expect(config!.entityCaching?.cachePopulateConfigurations).toStrictEqual([
-        {
-          fieldName: 'createProduct',
-          operationType: MUTATION,
-          entityTypeName: 'Product',
-          maxAgeSeconds: undefined,
-        },
-      ] satisfies CachePopulateConfig[]);
-    });
-
     test('that a config with an explicit maxAge override is produced', () => {
       const config = getConfigForType(
         createSubgraphWithDefaultName(`
@@ -101,12 +71,12 @@ describe('@openfed__cachePopulate tests', () => {
       expect(config).toBeDefined();
       expect(config!.entityCaching?.cachePopulateConfigurations).toStrictEqual([
         {
-          fieldName: 'createProduct',
-          operationType: MUTATION,
           entityTypeName: 'Product',
+          fieldName: 'createProduct',
           maxAgeSeconds: 120,
+          operationType: OperationTypeNode.MUTATION,
         },
-      ] satisfies CachePopulateConfig[]);
+      ] satisfies Array<CachePopulateConfiguration>);
     });
 
     test('that a renamed Mutation root type keys the config under the canonical name', () => {
@@ -129,12 +99,12 @@ describe('@openfed__cachePopulate tests', () => {
       expect(config!.typeName).toBe(MUTATION);
       expect(config!.entityCaching?.cachePopulateConfigurations).toStrictEqual([
         {
-          fieldName: 'createProduct',
-          operationType: MUTATION,
           entityTypeName: 'Product',
-          maxAgeSeconds: undefined,
+          fieldName: 'createProduct',
+          maxAgeSeconds: 60,
+          operationType: OperationTypeNode.MUTATION,
         },
-      ] satisfies CachePopulateConfig[]);
+      ] satisfies Array<CachePopulateConfiguration>);
       expect(getConfigForType(subgraph, 'NewMutations')).toBeUndefined();
     });
   });
@@ -157,7 +127,7 @@ describe('@openfed__cachePopulate tests', () => {
       expect(schema).toBeDefined();
     });
 
-    test('that it produces the correct config', () => {
+    test('that if maxAge is not provided, the value falls back to the entityCache maxAge', () => {
       const config = getConfigForType(
         createSubgraphWithDefaultName(`
             type Query { dummy: String! }
@@ -174,12 +144,12 @@ describe('@openfed__cachePopulate tests', () => {
       expect(config).toBeDefined();
       expect(config!.entityCaching?.cachePopulateConfigurations).toStrictEqual([
         {
-          fieldName: 'itemCreated',
-          operationType: SUBSCRIPTION,
           entityTypeName: 'Product',
-          maxAgeSeconds: undefined,
+          fieldName: 'itemCreated',
+          maxAgeSeconds: 60,
+          operationType: OperationTypeNode.SUBSCRIPTION,
         },
-      ] satisfies CachePopulateConfig[]);
+      ] satisfies Array<CachePopulateConfiguration>);
     });
   });
 
@@ -200,7 +170,7 @@ describe('@openfed__cachePopulate tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Query.product', FIRST_ORDINAL, [
-          cachePopulateOnNonMutationSubscriptionFieldErrorMessage('Query.product'),
+          invalidMutationOrSubscriptionFieldCoordsErrorMessage('Query.product'),
         ]),
       );
     });
@@ -221,9 +191,10 @@ describe('@openfed__cachePopulate tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
+      const fieldCoords = 'Mutation.createProduct';
       expect(errors[0]).toStrictEqual(
-        invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Mutation.createProduct', FIRST_ORDINAL, [
-          cachePopulateOnNonEntityReturnTypeErrorMessage('Result'),
+        invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+          invalidEntityReturnTypeErrorMessage({ fieldCoords, returnTypeName: 'Result' }),
         ]),
       );
     });
@@ -253,9 +224,8 @@ describe('@openfed__cachePopulate tests', () => {
     test('that an invalid maxAge does not produce a config (regression)', () => {
       // Regression: a maxAge of 0 once emitted a cachePopulate config despite failing validation.
       // Composition now fails outright, so assert exactly the one @openfed__cachePopulate error.
-      const result = new BatchNormalizer({
-        subgraphs: [
-          createSubgraphWithDefaultName(`
+      const { errors, warnings } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
               type Query { dummy: String! }
               type Mutation {
                 createProduct(name: String!): Product @openfed__cachePopulate(maxAge: 0)
@@ -265,18 +235,16 @@ describe('@openfed__cachePopulate tests', () => {
                 name: String!
               }
             `),
-        ],
-      }).batchNormalize();
-      expect(result.success).toBe(false);
-      if (result.success) return;
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
-        subgraphValidationError('subgraph-default-a', [
-          invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Mutation.createProduct', FIRST_ORDINAL, [
-            maxAgeNotPositiveIntegerErrorMessage(0),
-          ]),
-        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
       );
+
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Mutation.createProduct', FIRST_ORDINAL, [
+          maxAgeNotPositiveIntegerErrorMessage(0),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(0);
     });
 
     test('that it rejects coexisting @openfed__cacheInvalidate and @openfed__cachePopulate on the same field', () => {
@@ -295,9 +263,55 @@ describe('@openfed__cachePopulate tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(invalidMutuallyExclusiveCacheDirectivesError('Mutation.updateProduct'));
+    });
+
+    test('that if maxAge is not provided, the value falls back to the entityCache maxAge', () => {
+      const subgraph = createSubgraphWithDefaultName(`
+        type Query {
+          dummy: String!
+        }
+        
+        type Mutation {
+          createProduct(name: String!): Product @openfed__cachePopulate
+        }
+        
+        type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+          id: ID!
+          name: String!
+        }
+      `);
+      const config = getConfigForType(subgraph, MUTATION);
+      expect(config).toBeDefined();
+      expect(config!.entityCaching?.cachePopulateConfigurations).toStrictEqual([
+        {
+          entityTypeName: 'Product',
+          fieldName: 'createProduct',
+          maxAgeSeconds: 60,
+          operationType: OperationTypeNode.MUTATION,
+        },
+      ] satisfies Array<CachePopulateConfiguration>);
+    });
+
+    test('that an error is returned if maxAge is provided as null', () => {
+      // A mutation can't both evict and write to the cache for the same entity
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+            type Query { dummy: String! }
+            type Mutation {
+              updateProduct(id: ID!): Product @openfed__cachePopulate(maxAge: null)
+            }
+            type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+              id: ID!
+              name: String!
+            }
+          `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
-        invalidDirectiveError(OPENFED_CACHE_INVALIDATE, 'Mutation.updateProduct', FIRST_ORDINAL, [
-          cacheInvalidateAndPopulateMutualExclusionErrorMessage('Mutation.updateProduct'),
+        invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Mutation.updateProduct', FIRST_ORDINAL, [
+          maxAgeNotPositiveIntegerErrorMessage(null),
         ]),
       );
     });
@@ -306,9 +320,6 @@ describe('@openfed__cachePopulate tests', () => {
 
 // Returns the ConfigurationData for a type. Entity-caching config is nested under `.entityCaching`.
 function getConfigForType(sg: Subgraph, typeName: TypeName): ConfigurationData | undefined {
-  const result = new BatchNormalizer({ subgraphs: [sg] }).batchNormalize() as BatchNormalizationSuccess;
-  expect(result.success).toBe(true);
-  const internal = result.internalSubgraphByName.get(sg.name);
-  expect(internal).toBeDefined();
-  return internal!.configurationDataByTypeName.get(typeName);
+  const { configurationDataByTypeName } = normalizeSubgraphSuccess(sg, ROUTER_COMPATIBILITY_VERSION_ONE);
+  return configurationDataByTypeName.get(typeName);
 }
