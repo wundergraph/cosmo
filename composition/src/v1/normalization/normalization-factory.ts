@@ -4007,7 +4007,7 @@ export class NormalizationFactory {
 
   extractEntityCacheDirective({ directivesByName, name: typeName }: ObjectDefinitionData) {
     const entityCacheDirectives = directivesByName.get(OPENFED_ENTITY_CACHE);
-    if (!entityCacheDirectives || entityCacheDirectives.length == 0) {
+    if (!entityCacheDirectives || entityCacheDirectives.length === 0) {
       return;
     }
     if (!this.keyFieldSetDatasByTypeName.has(typeName)) {
