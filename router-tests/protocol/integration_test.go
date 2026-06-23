@@ -285,6 +285,38 @@ func TestPlayground(t *testing.T) {
 	})
 }
 
+// TestPlaygroundWithCustomPath verifies that when the playground is mounted at a
+// non-root path via the new playground.path config, the embedded JS receives the
+// actual playground path so itcan correctly strip it from window.location.href
+// when constructing the GraphQL URL.
+func TestPlaygroundWithCustomPath(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{
+		RouterOptions: []core.Option{
+			core.WithPlaygroundConfig(config.PlaygroundConfig{
+				Enabled: true,
+				Path:    "/playgroundTestPath",
+			}),
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeRequest(http.MethodGet, "/playgroundTestPath", http.Header{
+			"Accept": []string{"text/html"},
+		}, nil)
+		require.NoError(t, err)
+		defer res.Body.Close()
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		body, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+		require.Contains(t, string(body), `WunderGraph Playground`)
+		// The embedded JS calls constructGraphQLURL(window.location.href, "<graphqlURL>", "<playgroundPath>").
+		// Both placeholders must be replaced with their actual values so the playground
+		// strips its own path from the location and points requests at /graphql, not
+		// /playground/graphql.
+		require.Contains(t, string(body), `(window.location.href,"/graphql","/playgroundTestPath")`)
+	})
+}
+
 func TestExecutionPlanCache(t *testing.T) {
 	t.Parallel()
 
@@ -1548,6 +1580,7 @@ func BenchmarkSequentialBig(b *testing.B) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: bigEmployeesQuery,
 			})
+			// Not worth stopping the timer.
 			if len(res.Body) < 3000 {
 				b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
 			}
@@ -1561,7 +1594,8 @@ func BenchmarkSequentialBigCostControl(b *testing.B) {
 			cfg.CostControl = &config.CostControl{
 				Enabled:           true,
 				Mode:              config.CostControlModeMeasure,
-				EstimatedListSize: 15,
+				EstimatedListSize: 5,
+				ExposeHeaders:     true,
 			}
 		},
 	}, func(b *testing.B, xEnv *testenv.Environment) {
@@ -1571,9 +1605,76 @@ func BenchmarkSequentialBigCostControl(b *testing.B) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: bigEmployeesQuery,
 			})
+			b.StopTimer()
 			if len(res.Body) < 3000 {
 				b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
 			}
+			estimated := res.Response.Header.Get(core.CostEstimatedHeader)
+			require.Equal(b, "4650", estimated)
+			actual := res.Response.Header.Get(core.CostActualHeader)
+			require.Equal(b, "189", actual)
+			b.StartTimer()
+		}
+	})
+}
+
+func BenchmarkSequentialBigNotCached(b *testing.B) {
+	testenv.Bench(b, &testenv.Config{
+		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+			cfg.EnableNormalizationCache = false
+			cfg.EnableValidationCache = false
+			cfg.EnablePersistedOperationsCache = false
+			cfg.ExecutionPlanCacheSize = 0
+			cfg.OperationHashCacheSize = 0
+		},
+	}, func(b *testing.B, xEnv *testenv.Environment) {
+		b.SetBytes(int64(len(bigEmployeesResponse)))
+		b.ReportAllocs()
+		for b.Loop() {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: bigEmployeesQuery,
+			})
+			// Not worth stopping the timer.
+			if len(res.Body) < 3000 {
+				b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
+			}
+		}
+	})
+}
+
+func BenchmarkSequentialBigNotCachedCostControl(b *testing.B) {
+	testenv.Bench(b, &testenv.Config{
+		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+			cfg.EnableNormalizationCache = false
+			cfg.EnableValidationCache = false
+			cfg.EnablePersistedOperationsCache = false
+			cfg.ExecutionPlanCacheSize = 0
+			cfg.OperationHashCacheSize = 0
+		},
+		ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
+			cfg.CostControl = &config.CostControl{
+				Enabled:           true,
+				Mode:              config.CostControlModeMeasure,
+				EstimatedListSize: 5,
+				ExposeHeaders:     true,
+			}
+		},
+	}, func(b *testing.B, xEnv *testenv.Environment) {
+		b.SetBytes(int64(len(bigEmployeesResponse)))
+		b.ReportAllocs()
+		for b.Loop() {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: bigEmployeesQuery,
+			})
+			b.StopTimer()
+			if len(res.Body) < 3000 {
+				b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
+			}
+			estimated := res.Response.Header.Get(core.CostEstimatedHeader)
+			require.Equal(b, "4650", estimated)
+			actual := res.Response.Header.Get(core.CostActualHeader)
+			require.Equal(b, "189", actual)
+			b.StartTimer()
 		}
 	})
 }

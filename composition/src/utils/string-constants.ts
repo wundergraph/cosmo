@@ -1,5 +1,5 @@
 import { Kind } from 'graphql';
-import { type DirectiveName } from '../types/types';
+import { type DirectiveName, type FieldName } from '../types/types';
 
 export const AS = 'as';
 export const ASSUMED_SIZE = 'assumedSize';
@@ -10,6 +10,8 @@ export const AUTHENTICATED = 'authenticated';
 export const ARGUMENT_DEFINITION_UPPER = 'ARGUMENT_DEFINITION';
 export const BOOLEAN = 'boolean';
 export const BOOLEAN_SCALAR = 'Boolean';
+export const OPENFED_CACHE_INVALIDATE = 'openfed__cacheInvalidate';
+export const OPENFED_CACHE_POPULATE = 'openfed__cachePopulate';
 export const CHANNEL = 'channel';
 export const CHANNELS = 'channels';
 export const COMPOSE_DIRECTIVE = 'composeDirective';
@@ -41,6 +43,7 @@ export const EDFS_REDIS_PUBLISH = 'edfs__redisPublish';
 export const EDFS_REDIS_SUBSCRIBE = 'edfs__redisSubscribe';
 export const ENTITIES = 'entities';
 export const ENTITIES_FIELD = '_entities';
+export const OPENFED_ENTITY_CACHE = 'openfed__entityCache';
 export const ENTITY_UNION = '_Entity';
 export const ENUM = 'Enum';
 export const ENUM_UPPER = 'ENUM';
@@ -65,6 +68,7 @@ export const FROM = 'from';
 export const HYPHEN_JOIN = `\n -`;
 export const ID_SCALAR = 'ID';
 export const IMPORT = 'import';
+export const INCLUDE_HEADERS = 'includeHeaders';
 export const IN_UPPER = 'IN';
 export const INACCESSIBLE = 'inaccessible';
 export const INLINE_FRAGMENT = 'inlineFragment';
@@ -87,9 +91,11 @@ export const LIST_SIZE = 'listSize';
 export const LINK_IMPORT = 'link__Import';
 export const LINK_PURPOSE = 'link__Purpose';
 export const LIST = 'list';
+export const LITERAL_AT = '@';
 export const LITERAL_SPACE = ' ';
 export const LITERAL_NEW_LINE = '\n';
 export const LITERAL_PERIOD = '.';
+export const MAX_AGE = 'maxAge';
 export const NUMBER = 'number';
 export const MUTATION = 'Mutation';
 export const MUTATION_UPPER = 'MUTATION';
@@ -99,6 +105,7 @@ export const PROVIDER_TYPE_NATS = 'nats';
 export const PROVIDER_TYPE_REDIS = 'redis';
 export const NOT_APPLICABLE = 'N/A';
 export const NAME = 'name';
+export const NEGATIVE_CACHE_TTL = 'negativeCacheTTL';
 export const NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT = 'edfs__PublishResult!';
 export const NON_NULLABLE_BOOLEAN = 'Boolean!';
 export const NON_NULLABLE_INT = 'Int!';
@@ -111,6 +118,7 @@ export const OBJECT = 'Object';
 export const OBJECT_UPPER = 'OBJECT';
 export const OR_UPPER = 'OR';
 export const OVERRIDE = 'override';
+export const PARTIAL_CACHE_LOAD = 'partialCacheLoad';
 export const PARENT_DEFINITION_DATA = 'parentDefinitionDataByTypeName';
 export const PARENT_DEFINITION_DATA_MAP = 'parentDefinitionDataByParentTypeName';
 export const PARENT_EXTENSION_DATA_MAP = 'parentExtensionDataByParentTypeName';
@@ -138,6 +146,7 @@ export const SELECTION_REPRESENTATION = ' { ... }';
 export const SEMANTIC_NON_NULL = 'semanticNonNull';
 export const SERVICE_OBJECT = '_Service';
 export const SERVICE_FIELD = '_service';
+export const SHADOW_MODE = 'shadowMode';
 export const SHAREABLE = 'shareable';
 export const SIZED_FIELDS = 'sizedFields';
 export const SLICING_ARGUMENTS = 'slicingArguments';
@@ -178,10 +187,10 @@ export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
 ]);
 
 export const ROOT_TYPE_NAMES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
-export const AUTHORIZATION_DIRECTIVES = new Set<string>([AUTHENTICATED, REQUIRES_SCOPES]);
-export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([DEPRECATED, ONE_OF, SEMANTIC_NON_NULL]);
-export const INHERITABLE_DIRECTIVE_NAMES = new Set<string>([EXTERNAL, REQUIRE_FETCH_REASONS, SHAREABLE]);
-export const IGNORED_FIELDS = new Set<string>([ENTITIES_FIELD, SERVICE_FIELD]);
+export const AUTHORIZATION_DIRECTIVES = new Set<DirectiveName>([AUTHENTICATED, REQUIRES_SCOPES]);
+export const PERSISTED_CLIENT_DIRECTIVES = new Set<DirectiveName>([DEPRECATED, ONE_OF, SEMANTIC_NON_NULL]);
+export const INHERITABLE_DIRECTIVE_NAMES = new Set<DirectiveName>([EXTERNAL, REQUIRE_FETCH_REASONS, SHAREABLE]);
+export const IGNORED_FIELDS = new Set<FieldName>([ENTITIES_FIELD, SERVICE_FIELD]);
 
 export const INPUT_NODE_KINDS = new Set<Kind>([
   Kind.ENUM_TYPE_DEFINITION,
@@ -197,4 +206,6 @@ export const OUTPUT_NODE_KINDS = new Set<Kind>([
   Kind.UNION_TYPE_DEFINITION,
 ]);
 
-export const NON_REPEATABLE_PERSISTED_DIRECTIVES = new Set<DirectiveName>([INACCESSIBLE, ONE_OF, SEMANTIC_NON_NULL]);
+export const INTERFACE_NODE_KINDS = new Set<Kind>([Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION]);
+
+export const NON_REPEATABLE_FEDERATED_DIRECTIVES = new Set<DirectiveName>([INACCESSIBLE, ONE_OF, SEMANTIC_NON_NULL]);

@@ -416,33 +416,77 @@ tls:
       cert_file: ../your/cert.pem
 ```
 
-### Outbound Client TLS (mTLS to Subgraphs)
+### Outbound TLS to Subgraphs
 
-Configure TLS client certificates for outbound connections from the router to subgraphs. See [Outbound mTLS to Subgraphs](/router/security/tls#router-mtls) for details.
+Configure TLS for outbound connections from router to subgraphs.
+See [TLS](/router/security/tls) for details.
 
-| Environment Variable                      | YAML                                          | Required               | Description                                                                                                                   | Default Value |
-| ----------------------------------------- | --------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| TLS_CLIENT_CERT_FILE                      | tls.client.all.cert_file                      | <Icon icon="square" /> | Path to the client certificate chain file for authenticating the router to subgraphs.                                         |               |
-| TLS_CLIENT_KEY_FILE                       | tls.client.all.key_file                       | <Icon icon="square" /> | Path to the client private key file.                                                                                          |               |
-| TLS_CLIENT_CA_FILE                        | tls.client.all.ca_file                        | <Icon icon="square" /> | Path to a custom CA certificate file for verifying subgraph server certificates.                                              |               |
-| TLS_CLIENT_INSECURE_SKIP_CA_VERIFICATION  | tls.client.all.insecure_skip_ca_verification  | <Icon icon="square" /> | Skip verification of the subgraph server certificate. Only use for development or testing.                                    | false         |
+#### HTTP Subgraphs
 
-### Example YAML config:
+Configuring a subgraph URL with a `https://` scheme activates TLS to subgraphs.
+Specifying `ca_file` additionally verifies a subgraphs certificate against that CA certificate.  
+Additionally specifying `cert_file` and `key_file` enables mTLS on subgraph connections.
+
+The following settings configure TLS for HTTP based subgraphs.
+
+| Environment Variable                          | YAML                                          | Required               | Description                                                                                         | Default Value |
+| --------------------------------------------- | --------------------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------- | ------------- |
+| TLS_CLIENT_ALL_CA_FILE                        | tls.client.all.ca_file                        | <Icon icon="square" /> | Path to a custom CA certificate file for verifying subgraph server certificates.                    |               |
+| TLS_CLIENT_ALL_CERT_FILE                      | tls.client.all.cert_file                      | <Icon icon="square" /> | Path to the client certificate chain file for authenticating the router to subgraphs. Enables mTLS. |               |
+| TLS_CLIENT_ALL_KEY_FILE                       | tls.client.all.key_file                       | <Icon icon="square" /> | Path to the client private key file. Enables mTLS.                                                  |               |
+| TLS_CLIENT_ALL_INSECURE_SKIP_CA_VERIFICATION  | tls.client.all.insecure_skip_ca_verification  | <Icon icon="square" /> | Skip verification of the subgraph server certificate. Only use for development or testing.          | false         |
+
+##### Example YAML config:
 
 ```yaml config.yaml
 version: "1"
 
 tls:
   client:
-    all:
+    all: # global tls configuration affecting all HTTP subgraphs
       cert_file: /path/to/client.crt
       key_file: /path/to/client.key
       ca_file: /path/to/ca.crt
-    subgraphs:
+    subgraphs: # additional overwrites for specific HTTP subgraphs
       products:
         cert_file: /path/to/products-client.crt
         key_file: /path/to/products-client.key
 ```
+
+#### gRPC Subgraphs
+
+The configuration settings above are not applied to gRPC subgraphs.
+For gRPC subgraphs, TLS must be explicitly enabled with `enabled: true`.
+
+| Environment Variable                               | YAML                                               | Required                | Description                                                                                              | Default Value |
+| -------------------------------------------------- | -------------------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------- | ------------- |
+| TLS_CLIENT_GRPC_ALL_ENABLED                        | tls.client_grpc.all.enabled                        | <Icon icon="check-square" /> | Enable TLS for all gRPC subgraph connections.                                                       |               |
+| TLS_CLIENT_GRPC_ALL_CA_FILE                        | tls.client_grpc.all.ca_file                        | <Icon icon="square" /> | Path to a custom CA certificate file for verifying gRPC subgraph server certificates.                    |               |
+| TLS_CLIENT_GRPC_ALL_CERT_FILE                      | tls.client_grpc.all.cert_file                      | <Icon icon="square" /> | Path to the client certificate chain file for authenticating the router to gRPC subgraphs. Enables mTLS. |               |
+| TLS_CLIENT_GRPC_ALL_KEY_FILE                       | tls.client_grpc.all.key_file                       | <Icon icon="square" /> | Path to the client private key file. Enables mTLS.                                                       |               |
+| TLS_CLIENT_GRPC_ALL_INSECURE_SKIP_CA_VERIFICATION  | tls.client_grpc.all.insecure_skip_ca_verification  | <Icon icon="square" /> | Skip verification of the gRPC subgraph server certificate. Only use for development or testing.          | false         |
+
+##### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+tls:
+  client_grpc:
+    all: # global TLS configuration for all gRPC subgraphs
+      enabled: true
+      cert_file: /path/to/client.crt
+      key_file: /path/to/client.key
+      ca_file: /path/to/ca.crt
+    subgraphs: # per-subgraph overrides
+      products:
+        enabled: true
+        cert_file: /path/to/products-client.crt
+        key_file: /path/to/products-client.key
+      projects:
+        enabled: false # specifically disable TLS for this subgraph
+```
+
 
 ## Compliance
 
@@ -659,16 +703,17 @@ This option may change or be removed in future versions as the OpenTelemetry SDK
 
 ### OTLP
 
-| Environment Variable               | YAML                  | Required                                      | Description                                                                                                                                               | Default Value |
-| ---------------------------------- | --------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| METRICS_OTLP_ENABLED               | enabled               | <Icon icon="square-check" iconType="solid" /> | Enables OTEL metrics instrumentation                                                                                                                      | true          |
-| METRICS_OTLP_ROUTER_RUNTIME        | router_runtime        | <Icon icon="square" />                        | Enable the collection of metrics for the router runtime.                                                                                                  | true          |
-| METRICS_OTLP_GRAPHQL_CACHE         | graphql_cache         | <Icon icon="square" />                        | Enable the collection of metrics for the GraphQL operation router caches.                                                                                 | false         |
-| METRICS_OTLP_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        | The metrics to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.       | []            |
-| METRICS_OTLP_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        | The metric labels to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions. | []            |
-| METRICS_OTLP_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                | false         |
-| METRICS_OTLP_CIRCUIT_BREAKER       | circuit_breaker       | <Icon icon="square" />                        | Ensure that circuit breaker metrics are enabled for OTEL.                                                                                                 | false         |
-| METRICS_OTLP_STREAM                | streams               | <Icon icon="square" />                        | Enable Cosmo Streams metrics.                                                                                                                             | false         |
+| Environment Variable               | YAML                  | Required                                      | Description                                                                                                                                                                | Default Value |
+| ---------------------------------- | --------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| METRICS_OTLP_ENABLED               | enabled               | <Icon icon="square-check" iconType="solid" /> | Enables OTEL metrics instrumentation                                                                                                                                       | true          |
+| METRICS_OTLP_ROUTER_RUNTIME        | router_runtime        | <Icon icon="square" />                        | Enable the collection of metrics for the router runtime.                                                                                                                   | true          |
+| METRICS_OTLP_GRAPHQL_CACHE         | graphql_cache         | <Icon icon="square" />                        | Enable the collection of metrics for the GraphQL operation router caches.                                                                                                  | false         |
+| METRICS_OTLP_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        | The metrics to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                        | []            |
+| METRICS_OTLP_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        | The metric labels to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                  | []            |
+| METRICS_OTLP_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false         |
+| METRICS_OTLP_CIRCUIT_BREAKER       | circuit_breaker       | <Icon icon="square" />                        | Ensure that circuit breaker metrics are enabled for OTEL.                                                                                                                  | false         |
+| METRICS_OTLP_STREAM                | streams               | <Icon icon="square" />                        | Enable Cosmo Streams metrics.                                                                                                                                              | false         |
+| METRICS_OTLP_EXEMPLAR_FILTER       | exemplar_filter       | <Icon icon="square" />                        | Controls which measurements are eligible to record exemplars. One of: `always_off`, `trace_based`, `always_on`. See [Exemplars](/router/metrics-and-monitoring/exemplars). | always_off    |
 
 ### Metrics Log Exporter
 
@@ -705,6 +750,9 @@ telemetry:
       exclude_metrics: []
       exclude_metric_labels: []
       streams: true
+      # Record exemplars only for measurements taken within a sampled trace.
+      # One of: always_off (default), trace_based, always_on
+      exemplar_filter: always_off
       log_exporter:
         enabled: false
         # note that both exclude_metrics and include_metrics cannot be used together
@@ -723,18 +771,19 @@ telemetry:
 
 ### Prometheus
 
-| Environment Variable             | YAML                  | Required                                      | Description                                                               | Default Value    |
-| -------------------------------- | --------------------- | --------------------------------------------- | ------------------------------------------------------------------------- | ---------------- |
-| PROMETHEUS_ENABLED               | enabled               | <Icon icon="square-check" iconType="solid" /> | Enables prometheus metrics support                                        | true             |
-| PROMETHEUS_HTTP_PATH             | path                  | <Icon icon="square" />                        | The HTTP path where metrics are exposed.                                  | "/metrics"       |
-| PROMETHEUS_LISTEN_ADDR           | listen_addr           | <Icon icon="square" />                        | The address to listen on for the prometheus metrics endpoint.             | "127.0.0.1:8088" |
-| PROMETHEUS_GRAPHQL_CACHE         | graphql_cache         | <Icon icon="square" />                        | Enable the collection of metrics for the GraphQL operation router caches. | false            |
-| PROMETHEUS_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                | false            |
-| PROMETHEUS_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        |                                                                           |                  |
-| PROMETHEUS_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        |                                                                           |                  |
-| PROMETHEUS_EXCLUDE_SCOPE_INFO    | exclude_scope_info    | <Icon icon="square" />                        | Exclude scope info from Prometheus metrics.                               | false            |
-| PROMETHEUS_CIRCUIT_BREAKER       | circuit_breaker       | <Icon icon="square" />                        | Enable the circuit breaker metrics for prometheus metric collection.      | false            |
-| PROMETHEUS_OTLP_STREAM           | streams               | <Icon icon="square" />                        | Enable Cosmo Streams metrics.                                             | false            |
+| Environment Variable             | YAML                  | Required                                      | Description                                                                                                                                                                | Default Value    |
+| -------------------------------- | --------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ---------------- |
+| PROMETHEUS_ENABLED               | enabled               | <Icon icon="square-check" iconType="solid" /> | Enables prometheus metrics support                                                                                                                                         | true             |
+| PROMETHEUS_HTTP_PATH             | path                  | <Icon icon="square" />                        | The HTTP path where metrics are exposed.                                                                                                                                   | "/metrics"       |
+| PROMETHEUS_LISTEN_ADDR           | listen_addr           | <Icon icon="square" />                        | The address to listen on for the prometheus metrics endpoint.                                                                                                              | "127.0.0.1:8088" |
+| PROMETHEUS_GRAPHQL_CACHE         | graphql_cache         | <Icon icon="square" />                        | Enable the collection of metrics for the GraphQL operation router caches.                                                                                                  | false            |
+| PROMETHEUS_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false            |
+| PROMETHEUS_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        |                                                                                                                                                                            |                  |
+| PROMETHEUS_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        |                                                                                                                                                                            |                  |
+| PROMETHEUS_EXCLUDE_SCOPE_INFO    | exclude_scope_info    | <Icon icon="square" />                        | Exclude scope info from Prometheus metrics.                                                                                                                                | false            |
+| PROMETHEUS_CIRCUIT_BREAKER       | circuit_breaker       | <Icon icon="square" />                        | Enable the circuit breaker metrics for prometheus metric collection.                                                                                                       | false            |
+| PROMETHEUS_OTLP_STREAM           | streams               | <Icon icon="square" />                        | Enable Cosmo Streams metrics.                                                                                                                                              | false            |
+| PROMETHEUS_EXEMPLAR_FILTER       | exemplar_filter       | <Icon icon="square" />                        | Controls which measurements are eligible to record exemplars. One of: `always_off`, `trace_based`, `always_on`. See [Exemplars](/router/metrics-and-monitoring/exemplars). | always_off       |
 
 ### Example YAML config:
 
@@ -754,6 +803,9 @@ telemetry:
       exclude_metric_labels: []
       streams: true
       exclude_scope_info: false
+      # Record exemplars only for measurements taken within a sampled trace.
+      # One of: always_off (default), trace_based, always_on
+      exemplar_filter: always_off
 ```
 
 ### Exporter
@@ -994,16 +1046,19 @@ headers:
 
 Apply to requests to specific Subgraphs.
 
-| Environment Variable | YAML       | Required                                      | Description                                                                                                                                              | Default Value |
-| -------------------- | ---------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-|                      | op         | <Icon icon="square-check" iconType="solid" /> | oneof=propagate, set                                                                                                                                     |               |
-|                      | matching   | <Icon icon="square" />                        | matching is the regex to match the header name against                                                                                                   |               |
-|                      | named      | <Icon icon="square" />                        | named is the exact header name to match                                                                                                                  |               |
-|                      | rename     | <Icon icon="square" />                        | renames the header's key to the provided value                                                                                                           |               |
-|                      | default    | <Icon icon="square" />                        | default is the default value to set if the header is not present                                                                                         |               |
-|                      | name       | <Icon icon="square" />                        | If `op` is `set`, `name` is the name of the desired header to set                                                                                        |               |
-|                      | value      | <Icon icon="square" />                        | If `op` is `set`, `value` is the value of the desired header to set                                                                                      |               |
-|                      | expression | <Icon icon="square" />                        | If `op` is `set`, `expression` is the [expression](/router/configuration/template-expressions) to evaluate to get the value of the desired header to set |               |
+| Environment Variable | YAML                       | Required                                      | Description                                                                                                                                                                       | Default Value |
+| -------------------- | -------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+|                      | op                         | <Icon icon="square-check" iconType="solid" /> | oneof=propagate, set                                                                                                                                                              |               |
+|                      | matching                   | <Icon icon="square" />                        | matching is the regex to match the header name against                                                                                                                            |               |
+|                      | named                      | <Icon icon="square" />                        | named is the exact header name to match                                                                                                                                           |               |
+|                      | rename                     | <Icon icon="square" />                        | renames the header's key to the provided value                                                                                                                                    |               |
+|                      | default                    | <Icon icon="square" />                        | default is the default value to set if the header is not present                                                                                                                  |               |
+|                      | name                       | <Icon icon="square" />                        | If `op` is `set`, `name` is the name of the desired header to set                                                                                                                 |               |
+|                      | value                      | <Icon icon="square" />                        | If `op` is `set`, `value` is the value of the desired header to set                                                                                                               |               |
+|                      | expression                 | <Icon icon="square" />                        | If `op` is `set`, `expression` is the [expression](/router/configuration/template-expressions) to evaluate to get the value of the desired header to set                          |               |
+|                      | from_file                  | <Icon icon="square" />                        | If `op` is `set`, sources the header value from a file's contents. The file is loaded into memory and refreshed on a polling interval, so request-time reads do not touch disk. Request rules only. |               |
+|                      | from_file.path             | <Icon icon="square-check" iconType="solid" /> | Absolute path to the file whose contents become the header value.                                                                                                                 |               |
+|                      | from_file.refresh_interval | <Icon icon="square-check" iconType="solid" /> | Determines how often the file is checked for changes and re-read into memory. The minimum value is `100ms`.                                                                       | `1m`          |
 
 ### Example YAML config:
 
@@ -1021,7 +1076,19 @@ headers:
         - op: "set"
           name: "X-API-Key"
           value: "my-secret-value"
+        # Read the value from a file. The file is loaded once at startup and
+        # re-read every refresh_interval. Useful for mounted secrets that
+        # rotate (e.g. Kubernetes Secrets, Vault Agent sidecars).
+        - op: "set"
+          name: "X-Service-Token"
+          from_file:
+            path: "/etc/secrets/service-token"
+            refresh_interval: "1m"
 ```
+
+<Note>
+  `from_file` is request-only. It cannot be used in response header rules.
+</Note>
 
 ### Response Header Rule
 
@@ -1091,53 +1158,49 @@ storage_providers:
 
 ### Storage Provider Types
 
-#### File System Storage Provider
-
-This provider allows you to load files from the local file system. This is particularly useful for the MCP server to load GraphQL operations.
-
-| Environment Variable     | YAML | Required                                      | Description                                                   | Default Value |
-| ------------------------ | ---- | --------------------------------------------- | ------------------------------------------------------------- | ------------- |
-| STORAGE_PROVIDER_FS_ID   | id   | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations   |               |
-| STORAGE_PROVIDER_FS_PATH | path | <Icon icon="square-check" iconType="solid" /> | The path on the file system where files should be loaded from |               |
-
-<Note>
-  The file system storage provider is **currently only supported by the MCP
-  feature**. It cannot be used for persisted operations or execution
-  configurations.
-</Note>
-
-#### Redis Storage Provider
-
-Used for distributed caching like automatic persisted queries.
-
-| Environment Variable                   | YAML            | Required                                      | Description                                                                                               | Default Value |
-| -------------------------------------- | --------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------- |
-| STORAGE_PROVIDER_REDIS_ID              | id              | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations                                               |               |
-| STORAGE_PROVIDER_REDIS_URLS            | urls            | <Icon icon="square-check" iconType="solid" /> | List of Redis URLs to connect to. If cluster_enabled is true, these are the seeds to discover the cluster |               |
-| STORAGE_PROVIDER_REDIS_CLUSTER_ENABLED | cluster_enabled | <Icon icon="square" />                        | Whether to use the Redis Cluster client                                                                   | false         |
+Storage providers are configured as arrays, so environment variables use indexed notation: `STORAGE_PROVIDER_{TYPE}_{INDEX}_{FIELD}`. Indexes must start from `0` and be sequential. If an index is skipped, all indexes after the gap are ignored. See [Storage Providers](/router/storage-providers) for more details.
 
 #### S3 Storage Provider
 
 For storing operations and configs in S3-compatible storage.
 
-| Environment Variable | YAML       | Required                                      | Description                                                 | Default Value |
-| -------------------- | ---------- | --------------------------------------------- | ----------------------------------------------------------- | ------------- |
-|                      | id         | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations |               |
-|                      | endpoint   | <Icon icon="square-check" iconType="solid" /> | The endpoint of the S3 service                              |               |
-|                      | access_key | <Icon icon="square-check" iconType="solid" /> | The access key for the S3 service                           |               |
-|                      | secret_key | <Icon icon="square-check" iconType="solid" /> | The secret key for the S3 service                           |               |
-|                      | bucket     | <Icon icon="square-check" iconType="solid" /> | The bucket where objects will be stored                     |               |
-|                      | region     | <Icon icon="square" />                        | The region of the S3 bucket                                 |               |
-|                      | secure     | <Icon icon="square" />                        | Whether to use HTTPS for S3 connections                     | true          |
+| Environment Variable              | YAML       | Required                                      | Description                                                 | Default Value |
+| --------------------------------- | ---------- | --------------------------------------------- | ----------------------------------------------------------- | ------------- |
+| STORAGE_PROVIDER_S3_\{n\}_ID        | id         | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations |               |
+| STORAGE_PROVIDER_S3_\{n\}_ENDPOINT  | endpoint   | <Icon icon="square-check" iconType="solid" /> | The endpoint of the S3 service                              |               |
+| STORAGE_PROVIDER_S3_\{n\}_ACCESS_KEY| access_key | <Icon icon="square-check" iconType="solid" /> | The access key for the S3 service                           |               |
+| STORAGE_PROVIDER_S3_\{n\}_SECRET_KEY| secret_key | <Icon icon="square-check" iconType="solid" /> | The secret key for the S3 service                           |               |
+| STORAGE_PROVIDER_S3_\{n\}_BUCKET    | bucket     | <Icon icon="square-check" iconType="solid" /> | The bucket where objects will be stored                     |               |
+| STORAGE_PROVIDER_S3_\{n\}_REGION    | region     | <Icon icon="square" />                        | The region of the S3 bucket                                 |               |
+| STORAGE_PROVIDER_S3_\{n\}_SECURE    | secure     | <Icon icon="square" />                        | Whether to use HTTPS for S3 connections                     | false         |
 
-#### CDN Provider
+#### CDN Storage Provider
 
 For connecting to the Cosmo CDN.
 
-| Environment Variable | YAML | Required                                      | Description                                                 | Default Value                     |
-| -------------------- | ---- | --------------------------------------------- | ----------------------------------------------------------- | --------------------------------- |
-|                      | id   | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations |                                   |
-|                      | url  | <Icon icon="square-check" iconType="solid" /> | The URL of the CDN                                          | https://cosmo-cdn.wundergraph.com |
+| Environment Variable           | YAML | Required                                      | Description                                                 | Default Value                     |
+| ------------------------------ | ---- | --------------------------------------------- | ----------------------------------------------------------- | --------------------------------- |
+| STORAGE_PROVIDER_CDN_\{n\}_ID    | id   | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations |                                   |
+| STORAGE_PROVIDER_CDN_\{n\}_URL   | url  | <Icon icon="square" />                        | The URL of the CDN                                          | https://cosmo-cdn.wundergraph.com |
+
+#### Redis Storage Provider
+
+Used for distributed caching like automatic persisted queries.
+
+| Environment Variable                    | YAML            | Required                                      | Description                                                                                               | Default Value |
+| --------------------------------------- | --------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------- |
+| STORAGE_PROVIDER_REDIS_\{n\}_ID              | id              | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations                                               |               |
+| STORAGE_PROVIDER_REDIS_\{n\}_URLS            | urls            | <Icon icon="square-check" iconType="solid" /> | List of Redis URLs to connect to. If cluster_enabled is true, these are the seeds to discover the cluster |               |
+| STORAGE_PROVIDER_REDIS_\{n\}_CLUSTER_ENABLED | cluster_enabled | <Icon icon="square" />                        | Whether to use the Redis Cluster client                                                                   | false         |
+
+#### File System Storage Provider
+
+This provider allows you to load files from the local file system.
+
+| Environment Variable        | YAML | Required                                      | Description                                                   | Default Value |
+| --------------------------- | ---- | --------------------------------------------- | ------------------------------------------------------------- | ------------- |
+| STORAGE_PROVIDER_FS_\{n\}_ID   | id   | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations   |               |
+| STORAGE_PROVIDER_FS_\{n\}_PATH | path | <Icon icon="square-check" iconType="solid" /> | The path on the file system where files should be loaded from |               |
 
 ## Persisted Operations
 
@@ -1222,7 +1285,7 @@ The configuration for the execution setup contains instructions for the router t
 
 ### Example YAML config:
 
-You can load the execution config from a [storage provider](/router/storage-providers) or from a local file:
+The execution config source is exclusive. Configure exactly one of `storage`, `file`, or `manifest`. `fallback_storage` is the only field that may be combined with `storage` and is used to retry from a secondary location when the primary storage provider fails.
 
 <CodeGroup>
   ```yaml Storage provider
@@ -1242,6 +1305,18 @@ You can load the execution config from a [storage provider](/router/storage-prov
       watch_interval: "1s"
   ```
 
+  ```yaml Local manifest
+  version: "1"
+  execution_config:
+    manifest:
+      path: "./__schemas/manifest"
+      skip_missing_feature_flags: false
+      ignored_feature_flags:
+        - "experimental-checkout"
+      watch: true
+      watch_interval: "1s"
+  ```
+
   ```yaml Fallback storage
   version: "1"
   execution_config:
@@ -1254,6 +1329,8 @@ You can load the execution config from a [storage provider](/router/storage-prov
       object_path: "router.json"
   ```
 </CodeGroup>
+
+A manifest directory contains a `mapper.json` indexing the base graph and every feature flag by version, a `latest.json` with the base graph's execution config, and one `feature-flags/<name>.json` per feature flag. When `watch` is enabled, the router watches `mapper.json`. Whenever the file's mtime changes, the router reloads the assembled config without downtime.
 
 When using a storage provider, the `object_path` field points to the file in your bucket that is updated after each schema deployment in your CI/CD pipeline:
 
@@ -1272,19 +1349,50 @@ You can configure a fallback storage for fetching the execution config in the ev
 
 ### Execution config options
 
-| Environment Variable                          | YAML                                          | Required                                      | Description                                                                                                                                                                                         | Default Value |
-| --------------------------------------------- | --------------------------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-|                                               | execution_config                              | <Icon icon="square" />                        | The configuration for the execution config.                                                                                                                                                         |               |
-|                                               | file                                          | <Icon icon="square" />                        | The configuration for the execution config file. The config file is used to load the execution config from the local file system. The file has precedence over the storage provider.                |               |
-| EXECUTION_CONFIG_FILE_PATH                    | file.path                                     | <Icon icon="square" />                        | The path to the execution config file. The path is used to load the execution config from the local file system.                                                                                    |               |
-| EXECUTION_CONFIG_FILE_WATCH                   | file.watch                                    | <Icon icon="square" />                        | Enable the watch mode. The watch mode is used to watch the execution config file for changes. If the file changes, the router will reload the execution config without downtime.                    | true          |
-| EXECUTION_CONFIG_FILE_WATCH_INTERVAL          | file.watch_interval                           | <Icon icon="square" />                        | The interval at which the file is checked for changes.                                                                                                                                              | 1s            |
-|                                               | execution_config.storage                      | <Icon icon="square" />                        | The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config. |               |
-| EXECUTION_CONFIG_STORAGE_PROVIDER_ID          | execution_config.storage.provider_id          | <Icon icon="square-check" iconType="solid" /> | The ID of the storage provider. The ID must match the ID of the storage provider in the `storage_providers` section.                                                                                |               |
-| EXECUTION_CONFIG_STORAGE_OBJECT_PATH          | execution_config.storage.object_path          | <Icon icon="square-check" iconType="solid" /> | The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket.                                                                     |               |
-| EXECUTION_CONFIG_FALLBACK_STORAGE_ENABLED     | execution_config.fallback_storage.enabled     | <Icon icon="square" />                        | Enable a fallback storage to fetch the execution config in case the above primary source fails.                                                                                                     | false         |
-| EXECUTION_CONFIG_FALLBACK_STORAGE_PROVIDER_ID | execution_config.fallback_storage.provider_id | <Icon icon="square" />                        | The ID of the storage provider. The ID must match the ID of the storage provider in the `storage_providers` section.                                                                                |               |
-| EXECUTION_CONFIG_FALLBACK_STORAGE_OBJECT_PATH | execution_config.fallback_storage.object_path | <Icon icon="square" />                        | The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket.                                                                     |               |
+| Environment Variable                                 | YAML                                          | Required                                      | Description                                                                                                                                                                                                                                  | Default Value |
+| ---------------------------------------------------- | --------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+|                                                      | execution_config                              | <Icon icon="square" />                        | The configuration for the execution config.                                                                                                                                                                                                  |               |
+|                                                      | file                                          | <Icon icon="square" />                        | The configuration for the execution config file. The config file is used to load the execution config from the local file system. The file has precedence over the storage provider.                                                         |               |
+| EXECUTION_CONFIG_FILE_PATH                           | file.path                                     | <Icon icon="square" />                        | The path to the execution config file. The path is used to load the execution config from the local file system.                                                                                                                             |               |
+| EXECUTION_CONFIG_FILE_WATCH                          | file.watch                                    | <Icon icon="square" />                        | Enable the watch mode. The watch mode is used to watch the execution config file for changes. If the file changes, the router will reload the execution config without downtime.                                                             | true          |
+| EXECUTION_CONFIG_FILE_WATCH_INTERVAL                 | file.watch_interval                           | <Icon icon="square" />                        | The interval at which the file is checked for changes.                                                                                                                                                                                       | 1s            |
+|                                                      | manifest                                      | <Icon icon="square" />                        | The configuration for loading the execution config from a local manifest directory. The directory contains `mapper.json`, `latest.json`, and one `feature-flags/<name>.json` per feature flag. Mutually exclusive with `file` and `storage`. |               |
+| EXECUTION_CONFIG_MANIFEST_PATH                       | manifest.path                                 | <Icon icon="square-check" iconType="solid" /> | The path to the manifest directory.                                                                                                                                                                                                          |               |
+| EXECUTION_CONFIG_MANIFEST_SKIP_MISSING_FEATURE_FLAGS | manifest.skip_missing_feature_flags           | <Icon icon="square" />                        | Skip feature flags listed in `mapper.json` whose execution config file cannot be loaded, instead of aborting the load.                                                                                                                       | false         |
+| EXECUTION_CONFIG_MANIFEST_IGNORED_FEATURE_FLAGS      | manifest.ignored_feature_flags                | <Icon icon="square" />                        | Feature flag names to skip entirely when loading the manifest. Listed flags are not loaded even when referenced by `mapper.json`.                                                                                                            |               |
+| EXECUTION_CONFIG_MANIFEST_WATCH                      | manifest.watch                                | <Icon icon="square" />                        | Enable the watch mode. When enabled, the router stats `mapper.json` for changes and reloads the assembled execution config without downtime.                                                                                                 | false         |
+| EXECUTION_CONFIG_MANIFEST_WATCH_INTERVAL             | manifest.watch_interval                       | <Icon icon="square" />                        | The interval at which `mapper.json` is checked for changes. Only applied when `manifest.watch` is enabled.                                                                                                                                   | 1s            |
+|                                                      | execution_config.storage                      | <Icon icon="square" />                        | The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config.                                          |               |
+| EXECUTION_CONFIG_STORAGE_PROVIDER_ID                 | execution_config.storage.provider_id          | <Icon icon="square-check" iconType="solid" /> | The ID of the storage provider. The ID must match the ID of the storage provider in the `storage_providers` section.                                                                                                                         |               |
+| EXECUTION_CONFIG_STORAGE_OBJECT_PATH                 | execution_config.storage.object_path          | <Icon icon="square-check" iconType="solid" /> | The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket.                                                                                                              |               |
+| EXECUTION_CONFIG_FALLBACK_STORAGE_ENABLED            | execution_config.fallback_storage.enabled     | <Icon icon="square" />                        | Enable a fallback storage to fetch the execution config in case the above primary source fails.                                                                                                                                              | false         |
+| EXECUTION_CONFIG_FALLBACK_STORAGE_PROVIDER_ID        | execution_config.fallback_storage.provider_id | <Icon icon="square" />                        | The ID of the storage provider. The ID must match the ID of the storage provider in the `storage_providers` section.                                                                                                                         |               |
+| EXECUTION_CONFIG_FALLBACK_STORAGE_OBJECT_PATH        | execution_config.fallback_storage.object_path | <Icon icon="square" />                        | The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket.                                                                                                              |               |
+
+## Split Config Poller
+
+The split-config polling strategy assembles the final router execution config by fetching the base graph and each feature flag config as separate files from the CDN. These rules govern its behavior when individual feature flag files are missing or should be excluded entirely. They are only applied when the router is enrolled in split-config loading; with a custom storage provider the router falls back to the regular polling strategy and these rules have no effect.
+
+The base graph is always required. Skip and ignore rules apply to feature flags only. A missing or unfetchable base graph always aborts the poll cycle, regardless of these rules.
+
+### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+split_config_poller:
+  skip_missing_feature_flags: true
+  ignored_feature_flags:
+    - "experimental-checkout"
+    - "ab-test-foo"
+```
+
+### Split config poller options
+
+| Environment Variable                              | YAML                                                | Required               | Description                                                                                                                                                                                          | Default Value |
+| ------------------------------------------------- | --------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| SPLIT_CONFIG_POLLER_SKIP_MISSING_FEATURE_FLAGS    | split_config_poller.skip_missing_feature_flags      | <Icon icon="square" /> | Keep polling alive when a feature flag listed in the mapper cannot be fetched (responds with `file not found`). When false, a single missing feature flag aborts the poll cycle.                     | false         |
+| SPLIT_CONFIG_POLLER_IGNORED_FEATURE_FLAGS         | split_config_poller.ignored_feature_flags           | <Icon icon="square" /> | Feature flag names to skip entirely during polling. Listed flags are not fetched even when present in the mapper, and are absent from the assembled execution config.                                | []            |
 
 ## Traffic Shaping
 
@@ -1567,6 +1675,7 @@ In addition to the above JWKS configuration flavours, you can define a list of a
 
 | YAML                | Required               | Description                                                                                                                   | Default Value |
 | ------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| scope_claim         | <Icon icon="square" /> | The JWT claim used to read scopes for authorization. Use this when your identity provider stores scopes in a claim other than `scope`. Only top level claims are supported. | scope         |
 | header_name         | <Icon icon="square" /> | The name of the header. The header is used to extract the token from the request. The default value is 'Authorization'.       | Authorization |
 | header_value_prefix | <Icon icon="square" /> | The prefix of the header value. The prefix is used to extract the token from the header value. The default value is 'Bearer'. | Bearer        |
 
@@ -1602,6 +1711,7 @@ authentication:
           interval: 30s
           burst: 2
     header_name: Authorization # This is the default value
+    scope_claim: scope # This is the default value
     header_value_prefix: Bearer # This is the default value
     header_sources:
       - type: header
@@ -1713,6 +1823,10 @@ events:
           user_info:
             username: "username"
             password: "password"
+        tls:
+          ca_file: /path/to/ca.crt
+          cert_file: /path/to/client.crt
+          key_file: /path/to/client.key
     kafka:
       - id: my-kafka
         tls:
@@ -1746,6 +1860,60 @@ events:
 |                      | authentication.user_info          | <Icon icon="square" />                        | User-Info based authentication.                                                          |               |
 |                      | authentication.user_info.username | <Icon icon="square" />                        | Username.                                                                                |               |
 |                      | authentication.user_info.password | <Icon icon="square" />                        | Password.                                                                                |               |
+|                      | tls                               | <Icon icon="square" />                        | TLS configuration for the NATS provider.                                                 |               |
+|                      | tls.insecure_skip_ca_verification | <Icon icon="square" />                        | Skip server certificate verification. Not recommended for production.                    | false         |
+|                      | tls.ca_file                       | <Icon icon="square" />                        | Path to a custom CA certificate file (PEM) used to verify the server certificate. Defaults to the host's system trust store. |               |
+|                      | tls.cert_file                     | <Icon icon="square" />                        | Path to the client certificate file (PEM) for mTLS. Must be set together with `key_file`.             |               |
+|                      | tls.key_file                      | <Icon icon="square" />                        | Path to the client private key file (PEM) for mTLS. Must be set together with `cert_file`.            |               |
+
+#### TLS
+
+The NATS provider supports four TLS modes:
+
+| Mode | Config |
+|---|---|
+| No TLS | Omit the `tls` block |
+| TLS with skip verify | `insecure_skip_ca_verification: true` |
+| TLS with custom CA | `ca_file: /path/to/ca.crt` |
+| Mutual TLS (mTLS) | `cert_file` + `key_file` (plus optional `ca_file`) |
+
+<CodeGroup>
+  ```yaml Skip verify (dev/self-signed)
+  events:
+    providers:
+      nats:
+        - id: my-nats
+          url: "nats://localhost:4222"
+          tls:
+            insecure_skip_ca_verification: true
+  ```
+
+  ```yaml Custom CA (1-way TLS)
+  events:
+    providers:
+      nats:
+        - id: my-nats
+          url: "nats://localhost:4222"
+          tls:
+            ca_file: /path/to/ca.crt
+  ```
+
+  ```yaml Mutual TLS (mTLS)
+  events:
+    providers:
+      nats:
+        - id: my-nats
+          url: "nats://localhost:4222"
+          tls:
+            ca_file: /path/to/ca.crt
+            cert_file: /path/to/client.crt
+            key_file: /path/to/client.key
+  ```
+</CodeGroup>
+
+<Warning>
+  `insecure_skip_ca_verification: true` disables server certificate verification. Do not use in production.
+</Warning>
 
 ### Kafka Provider
 
@@ -1790,14 +1958,16 @@ Configure the GraphQL Execution Engine of the Router.
 | ENGINE_ENABLE_REQUEST_TRACING                                 | enable_request_tracing                                 | <Icon icon="square" /> | Enable [Advanced Request Tracing (ART)](/router/advanced-request-tracing-art)This config is not correlated to OTEL tracing.                                                                                                                                                                                                                 | true          |
 | ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER            | enable_execution_plan_cache_response_header            | <Icon icon="square" /> | **Deprecated**, use ["enable_cache_response_headers"](/router/configuration#debug-configuration) instead. When enabled, the Router sets the response Header "X-WG-Execution-Plan-Cache" to "HIT" or "MISS"                                                                                                                                  | false         |
 | ENGINE_MAX_CONCURRENT_RESOLVERS                               | max_concurrent_resolvers                               | <Icon icon="square" /> | Use this to limit the concurrency in the GraphQL Engine. A high number will lead to more memory usage. A number too low will slow down your Router.                                                                                                                                                                                         | 32            |
-| ENGINE_ENABLE_NET_POLL                                        | enable_net_poll                                        | <Icon icon="square" /> | Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.                                                                                  | true          |
-| ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT                          | websocket_client_poll_timeout                          | <Icon icon="square" /> | The timeout for the poll loop of the WebSocket client implementation. The period is specified as a string with a number and a unit                                                                                                                                                                                                          | 1s            |
-| ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE                      | websocket_client_conn_buffer_size                      | <Icon icon="square" /> | The buffer size for the poll buffer of the WebSocket client implementation. The buffer size determines how many connections can be handled in one loop.                                                                                                                                                                                     | 128           |
-| ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT                          | websocket_client_read_timeout                          | <Icon icon="square" /> | The timeout for the websocket read of the WebSocket client implementation.                                                                                                                                                                                                                                                                  | 5s            |
+| ENGINE_ENABLE_NET_POLL                                        | enable_net_poll                                        | <Icon icon="square" /> | Enables the more efficient poll implementation for the server-side WebSocket handler of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used. Has no effect on the router's upstream connections to subgraphs.                              | true          |
+| ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT                          | websocket_server_read_timeout                          | <Icon icon="square" /> | Read timeout on the server-side WebSocket handler (router accepting clients). Specified as a Go duration string, e.g. `10ms`, `1s`, `1m`.                                                                                                                                                                                                   | 5s            |
+| ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT                         | websocket_server_write_timeout                         | <Icon icon="square" /> | Write timeout on the server-side WebSocket handler (router accepting clients).                                                                                                                                                                                                                                                               | 10s           |
+| ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT                          | websocket_server_poll_timeout                          | <Icon icon="square" /> | The timeout for the poll loop of the server-side WebSocket handler. The period is specified as a string with a number and a unit.                                                                                                                                                                                                            | 1s            |
+| ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE                      | websocket_server_conn_buffer_size                      | <Icon icon="square" /> | The buffer size for the poll buffer of the server-side WebSocket handler. The buffer size determines how many connections can be handled in one loop.                                                                                                                                                                                        | 128           |
 | ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT                         | websocket_client_write_timeout                         | <Icon icon="square" /> | The timeout for the websocket write of the WebSocket client implementation.                                                                                                                                                                                                                                                                 | 10s           |
 | ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL                         | websocket_client_ping_interval                         | <Icon icon="square" /> | The Websocket client ping interval to the subgraph. Defines how often the router will ping the subgraph to signal that the connection is still alive. Timeout needs to be coordinated with the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. | 15s           |
 | ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT                          | websocket_client_ping_timeout                          | <Icon icon="square" /> | The Websocket client ping timeout to the subgraph. Defines how long the router will wait for a ping response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.                                                                          | 30s           |
-| ENGINE_WEBSOCKET_CLIENT_FRAME_TIMEOUT                         | websocket_client_frame_timeout                         | <Icon icon="square" /> | The Websocket client frame timeout to the subgraph. Defines how long the router will wait for a frame response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.                                                                        | 100ms         |
+| ENGINE_WEBSOCKET_CLIENT_ACK_TIMEOUT                           | websocket_client_ack_timeout                           | <Icon icon="square" /> | How long the router waits for a `connection_ack` from a subgraph after sending `connection_init`. Minimum `1s`.                                                                                                                                                                                                                              | 30s           |
+| ENGINE_WEBSOCKET_CLIENT_READ_LIMIT                            | websocket_client_read_limit                            | <Icon icon="square" /> | Maximum size of an incoming WebSocket message from a subgraph. Specified as a byte string, e.g. `512KB`, `1MB`. Minimum `1KB`.                                                                                                                                                                                                               | 1MB           |
 | ENGINE_EXECUTION_PLAN_CACHE_SIZE                              | execution_plan_cache_size                              | <Icon icon="square" /> | Define how many GraphQL Operations should be stored in the execution plan cache. A low number will lead to more frequent cache misses, which will lead to increased latency.                                                                                                                                                                | 1024          |
 | ENGINE_SLOW_PLAN_CACHE_SIZE                                   | slow_plan_cache_size                                   | <Icon icon="square" /> | The maximum number of entries in the slow plan cache. This cache protects slow-to-plan queries from being evicted by the main plan cache's LFU policy. Only used when `in_memory_fallback` is enabled. See [Slow Plan Cache](/concepts/cache-warmer#slow-plan-cache).                                                                        | 300           |
 | ENGINE_SLOW_PLAN_CACHE_THRESHOLD                              | slow_plan_cache_threshold                              | <Icon icon="square" /> | The minimum planning duration for a query to be promoted into the slow plan cache. Queries that take longer than this threshold to plan are considered expensive and protected from eviction. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 5s. The supported units are 'ms', 's', 'm', 'h'.                  | 100ms         |
@@ -1816,6 +1986,14 @@ Configure the GraphQL Execution Engine of the Router.
 | ENGINE_SUBSCRIPTION_FETCH_TIMEOUT                             | subscription_fetch_timeout                             | <Icon icon="square" /> | The maximum time a subscription fetch can take before it is considered timed out.                                                                                                                                                                                                                                                           | 30s           |
 | ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY | relax_subgraph_operation_field_selection_merging_nullability | <Icon icon="square" /> | Relaxes nullability validation for [field selection merging](/router/relaxed-field-selection-merging-nullability) across union member types.                                                                                                                                                                                            | false         |
 
+<Warning>
+  **Subject to change.** `enable_net_poll`, `websocket_server_poll_timeout`, and `websocket_server_conn_buffer_size` may be removed or changed in a future release without a standard deprecation cycle. Avoid depending on them.
+</Warning>
+
+<Note>
+  If you're upgrading from a previous release and set `websocket_client_read_timeout`, `websocket_client_poll_timeout`, `websocket_client_conn_buffer_size`, `websocket_client_frame_timeout`, or `websocket_client_write_timeout`, see the [subscriptions overhaul migration guide](/router/subscriptions-migration). Several of these were removed and one (`websocket_client_write_timeout`) kept its name but changed scope.
+</Note>
+
 ### Example YAML config:
 
 
@@ -1829,11 +2007,17 @@ engine:
   enable_websocket_epoll_kqueue: true
   epoll_kqueue_poll_timeout: "1s"
   epoll_kqueue_conn_buffer_size: 128
-  websocket_client_read_timeout: "1s"
-  websocket_client_write_timeout: "5s"
+  # Server-side WebSocket handler (router accepting clients)
+  websocket_server_read_timeout: "5s"
+  websocket_server_write_timeout: "10s"
+  websocket_server_poll_timeout: "1s"
+  websocket_server_conn_buffer_size: 128
+  # Upstream subscription client (router connecting to subgraphs)
+  websocket_client_write_timeout: "10s"
   websocket_client_ping_interval: "15s"
   websocket_client_ping_timeout: "30s"
-  websocket_client_frame_timeout: "100ms"
+  websocket_client_ack_timeout: "30s"
+  websocket_client_read_limit: "1MB"
   execution_plan_cache_size: 10000
   slow_plan_cache_size: 300
   slow_plan_cache_threshold: 100ms
@@ -1991,7 +2175,11 @@ rate_limit:
         code: "RATE_LIMIT_EXCEEDED"
 ```
 
-## Subgraph Error Propagation
+## Subgraph Data Propagation
+
+Controls what subgraphs can propagate back to the client. Errors and the response `extensions` object are governed by separate but related policies.
+
+### Subgraph Error Propagation
 
 The configuration for the subgraph error propagation. Errors can be exposed to the client in a "wrapped" form to hide Subgraph internals, or it's possible to "pass-through" Subgraph errors directly to the client.
 
@@ -2009,7 +2197,7 @@ The configuration for the subgraph error propagation. Errors can be exposed to t
 | SUBGRAPH_ERROR_PROPAGATION_ALLOWED_EXTENSION_FIELDS   | allowed_extension_fields   | <Icon icon="square" /> | The allowed extension fields. The allowed extension fields are used to specify which fields of the Subgraph errors are allowed to be propagated to the client.                                                                                   | ["code"]                 |
 | SUBGRAPH_ERROR_PROPAGATION_ALLOW_ALL_EXTENSION_FIELDS | allow_all_extension_fields | <Icon icon="square" /> | Allow all extension fields from Subgraph errors to be propagated to the client. If the value is true (default: false), all extension fields from Subgraph errors will be propagated, overriding the allowed_extension_fields configuration.      | false                    |
 
-### Example YAML configuration:
+#### Example YAML configuration:
 
 ```yaml
 version: "1"
@@ -2028,7 +2216,32 @@ subgraph_error_propagation:
     - "code"
 ```
 
-See [Subgraph Error Propagation](/router/subgraph-error-propagation) for more detailed information.
+See [Subgraph Error Propagation](/router/subgraph-data-propagation/subgraph-error-propagation) for more detailed information.
+
+### Subgraph Extension Propagation
+
+The router forwards subgraph response `extensions` to the client. An allow list restricts which extension fields are propagated, and an algorithm selects a winner when multiple subgraphs return the same field.
+
+| Environment Variable                                     | YAML                          | Required               | Description                                                                                                                                                                | Default Value |
+|----------------------------------------------------------|-------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| SUBGRAPH_EXTENSION_PROPAGATION_ENABLED                   | enabled                       | <Icon icon="square" /> | Enable forwarding of subgraph response extensions to the client.                                                                                                           | false         |
+| SUBGRAPH_EXTENSION_PROPAGATION_ALLOWED_EXTENSION_FIELDS  | allowed_extension_fields      | <Icon icon="square" /> | Extension fields that are allowed to be propagated from subgraphs to the client. Any field not in this list is dropped. If empty, all extension fields are forwarded.      | []            |
+| SUBGRAPH_EXTENSION_PROPAGATION_ALGORITHM                 | algorithm                     | <Icon icon="square" /> | Conflict resolution when multiple subgraphs return the same extension field. `first_write` keeps the value from the first subgraph that wrote it; `last_write` keeps the last. | first_write   |
+
+#### Example YAML configuration:
+
+```yaml
+version: "1"
+
+subgraph_extension_propagation:
+  enabled: true
+  allowed_extension_fields:
+    - rateLimit
+    - auth
+  algorithm: last_write
+```
+
+See [Subgraph Extension Propagation](/router/subgraph-data-propagation/subgraph-extension-propagation) for more detailed information.
 
 ## Security
 
@@ -2050,6 +2263,7 @@ The configuration for the security. The security is used to configure the securi
 | SECURITY_BLOCK_PERSISTED_OPERATIONS_CONDITION     | block_persisted_operations.condition     | <Icon icon="square" /> | The [expression](/router/configuration/template-expressions) to evaluate if the operation should be blocked.                       |               |
 |                                                   | complexity_calculation_cache             | <Icon icon="square" /> | Complexity Cache configuration                                                                                                     |               |
 |                                                   | complexity_limits                        | <Icon icon="square" /> | Complexity limits configuration                                                                                                    |               |
+|                                                   | complexity_limits.mode                   | <Icon icon="square" /> | `measure` calculates complexity without rejecting; `enforce` rejects operations exceeding limits.                                  | enforce       |
 |                                                   | parser_limits.approximate_depth_limit    | <Icon icon="square" /> | The approximate cumulative depth limit of a query, including fragments. Set to 0 to disable.                                       | 200           |
 |                                                   | parser_limits.total_fields_limit         | <Icon icon="square" /> | The total number of fields the parser will allow. Set to 0 to disable.                                                             | 3500          |
 | SECURITY_OPERATION_NAME_LENGTH_LIMIT              | operation_name_length_limit              | <Icon icon="square" /> | The maximum allowed length for the operation name. Set to 0 to disable.                                                            | 512           |
@@ -2074,7 +2288,8 @@ security:
     enabled: true
     size: 1024
   complexity_limits:
-    depth: # the equivalent of `security.depth_limit` prevoiusly
+    mode: enforce # 'measure' calculates complexity without rejecting; 'enforce' rejects operations exceeding limits
+    depth: # the equivalent of `security.depth_limit` previously
       enabled: true
       limit: 7
       ignore_persisted_operations: true
@@ -2145,13 +2360,19 @@ The configuration for adding a complexity limits for queries. We currently expos
 - **Root Fields in Query**
 - **Root Field Aliases in Query**
 
-For all of the limits, if the limit is 0, or `enabled` isn't true, the limit isn't applied. All of them have the same configuration fields:
+A limit is not applied when its value is 0 or `enabled` is not true.
 
-| Environment Variable | YAML                        | Required               | Description                                                                                                                                                                           | Default Value |
-| -------------------- | --------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-|                      | enabled                     | <Icon icon="square" /> | Enable the specific limit. If the value is true (default: false), and a valid limit value is set, the limit will be applied                                                           | false         |
-|                      | limit                       | <Icon icon="square" /> | The limit amount for query. If the limit is 0, this limit isn't applied                                                                                                               | 0             |
-|                      | ignore_persisted_operations | <Icon icon="square" /> | Disable the limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations | false         |
+The `mode` field controls enforcement versus measurement:
+
+- `measure`: calculates complexity and reports it via telemetry but does not reject requests.
+- `enforce` (default): rejects requests that exceed limits.
+
+| Environment Variable     | YAML                        | Required               | Description                                                                                                                                                                            | Default Value |
+| ------------------------ | --------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+|                          | mode                        | <Icon icon="square" /> | `measure` calculates complexity without rejecting; `enforce` rejects operations exceeding limits.                                                                                      | enforce       |
+|                          | enabled                     | <Icon icon="square" /> | Enable the specific limit. If the value is true (default: false), and a valid limit value is set, the limit will be applied.                                                           | false         |
+|                          | limit                       | <Icon icon="square" /> | The limit amount for query. If the limit is 0, this limit is not applied.                                                                                                              | 0             |
+|                          | ignore_persisted_operations | <Icon icon="square" /> | Disable the limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations. | false         |
 
 ## File Upload
 
@@ -2303,7 +2524,8 @@ apollo_router_compatibility_flags:
 | Environment Variable                                | YAML                           | Required               | Description                                                                                                                                                                                                                                                                                  | Default Value |
 | --------------------------------------------------- | ------------------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | CACHE_WARMUP_ENABLED                                | enabled                        | <Icon icon="square" /> | Enable the cache warmer.                                                                                                                                                                                                                                                                     | false         |
-| CACHE_WARMUP_ITEMS_PER_SECOND                       | items_per_second               | <Icon icon="square" /> | The number of cache warmup items to process per second. Higher numbers decrease the time to warm up the cache but increase the load on the system.                                                                                                                                           | 50            |
+| CACHE_WARMUP_ITEMS_PER_SECOND                       | items_per_second               | <Icon icon="square" /> | Maximum number of cache warmup items processed per second across all workers. Acts as an upper bound: actual throughput can be lower if processing is slow or there are too few items. Set to `0` for unlimited. Higher numbers decrease warmup time but increase system load.               | 50            |
+| CACHE_WARMUP_ITEM_DELAY                             | item_delay                     | <Icon icon="square" /> | A fixed delay applied after each cache warmup item is processed, per worker. Use to further smooth load during warmup. It applies in addition to `items_per_second`. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. | 0s            |
 | CACHE_WARMUP_TIMEOUT                                | timeout                        | <Icon icon="square" /> | The timeout for warming up the cache. This can be used to limit the amount of time cache warming will block deploying a new config. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.                        | 30s           |
 | CACHE_WARMUP_WORKERS                                | workers                        | <Icon icon="square" /> | The number of workers for the cache warmup to run in parallel. Higher numbers decrease the time to warm up the cache but increase the load on the system.                                                                                                                                    | 8             |
 |                                                     | source                         | <Icon icon="square" /> | The source of the cache warmup items. Only one can be specified. If empty, the cache warmup source is the Cosmo CDN and it requires a graph to be set.                                                                                                                                       |               |
@@ -2318,6 +2540,7 @@ cache_warmup:
   enabled: true
   workers: 8
   items_per_second: 50
+  item_delay: 0s
   timeout: 30s
   in_memory_fallback: true
 ```
@@ -2340,6 +2563,7 @@ cache_warmup:
   enabled: true
   workers: 8
   items_per_second: 50
+  item_delay: 0s
   timeout: 30s
   in_memory_fallback: true
   source:

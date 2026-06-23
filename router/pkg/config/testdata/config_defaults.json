@@ -57,7 +57,8 @@
           "Enabled": false,
           "ExcludeMetrics": null,
           "IncludeMetrics": null
-        }
+        },
+        "ExemplarFilter": "always_off"
       },
       "Prometheus": {
         "Enabled": true,
@@ -86,7 +87,8 @@
             "Interval": 2000000000,
             "ExportTimeout": 10000000000
           }
-        }
+        },
+        "ExemplarFilter": "always_off"
       },
       "CardinalityLimit": 2000
     }
@@ -140,6 +142,16 @@
         "InsecureSkipCaVerification": false
       },
       "Subgraphs": null
+    },
+    "ClientGRPC": {
+      "All": {
+        "CertFile": "",
+        "KeyFile": "",
+        "CaFile": "",
+        "InsecureSkipCaVerification": false,
+        "Enabled": false
+      },
+      "Subgraphs": null
     }
   },
   "CacheControl": {
@@ -164,7 +176,23 @@
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
     "RouterURL": "",
-    "OmitToolNamePrefix": false
+    "OmitToolNamePrefix": false,
+    "OAuth": {
+      "Enabled": false,
+      "JWKS": null,
+      "AuthorizationServerURL": "",
+      "Scopes": {
+        "Initialize": null,
+        "ToolsList": null,
+        "ToolsCall": null,
+        "ExecuteGraphQL": null,
+        "GetOperationInfo": null,
+        "GetSchema": null
+      },
+      "ScopeChallengeIncludeTokenScopes": false,
+      "MaxScopeCombinations": 2048
+    },
+    "ResourceDocumentation": ""
   },
   "ConnectRPC": {
     "Enabled": false,
@@ -298,6 +326,7 @@
   "Authentication": {
     "JWT": {
       "JWKS": null,
+      "ScopeClaim": "scope",
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
       "HeaderSources": null
@@ -361,6 +390,7 @@
     },
     "Workers": 8,
     "ItemsPerSecond": 50,
+    "ItemDelay": 0,
     "Timeout": 30000000000,
     "InMemoryFallback": true
   },
@@ -424,16 +454,10 @@
     "EnableInboundRequestDeduplication": true,
     "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
+    "ForceUnauthenticatedRequestTracing": false,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 1024,
     "EnableNetPoll": true,
-    "WebSocketClientPollTimeout": 1000000000,
-    "WebSocketClientConnBufferSize": 128,
-    "WebSocketClientReadTimeout": 5000000000,
-    "WebSocketClientWriteTimeout": 10000000000,
-    "WebSocketClientPingInterval": 15000000000,
-    "WebSocketClientPingTimeout": 30000000000,
-    "WebSocketClientFrameTimeout": 100000000,
     "ExecutionPlanCacheSize": 1024,
     "SlowPlanCacheSize": 300,
     "SlowPlanCacheThreshold": 100000000,
@@ -451,6 +475,15 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "WebSocketServerReadTimeout": 5000000000,
+    "WebSocketServerWriteTimeout": 10000000000,
+    "WebSocketServerPollTimeout": 1000000000,
+    "WebSocketServerConnBufferSize": 128,
+    "WebSocketClientWriteTimeout": 10000000000,
+    "WebSocketClientReadLimit": 1000000,
+    "WebSocketClientPingInterval": 15000000000,
+    "WebSocketClientPingTimeout": 30000000000,
+    "WebSocketClientAckTimeout": 30000000000,
     "ValidateRequiredExternalFields": false,
     "RelaxSubgraphOperationFieldSelectionMergingNullability": false
   },
@@ -509,6 +542,11 @@
     ],
     "AllowedFields": null
   },
+  "SubgraphExtensionPropagation": {
+    "Enabled": false,
+    "AllowedExtensionFields": null,
+    "Algorithm": "first_write"
+  },
   "StorageProviders": {
     "S3": null,
     "CDN": null,
@@ -529,7 +567,18 @@
       "Enabled": false,
       "ProviderID": "",
       "ObjectPath": ""
+    },
+    "Manifest": {
+      "Path": "",
+      "SkipMissingFeatureFlags": false,
+      "IgnoredFeatureFlags": null,
+      "Watch": false,
+      "WatchInterval": 1000000000
     }
+  },
+  "SplitConfigPoller": {
+    "SkipMissingFeatureFlags": false,
+    "IgnoredFeatureFlags": null
   },
   "PersistedOperationsConfig": {
     "Disabled": false,
@@ -611,7 +660,8 @@
     "Enabled": false,
     "Path": "plugins",
     "Registry": {
-      "URL": "cosmo-registry.wundergraph.com"
+      "URL": "cosmo-registry.wundergraph.com",
+      "Insecure": false
     }
   },
   "WatchConfig": {

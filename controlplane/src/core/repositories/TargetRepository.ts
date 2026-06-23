@@ -3,8 +3,10 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { targets } from '../../db/schema.js';
 import { sanitizeReadme } from '../util.js';
+import { traced } from '../tracing.js';
 import { NamespaceRepository } from './NamespaceRepository.js';
 
+@traced
 export class TargetRepository {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,

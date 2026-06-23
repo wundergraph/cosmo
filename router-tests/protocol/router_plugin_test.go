@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 	"testing"
@@ -13,8 +14,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 )
 
@@ -510,6 +515,16 @@ func TestRouterPluginRequests(t *testing.T) {
 			query:    `{ employee(id: 999) { id taggedProjectSummary } }`,
 			expected: `{"data":{"employee":null}}`,
 		},
+		{
+			name:     "query employee @requires field with argument resolved with expertise",
+			query:    `{ employee(id: 1) { id filteredProjectSummary(tag: "cloud") } }`,
+			expected: `{"data":{"employee":{"id":1,"filteredProjectSummary":"expertise: Backend Architecture, filtered tags (tag=cloud): [cloud]"}}}`,
+		},
+		{
+			name:     "query employee @requires field with argument — no matching tags",
+			query:    `{ employee(id: 1) { id filteredProjectSummary(tag: "nonexistent") } }`,
+			expected: `{"data":{"employee":{"id":1,"filteredProjectSummary":"expertise: Backend Architecture, no tags matched (tag=nonexistent)"}}}`,
+		},
 		// Pattern 1: Flat abstract — interface
 		{
 			name:     "query employee @requires flat interface (technical)",
@@ -602,4 +617,74 @@ func TestRouterPluginRequests(t *testing.T) {
 				})
 			}
 		})
+
+}
+
+func TestRouterPluginWithHeaderForwarding(t *testing.T) {
+	t.Run("Should send http headers as gRPC metadata to subgraphs", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.RunGRPCPluginHeaderCases(t, testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+			Plugins: testenv.PluginConfig{
+				Enabled: true,
+				Path:    "../../router/plugins",
+			},
+		})
+	})
+
+	// Regression: gRPC plugin client's Invoke used to overwrite the outgoing
+	// metadata with a fresh map before the otel propagator wrote into it,
+	// dropping any router-propagated headers. With distributed tracing also
+	// enabled, both features must coexist: the propagated header reaches the
+	// plugin AND a trace is recorded.
+	t.Run("Should propagate http headers and record a distributed trace at the same time", func(t *testing.T) {
+		t.Parallel()
+
+		var captured metadata.MD
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter:            exporter,
+			RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+			RouterOptions: []core.Option{
+				core.WithGRPCPluginDialOptions(grpc.WithUnaryInterceptor(testenv.CaptureSubgraphMetadataInterceptor(&captured))),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{Operation: config.HeaderRuleOperationPropagate, Named: "X-Tenant-Id"},
+						},
+					},
+				}),
+			},
+			Plugins: testenv.PluginConfig{
+				Enabled: true,
+				Path:    "../../router/plugins",
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { projects { id name } }`,
+				Header: http.Header{
+					"X-Tenant-Id": []string{"acme"},
+				},
+			})
+
+			require.Equal(t, []string{"acme"}, captured.Get("x-tenant-id"))
+
+			// Look specifically for a plugin gRPC span — the router emits its own spans
+			// regardless of whether the plugin's trace was recorded, so a plain non-empty
+			// check would silently pass if the propagator-vs-metadata regression came back.
+			snapshots := exporter.GetSpans().Snapshots()
+			pluginSpans := 0
+			for _, sn := range snapshots {
+				for _, attr := range sn.Attributes() {
+					if attr.Key == otel.WgOperationProtocol && attr.Value.AsString() == "grpc" {
+						pluginSpans++
+						break
+					}
+				}
+			}
+			require.NotZero(t, pluginSpans, "expected at least one plugin gRPC span alongside header propagation")
+		})
+	})
 }

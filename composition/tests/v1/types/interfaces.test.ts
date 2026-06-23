@@ -19,6 +19,7 @@ import {
 import { describe, expect, test } from 'vitest';
 import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION, TAG_DIRECTIVE } from '../utils/utils';
 import {
+  createSubgraph,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
@@ -452,6 +453,72 @@ describe('Interface tests', () => {
         `,
         ),
       );
+    });
+
+    test('that a concrete Interface implementation is a valid subtype of an implemented Interface field', () => {
+      const { schema, warnings } = normalizeSubgraphSuccess(ncaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          interface InterfaceA {
+            a: ID
+          }
+          
+          interface InterfaceB {
+            a: InterfaceA
+          }
+          
+          type ObjectA implements InterfaceA {
+            a: ID
+          }
+          
+          type ObjectB implements InterfaceB {
+            a: ObjectA
+          }
+          
+          type Query {
+            a: InterfaceB
+          }
+        `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an abstract Interface implementation is a valid subtype of an implemented Interface field', () => {
+      const { schema, warnings } = normalizeSubgraphSuccess(ndaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          interface InterfaceA {
+            a: ID
+          }
+          
+          interface InterfaceB implements InterfaceA {
+            a: ID
+          }
+          
+          interface InterfaceC {
+            a: InterfaceA
+          }
+          
+          type ObjectA implements InterfaceA & InterfaceB {
+            a: ID
+          }
+          
+          type ObjectB implements InterfaceC {
+            a: InterfaceB
+          }
+          
+          type Query {
+            a: InterfaceC
+          }
+        `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
     });
   });
 
@@ -1060,6 +1127,88 @@ describe('Interface tests', () => {
           ]),
         ),
       );
+    });
+
+    test('that a concrete Interface implementation is a valid subtype of an implemented Interface field', () => {
+      const { federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+        [faaaa, faaab],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          type EntityA implements InterfaceA {
+            a: ID
+            b: ID
+            id: ID!
+          }
+          
+          type EntityB implements InterfaceB {
+            a: EntityA
+            b: ID
+            id: ID!
+          }
+          
+          interface InterfaceA {
+            a: ID
+          }
+          
+          interface InterfaceB {
+            a: InterfaceA
+          }
+          
+          type Query {
+            a: InterfaceB
+            b: EntityB
+          }
+        `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an abstract Interface implementation is a valid subtype of an implemented Interface field', () => {
+      const { federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+        [fbaaa, fbaab],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          type EntityA implements InterfaceA & InterfaceB {
+            a: ID
+            b: ID
+            id: ID!
+          }
+          
+          type EntityB implements InterfaceC {
+            a: InterfaceB
+            b: ID
+            id: ID!
+          }
+          
+          interface InterfaceA {
+            a: ID
+          }
+          
+          interface InterfaceB implements InterfaceA {
+            a: ID
+          }
+          
+          interface InterfaceC {
+            a: InterfaceA
+          }
+          
+          type Query {
+            a: InterfaceC
+            b: EntityB
+          }
+        `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
     });
   });
 });
@@ -1707,3 +1856,160 @@ const nbaaa: Subgraph = {
     }
   `),
 };
+
+const ncaaa = createSubgraph(
+  'ncaaa',
+  `
+  interface InterfaceA {
+    a: ID
+  }
+  
+  interface InterfaceB {
+    a: InterfaceA
+  }
+  
+  type ObjectA implements InterfaceA {
+    a: ID
+  }
+  
+  type ObjectB implements InterfaceB {
+    a: ObjectA
+  }
+  
+  type Query {
+    a: InterfaceB
+  }
+  `,
+);
+
+const ndaaa = createSubgraph(
+  'ndaaa',
+  `
+  interface InterfaceA {
+    a: ID
+  }
+  
+  interface InterfaceB implements InterfaceA {
+    a: ID
+  }
+  
+  interface InterfaceC {
+    a: InterfaceA
+  }
+  
+  type ObjectA implements InterfaceA & InterfaceB {
+    a: ID
+  }
+  
+  type ObjectB implements InterfaceC {
+    a: InterfaceB
+  }
+  
+  type Query {
+    a: InterfaceC
+  }
+  `,
+);
+
+const faaaa = createSubgraph(
+  'faaaa',
+  `
+  type EntityA implements InterfaceA @key(fields: "id") {
+    a: ID
+    id: ID!
+  }
+  
+  type EntityB implements InterfaceB @key(fields: "id") {
+    a: EntityA
+    id: ID!
+  }
+  
+  interface InterfaceA {
+    a: ID
+  }
+  
+  interface InterfaceB {
+    a: InterfaceA
+  }
+  
+  type Query {
+    a: InterfaceB
+  }
+  `,
+);
+
+const faaab = createSubgraph(
+  'faaab',
+  `
+  type EntityA @key(fields: "id") {
+    b: ID
+    id: ID!
+  }
+  
+  type EntityB @key(fields: "id") {
+    a: EntityA
+    b: ID
+    id: ID!
+  }
+  
+  type Query {
+    b: EntityB
+  }
+  `,
+);
+
+const fbaaa = createSubgraph(
+  'fbaaa',
+  `
+  type EntityA implements InterfaceA & InterfaceB @key(fields: "id") {
+    a: ID
+    id: ID!
+  }
+  
+  type EntityB implements InterfaceC {
+    a: InterfaceB
+    id: ID!
+  }
+  
+  interface InterfaceA {
+    a: ID
+  }
+  
+  interface InterfaceB implements InterfaceA {
+    a: ID
+  }
+  
+  interface InterfaceC {
+    a: InterfaceA
+  }
+  
+  type Query {
+    a: InterfaceC
+  }
+  `,
+);
+
+const fbaab = createSubgraph(
+  'fbaab',
+  `
+  type EntityA implements InterfaceB @key(fields: "id") {
+    a: ID
+    b: ID
+    id: ID!
+  }
+  
+  type EntityB @key(fields: "id") {
+    a: InterfaceB
+    b: ID
+    id: ID!
+  }
+ 
+  interface InterfaceB {
+    a: ID
+  }
+  
+  type Query {
+    b: EntityB
+  }
+  `,
+);

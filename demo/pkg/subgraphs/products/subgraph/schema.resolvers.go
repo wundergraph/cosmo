@@ -120,6 +120,23 @@ func (r *queriesResolver) SlicedThings(ctx context.Context, first *int, last *in
 	return things, nil
 }
 
+// SearchThings is the resolver for the searchThings field.
+func (r *queriesResolver) SearchThings(ctx context.Context, input model.ProductSearchInput) ([]*model.Thing, error) {
+	const maxSize = 1000
+	var size int
+	if input.Pagination != nil && input.Pagination.First != nil {
+		size = *input.Pagination.First
+	}
+	if size < 0 || size > maxSize {
+		return nil, errors.New("pagination.first is out of allowed range")
+	}
+	things := make([]*model.Thing, 0, size)
+	for i := 0; i < size; i++ {
+		things = append(things, &model.Thing{A: fmt.Sprintf("a-%d", i)})
+	}
+	return things, nil
+}
+
 // Documentation returns generated.DocumentationResolver implementation.
 func (r *Resolver) Documentation() generated.DocumentationResolver { return &documentationResolver{r} }
 

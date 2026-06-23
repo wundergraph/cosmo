@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, lt, SQL } from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, lt, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { ProposalState, ProposalOrigin } from '../../db/models.js';
@@ -13,11 +13,13 @@ import {
 } from '../../types/index.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { isCheckSuccessful, normalizeLabels } from '../util.js';
+import { traced } from '../tracing.js';
 import { SchemaCheckRepository } from './SchemaCheckRepository.js';
 
 /**
  * Repository for organization related operations.
  */
+@traced
 export class ProposalRepository {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
@@ -59,12 +61,12 @@ export class ProposalRepository {
     await this.db.insert(schema.proposalSubgraphs).values(
       proposalSubgraphs.map((subgraph) => ({
         proposalId: proposal[0].id,
-        subgraphId: subgraph.subgraphId,
+        subgraphId: subgraph.subgraphId || null,
         subgraphName: subgraph.subgraphName,
         schemaSDL: subgraph.schemaSDL || null,
         isDeleted: subgraph.isDeleted,
         isNew: subgraph.isNew,
-        currentSchemaVersionId: subgraph.currentSchemaVersionId,
+        currentSchemaVersionId: subgraph.currentSchemaVersionId || null,
         labels: subgraph.isNew ? normalizeLabels(subgraph.labels).map((l) => joinLabel(l)) : undefined,
       })),
     );
@@ -385,12 +387,12 @@ export class ProposalRepository {
       await this.db.insert(schema.proposalSubgraphs).values(
         proposalSubgraphs.map((subgraph) => ({
           proposalId: id,
-          subgraphId: subgraph.subgraphId,
+          subgraphId: subgraph.subgraphId || null,
           subgraphName: subgraph.subgraphName,
           schemaSDL: subgraph.schemaSDL || null,
           isDeleted: subgraph.isDeleted,
           isNew: subgraph.isNew,
-          currentSchemaVersionId: subgraph.currentSchemaVersionId,
+          currentSchemaVersionId: subgraph.currentSchemaVersionId || null,
           labels: subgraph.isNew ? normalizeLabels(subgraph.labels).map((l) => joinLabel(l)) : undefined,
         })),
       );
@@ -450,12 +452,14 @@ export class ProposalRepository {
     return proposalConfig[0];
   }
 
-  public async getApprovedProposalSubgraphsBySubgraph({
+  public async getProposalSubgraphsBySubgraph({
     subgraphName,
     namespaceId,
+    approvedOnly = false,
   }: {
     subgraphName: string;
     namespaceId: string;
+    approvedOnly?: boolean;
   }) {
     const proposalSubgraphs = await this.db
       .select({
@@ -472,8 +476,11 @@ export class ProposalRepository {
       .where(
         and(
           eq(schema.proposalSubgraphs.subgraphName, subgraphName),
-          eq(schema.proposals.state, 'APPROVED'),
           eq(schema.targets.namespaceId, namespaceId),
+          eq(schema.targets.organizationId, this.organizationId),
+          approvedOnly
+            ? eq(schema.proposals.state, 'APPROVED')
+            : inArray(schema.proposals.state, ['DRAFT', 'APPROVED']),
         ),
       );
 
@@ -487,6 +494,7 @@ export class ProposalRepository {
     schemaSDL,
     routerCompatibilityVersion,
     isDeleted,
+    approvedOnly = false,
   }: {
     subgraphName: string;
     namespaceId: string;
@@ -494,11 +502,9 @@ export class ProposalRepository {
     schemaSDL: string;
     routerCompatibilityVersion: string;
     isDeleted: boolean;
+    approvedOnly?: boolean;
   }): Promise<{ proposalId: string; proposalSubgraphId: string }[]> {
-    const proposalSubgraphs = await this.getApprovedProposalSubgraphsBySubgraph({
-      subgraphName,
-      namespaceId,
-    });
+    const proposalSubgraphs = await this.getProposalSubgraphsBySubgraph({ subgraphName, namespaceId, approvedOnly });
 
     const matches: { proposalId: string; proposalSubgraphId: string }[] = [];
 

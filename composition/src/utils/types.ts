@@ -1,5 +1,5 @@
 import { type Kind } from 'graphql';
-import { type SubgraphName } from '../types/types';
+import { type ArgumentName, type SubgraphName } from '../types/types';
 
 export type RootTypeName = 'Mutation' | 'Query' | 'Subscription';
 
@@ -15,7 +15,7 @@ export type InvalidFieldImplementation = {
   invalidImplementedArguments: InvalidArgumentImplementation[];
   isInaccessible: boolean;
   originalResponseType: string;
-  unimplementedArguments: Set<string>;
+  unimplementedArguments: Set<ArgumentName>;
 };
 
 export type ImplementationErrors = {

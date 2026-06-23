@@ -99,10 +99,44 @@ POST http://example.com/graphql?wg_trace=exclude_output
 
 ## Development
 
-For security reasons, we don't enable Advanced Request Tracing (ART) by default but you can enable it by setting the router environment variable `DEV_MODE` to `true` and using the following header in the playground:
+In production, ART responses are gated behind a signed request token issued by Cosmo Studio
+so untrusted clients can't trigger them. For local development,
+set the router environment variable `DEV_MODE` to `true` to bypass that check,
+then send the header in the playground:
 
 ```bash
 {
   "X-WG-TRACE" : "true"
 }
 ```
+
+## Bypassing authentication (Dangerous and Unsafe)
+
+The router can also accept ART headers without a signed request token and without `DEV_MODE`.
+This is controlled by the `force_unauthenticated_request_tracing` option
+(env `ENGINE_FORCE_UNAUTHENTICATED_REQUEST_TRACING`). By default, it is disabled.
+
+To enable it:
+
+```yaml
+engine:
+  force_unauthenticated_request_tracing: true
+```
+
+<Warning>
+  Do not enable unauthenticated request tracing on a router that is reachable by untrusted clients.
+
+  When this flag is `true`, any client that can send a request to the router can set the header
+    `X-WG-Trace` (or `?wg_trace=...`) and receive the full ART payload in the response.
+
+  That payload could expose:
+
+  - internal subgraph URLs and the router's federation topology
+  - the exact requests sent to subgraphs, including propagated headers (which may contain auth tokens, cookies, or API keys)
+  - raw subgraph responses, including fields filtered by the gateway
+  - the complete query plan and per-fetch timings
+
+  On startup the router logs a warning whenever this flag is enabled.
+  Use it only for local debugging or in trusted, isolated environments.
+  For production debugging, keep the default and let Cosmo Studio issue signed request tokens.
+</Warning>

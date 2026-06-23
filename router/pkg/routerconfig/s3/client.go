@@ -15,7 +15,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 )
@@ -141,9 +141,9 @@ func (c Client) RouterConfig(ctx context.Context, _ string, modifiedSince time.T
 		var minioErr minio.ErrorResponse
 		if errors.As(err, &minioErr) {
 			if minioErr.StatusCode == http.StatusNotModified {
-				return nil, configpoller.ErrConfigNotModified
+				return nil, errs.ErrConfigNotModified
 			} else if minioErr.Code == "NoSuchKey" {
-				return nil, configpoller.ErrConfigNotFound
+				return nil, errs.ErrRouterConfigNotFound
 			}
 		}
 

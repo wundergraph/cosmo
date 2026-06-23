@@ -1,5 +1,6 @@
 /* eslint-disable import/named */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { access } from 'node:fs/promises';
 import {
   CompositionOptions,
   federateSubgraphs,
@@ -19,7 +20,7 @@ import {
   WebsocketSubprotocol,
 } from '@wundergraph/cosmo-shared';
 import { SubgraphPublishStats } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { config, configFile } from './core/config.js';
+import { config, configDir, configFile } from './core/config.js';
 import { KeycloakToken } from './commands/auth/utils.js';
 
 export interface Header {
@@ -183,10 +184,26 @@ export const introspectSubgraph = async ({
  */
 export function composeSubgraphs(subgraphs: Subgraph[], options?: CompositionOptions): FederationResult {
   // @TODO get router compatibility version programmatically
-  return federateSubgraphs({ options, subgraphs, version: ROUTER_COMPATIBILITY_VERSION_ONE });
+  return federateSubgraphs({
+    options,
+    subgraphs,
+    version: ROUTER_COMPATIBILITY_VERSION_ONE,
+  });
 }
 
 export type ConfigData = Partial<KeycloakToken & { organizationSlug: string; lastUpdateCheck: number }>;
+
+/**
+ * Asynchronously checks whether a file (or directory) exists at the given path.
+ */
+export const fileExists = async (filePath: string): Promise<boolean> => {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 export const readConfigFile = (): ConfigData => {
   if (!existsSync(configFile)) {
@@ -209,10 +226,12 @@ export const updateConfigFile = (newData: ConfigData) => {
 };
 
 export const checkForUpdates = async () => {
+  if (config.disableUpdateCheck === 'true') {
+    return;
+  }
+
   try {
-    if (config.disableUpdateCheck === 'true') {
-      return;
-    }
+    mkdirSync(configDir, { recursive: true });
 
     const currentTime = Date.now();
 
@@ -302,6 +321,73 @@ type PrintTruncationWarningParams = {
   totalErrorCounts?: SubgraphPublishStats;
 };
 
+type KeyPressCallback = () => unknown | Promise<unknown>;
+
+/**
+ * Waits for a single keypress matching one of the keys in the provided map.
+ * Keys are case-sensitive strings. Use 'Enter' for the enter key.
+ * Each entry is either a callback function or a descriptor `{ callback, persistent }`.
+ * When `persistent` is true the callback fires but the prompt keeps listening,
+ * useful for side-effect actions (e.g. opening a URL) alongside a terminating key.
+ */
+export function waitForKeyPress(
+  keyMap: Record<string, KeyPressCallback | { callback: KeyPressCallback; persistent: boolean } | undefined>,
+  message?: string,
+): Promise<void> {
+  const { promise, resolve } = Promise.withResolvers<void>();
+
+  if (message) {
+    process.stdout.write(pc.dim(message));
+  }
+
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+
+  const onData = async (data: Buffer) => {
+    const key = data.toString();
+
+    // Ctrl+C
+    if (key === '\u0003') {
+      process.stdin.setRawMode(false);
+      process.stdin.pause();
+      process.stdout.write('\n');
+      process.exit(0);
+    }
+
+    // Normalize Enter (\r or \n)
+    const normalized = key === '\r' || key === '\n' ? 'Enter' : key;
+
+    if (!(normalized in keyMap)) {
+      return;
+    }
+
+    const entry = keyMap[normalized];
+    if (!entry) {
+      return;
+    }
+
+    const isDescriptor = typeof entry !== 'function';
+    const callback = isDescriptor ? entry.callback : entry;
+    const persistent = isDescriptor ? entry.persistent : false;
+
+    if (persistent) {
+      await callback();
+      return;
+    }
+
+    process.stdin.removeListener('data', onData);
+    process.stdin.setRawMode(false);
+    process.stdin.pause();
+    process.stdout.write('\n');
+    await callback();
+    resolve();
+  };
+
+  process.stdin.on('data', onData);
+
+  return promise;
+}
+
 export function printTruncationWarning({ displayedErrorCounts, totalErrorCounts }: PrintTruncationWarningParams) {
   if (!totalErrorCounts) {
     return;
@@ -328,4 +414,56 @@ export function printTruncationWarning({ displayedErrorCounts, totalErrorCounts 
   if (truncatedItems.length > 0) {
     console.log(pc.yellow(`\nNote: Some results were truncated: ${truncatedItems.join(', ')}.`));
   }
+}
+
+/**
+ * Prints text with rainbow-like effect. Respects NO_COLOR
+ */
+export function rainbow(text: string): string {
+  if (!pc.isColorSupported) {
+    return text;
+  }
+  const chars = [...text];
+  return (
+    chars
+      .map((char, i) => {
+        const t = chars.length > 1 ? i / (chars.length - 1) : 0;
+        const [r, g, b] = interpolateColor(t);
+        return `\u001B[38;2;${r};${g};${b}m${char}`;
+      })
+      .join('') + '\u001B[0m'
+  );
+}
+
+/** Strips ANSI SGR escape sequences (colors, bold, dim, etc.) from a string. */
+export function stripAnsi(s: string): string {
+  const ESC = String.fromCodePoint(0x1b);
+  return s.replaceAll(new RegExp(`${ESC}\\[[\\d;]*m`, 'g'), '');
+}
+
+/** Returns the visible character count of a string, ignoring ANSI escape sequences. */
+export function visibleLength(s: string): number {
+  return stripAnsi(s).length;
+}
+
+// Gradient color stops: pink → orange → yellow → green → cyan → blue → purple
+const gradientStops: [number, number, number][] = [
+  [255, 100, 150], // pink
+  [255, 160, 50], // orange
+  [255, 220, 50], // yellow
+  [80, 220, 100], // green
+  [50, 200, 220], // cyan
+  [80, 120, 255], // blue
+  [180, 100, 255], // purple
+];
+
+function interpolateColor(t: number): [number, number, number] {
+  const segment = t * (gradientStops.length - 1);
+  const i = Math.min(Math.floor(segment), gradientStops.length - 2);
+  const f = segment - i;
+  return [
+    Math.round(gradientStops[i][0] + (gradientStops[i + 1][0] - gradientStops[i][0]) * f),
+    Math.round(gradientStops[i][1] + (gradientStops[i + 1][1] - gradientStops[i][1]) * f),
+    Math.round(gradientStops[i][2] + (gradientStops[i + 1][2] - gradientStops[i][2]) * f),
+  ];
 }

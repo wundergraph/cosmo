@@ -2,13 +2,17 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { lru } from 'tiny-lru';
 import { FastifyBaseLogger } from 'fastify';
 import { AuthContext, UserInfoEndpointResponse } from '../../types/index.js';
+import { buildAuthState } from '../util.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { OidcRepository } from '../repositories/OidcRepository.js';
+import { NamespaceLoginMethodRepository } from '../repositories/NamespaceLoginMethodRepository.js';
+import { OrganizationLoginMethodRepository } from '../repositories/OrganizationLoginMethodRepository.js';
+import { traced } from '../tracing.js';
 import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
 import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
 import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
 import WebSessionAuthenticator from './WebSessionAuthenticator.js';
-import { RBACEvaluator } from './RBACEvaluator.js';
 
 // The maximum time to cache the user auth context for the web session authentication.
 const maxAuthCacheTtl = 30 * 1000; // 30 seconds
@@ -19,6 +23,7 @@ export interface Authenticator {
   getUserInfo(token: string): Promise<UserInfoEndpointResponse | undefined>;
 }
 
+@traced
 export class Authentication implements Authenticator {
   #cache = lru<AuthContext>(1000, maxAuthCacheTtl);
 
@@ -28,6 +33,9 @@ export class Authentication implements Authenticator {
     private accessTokenAuth: AccessTokenAuthenticator,
     private graphKeyAuth: GraphApiTokenAuthenticator,
     private orgRepo: OrganizationRepository,
+    private oidcRepo: OidcRepository,
+    private namespaceLoginMethodRepo: NamespaceLoginMethodRepository,
+    private orgLoginMethodRepo: OrganizationLoginMethodRepository,
     private logger: FastifyBaseLogger,
   ) {}
 
@@ -65,7 +73,9 @@ export class Authentication implements Authenticator {
         throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Organization not found');
       }
 
-      const cacheKey = `${user.userId}:${organization.id}`;
+      // Cache key now includes sessionId so that re-login via a different IdP
+      // within the cache TTL invalidates cleanly.
+      const cacheKey = `${user.userId}:${organization.id}:${user.sessionId}`;
       const cachedUserContext = this.#cache.get(cacheKey);
 
       if (cachedUserContext) {
@@ -88,12 +98,16 @@ export class Authentication implements Authenticator {
       }
 
       const organizationDeactivated = !!organization.deactivation;
-      const rbac = new RBACEvaluator(
-        await this.orgRepo.getOrganizationMemberGroups({
-          organizationID: organization.id,
-          userID: user.userId,
-        }),
-        user.userId,
+
+      // Resolve the login method, IdP gate and RBAC from the session's idp_alias.
+      const { loginMethod, rbac } = await buildAuthState(
+        {
+          oidcRepo: this.oidcRepo,
+          orgRepo: this.orgRepo,
+          namespaceLoginMethodRepo: this.namespaceLoginMethodRepo,
+          orgLoginMethodRepo: this.orgLoginMethodRepo,
+        },
+        { organizationId: organization.id, userId: user.userId, idpAlias: user.idpAlias },
       );
 
       const userContext: AuthContext = {
@@ -104,6 +118,7 @@ export class Authentication implements Authenticator {
         organizationDeactivated,
         rbac,
         userDisplayName: user.userDisplayName,
+        loginMethod,
       };
 
       this.#cache.set(cacheKey, userContext);

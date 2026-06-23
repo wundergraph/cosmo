@@ -46,18 +46,23 @@ import { parseSchema } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { explorerPlugin } from '@graphiql/plugin-explorer';
-import { createGraphiQLFetcher } from '@graphiql/toolkit';
+import { createGraphiQLFetcher, createLocalStorage, type Storage as GraphiQLStorage } from '@graphiql/toolkit';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 import { Component2Icon, ExclamationTriangleIcon, MobileIcon } from '@radix-ui/react-icons';
 import { TooltipContent, TooltipTrigger } from '@radix-ui/react-tooltip';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getClients,
+  getFeatureFlagsInLatestCompositionByFederatedGraph,
   getFederatedGraphSDLByName,
   getSubgraphSDLFromLatestComposition,
   publishPersistedOperations,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { PersistedOperation, PublishedOperationStatus } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  PersistedOperation,
+  PublishedOperationStatus,
+  GetFeatureFlagsInLatestCompositionByFederatedGraphResponse,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { sentenceCase } from 'change-case';
 import crypto from 'crypto';
 import { GraphiQL } from 'graphiql';
@@ -65,7 +70,7 @@ import { GraphQLSchema, parse, validate } from 'graphql';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/router';
 import posthog from 'posthog-js';
-import { ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { FiSave } from 'react-icons/fi';
@@ -75,6 +80,43 @@ import { PiBracketsCurly, PiDevices, PiGraphLight } from 'react-icons/pi';
 import { TbDevicesCheck } from 'react-icons/tb';
 import { useDebounce } from 'use-debounce';
 import { z } from 'zod';
+
+class CosmoGraphiqlStorage implements GraphiQLStorage {
+  constructor(graphId: string) {
+    this.storage = createLocalStorage({ namespace: `cosmo-playground:${graphId}` });
+  }
+
+  private storage: GraphiQLStorage;
+
+  public setItem = (key: string, value: string) => this.storage.setItem(key, value);
+  public getItem = (key: string) => {
+    // GraphiQL matches restored tabs by query, variables, and headers. When it restores headers from a
+    // separate empty key, it adds a duplicate tab instead of selecting the matching persisted tab.
+    if (key === 'graphiql:headers') {
+      const tabState = this.storage.getItem('graphiql:tabState');
+
+      if (tabState) {
+        try {
+          const parsed = JSON.parse(tabState);
+          const activeTab = parsed?.tabs?.[parsed.activeTabIndex];
+
+          if (activeTab && 'headers' in activeTab) {
+            return activeTab.headers;
+          }
+        } catch {
+          // Fall back to stored headers.
+        }
+      }
+    }
+
+    return this.storage.getItem(key);
+  };
+  public removeItem = (key: string) => this.storage.removeItem(key);
+  public clear = () => this.storage.clear();
+  public get length() {
+    return this.storage.length;
+  }
+}
 
 const validateHeaders = (headers: Record<string, string>) => {
   for (const headersKey in headers) {
@@ -615,7 +657,8 @@ const ConfigSelect = () => {
 
   const graphContext = useContext(GraphContext);
   const subgraphs = graphContext?.subgraphs;
-  const featureFlags = graphContext?.featureFlagsInLatestValidComposition;
+  const compositionFlagsData = useCompositionFlags();
+  const featureFlags = compositionFlagsData?.featureFlags ?? [];
 
   const selected = (router.query.load as string) || graphContext?.graph?.id || '';
   const type = (router.query.type as string) || 'graph';
@@ -729,12 +772,14 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const loadSchemaGraphId = (router.query.load as string) || graphContext?.graph?.id || '';
   const type = (router.query.type as string) || 'graph';
 
+  const compositionFlagsData = useCompositionFlags();
+
   const { data, isLoading: isLoadingGraphSchema } = useQuery(getFederatedGraphSDLByName, {
     name: graphContext?.graph?.name,
     namespace: graphContext?.graph?.namespace,
     featureFlagName:
       type === 'featureFlag'
-        ? graphContext?.featureFlagsInLatestValidComposition.find((f) => f.id === loadSchemaGraphId)?.name
+        ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
         : undefined,
   });
 
@@ -772,6 +817,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
   });
   const [tempHeaders, setTempHeaders] = useState<any>();
 
+  const graphId = graphContext?.graph?.id ?? 'unknown';
+
+  const graphiqlStorage = useMemo(() => new CosmoGraphiqlStorage(graphId), [graphId]);
+
   useEffect(() => {
     if (!storedHeaders || tempHeaders) {
       return;
@@ -805,6 +854,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   });
 
   const [isHydrated, setIsHydrated] = useState(false);
+  const shouldPassEditorStateProps = !!operation;
   useHydratePlaygroundStateFromUrl(
     tabsState,
     setQuery,
@@ -985,7 +1035,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
           args[1] as RequestInit,
           graphContext?.graph?.id || '',
           type === 'featureFlag'
-            ? graphContext?.featureFlagsInLatestValidComposition.find((f) => f.id === loadSchemaGraphId)?.name
+            ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
             : undefined,
         ),
     });
@@ -994,7 +1044,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     subscriptionUrl,
     graphContext?.graphRequestToken,
     graphContext?.graph?.id,
-    graphContext?.featureFlagsInLatestValidComposition,
+    compositionFlagsData?.featureFlags,
     schema,
     clientValidationEnabled,
     type,
@@ -1040,9 +1090,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
         validateHeaders(requestHeaders);
 
         if (type === 'featureFlag') {
-          const featureFlag = graphContext?.featureFlagsInLatestValidComposition.find(
-            (f) => f.id === loadSchemaGraphId,
-          );
+          const featureFlag = (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId);
           if (featureFlag) {
             requestHeaders['X-Feature-Flag'] = featureFlag.name;
           }
@@ -1074,7 +1122,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   }, [
     debouncedQuery,
     debouncedHeaders,
-    graphContext?.featureFlagsInLatestValidComposition,
+    compositionFlagsData?.featureFlags,
     graphContext?.graphRequestToken,
     graphContext?.graph?.id,
     loadSchemaGraphId,
@@ -1130,11 +1178,12 @@ const PlaygroundPage: NextPageWithLayout = () => {
       >
         <div className="hidden h-full flex-1 pl-2.5 md:flex">
           <GraphiQL
+            key={graphId}
             shouldPersistHeaders
             showPersistHeadersSettings={false}
             fetcher={fetcher}
-            query={query}
-            variables={updatedVariables}
+            query={shouldPassEditorStateProps ? query : undefined}
+            variables={shouldPassEditorStateProps || variables ? updatedVariables : undefined}
             onEditQuery={setQuery}
             headers={headers === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE ? undefined : headers}
             defaultHeaders={PLAYGROUND_DEFAULT_HEADERS_TEMPLATE}
@@ -1146,6 +1195,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
             ]}
             // null stops introspection and undefined forces introspection if schema is null
             schema={isLoading ? null : (schema ?? undefined)}
+            storage={graphiqlStorage}
             onTabChange={setTabsState}
           />
           {isMounted && <PlaygroundPortal />}
@@ -1164,17 +1214,43 @@ const PlaygroundPage: NextPageWithLayout = () => {
   );
 };
 
+const CompositionFlagsContext = createContext<GetFeatureFlagsInLatestCompositionByFederatedGraphResponse | undefined>(
+  undefined,
+);
+
+function useCompositionFlags() {
+  return useContext(CompositionFlagsContext);
+}
+
+const CompositionFlagsProvider = ({ children }: PropsWithChildren) => {
+  const graphContext = useContext(GraphContext);
+  const { data: compositionFlagsData } = useQuery(
+    getFeatureFlagsInLatestCompositionByFederatedGraph,
+    {
+      federatedGraphName: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+    },
+    {
+      enabled: !!graphContext?.graph?.name,
+    },
+  );
+
+  return <CompositionFlagsContext.Provider value={compositionFlagsData}>{children}</CompositionFlagsContext.Provider>;
+};
+
 PlaygroundPage.getLayout = (page: ReactNode) => {
   return getGraphLayout(
     <PageHeader title="Playground | Studio">
-      <GraphPageLayout
-        title="Playground"
-        subtitle="Execute queries against your graph"
-        noPadding
-        toolbar={<ConfigSelect />}
-      >
-        {page}
-      </GraphPageLayout>
+      <CompositionFlagsProvider>
+        <GraphPageLayout
+          title="Playground"
+          subtitle="Execute queries against your graph"
+          noPadding
+          toolbar={<ConfigSelect />}
+        >
+          {page}
+        </GraphPageLayout>
+      </CompositionFlagsProvider>
     </PageHeader>,
   );
 };

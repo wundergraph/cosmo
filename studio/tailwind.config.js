@@ -92,6 +92,9 @@ export default {
           950: 'hsl(var(--gray-950))',
         },
       },
+      spacing: {
+        160: '40rem',
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

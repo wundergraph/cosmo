@@ -74,7 +74,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 
 // ResolveDataSourceSubscription returns the subscription data source
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.SubscriptionDataSource, error) {
-	uniqueRequestIdFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	triggerHashInputFn := func(input []byte, xxh *xxhash.Digest) error {
 		val, _, _, err := jsonparser.Get(input, "channels")
 		if err != nil {
 			return err
@@ -99,7 +99,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 	}
 
 	return datasource.NewPubSubSubscriptionDataSource[*SubscriptionEventConfiguration](
-		c.RedisAdapter, uniqueRequestIdFn, c.logger, eventCreateFn,
+		c.RedisAdapter, triggerHashInputFn, c.logger, eventCreateFn,
 	), nil
 }
 
@@ -121,6 +121,9 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, 
 func (c *EngineDataSourceFactory) TransformEventData(extractFn datasource.ArgumentTemplateCallback) error {
 	switch c.eventType {
 	case EventTypePublish:
+		if len(c.channels) != 1 {
+			return fmt.Errorf("publish event definition should define one channel but has %d", len(c.channels))
+		}
 		extractedChannel, err := extractFn(c.channels[0])
 		if err != nil {
 			return fmt.Errorf("unable to parse channel with id %s", c.channels[0])

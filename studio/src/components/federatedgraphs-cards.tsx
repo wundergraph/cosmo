@@ -1,43 +1,34 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFireworks } from '@/hooks/use-fireworks';
-import { SubmitHandler, useZodForm } from '@/hooks/use-form';
 import { docsBaseURL } from '@/lib/constants';
 import { formatMetric } from '@/lib/format-metric';
 import { useChartData } from '@/lib/insights-helpers';
 import { cn } from '@/lib/utils';
-import { ChevronDoubleRightIcon, CommandLineIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
-import { Component2Icon } from '@radix-ui/react-icons';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { migrateFromApollo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { CommandLineIcon, DocumentArrowDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, Component2Icon, LightningBoltIcon, PlayIcon } from '@radix-ui/react-icons';
 import { FederatedGraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import copy from 'copy-to-clipboard';
 import { getTime, parseISO, subDays } from 'date-fns';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { Dispatch, SetStateAction, useContext, useEffect, useState } from 'react';
 import { FiCheck, FiCopy } from 'react-icons/fi';
 import { LuSquareDot } from 'react-icons/lu';
 import { MdNearbyError } from 'react-icons/md';
-import { SiApollographql } from 'react-icons/si';
 import { Line, LineChart, ResponsiveContainer, XAxis } from 'recharts';
-import { z } from 'zod';
 import { UserContext } from './app-provider';
 import { ComposeStatusMessage } from './compose-status';
 import { ComposeStatusBulb } from './compose-status-bulb';
 import { EmptyState } from './empty-state';
-import { Logo } from './logo';
 import { TimeAgo } from './time-ago';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { CLI } from './ui/cli';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Input } from './ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { useToast } from './ui/use-toast';
-import { useMutation } from '@connectrpc/connect-query';
+import { MigrationDialog } from './migration-dialog';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { useWorkspace } from '@/hooks/use-workspace';
-import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { useOnboarding } from '@/hooks/use-onboarding';
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -50,174 +41,6 @@ const fallbackData = [
     totalRequests: 0,
   },
 ];
-
-const MigrationDialog = ({
-  refetch,
-  isMigrating,
-  setIsMigrating,
-  setIsMigrationSuccess,
-  setToken,
-  isEmptyState,
-}: {
-  refetch: () => void;
-  isMigrating: boolean;
-  setIsMigrating: Dispatch<SetStateAction<boolean>>;
-  setIsMigrationSuccess: Dispatch<SetStateAction<boolean>>;
-  setToken: Dispatch<SetStateAction<string | undefined>>;
-  isEmptyState?: boolean;
-}) => {
-  const router = useRouter();
-  const {
-    namespace: { name: namespace },
-  } = useWorkspace();
-  const organizationSlug = useCurrentOrganization()?.slug;
-  const migrate = !!router.query.migrate;
-
-  const migrateInputSchema = z.object({
-    apiKey: z.string().min(1, { message: 'API Key must contain at least 1 character.' }),
-    variantName: z.string().min(1, { message: 'Variant name must contain at least 1 character.' }),
-  });
-
-  type MigrateInput = z.infer<typeof migrateInputSchema>;
-
-  const {
-    register,
-    formState: { isValid, errors },
-    handleSubmit,
-    reset,
-  } = useZodForm<MigrateInput>({
-    mode: 'onBlur',
-    schema: migrateInputSchema,
-  });
-
-  const { toast } = useToast();
-
-  const { mutate } = useMutation(migrateFromApollo);
-
-  const [open, setOpen] = useState(migrate || false);
-
-  const onSubmit: SubmitHandler<MigrateInput> = (data) => {
-    setIsMigrating(true);
-    mutate(
-      {
-        apiKey: data.apiKey,
-        variantName: data.variantName,
-        namespace,
-      },
-      {
-        onSuccess: (d) => {
-          setOpen(false);
-          if (
-            d.response?.code === EnumStatusCode.OK ||
-            d.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
-          ) {
-            toast({
-              description: 'Successfully migrated the graph.',
-              duration: 2000,
-            });
-            refetch();
-            setIsMigrationSuccess(true);
-            setToken(d.token);
-          } else if (d.response?.details) {
-            setIsMigrating(false);
-            toast({ description: d.response.details, duration: 3000 });
-          }
-          router.replace(`/${organizationSlug}/graphs`);
-        },
-        onError: (_) => {
-          toast({
-            description: 'Could not migrate the graph. Please try again.',
-            duration: 3000,
-          });
-          setOpen(false);
-          setIsMigrating(false);
-          router.replace(`/${organizationSlug}/graphs`);
-        },
-      },
-    );
-    reset();
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        className={cn({
-          'min-h-[254px]': !isEmptyState,
-        })}
-      >
-        <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
-          <div className="flex items-center justify-center gap-x-5">
-            <SiApollographql className="h-10 w-10" />
-            <ChevronDoubleRightIcon className="animation h-8 w-8" />
-            <Logo width={50} height={50} />
-          </div>
-          <p className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-xl font-semibold text-transparent">
-            Migrate from Apollo
-          </p>
-        </Card>
-      </DialogTrigger>
-      <DialogContent>
-        {!isMigrating ? (
-          <>
-            <DialogHeader>
-              <DialogTitle>Migrate from Apollo</DialogTitle>
-            </DialogHeader>
-            <div className="flex flex-col gap-y-2">
-              <p className="text-sm">
-                The Graph API Key is the api key associated to the graph which has to be migrated and it should be
-                obtained from Apollo Studio.
-              </p>
-              <p className="text-sm">
-                Click{' '}
-                <Link
-                  href={docsBaseURL + '/studio/migrate-from-apollo'}
-                  className="text-primary"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  here
-                </Link>{' '}
-                to find the steps to obtain the key.
-              </p>
-              <p className="text-sm text-teal-400">
-                Note: This key is not stored and only used to fetch the subgraphs.
-              </p>
-            </div>
-            <form className="mt-2 flex flex-col gap-y-3" onSubmit={handleSubmit(onSubmit)}>
-              <div className="flex flex-col gap-y-2">
-                <span className="text-sm font-semibold">Graph API Key</span>
-                <Input className="w-full" type="text" {...register('apiKey')} />
-                {errors.apiKey && <span className="px-2 text-xs text-destructive">{errors.apiKey.message}</span>}
-              </div>
-              <div className="flex flex-col gap-y-2">
-                <span className="text-sm font-semibold">Graph Variant Name</span>
-                <Input className="w-full" type="text" {...register('variantName')} />
-                {errors.variantName && (
-                  <span className="px-2 text-xs text-destructive">{errors.variantName.message}</span>
-                )}
-              </div>
-
-              <Button className="mt-2" type="submit" disabled={!isValid} variant="default">
-                Migrate
-              </Button>
-            </form>
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-y-4 py-4">
-            <div className="flex items-center justify-center gap-x-5">
-              <SiApollographql className="h-10 w-10" />
-              <ChevronDoubleRightIcon className="animation h-8 w-8" />
-              <Logo width={50} height={50} />
-            </div>
-            <p className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-xl font-semibold text-transparent">
-              Migrating...
-            </p>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 const MigrationSuccess = () => {
   useFireworks(true);
@@ -405,69 +228,89 @@ export const Empty = ({
     namespace: { name: namespace },
   } = useWorkspace();
 
+  const { onboarding, enabled, currentStep } = useOnboarding();
+  const displayOnboardingEmptyState = enabled && onboarding && onboarding.federatedGraphsCount === 0;
+
   let labels = 'team=A';
   return (
-    <EmptyState
-      className="h-auto"
-      icon={<CommandLineIcon />}
-      title="No graphs found"
-      description={
-        <>
-          Use the CLI tool to create either a federated graph ({' '}
-          <a
-            target="_blank"
-            rel="noreferrer"
-            href={docsBaseURL + '/cli/federated-graph/create'}
-            className="text-primary"
-          >
-            docs
-          </a>{' '}
-          ) or a monograph ({' '}
-          <a target="_blank" rel="noreferrer" href={docsBaseURL + '/cli/monograph/create'} className="text-primary">
-            docs
-          </a>{' '}
-          ).
-        </>
-      }
-      actions={
-        <div className="flex flex-col gap-y-6">
-          <Tabs defaultValue="federated" className="mt-8 w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="federated">Federated Graph</TabsTrigger>
-              <TabsTrigger value="monograph">Monograph</TabsTrigger>
-            </TabsList>
-            <TabsContent value="federated">
-              <CLI
-                command={`npx wgc federated-graph create production --namespace ${namespace} --label-matcher ${labels} --routing-url http://localhost:3002/graphql`}
-              />
-            </TabsContent>
-            <TabsContent value="monograph">
-              <CLI
-                command={`npx wgc monograph create production --namespace ${namespace} --routing-url http://localhost:3002/graphql  --graph-url http://localhost:4000/graphql`}
-              />
-            </TabsContent>
-          </Tabs>
-
-          {checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] }) && (
+    <>
+      {displayOnboardingEmptyState && (
+        <OnboardingEmptyState step={currentStep} isFinished={Boolean(onboarding.finishedAt)} />
+      )}
+      <EmptyState
+        className="h-auto"
+        icon={displayOnboardingEmptyState ? undefined : <CommandLineIcon />}
+        title={displayOnboardingEmptyState ? undefined : 'No graphs found'}
+        description={
+          displayOnboardingEmptyState ? undefined : (
             <>
-              <span className="text-sm font-bold">OR</span>
-              <MigrationDialog
-                refetch={refetch}
-                setIsMigrationSuccess={setIsMigrationSuccess}
-                isEmptyState={true}
-                setToken={setToken}
-                isMigrating={isMigrating}
-                setIsMigrating={setIsMigrating}
-              />
+              Use the CLI tool to create either a federated graph ({' '}
+              <a
+                target="_blank"
+                rel="noreferrer"
+                href={docsBaseURL + '/cli/federated-graph/create'}
+                className="text-primary"
+              >
+                docs
+              </a>{' '}
+              ) or a monograph ({' '}
+              <a target="_blank" rel="noreferrer" href={docsBaseURL + '/cli/monograph/create'} className="text-primary">
+                docs
+              </a>{' '}
+              ).
             </>
-          )}
-        </div>
-      }
-    />
+          )
+        }
+        actions={
+          <div className="flex flex-col gap-y-6">
+            <Tabs
+              defaultValue="federated"
+              className={cn('w-full', {
+                'mt-8': !displayOnboardingEmptyState,
+              })}
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="federated">Federated Graph</TabsTrigger>
+                <TabsTrigger value="monograph">Monograph</TabsTrigger>
+              </TabsList>
+              <TabsContent value="federated">
+                <CLI
+                  command={`npx wgc federated-graph create production --namespace ${namespace} --label-matcher ${labels} --routing-url http://localhost:3002/graphql`}
+                />
+              </TabsContent>
+              <TabsContent value="monograph">
+                <CLI
+                  command={`npx wgc monograph create production --namespace ${namespace} --routing-url http://localhost:3002/graphql  --graph-url http://localhost:4000/graphql`}
+                />
+              </TabsContent>
+            </Tabs>
+
+            {checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] }) && (
+              <>
+                {displayOnboardingEmptyState ? (
+                  <OnboardingOrSeparator className="my-4" />
+                ) : (
+                  <span className="text-sm font-bold">OR</span>
+                )}
+                <MigrationDialog
+                  refetch={refetch}
+                  setIsMigrationSuccess={setIsMigrationSuccess}
+                  isEmptyState={true}
+                  compact={displayOnboardingEmptyState}
+                  setToken={setToken}
+                  isMigrating={isMigrating}
+                  setIsMigrating={setIsMigrating}
+                />
+              </>
+            )}
+          </div>
+        }
+      />
+    </>
   );
 };
 
-const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
+const GraphCard = ({ graph, hasStaleMetrics }: { graph: FederatedGraph; hasStaleMetrics: boolean }) => {
   const user = useContext(UserContext);
   const { data, ticks, domain, timeFormatter } = useChartData(
     4,
@@ -502,7 +345,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                 type="monotone"
                 dataKey="totalRequests"
                 animationDuration={300}
-                stroke="#0284C7"
+                stroke={hasStaleMetrics ? 'hsl(var(--gray-100))' : '#0284C7'}
                 dot={false}
                 strokeWidth={1.5}
               />
@@ -518,9 +361,26 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <div className="flex w-full justify-end px-4 font-mono text-xs text-muted-foreground">
-          {`${formatMetric(totalRequests / (4 * 60))} RPM`}
-        </div>
+        {hasStaleMetrics ? (
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <div
+                className="flex w-full items-center justify-end gap-1 px-4 font-mono text-xs text-gray-100"
+                tabIndex={0}
+                role="img"
+                aria-label="Analytics are not available at this moment"
+              >
+                <ExclamationTriangleIcon width={12} height={12} aria-hidden />
+                N/A
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>Analytics are not available at this moment</TooltipContent>
+          </Tooltip>
+        ) : (
+          <div className="flex w-full justify-end px-4 font-mono text-xs text-muted-foreground">
+            {`${formatMetric(totalRequests / (4 * 60))} RPM`}
+          </div>
+        )}
 
         <div className="mt-3 flex flex-1 flex-col items-start px-6">
           <div className="text-base font-semibold">{graph.name}</div>
@@ -611,7 +471,59 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
   );
 };
 
-export const FederatedGraphsCards = ({ graphs, refetch }: { graphs?: FederatedGraph[]; refetch: () => void }) => {
+function OnboardingBoltIcon() {
+  return <LightningBoltIcon className="size-10 text-primary" />;
+}
+
+function OnboardingOrSeparator({ className }: { className?: string }) {
+  return (
+    <div className={cn('mt-7 flex w-full items-center gap-4', className)}>
+      <span className="h-px flex-1 bg-border" />
+      <span className="text-xs font-bold text-muted-foreground">OR</span>
+      <span className="h-px flex-1 bg-border" />
+    </div>
+  );
+}
+
+function OnboardingEmptyState({ step, isFinished }: { step?: number; isFinished: boolean }) {
+  const shouldContinue = step !== undefined && !isFinished;
+
+  return (
+    <div className="flex w-full max-w-2xl flex-col items-center px-6 text-center">
+      <OnboardingBoltIcon />
+      <h3 className="mt-7 text-2xl font-bold tracking-tight">Create your first graph</h3>
+      <p className="mt-4 text-sm text-muted-foreground">
+        No graphs yet. Take the guided tour, or set one up from the CLI.
+      </p>
+      <Link
+        href={`/onboarding/${shouldContinue ? step : 1}`}
+        className="mt-5 flex w-full items-center rounded-xl bg-pink-600 px-5 py-4 text-left text-white transition-colors hover:bg-pink-700"
+      >
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white/20">
+          <PlayIcon className="size-5" />
+        </span>
+        <span className="ml-4 min-w-0 flex-1">
+          <span className="block text-base font-bold leading-5">
+            {shouldContinue ? 'Continue the 5-minute tour' : 'Start the 5-minute tour'}
+          </span>
+          <span className="block text-sm leading-5 text-white/85">Set up your first federated graph step by step</span>
+        </span>
+        <ArrowRightIcon className="ml-4 size-5 shrink-0" />
+      </Link>
+      <OnboardingOrSeparator />
+    </div>
+  );
+}
+
+export const FederatedGraphsCards = ({
+  graphs,
+  refetch,
+  hasStaleMetrics,
+}: {
+  graphs?: FederatedGraph[];
+  refetch: () => void;
+  hasStaleMetrics: boolean;
+}) => {
   const [isMigrationSuccess, setIsMigrationSuccess] = useState(false);
   const [token, setToken] = useState<string | undefined>();
   const [isMigrating, setIsMigrating] = useState(false);
@@ -626,13 +538,15 @@ export const FederatedGraphsCards = ({ graphs, refetch }: { graphs?: FederatedGr
 
   if (!graphs || graphs.length === 0)
     return (
-      <Empty
-        refetch={refetch}
-        setIsMigrationSuccess={setIsMigrationSuccess}
-        setToken={setToken}
-        isMigrating={isMigrating}
-        setIsMigrating={setIsMigrating}
-      />
+      <div className="flex flex-col items-center gap-y-8">
+        <Empty
+          refetch={refetch}
+          setIsMigrationSuccess={setIsMigrationSuccess}
+          setToken={setToken}
+          isMigrating={isMigrating}
+          setIsMigrating={setIsMigrating}
+        />
+      </div>
     );
 
   return (
@@ -653,7 +567,7 @@ export const FederatedGraphsCards = ({ graphs, refetch }: { graphs?: FederatedGr
       )}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {graphs.map((graph, graphIndex) => {
-          return <GraphCard key={graphIndex.toString()} graph={graph} />;
+          return <GraphCard key={graphIndex.toString()} graph={graph} hasStaleMetrics={hasStaleMetrics} />;
         })}
         {checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] }) && (
           <MigrationDialog

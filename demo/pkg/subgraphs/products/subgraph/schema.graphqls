@@ -27,6 +27,7 @@ type Queries {
   factTypes: [TopSecretFactType!]
   sharedThings(numOfA: Int! numOfB: Int!): [Thing!]! @listSize(slicingArguments: ["numOfA"]) @shareable
   slicedThings(first: Int, last: Int): [Thing] @listSize(slicingArguments: ["first", "last"])
+  searchThings(input: ProductSearchInput!): [Thing!]! @listSize(slicingArguments: ["input.pagination.first"])
 }
 
 type Mutation {
@@ -41,6 +42,16 @@ input TopSecretFactInput {
   title: String!
   description: FactContent!
   factType: TopSecretFactType!
+}
+
+input ProductSearchPagination {
+  first: Int
+  after: String
+}
+
+input ProductSearchInput {
+  pagination: ProductSearchPagination
+  query: String
 }
 
 enum TopSecretFactType @authenticated {

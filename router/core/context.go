@@ -544,7 +544,7 @@ func (c *requestContext) Authentication() authentication.Authentication {
 func (c *requestContext) SetAuthenticationScopes(scopes []string) {
 	auth := authentication.FromContext(c.request.Context())
 	if auth == nil {
-		auth = authentication.NewEmptyAuthentication()
+		auth = authentication.NewEmptyAuthentication(authentication.DefaultScopeClaim)
 		c.request = c.request.WithContext(authentication.NewContext(c.request.Context(), auth))
 	}
 	auth.SetScopes(scopes)
@@ -661,6 +661,10 @@ type operationContext struct {
 
 func (o *operationContext) Variables() *astjson.Value {
 	return o.variables
+}
+
+func (c *operationContext) VariablesView() resolve.VariablesView {
+	return resolve.NewVariablesView(c.variables, c.remapVariables)
 }
 
 func (o *operationContext) Files() []*httpclient.FileUpload {

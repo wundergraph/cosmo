@@ -1,5 +1,28 @@
 import { z } from 'zod';
 
+export const sentryEnvVariables = z.object({
+  SENTRY_ENABLED: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true')
+    .default('false'),
+  SENTRY_DSN: z.string().optional(),
+  SENTRY_SEND_DEFAULT_PII: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true')
+    .default('false'),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().optional().default(1),
+  SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().optional().default(1),
+  SENTRY_PROFILE_LIFECYCLE: z.enum(['manual', 'trace']).optional().default('manual'),
+  SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: z.coerce.number().optional().default(100),
+  SENTRY_ENABLE_LOGS: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true')
+    .default('false'),
+});
+
 export const envVariables = z
   .object({
     /**
@@ -163,6 +186,22 @@ export const envVariables = z
       .transform((val) => val === 'true')
       .optional(),
     /**
+     * S3 Failover Storage (optional secondary bucket for resilience)
+     */
+    S3_FAILOVER_STORAGE_URL: z.string().optional(),
+    S3_FAILOVER_ENDPOINT: z.string().optional(),
+    S3_FAILOVER_REGION: z.string().default('auto'),
+    S3_FAILOVER_ACCESS_KEY_ID: z.string().optional(),
+    S3_FAILOVER_SECRET_ACCESS_KEY: z.string().optional(),
+    S3_FAILOVER_FORCE_PATH_STYLE: z
+      .string()
+      .transform((val) => val === 'true')
+      .optional(),
+    S3_FAILOVER_USE_INDIVIDUAL_DELETES: z
+      .string()
+      .transform((val) => val === 'true')
+      .optional(),
+    /**
      * Email
      */
     SMTP_ENABLED: z
@@ -191,31 +230,8 @@ export const envVariables = z
      * Admission Webhook
      */
     AUTH_ADMISSION_JWT_SECRET: z.string(),
-
-    /**
-     * Sentry
-     */
-    SENTRY_ENABLED: z
-      .string()
-      .optional()
-      .transform((val) => val === 'true')
-      .default('false'),
-    SENTRY_DSN: z.string().optional(),
-    SENTRY_SEND_DEFAULT_PII: z
-      .string()
-      .optional()
-      .transform((val) => val === 'true')
-      .default('false'),
-    SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().optional().default(1),
-    SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().optional().default(1),
-    SENTRY_PROFILE_LIFECYCLE: z.enum(['manual', 'trace']).optional().default('manual'),
-    SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: z.coerce.number().optional().default(100),
-    SENTRY_ENABLE_LOGS: z
-      .string()
-      .optional()
-      .transform((val) => val === 'true')
-      .default('false'),
   })
+  .merge(sentryEnvVariables)
   .refine((input) => {
     if (input.STRIPE_WEBHOOK_SECRET && !input.STRIPE_SECRET_KEY) {
       return false;

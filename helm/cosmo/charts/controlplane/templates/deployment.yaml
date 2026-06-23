@@ -274,6 +274,48 @@ spec:
                   name: {{ include "controlplane.secretName" . }}
                   key: s3SecretAccessKey
             {{- end }}
+            {{- if .Values.configuration.s3FailoverStorageUrl }}
+            - name: S3_FAILOVER_STORAGE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: s3FailoverStorageUrl
+            {{- end }}
+            {{- if .Values.configuration.s3FailoverRegion }}
+            - name: S3_FAILOVER_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: s3FailoverRegion
+            {{- end }}
+            {{- if .Values.configuration.s3FailoverEndpoint }}
+            - name: S3_FAILOVER_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: s3FailoverEndpoint
+            {{- end }}
+            {{- if .Values.configuration.s3FailoverForcePathStyle }}
+            - name: S3_FAILOVER_FORCE_PATH_STYLE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: s3FailoverForcePathStyle
+            {{- end }}
+            {{- if .Values.configuration.s3FailoverAccessKeyId }}
+            - name: S3_FAILOVER_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: s3FailoverAccessKeyId
+            {{- end }}
+            {{- if .Values.configuration.s3FailoverSecretAccessKey }}
+            - name: S3_FAILOVER_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: s3FailoverSecretAccessKey
+            {{- end }}
             - name: SMTP_ENABLED
               valueFrom:
                 configMapKeyRef:

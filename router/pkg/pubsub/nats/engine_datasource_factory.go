@@ -76,7 +76,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 }
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.SubscriptionDataSource, error) {
-	uniqueRequestIdFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	triggerHashInputFn := func(input []byte, xxh *xxhash.Digest) error {
 		val, _, _, err := jsonparser.Get(input, "subjects")
 		if err != nil {
 			return err
@@ -102,7 +102,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 
 	return datasource.NewPubSubSubscriptionDataSource[*SubscriptionEventConfiguration](
 		c.NatsAdapter,
-		uniqueRequestIdFn, c.logger, createEventFn), nil
+		triggerHashInputFn, c.logger, createEventFn), nil
 }
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
@@ -128,6 +128,9 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, 
 func (c *EngineDataSourceFactory) TransformEventData(extractFn datasource.ArgumentTemplateCallback) error {
 	switch c.eventType {
 	case EventTypePublish, EventTypeRequest:
+		if len(c.subjects) != 1 {
+			return fmt.Errorf("publish and request event definition should define one subject but has %d", len(c.subjects))
+		}
 		extractedSubject, err := extractFn(c.subjects[0])
 		if err != nil {
 			return fmt.Errorf("unable to parse subject with id %s", c.subjects[0])

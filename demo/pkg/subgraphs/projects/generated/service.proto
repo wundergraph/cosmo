@@ -38,6 +38,7 @@ service ProjectsService {
   rpc QueryTasks(QueryTasksRequest) returns (QueryTasksResponse) {}
   rpc QueryTasksByPriority(QueryTasksByPriorityRequest) returns (QueryTasksByPriorityResponse) {}
   rpc RequireEmployeeDeepWorkItemInfoById(RequireEmployeeDeepWorkItemInfoByIdRequest) returns (RequireEmployeeDeepWorkItemInfoByIdResponse) {}
+  rpc RequireEmployeeFilteredProjectSummaryById(RequireEmployeeFilteredProjectSummaryByIdRequest) returns (RequireEmployeeFilteredProjectSummaryByIdResponse) {}
   rpc RequireEmployeeReviewReportById(RequireEmployeeReviewReportByIdRequest) returns (RequireEmployeeReviewReportByIdResponse) {}
   rpc RequireEmployeeTaggedProjectSummaryById(RequireEmployeeTaggedProjectSummaryByIdRequest) returns (RequireEmployeeTaggedProjectSummaryByIdResponse) {}
   rpc RequireEmployeeWorkItemHandlerInfoById(RequireEmployeeWorkItemHandlerInfoByIdRequest) returns (RequireEmployeeWorkItemHandlerInfoByIdResponse) {}
@@ -844,6 +845,35 @@ message RequireEmployeeTaggedProjectSummaryByIdResult {
 }
 
 message RequireEmployeeTaggedProjectSummaryByIdFields {
+  string expertise = 1;
+}
+
+message RequireEmployeeFilteredProjectSummaryByIdRequest {
+  // RequireEmployeeFilteredProjectSummaryByIdContext provides the context for the required fields method RequireEmployeeFilteredProjectSummaryById.
+  repeated RequireEmployeeFilteredProjectSummaryByIdContext context = 1;
+  // RequireEmployeeFilteredProjectSummaryByIdArgs provides the field arguments for the required field with method RequireEmployeeFilteredProjectSummaryById.
+  RequireEmployeeFilteredProjectSummaryByIdArgs field_args = 2;
+}
+
+message RequireEmployeeFilteredProjectSummaryByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeFilteredProjectSummaryByIdFields fields = 2;
+}
+
+message RequireEmployeeFilteredProjectSummaryByIdArgs {
+  string tag = 1;
+}
+
+message RequireEmployeeFilteredProjectSummaryByIdResponse {
+  // RequireEmployeeFilteredProjectSummaryByIdResult provides the result for the required fields method RequireEmployeeFilteredProjectSummaryById.
+  repeated RequireEmployeeFilteredProjectSummaryByIdResult result = 1;
+}
+
+message RequireEmployeeFilteredProjectSummaryByIdResult {
+  string filtered_project_summary = 1;
+}
+
+message RequireEmployeeFilteredProjectSummaryByIdFields {
   string expertise = 1;
 }
 

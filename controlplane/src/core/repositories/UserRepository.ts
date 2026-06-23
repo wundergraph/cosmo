@@ -8,6 +8,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import Keycloak from '../services/Keycloak.js';
 import OidcProvider from '../services/OidcProvider.js';
 import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
+import { traced } from '../tracing.js';
 import { BillingRepository } from './BillingRepository.js';
 import { OidcRepository } from './OidcRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
@@ -15,6 +16,7 @@ import { OrganizationRepository } from './OrganizationRepository.js';
 /**
  * Repository for user related operations.
  */
+@traced
 export class UserRepository {
   constructor(
     private logger: FastifyBaseLogger,
@@ -81,8 +83,8 @@ export class UserRepository {
     // get all providers
     const oidcProviders: { alias: string; orgSlug: string }[] = [];
     for (const org of orgMemberships.soloAdminSoloMemberOrgs) {
-      const provider = await oidcRepo.getOidcProvider({ organizationId: org.id });
-      if (provider) {
+      const providers = await oidcRepo.listOidcProvidersByOrganizationId({ organizationId: org.id });
+      for (const provider of providers) {
         oidcProviders.push({ ...provider, orgSlug: org.slug });
       }
     }

@@ -2,18 +2,13 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { SQL, and, count, desc, eq, gt, lt, not } from 'drizzle-orm';
 import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
-import {
-  graphCompositions,
-  graphCompositionSubgraphs,
-  schemaVersion,
-  subgraphs,
-  targets,
-  users,
-} from '../../db/schema.js';
+import { graphCompositions, graphCompositionSubgraphs, schemaVersion, subgraphs, users } from '../../db/schema.js';
 import { DateRange, GraphCompositionDTO } from '../../types/index.js';
 import { CompositionSubgraphRecord } from '../composition/composer.js';
+import { traced } from '../tracing.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
+@traced
 export class GraphCompositionRepository {
   constructor(
     private logger: FastifyBaseLogger,
@@ -54,7 +49,6 @@ export class GraphCompositionRepository {
       }
 
       const subgraphSchemaVersionIds = composedSubgraphs.map((subgraph) => subgraph.schemaVersionId);
-
       const previousComposition = (
         await tx
           .select({
@@ -232,6 +226,7 @@ export class GraphCompositionRepository {
     return {
       id: composition.id,
       schemaVersionId: composition.schemaVersionId,
+      targetId: composition.targetId,
       createdAt: composition.createdAt.toISOString(),
       isComposable: composition.isComposable || false,
       compositionErrors: composition.compositionErrors || undefined,
@@ -292,6 +287,7 @@ export class GraphCompositionRepository {
     return {
       id: composition.id,
       schemaVersionId: composition.schemaVersionId,
+      targetId: composition.targetId,
       createdAt: composition.createdAt.toISOString(),
       isComposable: composition.isComposable || false,
       compositionErrors: composition.compositionErrors || undefined,

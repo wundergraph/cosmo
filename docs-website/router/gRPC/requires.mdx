@@ -143,14 +143,92 @@ continue
   </Step>
 </Steps>
 
+## Fields with Arguments
+
+A requiring field can declare arguments. The router passes them as the `field_args` message on the request to the
+gRPC subgraph.
+
+### Schema
+
+```graphql
+type Storage @key(fields: "id") {
+  id: ID!
+  tags: [String!]! @external
+  filteredTagSummary(prefix: String!): String! @requires(fields: "tags")
+}
+```
+
+### Generated Protobuf
+
+```protobuf
+message RequireStorageFilteredTagSummaryByIdRequest {
+  repeated RequireStorageFilteredTagSummaryByIdContext context = 1;
+  // field_args carries the GraphQL field arguments.
+  RequireStorageFilteredTagSummaryByIdArgs field_args = 2;
+}
+
+message RequireStorageFilteredTagSummaryByIdContext {
+  LookupStorageByIdRequestKey key = 1;
+  RequireStorageFilteredTagSummaryByIdFields fields = 2;
+}
+
+message RequireStorageFilteredTagSummaryByIdArgs {
+  string prefix = 1;
+}
+
+message RequireStorageFilteredTagSummaryByIdFields {
+  repeated string tags = 1;
+}
+```
+
+`field_args` sits at the request level, not inside `context`. All entities in the batch receive the same argument values.
+
+### Implementation on the subgraph
+
+You can access field arguments via the request's `GetFieldArgs()` method.
+
+```go
+func (s *StorageService) RequireStorageFilteredTagSummaryById(
+  _ context.Context,
+  req *storagev1.RequireStorageFilteredTagSummaryByIdRequest,
+) (*storagev1.RequireStorageFilteredTagSummaryByIdResponse, error) {
+  prefix := req.GetFieldArgs().GetPrefix()
+
+  results := make(
+    []*storagev1.RequireStorageFilteredTagSummaryByIdResult,
+    0,
+    len(req.GetContext()),
+  )
+
+  for _, ctx := range req.GetContext() {
+    var matching []string
+    for _, tag := range ctx.GetFields().GetTags() {
+      if strings.HasPrefix(tag, prefix) {
+        matching = append(matching, tag)
+      }
+    }
+    results = append(
+      results,
+      &storagev1.RequireStorageFilteredTagSummaryByIdResult{
+        FilteredTagSummary: strings.Join(matching, ", "),
+      },
+    )
+  }
+
+  return &storagev1.RequireStorageFilteredTagSummaryByIdResponse{
+    Result: results,
+  }, nil
+}
+```
+
 ## Limitations
 
 <Warning>
-Two limitations currently apply to `@requires` in Cosmo Connect. Both are actively being worked on and will be lifted in a future release.
+Two limitations currently apply to `@requires` in Cosmo Connect.
 
 **Abstract types** — `@requires` on fields of interface or union types is not yet supported.
 
-**Field arguments** — A field cannot currently be both a requiring field (`@requires`) and a field resolver (`@connect__fieldResolver`) at the same time. Support for requiring fields with arguments is planned.
+**Combined `@requires` and `@connect__fieldResolver`** — A field cannot be both a requiring field (`@requires`) and a field resolver (`@connect__fieldResolver`) at the same time.
 </Warning>
 
 ## See Also

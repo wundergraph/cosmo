@@ -20,6 +20,7 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 - ✓ Federation entity lookups with a single key
 - ✓ Federation entity lookups with multiple keys
 - ✓ Federation entity lookups with compound keys
+- ✓ Federation entity lookups on interface objects
 - ✓ Federation @requires directive (entity field dependencies)
 
 #### Data Types
@@ -142,9 +143,83 @@ message LookupProductByIdResponse {
 }
 ```
 
+### Interface Object Lookups
+
+In addition to object types, interface types can also define `@key` directives, making them interface objects. When an interface has `@key`, a lookup method is generated for the interface itself, in addition to any lookups generated for the implementing types. The interface's proto message uses `oneof` (as with all interfaces), so the lookup response returns the interface wrapper which contains the concrete type.
+
+Both the interface and its implementing types can independently declare `@key` directives with different key fields:
+
+```graphql
+interface Account @key(fields: "id") {
+  id: ID!
+  email: String!
+}
+
+type PersonalAccount implements Account @key(fields: "id") @key(fields: "email") {
+  id: ID!
+  email: String!
+  name: String!
+}
+
+type BusinessAccount implements Account @key(fields: "id") {
+  id: ID!
+  email: String!
+  taxId: String!
+}
+```
+
+Maps to:
+
+```protobuf
+// Interface entity lookup
+rpc LookupAccountById(LookupAccountByIdRequest) returns (LookupAccountByIdResponse) {}
+
+// Implementing type lookups (each type has its own keys)
+rpc LookupPersonalAccountById(LookupPersonalAccountByIdRequest) returns (LookupPersonalAccountByIdResponse) {}
+rpc LookupPersonalAccountByEmail(LookupPersonalAccountByEmailRequest) returns (LookupPersonalAccountByEmailResponse) {}
+rpc LookupBusinessAccountById(LookupBusinessAccountByIdRequest) returns (LookupBusinessAccountByIdResponse) {}
+
+message LookupAccountByIdRequest {
+  repeated LookupAccountByIdRequestKey keys = 1;
+}
+
+message LookupAccountByIdRequestKey {
+  string id = 1;
+}
+
+message LookupAccountByIdResponse {
+  repeated Account result = 1;
+}
+
+message Account {
+  oneof instance {
+    PersonalAccount personal_account = 1;
+    BusinessAccount business_account = 2;
+  }
+}
+
+message PersonalAccount {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+}
+
+message BusinessAccount {
+  string id = 1;
+  string email = 2;
+  string tax_id = 3;
+}
+```
+
+**Key Points**:
+
+- The interface entity lookup returns the interface message (which contains `oneof instance`)
+- Implementing types generate their own independent lookup methods based on their own `@key` directives
+- `@requires` is **not** supported on interface objects — only on object types with `@key`
+
 ### Required Fields (@requires)
 
-The `@requires` directive declares that a field depends on external fields from other subgraphs to be resolved. It is always defined on an entity (a type with `@key`). For each field with `@requires`, a dedicated RPC method is generated that receives the entity key and the required external fields, and returns the computed field value.
+The `@requires` directive declares that a field depends on external fields from other subgraphs to be resolved. It is only supported on object types with `@key` (interfaces are excluded, even when declared as interface objects). For each field with `@requires`, a dedicated RPC method is generated that receives the entity key and the required external fields, and returns the computed field value.
 
 This directive is part of Apollo Federation and enables a service to compute fields that depend on data owned by other services, without those services needing to know about the computed field.
 
@@ -723,7 +798,7 @@ message ResolveUserCommentsResult {
 
 ### Interfaces
 
-GraphQL interfaces are mapped to Protocol Buffer messages with a `oneof` field containing all implementing types:
+GraphQL interfaces are mapped to Protocol Buffer messages with a `oneof` field containing all implementing types. Interfaces can also define `@key` directives to become interface objects — see [Interface Object Lookups](#interface-object-lookups) for details.
 
 ```graphql
 interface Node {

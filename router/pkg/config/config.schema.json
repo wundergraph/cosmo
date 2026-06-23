@@ -399,8 +399,76 @@
               }
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "manifest": {
+              "type": "object",
+              "description": "The configuration for loading the execution config from a manifest directory on the local file system. The manifest describes the base graph and any feature flag execution configs as separate files in a directory.",
+              "additionalProperties": false,
+              "required": ["path"],
+              "dependentSchemas": {
+                "watch_interval": {
+                  "properties": {
+                    "watch": {
+                      "const": true
+                    }
+                  }
+                }
+              },
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "format": "directory-path",
+                  "description": "The path to the manifest directory. The directory contains the manifest file and the individual execution config files referenced by it."
+                },
+                "skip_missing_feature_flags": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Skip feature flags listed in the manifest whose execution config file cannot be loaded, instead of aborting the load. Use this when occasional missing feature flag files should not prevent the router from loading the rest of the manifest."
+                },
+                "ignored_feature_flags": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Feature flag names to skip entirely when loading the manifest. Listed flags are not loaded even when referenced by the manifest."
+                },
+                "watch": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the watch mode. The watch mode is used to watch the manifest directory for changes. If a file changes, the router will reload the execution config without downtime."
+                },
+                "watch_interval": {
+                  "type": "string",
+                  "description": "The interval at which the manifest directory is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                  "default": "1s",
+                  "duration": {
+                    "minimum": "100ms"
+                  }
+                }
+              }
+            }
+          }
         }
       ]
+    },
+    "split_config_poller": {
+      "type": "object",
+      "description": "Behavior overrides for the split-config polling strategy, which assembles the final router execution config by fetching the base graph and each feature flag config as separate files from the CDN. Only applied when the router is enrolled in split-config loading.",
+      "additionalProperties": false,
+      "properties": {
+        "skip_missing_feature_flags": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip feature flags that cannot be fetched instead of aborting the poll cycle. Use this when occasional feature flag fetch failures should not stop the router from picking up changes to other graphs."
+        },
+        "ignored_feature_flags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Feature flag names to skip entirely during config polling. Listed flags are not fetched even when present in the mapper."
+        }
+      }
     },
     "graphql_metrics": {
       "type": "object",
@@ -420,7 +488,7 @@
     "dev_mode": {
       "type": "boolean",
       "default": false,
-      "description": "Enable the development mode. The development mode is used to enable the development features like ART (Advanced Request Tracing) and pretty logs."
+      "description": "Enable the development mode. Development mode enables developer-focused behavior (such as pretty logs) and allows ART request options without request-token authentication."
     },
     "tls": {
       "type": "object",
@@ -540,6 +608,88 @@
                     "description": "Skip verification of this subgraph's server certificate. Only use for development or testing."
                   }
                 },
+                "dependencies": {
+                  "cert_file": ["key_file"],
+                  "key_file": ["cert_file"]
+                }
+              }
+            }
+          }
+        },
+        "client_grpc": {
+          "type": "object",
+          "description": "The TLS configuration for outbound gRPC connections from the router to gRPC subgraphs. Enables TLS/mTLS by presenting a client certificate when connecting to gRPC subgraphs.",
+          "additionalProperties": false,
+          "properties": {
+            "all": {
+              "type": "object",
+              "description": "TLS configuration applied to all gRPC subgraph connections.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable TLS for all gRPC subgraph connections."
+                },
+                "cert_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client certificate chain file. Used to authenticate the router to gRPC subgraphs. May include intermediate certificates."
+                },
+                "key_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client private key file."
+                },
+                "ca_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the CA certificate file. Used to verify gRPC subgraph server certificates. If not set, the system's root CAs are used."
+                },
+                "insecure_skip_ca_verification": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Skip verification of the gRPC subgraph server certificate. Only use for development or testing."
+                }
+              },
+              "required": ["enabled"],
+              "dependencies": {
+                "cert_file": ["key_file"],
+                "key_file": ["cert_file"]
+              }
+            },
+            "subgraphs": {
+              "type": "object",
+              "description": "Per-subgraph gRPC TLS configuration overrides. Each key is a subgraph name. Fully overrides the 'all' config for that subgraph.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Enable TLS for this gRPC subgraph connection."
+                  },
+                  "cert_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client certificate chain file for this gRPC subgraph. May include intermediate certificates."
+                  },
+                  "key_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client private key file for this gRPC subgraph."
+                  },
+                  "ca_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the CA certificate file for verifying this gRPC subgraph's server certificate."
+                  },
+                  "insecure_skip_ca_verification": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip verification of this gRPC subgraph's server certificate. Only use for development or testing."
+                  }
+                },
+                "required": ["enabled"],
                 "dependencies": {
                   "cert_file": ["key_file"],
                   "key_file": ["cert_file"]
@@ -1362,6 +1512,12 @@
                   "not": {
                     "required": ["exclude_metrics", "include_metrics"]
                   }
+                },
+                "exemplar_filter": {
+                  "type": "string",
+                  "default": "always_off",
+                  "enum": ["trace_based", "always_off", "always_on"],
+                  "description": "Controls which metric measurements are eligible to record exemplars. 'always_off' records no exemplars (the default). 'trace_based' only records exemplars for measurements taken within a sampled trace context. 'always_on' records exemplars for all measurements. See https://opentelemetry.io/docs/specs/otel/metrics/sdk/#exemplarfilter."
                 }
               }
             },
@@ -1502,6 +1658,12 @@
                       }
                     }
                   }
+                },
+                "exemplar_filter": {
+                  "type": "string",
+                  "default": "always_off",
+                  "enum": ["trace_based", "always_off", "always_on"],
+                  "description": "Controls which metric measurements are eligible to record exemplars. 'always_off' records no exemplars (the default). 'trace_based' only records exemplars for measurements taken within a sampled trace context. 'always_on' records exemplars for all measurements. See https://opentelemetry.io/docs/specs/otel/metrics/sdk/#exemplarfilter."
                 }
               }
             }
@@ -1843,7 +2005,7 @@
                     "$ref": "#/$defs/traffic_shaping_header_response_rule"
                   },
                   {
-                    "$ref": "#/$defs/set_header_rule"
+                    "$ref": "#/$defs/set_response_header_rule"
                   }
                 ]
               }
@@ -2047,7 +2209,7 @@
                       "max_wait": {
                         "type": "string",
                         "description": "Maximum time to wait for a refresh permit before giving up.",
-                        "default": "10s",
+                        "default": "2m",
                         "duration": {
                           "minimum": "0s"
                         }
@@ -2055,7 +2217,7 @@
                       "interval": {
                         "type": "string",
                         "description": "Token refill interval for the rate limiter.",
-                        "default": "1m",
+                        "default": "30s",
                         "duration": {
                           "minimum": "1s"
                         }
@@ -2107,6 +2269,12 @@
                   }
                 ]
               }
+            },
+            "scope_claim": {
+              "type": "string",
+              "description": "The JWT claim to use when reading scopes for authorization. Only top level claims are supported. The default value is 'scope'.",
+              "default": "scope",
+              "minLength": 1
             },
             "header_name": {
               "type": "string",
@@ -2355,10 +2523,8 @@
               "format": "hostname-port"
             },
             "base_url": {
-              "deprecated": true,
-              "deprecationMessage": "The base_url is deprecated. This property was related to the SSE protocol that is not supported anymore.",
               "type": "string",
-              "description": "The base URL of the MCP server. This is the URL advertised to the LLM clients when SSE is used as primary transport. By default, the base URL is relative to the URL that the router is running on. The URL is specified as a string with the format 'scheme://host:port'.",
+              "description": "The base URL of the MCP server used for OAuth 2.0 discovery (RFC 9728). This URL is advertised in the Protected Resource Metadata endpoint and used to construct the resource metadata URL. Required when OAuth is enabled. The URL is specified as a string with the format 'scheme://host:port'.",
               "format": "http-url"
             }
           }
@@ -2416,7 +2582,243 @@
           "type": "boolean",
           "default": false,
           "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
+        },
+        "resource_documentation": {
+          "type": "string",
+          "description": "A URL to a human-readable page describing this MCP resource, its access policies, and how to get started. Included in the RFC 9728 Protected Resource Metadata response if set.",
+          "format": "http-url"
+        },
+        "oauth": {
+          "type": "object",
+          "description": "OAuth/JWKS authentication configuration for the MCP server. When enabled, MCP tool calls require valid JWT authentication and the server implements OAuth 2.0 discovery mechanisms (RFC 8414, RFC 9728).",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable OAuth/JWKS authentication for the MCP server. When true, all MCP tool calls must include a valid JWT token."
+            },
+            "authorization_server_url": {
+              "type": "string",
+              "description": "The base URL of the OAuth 2.0 authorization server. This URL is advertised to MCP clients via the Protected Resource Metadata endpoint (RFC 9728) to enable automatic discovery of OAuth endpoints. Clients will append '/.well-known/oauth-authorization-server' to this URL to discover token, authorization, and registration endpoints. Example: 'https://auth.example.com'",
+              "format": "http-url"
+            },
+            "scopes": {
+              "type": "object",
+              "description": "Configures which OAuth scopes are required for different MCP operations. All configured scopes are automatically unioned into 'scopes_supported' for OAuth metadata discovery.",
+              "additionalProperties": false,
+              "properties": {
+                "initialize": {
+                  "type": "array",
+                  "description": "Scopes required for ALL HTTP requests (checked before JSON-RPC parsing). This is the baseline scope needed to establish an MCP connection.",
+                  "items": { "type": "string" }
+                },
+                "tools_list": {
+                  "type": "array",
+                  "description": "Scopes required for the tools/list MCP method.",
+                  "items": { "type": "string" }
+                },
+                "tools_call": {
+                  "type": "array",
+                  "description": "Scopes required for the tools/call MCP method (any tool).",
+                  "items": { "type": "string" }
+                },
+                "execute_graphql": {
+                  "type": "array",
+                  "description": "Scopes required to call the execute_graphql built-in tool. Additive to tools_call scopes. Only relevant when enable_arbitrary_operations is true.",
+                  "items": { "type": "string" }
+                },
+                "get_operation_info": {
+                  "type": "array",
+                  "description": "Scopes required to call the get_operation_info built-in tool. Additive to tools_call scopes.",
+                  "items": { "type": "string" }
+                },
+                "get_schema": {
+                  "type": "array",
+                  "description": "Scopes required to call the get_schema built-in tool. Additive to tools_call scopes. Only relevant when expose_schema is true.",
+                  "items": { "type": "string" }
+                }
+              }
+            },
+            "scope_challenge_include_token_scopes": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, includes the token's existing scopes in the scope parameter of 403 insufficient_scope responses (workaround for MCP client SDKs that replace rather than accumulate scopes). When false (default), only the scopes required for the operation are returned (RFC 6750 strict)."
+            },
+            "jwks": {
+              "type": "array",
+              "description": "List of JWKS (JSON Web Key Set) configurations for JWT token verification. Multiple JWKS providers can be configured for different authentication sources.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "The URL of the JWKs. The JWKs are used to verify the JWT (JSON Web Token). The URL is specified as a string with the format 'scheme://host:port'.",
+                    "format": "http-url"
+                  },
+                  "audiences": {
+                    "type": "array",
+                    "description": "The audiences of the JWKs. The audiences are used to verify the JWT (JSON Web Token). The audiences are specified as a list of strings.",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "secret": {
+                    "type": "string",
+                    "description": "The secret of the JWKs"
+                  },
+                  "symmetric_algorithm": {
+                    "type": "string",
+                    "description": "The symmetric algorithm used",
+                    "enum": ["HS256", "HS384", "HS512"]
+                  },
+                  "header_key_id": {
+                    "type": "string",
+                    "description": "The KID header of the JWK token created using the secret"
+                  },
+                  "allowed_use": {
+                    "type": "array",
+                    "description": "The allowed value of the use parameter for the JWKs. If not specified, only keys with use set to 'sig' will be used. If your server provides no use, you can add an empty value to allow those keys.",
+                    "default": ["sig"],
+                    "items": {
+                      "type": "string",
+                      "enum": ["sig", "enc", ""]
+                    }
+                  },
+                  "algorithms": {
+                    "type": "array",
+                    "description": "The allowed algorithms for the keys that are retrieved from the JWKs. An empty list means that all algorithms are allowed.",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "HS256",
+                        "HS384",
+                        "HS512",
+                        "RS256",
+                        "RS384",
+                        "RS512",
+                        "ES256",
+                        "ES384",
+                        "ES512",
+                        "PS256",
+                        "PS384",
+                        "PS512",
+                        "EdDSA"
+                      ]
+                    }
+                  },
+                  "refresh_interval": {
+                    "type": "string",
+                    "duration": {
+                      "minimum": "5s"
+                    },
+                    "description": "The interval at which the JWKs are refreshed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                    "default": "1m"
+                  },
+                  "refresh_unknown_kid": {
+                    "type": "object",
+                    "description": "Controls rate-limited refresh behavior when a JWT KID is unknown.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Enable refresh attempts on unknown KID.",
+                        "default": false
+                      },
+                      "max_wait": {
+                        "type": "string",
+                        "description": "Maximum time to wait for a refresh permit before giving up.",
+                        "default": "2m",
+                        "duration": {
+                          "minimum": "0s"
+                        }
+                      },
+                      "interval": {
+                        "type": "string",
+                        "description": "Token refill interval for the rate limiter.",
+                        "default": "30s",
+                        "duration": {
+                          "minimum": "1s"
+                        }
+                      },
+                      "burst": {
+                        "type": "integer",
+                        "description": "Burst size for the rate limiter.",
+                        "default": 2,
+                        "minimum": 1
+                      }
+                    }
+                  }
+                },
+                "oneOf": [
+                  {
+                    "required": ["url"],
+                    "not": {
+                      "anyOf": [
+                        {
+                          "required": ["secret"]
+                        },
+                        {
+                          "required": ["symmetric_algorithm"]
+                        },
+                        {
+                          "required": ["header_key_id"]
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "required": ["secret", "symmetric_algorithm", "header_key_id"],
+                    "not": {
+                      "anyOf": [
+                        {
+                          "required": ["url"]
+                        },
+                        {
+                          "required": ["algorithms"]
+                        },
+                        {
+                          "required": ["refresh_interval"]
+                        },
+                        {
+                          "required": ["refresh_unknown_kid"]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
         }
+      },
+      "if": {
+        "properties": {
+          "oauth": {
+            "properties": {
+              "enabled": { "const": true }
+            },
+            "required": ["enabled"]
+          }
+        },
+        "required": ["oauth"]
+      },
+      "then": {
+        "properties": {
+          "server": {
+            "required": ["base_url"]
+          },
+          "oauth": {
+            "properties": {
+              "jwks": {
+                "minItems": 1
+              }
+            },
+            "required": ["jwks"]
+          }
+        },
+        "required": ["server", "oauth"]
       }
     },
     "connect_rpc": {
@@ -2549,6 +2951,37 @@
                         }
                       }
                     ]
+                  },
+                  "tls": {
+                    "type": "object",
+                    "description": "TLS configuration for the NATS provider.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "insecure_skip_ca_verification": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Skip server certificate verification. Not recommended for production use."
+                      },
+                      "ca_file": {
+                        "type": "string",
+                        "description": "Path to a custom CA certificate file (PEM) used to verify the server certificate.",
+                        "format": "file-path"
+                      },
+                      "cert_file": {
+                        "type": "string",
+                        "description": "Path to the client certificate file (PEM) for mTLS. If set 'key_file' has to be set as well.",
+                        "format": "file-path"
+                      },
+                      "key_file": {
+                        "type": "string",
+                        "description": "Path to the client private key file (PEM) for mTLS. If set 'cert_file' has to be set as well.",
+                        "format": "file-path"
+                      }
+                    },
+                    "dependencies": {
+                      "cert_file": ["key_file"],
+                      "key_file": ["cert_file"]
+                    }
                   },
                   "experiment_delete_durable_consumers_on_shutdown": {
                     "type": "boolean",
@@ -2770,6 +3203,11 @@
           "description": "The number of cache warmup items to process per second. Higher numbers decrease the time to warm up the cache but increase the load on the system.",
           "default": 50
         },
+        "item_delay": {
+          "type": "string",
+          "description": "A fixed delay applied after each cache warmup item is processed, per worker. Use to further smooth load during warmup. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. Defaults to 0s (no delay).",
+          "default": "0s"
+        },
         "timeout": {
           "type": "string",
           "description": "The timeout for warming up the cache. This can be used to limit the amount of time cache warming will block deploying a new config. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
@@ -2936,6 +3374,12 @@
           "description": "The configuration for complexity limits for queries",
           "additionalProperties": false,
           "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["measure", "enforce"],
+              "default": "enforce",
+              "description": "Controls complexity limits behavior: 'measure' calculates complexity without rejecting operations; 'enforce' rejects operations exceeding limits."
+            },
             "depth": {
               "type": "object",
               "description": "The configuration for adding a max depth limit for query (how many nested levels you can have in a query). This limit prevents infinite querying, and also limits the size of the data returned. If the limit is 0, this limit isn't applied.",
@@ -3087,6 +3531,11 @@
             "expose_headers": {
               "type": "boolean",
               "description": "Enable costs response headers for estimated and actuals operation costs."
+            },
+            "ignore_implementing_type_weights": {
+              "type": "boolean",
+              "default": false,
+              "description": "When enabled, ignores @cost weights from implementing types on abstract (interface/union) fields that have no weight of their own. Emulates Apollo's cost behavior."
             }
           }
         },
@@ -3256,7 +3705,12 @@
         "enable_request_tracing": {
           "type": "boolean",
           "default": true,
-          "description": "Enable the advanced request tracing. See https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art for more information."
+          "description": "Capability gate for Advanced Request Tracing (ART). When false, ART is disabled regardless of headers, query parameters, or authentication."
+        },
+        "force_unauthenticated_request_tracing": {
+          "type": "boolean",
+          "default": false,
+          "description": "UNSAFE — DO NOT ENABLE IN PRODUCTION. Bypasses the authorization gate for Advanced Request Tracing (ART) when dev_mode is false. If false (default), ART request options require a valid WG request token. If true, ART request options are allowed without request-token authentication; this exposes internal subgraph URLs, request and response payloads, propagated headers (which may include auth tokens or API keys), and full query plans to any client that can reach the router. See https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art."
         },
         "enable_execution_plan_cache_response_header": {
           "type": "boolean",
@@ -3274,28 +3728,34 @@
           "description": "Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
           "default": true
         },
-        "websocket_client_poll_timeout": {
-          "type": "string",
-          "format": "go-duration",
-          "default": "1s",
-          "description": "The timeout for the poll loop of the WebSocket client implementation. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-        },
-        "websocket_client_conn_buffer_size": {
-          "type": "integer",
-          "default": 128,
-          "description": "The buffer size for the poll buffer of the WebSocket client implementation. The buffer size determines how many connections can be handled in one loop."
-        },
-        "websocket_client_read_timeout": {
-          "type": "string",
-          "format": "go-duration",
-          "default": "5s",
-          "description": "Defines the timeout for the websocket read of the WebSocket client implementation. This is used to set the read deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-        },
         "websocket_client_write_timeout": {
           "type": "string",
           "format": "go-duration",
           "default": "10s",
-          "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "description": "The write timeout for WebSocket operations when the router connects to subgraphs (subscribe, unsubscribe, ping, pong). The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "websocket_server_read_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The read timeout for the server-side WebSocket handler. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "5s"
+        },
+        "websocket_server_write_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The write timeout for the server-side WebSocket handler. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "10s"
+        },
+        "websocket_server_poll_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The poll timeout for the server-side WebSocket net poller. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "1s"
+        },
+        "websocket_server_conn_buffer_size": {
+          "type": "integer",
+          "default": 128,
+          "description": "The buffer size for the server-side WebSocket net poller. Determines how many connections can be handled in one poll loop."
         },
         "websocket_client_ping_interval": {
           "type": "string",
@@ -3315,13 +3775,22 @@
             "minimum": "5s"
           }
         },
-        "websocket_client_frame_timeout": {
+        "websocket_client_ack_timeout": {
           "type": "string",
           "format": "go-duration",
-          "description": "The Websocket client frame timeout to the subgraph. Defines how long the router will wait for a frame response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
-          "default": "100ms",
+          "description": "The maximum time to wait for a connection_ack message after sending connection_init to a subgraph WebSocket. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "30s",
           "duration": {
-            "minimum": "10ms"
+            "minimum": "1s"
+          }
+        },
+        "websocket_client_read_limit": {
+          "type": "string",
+          "format": "bytes-string",
+          "description": "The maximum size of an incoming WebSocket message from a subgraph. The size is specified as a string with a number and a unit, e.g. 1KB, 1MB, 10MB. The supported units are 'KB', 'MB', 'GB'.",
+          "default": "1MB",
+          "bytes": {
+            "minimum": "1KB"
           }
         },
         "execution_plan_cache_size": {
@@ -3498,6 +3967,31 @@
         }
       }
     },
+    "subgraph_extension_propagation": {
+      "type": "object",
+      "description": "Configuration for forwarding the response 'extensions' object from subgraphs to the client. Allows controlling which extension fields are propagated and how conflicts between subgraphs are resolved.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable forwarding of subgraph response extensions to the client."
+        },
+        "allowed_extension_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The extension fields that are allowed to be propagated from subgraphs to the client. If left empty, all extension fields will be forwarded."
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": ["first_write", "last_write"],
+          "default": "first_write",
+          "description": "The conflict resolution algorithm when multiple subgraphs return the same extension field. 'first_write' propagates the first response that wrote the field; 'last_write' propagates the last."
+        }
+      }
+    },
     "apollo_compatibility_flags": {
       "type": "object",
       "description": "To enable full compatibility with Apollo Federation, Apollo Gateway and Apollo Router, you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo.",
@@ -3624,6 +4118,11 @@
               "type": "string",
               "default": "cosmo-registry.wundergraph.com",
               "description": "The URL of the plugin registry."
+            },
+            "insecure": {
+              "type": "boolean",
+              "default": false,
+              "description": "If true, the plugin registry is accessed over plaintext HTTP without authentication. Intended for local development against an unauthenticated registry; never enable in production."
             }
           }
         }
@@ -3715,6 +4214,138 @@
     }
   },
   "$defs": {
+    "jwks_configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "The URL of the JWKs. The JWKs are used to verify the JWT (JSON Web Token). The URL is specified as a string with the format 'scheme://host:port'.",
+          "format": "http-url"
+        },
+        "audiences": {
+          "type": "array",
+          "description": "The audiences of the JWKs. The audiences are used to verify the JWT (JSON Web Token). The audiences are specified as a list of strings.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "secret": {
+          "type": "string",
+          "description": "The secret of the JWKs"
+        },
+        "symmetric_algorithm": {
+          "type": "string",
+          "description": "The symmetric algorithm used",
+          "enum": ["HS256", "HS384", "HS512"]
+        },
+        "header_key_id": {
+          "type": "string",
+          "description": "The KID header of the JWK token created using the secret"
+        },
+        "algorithms": {
+          "type": "array",
+          "description": "The allowed algorithms for the keys that are retrieved from the JWKs. An empty list means that all algorithms are allowed.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "HS256",
+              "HS384",
+              "HS512",
+              "RS256",
+              "RS384",
+              "RS512",
+              "ES256",
+              "ES384",
+              "ES512",
+              "PS256",
+              "PS384",
+              "PS512",
+              "EdDSA"
+            ]
+          }
+        },
+        "refresh_interval": {
+          "type": "string",
+          "duration": {
+            "minimum": "5s"
+          },
+          "description": "The interval at which the JWKs are refreshed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "1m"
+        },
+        "refresh_unknown_kid": {
+          "type": "object",
+          "description": "Controls rate-limited refresh behavior when a JWT KID is unknown.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable refresh attempts on unknown KID.",
+              "default": false
+            },
+            "max_wait": {
+              "type": "string",
+              "description": "Maximum time to wait for a refresh permit before giving up.",
+              "default": "2m",
+              "duration": {
+                "minimum": "0s"
+              }
+            },
+            "interval": {
+              "type": "string",
+              "description": "Token refill interval for the rate limiter.",
+              "default": "30s",
+              "duration": {
+                "minimum": "1s"
+              }
+            },
+            "burst": {
+              "type": "integer",
+              "description": "Burst size for the rate limiter.",
+              "default": 2,
+              "minimum": 1
+            }
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["url"],
+          "not": {
+            "anyOf": [
+              {
+                "required": ["secret"]
+              },
+              {
+                "required": ["symmetric_algorithm"]
+              },
+              {
+                "required": ["header_key_id"]
+              }
+            ]
+          }
+        },
+        {
+          "required": ["secret", "symmetric_algorithm", "header_key_id"],
+          "not": {
+            "anyOf": [
+              {
+                "required": ["url"]
+              },
+              {
+                "required": ["algorithms"]
+              },
+              {
+                "required": ["refresh_interval"]
+              },
+              {
+                "required": ["refresh_unknown_kid"]
+              }
+            ]
+          }
+        }
+      ]
+    },
     "traffic_shaping_subgraph_request_rule": {
       "type": "object",
       "additionalProperties": false,
@@ -4008,6 +4639,82 @@
         "name": {
           "type": "string",
           "examples": ["X-API-Key"],
+          "description": "The name of the header to set."
+        },
+        "value": {
+          "type": "string",
+          "examples": ["My-Secret-Value"],
+          "description": "The value to set for the header. This can include environment variables."
+        },
+        "expression": {
+          "type": "string",
+          "description": "The template expression to evaluate. The expression must return a string value."
+        },
+        "value_from": {
+          "type": "object",
+          "description": "DEPRECATED: Use expression instead. The configuration for the value from. The value from is used to extract a value from a request context and propagate it to subgraphs. This is currently only valid in requests",
+          "additionalProperties": false,
+          "required": ["context_field"],
+          "properties": {
+            "context_field": {
+              "type": "string",
+              "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
+              "enum": ["operation_name"]
+            }
+          }
+        },
+        "from_file": {
+          "type": "object",
+          "description": "Source the header value from a file's contents. The file is loaded into memory and refreshed at refresh_interval, so request-time reads do not touch disk. Currently only valid in requests.",
+          "additionalProperties": false,
+          "required": ["path", "refresh_interval"],
+          "properties": {
+            "path": {
+              "type": "string",
+              "examples": ["/etc/secrets/api.key"],
+              "description": "Absolute path to the file whose contents become the header value. Trailing whitespace is trimmed."
+            },
+            "refresh_interval": {
+              "type": "string",
+              "format": "go-duration",
+              "duration": {
+                "minimum": "100ms"
+              },
+              "default": "1m",
+              "description": "Determines how often the file is checked for changes and re-read into memory. The minimum value is 100ms."
+            }
+          }
+        }
+      },
+      "required": ["op", "name"],
+      "oneOf": [
+        {
+          "required": ["value"]
+        },
+        {
+          "required": ["expression"]
+        },
+        {
+          "required": ["value_from"]
+        },
+        {
+          "required": ["from_file"]
+        }
+      ]
+    },
+    "set_response_header_rule": {
+      "type": "object",
+      "description": "The configuration for setting response headers. This is used to set specific headers in responses. Unlike the request variant, 'from_file' is not allowed here.",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string",
+          "const": "set",
+          "description": "The 'set' operation is used to set a specific header value."
+        },
+        "name": {
+          "type": "string",
+          "examples": ["X-Custom-Header"],
           "description": "The name of the header to set."
         },
         "value": {

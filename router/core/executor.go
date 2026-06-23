@@ -90,6 +90,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		PropagateFetchReasons:                  opts.RouterEngineConfig.Execution.EnableRequireFetchReasons,
 		ValidateRequiredExternalFields:         opts.RouterEngineConfig.Execution.ValidateRequiredExternalFields,
 		SetDeduplicationShardCountToGOMAXPROCS: true,
+		AllowCustomExtensionProperties:         opts.RouterEngineConfig.SubgraphExtensionPropagation.Enabled,
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
@@ -107,6 +108,17 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 
 	if opts.ApolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled {
 		options.ApolloRouterCompatibilitySubrequestHTTPError = true
+	}
+
+	if allowedFields := opts.RouterEngineConfig.SubgraphExtensionPropagation.AllowedExtensionFields; len(allowedFields) > 0 {
+		options.ResolvableOptions.AllowedSubgraphExtensions = make(map[string]struct{})
+		for _, field := range allowedFields {
+			options.ResolvableOptions.AllowedSubgraphExtensions[field] = struct{}{}
+		}
+	}
+
+	if algorithm := string(opts.RouterEngineConfig.SubgraphExtensionPropagation.Algorithm); algorithm != "" {
+		options.ResolvableOptions.ExtensionForwardingAlgorithm = resolve.MapExtensionForwardingAlgorithm(algorithm)
 	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
@@ -248,6 +260,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	if routerEngineCfg.CostControl != nil && routerEngineCfg.CostControl.Enabled {
 		planConfig.ComputeCosts = true
 		planConfig.StaticCostDefaultListSize = routerEngineCfg.CostControl.EstimatedListSize
+		planConfig.IgnoreImplementingTypeWeights = routerEngineCfg.CostControl.IgnoreImplementingTypeWeights
 	}
 
 	return planConfig, providers, nil

@@ -301,6 +301,7 @@ type Employee @key(fields: "id") {
 
   # Field requiring expertise from employees subgraph
   taggedProjectSummary: String! @requires(fields: "expertise")
+  filteredProjectSummary(tag: String!): String! @requires(fields: "expertise")
 
   # External abstract type fields for @requires testing
   primaryWorkItem: EmployeeWorkItem @external

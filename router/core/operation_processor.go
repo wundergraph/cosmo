@@ -24,6 +24,7 @@ import (
 	"github.com/tidwall/sjson"
 
 	fastjson "github.com/wundergraph/astjson"
+
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -1342,6 +1343,9 @@ func (o *OperationKit) ValidateQueryComplexity() (ok bool, cacheEntry Complexity
 
 	if o.cache != nil && o.cache.complexityCache != nil {
 		if cachedComplexity, found := o.cache.complexityCache.Get(o.parsedOperation.InternalID); found {
+			if limits.Mode == config.ComplexityLimitsModeMeasure {
+				return true, cachedComplexity, nil
+			}
 			return true, cachedComplexity, o.runComplexityComparisons(limits, cachedComplexity, o.parsedOperation.IsPersistedOperation)
 		}
 	}
@@ -1363,6 +1367,10 @@ func (o *OperationKit) ValidateQueryComplexity() (ok bool, cacheEntry Complexity
 
 	if o.cache != nil && o.cache.complexityCache != nil {
 		o.cache.complexityCache.Set(o.parsedOperation.InternalID, cacheResult, 1)
+	}
+
+	if limits.Mode == config.ComplexityLimitsModeMeasure {
+		return false, cacheResult, nil
 	}
 
 	return false, cacheResult, o.runComplexityComparisons(limits, cacheResult, o.parsedOperation.IsPersistedOperation)
@@ -1410,14 +1418,14 @@ func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
 	// Compute and cache estimated cost once after planning
 	if opCtx.preparedPlan != nil && opCtx.preparedPlan.preparedPlan != nil {
 		if costCalc := opCtx.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-
 			// Validate that variables/arguments are correct for the requirements in listSize
 			var sliceReport operationreport.Report
-			costCalc.ValidateSliceArguments(opCtx.planConfig, opCtx.variables, &sliceReport)
+			vs := opCtx.VariablesView()
+			costCalc.ValidateSliceArguments(vs, &sliceReport)
 			if sliceReport.HasErrors() {
 				return &reportError{report: &sliceReport}
 			}
-			opCtx.costEstimated = costCalc.EstimateCost(opCtx.planConfig, opCtx.variables)
+			opCtx.costEstimated = costCalc.EstimateCost(vs)
 			opCtx.costEstimatedSet = true
 		}
 	}
@@ -1462,7 +1470,8 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 				if value.Kind != ast.ValueKindVariable {
 					continue
 				}
-				variableName := o.kit.doc.VariableValueNameString(value.Ref)
+				// explicitly convert to string to not store unsafe reference in a map
+				variableName := string(o.kit.doc.VariableValueNameBytes(value.Ref))
 				variableNames[variableName] = struct{}{}
 			}
 		}

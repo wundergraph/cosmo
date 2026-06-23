@@ -5,6 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/url"
+	"time"
+
 	"github.com/wundergraph/cosmo/router-plugin/config"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -14,8 +17,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
-	"net/url"
-	"time"
 )
 
 type TracingOptions struct {
@@ -106,9 +107,9 @@ func initTracer(
 		opts = append(opts, sdktrace.WithSyncer(tracingConfig.MemoryExporter))
 	} else {
 		for _, exp := range tracingConfig.TracingConfig.Exporters {
-			// Default to OLTP HTTP
+			// Default to OTLP HTTP
 			if exp.Exporter == "" {
-				exp.Exporter = config.ExporterOLTPHTTP
+				exp.Exporter = config.ExporterOTLPHTTP
 			}
 
 			exporter, err := createExporter(exp)
@@ -164,7 +165,7 @@ func createExporter(exp config.Exporter) (sdktrace.SpanExporter, error) {
 	var exporter sdktrace.SpanExporter
 	// Just support OTLP and gRPC for now. Jaeger has native OTLP support.
 	switch exp.Exporter {
-	case config.ExporterOLTPHTTP:
+	case config.ExporterOTLPHTTP:
 		opts := []otlptracehttp.Option{
 			// Includes host and port
 			otlptracehttp.WithEndpoint(u.Host),
@@ -185,7 +186,7 @@ func createExporter(exp config.Exporter) (sdktrace.SpanExporter, error) {
 			context.Background(),
 			opts...,
 		)
-	case config.ExporterOLTPGRPC:
+	case config.ExporterOTLPGRPC:
 		opts := []otlptracegrpc.Option{
 			// Includes host and port
 			otlptracegrpc.WithEndpoint(u.Host),

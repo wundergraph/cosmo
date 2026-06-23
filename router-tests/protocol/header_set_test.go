@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -153,7 +155,7 @@ func TestHeaderSet(t *testing.T) {
 			})
 		})
 
-		t.Run("global set works", func(t *testing.T) {
+		t.Run("global set is internal only", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: global(customHeader, hobbyVal),
@@ -162,12 +164,12 @@ func TestHeaderSet(t *testing.T) {
 					Query: queryEmployeeWithHobby,
 				})
 				ch := strings.Join(res.Response.Header.Values(customHeader), ",")
-				require.Equal(t, hobbyVal, ch)
+				require.Equal(t, "", ch, "set response headers should not be forwarded to the client")
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
 
-		t.Run("subgraph set works", func(t *testing.T) {
+		t.Run("subgraph set is internal only", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: partial(customHeader, employeeVal),
@@ -176,8 +178,153 @@ func TestHeaderSet(t *testing.T) {
 					Query: queryEmployeeWithHobby,
 				})
 				ch := strings.Join(res.Response.Header.Values(customHeader), ",")
-				require.Equal(t, employeeVal, ch)
+				require.Equal(t, "", ch, "set response headers should not be forwarded to the client")
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+			})
+		})
+
+		t.Run("set followed by propagate forwards to client", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationSet,
+									Name:      customHeader,
+									Value:     "injected-value",
+								},
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     customHeader,
+									Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+								},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				ch := strings.Join(res.Response.Header.Values(customHeader), ",")
+				require.Equal(t, "injected-value", ch, "set + propagate should forward the header to the client")
+				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+			})
+		})
+
+		t.Run("set Cache-Control feeds into restrictive algorithm via All rules", func(t *testing.T) {
+			t.Parallel()
+			// The set rule in All.Response runs before the cache control
+			// algorithm (also in All.Response), injecting a Cache-Control
+			// value that the algorithm then processes as if the subgraph
+			// returned it.
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{
+					Enabled: true,
+					Value:   "max-age=300, public",
+				},
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationSet,
+									Name:      "Cache-Control",
+									Value:     "max-age=60, public",
+								},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				cc := res.Response.Header.Get("Cache-Control")
+				require.Equal(t, "max-age=60, public", cc, "set Cache-Control should feed into the restrictive algorithm")
+			})
+		})
+
+		t.Run("subgraph set Cache-Control feeds into restrictive algorithm", func(t *testing.T) {
+			t.Parallel()
+			// A subgraph-level set rule injects Cache-Control into the employees
+			// response. The cache control algorithm (which runs after all user
+			// rules) sees this value and uses it in the restrictive merge.
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{
+					Enabled: true,
+					Value:   "max-age=300, public",
+				},
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						Subgraphs: map[string]*config.GlobalHeaderRule{
+							"employees": {
+								Response: []*config.ResponseHeaderRule{
+									{
+										Operation: config.HeaderRuleOperationSet,
+										Name:      "Cache-Control",
+										Value:     "max-age=45, public",
+									},
+								},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				cc := res.Response.Header.Get("Cache-Control")
+				// The set rule injects max-age=45 on the employees subgraph.
+				// The hobbies subgraph has no Cache-Control, so it uses the
+				// default (max-age=300). The algorithm picks the most
+				// restrictive: max-age=45.
+				require.Equal(t, "max-age=45, public", cc, "subgraph-level set should feed into the cache control algorithm")
+			})
+		})
+
+		t.Run("set overwrites existing subgraph response header", func(t *testing.T) {
+			t.Parallel()
+			// The employees subgraph returns X-Custom-Header: original-value.
+			// A set rule in All.Response overwrites it before the propagate
+			// rule sees it, so the client receives the overwritten value.
+			testenv.Run(t, &testenv.Config{
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set(customHeader, "original-value")
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationSet,
+									Name:      customHeader,
+									Value:     "overwritten-value",
+								},
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     customHeader,
+									Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+								},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				ch := strings.Join(res.Response.Header.Values(customHeader), ",")
+				require.Equal(t, "overwritten-value", ch, "set should overwrite the subgraph's original header before propagate sees it")
 			})
 		})
 	})
@@ -418,6 +565,81 @@ func TestHeaderSetWithExpression(t *testing.T) {
 				Query: query,
 			})
 			assert.Equal(t, `{"data":{"headerValue":"test-client 1.0.0"}}`, res.Body)
+		})
+	})
+}
+
+func TestHeaderSetFromFile(t *testing.T) {
+	t.Parallel()
+
+	const customHeader = "X-Custom-Header"
+
+	writeHeaderFile := func(t *testing.T, content string) string {
+		t.Helper()
+		path := filepath.Join(t.TempDir(), "header-value.txt")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+		return path
+	}
+
+	getRule := func(name, path string) *config.RequestHeaderRule {
+		return &config.RequestHeaderRule{
+			Operation: config.HeaderRuleOperationSet,
+			Name:      name,
+			FromFile:  &config.FileHeaderSource{Path: path},
+		}
+	}
+
+	global := func(name, path string) []core.Option {
+		return []core.Option{
+			core.WithHeaderRules(config.HeaderRules{
+				All: &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
+						getRule(name, path),
+					},
+				},
+			}),
+		}
+	}
+
+	subgraph := func(subgraphName, name, path string) []core.Option {
+		return []core.Option{
+			core.WithHeaderRules(config.HeaderRules{
+				Subgraphs: map[string]*config.GlobalHeaderRule{
+					subgraphName: {
+						Request: []*config.RequestHeaderRule{
+							getRule(name, path),
+						},
+					},
+				},
+			}),
+		}
+	}
+
+	t.Run("global request rule sets header from file contents", func(t *testing.T) {
+		t.Parallel()
+		path := writeHeaderFile(t, "file-value")
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: global(customHeader, path),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: http.Header{},
+				Query:  fmt.Sprintf(`query { headerValue(name:"%s") }`, customHeader),
+			})
+			assert.Equal(t, `{"data":{"headerValue":"file-value"}}`, res.Body)
+		})
+	})
+
+	t.Run("subgraph request rule sets header from file contents", func(t *testing.T) {
+		t.Parallel()
+		path := writeHeaderFile(t, "file-value")
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: subgraph("test1", customHeader, path),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: http.Header{},
+				Query:  fmt.Sprintf(`query { headerValue(name:"%s") }`, customHeader),
+			})
+			assert.Equal(t, `{"data":{"headerValue":"file-value"}}`, res.Body)
 		})
 	})
 }

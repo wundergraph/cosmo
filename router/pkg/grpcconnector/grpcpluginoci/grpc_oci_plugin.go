@@ -25,9 +25,11 @@ type GRPCPluginConfig struct {
 	Logger             *zap.Logger
 	ImageRef           string
 	RegistryToken      string
+	RegistryInsecure   bool
 	StartupConfig      grpccommon.GRPCStartupParams
 	Tracer             trace.Tracer
 	GetTraceAttributes grpccommon.GRPCTraceAttributeGetter
+	DialOptions        []grpc.DialOption
 }
 
 type GRPCPlugin struct {
@@ -45,6 +47,7 @@ type GRPCPlugin struct {
 
 	registryUsername string
 	registryPassword string
+	registryInsecure bool
 
 	client *grpccommon.GRPCPluginClient
 
@@ -52,6 +55,8 @@ type GRPCPlugin struct {
 
 	tracer             trace.Tracer
 	getTraceAttributes grpccommon.GRPCTraceAttributeGetter
+
+	dialOptions []grpc.DialOption
 }
 
 func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
@@ -63,7 +68,7 @@ func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 		return nil, fmt.Errorf("image source is required")
 	}
 
-	if config.RegistryToken == "" {
+	if config.RegistryToken == "" && !config.RegistryInsecure {
 		return nil, fmt.Errorf("registry token is required")
 	}
 
@@ -78,10 +83,13 @@ func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 
 		registryUsername: "router",
 		registryPassword: config.RegistryToken,
+		registryInsecure: config.RegistryInsecure,
 
 		tracer:             config.Tracer,
 		startupConfig:      config.StartupConfig,
 		getTraceAttributes: config.GetTraceAttributes,
+
+		dialOptions: config.DialOptions,
 	}, nil
 }
 
@@ -125,6 +133,7 @@ func (p *GRPCPlugin) startPluginProcess() error {
 		Plugins: map[string]plugin.Plugin{
 			"grpc_datasource": &grpccommon.ThinPlugin{},
 		},
+		GRPCDialOptions: p.dialOptions,
 	})
 
 	clientProtocol, err := pluginClient.Client()
@@ -175,16 +184,22 @@ func (p *GRPCPlugin) cleanupPluginWorkDir() {
 
 // Start implements Plugin.
 func (p *GRPCPlugin) Start(ctx context.Context) error {
-	desc, err := crane.Get(p.imgRef,
-		crane.WithAuth(&authn.Basic{
-			Username: p.registryUsername,
-			Password: p.registryPassword,
-		}),
+	opts := []crane.Option{
 		crane.WithPlatform(&v1.Platform{
 			Architecture: runtime.GOARCH,
 			OS:           runtime.GOOS,
 		}),
-	)
+	}
+	if p.registryInsecure {
+		opts = append(opts, crane.Insecure)
+	} else {
+		opts = append(opts, crane.WithAuth(&authn.Basic{
+			Username: p.registryUsername,
+			Password: p.registryPassword,
+		}))
+	}
+
+	desc, err := crane.Get(p.imgRef, opts...)
 
 	if err != nil {
 		return fmt.Errorf("pulling image %s: %w", p.imgRef, err)

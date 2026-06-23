@@ -158,6 +158,12 @@ const UsagesPage: NextPageWithLayout = () => {
                 </dd>
               </div>
               <div className="flex">
+                <dt className="flex-1 px-2 text-sm text-muted-foreground">Persisted Operations (per graph)</dt>
+                <dd className="w-1/3 px-2 text-right text-sm font-medium">
+                  <FeatureLimit id="persisted-operations" fallback={3000} />
+                </dd>
+              </div>
+              <div className="flex">
                 <dt className="flex-1 px-2 text-sm text-muted-foreground">Analytics Data Retention</dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
                   <FeatureLimit id="analytics-retention" fallback={30} /> days

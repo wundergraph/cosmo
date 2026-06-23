@@ -7,6 +7,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { traced } from '../tracing.js';
 import { BlobNotFoundError, BlobObject, type BlobStorage } from './index.js';
 
 const maxConcurrency = 10; // Maximum number of concurrent operations
@@ -26,6 +27,7 @@ export interface S3BlobStorageConfig {
 /**
  * Stores objects in S3 given an S3Client and a bucket name
  */
+@traced
 export class S3BlobStorage implements BlobStorage {
   private readonly useIndividualDeletes: boolean;
 

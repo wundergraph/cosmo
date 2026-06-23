@@ -1,8 +1,10 @@
 package integration
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -87,6 +89,8 @@ func TestMCP(t *testing.T) {
 				})
 
 				// Verify execute tool with proper schema
+				// Note: IdempotentHint is a bool (not *bool) in the new SDK, so false + omitempty
+				// means it's omitted from JSON, and the old client deserializes it as nil.
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "execute_graphql",
 					Description: "Executes a GraphQL query or mutation.",
@@ -110,7 +114,6 @@ func TestMCP(t *testing.T) {
 						Title:           "Execute GraphQL Query",
 						DestructiveHint: mcp.ToBoolPtr(true),
 						OpenWorldHint:   mcp.ToBoolPtr(true),
-						IdempotentHint:  mcp.ToBoolPtr(false),
 					},
 				})
 
@@ -136,7 +139,7 @@ func TestMCP(t *testing.T) {
 					Description: "This is a GraphQL query that retrieves a list of employees.",
 					InputSchema: mcp.ToolInputSchema{
 						Type:       "object",
-						Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "nullable": false, "properties": map[string]interface{}{"hasPets": map[string]interface{}{"nullable": true, "type": "boolean"}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "nullable": true, "type": "string"}, "nested": map[string]interface{}{"additionalProperties": false, "nullable": true, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"nullable": true, "type": "boolean"}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED"}, "nullable": true, "type": "string"}}, "type": "object"}}, "type": "object"}},
+						Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "properties": map[string]interface{}{"hasPets": map[string]interface{}{"type": []interface{}{"boolean", "null"}}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN", nil}, "type": []interface{}{"string", "null"}}, "nested": map[string]interface{}{"additionalProperties": false, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"type": []interface{}{"boolean", "null"}}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED", nil}, "type": []interface{}{"string", "null"}}}, "type": []interface{}{"object", "null"}}}, "type": "object"}},
 						Required:   []string(nil)},
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
@@ -148,15 +151,15 @@ func TestMCP(t *testing.T) {
 				})
 
 				// Verify UpdateMood operation
+				// Note: ReadOnlyHint and IdempotentHint are bool (not *bool) in the new SDK,
+				// so false + omitempty means they're omitted from JSON, and the old client gets nil.
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "execute_operation_update_mood",
 					Description: "This mutation update the mood of an employee.",
 					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"}}, Required: []string{"employeeID", "mood"}}, RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
-						Title:          "Execute operation UpdateMood",
-						OpenWorldHint:  mcp.ToBoolPtr(true),
-						ReadOnlyHint:   mcp.ToBoolPtr(false),
-						IdempotentHint: mcp.ToBoolPtr(false),
+						Title:         "Execute operation UpdateMood",
+						OpenWorldHint: mcp.ToBoolPtr(true),
 					},
 				})
 			})
@@ -289,8 +292,48 @@ func TestMCP(t *testing.T) {
 
 					assert.Equal(t, content.Type, "text")
 
-					// Set up expected text with the static endpoint
-					expectedContent := "Operation: MyEmployees\nType: query\nDescription: This is a GraphQL query that retrieves a list of employees.\n\nInput Schema:\n```json\n{\"additionalProperties\":false,\"description\":\"This is a GraphQL query that retrieves a list of employees.\",\"nullable\":true,\"properties\":{\"criteria\":{\"additionalProperties\":false,\"description\":\"Allows to filter employees by their details.\",\"nullable\":false,\"properties\":{\"hasPets\":{\"nullable\":true,\"type\":\"boolean\"},\"nationality\":{\"enum\":[\"AMERICAN\",\"DUTCH\",\"ENGLISH\",\"GERMAN\",\"INDIAN\",\"SPANISH\",\"UKRAINIAN\"],\"nullable\":true,\"type\":\"string\"},\"nested\":{\"additionalProperties\":false,\"nullable\":true,\"properties\":{\"hasChildren\":{\"nullable\":true,\"type\":\"boolean\"},\"maritalStatus\":{\"enum\":[\"ENGAGED\",\"MARRIED\"],\"nullable\":true,\"type\":\"string\"}},\"type\":\"object\"}},\"type\":\"object\"}},\"type\":\"object\"}\n```\n\nGraphQL Query:\n```\nquery MyEmployees($criteria: SearchInput) {\n    findEmployees(criteria: $criteria) {\n        id\n        isAvailable\n        currentMood\n        products\n        details {\n            forename\n            nationality\n        }\n    }\n}\n```\n\nUsage Instructions:\n1. Endpoint: https://api.example.com/graphql\n2. HTTP Method: POST\n3. Headers Required:\n   - Content-Type: application/json; charset=utf-8\n\nRequest Format:\n```json\n{\n  \"query\": \"<operation_query>\",\n  \"variables\": <your_variables_object>\n}\n```\n\nImportant Notes:\n1. Use the query string exactly as provided above\n2. Do not modify or reformat the query string"
+					bt := "```"
+					expectedContent := `Operation: MyEmployees
+Type: query
+Description: This is a GraphQL query that retrieves a list of employees.
+
+Input Schema:
+` + bt + `json
+{"additionalProperties":false,"description":"This is a GraphQL query that retrieves a list of employees.","properties":{"criteria":{"additionalProperties":false,"description":"Allows to filter employees by their details.","properties":{"hasPets":{"type":["boolean","null"]},"nationality":{"enum":["AMERICAN","DUTCH","ENGLISH","GERMAN","INDIAN","SPANISH","UKRAINIAN",null],"type":["string","null"]},"nested":{"additionalProperties":false,"properties":{"hasChildren":{"type":["boolean","null"]},"maritalStatus":{"enum":["ENGAGED","MARRIED",null],"type":["string","null"]}},"type":["object","null"]}},"type":"object"}},"type":"object"}
+` + bt + `
+
+GraphQL Query:
+` + bt + `
+query MyEmployees($criteria: SearchInput) {
+    findEmployees(criteria: $criteria) {
+        id
+        isAvailable
+        currentMood
+        products
+        details {
+            forename
+            nationality
+        }
+    }
+}
+` + bt + `
+
+Usage Instructions:
+1. Endpoint: https://api.example.com/graphql
+2. HTTP Method: POST
+3. Headers Required:
+   - Content-Type: application/json; charset=utf-8
+
+Request Format:
+` + bt + `json
+{
+  "query": "<operation_query>",
+  "variables": <your_variables_object>
+}
+` + bt + `
+Important Notes:
+1. Use the query string exactly as provided above
+2. Do not modify or reformat the query string`
 
 					assert.Equal(t, expectedContent, content.Text)
 				})
@@ -347,7 +390,7 @@ func TestMCP(t *testing.T) {
 						assert.True(t, ok)
 
 						assert.Equal(t, content.Type, "text")
-						assert.Equal(t, content.Text, "Input validation Error: validation error: at '/criteria': got null, want object")
+						assert.Equal(t, content.Text, "Input validation error: validation error: at '/criteria': got null, want object")
 					})
 				})
 			})
@@ -473,7 +516,7 @@ func TestMCP(t *testing.T) {
 				// Make the request
 				resp, err := xEnv.RouterClient.Do(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer resp.Body.Close() //nolint:errcheck
 
 				// Verify response status
 				assert.Equal(t, http.StatusNoContent, resp.StatusCode)
@@ -520,7 +563,7 @@ func TestMCP(t *testing.T) {
 				requestBody, err := json.Marshal(mcpRequest)
 				require.NoError(t, err)
 
-				req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+				req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
 				require.NoError(t, err)
 
 				// Add cross-origin headers
@@ -530,7 +573,7 @@ func TestMCP(t *testing.T) {
 				// Make the request
 				resp, err := xEnv.RouterClient.Do(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer resp.Body.Close() //nolint:errcheck
 
 				// Verify CORS headers are present in the response
 				assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
@@ -564,7 +607,7 @@ func TestMCP(t *testing.T) {
 				// Make the request
 				resp, err := xEnv.RouterClient.Do(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer resp.Body.Close() //nolint:errcheck
 
 				// Verify CORS headers are present in the response
 				assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
@@ -602,7 +645,7 @@ func TestMCP(t *testing.T) {
 						// Make the request
 						resp, err := xEnv.RouterClient.Do(req)
 						require.NoError(t, err)
-						defer resp.Body.Close()
+						defer resp.Body.Close() //nolint:errcheck
 
 						// Verify CORS headers are present
 						assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
@@ -643,7 +686,7 @@ func TestMCP(t *testing.T) {
 				// Make the request
 				resp, err := xEnv.RouterClient.Do(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer resp.Body.Close() //nolint:errcheck
 
 				// Verify CORS headers are present in the response
 				assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
@@ -666,6 +709,52 @@ func TestMCP(t *testing.T) {
 				assert.Contains(t, allowedHeaders, "X-Custom-Auth")
 
 				assert.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
+			})
+		})
+	})
+
+	t.Run("Content-Type Handling", func(t *testing.T) {
+		// Regression test: a Content-Type with parameters, such as
+		// "application/json; charset=utf-8", must be accepted. Guards against upstream
+		// MCP go-sdk changes.
+		t.Run("JSON Content-Type with charset parameter is accepted", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				MCP: config.MCPConfiguration{
+					Enabled: true,
+					Session: config.MCPSessionConfig{
+						Stateless: true,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				mcpAddr := xEnv.GetMCPServerAddr()
+
+				mcpRequest := map[string]any{
+					"jsonrpc": "2.0",
+					"id":      1,
+					"method":  "tools/call",
+					"params": map[string]any{
+						"name": "execute_operation_my_employees",
+						"arguments": map[string]any{
+							"criteria": map[string]any{},
+						},
+					},
+				}
+
+				requestBody, err := json.Marshal(mcpRequest)
+				require.NoError(t, err)
+
+				req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
+				require.NoError(t, err)
+				req.Header.Set("Content-Type", "application/json; charset=utf-8")
+				req.Header.Set("Accept", "application/json, text/event-stream")
+
+				resp, err := xEnv.RouterClient.Do(req)
+				require.NoError(t, err)
+				defer resp.Body.Close() //nolint:errcheck
+
+				assert.NotEqual(t, http.StatusUnsupportedMediaType, resp.StatusCode,
+					"router must accept application/json with a charset parameter")
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
 			})
 		})
 	})
@@ -934,24 +1023,32 @@ input UserInput {
 				requestBody, err := json.Marshal(mcpRequest)
 				require.NoError(t, err)
 
-				req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+				req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
 				require.NoError(t, err)
 
 				// Add various headers to test forwarding
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("foo", "bar")                         // Non-standard header
-				req.Header.Set("X-Custom-Header", "custom-value")    // Custom X- header
-				req.Header.Set("X-Trace-Id", "trace-123")            // Tracing header
-				req.Header.Set("Authorization", "Bearer test-token") // Auth header
+				req.Header.Set("Accept", "application/json, text/event-stream") // Required by Streamable HTTP transport
+				req.Header.Set("foo", "bar")                                    // Non-standard header
+				req.Header.Set("X-Custom-Header", "custom-value")               // Custom X- header
+				req.Header.Set("X-Trace-Id", "trace-123")                       // Tracing header
+				req.Header.Set("Authorization", "Bearer test-token")            // Auth header
 
 				// Make the request
 				resp, err := xEnv.RouterClient.Do(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer resp.Body.Close() //nolint:errcheck
 
 				// With stateless mode, the request should succeed
 				t.Logf("Response Status: %d", resp.StatusCode)
 				require.Equal(t, http.StatusOK, resp.StatusCode, "Request should succeed in stateless mode")
+
+				// Read the full response body - with StreamableHTTP, the response is an SSE stream
+				// and the tool execution completes within it. We must consume the stream fully
+				// before the subgraph request is guaranteed to have been made.
+				body, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				t.Logf("Response Body: %s", string(body))
 
 				// Verify headers reached subgraph
 				subgraphMutex.Lock()
@@ -1036,15 +1133,15 @@ input UserInput {
 				requestBody, err := json.Marshal(mcpRequest)
 				require.NoError(t, err)
 
-				req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+				req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
 				require.NoError(t, err)
 
 				// Set headers that should be filtered
 				req.Header.Set("Proxy-Authenticate", "Basic")
 				req.Header.Set("Proxy-Authorization", "Basic YWxhZGRpbjpvcGVuc2VzYW1l")
-				req.Header.Set("Content-Type", "application/json; foo=bar") // Custom param that should be stripped
-				req.Header.Set("Accept", "application/json")
-				req.Header.Set("Accept-Encoding", "br") // Request brotli (which go client doesn't support by default)
+				req.Header.Set("Content-Type", "application/json")              // base media type must be application/json
+				req.Header.Set("Accept", "application/json, text/event-stream") // Required by Streamable HTTP transport
+				req.Header.Set("Accept-Encoding", "br")                         // Request brotli (which go client doesn't support by default)
 				req.Header.Set("Alt-Svc", "h2=\":443\"; ma=2592000")
 				req.Header.Set("Proxy-Connection", "keep-alive")
 
@@ -1053,12 +1150,17 @@ input UserInput {
 
 				resp, err := xEnv.RouterClient.Do(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer resp.Body.Close() //nolint:errcheck
 
 				if resp.StatusCode != http.StatusOK {
 					t.Logf("Response Status: %d", resp.StatusCode)
 				}
 				require.Equal(t, http.StatusOK, resp.StatusCode)
+
+				// Consume the full SSE stream so the tool execution completes
+				body, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				t.Logf("Response Body: %s", string(body))
 
 				subgraphMutex.Lock()
 				defer subgraphMutex.Unlock()
@@ -1072,10 +1174,9 @@ input UserInput {
 				assert.NotEqual(t, "Basic", capturedSubgraphRequest.Header.Get("Proxy-Authenticate"))
 				assert.NotEqual(t, "Basic YWxhZGRpbjpvcGVuc2VzYW1l", capturedSubgraphRequest.Header.Get("Proxy-Authorization"))
 
-				// Content-Type should be set by MCP server to application/json (and stripped of custom params)
+				// Content-Type should be set by MCP server to application/json
 				ct := capturedSubgraphRequest.Header.Get("Content-Type")
 				assert.True(t, strings.HasPrefix(ct, "application/json"), "Content-Type should start with application/json")
-				assert.False(t, strings.Contains(ct, "foo=bar"), "Content-Type should not contain forwarded parameters")
 
 				// Accept should be set by MCP server
 				assert.Equal(t, "application/json", capturedSubgraphRequest.Header.Get("Accept"))
@@ -1088,6 +1189,47 @@ input UserInput {
 				// Other headers should be missing
 				assert.Empty(t, capturedSubgraphRequest.Header.Get("Alt-Svc"))
 				assert.Empty(t, capturedSubgraphRequest.Header.Get("Proxy-Connection"))
+			})
+
+			// Regression test: a Content-Type with extra parameters, such as
+			// "application/json; foo=bar", must be accepted as long as the base media type
+			// is application/json. Guards against upstream MCP go-sdk changes.
+			t.Run("Content-Type params are accepted", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					MCP: config.MCPConfiguration{
+						Enabled: true,
+						Session: config.MCPSessionConfig{
+							Stateless: true,
+						},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					mcpAddr := xEnv.GetMCPServerAddr()
+
+					mcpRequest := map[string]interface{}{
+						"jsonrpc": "2.0",
+						"id":      1,
+						"method":  "tools/call",
+						"params": map[string]interface{}{
+							"name":      "execute_operation_my_employees",
+							"arguments": map[string]interface{}{},
+						},
+					}
+
+					requestBody, err := json.Marshal(mcpRequest)
+					require.NoError(t, err)
+
+					req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
+					require.NoError(t, err)
+					req.Header.Set("Content-Type", "application/json; foo=bar")
+					req.Header.Set("Accept", "application/json, text/event-stream")
+
+					resp, err := xEnv.RouterClient.Do(req)
+					require.NoError(t, err)
+					defer resp.Body.Close() //nolint:errcheck
+
+					assert.Equal(t, http.StatusOK, resp.StatusCode,
+						"router accepts application/json with media type parameters")
+				})
 			})
 		})
 	})

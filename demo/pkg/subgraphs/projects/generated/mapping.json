@@ -191,6 +191,21 @@
         },
         {
           "fieldMapping": {
+            "original": "filteredProjectSummary",
+            "mapped": "filtered_project_summary",
+            "argumentMappings": [
+              {
+                "original": "tag",
+                "mapped": "tag"
+              }
+            ]
+          },
+          "rpc": "RequireEmployeeFilteredProjectSummaryById",
+          "request": "RequireEmployeeFilteredProjectSummaryByIdRequest",
+          "response": "RequireEmployeeFilteredProjectSummaryByIdResponse"
+        },
+        {
+          "fieldMapping": {
             "original": "workItemInfo",
             "mapped": "work_item_info",
             "argumentMappings": []
@@ -1176,6 +1191,16 @@
           "original": "taggedProjectSummary",
           "mapped": "tagged_project_summary",
           "argumentMappings": []
+        },
+        {
+          "original": "filteredProjectSummary",
+          "mapped": "filtered_project_summary",
+          "argumentMappings": [
+            {
+              "original": "tag",
+              "mapped": "tag"
+            }
+          ]
         },
         {
           "original": "primaryWorkItem",

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { CheckIcon, Cross1Icon, Pencil1Icon, PlayIcon } from '@radix-ui/react-icons';
 import CryptoJS from 'crypto-js';
-import _ from 'lodash';
+import isEqual from 'lodash/isEqual';
 import { editor } from 'monaco-editor';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
@@ -645,13 +645,13 @@ export const CustomScripts = () => {
 
     const activeTabScripts = scriptsTabState[activeTabId];
 
-    if (!_.isEqual(selectedPreOp, activeTabScripts?.['pre-operation'])) {
+    if (!isEqual(selectedPreOp, activeTabScripts?.['pre-operation'])) {
       if (selectedPreOp?.updatedByTabId && selectedPreOp?.updatedByTabId !== activeTabId) {
         setSelectedPreOp(activeTabScripts?.['pre-operation']);
       }
     }
 
-    if (!_.isEqual(selectedPostOp, activeTabScripts?.['post-operation'])) {
+    if (!isEqual(selectedPostOp, activeTabScripts?.['post-operation'])) {
       if (selectedPostOp?.updatedByTabId && selectedPostOp?.updatedByTabId !== activeTabId) {
         setSelectedPostOp(activeTabScripts?.['post-operation']);
       }

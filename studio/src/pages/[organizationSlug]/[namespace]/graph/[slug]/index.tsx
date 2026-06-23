@@ -34,6 +34,7 @@ import { useRouter } from 'next/router';
 import { useContext, useState } from 'react';
 import { PiCubeFocus } from 'react-icons/pi';
 import { ReactFlowProvider } from 'reactflow';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
 const GraphOverviewPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -85,6 +86,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
 
   const validGraph = isComposable && !!lastUpdatedAt;
   const emptyGraph = !lastUpdatedAt && !isComposable;
+  const hasStaleMetrics = dashboardView?.response?.code === EnumStatusCode.WARN_PARTIAL_DATA;
 
   const onDateRangeChange: DateRangePickerChangeHandler = ({ range, dateRange }) => {
     if (range) {
@@ -359,10 +361,20 @@ const GraphOverviewPage: NextPageWithLayout = () => {
           </Card>
         </div>
         <div className="lg:col-span-1">
-          <MostRequested data={dashboardView?.mostRequestedOperations ?? []} isLoading={dashboardViewLoading} />
+          <MostRequested
+            data={dashboardView?.mostRequestedOperations ?? []}
+            isLoading={dashboardViewLoading}
+            isFetching={!!isFetching}
+            hasStaleMetrics={hasStaleMetrics}
+          />
         </div>
         <div className="lg:col-span-2">
-          <RequestChart requestSeries={dashboardView?.requestSeries ?? []} isLoading={dashboardViewLoading} />
+          <RequestChart
+            requestSeries={dashboardView?.requestSeries ?? []}
+            isLoading={dashboardViewLoading}
+            isFetching={!!isFetching}
+            hasStaleMetrics={hasStaleMetrics}
+          />
         </div>
       </div>
     </GraphPageLayout>

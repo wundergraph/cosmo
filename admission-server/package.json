@@ -10,14 +10,14 @@
     "format": "prettier -w -c ."
   },
   "dependencies": {
-    "@hono/node-server": "1.13.7",
+    "@hono/node-server": "1.19.13",
     "@wundergraph/cosmo-shared": "workspace:^",
-    "dotenv": "^16.4.5",
-    "hono": "4.10.6"
+    "dotenv": "catalog:",
+    "hono": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^20.11.17",
-    "tsx": "^4.16.0",
-    "typescript": "^5.3.2"
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
   }
 }

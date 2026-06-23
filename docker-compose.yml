@@ -176,21 +176,40 @@ services:
     profiles:
       - dev
 
-  minio:
-    image: bitnamilegacy/minio:${DC_MINIO_VERSION:-2024.7.16-debian-12-r0}
+  # Due to previous use of minio and to ensure that data is correctly migrated, we need to
+  # ensure that rustfs is able to access it. Rustfs runs under a different user than minio, so this
+  # is a one-off run to fix permissions on the volume.
+  rustfs_perms:
+    image: alpine
+    user: root
+    volumes:
+      - minio:/data
+    command: chown -R 10001:10001 /data
+
+  rustfs:
+    image: rustfs/rustfs:1.0.0-alpha.92
+    depends_on:
+      rustfs_perms:
+        condition: service_completed_successfully
+    command: 'rustfs server /data'
     environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-changeme}
-      - MINIO_DEFAULT_BUCKETS=cosmo
+      RUSTFS_CONSOLE_ENABLE: 'true'
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-admin}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:-changeme}
     ports:
       - '10000:9000'
       - '10001:9001'
     volumes:
-      - minio:/bitnami/minio/data
+      # We've previously used minio for S3 provider. Since rustfs is storage-compatible
+      # with minio, we want to reuse the existing minio volume so that existing data is kept.
+      - minio:/data
     networks:
       - primary
     profiles:
       - dev
+    post_start:
+      - command: sh -c "sleep 10 && apk add minio-client && mcli alias set rustfs http://localhost:9000 ${S3_ACCESS_KEY_ID:-admin} ${S3_SECRET_ACCESS_KEY:-changeme} && mcli mb -p rustfs/cosmo"
+        user: root
 
   cdn:
     image: ghcr.io/wundergraph/cosmo/cdn:${DC_CDN_VERSION:-latest}
@@ -202,10 +221,10 @@ services:
       NODE_ENV: development
       AUTH_JWT_SECRET: ${CDN_AUTH_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
       AUTH_ADMISSION_JWT_SECRET: uXDxJLEvrw4aafPfrf3rRotCoBzRfPEW
-      S3_STORAGE_URL: ${S3_STORAGE_URL:-http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-changeme}@minio:9000/cosmo}
+      S3_STORAGE_URL: ${S3_STORAGE_URL:-http://rustfs:9000/cosmo}
       S3_REGION: ${S3_REGION_CDN:-${S3_REGION:-auto}}
-      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
-      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-admin}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-changeme}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
     ports:
       - '11000:11000'
@@ -335,6 +354,40 @@ services:
     profiles:
       - dev
 
+  # Local OCI plugin registry for gRPC plugin development.
+  # No auth, plain HTTP. For `wgc router plugin publish` to work:
+  #
+  # 1. Trust the registry in the Docker daemon (needed for `docker login`).
+  #    OrbStack: edit ~/.orbstack/config/docker.json, then `orb restart docker`:
+  #      { "insecure-registries": ["host.docker.internal:5050"] }
+  #    Docker Desktop: Settings -> Docker Engine, merge the same key, Apply & Restart.
+  #
+  # 2. Create a buildx builder with insecure registry support (needed for push):
+  #      cat > /tmp/buildkitd.toml << 'EOF'
+  #      [registry."host.docker.internal:5050"]
+  #        http = true
+  #        insecure = true
+  #      EOF
+  #      docker buildx create --name local-registry --driver docker-container --config /tmp/buildkitd.toml --use
+  #
+  # 3. Set PLUGIN_REGISTRY_URL=host.docker.internal:5050 in cli/.env
+  #    (host.docker.internal is required because buildx runs inside a container)
+  #
+  # 4. For the router to pull plugins from this registry, set in router/.env:
+  #      PLUGINS_REGISTRY_URL=localhost:5050
+  #      PLUGINS_REGISTRY_INSECURE=true
+  #    (localhost here because the router runs on the host, not in a container)
+  plugin-registry:
+    image: registry:2
+    ports:
+      - '127.0.0.1:5050:5000'
+    volumes:
+      - plugin-registry:/var/lib/registry
+    networks:
+      - primary
+    profiles:
+      - dev
+
   kafka:
     image: bitnamilegacy/kafka:3.7.0
     ports:
@@ -380,3 +433,4 @@ volumes:
   redis-cluster-node-1:
   redis-cluster-node-2:
   redis-cluster-node-3:
+  plugin-registry:

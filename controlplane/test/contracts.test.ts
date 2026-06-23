@@ -734,10 +734,10 @@ describe('Contract tests', () => {
     const fedGraphName = genID('fedGraph');
     const contractGraphName = genID('contract');
     const label = genUniqueLabel('label');
-    const prod = 'prod';
+    const prodNamespace = genID('prod').toLowerCase();
 
     await client.createNamespace({
-      name: prod,
+      name: prodNamespace,
     });
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
@@ -750,7 +750,14 @@ describe('Contract tests', () => {
       [label],
       'http://localhost:8082',
     );
-    await createThenPublishSubgraph(client, subgraphName, prod, subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      prodNamespace,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
 
@@ -763,18 +770,88 @@ describe('Contract tests', () => {
       readme: 'test',
     });
 
+    await assertNumberOfCompositions(client, fedGraphName, 1);
+    await assertNumberOfCompositions(client, contractGraphName, 1);
+
     const moveRes = await client.moveFederatedGraph({
       name: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
-      newNamespace: prod,
+      newNamespace: prodNamespace,
     });
     expect(moveRes.response?.code).toEqual(EnumStatusCode.OK);
 
     const contractResAfterMove = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: prod,
+      namespace: prodNamespace,
     });
     expect(contractResAfterMove.response?.code).toEqual(EnumStatusCode.OK);
+
+    await assertNumberOfCompositions(client, fedGraphName, 2, prodNamespace);
+    await assertNumberOfCompositions(client, contractGraphName, 2, prodNamespace);
+  });
+
+  test('that moving source federated graph moves contract graph with `split-config-loading` enabled', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient, enabledFeatures: ['split-config-loading'] });
+    testContext.onTestFinished(() => server.close());
+
+    const subgraphName = genID('subgraph');
+    const fedGraphName = genID('fedGraph');
+    const contractGraphName = genID('contract');
+    const label = genUniqueLabel('label');
+    const prodNamespace = genID('prod').toLowerCase();
+
+    await client.createNamespace({
+      name: prodNamespace,
+    });
+
+    const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      prodNamespace,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
+
+    await client.createContract({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      sourceGraphName: fedGraphName,
+      excludeTags: ['test'],
+      routingUrl: 'http://localhost:8081',
+      readme: 'test',
+    });
+
+    await assertNumberOfCompositions(client, fedGraphName, 1);
+    await assertNumberOfCompositions(client, contractGraphName, 1);
+
+    const moveRes = await client.moveFederatedGraph({
+      name: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      newNamespace: prodNamespace,
+    });
+    expect(moveRes.response?.code).toEqual(EnumStatusCode.OK);
+
+    const contractResAfterMove = await client.getFederatedGraphByName({
+      name: contractGraphName,
+      namespace: prodNamespace,
+    });
+    expect(contractResAfterMove.response?.code).toEqual(EnumStatusCode.OK);
+
+    await assertNumberOfCompositions(client, fedGraphName, 2, prodNamespace);
+    await assertNumberOfCompositions(client, contractGraphName, 2, prodNamespace);
   });
 
   test('that moving contract federated graph is not allowed', async (testContext) => {
@@ -785,10 +862,10 @@ describe('Contract tests', () => {
     const fedGraphName = genID('fedGraph');
     const contractGraphName = genID('contract');
     const label = genUniqueLabel('label');
-    const prod = 'prod';
+    const prodNamespace = genID('prod').toLowerCase();
 
     await client.createNamespace({
-      name: prod,
+      name: prodNamespace,
     });
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
@@ -816,7 +893,7 @@ describe('Contract tests', () => {
     const moveRes = await client.moveFederatedGraph({
       name: contractGraphName,
       namespace: DEFAULT_NAMESPACE,
-      newNamespace: prod,
+      newNamespace: prodNamespace,
     });
     expect(moveRes.response?.code).toEqual(EnumStatusCode.ERR);
   });
@@ -860,10 +937,10 @@ describe('Contract tests', () => {
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
-    const prod = 'prod';
+    const prodNamespace = genID('prod').toLowerCase();
 
     await client.createNamespace({
-      name: prod,
+      name: prodNamespace,
     });
 
     const createResp = await client.createMonograph({
@@ -886,13 +963,13 @@ describe('Contract tests', () => {
     const moveRes = await client.moveMonograph({
       name: monographName,
       namespace: DEFAULT_NAMESPACE,
-      newNamespace: prod,
+      newNamespace: prodNamespace,
     });
     expect(moveRes.response?.code).toEqual(EnumStatusCode.OK);
 
     const getContractRes = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: prod,
+      namespace: prodNamespace,
     });
     expect(getContractRes.response?.code).toEqual(EnumStatusCode.OK);
     expect(getContractRes.subgraphs.length).toEqual(1);
@@ -1235,9 +1312,10 @@ describe('Contract tests', () => {
     const fedGraphName = genID('fedGraph');
     const contractGraphName = genID('contract');
     const label = genUniqueLabel('label');
+    const prodNamespace = genID('prod').toLowerCase();
 
     await client.createNamespace({
-      name: 'prod',
+      name: prodNamespace,
     });
 
     const subgraph1SchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
@@ -1287,7 +1365,7 @@ describe('Contract tests', () => {
     await client.moveSubgraph({
       name: subgraph2Name,
       namespace: DEFAULT_NAMESPACE,
-      newNamespace: 'prod',
+      newNamespace: prodNamespace,
     });
 
     const sdlResponse2 = await client.getFederatedGraphSDLByName({

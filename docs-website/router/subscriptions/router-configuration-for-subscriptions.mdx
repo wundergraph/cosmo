@@ -74,3 +74,48 @@ npx wgc subgraph publish products --subscription-url "http://localhost:4001/subs
 
 You can also use \`wgc subgraph update ...\` to update the Subscriptions protocol or URL for a specific Subgraph.
 
+## Tuning the upstream subscription client
+
+The router's upstream WebSocket client (the one that connects to subgraphs for subscriptions) is configured under the `engine` block. The defaults suit most deployments. The options below are listed with their YAML field and the matching environment variable.
+
+| Option | Env var | Default | Purpose |
+|-|-|-|-|
+| `websocket_client_write_timeout` | `ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT` | `10s` | The timeout for the websocket write of the WebSocket client implementation. |
+| `websocket_client_ping_interval` | `ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL` | `15s` | The Websocket client ping interval to the subgraph. Defines how often the router will ping the subgraph to signal that the connection is still alive. |
+| `websocket_client_ping_timeout` | `ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT` | `30s` | The Websocket client ping timeout to the subgraph. Defines how long the router will wait for a ping response from the subgraph. |
+| `websocket_client_ack_timeout` | `ENGINE_WEBSOCKET_CLIENT_ACK_TIMEOUT` | `30s` | How long the router waits for `connection_ack` from a subgraph after sending `connection_init`. |
+| `websocket_client_read_limit` | `ENGINE_WEBSOCKET_CLIENT_READ_LIMIT` | `1MB` | Maximum size of a single incoming WebSocket message from a subgraph. |
+
+Example:
+
+```yaml
+version: "1"
+
+engine:
+  websocket_client_write_timeout: 10s
+  websocket_client_ping_interval: 15s
+  websocket_client_ping_timeout: 30s
+  websocket_client_ack_timeout: 30s
+  websocket_client_read_limit: 1MB
+```
+
+## Tuning the server-side WebSocket handler
+
+These options apply to the router's own WebSocket endpoint (the one clients connect to). They are separate from the upstream client options above.
+
+| Option | Env var | Default | Purpose |
+|-|-|-|-|
+| `websocket_server_read_timeout` | `ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT` | `5s` | Read timeout for the server-side WebSocket handler. |
+| `websocket_server_write_timeout` | `ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT` | `10s` | Write timeout for the server-side WebSocket handler. |
+| `websocket_server_poll_timeout` | `ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT` | `1s` | Timeout for the poll loop of the server-side WebSocket handler. |
+| `websocket_server_conn_buffer_size` | `ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE` | `128` | Buffer size for the poll buffer of the server-side WebSocket handler. Determines how many connections can be handled in one loop. |
+| `enable_net_poll` | `ENGINE_ENABLE_NET_POLL` | `true` | Enables the more efficient poll implementation for the server-side WebSocket handler. Linux and macOS only. Has no effect on upstream subgraph connections. |
+
+<Warning>
+  **Subject to change.** `enable_net_poll`, `websocket_server_poll_timeout`, and `websocket_server_conn_buffer_size` may be removed or changed in a future release without a standard deprecation cycle. Avoid depending on them.
+</Warning>
+
+<Note>
+  If you are upgrading from an older release and your configuration sets `websocket_client_poll_timeout`, `websocket_client_read_timeout`, `websocket_client_conn_buffer_size`, or `websocket_client_frame_timeout`, see the [Subscriptions Overhaul migration guide](/router/subscriptions-migration).
+</Note>
+

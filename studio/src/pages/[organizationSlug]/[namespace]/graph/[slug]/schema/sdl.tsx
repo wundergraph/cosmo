@@ -31,6 +31,7 @@ import { Component2Icon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getFederatedGraphSDLByName,
+  getFeatureFlagsInLatestCompositionByFederatedGraph,
   getSubgraphSDLFromLatestComposition,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
@@ -78,6 +79,17 @@ const SDLPage: NextPageWithLayout = () => {
     },
   );
 
+  const { data: compositionFlagsData } = useQuery(
+    getFeatureFlagsInLatestCompositionByFederatedGraph,
+    {
+      federatedGraphName: graphData?.graph?.name,
+      namespace,
+    },
+    {
+      enabled: !!graphData?.graph?.name,
+    },
+  );
+
   const subgraphs =
     graphData?.subgraphs.map((each) => {
       return {
@@ -87,7 +99,7 @@ const SDLPage: NextPageWithLayout = () => {
     }) ?? [];
 
   const featureFlags =
-    graphData?.featureFlagsInLatestValidComposition.map((each) => {
+    compositionFlagsData?.featureFlags.map((each) => {
       return {
         name: each.name,
         query: `?featureFlag=${each.name}`,

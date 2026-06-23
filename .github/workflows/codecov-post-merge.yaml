@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - 'docs-website/**'
       - '*.md'
+      - '.github/CODEOWNERS'
 
 env:
   CI: true
