@@ -6,7 +6,7 @@ import {
   type ObjectDefinitionData,
 } from '../schema-building/types/types';
 import {
-  type CacheInvalidateOnNonEntityReturnTypeErrorParams,
+  type InvalidEntityReturnTypeErrorParams,
   type IncompatibleMergedTypesErrorParams,
   type IncompatibleParentTypeMergeErrorParams,
   type IncompatibleTypeWithProvidesErrorMessageParams,
@@ -2082,29 +2082,21 @@ export function queryCacheOnNonEntityReturnTypeErrorMessage(fieldCoords: string,
   );
 }
 
-export function cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
-  return `Coordinates "${fieldCoords}" are not a Mutation or Subscription root field.`;
+export function invalidMutationOrSubscriptionFieldCoordsErrorMessage(fieldCoords: string): string {
+  return `Field coordinates "${fieldCoords}" are not a Mutation or Subscription root field.`;
 }
 
-export function cacheInvalidateOnNonEntityReturnTypeErrorMessage({
+export function invalidEntityReturnTypeErrorMessage({
   fieldCoords,
-  returnType,
-}: CacheInvalidateOnNonEntityReturnTypeErrorParams): string {
-  return `Coordinates "${fieldCoords}" return non-entity type "${returnType}".`;
+  returnTypeName,
+}: InvalidEntityReturnTypeErrorParams): string {
+  return `Field coordinates "${fieldCoords}" return non-entity type "${returnTypeName}".`;
 }
 
-export function cachePopulateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
-  return `@openfed__cachePopulate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
-}
-
-export function cachePopulateOnNonEntityReturnTypeErrorMessage(returnType: string): string {
-  return `@openfed__cachePopulate returns non-entity type "${returnType}".`;
-}
-
-export function cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords: string): string {
-  return (
-    `Field "${fieldCoords}" has both @openfed__cacheInvalidate and @openfed__cachePopulate.` +
-    ` A field must use one or the other, not both.`
+export function invalidMutuallyExclusiveCacheDirectivesError(fieldCoords: string): Error {
+  return new Error(
+    `Field coordinates "${fieldCoords}" define both mutually exclusive directives "@openfed__cacheInvalidate"` +
+      ` and "@openfed__cachePopulate".`,
   );
 }
 

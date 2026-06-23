@@ -67,8 +67,6 @@ import {
   newFieldAuthorizationData,
 } from '../utils/utils';
 import {
-  cacheInvalidateOnNonEntityReturnTypeErrorMessage,
-  cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage,
   configureDescriptionNoDescriptionError,
   costOnInterfaceFieldErrorMessage,
   duplicateArgumentsError,
@@ -93,6 +91,7 @@ import {
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   invalidEdfsPublishResultObjectErrorMessage,
+  invalidEntityReturnTypeErrorMessage,
   invalidEventDirectiveError,
   invalidEventDrivenGraphError,
   invalidEventDrivenMutationResponseTypeErrorMessage,
@@ -107,6 +106,8 @@ import {
   invalidInlineFragmentTypeErrorMessage,
   invalidInterfaceImplementationError,
   invalidKeyFieldSetsEventDrivenErrorMessage,
+  invalidMutationOrSubscriptionFieldCoordsErrorMessage,
+  invalidMutuallyExclusiveCacheDirectivesError,
   invalidNamedTypeError,
   invalidNatsStreamConfigurationDefinitionErrorMessage,
   invalidNatsStreamInputErrorMessage,
@@ -172,9 +173,6 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
-  cacheInvalidateAndPopulateMutualExclusionErrorMessage,
-  cachePopulateOnNonEntityReturnTypeErrorMessage,
-  cachePopulateOnNonMutationSubscriptionFieldErrorMessage,
   batchListValuedKeyRequiresNestedListsErrorMessage,
   duplicateKeyFieldMappingErrorMessage,
   explicitBatchAdditionalNonKeyArgumentErrorMessage,
@@ -206,6 +204,7 @@ import {
 import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
   type CacheInvalidateConfiguration,
+  type CachePopulateConfiguration,
   type ConfigurationData,
   type Costs,
   type EntityCacheConfiguration,
@@ -214,7 +213,6 @@ import {
   type FieldWeightConfiguration,
   type NatsEventType,
   type RequiredFieldConfiguration,
-  type CachePopulateConfig,
   type EntityKeyMappingConfig,
   type FieldMappingConfig,
   type QueryCacheConfig,
@@ -346,6 +344,7 @@ import {
   NOT_APPLICABLE,
   ONE_OF,
   OPENFED_CACHE_INVALIDATE,
+  OPENFED_CACHE_POPULATE,
   OPENFED_ENTITY_CACHE,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
@@ -384,7 +383,6 @@ import {
   TOPICS,
   TYPENAME,
   WEIGHT,
-  OPENFED_CACHE_POPULATE,
   OPENFED_IS,
   LITERAL_OPEN_BRACE,
   LITERAL_SPACE,
@@ -405,6 +403,7 @@ import {
 } from '../../utils/utils';
 import {
   type AddInputValueDataByNodeParams,
+  type CachePopulateDirectiveNode,
   type ComposeDirectiveNode,
   type ConditionalFieldSetValidationResult,
   type EntityCacheDirectiveNode,
@@ -421,7 +420,6 @@ import {
   type RecordDirectiveWeightOnFieldParams,
   type UpsertInputObjectResult,
   type ValidateDirectiveParams,
-  type CachePopulateDirectiveNode,
   type QueryCacheDirectiveNode,
   type RequestScopedDirectiveNode,
 } from './types/types';
@@ -4164,9 +4162,10 @@ export class NormalizationFactory {
     getOrInitializeEntityCaching(configurationData).entityCacheConfigurations.push(config);
   }
 
-  extractCacheInvalidateConfig(fieldData: FieldData) {
+  // Returns true if the directive is defined and false otherwise
+  extractCacheInvalidateConfig(fieldData: FieldData): boolean {
     if (!fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE)) {
-      return;
+      return false;
     }
 
     const operationType = this.getOperationTypeNodeForRootTypeName(fieldData.originalParentTypeName);
@@ -4174,20 +4173,22 @@ export class NormalizationFactory {
     if (!operationType || operationType === OperationTypeNode.QUERY) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
-          cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
+          invalidMutationOrSubscriptionFieldCoordsErrorMessage(fieldCoords),
         ]),
       );
-      return;
+      return true;
     }
+
     const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
     if (!this.entityCacheConfigByTypeName.has(returnTypeName)) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
-          cacheInvalidateOnNonEntityReturnTypeErrorMessage({ fieldCoords, returnType: returnTypeName }),
+          invalidEntityReturnTypeErrorMessage({ fieldCoords, returnTypeName: returnTypeName }),
         ]),
       );
-      return;
+      return true;
     }
+
     const configurationData = getValueOrDefault(this.configurationDataByTypeName, fieldData.renamedParentTypeName, () =>
       newConfigurationData(false, fieldData.renamedParentTypeName),
     );
@@ -4199,68 +4200,91 @@ export class NormalizationFactory {
     };
 
     getOrInitializeEntityCaching(configurationData).cacheInvalidateConfigurations.push(config);
+    return true;
   }
 
-  // Extracts @openfed__cachePopulate from Mutation/Subscription fields. The return type must be a cached
-  // entity (@key + @openfed__entityCache). maxAge is optional — when absent the router falls back to the
-  // entity's @openfed__entityCache TTL; when present it must be positive.
-  extractCachePopulateConfig(fieldData: FieldData) {
+  /* Extracts @openfed__cachePopulate from Mutation/Subscription fields.
+   * The return type must be a cached entity (@key & @openfed__entityCache).
+   * Argument `maxAge` is optional; if absent, the router falls back to the entity's @openfed__entityCache TTL;
+   * if provided, must be a positive integer.
+   *
+   * Returns true if the directive is defined and false otherwise
+   */
+  extractCachePopulateConfig(fieldData: FieldData): boolean {
     if (!fieldData.directivesByName.has(OPENFED_CACHE_POPULATE)) {
-      return;
+      return false;
     }
 
     const fieldCoords = `${fieldData.originalParentTypeName}.${fieldData.name}`;
     const operationType = this.getOperationTypeNodeForRootTypeName(fieldData.originalParentTypeName);
-    if (operationType !== OperationTypeNode.MUTATION && operationType !== OperationTypeNode.SUBSCRIPTION) {
+    if (!operationType || operationType === OperationTypeNode.QUERY) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
-          cachePopulateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
+          invalidMutationOrSubscriptionFieldCoordsErrorMessage(fieldCoords),
         ]),
       );
-      return;
+      return true;
     }
+
     const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-    if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
+    const entityCacheConfig = this.entityCacheConfigByTypeName.get(returnTypeName);
+    if (!entityCacheConfig) {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
-          cachePopulateOnNonEntityReturnTypeErrorMessage(returnTypeName),
+          invalidEntityReturnTypeErrorMessage({ fieldCoords, returnTypeName }),
         ]),
       );
-      return;
+      return true;
     }
-    // validateDirectives() has already guaranteed maxAge is an Int when present, so the generic
-    // ConstDirectiveNode is narrowed once to the precise typed node — mirroring the other caching
-    // directives. maxAge is the only argument and is optional.
+
+    /* validateDirectives() has already guaranteed maxAge is an Int when present, so the generic
+     * ConstDirectiveNode is narrowed once to the precise typed node — mirroring the other caching
+     * directives. maxAge is the only argument and is optional.
+     */
     const cachePopulateDirective = fieldData.directivesByName.get(
       OPENFED_CACHE_POPULATE,
     )![0] as CachePopulateDirectiveNode;
-    const maxAgeArgument = cachePopulateDirective.arguments.find((arg) => arg.name.value === MAX_AGE);
 
-    let maxAgeSeconds: number | undefined;
-    if (maxAgeArgument) {
-      const maxAgeRaw = parseInt(maxAgeArgument.value.value, 10);
-      if (maxAgeRaw <= 0) {
-        this.errors.push(
-          invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
-            maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_CACHE_POPULATE, value: maxAgeRaw }),
-          ]),
-        );
-        return;
-      }
-      maxAgeSeconds = maxAgeRaw;
-    }
-    const config: CachePopulateConfig = {
-      fieldName: fieldData.name,
-      operationType: operationType === OperationTypeNode.MUTATION ? MUTATION : SUBSCRIPTION,
+    const config: CachePopulateConfiguration = {
       entityTypeName: returnTypeName,
-      maxAgeSeconds,
+      fieldName: fieldData.name,
+      operationType,
+      maxAgeSeconds: entityCacheConfig.maxAgeSeconds, // Set fallback immediately; overridden where appropriate.
     };
+
+    const maxAgeArgument = cachePopulateDirective.arguments[0];
+    if (!maxAgeArgument) {
+      const configurationData = getValueOrDefault(
+        this.configurationDataByTypeName,
+        fieldData.renamedParentTypeName,
+        () => newConfigurationData(false, fieldData.renamedParentTypeName),
+      );
+
+      getOrInitializeEntityCaching(configurationData).cachePopulateConfigurations.push(config);
+      return true;
+    }
+
+    config.maxAgeSeconds = parseInt(maxAgeArgument.value.value, 10);
+    // This syntax handles possible NaN.
+    if (isNaN(config.maxAgeSeconds) || config.maxAgeSeconds <= 0) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+          // If null is explicitly provided in GraphQL the value in JS is undefined.
+          maxAgeNotPositiveIntegerErrorMessage({
+            directiveName: OPENFED_CACHE_POPULATE,
+            value: maxAgeArgument.value.value ?? null,
+          }),
+        ]),
+      );
+      return true;
+    }
 
     const configurationData = getValueOrDefault(this.configurationDataByTypeName, fieldData.renamedParentTypeName, () =>
       newConfigurationData(false, fieldData.renamedParentTypeName),
     );
 
     getOrInitializeEntityCaching(configurationData).cachePopulateConfigurations.push(config);
+    return true;
   }
 
   extractQueryCacheConfig(
@@ -5276,6 +5300,19 @@ export class NormalizationFactory {
     definitions.push(...dependencies);
   }
 
+  // Only Object fields should be passed to this method
+  handleFieldCacheDirectives(data: FieldData): void {
+    /* A field can't both evict (@openfed__cacheInvalidate) and write (@openfed__cachePopulate)
+     * the cache for the same entity, so the two directives are mutually exclusive.
+     */
+    const definesInvalidate = this.extractCacheInvalidateConfig(data);
+    const definesPopulate = this.extractCachePopulateConfig(data);
+    if (definesInvalidate && definesPopulate) {
+      const fieldCoords = `${data.originalParentTypeName}.${data.name}`;
+      this.errors.push(invalidMutuallyExclusiveCacheDirectivesError(fieldCoords));
+    }
+  }
+
   normalize(document: DocumentNode): NormalizationResult {
     // Collect any renamed root types
     upsertDirectiveSchemaAndEntityDefinitions(this, document);
@@ -5388,23 +5425,7 @@ export class NormalizationFactory {
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
             if (isObject) {
-              // A field can't both evict (@openfed__cacheInvalidate) and write (@openfed__cachePopulate)
-              // the cache for the same entity, so the two directives are mutually exclusive.
-              if (
-                fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE) &&
-                fieldData.directivesByName.has(OPENFED_CACHE_POPULATE)
-              ) {
-                const fieldCoords = `${fieldData.originalParentTypeName}.${fieldData.name}`;
-                this.errors.push(
-                  invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
-                    cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords),
-                  ]),
-                );
-              } else {
-                this.extractCacheInvalidateConfig(fieldData);
-                this.extractCachePopulateConfig(fieldData);
-              }
-
+              this.handleFieldCacheDirectives(fieldData);
               this.extractRequestScopedConfig(fieldData);
 
               // @openfed__queryCache extraction and @openfed__is placement validation. Key field sets and
@@ -5431,6 +5452,7 @@ export class NormalizationFactory {
             } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
             }
+
             // Arguments can only be fully validated once all parents types are known
             this.validateArguments(fieldData, parentData.kind);
             // Base Scalars have already been set
