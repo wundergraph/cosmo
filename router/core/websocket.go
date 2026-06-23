@@ -573,6 +573,9 @@ func (h *WebsocketHandler) runPoller() {
 
 				msg, err := handler.protocol.ReadMessage()
 				if err != nil {
+					if isReadTimeout(err) {
+						continue
+					}
 					h.logger.Debug("Client closed connection", zap.Error(err))
 					h.removeConnection(conn, handler, fd, wsproto.CloseKindOf(err))
 					continue
