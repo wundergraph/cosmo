@@ -1814,7 +1814,7 @@ We support NATS, Kafka and Redis as event bus provider.
 version: "1"
 
 events:
-  skip_missing_providers: false
+  skip_unavailable_providers: false
   providers:
     nats:
       - id: default
@@ -1841,14 +1841,14 @@ events:
     redis:
       - id: my-redis
         urls:
-          - "localhost:9092"
+          - "redis://localhost:6379"
 ```
 
 ### Options
 
-| Environment Variable          | YAML                   | Required               | Description                                                                                                                                                                                                                                                          | Default Value |
-| ----------------------------- | ---------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| EVENTS_SKIP_MISSING_PROVIDERS | skip_missing_providers | <Icon icon="square" /> | Start the router even when the execution config references an event provider that is not defined under `providers`. The router logs an error and disables only the affected fields instead of failing to start. By default a missing provider prevents startup. | false         |
+| Environment Variable              | YAML                       | Required               | Description                                                                                                                                                                                                                                                                                                                       | Default Value |
+| --------------------------------- | -------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| EVENTS_SKIP_UNAVAILABLE_PROVIDERS | skip_unavailable_providers | <Icon icon="square" /> | Start the router even when an event provider referenced by the execution config is unavailable: either not defined under `providers`, or defined but unreachable at startup (e.g. the broker is down). The router logs an error and disables only the affected fields instead of failing to start. By default this prevents startup. | false         |
 
 ### Provider
 

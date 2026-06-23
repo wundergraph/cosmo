@@ -96,6 +96,14 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		zap.String("method", "subscribe"),
 		zap.Strings("channels", subConf.Channels),
 	)
+
+	// Defensive backstop behind PubSubProvider.UnavailableError(): a provider that failed
+	// to connect is normally short-circuited before reaching the adapter, but guard the
+	// nil connection here too so an unstarted adapter returns an error instead of panicking.
+	if p.conn == nil {
+		return datasource.NewError("redis connection not initialized", nil)
+	}
+
 	sub := p.conn.PSubscribe(ctx, subConf.Channels...)
 	msgChan := sub.Channel()
 

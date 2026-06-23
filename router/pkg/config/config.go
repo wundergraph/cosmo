@@ -801,13 +801,15 @@ type EventProviders struct {
 
 type EventsConfiguration struct {
 	Providers EventProviders `yaml:"providers,omitempty"`
-	// SkipMissingProviders allows the router to start even when the execution config
-	// references an event provider that is not defined in the router configuration.
-	// When enabled, the router logs an error and skips the data sources that depend on
-	// the missing provider instead of failing to start. Only the affected fields become
-	// unavailable; the rest of the graph keeps serving traffic.
-	SkipMissingProviders bool                        `yaml:"skip_missing_providers" envDefault:"false" env:"EVENTS_SKIP_MISSING_PROVIDERS"`
-	Handlers             StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
+	// SkipUnavailableProviders allows the router to start even when an event provider
+	// referenced by the execution config is unavailable: either not defined in the router
+	// configuration, or defined but unreachable at startup (e.g. the broker is down).
+	// When enabled, the router logs an error and starts anyway instead of failing. A
+	// provider that is not defined has its data sources skipped; a provider that fails to
+	// connect is marked unavailable so requests to the affected fields return an error
+	// instead of crashing the router. The rest of the graph keeps serving traffic.
+	SkipUnavailableProviders bool                        `yaml:"skip_unavailable_providers" envDefault:"false" env:"EVENTS_SKIP_UNAVAILABLE_PROVIDERS"`
+	Handlers                 StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
 }
 
 type StreamsHandlerConfiguration struct {

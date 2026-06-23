@@ -2202,9 +2202,12 @@ func (s *graphServer) startupPubSubProviders(ctx context.Context) error {
 	// Default timeout for pubsub provider startup
 	const defaultStartupTimeout = 5 * time.Second
 
+	// When skip_unavailable_providers is enabled, a provider that fails to start (e.g. the
+	// broker is unreachable) must not prevent the router from starting. The provider is
+	// logged and marked unavailable so requests to its fields fail gracefully instead.
 	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.Provider) error {
 		return provider.Startup(ctx)
-	}, defaultStartupTimeout, "pubsub provider startup timed out")
+	}, defaultStartupTimeout, "pubsub provider startup timed out", s.eventsConfig.SkipUnavailableProviders)
 }
 
 // shutdownPubSubProviders shuts down all pubsub providers
@@ -2216,29 +2219,62 @@ func (s *graphServer) shutdownPubSubProviders(ctx context.Context) error {
 
 	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.Provider) error {
 		return provider.Shutdown(ctx)
-	}, defaultShutdownTimeout, "pubsub provider shutdown timed out")
+	}, defaultShutdownTimeout, "pubsub provider shutdown timed out", false)
 }
 
-func (s *graphServer) providersActionWithTimeout(ctx context.Context, action func(ctx context.Context, provider datasource.Provider) error, timeout time.Duration, timeoutMessage string) error {
+// providerUnavailableMarker is implemented by providers that can be marked unavailable
+// so that requests to their fields fail gracefully instead of using a provider that
+// could not be started.
+type providerUnavailableMarker interface {
+	MarkUnavailable()
+}
+
+// providersActionWithTimeout runs action against every pubsub provider concurrently,
+// bounding each by timeout. When continueOnError is true, a provider whose action fails
+// or times out is logged and marked unavailable instead of aborting the whole action;
+// this is used at startup so an unreachable provider does not prevent the router from
+// starting.
+func (s *graphServer) providersActionWithTimeout(ctx context.Context, action func(ctx context.Context, provider datasource.Provider) error, timeout time.Duration, timeoutMessage string, continueOnError bool) error {
 	cancellableCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
 
 	providersGroup := new(errgroup.Group)
 	for _, provider := range s.pubSubProviders {
 		providersGroup.Go(func() error {
+			// Each provider is bounded by its own timer. A single shared timer would only
+			// ever deliver its fire to one goroutine, so multiple slow/unreachable providers
+			// would block the others forever and hang startup.
+			timer := time.NewTimer(timeout)
+			defer timer.Stop()
+
 			actionDone := make(chan error, 1)
 			go func() {
 				actionDone <- action(cancellableCtx, provider)
 			}()
+			var actionErr error
 			select {
 			case err := <-actionDone:
-				return err
+				actionErr = err
 			case <-timer.C:
-				return errors.New(timeoutMessage)
+				actionErr = errors.New(timeoutMessage)
 			}
+			if actionErr == nil || !continueOnError {
+				return actionErr
+			}
+			// Lenient mode: tolerate the failure only if the provider can be marked
+			// unavailable, so that requests to its fields fail gracefully instead of using
+			// an unconnected adapter. If it cannot be marked, do not swallow the error.
+			marker, ok := provider.(providerUnavailableMarker)
+			if !ok {
+				return actionErr
+			}
+			s.logger.Error("EDFS provider is unavailable; the router will keep running and the fields backed by this provider will be unavailable",
+				zap.String("provider_id", provider.ID()),
+				zap.String("provider_type", provider.TypeID()),
+				zap.Error(actionErr),
+			)
+			marker.MarkUnavailable()
+			return nil
 		})
 	}
 

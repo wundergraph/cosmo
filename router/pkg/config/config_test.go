@@ -177,7 +177,7 @@ engine:
 	})
 }
 
-func TestEventsSkipMissingProvidersConfigLoading(t *testing.T) {
+func TestEventsSkipUnavailableProvidersConfigLoading(t *testing.T) {
 	t.Run("defaults to false", func(t *testing.T) {
 		t.Parallel()
 
@@ -190,7 +190,7 @@ graph:
 
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.False(t, cfg.Config.Events.SkipMissingProviders)
+		require.False(t, cfg.Config.Events.SkipUnavailableProviders)
 	})
 
 	t.Run("can be enabled from yaml", func(t *testing.T) {
@@ -203,16 +203,16 @@ graph:
   token: "token"
 
 events:
-  skip_missing_providers: true
+  skip_unavailable_providers: true
 `)
 
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.True(t, cfg.Config.Events.SkipMissingProviders)
+		require.True(t, cfg.Config.Events.SkipUnavailableProviders)
 	})
 
 	t.Run("can be enabled from env", func(t *testing.T) {
-		t.Setenv("EVENTS_SKIP_MISSING_PROVIDERS", "true")
+		t.Setenv("EVENTS_SKIP_UNAVAILABLE_PROVIDERS", "true")
 
 		f := createTempFileFromFixture(t, `
 version: "1"
@@ -223,7 +223,7 @@ graph:
 
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.True(t, cfg.Config.Events.SkipMissingProviders)
+		require.True(t, cfg.Config.Events.SkipUnavailableProviders)
 	})
 }
 

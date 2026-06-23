@@ -186,15 +186,20 @@ We've intentionally moved this part of the configuration out of the Schema to ke
 
 If you run `make edfs-demo` in the Cosmo Monorepo, you'll automatically get a NATS instance running on the default port (4222) using Docker.
 
-### Missing providers
+### Unavailable providers
 
-If the execution config references a provider ID that is not defined under `events.providers`, the router fails to start with an error such as `redis provider with ID my-provider is not defined`. This stops a router from coming up with a partially-configured event setup.
+By default the router fails to start if an event provider referenced by the execution config is unavailable. This happens in two cases:
 
-Set `skip_missing_providers: true` (or the `EVENTS_SKIP_MISSING_PROVIDERS` environment variable) to start the router anyway. The router logs the error and disables only the fields backed by the missing provider. The rest of the graph keeps serving traffic, and requests to the affected fields fail at query time. Set up an alert on the logged error to detect the missing configuration.
+- The provider is not defined under `events.providers`. The router reports an error such as `redis provider with ID my-provider is not defined`.
+- The provider is defined but cannot be reached at startup (e.g. the broker is down).
+
+This stops a router from coming up with a broken event setup.
+
+Set `skip_unavailable_providers: true` (or the `EVENTS_SKIP_UNAVAILABLE_PROVIDERS` environment variable) to start the router anyway. The router logs the error and disables only the fields backed by the unavailable provider. The rest of the graph keeps serving traffic. A field whose provider is not defined is dropped (it cannot be queried); a field whose provider failed to connect returns an error at query time. Set up an alert on the logged error to detect the misconfiguration or outage.
 
 ```yaml config.yaml
 events:
-  skip_missing_providers: true
+  skip_unavailable_providers: true
   providers:
     nats:
       - id: default

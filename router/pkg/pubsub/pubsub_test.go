@@ -449,7 +449,7 @@ func TestBuildProvidersAndDataSources_Nats_OK(t *testing.T) {
 	assert.False(t, dataSources[0].HasRootNode("Type1", "Field2"))
 }
 
-func TestBuildProvidersAndDataSources_SkipMissingProviders(t *testing.T) {
+func TestBuildProvidersAndDataSources_SkipUnavailableProviders(t *testing.T) {
 	ctx := context.Background()
 
 	dsMeta := &plan.DataSourceMetadata{
@@ -503,7 +503,7 @@ func TestBuildProvidersAndDataSources_SkipMissingProviders(t *testing.T) {
 	assert.IsType(t, &ProviderNotDefinedError{}, err)
 
 	// With the flag enabled, the router starts and only the affected data source is skipped.
-	eventsConfig.SkipMissingProviders = true
+	eventsConfig.SkipUnavailableProviders = true
 	providers, dataSources, err := BuildProvidersAndDataSources(ctx, eventsConfig, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{})
 	require.NoError(t, err)
 	require.Len(t, providers, 1)

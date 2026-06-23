@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -16,6 +17,11 @@ type PubSubProvider struct {
 	Logger       *zap.Logger
 	hooks        Hooks
 	eventBuilder EventBuilderFn
+	// unavailable is set when the provider could not be started (e.g. the broker is
+	// unreachable) and the router was configured to start anyway. Once set, Subscribe
+	// and Publish return an error instead of using the underlying adapter, so the
+	// affected fields fail gracefully rather than crashing the router.
+	unavailable atomic.Bool
 }
 
 // applyPublishEventHooks processes events through a chain of hook functions
@@ -67,7 +73,31 @@ func (p *PubSubProvider) Startup(ctx context.Context) error {
 	return nil
 }
 
+// MarkUnavailable flags the provider as unavailable. It is called when the provider
+// failed to start and the router was configured (events.skip_unavailable_providers)
+// to keep running. Subsequent Subscribe/Publish calls return an error instead of
+// using the underlying adapter, which may not have an established connection.
+func (p *PubSubProvider) MarkUnavailable() {
+	p.unavailable.Store(true)
+}
+
+// UnavailableError returns a non-nil error if the provider has been marked unavailable.
+// Data sources that reach into the underlying adapter directly (e.g. NATS request/reply)
+// should call this before using it, so a provider that failed to start is not used.
+func (p *PubSubProvider) UnavailableError() error {
+	if p.unavailable.Load() {
+		return NewError(fmt.Sprintf("event provider %q (%s) is unavailable", p.id, p.typeID), nil)
+	}
+	return nil
+}
+
 func (p *PubSubProvider) Shutdown(ctx context.Context) error {
+	// A provider marked unavailable failed to start, so it has no connection to tear down.
+	// Skip the adapter: its connection fields may still be written by an in-flight Startup
+	// goroutine, and reading them here would race that write.
+	if p.unavailable.Load() {
+		return nil
+	}
 	if err := p.Adapter.Shutdown(ctx); err != nil {
 		return err
 	}
@@ -75,10 +105,17 @@ func (p *PubSubProvider) Shutdown(ctx context.Context) error {
 }
 
 func (p *PubSubProvider) Subscribe(ctx context.Context, cfg SubscriptionEventConfiguration, updater SubscriptionEventUpdater) error {
+	if err := p.UnavailableError(); err != nil {
+		return err
+	}
 	return p.Adapter.Subscribe(ctx, cfg, updater)
 }
 
 func (p *PubSubProvider) Publish(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) error {
+	if err := p.UnavailableError(); err != nil {
+		return err
+	}
+
 	if len(p.hooks.OnPublishEvents.Handlers) == 0 {
 		return p.Adapter.Publish(ctx, cfg, events)
 	}
