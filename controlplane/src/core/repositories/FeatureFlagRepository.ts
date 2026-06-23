@@ -65,6 +65,29 @@ export type CheckConstituentFeatureSubgraphsResult = {
   featureSubgraphIds: Array<string>;
 };
 
+export type FeatureFlagCollectCaches = {
+  featureFlagsByBaseSubgraphId: Map<string, ReturnType<FeatureFlagRepository['getFeatureFlagsByBaseSubgraphId']>>;
+  matchedFeatureFlagsByLabelKey: Map<string, ReturnType<FeatureFlagRepository['getMatchedFeatureFlags']>>;
+  featureSubgraphsByFlagId: Map<string, ReturnType<FeatureFlagRepository['getFeatureSubgraphsByFeatureFlagId']>>;
+};
+
+/** Get-or-compute a cached promise (single-flight). With no cache, just computes. */
+function memoizePromise<T>(
+  cache: Map<string, Promise<T>> | undefined,
+  key: string,
+  compute: () => Promise<T>,
+): Promise<T> {
+  if (!cache) {
+    return compute();
+  }
+  let promise = cache.get(key);
+  if (!promise) {
+    promise = compute();
+    cache.set(key, promise);
+  }
+  return promise;
+}
+
 @traced
 export class FeatureFlagRepository {
   constructor(
@@ -1107,26 +1130,28 @@ export class FeatureFlagRepository {
     baseSubgraphNames,
     fedGraphLabelMatchers,
     excludeDisabled,
+    caches,
   }: {
     baseSubgraphId: string;
     namespaceId: string;
     baseSubgraphNames: string[];
     fedGraphLabelMatchers: string[];
     excludeDisabled: boolean;
+    caches?: FeatureFlagCollectCaches;
   }): Promise<FeatureFlagWithFeatureSubgraphs[]> {
     const featureFlagWithEnabledFeatureGraphs: FeatureFlagWithFeatureSubgraphs[] = [];
-    const featureFlagsBySubgraphId = await this.getFeatureFlagsByBaseSubgraphId({
-      baseSubgraphId,
-      namespaceId,
-      excludeDisabled,
-    });
 
-    // gets all the feature flags that match the label matchers
-    const matchedFeatureFlags = await this.getMatchedFeatureFlags({
-      namespaceId,
-      fedGraphLabelMatchers,
-      excludeDisabled,
-    });
+    const featureFlagsBySubgraphId = await memoizePromise(
+      caches?.featureFlagsByBaseSubgraphId,
+      `${namespaceId}:${excludeDisabled}:${baseSubgraphId}`,
+      () => this.getFeatureFlagsByBaseSubgraphId({ baseSubgraphId, namespaceId, excludeDisabled }),
+    );
+
+    const matchedFeatureFlags = await memoizePromise(
+      caches?.matchedFeatureFlagsByLabelKey,
+      `${namespaceId}:${excludeDisabled}:${[...fedGraphLabelMatchers].sort().join(';')}`,
+      () => this.getMatchedFeatureFlags({ namespaceId, fedGraphLabelMatchers, excludeDisabled }),
+    );
 
     for (const featureFlag of featureFlagsBySubgraphId) {
       const matched = matchedFeatureFlags.some((m) => m.id === featureFlag.id);
@@ -1134,10 +1159,10 @@ export class FeatureFlagRepository {
         continue;
       }
 
-      const featureSubgraphsByFlag = await this.getFeatureSubgraphsByFeatureFlagId({
-        featureFlagId: featureFlag.id,
-        namespaceId,
-      });
+      // Feature subgraphs of the flag — memoized by flag id (the same flags recur across the batch).
+      const featureSubgraphsByFlag = await memoizePromise(caches?.featureSubgraphsByFlagId, featureFlag.id, () =>
+        this.getFeatureSubgraphsByFeatureFlagId({ featureFlagId: featureFlag.id, namespaceId }),
+      );
 
       // if there are no feature subgraphs in the flag, then skip the flag
       if (featureSubgraphsByFlag.length === 0) {
