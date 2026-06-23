@@ -28,7 +28,9 @@ import {
   DataSourceKind,
   EngineConfiguration,
   EntityCacheConfiguration,
+  EntityCacheFieldMapping,
   EntityCachingConfiguration,
+  EntityKeyMapping,
   FieldListSizeConfiguration,
   FieldWeightConfiguration,
   GraphQLSubscriptionConfiguration,
@@ -38,6 +40,7 @@ import {
   ImageReference,
   InternedString,
   PluginConfiguration,
+  QueryCacheConfiguration,
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
@@ -88,6 +91,7 @@ function extractEntityCachingConfiguration(
   const entityCache: EntityCacheConfiguration[] = [];
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
   const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
+  const queryCacheConfigurations: QueryCacheConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
     if (!data.entityCaching) {
       continue;
@@ -126,13 +130,43 @@ function extractEntityCachingConfiguration(
         }),
       );
     }
+    for (const rfc of data.entityCaching?.queryCacheConfigurations ?? []) {
+      queryCacheConfigurations.push(
+        new QueryCacheConfiguration({
+          fieldName: rfc.fieldName,
+          maxAgeSeconds: BigInt(rfc.maxAgeSeconds),
+          includeHeaders: rfc.includeHeaders,
+          shadowMode: rfc.shadowMode,
+          entityTypeName: rfc.entityTypeName,
+          entityKeyMappings: rfc.entityKeyMappings.map(
+            (m) =>
+              new EntityKeyMapping({
+                entityTypeName: m.entityTypeName,
+                fieldMappings: m.fieldMappings.map(
+                  (fm) =>
+                    new EntityCacheFieldMapping({
+                      entityKeyField: fm.entityKeyField,
+                      argumentPath: fm.argumentPath,
+                      isBatch: fm.isBatch || false,
+                    }),
+                ),
+              }),
+          ),
+        }),
+      );
+    }
   }
-
-  if (entityCache.length > 0 || cacheInvalidateConfigurations.length > 0 || cachePopulateConfigurations.length > 0) {
+  if (
+    entityCache.length > 0 ||
+    cacheInvalidateConfigurations.length > 0 ||
+    cachePopulateConfigurations.length > 0 ||
+    queryCacheConfigurations.length > 0
+  ) {
     return new EntityCachingConfiguration({
+      entityCache,
       cacheInvalidateConfigurations,
       cachePopulateConfigurations,
-      entityCache,
+      queryCacheConfigurations,
     });
   }
 }

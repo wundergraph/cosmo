@@ -16,3 +16,9 @@ export type InvalidRepeatedComposedDirectiveWarningParams = {
   directiveName: DirectiveName;
   printedDirective: string;
 };
+
+export type QueryCacheReturnEntityMissingEntityCacheWarningParams = {
+  subgraphName: SubgraphName;
+  fieldCoords: FieldName;
+  entityType: TypeName;
+};
