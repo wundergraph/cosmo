@@ -1466,7 +1466,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
       const mapping = compileGraphQLToMapping(sdl, 'MediaService');
 
-      const json = mapping.toJson() as any;
+      const json = toJson(GRPCMappingSchema, mapping) as any;
 
       // Should have entity mappings for interface AND concrete types
       const entityTypeNames = json.entityMappings.map((e: any) => e.typeName);
@@ -1610,7 +1610,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
       const mapping = compileGraphQLToMapping(sdl, 'AccountService');
 
-      const json = mapping.toJson() as any;
+      const json = toJson(GRPCMappingSchema, mapping) as any;
 
       // Interface gets one lookup by id
       const accountMappings = json.entityMappings.filter((e: any) => e.typeName === 'Account');
@@ -1769,7 +1769,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
       const mapping = compileGraphQLToMapping(sdl, 'VehicleService');
 
-      const json = mapping.toJson() as any;
+      const json = toJson(GRPCMappingSchema, mapping) as any;
 
       // All types should have composite key entity mappings
       const entityTypeNames = json.entityMappings.map((e: any) => e.typeName);
