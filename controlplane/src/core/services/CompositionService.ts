@@ -902,8 +902,8 @@ export class CompositionService {
       featureFlagName,
       featureFlagRouterExecutionConfig,
     ] of featureFlagRouterExecutionConfigByFeatureFlagName) {
-      const routerExecutionConfig = RouterConfig.fromJson({
-        ...(featureFlagRouterExecutionConfig.toJson() as JsonObject),
+      const routerExecutionConfig = fromJson(RouterConfigSchema, {
+        ...(toJson(FeatureFlagRouterExecutionConfigSchema, featureFlagRouterExecutionConfig) as JsonObject),
         compatibilityVersion: graph.routerCompatibilityVersion,
       });
 
