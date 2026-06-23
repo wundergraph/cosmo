@@ -85,9 +85,11 @@ import {
   OPENFED_CACHE_POPULATE,
   OPENFED_ENTITY_CACHE,
   INCLUDE_HEADERS,
+  OPENFED_IS,
   MAX_AGE,
   NEGATIVE_CACHE_TTL,
   PARTIAL_CACHE_LOAD,
+  OPENFED_QUERY_CACHE,
   OPENFED_REQUEST_SCOPED,
   SHADOW_MODE,
 } from '../../utils/string-constants';
@@ -894,6 +896,50 @@ export const OPENFED_CACHE_POPULATE_DEFINITION: DirectiveDefinitionNode = {
   name: stringToNameNode(OPENFED_CACHE_POPULATE),
   repeatable: false,
 };
+
+// @openfed__queryCache(maxAge: Int!, includeHeaders: Boolean = false, shadowMode: Boolean = false) on FIELD_DEFINITION
+export const OPENFED_QUERY_CACHE_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(MAX_AGE),
+      type: REQUIRED_INT_TYPE_NODE,
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(INCLUDE_HEADERS),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      defaultValue: { kind: Kind.BOOLEAN, value: false },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(SHADOW_MODE),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      defaultValue: { kind: Kind.BOOLEAN, value: false },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(OPENFED_QUERY_CACHE),
+  repeatable: false,
+};
+
+// @openfed__is(fields: String!) on ARGUMENT_DEFINITION
+export const OPENFED_IS_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(FIELDS),
+      type: REQUIRED_STRING_TYPE_NODE,
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([ARGUMENT_DEFINITION_UPPER]),
+  name: stringToNameNode(OPENFED_IS),
+  repeatable: false,
+};
+
+// @openfed__requestScoped(key: String!) on FIELD_DEFINITION
 export const OPENFED_REQUEST_SCOPED_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {

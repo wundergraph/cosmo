@@ -2,6 +2,7 @@ import { Warning } from '../../warnings/types';
 import { QUOTATION_JOIN } from '../../utils/string-constants';
 import {
   type InvalidRepeatedComposedDirectiveWarningParams,
+  type QueryCacheReturnEntityMissingEntityCacheWarningParams,
   type RequestScopedSingleFieldWarningParams,
   type SingleFederatedInputFieldOneOfWarningParams,
   type SingleSubgraphInputFieldOneOfWarningParams,
@@ -250,6 +251,23 @@ export function invalidRepeatedComposedDirectiveWarning({
       ` Consider updating the directive definition for "${directiveName}" to be repeatable.`,
     subgraph: {
       name: '',
+    },
+  });
+}
+
+export function queryCacheReturnEntityMissingEntityCacheWarning({
+  subgraphName,
+  fieldCoords,
+  entityType,
+}: QueryCacheReturnEntityMissingEntityCacheWarningParams): Warning {
+  return new Warning({
+    message:
+      `Field "${fieldCoords}" has @openfed__queryCache and returns entity "${entityType}",` +
+      ` but "${entityType}" has no @openfed__entityCache directive. Add @openfed__entityCache(maxAge: ...)` +
+      ` to "${entityType}" to enable caching, or remove @openfed__queryCache from "${fieldCoords}".` +
+      ' The @openfed__queryCache config for this field was not extracted.',
+    subgraph: {
+      name: subgraphName,
     },
   });
 }

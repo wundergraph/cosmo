@@ -173,6 +173,28 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
+  batchListValuedKeyRequiresNestedListsErrorMessage,
+  duplicateKeyFieldMappingErrorMessage,
+  explicitBatchAdditionalNonKeyArgumentErrorMessage,
+  explicitCompositeAdditionalNonKeyArgumentErrorMessage,
+  explicitIncompleteCompositeKeyErrorMessage,
+  explicitScalarArgumentsCannotEstablishBatchMappingErrorMessage,
+  explicitSingularAdditionalNonKeyArgumentErrorMessage,
+  explicitTypeMismatchErrorMessage,
+  inputObjectCompositeMissingFieldErrorMessage,
+  inputObjectCompositeTypeMismatchErrorMessage,
+  isReferencesUnknownKeyFieldErrorMessage,
+  isWithoutQueryCacheErrorMessage,
+  listArgumentToScalarKeySpecErrorMessage,
+  multipleListArgumentsBatchFactoryMessage,
+  nestedInputObjectMissingFieldErrorMessage,
+  nestedInputObjectTypeMismatchErrorMessage,
+  nestedKeyRequiresInputObjectErrorMessage,
+  nonInputArgumentCannotTargetCompositeKeyErrorMessage,
+  nonKeyFieldSpecErrorMessage,
+  queryCacheOnNonEntityReturnTypeErrorMessage,
+  queryCacheOnNonQueryFieldErrorMessage,
+  scalarArgumentToListKeySpecErrorMessage,
 } from '../../errors/errors';
 import {
   DEPENDENCIES_BY_DIRECTIVE_NAME,
@@ -191,6 +213,9 @@ import {
   type FieldWeightConfiguration,
   type NatsEventType,
   type RequiredFieldConfiguration,
+  type EntityKeyMappingConfig,
+  type FieldMappingConfig,
+  type QueryCacheConfig,
   type RequestScopedConfiguration,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
@@ -205,6 +230,7 @@ import {
   requestScopedSingleFieldWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
+  queryCacheReturnEntityMissingEntityCacheWarning,
 } from '../warnings/warnings';
 import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
 import {
@@ -357,6 +383,10 @@ import {
   TOPICS,
   TYPENAME,
   WEIGHT,
+  OPENFED_IS,
+  LITERAL_OPEN_BRACE,
+  LITERAL_SPACE,
+  OPENFED_QUERY_CACHE,
   OPENFED_REQUEST_SCOPED,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
@@ -390,6 +420,7 @@ import {
   type RecordDirectiveWeightOnFieldParams,
   type UpsertInputObjectResult,
   type ValidateDirectiveParams,
+  type QueryCacheDirectiveNode,
   type RequestScopedDirectiveNode,
 } from './types/types';
 import {
@@ -471,8 +502,9 @@ export class NormalizationFactory {
   directiveDefinitionDataByName = initializeDirectiveDefinitionDatas();
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
-  /* Cached entity configs keyed by type name, populated by extractEntityCacheDirective() from
-   * @openfed__entityCache. Future caching directives (@openfed__queryCache etc.) use this as a lookup
+  /**
+   * Cached entity configs keyed by type name, populated by {@link extractEntityCacheDirective} from
+   * `@openfed__entityCache`. Future caching directives (`@openfed__queryCache` etc.) use this as a lookup
    * to verify a field's return type is a cached entity.
    */
   entityCacheConfigByTypeName = new Map<TypeName, EntityCacheConfiguration>();
@@ -4104,7 +4136,7 @@ export class NormalizationFactory {
     if (config.maxAgeSeconds <= 0) {
       entityCacheErrors.push(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage(config.maxAgeSeconds),
+          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_ENTITY_CACHE, value: config.maxAgeSeconds }),
         ]),
       );
     }
@@ -4238,7 +4270,10 @@ export class NormalizationFactory {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
           // If null is explicitly provided in GraphQL the value in JS is undefined.
-          maxAgeNotPositiveIntegerErrorMessage(maxAgeArgument.value.value ?? null),
+          maxAgeNotPositiveIntegerErrorMessage({
+            directiveName: OPENFED_CACHE_POPULATE,
+            value: maxAgeArgument.value.value ?? null,
+          }),
         ]),
       );
       return true;
@@ -4250,6 +4285,923 @@ export class NormalizationFactory {
 
     getOrInitializeEntityCaching(configurationData).cachePopulateConfigurations.push(config);
     return true;
+  }
+
+  extractQueryCacheConfig(
+    parentTypeName: string,
+    configurationTypeName: string,
+    fieldName: string,
+    fieldData: FieldData,
+    operationType: OperationTypeNode | undefined,
+  ) {
+    const fieldCoords = `${parentTypeName}.${fieldName}`;
+    if (operationType !== OperationTypeNode.QUERY) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
+          queryCacheOnNonQueryFieldErrorMessage(fieldCoords),
+        ]),
+      );
+      return;
+    }
+    const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+    if (!this.keyFieldSetDatasByTypeName.has(returnTypeName)) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
+          queryCacheOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
+        ]),
+      );
+      return;
+    }
+    // validateDirectives() has already guaranteed the argument types (Int maxAge, Boolean flags), so the
+    // generic ConstDirectiveNode is narrowed once to the precise typed node — mirroring
+    // EntityCacheDirectiveNode/RequestScopedDirectiveNode. Optional args may be absent (definition defaults
+    // are not materialized onto the usage AST), so each defaults here and present args override.
+    const queryCacheDirective = fieldData.directivesByName.get(OPENFED_QUERY_CACHE)![0] as QueryCacheDirectiveNode;
+    let maxAgeSeconds = 0;
+    let includeHeaders = false;
+    let shadowModeValue = false;
+    for (const { name, value } of queryCacheDirective.arguments) {
+      switch (name.value) {
+        case MAX_AGE:
+          if (value.kind === Kind.INT) maxAgeSeconds = parseInt(value.value, 10);
+          break;
+        case INCLUDE_HEADERS:
+          if (value.kind === Kind.BOOLEAN) includeHeaders = value.value;
+          break;
+        case SHADOW_MODE:
+          if (value.kind === Kind.BOOLEAN) shadowModeValue = value.value;
+          break;
+      }
+    }
+    if (maxAgeSeconds <= 0) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
+          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_QUERY_CACHE, value: maxAgeSeconds }),
+        ]),
+      );
+      return;
+    }
+
+    // The return entity must have @openfed__entityCache — otherwise there is no L1/L2 backing store
+    // for queryCache to read from. Warn and skip extraction. Only actionable when the return type is an
+    // OBJECT (@openfed__entityCache is OBJECT-only), so skip the prereq check for interface/union returns.
+    const returnTypeData = this.parentDefinitionDataByTypeName.get(returnTypeName);
+    const isObjectReturn = returnTypeData?.kind === Kind.OBJECT_TYPE_DEFINITION;
+    if (isObjectReturn && !this.entityCacheConfigByTypeName.has(returnTypeName)) {
+      this.warnings.push(
+        queryCacheReturnEntityMissingEntityCacheWarning({
+          subgraphName: this.subgraphName,
+          fieldCoords,
+          entityType: returnTypeName,
+        }),
+      );
+      return;
+    }
+
+    const isListReturn = isTypeNodeListType(fieldData.node.type);
+    const keyFieldSets = this.keyFieldSetDatasByTypeName.get(returnTypeName);
+    const mappings = this.buildArgumentKeyMappings(fieldData, fieldCoords, returnTypeName, keyFieldSets, isListReturn);
+
+    const config: QueryCacheConfig = {
+      fieldName,
+      maxAgeSeconds,
+      includeHeaders,
+      shadowMode: shadowModeValue,
+      entityTypeName: returnTypeName,
+      entityKeyMappings: mappings,
+    };
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, configurationTypeName, () =>
+      newConfigurationData(false, configurationTypeName),
+    );
+    const entityCaching = getOrInitializeEntityCaching(configurationData);
+    entityCaching.queryCacheConfigurations = [...(entityCaching.queryCacheConfigurations ?? []), config];
+  }
+
+  validateIsDirectivePlacement(fieldCoords: string, fieldData: FieldData) {
+    for (const [argumentName, argumentData] of fieldData.argumentDataByName) {
+      if (!argumentData.directivesByName.has(OPENFED_IS)) {
+        continue;
+      }
+      this.errors.push(
+        invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argumentName}: ...)`, FIRST_ORDINAL, [
+          isWithoutQueryCacheErrorMessage(argumentName, fieldCoords),
+        ]),
+      );
+    }
+  }
+
+  /**
+   * Extracts key field info from a key's `DocumentNode` AST.
+   *
+   * @returns An array of `{ path: "store.id", typeNode: TypeNode }` for each leaf field.
+   */
+  extractKeyFieldInfos(
+    documentNode: DocumentNode,
+    entityTypeName: string,
+  ): Array<{ path: string; typeNode: TypeNode }> {
+    const result: Array<{ path: string; typeNode: TypeNode }> = [];
+    const operationDef = documentNode.definitions[0];
+    if (!operationDef || !('selectionSet' in operationDef) || !operationDef.selectionSet) {
+      return result;
+    }
+
+    const walkSelections = (selections: readonly any[], currentTypeName: string, pathPrefix: string) => {
+      for (const selection of selections) {
+        if (selection.kind !== Kind.FIELD) {
+          continue;
+        }
+        const fieldName = selection.name.value;
+        const fieldPath = pathPrefix ? `${pathPrefix}.${fieldName}` : fieldName;
+
+        // Look up the field type on the current parent type
+        const parentData = this.parentDefinitionDataByTypeName.get(currentTypeName);
+        if (!parentData || !('fieldDataByName' in parentData)) {
+          continue;
+        }
+        const fieldData = parentData.fieldDataByName.get(fieldName);
+        if (!fieldData) {
+          continue;
+        }
+
+        if (selection.selectionSet && selection.selectionSet.selections.length > 0) {
+          // Nested: recurse into the named type
+          const nestedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+          walkSelections(selection.selectionSet.selections, nestedTypeName, fieldPath);
+        } else {
+          // Leaf field
+          result.push({ path: fieldPath, typeNode: fieldData.node.type });
+        }
+      }
+    };
+
+    walkSelections(operationDef.selectionSet.selections, entityTypeName, '');
+    return result;
+  }
+
+  // Unwraps one layer of list: [T!]! -> T!, [[T!]!]! -> [T!]!
+  unwrapListType(typeNode: TypeNode): TypeNode {
+    if (typeNode.kind === Kind.LIST_TYPE) {
+      return typeNode.type;
+    }
+    if (typeNode.kind === Kind.NON_NULL_TYPE) {
+      const inner = this.unwrapListType(typeNode.type);
+      // If inner changed (was a list), return the unwrapped version without non-null wrapper
+      if (inner !== typeNode.type) {
+        return inner;
+      }
+    }
+    return typeNode;
+  }
+
+  // Compare named types (unwrapping NonNull wrappers only, not list wrappers).
+  namedTypesMatch(a: TypeNode, b: TypeNode): boolean {
+    return getTypeNodeNamedTypeName(a) === getTypeNodeNamedTypeName(b);
+  }
+
+  /**
+   * Structurally compare two `TypeNode`s: named type AND list/NonNull wrapping must match.
+   * Used at nested composite-key leaves where a printer-level mismatch (e.g., `[ID!]!` vs `ID`)
+   * must be rejected even though the named type (`ID`) agrees.
+   *
+   * @returns `true` if `expected` and `got` match in both named type and list/NonNull structure.
+   */
+  typesMatchIncludingListShape(expected: TypeNode, got: TypeNode): boolean {
+    if (expected.kind !== got.kind) {
+      return false;
+    }
+    if (expected.kind === Kind.NAMED_TYPE) {
+      return expected.name.value === (got as typeof expected).name.value;
+    }
+    if (expected.kind === Kind.NON_NULL_TYPE || expected.kind === Kind.LIST_TYPE) {
+      return this.typesMatchIncludingListShape(expected.type, (got as typeof expected).type);
+    }
+    return false;
+  }
+
+  // Get @openfed__is field value from an argument's directives.
+  getIsFieldValue(isDirective: ConstDirectiveNode): string | undefined {
+    if (isDirective.arguments) {
+      for (const arg of isDirective.arguments) {
+        if (arg.name.value === FIELDS && arg.value.kind === Kind.STRING) {
+          return (arg.value as StringValueNode).value;
+        }
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Validates and builds nested input object mappings against key field infos.
+   *
+   * @returns Field mappings, or `null` on error (errors already pushed).
+   */
+  validateNestedInputObjectMapping(
+    argumentName: string,
+    fieldCoords: string,
+    entityTypeName: string,
+    keyFieldInfos: Array<{ path: string; typeNode: TypeNode }>,
+    normalizedFieldSet: string,
+    inputTypeName: string,
+    argumentPathPrefix: string[],
+    isBatch: boolean,
+    isNested: boolean,
+    entityKeyPathPrefix: string = '',
+  ): FieldMappingConfig[] | null {
+    const inputData = this.parentDefinitionDataByTypeName.get(inputTypeName);
+    if (!inputData || inputData.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+      if (isNested) {
+        // Mid-recursion the key demands a deeper selection (e.g. "store { id }"), but the
+        // input field type is scalar/unknown. Callers treat null as "error already pushed",
+        // so bailing silently here would discard the key without any diagnostic.
+        this.errors.push(
+          invalidDirectiveError(OPENFED_QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
+            nestedKeyRequiresInputObjectErrorMessage(
+              argumentName,
+              fieldCoords,
+              normalizedFieldSet,
+              entityTypeName,
+              inputTypeName,
+              entityKeyPathPrefix,
+            ),
+          ]),
+        );
+      }
+      return null;
+    }
+
+    // Group key field infos by top-level field name for the current level
+    const topLevelGroups = new Map<string, Array<{ path: string; typeNode: TypeNode; restPath: string }>>();
+    for (const info of keyFieldInfos) {
+      const dotIndex = info.path.indexOf(LITERAL_PERIOD);
+      const topField = dotIndex >= 0 ? info.path.substring(0, dotIndex) : info.path;
+      const restPath = dotIndex >= 0 ? info.path.substring(dotIndex + 1) : '';
+      if (!topLevelGroups.has(topField)) {
+        topLevelGroups.set(topField, []);
+      }
+      topLevelGroups.get(topField)!.push({ ...info, restPath });
+    }
+
+    const fieldMappings: FieldMappingConfig[] = [];
+
+    for (const [topField, infos] of topLevelGroups) {
+      const inputFieldData = inputData.inputValueDataByName.get(topField);
+      if (!inputFieldData) {
+        // Missing field in input type
+        if (isNested) {
+          this.errors.push(
+            invalidDirectiveError(OPENFED_QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
+              nestedInputObjectMissingFieldErrorMessage(
+                argumentName,
+                fieldCoords,
+                normalizedFieldSet,
+                entityTypeName,
+                inputTypeName,
+                topField,
+              ),
+            ]),
+          );
+        } else {
+          this.errors.push(
+            invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argumentName}: ...)`, FIRST_ORDINAL, [
+              inputObjectCompositeMissingFieldErrorMessage(
+                argumentName,
+                fieldCoords,
+                normalizedFieldSet,
+                entityTypeName,
+                inputTypeName,
+                topField,
+              ),
+            ]),
+          );
+        }
+        return null;
+      }
+
+      const fullEntityKeyPath = entityKeyPathPrefix ? `${entityKeyPathPrefix}.${topField}` : topField;
+      const hasNestedFields = infos.some((i) => i.restPath !== '');
+      if (hasNestedFields) {
+        // Recurse into nested input object
+        const nestedInfos = infos.map((i) => ({ path: i.restPath, typeNode: i.typeNode }));
+        const nestedInputTypeName = getTypeNodeNamedTypeName(inputFieldData.type);
+        const nestedMappings = this.validateNestedInputObjectMapping(
+          argumentName,
+          fieldCoords,
+          entityTypeName,
+          nestedInfos,
+          normalizedFieldSet,
+          nestedInputTypeName,
+          [...argumentPathPrefix, topField],
+          isBatch,
+          true,
+          fullEntityKeyPath,
+        );
+        if (!nestedMappings) {
+          return null;
+        }
+        fieldMappings.push(...nestedMappings);
+      } else {
+        // Leaf: the input field must match the key field in BOTH named type and list/NonNull wrapping.
+        // Comparing only the named type would wrongly accept an `ID` input for a `[ID!]!` key field.
+        const keyTypeNode = infos[0].typeNode;
+        if (!this.typesMatchIncludingListShape(keyTypeNode, inputFieldData.type)) {
+          // Resolve the entity field's parent type for the error message
+          // We need to walk the full entity key path to find the parent of the leaf
+          const fullPath = entityKeyPathPrefix ? `${entityKeyPathPrefix}.${topField}` : topField;
+          const pathParts = fullPath.split(LITERAL_PERIOD);
+          let currentType = entityTypeName;
+          for (let i = 0; i < pathParts.length - 1; i++) {
+            const pd = this.parentDefinitionDataByTypeName.get(currentType);
+            if (pd && 'fieldDataByName' in pd) {
+              const fd = pd.fieldDataByName.get(pathParts[i]);
+              if (fd) {
+                currentType = getTypeNodeNamedTypeName(fd.node.type);
+              }
+            }
+          }
+          const entityFieldCoords = `${currentType}.${pathParts[pathParts.length - 1]}`;
+          if (isNested) {
+            this.errors.push(
+              invalidDirectiveError(OPENFED_QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
+                nestedInputObjectTypeMismatchErrorMessage(
+                  argumentName,
+                  fieldCoords,
+                  normalizedFieldSet,
+                  entityTypeName,
+                  inputTypeName,
+                  topField,
+                  printTypeNode(inputFieldData.node.type),
+                  entityFieldCoords,
+                  printTypeNode(keyTypeNode),
+                ),
+              ]),
+            );
+          } else {
+            this.errors.push(
+              invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argumentName}: ...)`, FIRST_ORDINAL, [
+                inputObjectCompositeTypeMismatchErrorMessage(
+                  argumentName,
+                  fieldCoords,
+                  normalizedFieldSet,
+                  entityTypeName,
+                  inputTypeName,
+                  topField,
+                  printTypeNode(inputFieldData.node.type),
+                  entityFieldCoords,
+                  printTypeNode(keyTypeNode),
+                ),
+              ]),
+            );
+          }
+          return null;
+        }
+        const mapping: FieldMappingConfig = {
+          entityKeyField: fullEntityKeyPath,
+          argumentPath: [...argumentPathPrefix, topField],
+        };
+        if (isBatch) {
+          mapping.isBatch = true;
+        }
+        fieldMappings.push(mapping);
+      }
+    }
+
+    return fieldMappings;
+  }
+
+  // The main mapping builder. Evaluates each @key independently and emits all satisfiable keys.
+  buildArgumentKeyMappings(
+    fieldData: FieldData,
+    fieldCoords: string,
+    entityTypeName: string,
+    keyFieldSets: Map<string, KeyFieldSetData> | undefined,
+    isListReturn: boolean,
+  ): EntityKeyMappingConfig[] {
+    if (!keyFieldSets || keyFieldSets.size === 0) {
+      return [];
+    }
+
+    type ArgumentInfo = {
+      name: string;
+      data: InputValueData;
+      isFieldValue: string | undefined; // @openfed__is(fields: "...") value
+      isList: boolean;
+      typeNode: TypeNode;
+    };
+
+    const argumentInfos: ArgumentInfo[] = [];
+    // Mappings are derived exclusively from explicit @openfed__is directives. Argument names are
+    // never matched to @key fields. If no argument carries @openfed__is, the field has no mappings.
+    let hasExplicitIs = false;
+    for (const [argumentName, argumentData] of fieldData.argumentDataByName) {
+      const isDirectives = argumentData.directivesByName.get(OPENFED_IS);
+      const hasIs = !!isDirectives && isDirectives.length > 0;
+      hasExplicitIs = hasExplicitIs || hasIs;
+
+      argumentInfos.push({
+        name: argumentName,
+        data: argumentData,
+        isFieldValue: hasIs ? this.getIsFieldValue(isDirectives[0]) : undefined,
+        isList: isTypeNodeListType(argumentData.type),
+        typeNode: argumentData.type,
+      });
+    }
+
+    if (!hasExplicitIs) {
+      return [];
+    }
+    return this.buildExplicitMappings(fieldCoords, entityTypeName, keyFieldSets, isListReturn, argumentInfos);
+  }
+
+  buildExplicitMappings(
+    fieldCoords: string,
+    entityTypeName: string,
+    keyFieldSets: Map<string, KeyFieldSetData>,
+    isListReturn: boolean,
+    argumentInfos: Array<{
+      name: string;
+      data: InputValueData;
+      isFieldValue: string | undefined;
+      isList: boolean;
+      typeNode: TypeNode;
+    }>,
+  ): EntityKeyMappingConfig[] {
+    // Collect all @openfed__is field values and their infos across ALL keys
+    const allKeyFieldInfosByKey = new Map<string, Array<{ path: string; typeNode: TypeNode }>>();
+    // Build a set of ALL key field paths across all keys
+    const allKeyFieldPaths = new Set<string>();
+    // Also build a map from field path -> key field info for type lookups
+    const fieldInfoByPath = new Map<string, { typeNode: TypeNode }>();
+    // Track which fields exist on the entity (not necessarily key fields)
+    const entityFieldNames = new Set<string>();
+    const entityParentData = this.parentDefinitionDataByTypeName.get(entityTypeName);
+    if (entityParentData && 'fieldDataByName' in entityParentData) {
+      for (const fname of entityParentData.fieldDataByName.keys()) {
+        entityFieldNames.add(fname);
+      }
+    }
+
+    for (const [normalizedFieldSet, keyData] of keyFieldSets) {
+      const infos = this.extractKeyFieldInfos(keyData.documentNode, entityTypeName);
+      allKeyFieldInfosByKey.set(normalizedFieldSet, infos);
+      for (const info of infos) {
+        allKeyFieldPaths.add(info.path);
+        fieldInfoByPath.set(info.path, { typeNode: info.typeNode });
+      }
+    }
+
+    // Process each argument with @openfed__is
+    const explicitMappings: Array<{
+      argumentName: string;
+      isFieldValue: string;
+      argumentInfo: (typeof argumentInfos)[0];
+    }> = [];
+    const compositeMappings: EntityKeyMappingConfig[] = [];
+    const mappedKeyFieldToArgumentName = new Map<string, string>();
+
+    for (const argInfo of argumentInfos) {
+      if (!argInfo.isFieldValue) {
+        continue;
+      }
+
+      const isFieldValue = argInfo.isFieldValue;
+
+      // Check if @openfed__is targets multiple fields (composite key via input object). A field-set string is
+      // composite whenever it contains whitespace (e.g. "id sku", "id\nsku") or a nested selection brace
+      // (e.g. "store{id}") — not only a literal space, or space-less/brace forms would be misread as scalars.
+      const isCompositeIsSpec = /[\s{]/.test(isFieldValue);
+
+      if (isCompositeIsSpec) {
+        const errorCount = this.errors.length;
+        const mappings = this.buildCompositeIsMapping(fieldCoords, entityTypeName, keyFieldSets, isListReturn, argInfo);
+        if (this.errors.length > errorCount) {
+          return [];
+        }
+        for (const mapping of mappings) {
+          for (const fieldMapping of mapping.fieldMappings) {
+            mappedKeyFieldToArgumentName.set(fieldMapping.entityKeyField, argInfo.name);
+          }
+        }
+        compositeMappings.push(...mappings);
+        continue;
+      }
+
+      // Check if the field exists on the entity at all but is not a key field
+      const topLevelFieldName = isFieldValue.split(LITERAL_PERIOD)[0];
+      if (!allKeyFieldPaths.has(isFieldValue)) {
+        if (entityFieldNames.has(topLevelFieldName) && !isFieldValue.includes(LITERAL_PERIOD)) {
+          // Field exists but is not a key field
+          this.errors.push(
+            invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+              nonKeyFieldSpecErrorMessage(argInfo.name, fieldCoords, isFieldValue, entityTypeName),
+            ]),
+          );
+        } else {
+          this.errors.push(
+            invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+              isReferencesUnknownKeyFieldErrorMessage(isFieldValue, argInfo.name, fieldCoords, entityTypeName),
+            ]),
+          );
+        }
+        return [];
+      }
+
+      // Duplicate check
+      if (mappedKeyFieldToArgumentName.has(isFieldValue)) {
+        this.errors.push(
+          invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+            duplicateKeyFieldMappingErrorMessage(fieldCoords, isFieldValue),
+          ]),
+        );
+        return [];
+      }
+
+      const keyFieldTypeNode = fieldInfoByPath.get(isFieldValue)!.typeNode;
+      const argTypeNode = argInfo.typeNode;
+
+      // Type checking
+      if (isListReturn) {
+        // Batch mode
+        if (isTypeNodeListType(keyFieldTypeNode)) {
+          // Key field is a list - need list-of-lists argument
+          if (!argInfo.isList) {
+            // Scalar arg to list key in batch
+            this.errors.push(
+              invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+                batchListValuedKeyRequiresNestedListsErrorMessage(
+                  fieldCoords,
+                  isFieldValue,
+                  entityTypeName,
+                  `a scalar tag of type "${printTypeNode(argTypeNode)}"`,
+                ),
+              ]),
+            );
+            return [];
+          }
+          // List arg but is it list-of-lists?
+          const unwrapped = this.unwrapListType(argTypeNode);
+          if (!isTypeNodeListType(unwrapped)) {
+            // Single list, not list of lists
+            this.errors.push(
+              invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+                batchListValuedKeyRequiresNestedListsErrorMessage(
+                  fieldCoords,
+                  isFieldValue,
+                  entityTypeName,
+                  `a single tag list of type "${printTypeNode(argTypeNode)}"`,
+                ),
+              ]),
+            );
+            return [];
+          }
+          // List of lists - check inner type matches
+          const innerType = this.unwrapListType(unwrapped);
+          if (!this.namedTypesMatch(innerType, keyFieldTypeNode)) {
+            this.errors.push(
+              invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+                explicitTypeMismatchErrorMessage(
+                  argInfo.name,
+                  fieldCoords,
+                  printTypeNode(argTypeNode),
+                  isFieldValue,
+                  entityTypeName,
+                  printTypeNode(keyFieldTypeNode),
+                ),
+              ]),
+            );
+            return [];
+          }
+        } else {
+          // Key field is scalar - need list argument with matching element type
+          if (argInfo.isList) {
+            // Check element type
+            const unwrapped = this.unwrapListType(argTypeNode);
+            if (!this.namedTypesMatch(unwrapped, keyFieldTypeNode)) {
+              this.errors.push(
+                invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+                  explicitTypeMismatchErrorMessage(
+                    argInfo.name,
+                    fieldCoords,
+                    printTypeNode(argTypeNode),
+                    isFieldValue,
+                    entityTypeName,
+                    printTypeNode(keyFieldTypeNode),
+                  ),
+                ]),
+              );
+              return [];
+            }
+          } else {
+            // Scalar arg in batch mode - could still be valid as a scalar @openfed__is, we'll check later
+          }
+        }
+      } else {
+        // Singular mode
+        const argIsList = argInfo.isList;
+        const keyIsList = isTypeNodeListType(keyFieldTypeNode);
+
+        if (argIsList && !keyIsList) {
+          // List arg to scalar key on singular return
+          this.errors.push(
+            invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+              listArgumentToScalarKeySpecErrorMessage(
+                argInfo.name,
+                fieldCoords,
+                printTypeNode(argTypeNode),
+                isFieldValue,
+                entityTypeName,
+                printTypeNode(keyFieldTypeNode),
+              ),
+            ]),
+          );
+          return [];
+        }
+
+        if (!argIsList && keyIsList) {
+          // Scalar arg to list key on singular return
+          this.errors.push(
+            invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+              scalarArgumentToListKeySpecErrorMessage(
+                argInfo.name,
+                fieldCoords,
+                printTypeNode(argTypeNode),
+                isFieldValue,
+                entityTypeName,
+                printTypeNode(keyFieldTypeNode),
+              ),
+            ]),
+          );
+          return [];
+        }
+
+        // Named type comparison (handles both scalar-scalar and list-list)
+        if (!this.namedTypesMatch(argTypeNode, keyFieldTypeNode)) {
+          this.errors.push(
+            invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+              explicitTypeMismatchErrorMessage(
+                argInfo.name,
+                fieldCoords,
+                printTypeNode(argTypeNode),
+                isFieldValue,
+                entityTypeName,
+                printTypeNode(keyFieldTypeNode),
+              ),
+            ]),
+          );
+          return [];
+        }
+      }
+
+      mappedKeyFieldToArgumentName.set(isFieldValue, argInfo.name);
+      explicitMappings.push({ argumentName: argInfo.name, isFieldValue, argumentInfo: argInfo });
+    }
+
+    if (explicitMappings.length === 0) {
+      return compositeMappings;
+    }
+
+    // Check for batch mode: all explicit mappings on list return
+    if (isListReturn) {
+      // Check for extra non-key arguments FIRST (not @openfed__is and not a key field in any key)
+      const extraArgs = argumentInfos.filter((a) => !a.isFieldValue && !allKeyFieldPaths.has(a.name));
+      if (extraArgs.length > 0) {
+        const firstExplicit = explicitMappings[0];
+        this.errors.push(
+          invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${firstExplicit.argumentName}: ...)`, FIRST_ORDINAL, [
+            explicitBatchAdditionalNonKeyArgumentErrorMessage(
+              fieldCoords,
+              firstExplicit.argumentName,
+              firstExplicit.isFieldValue,
+              entityTypeName,
+              extraArgs[0].name,
+            ),
+          ]),
+        );
+        return [];
+      }
+
+      // Check if all explicit args are scalars
+      const allScalar = explicitMappings.every((m) => !m.argumentInfo.isList);
+      const listMappings = explicitMappings.filter((m) => m.argumentInfo.isList);
+
+      if (allScalar) {
+        this.errors.push(
+          invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${explicitMappings[0].argumentName}: ...)`, FIRST_ORDINAL, [
+            explicitScalarArgumentsCannotEstablishBatchMappingErrorMessage(fieldCoords, entityTypeName),
+          ]),
+        );
+        return [];
+      }
+
+      if (listMappings.length > 1) {
+        this.errors.push(
+          invalidDirectiveError(OPENFED_QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
+            multipleListArgumentsBatchFactoryMessage(fieldCoords, entityTypeName),
+          ]),
+        );
+        return [];
+      }
+    } else {
+      // Singular/composite return: check for extra non-key arguments (not @openfed__is and not a key field in any key).
+      const globalExtraArgs = argumentInfos.filter((a) => !a.isFieldValue && !allKeyFieldPaths.has(a.name));
+      if (globalExtraArgs.length > 0) {
+        // Find which key the explicit mappings target
+        let targetKeyNormalized: string | undefined;
+        for (const [normalizedFieldSet] of keyFieldSets) {
+          const keyInfos = allKeyFieldInfosByKey.get(normalizedFieldSet)!;
+          const keyPaths = new Set(keyInfos.map((i) => i.path));
+          if (explicitMappings.every((m) => keyPaths.has(m.isFieldValue))) {
+            targetKeyNormalized = normalizedFieldSet;
+            break;
+          }
+        }
+
+        if (explicitMappings.length === 1 && targetKeyNormalized && !targetKeyNormalized.includes(LITERAL_SPACE)) {
+          this.errors.push(
+            invalidDirectiveError(
+              OPENFED_IS,
+              `${fieldCoords}(${explicitMappings[0].argumentName}: ...)`,
+              FIRST_ORDINAL,
+              [
+                explicitSingularAdditionalNonKeyArgumentErrorMessage(
+                  fieldCoords,
+                  explicitMappings[0].argumentName,
+                  explicitMappings[0].isFieldValue,
+                  entityTypeName,
+                  globalExtraArgs[0].name,
+                ),
+              ],
+            ),
+          );
+        } else {
+          // targetKeyNormalized may be undefined here when the explicit @openfed__is mappings span more than
+          // one alternative @key (no single key contains all of them). The satisfiable-keys loop below could
+          // still build a valid mapping per key, but the extra non-key argument makes every candidate cache key
+          // incomplete — so this must error rather than silently discard the mappings.
+          const isArgNames = explicitMappings.map((m) => m.argumentName);
+          const coveredKeyFields =
+            targetKeyNormalized ?? explicitMappings.map((m) => m.isFieldValue).join(LITERAL_SPACE);
+          this.errors.push(
+            invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${isArgNames[0]}: ...)`, FIRST_ORDINAL, [
+              explicitCompositeAdditionalNonKeyArgumentErrorMessage(
+                fieldCoords,
+                isArgNames[0],
+                isArgNames[1] || isArgNames[0],
+                coveredKeyFields,
+                entityTypeName,
+                globalExtraArgs[0].name,
+              ),
+            ]),
+          );
+        }
+        return [];
+      }
+    }
+
+    // Now try to find satisfiable keys
+    const results: EntityKeyMappingConfig[] = [];
+    for (const normalizedFieldSet of keyFieldSets.keys()) {
+      const keyInfos = allKeyFieldInfosByKey.get(normalizedFieldSet)!;
+      const keyPaths = new Set(keyInfos.map((i) => i.path));
+
+      // Check which explicit mappings target this key
+      const explicitForThisKey = explicitMappings.filter((m) => keyPaths.has(m.isFieldValue));
+
+      // Every field of this key must be covered by an explicit @openfed__is mapping.
+      const unmappedFields: string[] = [];
+      let keyFullySatisfied = true;
+
+      for (const info of keyInfos) {
+        if (explicitForThisKey.some((m) => m.isFieldValue === info.path)) {
+          continue;
+        }
+        unmappedFields.push(info.path);
+        keyFullySatisfied = false;
+      }
+
+      if (!keyFullySatisfied) {
+        // If this key has explicit mappings targeting it but is incomplete, error
+        if (explicitForThisKey.length > 0 && unmappedFields.length > 0) {
+          this.errors.push(
+            invalidDirectiveError(
+              OPENFED_IS,
+              `${fieldCoords}(${explicitForThisKey[0].argumentName}: ...)`,
+              FIRST_ORDINAL,
+              [
+                explicitIncompleteCompositeKeyErrorMessage(
+                  fieldCoords,
+                  explicitForThisKey[0].argumentName,
+                  explicitForThisKey[0].isFieldValue,
+                  entityTypeName,
+                  normalizedFieldSet,
+                  unmappedFields[0],
+                ),
+              ],
+            ),
+          );
+          return [];
+        }
+        continue;
+      }
+
+      // Build field mappings in key field info order
+      const fieldMappings: FieldMappingConfig[] = [];
+      for (const info of keyInfos) {
+        const explicitMatch = explicitForThisKey.find((m) => m.isFieldValue === info.path);
+        if (explicitMatch) {
+          const mapping: FieldMappingConfig = {
+            entityKeyField: explicitMatch.isFieldValue,
+            argumentPath: [explicitMatch.argumentName],
+          };
+          if (isListReturn && explicitMatch.argumentInfo.isList) {
+            mapping.isBatch = true;
+          }
+          fieldMappings.push(mapping);
+        }
+      }
+
+      if (fieldMappings.length > 0) {
+        results.push({ entityTypeName, fieldMappings });
+      }
+    }
+
+    // Each key remains its own EntityKeyMappingConfig — the router evaluates them
+    // independently (OR semantics). Do NOT merge single-field results.
+    return [...compositeMappings, ...results];
+  }
+
+  buildCompositeIsMapping(
+    fieldCoords: string,
+    entityTypeName: string,
+    keyFieldSets: Map<string, KeyFieldSetData>,
+    isListReturn: boolean,
+    argInfo: {
+      name: string;
+      data: InputValueData;
+      isFieldValue: string | undefined;
+      isList: boolean;
+      typeNode: TypeNode;
+    },
+  ): EntityKeyMappingConfig[] {
+    const isFieldValue = argInfo.isFieldValue!;
+    const { documentNode } = safeParse('{' + isFieldValue + '}');
+    const normalizedIsFieldValue = documentNode ? getNormalizedFieldSet(documentNode) : isFieldValue;
+
+    // Find the matching key
+    for (const [normalizedFieldSet, keyData] of keyFieldSets) {
+      if (normalizedFieldSet !== normalizedIsFieldValue) {
+        continue;
+      }
+
+      const keyInfos = this.extractKeyFieldInfos(keyData.documentNode, entityTypeName);
+      const argTypeName = getTypeNodeNamedTypeName(argInfo.typeNode);
+
+      // Check if argument is an input object type
+      const inputData = this.parentDefinitionDataByTypeName.get(argTypeName);
+      if (!inputData || inputData.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+        // Non-input argument targeting composite key
+        this.errors.push(
+          invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+            nonInputArgumentCannotTargetCompositeKeyErrorMessage(
+              argInfo.name,
+              fieldCoords,
+              isFieldValue,
+              entityTypeName,
+              printTypeNode(argInfo.typeNode),
+            ),
+          ]),
+        );
+        return [];
+      }
+
+      const isBatch = isListReturn && argInfo.isList;
+      const isNestedKey = normalizedFieldSet.includes(LITERAL_OPEN_BRACE);
+
+      const fieldMappings = this.validateNestedInputObjectMapping(
+        argInfo.name,
+        fieldCoords,
+        entityTypeName,
+        keyInfos,
+        normalizedFieldSet,
+        argTypeName,
+        [argInfo.name],
+        isBatch,
+        isNestedKey,
+      );
+
+      if (!fieldMappings) {
+        return [];
+      }
+
+      return [{ entityTypeName, fieldMappings }];
+    }
+
+    // Key not found
+    this.errors.push(
+      invalidDirectiveError(OPENFED_IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+        isReferencesUnknownKeyFieldErrorMessage(isFieldValue, argInfo.name, fieldCoords, entityTypeName),
+      ]),
+    );
+    return [];
   }
 
   // Attaches a single field annotated with @openfed__requestScoped to its type's configurationData. A field
@@ -4475,6 +5427,28 @@ export class NormalizationFactory {
             if (isObject) {
               this.handleFieldCacheDirectives(fieldData);
               this.extractRequestScopedConfig(fieldData);
+
+              // @openfed__queryCache extraction and @openfed__is placement validation. Key field sets and
+              // entity-cache configs are already finalized at this point in normalize() (populated by
+              // upsertParentsAndChildren and extractEntityCacheDirective, invalid keys pruned by
+              // evaluateExternalKeyFields), so queryCache can read keyFieldSetDatasByTypeName to build
+              // argument→key mappings.
+              if (fieldData.directivesByName.has(OPENFED_QUERY_CACHE)) {
+                // A renamed root type (e.g. `schema { query: MyQuery }`) is keyed in configurationDataByTypeName
+                // under its federated/canonical name (Query/Mutation/Subscription) by every other config writer.
+                // Cache configs must use the same key, or the router reads the canonical node and never sees them.
+                this.extractQueryCacheConfig(
+                  parentTypeName,
+                  getParentTypeName(parentData),
+                  fieldName,
+                  fieldData,
+                  this.getOperationTypeNodeForRootTypeName(parentTypeName),
+                );
+              } else {
+                // @openfed__is on an argument is only valid alongside @openfed__queryCache on the field, so any
+                // @openfed__is here (no queryCache) is a misplacement.
+                this.validateIsDirectivePlacement(`${parentTypeName}.${fieldName}`, fieldData);
+              }
             } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
             }
