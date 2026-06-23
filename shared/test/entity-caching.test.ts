@@ -5,13 +5,13 @@ import {
   LATEST_ROUTER_COMPATIBILITY_VERSION,
   parse,
 } from '@wundergraph/composition';
-import { EntityCaching } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { EntityCachingConfiguration } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { buildRouterConfig, ComposedSubgraph, SubgraphKind } from '../src';
 
-// Drives a single subgraph through federation + buildRouterConfig and returns the EntityCaching
+// Drives a single subgraph through federation + buildRouterConfig and returns the EntityCachingConfiguration
 // proto message attached to its datasource configuration (or undefined when no caching directives
-// are present). Exercises builder.ts#toEntityCaching end-to-end.
-function buildEntityCaching(sdl: string): EntityCaching | undefined {
+// are present). Exercises builder.ts#extractEntityCachingConfiguration end-to-end.
+function buildEntityCaching(sdl: string): EntityCachingConfiguration | undefined {
   const result = federateSubgraphs({
     subgraphs: [{ name: 'test', url: '', definitions: parse(sdl) }],
     version: LATEST_ROUTER_COMPATIBILITY_VERSION,
@@ -38,11 +38,11 @@ function buildEntityCaching(sdl: string): EntityCaching | undefined {
     federatedSDL: sdl,
     schemaVersionId: '',
   });
-  return routerConfig.engineConfig!.datasourceConfigurations[0].entityCaching;
+  return routerConfig.engineConfig!.datasourceConfigurations[0].entityCachingConfiguration;
 }
 
-describe('Entity caching router-config builder (toEntityCaching)', () => {
-  test('maps every entity-caching directive type into the EntityCaching message', () => {
+describe('Entity caching router-config builder (extractEntityCachingConfiguration)', () => {
+  test('maps every entity-caching directive type into the EntityCachingConfiguration message', () => {
     const ec = buildEntityCaching(`
       type Query {
         product(id: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 30)
@@ -65,19 +65,19 @@ describe('Entity caching router-config builder (toEntityCaching)', () => {
     expect(ec).toBeDefined();
 
     // @openfed__requestScoped
-    expect(ec!.requestScopedFields).toHaveLength(1);
-    expect(ec!.requestScopedFields[0].fieldName).toBe('me');
-    expect(ec!.requestScopedFields[0].typeName).toBe('Query');
-    expect(ec!.requestScopedFields[0].l1Key).toBe('test.u');
+    expect(ec!.requestScopedConfigurations).toHaveLength(1);
+    expect(ec!.requestScopedConfigurations[0].fieldName).toBe('me');
+    expect(ec!.requestScopedConfigurations[0].typeName).toBe('Query');
+    expect(ec!.requestScopedConfigurations[0].l1Key).toBe('test.u');
 
     // @openfed__entityCache (Int args become BigInt; flag defaults preserved)
-    expect(ec!.entityCacheConfigurations).toHaveLength(1);
-    expect(ec!.entityCacheConfigurations[0].typeName).toBe('Product');
-    expect(ec!.entityCacheConfigurations[0].maxAgeSeconds).toBe(60n);
-    expect(ec!.entityCacheConfigurations[0].notFoundCacheTtlSeconds).toBe(5n);
-    expect(ec!.entityCacheConfigurations[0].includeHeaders).toBe(true);
-    expect(ec!.entityCacheConfigurations[0].partialCacheLoad).toBe(false);
-    expect(ec!.entityCacheConfigurations[0].shadowMode).toBe(false);
+    expect(ec!.entityCache).toHaveLength(1);
+    expect(ec!.entityCache[0].typeName).toBe('Product');
+    expect(ec!.entityCache[0].maxAgeSeconds).toBe(60n);
+    expect(ec!.entityCache[0].notFoundCacheTtlSeconds).toBe(5n);
+    expect(ec!.entityCache[0].includeHeaders).toBe(true);
+    expect(ec!.entityCache[0].partialCacheLoad).toBe(false);
+    expect(ec!.entityCache[0].shadowMode).toBe(false);
 
     // @openfed__queryCache with @openfed__is mapping (non-batch)
     expect(ec!.queryCacheConfigurations).toHaveLength(1);
@@ -96,13 +96,13 @@ describe('Entity caching router-config builder (toEntityCaching)', () => {
     // @openfed__cacheInvalidate
     expect(ec!.cacheInvalidateConfigurations).toHaveLength(1);
     expect(ec!.cacheInvalidateConfigurations[0].fieldName).toBe('updateProduct');
-    expect(ec!.cacheInvalidateConfigurations[0].operationType).toBe('Mutation');
+    expect(ec!.cacheInvalidateConfigurations[0].operationType).toBe('mutation');
     expect(ec!.cacheInvalidateConfigurations[0].entityTypeName).toBe('Product');
 
     // @openfed__cachePopulate with explicit maxAge
     expect(ec!.cachePopulateConfigurations).toHaveLength(1);
     expect(ec!.cachePopulateConfigurations[0].fieldName).toBe('createProduct');
-    expect(ec!.cachePopulateConfigurations[0].operationType).toBe('Mutation');
+    expect(ec!.cachePopulateConfigurations[0].operationType).toBe('mutation');
     expect(ec!.cachePopulateConfigurations[0].entityTypeName).toBe('Product');
     expect(ec!.cachePopulateConfigurations[0].maxAgeSeconds).toBe(45n);
   });
@@ -126,7 +126,7 @@ describe('Entity caching router-config builder (toEntityCaching)', () => {
     expect(fm.isBatch).toBe(true);
   });
 
-  test('a Subscription @openfed__cachePopulate without maxAge omits maxAgeSeconds', () => {
+  test('a Subscription @openfed__cachePopulate without maxAge falls back to the entityCache TTL', () => {
     const ec = buildEntityCaching(`
       type Query {
         dummy: String!
@@ -144,10 +144,10 @@ describe('Entity caching router-config builder (toEntityCaching)', () => {
     expect(ec!.cachePopulateConfigurations).toHaveLength(1);
     const cp = ec!.cachePopulateConfigurations[0];
     expect(cp.fieldName).toBe('productStream');
-    expect(cp.operationType).toBe('Subscription');
+    expect(cp.operationType).toBe('subscription');
     expect(cp.entityTypeName).toBe('Product');
-    // maxAge omitted on the directive → builder passes undefined, leaving the optional proto field unset.
-    expect(cp.maxAgeSeconds).toBeUndefined();
+    // maxAge omitted on the directive → composition falls back to the entity's @openfed__entityCache TTL (60s).
+    expect(cp.maxAgeSeconds).toBe(60n);
   });
 
   test('a subgraph with no entity-caching directives omits the EntityCaching message', () => {
