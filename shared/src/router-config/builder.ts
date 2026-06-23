@@ -53,7 +53,7 @@ import type {
   ImageReference,
   InternedString,
   RouterConfig,
-  TypeField
+  TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 import { invalidRouterCompatibilityVersion, normalizationFailureError } from './errors.js';
