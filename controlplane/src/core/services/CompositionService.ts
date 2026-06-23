@@ -50,13 +50,6 @@ import { FeatureFlagRepository, SubgraphsToCompose } from './../repositories/Fea
 import { GraphCompositionRepository } from './../repositories/GraphCompositionRepository.js';
 import { SubgraphRepository } from './../repositories/SubgraphRepository.js';
 
-/**
- * Window size for the batch publish pipeline ({@link CompositionService.recomposeAndDeployAffectedBatch}): the number
- * of federated graphs / feature flags composed in parallel before being persisted and uploaded, and the max number of
- * concurrent uploads / mapper rebuilds. Bounding the window caps how many composition artifacts are held in memory at
- * once. Kept below the DB connection pool size (max 10, see `plugins/database.ts`) so concurrent batch publishing
- * leaves connections for the rest of the control plane. Set to 1 to effectively restore sequential behavior.
- */
 const COMPOSITION_DEPLOY_CONCURRENCY = 5;
 
 @traced
