@@ -90,6 +90,7 @@ import {
   NEGATIVE_CACHE_TTL,
   PARTIAL_CACHE_LOAD,
   OPENFED_QUERY_CACHE,
+  OPENFED_REQUEST_SCOPED,
   SHADOW_MODE,
 } from '../utils/string-constants';
 import {
@@ -127,6 +128,7 @@ import {
   OPENFED_ENTITY_CACHE_DEFINITION,
   OPENFED_IS_DEFINITION,
   OPENFED_QUERY_CACHE_DEFINITION,
+  OPENFED_REQUEST_SCOPED_DEFINITION,
   SPECIFIED_BY_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
   TAG_DEFINITION,
@@ -1105,4 +1107,22 @@ export const IS_DEFINITION_DATA = newDirectiveDefinitionData({
   name: OPENFED_IS,
   node: OPENFED_IS_DEFINITION,
   requiredArgumentNames: new Set<ArgumentName>([FIELDS]),
+});
+
+export const REQUEST_SCOPED_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      KEY,
+      newDirectiveArgumentData({
+        directive: `@${OPENFED_REQUEST_SCOPED}`,
+        name: KEY,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: OPENFED_REQUEST_SCOPED,
+  node: OPENFED_REQUEST_SCOPED_DEFINITION,
+  requiredArgumentNames: new Set<ArgumentName>([KEY]),
 });

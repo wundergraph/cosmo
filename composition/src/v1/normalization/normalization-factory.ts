@@ -216,6 +216,7 @@ import {
   type EntityKeyMappingConfig,
   type FieldMappingConfig,
   type QueryCacheConfig,
+  type RequestScopedConfiguration,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
@@ -226,6 +227,7 @@ import {
   fieldAlreadyProvidedWarning,
   invalidExternalFieldWarning,
   nonExternalConditionalFieldWarning,
+  requestScopedSingleFieldWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
   queryCacheReturnEntityMissingEntityCacheWarning,
@@ -385,6 +387,7 @@ import {
   LITERAL_OPEN_BRACE,
   LITERAL_SPACE,
   OPENFED_QUERY_CACHE,
+  OPENFED_REQUEST_SCOPED,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
 import {
@@ -418,6 +421,7 @@ import {
   type UpsertInputObjectResult,
   type ValidateDirectiveParams,
   type QueryCacheDirectiveNode,
+  type RequestScopedDirectiveNode,
 } from './types/types';
 import {
   getOrInitializeEntityCaching,
@@ -535,6 +539,7 @@ export class NormalizationFactory {
   referencedDirectiveNames = new Set<DirectiveName>();
   referencedTypeNames = new Set<TypeName>();
   renamedParentTypeName = '';
+  requestScopedFieldCoordsByL1Key = new Map<string, Array<string>>();
   schemaData: SchemaData;
   subgraphName: SubgraphName;
   unvalidatedExternalFieldCoords = new Set<string>();
@@ -4305,7 +4310,7 @@ export class NormalizationFactory {
     }
     // validateDirectives() has already guaranteed the argument types (Int maxAge, Boolean flags), so the
     // generic ConstDirectiveNode is narrowed once to the precise typed node — mirroring
-    // EntityCacheDirectiveNode. Optional args may be absent (definition defaults
+    // EntityCacheDirectiveNode/RequestScopedDirectiveNode. Optional args may be absent (definition defaults
     // are not materialized onto the usage AST), so each defaults here and present args override.
     const queryCacheDirective = fieldData.directivesByName.get(OPENFED_QUERY_CACHE)![0] as QueryCacheDirectiveNode;
     let maxAgeSeconds = 0;
@@ -5195,6 +5200,38 @@ export class NormalizationFactory {
     return [];
   }
 
+  // Attaches a single field annotated with @openfed__requestScoped to its type's configurationData. A field
+  // is both a reader and writer of the coordinate L1 — no receiver/provider. Fields with the same `key` share
+  // the same L1 entry: whichever is resolved first populates it, subsequent ones inject from it.
+  extractRequestScopedConfig(fieldData: FieldData) {
+    const directives = fieldData.directivesByName.get(OPENFED_REQUEST_SCOPED);
+    if (!directives) {
+      return;
+    }
+    // validateDirectives() (run earlier in normalize()) has already guaranteed a single, non-repeated
+    // @openfed__requestScoped with a required String `key`, so the generic ConstDirectiveNode can be
+    // narrowed to the precise typed node — mirroring handleComposeDirective()/ComposeDirectiveNode.
+    const directive = directives[0] as RequestScopedDirectiveNode;
+    const keyArg = directive.arguments.find((arg) => arg.name.value === KEY);
+    if (!keyArg) {
+      return;
+    }
+
+    const config: RequestScopedConfiguration = {
+      fieldName: fieldData.name,
+      typeName: fieldData.renamedParentTypeName,
+      l1Key: `${this.subgraphName}.${keyArg.value.value}`,
+    };
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, fieldData.renamedParentTypeName, () =>
+      newConfigurationData(false, fieldData.renamedParentTypeName),
+    );
+    getOrInitializeEntityCaching(configurationData).requestScopedConfigurations.push(config);
+    // Track field coords per L1 key so the single-field warning can be emitted after the walk completes.
+    getValueOrDefault(this.requestScopedFieldCoordsByL1Key, config.l1Key, () => []).push(
+      `${config.typeName}.${config.fieldName}`,
+    );
+  }
+
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
     const externalFieldNames = new Set<string>();
     for (const [fieldName, fieldData] of fieldDataByFieldName) {
@@ -5385,6 +5422,7 @@ export class NormalizationFactory {
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
             if (isObject) {
               this.handleFieldCacheDirectives(fieldData);
+              this.extractRequestScopedConfig(fieldData);
 
               // @openfed__queryCache extraction and @openfed__is placement validation. Key field sets and
               // entity-cache configs are already finalized at this point in normalize() (populated by
@@ -5496,6 +5534,21 @@ export class NormalizationFactory {
         default: {
           throw unexpectedKindFatalError(parentTypeName);
         }
+      }
+    }
+    // @openfed__requestScoped is meaningless unless >= 2 fields share a key (there'd be no second reader to
+    // benefit), so warn for any key used on only one field across the subgraph. extractRequestScopedConfig()
+    // populated requestScopedFieldCoordsByL1Key during the type walk above.
+    for (const [l1Key, fieldCoordsList] of this.requestScopedFieldCoordsByL1Key) {
+      if (fieldCoordsList.length === 1) {
+        this.warnings.push(
+          requestScopedSingleFieldWarning({
+            subgraphName: this.subgraphName,
+            // l1Key is `${this.subgraphName}.${key}`, so strip the prefix to recover the original key.
+            key: l1Key.slice(this.subgraphName.length + 1),
+            fieldCoords: fieldCoordsList[0],
+          }),
+        );
       }
     }
     this.isSubgraphEventDrivenGraph = this.edfsDirectiveReferences.size > 0;

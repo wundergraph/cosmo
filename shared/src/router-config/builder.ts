@@ -40,6 +40,7 @@ import {
   ImageReference,
   InternedString,
   PluginConfiguration,
+  RequestScopedConfiguration,
   QueryCacheConfiguration,
   RouterConfig,
   TypeField,
@@ -91,6 +92,7 @@ function extractEntityCachingConfiguration(
   const entityCache: EntityCacheConfiguration[] = [];
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
   const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
+  const requestScopedConfigurations: RequestScopedConfiguration[] = [];
   const queryCacheConfigurations: QueryCacheConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
     if (!data.entityCaching) {
@@ -130,6 +132,15 @@ function extractEntityCachingConfiguration(
         }),
       );
     }
+    for (const field of data.entityCaching?.requestScopedConfigurations) {
+      requestScopedConfigurations.push(
+        new RequestScopedConfiguration({
+          fieldName: field.fieldName,
+          typeName: field.typeName,
+          l1Key: field.l1Key,
+        }),
+      );
+    }
     for (const rfc of data.entityCaching?.queryCacheConfigurations ?? []) {
       queryCacheConfigurations.push(
         new QueryCacheConfiguration({
@@ -160,12 +171,14 @@ function extractEntityCachingConfiguration(
     entityCache.length > 0 ||
     cacheInvalidateConfigurations.length > 0 ||
     cachePopulateConfigurations.length > 0 ||
+    requestScopedConfigurations.length > 0 ||
     queryCacheConfigurations.length > 0
   ) {
     return new EntityCachingConfiguration({
       entityCache,
       cacheInvalidateConfigurations,
       cachePopulateConfigurations,
+      requestScopedConfigurations,
       queryCacheConfigurations,
     });
   }

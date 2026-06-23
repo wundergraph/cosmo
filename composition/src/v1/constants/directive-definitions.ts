@@ -90,6 +90,7 @@ import {
   NEGATIVE_CACHE_TTL,
   PARTIAL_CACHE_LOAD,
   OPENFED_QUERY_CACHE,
+  OPENFED_REQUEST_SCOPED,
   SHADOW_MODE,
 } from '../../utils/string-constants';
 import {
@@ -935,5 +936,23 @@ export const OPENFED_IS_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([ARGUMENT_DEFINITION_UPPER]),
   name: stringToNameNode(OPENFED_IS),
+  repeatable: false,
+};
+
+// @openfed__requestScoped(key: String!) on FIELD_DEFINITION
+export const OPENFED_REQUEST_SCOPED_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(KEY),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(OPENFED_REQUEST_SCOPED),
   repeatable: false,
 };

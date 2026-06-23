@@ -135,6 +135,7 @@ export const REASON = 'reason';
 export const REQUEST = 'request';
 export const REQUIRE_FETCH_REASONS = 'openfed__requireFetchReasons';
 export const REQUIRE_ONE_SLICING_ARGUMENT = 'requireOneSlicingArgument';
+export const OPENFED_REQUEST_SCOPED = 'openfed__requestScoped';
 export const REQUIRES = 'requires';
 export const REQUIRES_SCOPES = 'requiresScopes';
 export const RESOLVABLE = 'resolvable';

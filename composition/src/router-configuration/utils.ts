@@ -22,6 +22,7 @@ export function getOrInitializeEntityCaching(configurationData: ConfigurationDat
       cacheInvalidateConfigurations: [],
       cachePopulateConfigurations: [],
       entityCacheConfigurations: [],
+      requestScopedConfigurations: [],
     };
   }
 

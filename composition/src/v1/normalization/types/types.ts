@@ -148,6 +148,20 @@ export type ComposeDirectiveArgumentNode = {
   readonly loc?: Location;
 };
 
+export type RequestScopedDirectiveNode = {
+  readonly arguments: ReadonlyArray<RequestScopedArgumentNode>;
+  readonly kind: Kind.DIRECTIVE;
+  readonly name: NameNode;
+  readonly loc?: Location;
+};
+
+export type RequestScopedArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode;
+  readonly value: StringValueNode; // key: String! — guaranteed by validateDirectives()
+  readonly loc?: Location;
+};
+
 export type EntityCacheDirectiveNode = {
   readonly arguments:
     | readonly [MaxAgeArgumentNode]
