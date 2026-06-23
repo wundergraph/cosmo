@@ -179,7 +179,7 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 		astnormalization.WithInlineFragmentSpreads(),
 		astnormalization.WithRemoveUnusedVariables(),
 		astnormalization.WithIgnoreSkipInclude(),
-		astnormalization.WithInlineDefer(),
+		astnormalization.WithEnableDefer(),
 	)
 	normalizer.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
 	if report.HasErrors() {
