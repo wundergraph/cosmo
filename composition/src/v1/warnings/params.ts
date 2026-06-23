@@ -17,12 +17,6 @@ export type InvalidRepeatedComposedDirectiveWarningParams = {
   printedDirective: string;
 };
 
-export type RequestScopedSingleFieldWarningParams = {
-  subgraphName: SubgraphName;
-  key: string;
-  fieldCoords: string;
-};
-
 export type QueryCacheReturnEntityMissingEntityCacheWarningParams = {
   subgraphName: SubgraphName;
   fieldCoords: FieldName;

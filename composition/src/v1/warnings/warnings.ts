@@ -3,7 +3,6 @@ import { QUOTATION_JOIN } from '../../utils/string-constants';
 import {
   type InvalidRepeatedComposedDirectiveWarningParams,
   type QueryCacheReturnEntityMissingEntityCacheWarningParams,
-  type RequestScopedSingleFieldWarningParams,
   type SingleFederatedInputFieldOneOfWarningParams,
   type SingleSubgraphInputFieldOneOfWarningParams,
 } from './params';
@@ -188,22 +187,6 @@ export function singleSubgraphInputFieldOneOfWarning({
       `The directive "@oneOf" is defined on Input Object "${typeName}"` +
       `, but only one optional Input field, "${fieldName}", is defined.` +
       ` Consider removing "@oneOf" and changing "${fieldName}" to a required type instead.`,
-    subgraph: {
-      name: subgraphName,
-    },
-  });
-}
-
-export function requestScopedSingleFieldWarning({
-  subgraphName,
-  key,
-  fieldCoords,
-}: RequestScopedSingleFieldWarningParams): Warning {
-  return new Warning({
-    message:
-      `@openfed__requestScoped(key: "${key}") is declared on only one field ("${fieldCoords}") in this subgraph.` +
-      ` The directive is meaningless unless at least 2 fields share the same key so that the second and` +
-      ` subsequent fields can be served from the per-request L1 cache populated by the first.`,
     subgraph: {
       name: subgraphName,
     },

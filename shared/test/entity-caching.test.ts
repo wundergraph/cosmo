@@ -46,7 +46,6 @@ describe('Entity caching router-config builder (extractEntityCachingConfiguratio
     const ec = buildEntityCaching(`
       type Query {
         product(id: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 30)
-        me: User @openfed__requestScoped(key: "u")
       }
       type Mutation {
         updateProduct(id: ID!): Product @openfed__cacheInvalidate
@@ -56,19 +55,9 @@ describe('Entity caching router-config builder (extractEntityCachingConfiguratio
         id: ID!
         name: String!
       }
-      type User @key(fields: "id") {
-        id: ID!
-        name: String!
-      }
     `);
 
     expect(ec).toBeDefined();
-
-    // @openfed__requestScoped
-    expect(ec!.requestScopedConfigurations).toHaveLength(1);
-    expect(ec!.requestScopedConfigurations[0].fieldName).toBe('me');
-    expect(ec!.requestScopedConfigurations[0].typeName).toBe('Query');
-    expect(ec!.requestScopedConfigurations[0].l1Key).toBe('test.u');
 
     // @openfed__entityCache (Int args become BigInt; flag defaults preserved)
     expect(ec!.entityCache).toHaveLength(1);
