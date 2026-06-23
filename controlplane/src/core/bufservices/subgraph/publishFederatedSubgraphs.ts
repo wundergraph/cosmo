@@ -436,7 +436,7 @@ async function runBatchPublish({
   );
 
   const { compositionErrors, compositionWarnings, deploymentErrors } =
-    await compositionService.recomposeAndDeployAffected({
+    await compositionService.recomposeAndDeployAffectedBatch({
       actorId: authContext.userId,
       affectedFederatedGraphs,
       affectedFeatureFlags,
