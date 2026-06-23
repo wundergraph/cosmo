@@ -498,8 +498,7 @@ export class NormalizationFactory {
   directiveDefinitionDataByName = initializeDirectiveDefinitionDatas();
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
-  /**
-   * Cached entity configs keyed by type name, populated by {@link extractEntityCacheDirective} from
+  /* Cached entity configs keyed by type name, populated by extractEntityCacheDirective() from
    * `@openfed__entityCache`. Future caching directives (`@openfed__queryCache` etc.) use this as a lookup
    * to verify a field's return type is a cached entity.
    */
@@ -4066,7 +4065,7 @@ export class NormalizationFactory {
 
     /* validateDirectives() (run earlier in normalize()) has already guaranteed each argument's type —
      * Int for maxAge/negativeCacheTTL, Boolean for the flags — so the generic ConstDirectiveNode is
-     * narrowed once to the precise typed node, mirroring ComposeDirectiveNode.
+     * narrowed once to the precise typed node, mirroring RequestScopedDirectiveNode/ComposeDirectiveNode.
      * Optional arguments may be absent (definition defaults are not materialized onto the usage AST),
      * so the config starts at the directive's documented defaults and each present argument overrides it.
      */
@@ -4131,7 +4130,7 @@ export class NormalizationFactory {
     if (config.maxAgeSeconds <= 0) {
       entityCacheErrors.push(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_ENTITY_CACHE, value: config.maxAgeSeconds }),
+          maxAgeNotPositiveIntegerErrorMessage(config.maxAgeSeconds),
         ]),
       );
     }
@@ -4265,10 +4264,7 @@ export class NormalizationFactory {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
           // If null is explicitly provided in GraphQL the value in JS is undefined.
-          maxAgeNotPositiveIntegerErrorMessage({
-            directiveName: OPENFED_CACHE_POPULATE,
-            value: maxAgeArgument.value.value ?? null,
-          }),
+          maxAgeNotPositiveIntegerErrorMessage(maxAgeArgument.value.value ?? null),
         ]),
       );
       return true;
@@ -4331,7 +4327,7 @@ export class NormalizationFactory {
     if (maxAgeSeconds <= 0) {
       this.errors.push(
         invalidDirectiveError(OPENFED_QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_QUERY_CACHE, value: maxAgeSeconds }),
+          maxAgeNotPositiveIntegerErrorMessage(maxAgeSeconds),
         ]),
       );
       return;

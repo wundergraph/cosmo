@@ -216,7 +216,7 @@ describe('@openfed__cachePopulate tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Mutation.createProduct', FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_CACHE_POPULATE, value: 0 }),
+          maxAgeNotPositiveIntegerErrorMessage(0),
         ]),
       );
     });
@@ -241,7 +241,7 @@ describe('@openfed__cachePopulate tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors).toStrictEqual([
         invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Mutation.createProduct', FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_CACHE_POPULATE, value: 0 }),
+          maxAgeNotPositiveIntegerErrorMessage(0),
         ]),
       ]);
       expect(warnings).toHaveLength(0);
@@ -311,7 +311,7 @@ describe('@openfed__cachePopulate tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, 'Mutation.updateProduct', FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_CACHE_POPULATE, value: null }),
+          maxAgeNotPositiveIntegerErrorMessage(null),
         ]),
       );
     });

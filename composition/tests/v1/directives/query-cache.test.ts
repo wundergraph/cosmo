@@ -389,7 +389,7 @@ describe('@openfed__queryCache', () => {
       );
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_QUERY_CACHE, 'Query.user', FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_QUERY_CACHE, value: 0 }),
+          maxAgeNotPositiveIntegerErrorMessage(0),
         ]),
       );
     });
