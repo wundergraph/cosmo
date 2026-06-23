@@ -99,7 +99,7 @@ function extractEntityCachingConfiguration(
   if (!dataByTypeName) {
     return;
   }
-  const entityCache: EntityCacheConfiguration[] = [];
+  const entityCacheConfigurations: EntityCacheConfiguration[] = [];
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
   const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
@@ -108,7 +108,7 @@ function extractEntityCachingConfiguration(
     }
 
     for (const config of data.entityCaching.entityCacheConfigurations) {
-      entityCache.push(
+      entityCacheConfigurations.push(
         create(EntityCacheConfigurationSchema, {
           typeName: config.typeName,
           maxAgeSeconds: BigInt(config.maxAgeSeconds),
@@ -142,11 +142,15 @@ function extractEntityCachingConfiguration(
     }
   }
 
-  if (entityCache.length > 0 || cacheInvalidateConfigurations.length > 0 || cachePopulateConfigurations.length > 0) {
+  if (
+    entityCacheConfigurations.length > 0 ||
+    cacheInvalidateConfigurations.length > 0 ||
+    cachePopulateConfigurations.length > 0
+  ) {
     return create(EntityCachingConfigurationSchema, {
       cacheInvalidateConfigurations,
       cachePopulateConfigurations,
-      entityCache,
+      entityCacheConfigurations,
     });
   }
 }
