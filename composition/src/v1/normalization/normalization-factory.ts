@@ -499,7 +499,7 @@ export class NormalizationFactory {
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
   /* Cached entity configs keyed by type name, populated by extractEntityCacheDirective() from
-   * `@openfed__entityCache`. Future caching directives (`@openfed__queryCache` etc.) use this as a lookup
+   * @openfed__entityCache. Future caching directives (@openfed__queryCache etc.) use this as a lookup
    * to verify a field's return type is a cached entity.
    */
   entityCacheConfigByTypeName = new Map<TypeName, EntityCacheConfiguration>();
