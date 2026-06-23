@@ -18,6 +18,7 @@ import {
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import {
   CacheInvalidateConfigurationSchema,
+  CachePopulateConfigurationSchema,
   ConfigurationVariableKind,
   ConfigurationVariableSchema,
   CostConfigurationSchema,
@@ -43,6 +44,7 @@ import type {
   CostConfiguration,
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
+  CachePopulateConfiguration,
   EngineConfiguration,
   EntityCacheConfiguration,
   EntityCachingConfiguration,
@@ -99,36 +101,51 @@ function extractEntityCachingConfiguration(
   }
   const entityCache: EntityCacheConfiguration[] = [];
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
+  const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
     if (!data.entityCaching) {
       continue;
     }
 
-    for (const ec of data.entityCaching.entityCacheConfigurations) {
+    for (const config of data.entityCaching.entityCacheConfigurations) {
       entityCache.push(
         create(EntityCacheConfigurationSchema, {
-          typeName: ec.typeName,
-          maxAgeSeconds: BigInt(ec.maxAgeSeconds),
-          notFoundCacheTtlSeconds: BigInt(ec.notFoundCacheTtlSeconds),
-          includeHeaders: ec.includeHeaders,
-          partialCacheLoad: ec.partialCacheLoad,
-          shadowMode: ec.shadowMode,
+          typeName: config.typeName,
+          maxAgeSeconds: BigInt(config.maxAgeSeconds),
+          notFoundCacheTtlSeconds: BigInt(config.notFoundCacheTtlSeconds),
+          includeHeaders: config.includeHeaders,
+          partialCacheLoad: config.partialCacheLoad,
+          shadowMode: config.shadowMode,
         }),
       );
     }
-    for (const ci of data.entityCaching?.cacheInvalidateConfigurations) {
+
+    for (const config of data.entityCaching?.cacheInvalidateConfigurations) {
       cacheInvalidateConfigurations.push(
         create(CacheInvalidateConfigurationSchema, {
-          entityTypeName: ci.entityTypeName,
-          fieldName: ci.fieldName,
-          operationType: ci.operationType,
+          entityTypeName: config.entityTypeName,
+          fieldName: config.fieldName,
+          operationType: config.operationType,
+        }),
+      );
+    }
+
+    for (const config of data.entityCaching?.cachePopulateConfigurations) {
+      cachePopulateConfigurations.push(
+        create(CachePopulateConfigurationSchema, {
+          entityTypeName: config.entityTypeName,
+          fieldName: config.fieldName,
+          operationType: config.operationType,
+          maxAgeSeconds: BigInt(config.maxAgeSeconds),
         }),
       );
     }
   }
-  if (entityCache.length > 0 || cacheInvalidateConfigurations.length > 0) {
+
+  if (entityCache.length > 0 || cacheInvalidateConfigurations.length > 0 || cachePopulateConfigurations.length > 0) {
     return create(EntityCachingConfigurationSchema, {
       cacheInvalidateConfigurations,
+      cachePopulateConfigurations,
       entityCache,
     });
   }
