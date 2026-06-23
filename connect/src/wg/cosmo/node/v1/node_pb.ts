@@ -903,9 +903,9 @@ export class EntityCachingConfiguration extends Message<EntityCachingConfigurati
   /**
    * Per-entity cache configurations (from @openfed__entityCache directive)
    *
-   * @generated from field: repeated wg.cosmo.node.v1.EntityCacheConfiguration entity_cache = 1;
+   * @generated from field: repeated wg.cosmo.node.v1.EntityCacheConfiguration entity_cache_configurations = 1;
    */
-  entityCache: EntityCacheConfiguration[] = [];
+  entityCacheConfigurations: EntityCacheConfiguration[] = [];
 
   /**
    * Per-Mutation/Subscription-field cache eviction configs (from @openfed__cacheInvalidate)
@@ -929,7 +929,7 @@ export class EntityCachingConfiguration extends Message<EntityCachingConfigurati
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.node.v1.EntityCachingConfiguration";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "entity_cache", kind: "message", T: EntityCacheConfiguration, repeated: true },
+    { no: 1, name: "entity_cache_configurations", kind: "message", T: EntityCacheConfiguration, repeated: true },
     { no: 2, name: "cache_invalidate_configurations", kind: "message", T: CacheInvalidateConfiguration, repeated: true },
     { no: 3, name: "cache_populate_configurations", kind: "message", T: CachePopulateConfiguration, repeated: true },
   ]);
