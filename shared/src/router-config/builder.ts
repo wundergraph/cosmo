@@ -128,7 +128,11 @@ function extractEntityCachingConfiguration(
     }
   }
 
-  if (entityCacheConfigurations.length > 0 || cacheInvalidateConfigurations.length > 0 || cachePopulateConfigurations.length > 0) {
+  if (
+    entityCacheConfigurations.length > 0 ||
+    cacheInvalidateConfigurations.length > 0 ||
+    cachePopulateConfigurations.length > 0
+  ) {
     return new EntityCachingConfiguration({
       cacheInvalidateConfigurations,
       cachePopulateConfigurations,
