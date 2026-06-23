@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.153.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.152.0...@wundergraph/cosmo-connect@0.153.0) (2026-06-23)
+
+### Bug Fixes
+
+* proto changes for entity cache ([#2996](https://github.com/wundergraph/cosmo/issues/2996)) ([3db24b0](https://github.com/wundergraph/cosmo/commit/3db24b010905daddfa840abba07faaf416dd892d)) (@SkArchon)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cachePopulate directive (3/5) ([#2984](https://github.com/wundergraph/cosmo/issues/2984)) ([a8cc2af](https://github.com/wundergraph/cosmo/commit/a8cc2afa7767c35b71ac4ebd18e2a9e1cc381a66)) (@SkArchon)
+
 # [0.152.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.151.0...@wundergraph/cosmo-connect@0.152.0) (2026-06-22)
 
 ### Features
