@@ -502,9 +502,8 @@ export class NormalizationFactory {
   directiveDefinitionDataByName = initializeDirectiveDefinitionDatas();
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
-  /**
-   * Cached entity configs keyed by type name, populated by {@link extractEntityCacheDirective} from
-   * `@openfed__entityCache`. Future caching directives (`@openfed__queryCache` etc.) use this as a lookup
+  /* Cached entity configs keyed by type name, populated by extractEntityCacheDirective() from
+   * @openfed__entityCache. Future caching directives (@openfed__queryCache etc.) use this as a lookup
    * to verify a field's return type is a cached entity.
    */
   entityCacheConfigByTypeName = new Map<TypeName, EntityCacheConfiguration>();
@@ -4136,7 +4135,7 @@ export class NormalizationFactory {
     if (config.maxAgeSeconds <= 0) {
       entityCacheErrors.push(
         invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_ENTITY_CACHE, value: config.maxAgeSeconds }),
+          maxAgeNotPositiveIntegerErrorMessage(config.maxAgeSeconds),
         ]),
       );
     }
@@ -4270,10 +4269,7 @@ export class NormalizationFactory {
       this.errors.push(
         invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
           // If null is explicitly provided in GraphQL the value in JS is undefined.
-          maxAgeNotPositiveIntegerErrorMessage({
-            directiveName: OPENFED_CACHE_POPULATE,
-            value: maxAgeArgument.value.value ?? null,
-          }),
+          maxAgeNotPositiveIntegerErrorMessage(maxAgeArgument.value.value ?? null),
         ]),
       );
       return true;
@@ -4336,7 +4332,7 @@ export class NormalizationFactory {
     if (maxAgeSeconds <= 0) {
       this.errors.push(
         invalidDirectiveError(OPENFED_QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
-          maxAgeNotPositiveIntegerErrorMessage({ directiveName: OPENFED_QUERY_CACHE, value: maxAgeSeconds }),
+          maxAgeNotPositiveIntegerErrorMessage(maxAgeSeconds),
         ]),
       );
       return;

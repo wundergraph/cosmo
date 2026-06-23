@@ -99,8 +99,3 @@ export type InvalidEntityReturnTypeErrorParams = {
   fieldCoords: string;
   returnTypeName: string;
 };
-
-export type MaxAgeNotPositiveIntegerErrorParams = {
-  directiveName: DirectiveName;
-  value: number | string | null;
-};

@@ -18,7 +18,6 @@ import {
   type InvalidRepeatedDirectiveErrorParams,
   type InvalidSubValueFieldLinkDirectiveImportErrorParams,
   type invalidVersionLinkDirectiveUrlErrorParams,
-  type MaxAgeNotPositiveIntegerErrorParams,
   type NonExternalConditionalFieldErrorParams,
   type OneOfRequiredFieldsErrorParams,
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
@@ -2057,11 +2056,8 @@ export function entityCacheWithoutKeyErrorMessage(typeName: TypeName): string {
   return `Object "${typeName}" does not define a "@key" directive.`;
 }
 
-export function maxAgeNotPositiveIntegerErrorMessage({
-  directiveName,
-  value,
-}: MaxAgeNotPositiveIntegerErrorParams): string {
-  return `The directive "@${directiveName}" argument "maxAge" must be provided a positive integer; received "${value}".`;
+export function maxAgeNotPositiveIntegerErrorMessage(value: number | string | null): string {
+  return `The argument "maxAge" must be provided a positive integer; received "${value}".`;
 }
 
 export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(value: number): string {
