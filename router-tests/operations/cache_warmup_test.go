@@ -1619,6 +1619,70 @@ func TestCacheWarmupDefer(t *testing.T) {
 		})
 	})
 
+	t.Run("warmed defer plan survives a config change", func(t *testing.T) {
+		t.Parallel()
+
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.SlowPlanCacheSize = 100
+			},
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled:          true,
+					InMemoryFallback: true,
+					Source: config.CacheWarmupSource{
+						CdnSource: config.CacheWarmupCDNSource{
+							Enabled: true,
+						},
+					},
+				}),
+				core.WithConfigVersionHeader(true),
+			},
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+					pm.initConfig = config
+					return &pm
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			doDefer := func() *http.Response {
+				payloadData, err := json.Marshal(map[string]any{"query": queryWithDefer})
+				require.NoError(t, err)
+				req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payloadData))
+				res, err := xEnv.RouterClient.Do(req)
+				require.NoError(t, err)
+				_, err = io.ReadAll(res.Body)
+				require.NoError(t, err)
+				require.NoError(t, res.Body.Close())
+				return res
+			}
+
+			res := doDefer()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Header.Get("x-wg-execution-plan-cache"))
+
+			// Trigger a config change; the new graph is re-warmed from the in-memory fallback.
+			<-pm.ready
+			pm.initConfig.Version = "updated"
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
+
+			res = doDefer()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, "updated", res.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "HIT", res.Header.Get("x-wg-execution-plan-cache"))
+		})
+		// We could add a rewarming test for @defer(if:), but it would be broken,
+		// and there is a test case for normal warmup already.
+	})
+
 	// Since the Accept header sent from the client does not affect what server sends in case of defer,
 	// there no tests for that.
 }
