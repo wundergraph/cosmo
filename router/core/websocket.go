@@ -70,7 +70,7 @@ type WebsocketMiddlewareOptions struct {
 	ApolloCompatibilityFlags config.ApolloCompatibilityFlags
 }
 
-func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
+func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) (func(http.Handler) http.Handler, *WebsocketHandler) {
 	handler := &WebsocketHandler{
 		ctx:                       ctx,
 		operationProcessor:        opts.OperationProcessor,
@@ -148,7 +148,16 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 			}
 			handler.handleUpgradeRequest(w, r)
 		})
+	}, handler
+}
+
+// ShutdownConnections closes all active websocket connections and unsubscribes
+// any live GraphQL subscriptions before graph mux caches are torn down.
+func (h *WebsocketHandler) ShutdownConnections() {
+	if h == nil {
+		return
 	}
+	h.closeAllConnections()
 }
 
 // wsConnectionWrapper is a wrapper around websocket.Conn that allows

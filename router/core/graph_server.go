@@ -681,6 +681,9 @@ type graphMux struct {
 	mux    *chi.Mux
 	reused atomic.Bool
 
+	wsHandler               *WebsocketHandler
+	planCacheOnEvictEnabled atomic.Bool
+
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
 	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
 	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -721,10 +724,14 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			BufferItems:        64,
 		}
 		if srv.cacheWarmup != nil && srv.cacheWarmup.Enabled && srv.cacheWarmup.InMemoryFallback {
+			s.planCacheOnEvictEnabled.Store(true)
 			planCacheConfig.OnEvict = func(item *ristretto.Item[*planWithMetaData]) {
 				// This could be called before planFallbackCache is set, but it's not a problem
 				// because there is a nil guard inside, as well as items should not really be evicted
 				// on startup
+				if !s.planCacheOnEvictEnabled.Load() {
+					return
+				}
 				s.planFallbackCache.Set(item.Key, item.Value, item.Value.planningDuration)
 			}
 		}
@@ -958,10 +965,20 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
+	// Close websocket subscriptions synchronously before tearing down plan caches so
+	// active preparedPlan and executor references are released first.
+	if s.wsHandler != nil {
+		s.wsHandler.ShutdownConnections()
+	}
+
 	// cancel the graph muxes context to close its resources like websocket connections, resolvers, etc.
 	s.cancel()
 
+	// ristretto Close() clears all entries and invokes OnEvict for each one. Disable
+	// migration into the slow-plan fallback cache during intentional mux shutdown.
+	s.planCacheOnEvictEnabled.Store(false)
 	s.planCache.Close()
+	s.planFallbackCache.Wait()
 	s.planFallbackCache.Close()
 	s.persistedOperationCache.Close()
 	s.normalizationCache.Close()
@@ -1830,7 +1847,7 @@ func (s *graphServer) buildGraphMux(
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
-		wsMiddleware := NewWebsocketMiddleware(graphMuxCtx, WebsocketMiddlewareOptions{
+		wsMiddleware, wsHandler := NewWebsocketMiddleware(graphMuxCtx, WebsocketMiddlewareOptions{
 			OperationProcessor:        operationProcessor,
 			OperationBlocker:          operationBlocker,
 			Planner:                   operationPlanner,
@@ -1850,6 +1867,7 @@ func (s *graphServer) buildGraphMux(
 			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
 			ApolloCompatibilityFlags:  s.apolloCompatibilityFlags,
 		})
+		gm.wsHandler = wsHandler
 
 		// When the playground path is equal to the graphql path, we need to handle
 		// ws upgrades and html requests on the same route.
