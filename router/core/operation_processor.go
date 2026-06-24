@@ -738,7 +738,7 @@ func (o *OperationKit) normalizePersistedOperation(clientName string, isApq bool
 		// normalized operation was loaded from cache
 		return true, nil
 	}
-	skipIncludeNames := o.skipIncludeVariableNames()
+	skipIncludeNames := o.conditionalsVariableNames()
 
 	report := &operationreport.Report{}
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
@@ -813,7 +813,7 @@ type ComplexityCacheEntry struct {
 }
 
 func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error) {
-	skipIncludeVariableNames := o.skipIncludeVariableNames()
+	skipIncludeVariableNames := o.conditionalsVariableNames()
 	cacheKey := o.normalizationCacheKey(skipIncludeVariableNames)
 	if o.cache != nil && o.cache.normalizationCache != nil {
 		entry, ok := o.cache.normalizationCache.Get(cacheKey)
@@ -1455,9 +1455,9 @@ var (
 	literalIF = []byte("if")
 )
 
-// skipIncludeVariableNames returns a slice of variable names that are used as arguments
+// conditionalsVariableNames returns a slice of variable names that are used as arguments
 // in the skip/include conditionals.
-func (o *OperationKit) skipIncludeVariableNames() []string {
+func (o *OperationKit) conditionalsVariableNames() []string {
 	if len(o.kit.doc.Directives) == 0 {
 		return nil
 	}
@@ -1465,7 +1465,7 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 	for i := range o.kit.doc.Directives {
 		name := o.kit.doc.DirectiveNameBytes(i)
 		switch string(name) {
-		case "skip", "include":
+		case "skip", "include", "defer", "stream":
 			if value, ok := o.kit.doc.DirectiveArgumentValueByName(i, literalIF); ok {
 				if value.Kind != ast.ValueKindVariable {
 					continue
@@ -1506,6 +1506,11 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			astnormalization.WithRemoveFragmentDefinitions(),
 			astnormalization.WithRemoveUnusedVariables(),
 			astnormalization.WithEnableDefer(),
+			astnormalization.WithPrevalidationRules(
+				astvalidation.DeferStreamOnValidOperations(),
+				astvalidation.DeferStreamHaveUniqueLabels(),
+				astvalidation.DirectivesAreInValidLocations(),
+				astvalidation.StreamAppliedToListFieldsOnly()),
 		),
 		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
 		variablesRemapper:   astnormalization.NewVariablesMapper(),

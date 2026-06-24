@@ -180,6 +180,11 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 		astnormalization.WithRemoveUnusedVariables(),
 		astnormalization.WithIgnoreSkipInclude(),
 		astnormalization.WithEnableDefer(),
+		astnormalization.WithPrevalidationRules(
+			astvalidation.DeferStreamOnValidOperations(),
+			astvalidation.DeferStreamHaveUniqueLabels(),
+			astvalidation.DirectivesAreInValidLocations(),
+			astvalidation.StreamAppliedToListFieldsOnly()),
 	)
 	normalizer.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
 	if report.HasErrors() {

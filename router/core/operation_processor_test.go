@@ -652,7 +652,7 @@ func TestOperationProcessorIntrospectionQuery(t *testing.T) {
 	}
 }
 
-// TestSkipIncludeVariableNamesStableAfterKitReuse verifies that skipIncludeVariableNames
+// TestSkipIncludeVariableNamesStableAfterKitReuse verifies that conditionalsVariableNames
 // returns owned strings (not unsafe aliases into kit.doc.Input.RawBytes) so that the slice
 // stored in persistedOperationVariableNames remains valid after the kit is returned to the
 // pool and reused for a different query. Without explicit string creation the aliased strings would
@@ -682,9 +682,9 @@ func TestSkipIncludeVariableNamesStableAfterKitReuse(t *testing.T) {
 	kit1.parsedOperation.Request.Query = skipIncludeQuery
 	require.NoError(t, kit1.Parse())
 
-	names := kit1.skipIncludeVariableNames()
+	names := kit1.conditionalsVariableNames()
 	require.Equal(t, []string{"withAligators", "withCats"}, names,
-		"skipIncludeVariableNames should return sorted variable names")
+		"conditionalsVariableNames should return sorted variable names")
 
 	kit1.Free() // returns kit to pool; RawBytes are zeroed in length but NOT zeroed in content
 
@@ -699,13 +699,13 @@ func TestSkipIncludeVariableNamesStableAfterKitReuse(t *testing.T) {
 	kit2.parsedOperation.Request.Query = polluterQuery
 	require.NoError(t, kit2.Parse())
 
-	// Without strings.Clone in skipIncludeVariableNames, names[0] and names[1]
+	// Without strings.Clone in conditionalsVariableNames, names[0] and names[1]
 	// are unsafe aliases into the now-overwritten RawBytes — they will read the
 	// polluter query's bytes and no longer equal the original variable names.
 	require.Equal(t, "withAligators", names[0],
-		"skipIncludeVariableNames must return cloned (not aliased) strings: "+
+		"conditionalsVariableNames must return cloned (not aliased) strings: "+
 			"'withAligators' was corrupted after kit reuse")
 	require.Equal(t, "withCats", names[1],
-		"skipIncludeVariableNames must return cloned (not aliased) strings: "+
+		"conditionalsVariableNames must return cloned (not aliased) strings: "+
 			"'withCats' was corrupted after kit reuse")
 }
