@@ -117,7 +117,8 @@
       "path-to-regexp@8.x": "8.4.0",
       "ip-address@10.x": "10.1.1",
       "ws@8.x": "8.21.0",
-      "ajv@6.x": "6.14.0"
+      "ajv@6.x": "6.14.0",
+      "hono@4.x": "4.12.25"
     },
     "patchedDependencies": {
       "graphql@16.9.0": "patches/graphql@16.9.0.patch"

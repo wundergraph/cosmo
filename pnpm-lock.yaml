@@ -141,6 +141,7 @@ overrides:
   ip-address@10.x: 10.1.1
   ws@8.x: 8.21.0
   ajv@6.x: 6.14.0
+  hono@4.x: 4.12.25
 
 patchedDependencies:
   graphql@16.9.0:
@@ -751,7 +752,7 @@ importers:
         version: 1.4.0(@bufbuild/protoc-gen-es@1.9.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))
       '@spotlightjs/spotlight':
         specifier: ^4.10.0
-        version: 4.11.3(hono-rate-limiter@0.4.2(hono@4.12.18))
+        version: 4.11.3(hono-rate-limiter@0.4.2(hono@4.12.25))
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -3700,7 +3701,7 @@ packages:
     resolution: {integrity: sha512-JsaJes7VlNvUrUQ9j2b9C13xjFLvyKQY515aWtsdJ9cwhBmWz5od2yUCbDu7cX38GeADmlLmpu4BKNNAV6G27w==}
     peerDependencies:
       '@modelcontextprotocol/sdk': ^1.25.1
-      hono: '*'
+      hono: 4.12.25
       hono-rate-limiter: ^0.4.2
       zod: ^3.25.0
 
@@ -3708,7 +3709,7 @@ packages:
     resolution: {integrity: sha512-TsQLe4i2gvoTtrHje625ngThGBySOgSK3Xo2XRYOdqGN1teR8+I7vchQC46uLJi8OF62YTYA3AhSpumtkhsaKQ==}
     engines: {node: '>=18.14.1'}
     peerDependencies:
-      hono: ^4
+      hono: 4.12.25
 
   '@hookform/resolvers@4.1.3':
     resolution: {integrity: sha512-Jsv6UOWYTrEFJ/01ZrnwVXs7KDvP8XIo115i++5PWvNkNvkrsTfGiLS6w+eJ57CYtUtDQalUWovCZDHFJ8u1VQ==}
@@ -10456,11 +10457,7 @@ packages:
   hono-rate-limiter@0.4.2:
     resolution: {integrity: sha512-AAtFqgADyrmbDijcRTT/HJfwqfvhalya2Zo+MgfdrMPas3zSMD8SU03cv+ZsYwRU1swv7zgVt0shwN059yzhjw==}
     peerDependencies:
-      hono: ^4.1.1
-
-  hono@4.12.18:
-    resolution: {integrity: sha512-RWzP96k/yv0PQfyXnWjs6zot20TqfpfsNXhOnev8d1InAxubW93L11/oNUc3tQqn2G0bSdAOBpX+2uDFHV7kdQ==}
-    engines: {node: '>=16.9.0'}
+      hono: 4.12.25
 
   hono@4.12.25:
     resolution: {integrity: sha512-2NFaIyNVgJmBs/ecmtGzlmluTFs5cHEWGTdu0t1HBwYzoGXOL5nUQBRMXsXWla5i4KkG//QMzVP88m1+I3fdAQ==}
@@ -17404,17 +17401,13 @@ snapshots:
     dependencies:
       react: 18.3.1
 
-  '@hono/mcp@0.2.5(@modelcontextprotocol/sdk@1.26.0(zod@3.25.76))(hono-rate-limiter@0.4.2(hono@4.12.18))(hono@4.12.18)(zod@3.25.76)':
+  '@hono/mcp@0.2.5(@modelcontextprotocol/sdk@1.26.0(zod@3.25.76))(hono-rate-limiter@0.4.2(hono@4.12.25))(hono@4.12.25)(zod@3.25.76)':
     dependencies:
       '@modelcontextprotocol/sdk': 1.26.0(zod@3.25.76)
-      hono: 4.12.18
-      hono-rate-limiter: 0.4.2(hono@4.12.18)
+      hono: 4.12.25
+      hono-rate-limiter: 0.4.2(hono@4.12.25)
       pkce-challenge: 5.0.0
       zod: 3.25.76
-
-  '@hono/node-server@1.19.13(hono@4.12.18)':
-    dependencies:
-      hono: 4.12.18
 
   '@hono/node-server@1.19.13(hono@4.12.25)':
     dependencies:
@@ -17884,7 +17877,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.26.0(zod@3.25.76)':
     dependencies:
-      '@hono/node-server': 1.19.13(hono@4.12.18)
+      '@hono/node-server': 1.19.13(hono@4.12.25)
       ajv: 8.18.0
       ajv-formats: 3.0.1(ajv@8.18.0)
       content-type: 1.0.5
@@ -17894,7 +17887,7 @@ snapshots:
       eventsource-parser: 3.0.1
       express: 5.2.1
       express-rate-limit: 8.2.2(express@5.2.1)
-      hono: 4.12.18
+      hono: 4.12.25
       jose: 6.1.3
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.0
@@ -21595,10 +21588,10 @@ snapshots:
 
   '@socket.io/component-emitter@3.1.2': {}
 
-  '@spotlightjs/spotlight@4.11.3(hono-rate-limiter@0.4.2(hono@4.12.18))':
+  '@spotlightjs/spotlight@4.11.3(hono-rate-limiter@0.4.2(hono@4.12.25))':
     dependencies:
-      '@hono/mcp': 0.2.5(@modelcontextprotocol/sdk@1.26.0(zod@3.25.76))(hono-rate-limiter@0.4.2(hono@4.12.18))(hono@4.12.18)(zod@3.25.76)
-      '@hono/node-server': 1.19.13(hono@4.12.18)
+      '@hono/mcp': 0.2.5(@modelcontextprotocol/sdk@1.26.0(zod@3.25.76))(hono-rate-limiter@0.4.2(hono@4.12.25))(hono@4.12.25)(zod@3.25.76)
+      '@hono/node-server': 1.19.13(hono@4.12.25)
       '@jridgewell/trace-mapping': 0.3.31
       '@modelcontextprotocol/sdk': 1.26.0(zod@3.25.76)
       '@sentry/core': 10.49.0
@@ -21607,7 +21600,7 @@ snapshots:
       chalk: 5.6.2
       eventsource: 4.1.0
       fast-fuzzy: 1.12.0
-      hono: 4.12.18
+      hono: 4.12.25
       launch-editor: 2.13.2
       logfmt: 1.4.0
       mcp-proxy: 5.12.5
@@ -25675,11 +25668,9 @@ snapshots:
     dependencies:
       react-is: 16.13.1
 
-  hono-rate-limiter@0.4.2(hono@4.12.18):
+  hono-rate-limiter@0.4.2(hono@4.12.25):
     dependencies:
-      hono: 4.12.18
-
-  hono@4.12.18: {}
+      hono: 4.12.25
 
   hono@4.12.25: {}
 
