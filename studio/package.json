@@ -143,7 +143,7 @@
     "eslint": "catalog:",
     "eslint-config-next": "13.4.7",
     "jsdom": "^23.2.0",
-    "postcss": "8.4.38",
+    "postcss": "8.5.10",
     "prettier-plugin-tailwindcss": "^0.5.6",
     "typescript": "catalog:",
     "vitest": "catalog:"
