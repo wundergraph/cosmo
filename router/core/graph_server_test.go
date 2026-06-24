@@ -21,9 +21,11 @@ import (
 // whether a provider rejects subscriptions after being marked unavailable.
 type unavailableTestSubConfig struct{}
 
-func (unavailableTestSubConfig) ProviderID() string                    { return "redis-1" }
-func (unavailableTestSubConfig) ProviderType() datasource.ProviderType { return datasource.ProviderTypeRedis }
-func (unavailableTestSubConfig) RootFieldName() string                 { return "field" }
+func (unavailableTestSubConfig) ProviderID() string { return "redis-1" }
+func (unavailableTestSubConfig) ProviderType() datasource.ProviderType {
+	return datasource.ProviderTypeRedis
+}
+func (unavailableTestSubConfig) RootFieldName() string { return "field" }
 
 func TestStartupPubSubProviders_SkipUnavailableProviders(t *testing.T) {
 	t.Parallel()
