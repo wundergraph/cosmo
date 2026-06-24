@@ -173,10 +173,12 @@ It contains the following properties:
 
 - `subgraph.request.error` (error): Any error that occurred during the subgraph request
 - `subgraph.request.clientTrace` (ClientTrace): Contains tracing information about the client connection
+- `subgraph.request.startTime` (int): The Unix epoch in milliseconds at which the router started the subgraph fetch. This marks the start of the subgraph `latency` measurement reported in the subgraph access log. It is expressed in the same unit as [`UTC_to_epochUnix`](#functions), so the two can be combined directly.
 
 #### SubgraphResponse Properties
 
 - `subgraph.response.body` (SubgraphResponseBody)
+- `subgraph.response.header` (ResponseHeaders): The headers of the subgraph response. Values are retrieved with `subgraph.response.header.Get('Header-Name')` (case-insensitive). Rules from [response header propagation](/router/configuration/header-propagation) have already been applied. Accessing a missing header returns `""`.
 
 
 ### SubgraphResponseBody Object
@@ -220,6 +222,25 @@ subgraph.name == 'products'
 subgraph.request.error != nil
 subgraph.request.clientTrace.connAcquireDuration > 1.0
 ```
+
+#### ResponseHeaders Properties
+
+- `subgraph.response.header.Get('Header-Name')` (string): The value of a subgraph response header. The lookup is case-insensitive. A missing header returns `""`.
+
+#### Example expressions
+
+Read a numeric header and convert it from milliseconds to seconds. `float` is a [built-in](https://expr-lang.org/docs/language-definition#float) that parses the string value.
+
+```bash
+float(subgraph.response.header.Get('X-Upstream-Duration-Ms')) / 1000
+```
+
+Compute how long the subgraph took to start processing the request by combining a timestamp response header with the subgraph fetch start time. See [`UTC_to_epochUnix`](#functions).
+
+```bash
+(UTC_to_epochUnix(subgraph.response.header.Get('X-Server-Start')) - subgraph.request.startTime) / 1000
+```
+
 ### **Response Object**
 
 The `response` object is a read-only entity that provides details about the outgoing response. It is accessible after the response has been processed by the router.
@@ -254,6 +275,25 @@ request.error != nil ? response.body.raw : ''
 
 You can use expressions to specify the conditions for retries upon subgraph request failures. However, this uses a different expression context, which can be found [here](/router/traffic-shaping/retry#conditional-retry-with-expressions).
 
+## Functions
+
+In addition to the [built-in functions](https://expr-lang.org/docs/language-definition#built-in-functions) of the Expr language, the router exposes the following custom functions.
+
+### UTC_to_epochUnix
+
+`UTC_to_epochUnix(timestamp string) int`
+
+Parses an ISO-8601 / RFC3339 timestamp and returns the Unix epoch in milliseconds. Fractional seconds and timezone offsets are supported, for example `2026-06-22T19:45:39.018Z` or `2026-06-22T21:45:39.018+02:00`. The result is in milliseconds so it can be combined directly with `subgraph.request.startTime`.
+
+The function fails to resolve when the argument is not a parseable RFC3339 string. An absent header is the common case: `subgraph.response.header.Get(...)` returns `""`, which is not parseable. When an access-log expression fails to resolve, the field falls back to its configured `default` (or is omitted when no default is set), and the failure is logged at debug level. To emit an explicit value for the absent-header case, guard the access with a conditional.
+
+```bash
+UTC_to_epochUnix('2026-06-22T19:45:39.018Z')
+```
+
+```bash
+subgraph.response.header.Get('X-Server-Start') != '' ? (UTC_to_epochUnix(subgraph.response.header.Get('X-Server-Start')) - subgraph.request.startTime) / 1000 : 0.0
+```
 
 ### Additional Notes
 

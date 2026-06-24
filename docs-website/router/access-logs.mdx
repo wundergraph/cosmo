@@ -314,6 +314,25 @@ access_logs:
 
 In addition to the router access logger, you can also add attributes to the subgraph access logger, this is useful when you want to log anything related to the `subgraph` expression context object.
 
+Subgraph response headers are available through `subgraph.response.header.Get('Header-Name')`, and the start of the subgraph latency measurement is available as `subgraph.request.startTime` (Unix epoch in milliseconds). Combined with the [`UTC_to_epochUnix`](/router/configuration/template-expressions#functions) function, these let you derive timing values from subgraph responses.
+
+Guard header access with a conditional so the expression still resolves when a response does not carry the header. An absent header makes `float(...)` or `UTC_to_epochUnix(...)` fail to resolve, in which case the field falls back to its configured `default` (or is omitted).
+
+```yaml
+access_logs:
+  subgraphs:
+    enabled: true
+    fields:
+      # Convert a numeric duration header from milliseconds to seconds
+      - key: "subgraph_duration_clean"
+        value_from:
+          expression: "subgraph.response.header.Get('X-Upstream-Duration-Ms') != '' ? float(subgraph.response.header.Get('X-Upstream-Duration-Ms')) / 1000 : 0.0"
+      # Time between the router starting the fetch and the subgraph starting processing
+      - key: "subgraph_start_latency"
+        value_from:
+          expression: "subgraph.response.header.Get('X-Server-Start') != '' ? (UTC_to_epochUnix(subgraph.response.header.Get('X-Server-Start')) - subgraph.request.startTime) / 1000 : 0.0"
+```
+
 You can find more information about expressions and the fields accessible for expressions [here](/router/configuration/template-expressions).
 
 #### Default value

@@ -3248,6 +3248,210 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
+		t.Run("verify subgraph response header is attached", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "gw_duration",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.response.header.Get('X-Ebay-Mesh-Gw-Duration')",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(next http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("X-Ebay-Mesh-Gw-Duration", "1500")
+								next.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestContextMap := requestLog.All()[0].ContextMap()
+
+				gwDuration, ok := requestContextMap["gw_duration"].(string)
+				require.True(t, ok)
+				require.Equal(t, "1500", gwDuration)
+			})
+		})
+
+		t.Run("verify subgraph response header is usable in arithmetic", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "gw_duration_clean",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "float(subgraph.response.header.Get('X-Ebay-Mesh-Gw-Duration')) / 1000",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(next http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("X-Ebay-Mesh-Gw-Duration", "1500")
+								next.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestContextMap := requestLog.All()[0].ContextMap()
+
+				gwDuration, ok := requestContextMap["gw_duration_clean"].(float64)
+				require.True(t, ok)
+				require.Equal(t, 1.5, gwDuration)
+			})
+		})
+
+		t.Run("verify subgraph request startTime is attached", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "subgraph_start_time",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.startTime",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				before := time.Now().UnixMilli()
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				after := time.Now().UnixMilli()
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestContextMap := requestLog.All()[0].ContextMap()
+
+				startTime, ok := requestContextMap["subgraph_start_time"].(int64)
+				require.True(t, ok)
+				require.GreaterOrEqual(t, startTime, before)
+				require.LessOrEqual(t, startTime, after)
+			})
+		})
+
+		t.Run("verify UTC_to_epochUnix combined with subgraph startTime", func(t *testing.T) {
+			t.Parallel()
+
+			serverStart := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "server_start_epoch",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "UTC_to_epochUnix(subgraph.response.header.Get('X-Ebay-Mesh-Server-Start'))",
+						},
+					},
+					{
+						Key: "subgraph_start_latency",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "(UTC_to_epochUnix(subgraph.response.header.Get('X-Ebay-Mesh-Server-Start')) - subgraph.request.startTime) / 1000",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(next http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("X-Ebay-Mesh-Server-Start", serverStart.Format(time.RFC3339))
+								next.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestContextMap := requestLog.All()[0].ContextMap()
+
+				epoch, ok := requestContextMap["server_start_epoch"].(int64)
+				require.True(t, ok)
+				require.Equal(t, serverStart.UnixMilli(), epoch)
+
+				// The header timestamp is far in the future, so the difference is large and positive.
+				startLatency, ok := requestContextMap["subgraph_start_latency"].(float64)
+				require.True(t, ok)
+				require.Greater(t, startLatency, 0.0)
+			})
+		})
+
+		t.Run("verify expression with missing header falls back to default without error log", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key:     "server_start_epoch",
+						Default: "n/a",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "UTC_to_epochUnix(subgraph.response.header.Get('X-Absent-Header'))",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestContextMap := requestLog.All()[0].ContextMap()
+
+				// The header is absent, so the expression fails to resolve and the field
+				// falls back to its configured default instead of being dropped.
+				epoch, ok := requestContextMap["server_start_epoch"].(string)
+				require.True(t, ok)
+				require.Equal(t, "n/a", epoch)
+
+				// The data-driven resolution failure must not be logged at info/error level.
+				errLogs := xEnv.Observer().FilterMessage("unable to process expression for access logs")
+				require.Equal(t, 0, errLogs.Len())
+			})
+		})
+
 		t.Run("verify connAcquireDuration value is attached", func(t *testing.T) {
 			t.Parallel()
 

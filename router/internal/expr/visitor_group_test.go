@@ -212,6 +212,11 @@ func TestVisitorManager(t *testing.T) {
 				expression:     `subgraph["response"].body["raw"]`,
 				expectedResult: true,
 			},
+			{
+				name:           "with subgraph.response.header access - does not require body storage",
+				expression:     `subgraph.response.header.Get("X-Custom-Header")`,
+				expectedResult: false,
+			},
 		}
 
 		for _, tc := range testCases {

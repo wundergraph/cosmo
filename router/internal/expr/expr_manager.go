@@ -51,6 +51,7 @@ func (c *Manager) compileOptions(extra ...expr.Option) []expr.Option {
 	options := []expr.Option{
 		expr.Env(Context{}),
 	}
+	options = append(options, customFunctions()...)
 	options = append(options, extra...)
 
 	for _, visitor := range c.VisitorManager.globalVisitors {

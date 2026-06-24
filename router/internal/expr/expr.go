@@ -136,6 +136,13 @@ type RequestHeaders struct {
 	Header http.Header `expr:"-"` // Do not expose the full header
 }
 
+// ResponseHeaders exposes read access to a response's headers in expressions.
+// Like RequestHeaders, the underlying header map is not exposed directly; values must be
+// retrieved through the Get method (e.g. subgraph.response.header.Get('X-Custom-Header')).
+type ResponseHeaders struct {
+	Header http.Header `expr:"-"` // Do not expose the full header
+}
+
 type RequestAuth struct {
 	IsAuthenticated bool           `expr:"isAuthenticated"`
 	Type            string         `expr:"type"`
@@ -146,10 +153,17 @@ type RequestAuth struct {
 type SubgraphRequest struct {
 	Error       error       `expr:"error"`
 	ClientTrace ClientTrace `expr:"clientTrace"`
+	// StartTime is the Unix epoch in milliseconds at which the router started the subgraph
+	// fetch. It marks the start of the subgraph "latency" measurement reported in the
+	// subgraph access log. It is expressed in the same unit as UTC_to_epochUnix so the two can
+	// be combined directly, e.g. to compute how long it took the subgraph to start processing:
+	// (UTC_to_epochUnix(subgraph.response.header.Get('X-Server-Start')) - subgraph.request.startTime) / 1000
+	StartTime int64 `expr:"startTime"`
 }
 
 type SubgraphResponse struct {
-	Body Body `expr:"body"`
+	Body   Body            `expr:"body"`
+	Header ResponseHeaders `expr:"header"`
 }
 
 type ClientTrace struct {
@@ -173,6 +187,11 @@ type Subgraph struct {
 // The key is case-insensitive and transformed to the canonical format.
 // TODO: Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
 func (r RequestHeaders) Get(key string) string {
+	return r.Header.Get(key)
+}
+
+// TODO: Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
+func (r ResponseHeaders) Get(key string) string {
 	return r.Header.Get(key)
 }
 

@@ -127,4 +127,69 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 		require.Equal(t, &ExprWrapError{requestError}, expressionResponse.Interface)
 	})
 
+	t.Run("expression failing at runtime falls back to the configured default", func(t *testing.T) {
+		t.Parallel()
+
+		logger := zap.NewNop()
+
+		manager := expr.CreateNewExprManager()
+		// Compiles successfully but errors at request time because the header is absent,
+		// so UTC_to_epochUnix receives an empty string.
+		expression, err := manager.CompileAnyExpression("UTC_to_epochUnix(subgraph.response.header.Get('X-Missing'))")
+		require.NoError(t, err)
+
+		exprAttributes := []requestlogger.ExpressionAttribute{
+			{
+				Key:     "server_start",
+				Default: "fallback",
+				Expr:    expression,
+			},
+		}
+
+		response := SubgraphAccessLogsFieldHandler(
+			logger,
+			nil,
+			exprAttributes,
+			nil,
+			nil,
+			nil,
+			&expr.Context{},
+		)
+
+		require.Len(t, response, 1)
+		require.Equal(t, "server_start", response[0].Key)
+		require.Equal(t, "fallback", response[0].String)
+	})
+
+	t.Run("expression failing at runtime is skipped when no default is set", func(t *testing.T) {
+		t.Parallel()
+
+		logger := zap.NewNop()
+
+		manager := expr.CreateNewExprManager()
+		expression, err := manager.CompileAnyExpression("UTC_to_epochUnix(subgraph.response.header.Get('X-Missing'))")
+		require.NoError(t, err)
+
+		exprAttributes := []requestlogger.ExpressionAttribute{
+			{
+				Key:  "server_start",
+				Expr: expression,
+			},
+		}
+
+		response := SubgraphAccessLogsFieldHandler(
+			logger,
+			nil,
+			exprAttributes,
+			nil,
+			nil,
+			nil,
+			&expr.Context{},
+		)
+
+		for _, f := range response {
+			require.NotEqual(t, "server_start", f.Key)
+		}
+	})
+
 }
