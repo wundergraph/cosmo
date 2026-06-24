@@ -1,20 +1,30 @@
 package integration
 
 import (
-	"github.com/wundergraph/cosmo/router-tests/testutils"
-
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
 
+	"github.com/wundergraph/cosmo/router-tests/testutils"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -22,12 +32,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 type fakeSelfRegister struct{}
@@ -1400,6 +1404,149 @@ engine:
 
 }
 
+func TestCacheWarmupDefer(t *testing.T) {
+	// These tests verify how the cache warmer interacts with @defer queries.
+	t.Parallel()
+
+	deferRequest := func(t *testing.T, xEnv *testenv.Environment, query string, variables string) (status int, contentType, planCache string) {
+		t.Helper()
+		payload := map[string]any{"query": query}
+		if variables != "" {
+			payload["variables"] = json.RawMessage(variables)
+		}
+		payloadData, err := json.Marshal(payload)
+		require.NoError(t, err)
+
+		req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payloadData))
+		res, err := xEnv.RouterClient.Do(req)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, res.Body.Close()) }()
+		_, err = io.ReadAll(res.Body)
+		require.NoError(t, err)
+		return res.StatusCode, res.Header.Get("Content-Type"), res.Header.Get("x-wg-execution-plan-cache")
+	}
+
+	deferWarmup := func() []core.Option {
+		return []core.Option{
+			core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+				Enabled: true,
+				Source: config.CacheWarmupSource{
+					Filesystem: &config.CacheWarmupFileSystemSource{
+						Path: "testdata/cache_warmup/defer",
+					},
+				},
+			}),
+		}
+	}
+	// This query is used for warmup.
+	const queryWithDefer = `query {
+	  employee(id: 1) {
+		id
+		... @defer {
+		  hobbies {
+			__typename
+		  }
+		}
+	  }
+	}`
+	const queryWithoutDefer = `query {
+	  employee(id: 1) {
+		id
+		hobbies {
+		  __typename
+		}
+	  }
+	}`
+
+
+	t.Run("warmed defer query hits the plan cache on a live multipart request", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: deferWarmup(),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			status, contentType, planCache := deferRequest(t, xEnv, queryWithDefer, "")
+
+			require.Equal(t, http.StatusOK, status)
+			require.True(t, strings.HasPrefix(contentType, "multipart/mixed"))
+
+			require.Equal(t, "HIT", planCache)
+		})
+	})
+
+	t.Run("@defer changes the plan cache key", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: deferWarmup(),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: queryWithoutDefer,
+			})
+			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"),
+				"the non-defer variant must NOT share a plan cache entry with the warmed @defer query")
+
+			// The exact warmed @defer query, issued as a live multipart request, hits.
+			_, _, planCache := deferRequest(t, xEnv, queryWithDefer, "")
+			require.Equal(t, "HIT", planCache)
+		})
+	})
+
+	t.Run("@defer with @include(if: $var) is warmed but never matches a live request", func(t *testing.T) {
+		t.Parallel()
+
+		// This query is used in the warmup below:
+		const deferIncludeQuery = `query ($withDetails: Boolean!) {
+		  employee(id: 1) {
+			id
+			details @include(if: $withDetails) {
+			  forename
+			}
+			... @defer {
+			  hobbies {
+				__typename
+			  }
+			}
+		  }
+		}`
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient:  true,
+			LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.WarnLevel},
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled: true,
+					Source: config.CacheWarmupSource{
+						Filesystem: &config.CacheWarmupFileSystemSource{
+							Path: "testdata/cache_warmup/defer_include",
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			for _, l := range xEnv.Observer().FilterMessage("Failed to process operation, skipping").All() {
+				t.Fatalf("warmup unexpectedly skipped the operation: %v", l.ContextMap())
+			}
+
+			// First request with a concrete @include value: MISS.
+			status, contentType, planCacheTrue := deferRequest(t, xEnv, deferIncludeQuery, `{"withDetails": true}`)
+			require.Equal(t, http.StatusOK, status)
+			require.True(t, strings.HasPrefix(contentType, "multipart/mixed"))
+			require.Equal(t, "MISS", planCacheTrue)
+
+			// An identical repeat gets HIT.
+			_, _, planCacheTrueRepeat := deferRequest(t, xEnv, deferIncludeQuery, `{"withDetails": true}`)
+			require.Equal(t, "HIT", planCacheTrueRepeat)
+
+			// A different @include value is a separate plan cache entry.
+			_, _, planCacheFalse := deferRequest(t, xEnv, deferIncludeQuery, `{"withDetails": false}`)
+			require.Equal(t, "MISS", planCacheFalse,
+				"a different @include value is a distinct plan cache key, also unmatched by warmup")
+		})
+	})
+
+	// Since the Accept header sent from the client does not affect what server sends in case of defer,
+	// there no tests for that.
+}
 // findDataPoint finds a data point in a slice of histogram data points by matching
 // the value of WgEnginePlanCacheHit attribute
 func findDataPoint(t *testing.T, dataPoints []metricdata.HistogramDataPoint[float64], cacheHit bool) metricdata.HistogramDataPoint[float64] {

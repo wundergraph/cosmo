@@ -1,0 +1,13 @@
+query ($withDetails: Boolean!) {
+  employee(id: 1) {
+    id
+    details @include(if: $withDetails) {
+      forename
+    }
+    ... @defer {
+      hobbies {
+        __typename
+      }
+    }
+  }
+}
