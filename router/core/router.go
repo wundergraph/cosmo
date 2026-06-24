@@ -27,6 +27,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -1696,6 +1697,12 @@ func (r *Router) buildExecutionConfigWatcher(ctx context.Context, ll *zap.Logger
 				ll.Error("Failed to update server with new config", zap.Error(err))
 				return
 			}
+
+			if old := r.staticExecutionConfig; old != nil && old != cfg {
+				proto.Reset(old)
+			}
+			r.staticExecutionConfig = cfg
+			r.trackExecutionConfigUsage(cfg, true)
 		},
 	})
 
