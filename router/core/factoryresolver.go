@@ -79,6 +79,7 @@ type DefaultFactoryResolver struct {
 	transportFactory              ApiTransportFactory
 	defaultSubgraphRequestTimeout time.Duration
 	subscriptionClientOptions     []graphql_datasource.SubscriptionClientOption
+	useNoopSubscriptionClient     bool
 
 	subscriptionClient     graphql_datasource.GraphQLSubscriptionClient
 	subscriptionClientOnce sync.Once
@@ -135,7 +136,9 @@ func NewDefaultFactoryResolver(
 		graphql_datasource.WithLogger(factoryLogger),
 	}
 
+	useNoopSubscriptionClient := false
 	if subscriptionClientOptions != nil {
+		useNoopSubscriptionClient = subscriptionClientOptions.UseNoopClient
 		if subscriptionClientOptions.PingInterval > 0 {
 			options = append(options, graphql_datasource.WithPingInterval(subscriptionClientOptions.PingInterval))
 		}
@@ -168,6 +171,7 @@ func NewDefaultFactoryResolver(
 		transportFactory:              transportFactory,
 		defaultSubgraphRequestTimeout: transportOptions.SubgraphTransportOptions.RequestTimeout,
 		subscriptionClientOptions:     options,
+		useNoopSubscriptionClient:     useNoopSubscriptionClient,
 	}
 }
 
@@ -206,6 +210,11 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 
 func (d *DefaultFactoryResolver) sharedSubscriptionClient() graphql_datasource.GraphQLSubscriptionClient {
 	d.subscriptionClientOnce.Do(func() {
+		if d.useNoopSubscriptionClient {
+			d.subscriptionClient = noopGraphQLSubscriptionClientInstance
+			return
+		}
+
 		if d.transportFactory == nil || d.baseTransport == nil {
 			d.subscriptionClient = graphql_datasource.NewGraphQLSubscriptionClient(
 				d.engineCtx,

@@ -75,10 +75,11 @@ type ExecutorBuildOptions struct {
 	TraceClientRequired            bool
 	PluginsEnabled                 bool
 	InstanceData                   InstanceData
+	WebSocketConfiguration         *config.WebSocketConfiguration
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, []pubsub_datasource.Provider, error) {
-	planConfig, providers, err := b.buildPlannerConfiguration(ctx, opts.EngineConfig, opts.Subgraphs, opts.RouterEngineConfig, opts.PluginsEnabled)
+	planConfig, providers, err := b.buildPlannerConfiguration(ctx, opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
@@ -228,29 +229,41 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	}, providers, nil
 }
 
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineCfg *RouterEngineConfiguration, pluginsEnabled bool) (*plan.Configuration, []pubsub_datasource.Provider, error) {
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, opts *ExecutorBuildOptions) (*plan.Configuration, []pubsub_datasource.Provider, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
 
+	subscriptionClientOptions := b.subscriptionClientOptions
+	if subscriptionClientOptions == nil {
+		subscriptionClientOptions = &SubscriptionClientOptions{}
+	}
+	resolvedSubscriptionClientOptions := *subscriptionClientOptions
+	resolvedSubscriptionClientOptions.UseNoopClient = shouldUseNoopUpstreamSubscriptionClient(
+		opts.EngineConfig.GetGraphqlSchema(),
+		opts.EngineConfig,
+		opts.RouterEngineConfig.Events,
+		opts.WebSocketConfiguration,
+	)
+
 	loader := NewLoader(ctx, b.trackUsageInfo, NewDefaultFactoryResolver(
 		ctx,
 		b.transportOptions,
-		b.subscriptionClientOptions,
+		&resolvedSubscriptionClientOptions,
 		b.baseTripper,
 		b.subgraphTrippers,
 		b.pluginHost,
 		b.logger,
-		routerEngineCfg.Execution.EnableNetPoll,
+		opts.RouterEngineConfig.Execution.EnableNetPoll,
 		b.instanceData,
 	), b.logger, b.subscriptionHooks)
 
 	// this generates the plan config using the data source factories from the config package
-	planConfig, providers, err := loader.Load(engineConfig, subgraphs, routerEngineCfg, pluginsEnabled)
+	planConfig, providers, err := loader.Load(opts.EngineConfig, opts.Subgraphs, opts.RouterEngineConfig, opts.PluginsEnabled)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
-	debug := &routerEngineCfg.Execution.Debug
+	debug := &opts.RouterEngineConfig.Execution.Debug
 	planConfig.Debug = plan.DebugConfiguration{
 		PrintOperationTransformations: debug.PrintOperationTransformations,
 		PrintOperationEnableASTRefs:   debug.PrintOperationEnableASTRefs,
@@ -261,19 +274,19 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		PlanningVisitor:               debug.PlanningVisitor,
 		DatasourceVisitor:             debug.DatasourceVisitor,
 	}
-	planConfig.MinifySubgraphOperations = routerEngineCfg.Execution.MinifySubgraphOperations
+	planConfig.MinifySubgraphOperations = opts.RouterEngineConfig.Execution.MinifySubgraphOperations
 
-	planConfig.EnableOperationNamePropagation = routerEngineCfg.Execution.EnableSubgraphFetchOperationName
+	planConfig.EnableOperationNamePropagation = opts.RouterEngineConfig.Execution.EnableSubgraphFetchOperationName
 
-	planConfig.BuildFetchReasons = routerEngineCfg.Execution.EnableRequireFetchReasons || routerEngineCfg.Execution.ValidateRequiredExternalFields
-	planConfig.ValidateRequiredExternalFields = routerEngineCfg.Execution.ValidateRequiredExternalFields
-	planConfig.RelaxSubgraphOperationFieldSelectionMergingNullability = routerEngineCfg.Execution.RelaxSubgraphOperationFieldSelectionMergingNullability
+	planConfig.BuildFetchReasons = opts.RouterEngineConfig.Execution.EnableRequireFetchReasons || opts.RouterEngineConfig.Execution.ValidateRequiredExternalFields
+	planConfig.ValidateRequiredExternalFields = opts.RouterEngineConfig.Execution.ValidateRequiredExternalFields
+	planConfig.RelaxSubgraphOperationFieldSelectionMergingNullability = opts.RouterEngineConfig.Execution.RelaxSubgraphOperationFieldSelectionMergingNullability
 
 	// Enable cost computation when cost control is enabled
-	if routerEngineCfg.CostControl != nil && routerEngineCfg.CostControl.Enabled {
+	if opts.RouterEngineConfig.CostControl != nil && opts.RouterEngineConfig.CostControl.Enabled {
 		planConfig.ComputeCosts = true
-		planConfig.StaticCostDefaultListSize = routerEngineCfg.CostControl.EstimatedListSize
-		planConfig.IgnoreImplementingTypeWeights = routerEngineCfg.CostControl.IgnoreImplementingTypeWeights
+		planConfig.StaticCostDefaultListSize = opts.RouterEngineConfig.CostControl.EstimatedListSize
+		planConfig.IgnoreImplementingTypeWeights = opts.RouterEngineConfig.CostControl.IgnoreImplementingTypeWeights
 	}
 
 	return planConfig, providers, nil

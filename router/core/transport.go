@@ -223,6 +223,8 @@ type SubscriptionClientOptions struct {
 	AckTimeout                time.Duration
 	ReadLimit                 int64
 	DefaultErrorExtensionCode string
+	// UseNoopClient skips upstream WS/SSE transport initialization when subscriptions are not needed.
+	UseNoopClient bool
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
