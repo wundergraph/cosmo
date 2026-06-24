@@ -116,7 +116,8 @@
       "yaml@2.x": "2.8.3",
       "path-to-regexp@8.x": "8.4.0",
       "ip-address@10.x": "10.1.1",
-      "ws@8.x": "8.20.1"
+      "ws@8.x": "8.20.1",
+      "ajv@6.x": "6.14.0"
     },
     "patchedDependencies": {
       "graphql@16.9.0": "patches/graphql@16.9.0.patch"
