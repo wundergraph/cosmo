@@ -139,6 +139,7 @@ overrides:
   yaml@2.x: 2.8.3
   path-to-regexp@8.x: 8.4.0
   ip-address@10.x: 10.1.1
+  ws@8.x: 8.20.1
 
 patchedDependencies:
   graphql@16.9.0:
@@ -151,13 +152,13 @@ importers:
     dependencies:
       '@graphiql/plugin-explorer':
         specifier: ^3.1.0
-        version: 3.1.0(@graphiql/react@0.22.4(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 3.1.0(@graphiql/react@0.22.4(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.20.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@graphiql/toolkit':
         specifier: ^0.9.1
-        version: 0.9.1(@types/node@22.17.0)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
+        version: 0.9.1(@types/node@22.17.0)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.20.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
       graphiql:
         specifier: ^3.3.2
-        version: 3.3.2(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 3.3.2(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.20.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
     devDependencies:
       '@bufbuild/buf':
         specifier: ^1.34.0
@@ -691,7 +692,7 @@ importers:
         version: 4.1.3
       openai:
         specifier: ^4.104.0
-        version: 4.104.0(encoding@0.1.13)(ws@8.16.0)(zod@3.25.76)
+        version: 4.104.0(encoding@0.1.13)(ws@8.20.1)(zod@3.25.76)
       p-limit:
         specifier: ^6.1.0
         version: 6.1.0
@@ -10354,7 +10355,7 @@ packages:
       crossws: ~0.3
       graphql: 16.9.0
       uWebSockets.js: ^20
-      ws: ^8
+      ws: 8.20.1
     peerDependenciesMeta:
       '@fastify/websocket':
         optional: true
@@ -10978,7 +10979,7 @@ packages:
   isomorphic-ws@5.0.0:
     resolution: {integrity: sha512-muId7Zzn9ywDsyXgTIafTry2sV3nySZeUDe6YedVd1Hvuuep5AsIlqK+XefWpYTyJG5e503F2xIuT2lcU6rCSw==}
     peerDependencies:
-      ws: '*'
+      ws: 8.20.1
 
   istanbul-lib-coverage@3.2.2:
     resolution: {integrity: sha512-O8dpsF+r0WV/8MNRKfnmrtCWhuKjxrq2w+jpzBL5UZKTi2LeVWnWOmWRxFlesJONmc+wLAGvKQZEOanko0LFTg==}
@@ -12017,7 +12018,7 @@ packages:
     resolution: {integrity: sha512-p99EFNsA/yX6UhVO93f5kJsDRLAg+CTA2RBqdHK4RtK8u5IJw32Hyb2dTGKbnnFmnuoBv5r7Z2CURI9sGZpSuA==}
     hasBin: true
     peerDependencies:
-      ws: ^8.18.0
+      ws: 8.20.1
       zod: ^3.25.0
     peerDependenciesMeta:
       ws:
@@ -14526,56 +14527,8 @@ packages:
     resolution: {integrity: sha512-uMQTubF/vcu+Wd0b5BGtDmiXePd/+44hUWQz2nZPbs92/BnxRo74tqs+hqDo12RLiEd+CXFKUwxvvIZvtt34Jw==}
     engines: {node: '>=18'}
 
-  ws@8.13.0:
-    resolution: {integrity: sha512-x9vcZYTrFPC7aSIbj7sRCYo7L/Xb8Iy+pW0ng0wt2vCJv7M9HOMy0UoN3rr+IFC7hb7vXoqS+P9ktyLLLhO+LA==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-
-  ws@8.16.0:
-    resolution: {integrity: sha512-HS0c//TP7Ina87TfiPUz1rQzMhHrl/SG2guqRcTOIUYD2q8uhUdNHZYJUaQ8aTGPzCh+c6oawMKW35nFl1dxyQ==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-
-  ws@8.17.1:
-    resolution: {integrity: sha512-6XQFvXTkbfUOZOKKILFG1PDK2NDQs4azKQl26T0YS5CxqWLgXajbPZ+h4gZekJyRqFU8pvnbAbbs/3TgRPy+GQ==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-
-  ws@8.18.3:
-    resolution: {integrity: sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-
-  ws@8.19.0:
-    resolution: {integrity: sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg==}
+  ws@8.20.1:
+    resolution: {integrity: sha512-It4dO0K5v//JtTXuPkfEOaI3uUN87iYPnqo/ZzqCoG3g8uhA66QUMs/SrM0YK7/NAu+r4LMh/9dq2A7k+rHs+w==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -17136,17 +17089,17 @@ snapshots:
     dependencies:
       retry: 0.13.1
 
-  '@graphiql/plugin-explorer@3.1.0(@graphiql/react@0.22.4(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@graphiql/plugin-explorer@3.1.0(@graphiql/react@0.22.4(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.20.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@graphiql/react': 0.22.4(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@graphiql/react': 0.22.4(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.20.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       graphiql-explorer: 0.9.0(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       graphql: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  '@graphiql/react@0.22.4(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@graphiql/react@0.22.4(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.20.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@graphiql/toolkit': 0.9.1(@types/node@22.17.0)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
+      '@graphiql/toolkit': 0.9.1(@types/node@22.17.0)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.20.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
       '@headlessui/react': 1.7.15(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-dialog': 1.0.5(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-dropdown-menu': 2.0.5(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -17171,13 +17124,13 @@ snapshots:
       - '@types/react-dom'
       - graphql-ws
 
-  '@graphiql/toolkit@0.9.1(@types/node@22.17.0)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))':
+  '@graphiql/toolkit@0.9.1(@types/node@22.17.0)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.20.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))':
     dependencies:
       '@n1ru4l/push-pull-async-iterable-iterator': 3.2.0
       graphql: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
       meros: 1.3.0(@types/node@22.17.0)
     optionalDependencies:
-      graphql-ws: 6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0)
+      graphql-ws: 6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.20.1)
     transitivePeerDependencies:
       - '@types/node'
 
@@ -17249,9 +17202,9 @@ snapshots:
       '@types/ws': 8.5.10
       graphql: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
       graphql-ws: 5.12.1(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
-      isomorphic-ws: 5.0.0(ws@8.13.0)
+      isomorphic-ws: 5.0.0(ws@8.20.1)
       tslib: 2.8.1
-      ws: 8.13.0
+      ws: 8.20.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -17275,9 +17228,9 @@ snapshots:
       '@graphql-tools/utils': 9.2.1(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
       '@types/ws': 8.5.10
       graphql: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
-      isomorphic-ws: 5.0.0(ws@8.13.0)
+      isomorphic-ws: 5.0.0(ws@8.20.1)
       tslib: 2.8.1
-      ws: 8.13.0
+      ws: 8.20.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -17390,10 +17343,10 @@ snapshots:
       '@types/ws': 8.5.10
       '@whatwg-node/fetch': 0.8.8
       graphql: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
-      isomorphic-ws: 5.0.0(ws@8.16.0)
+      isomorphic-ws: 5.0.0(ws@8.20.1)
       tslib: 2.8.1
       value-or-promise: 1.0.12
-      ws: 8.16.0
+      ws: 8.20.1
     transitivePeerDependencies:
       - '@types/node'
       - bufferutil
@@ -24145,7 +24098,7 @@ snapshots:
       cors: 2.8.5
       debug: 4.4.1
       engine.io-parser: 5.2.3
-      ws: 8.17.1
+      ws: 8.20.1
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -25523,10 +25476,10 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  graphiql@3.3.2(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  graphiql@3.3.2(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.20.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
-      '@graphiql/react': 0.22.4(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@graphiql/toolkit': 0.9.1(@types/node@22.17.0)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
+      '@graphiql/react': 0.22.4(@codemirror/language@6.0.0)(@types/node@22.17.0)(@types/react-dom@18.3.0)(@types/react@18.3.3)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.20.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@graphiql/toolkit': 0.9.1(@types/node@22.17.0)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.20.1))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
       graphql: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
       graphql-language-service: 5.2.1(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
       markdown-it: 14.1.1
@@ -25594,11 +25547,11 @@ snapshots:
     dependencies:
       graphql: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
 
-  graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0):
+  graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.20.1):
     dependencies:
       graphql: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
     optionalDependencies:
-      ws: 8.19.0
+      ws: 8.20.1
     optional: true
 
   graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly): {}
@@ -26250,13 +26203,9 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  isomorphic-ws@5.0.0(ws@8.13.0):
+  isomorphic-ws@5.0.0(ws@8.20.1):
     dependencies:
-      ws: 8.13.0
-
-  isomorphic-ws@5.0.0(ws@8.16.0):
-    dependencies:
-      ws: 8.16.0
+      ws: 8.20.1
 
   istanbul-lib-coverage@3.2.2: {}
 
@@ -26362,7 +26311,7 @@ snapshots:
       whatwg-encoding: 3.1.1
       whatwg-mimetype: 4.0.0
       whatwg-url: 14.2.0
-      ws: 8.18.3
+      ws: 8.20.1
       xml-name-validator: 5.0.0
     transitivePeerDependencies:
       - bufferutil
@@ -26389,7 +26338,7 @@ snapshots:
       whatwg-encoding: 3.1.1
       whatwg-mimetype: 4.0.0
       whatwg-url: 15.1.0
-      ws: 8.19.0
+      ws: 8.20.1
       xml-name-validator: 5.0.0
     transitivePeerDependencies:
       - bufferutil
@@ -27585,7 +27534,7 @@ snapshots:
       is-inside-container: 1.0.0
       is-wsl: 2.2.0
 
-  openai@4.104.0(encoding@0.1.13)(ws@8.16.0)(zod@3.25.76):
+  openai@4.104.0(encoding@0.1.13)(ws@8.20.1)(zod@3.25.76):
     dependencies:
       '@types/node': 18.19.21
       '@types/node-fetch': 2.6.11
@@ -27595,7 +27544,7 @@ snapshots:
       formdata-node: 4.4.1
       node-fetch: 2.6.13(encoding@0.1.13)
     optionalDependencies:
-      ws: 8.16.0
+      ws: 8.20.1
       zod: 3.25.76
     transitivePeerDependencies:
       - encoding
@@ -29201,7 +29150,7 @@ snapshots:
   socket.io-adapter@2.5.5:
     dependencies:
       debug: 4.4.1
-      ws: 8.17.1
+      ws: 8.20.1
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -30502,15 +30451,7 @@ snapshots:
       type-fest: 4.23.0
       write-json-file: 6.0.0
 
-  ws@8.13.0: {}
-
-  ws@8.16.0: {}
-
-  ws@8.17.1: {}
-
-  ws@8.18.3: {}
-
-  ws@8.19.0: {}
+  ws@8.20.1: {}
 
   xml-name-validator@5.0.0: {}
 
