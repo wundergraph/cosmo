@@ -682,6 +682,7 @@ type graphMux struct {
 	reused atomic.Bool
 
 	wsHandler               *WebsocketHandler
+	executor                *Executor
 	planCacheOnEvictEnabled atomic.Bool
 
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
@@ -987,6 +988,11 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	s.complexityCalculationCache.Close()
 	s.validationCache.Close()
 	s.operationHashCache.Close()
+
+	if s.executor != nil {
+		s.executor.Close()
+		s.executor = nil
+	}
 
 	var err error
 
@@ -1463,22 +1469,29 @@ func (s *graphServer) buildGraphMux(
 		return nil, fmt.Errorf("failed to process retry options: %w", err)
 	}
 
+	subscriptionClientOptions := &SubscriptionClientOptions{
+		PingInterval:              s.engineExecutionConfiguration.WebSocketClientPingInterval,
+		PingTimeout:               s.engineExecutionConfiguration.WebSocketClientPingTimeout,
+		WriteTimeout:              s.engineExecutionConfiguration.WebSocketClientWriteTimeout,
+		AckTimeout:                s.engineExecutionConfiguration.WebSocketClientAckTimeout,
+		ReadLimit:                 int64(s.engineExecutionConfiguration.WebSocketClientReadLimit),
+		DefaultErrorExtensionCode: s.subgraphErrorPropagation.DefaultExtensionCode,
+	}
+	// Client-facing WebSocket subscriptions are disabled; skip upstream ping loops
+	// that would otherwise start one goroutine per subgraph datasource factory.
+	if s.webSocketConfiguration != nil && !s.webSocketConfiguration.Enabled {
+		subscriptionClientOptions.PingInterval = 0
+	}
+
 	ecb := &ExecutorConfigurationBuilder{
-		introspection:    s.introspection,
-		baseURL:          s.baseURL,
-		baseTripper:      s.baseTransport,
-		subgraphTrippers: subgraphTippers,
-		pluginHost:       s.connector,
-		logger:           s.logger,
-		trackUsageInfo:   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
-		subscriptionClientOptions: &SubscriptionClientOptions{
-			PingInterval:              s.engineExecutionConfiguration.WebSocketClientPingInterval,
-			PingTimeout:               s.engineExecutionConfiguration.WebSocketClientPingTimeout,
-			WriteTimeout:              s.engineExecutionConfiguration.WebSocketClientWriteTimeout,
-			AckTimeout:                s.engineExecutionConfiguration.WebSocketClientAckTimeout,
-			ReadLimit:                 int64(s.engineExecutionConfiguration.WebSocketClientReadLimit),
-			DefaultErrorExtensionCode: s.subgraphErrorPropagation.DefaultExtensionCode,
-		},
+		introspection:             s.introspection,
+		baseURL:                     s.baseURL,
+		baseTripper:                 s.baseTransport,
+		subgraphTrippers:            subgraphTippers,
+		pluginHost:                  s.connector,
+		logger:                      s.logger,
+		trackUsageInfo:              s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
+		subscriptionClientOptions:   subscriptionClientOptions,
 		transportOptions: &TransportOptions{
 			SubgraphTransportOptions:      s.subgraphTransportOptions,
 			PreHandlers:                   s.preOriginHandlers,
@@ -1514,6 +1527,7 @@ func (s *graphServer) buildGraphMux(
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
+	gm.executor = executor
 
 	s.pubSubProviders = providers
 	if pubSubStartupErr := s.startupPubSubProviders(s.graphServerCtx); pubSubStartupErr != nil {

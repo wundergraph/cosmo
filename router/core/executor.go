@@ -51,6 +51,19 @@ type Executor struct {
 	TrackUsageInfo  bool
 }
 
+// Close releases schema and planner references held by the executor so a replaced
+// graph mux can be garbage-collected after config reload.
+func (e *Executor) Close() {
+	if e == nil {
+		return
+	}
+	e.ClientSchema = nil
+	e.RouterSchema = nil
+	e.PlanConfig = plan.Configuration{}
+	e.RenameTypeNames = nil
+	e.Resolver = nil
+}
+
 type ExecutorBuildOptions struct {
 	EngineConfig                   *nodev1.EngineConfiguration
 	Subgraphs                      []*nodev1.Subgraph
