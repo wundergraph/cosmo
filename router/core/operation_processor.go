@@ -1521,9 +1521,6 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 }
 
 func buildNormalizationOptions(enableDefer bool) []astnormalization.Option {
-
-	// preValidationRules :=
-
 	opts := []astnormalization.Option{
 		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 		astnormalization.WithInlineFragmentSpreads(),
