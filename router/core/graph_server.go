@@ -965,6 +965,30 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 	return nil
 }
 
+func closeRistrettoCacheUint64[V any](cache **ristretto.Cache[uint64, V]) {
+	if *cache != nil {
+		(*cache).Close()
+		*cache = nil
+	}
+}
+
+// releaseOperationCaches drops references to closed Ristretto caches so the old
+// graphMux can be collected after shutdown (Close clears entries but retains structs).
+func (s *graphMux) releaseOperationCaches() {
+	closeRistrettoCacheUint64(&s.planCache)
+	if s.planFallbackCache != nil {
+		s.planFallbackCache.Close()
+		s.planFallbackCache = nil
+	}
+	closeRistrettoCacheUint64(&s.persistedOperationCache)
+	closeRistrettoCacheUint64(&s.normalizationCache)
+	closeRistrettoCacheUint64(&s.variablesNormalizationCache)
+	closeRistrettoCacheUint64(&s.remapVariablesCache)
+	closeRistrettoCacheUint64(&s.complexityCalculationCache)
+	closeRistrettoCacheUint64(&s.validationCache)
+	closeRistrettoCacheUint64(&s.operationHashCache)
+}
+
 func (s *graphMux) Shutdown(ctx context.Context) error {
 	// Close websocket subscriptions synchronously before tearing down plan caches so
 	// active preparedPlan and executor references are released first.
@@ -978,21 +1002,18 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	// ristretto Close() clears all entries and invokes OnEvict for each one. Disable
 	// migration into the slow-plan fallback cache during intentional mux shutdown.
 	s.planCacheOnEvictEnabled.Store(false)
-	s.planCache.Close()
-	s.planFallbackCache.Wait()
-	s.planFallbackCache.Close()
-	s.persistedOperationCache.Close()
-	s.normalizationCache.Close()
-	s.variablesNormalizationCache.Close()
-	s.remapVariablesCache.Close()
-	s.complexityCalculationCache.Close()
-	s.validationCache.Close()
-	s.operationHashCache.Close()
+	if s.planFallbackCache != nil {
+		s.planFallbackCache.Wait()
+	}
 
 	if s.executor != nil {
 		s.executor.Close()
 		s.executor = nil
 	}
+
+	s.releaseOperationCaches()
+	s.wsHandler = nil
+	s.mux = nil
 
 	var err error
 
@@ -2205,6 +2226,7 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		if err := mux.Shutdown(ctx); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
+		delete(s.graphMuxList, name)
 	}
 
 	// Close idle connections on base and subgraph transports
