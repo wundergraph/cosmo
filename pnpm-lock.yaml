@@ -134,6 +134,8 @@ overrides:
   shell-quote: 1.8.4
   picomatch@2.x: 2.3.2
   picomatch@4.x: 4.0.4
+  brace-expansion@1.x: 1.1.13
+  brace-expansion@2.x: 2.0.3
 
 patchedDependencies:
   graphql@16.9.0:
@@ -8298,11 +8300,11 @@ packages:
     resolution: {integrity: sha512-z0M+byMThzQmD9NILRniCUXYsYpjwnlO8N5uCFaCqIOpqRsJCrQL9NK3JsD67CN5a08nF5oIL2bD6loTdHOuKw==}
     engines: {node: '>= 5.10.0'}
 
-  brace-expansion@1.1.11:
-    resolution: {integrity: sha512-iCuPHDFgrHX7H2vEI/5xpz07zSHB00TpugqhmYtVmMO6518mCuRMoOYFldEBl0g187ufozdaHgWKcYFb61qGiA==}
+  brace-expansion@1.1.13:
+    resolution: {integrity: sha512-9ZLprWS6EENmhEOpjCYW2c8VkmOvckIJZfkr7rBW6dObmfgJ/L1GpSYW5Hpo9lDz4D1+n0Ckz8rU7FwHDQiG/w==}
 
-  brace-expansion@2.0.1:
-    resolution: {integrity: sha512-XnAIvQ8eM+kC6aULx6wuQiwVsnzsi9d3WxzV3FpWTGA19F621kwdbsAcFKXgKUHZWsy+mY6iL1sHTxWEFCytDA==}
+  brace-expansion@2.0.3:
+    resolution: {integrity: sha512-MCV/fYJEbqx68aE58kv2cA/kiky1G8vux3OR6/jbS+jIMe/6fJWa0DTzJU7dqijOWYwHi1t29FlfYI9uytqlpA==}
 
   brace-expansion@5.0.4:
     resolution: {integrity: sha512-h+DEnpVvxmfVefa4jFbCf5HdH5YMDXRsmKflpf1pILZWRFlTbJpxeU55nJl4Smt5HQaGzg1o6RHFPJaOqnmBDg==}
@@ -23109,12 +23111,12 @@ snapshots:
     dependencies:
       big-integer: 1.6.51
 
-  brace-expansion@1.1.11:
+  brace-expansion@1.1.13:
     dependencies:
       balanced-match: 1.0.2
       concat-map: 0.0.1
 
-  brace-expansion@2.0.1:
+  brace-expansion@2.0.3:
     dependencies:
       balanced-match: 1.0.2
 
@@ -27122,19 +27124,19 @@ snapshots:
 
   minimatch@3.1.4:
     dependencies:
-      brace-expansion: 1.1.11
+      brace-expansion: 1.1.13
 
   minimatch@4.2.5:
     dependencies:
-      brace-expansion: 1.1.11
+      brace-expansion: 1.1.13
 
   minimatch@5.1.8:
     dependencies:
-      brace-expansion: 2.0.1
+      brace-expansion: 2.0.3
 
   minimatch@8.0.6:
     dependencies:
-      brace-expansion: 2.0.1
+      brace-expansion: 2.0.3
 
   minimatch@9.0.7:
     dependencies:
