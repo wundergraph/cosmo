@@ -1568,11 +1568,11 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		complexityLimits:         opts.ComplexityLimits,
 		costControl:              opts.CostControl,
 		parseKitOptions: &parseKitOptions{
+			enableDefer:                                            opts.EnableDefer,
 			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,
 			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
-			enableDefer: opts.EnableDefer,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {
