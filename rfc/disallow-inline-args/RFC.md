@@ -79,10 +79,11 @@ would normalize that part of the query out, **even if** it is a directive argume
 The only document where all of these are simultaneously visible and intact is the operation
 exactly as parsed, before any normalization stage runs.
 
-Therefore detection runs during parsing itself (`operationKit.Parse()`, `graphql_prehandler.go:687`),
-which is the first and only pass that sees the operation fully intact,
-before any normalization stage and before the router writes any internal cache.
-An enforce-mode rejection then short-circuits without polluting a single cache — see § 4.1 and § 4.3.
+Therefore detection runs immediately after `Parse()` (`graphql_prehandler.go:687`) and before any
+normalization — a single linear scan of the parsed argument slice (`ast.Document.Arguments`), which at
+that point holds every argument the client sent, intact.
+This is before the router writes any internal cache, so an enforce-mode rejection short-circuits
+without polluting a single cache — see § 4.1 and § 4.3.
 
 ## 3. Goals / Non-Goals
 
@@ -101,99 +102,91 @@ An enforce-mode rejection then short-circuits without polluting a single cache �
 - Rewriting the client's operation for them (Cosmo already normalizes internally; this policy does not change the executed operation).
 - Changing the internal normalization behavior or the executed plan.
 - Detecting inline values inside variable-definition default values (`$x: Int = 5` is a definition default, not an argument the client passed to a field or directive — out of scope; see Open Questions).
+- Normalizing variable *names*. The same operation shape with different variable names still yields distinct query strings; this policy forces values to be variables but cannot collapse variable-name variance (see § 9). 
 - A per-field or per-argument allowlist of "acceptable" inline arguments (out of scope for v1; see Open Questions).
 
 ## 4. Detailed Design
 
-### 4.1 Integration point in graphql-go-tools
+### 4.1 Integration point: a direct lookup over the parsed AST
+
+> Review note (PR #2998): an earlier draft proposed instrumenting the parser
+> (`parseArgumentList`) or adding a dedicated visitor. Reviewers pushed back —
+> the parser approach taxes every parse with a flag check (Noroth), and the
+> simplest correct option is just to scan the parsed AST once in the request
+> pipeline (jensneuse). This section adopts that direct-lookup approach;
+> the parser and visitor variants are retained as alternatives in § 11.
 
 The literal-vs-variable discriminator is trivial in graphql-go-tools v2.4.6.
-The argument `Value` carries a `Kind` of type `ast.ValueKind`
-(`pkg/ast/ast_value.go` lines 17-30, `pkg/ast/ast_argument.go` line 18).
-An argument is inline if `arg.Value.Kind != ast.ValueKindVariable`.
-The existing `variablesExtractionVisitor.EnterArgument`
-(`pkg/astnormalization/variables_extraction.go` line 39) uses exactly this check at line 62 —
-we reuse the discriminator, but **not** its guards, because this policy must flag the cases those guards skip.
+An argument is inline if `arg.Value.Kind != ast.ValueKindVariable`
+(`pkg/ast/ast_argument.go:18-25`, `pkg/ast/ast_value.go`).
 
-#### Recommended approach: detect during parsing, in `parseArgumentList`
+The key enabling fact: the parser appends **every** argument it parses — for both fields and
+directives — into one flat slice, `ast.Document.Arguments []ast.Argument` (`pkg/ast/ast.go:19`;
+populated in `parseArgumentList`, `pkg/astparser/parser.go:439`).
+After `Parse()`, that slice is the complete, un-normalized set of arguments the client sent.
 
-Three requirements decide the integration point:
+#### Recommended approach
 
-1. **Flag everything** — field arguments, directive arguments (`@skip`/`@include` included), introspection arguments, and arguments in selections that normalization would prune.
-2. **Reject early without polluting caches** — short-circuit before the router writes any internal cache.
-3. **No extra traversal** — reuse an iteration the router already performs.
-
-Requirement 1 rules out riding any normalization stage:
-normalization rewrites literals to variables, and `@skip`/`@include` normalization *deletes nodes*
-(`directive_include_skip.go:128-135`) before later stages run.
-The only point at which every inline argument is simultaneously present is the operation as parsed.
-
-The parser already visits every argument value, so detection rides the parse the router performs anyway —
-no extra walk, and it is the earliest possible point (before any normalization or cache).
-The single choke point is `Parser.parseArgumentList` (`pkg/astparser/parser.go:415`),
-which parses arguments for **both fields and directives**
-(it is called from field parsing and from `parseDirectiveList`, `parser.go:394`).
-It reads the argument name, then `value := p.ParseValue()` (`parser.go:431`),
-and `ParseValue` already sets `value.Kind` — `ValueKindVariable` for `$var`, a literal kind otherwise (`parser.go:462-498`).
-
-The changes in graphql-go-tools v2.4.6:
-
-1. Add an opt-in field to `Parser` (e.g. `reportInlineArguments bool` plus a `[]InlineArgumentInfo` accumulator),
-   settable per parse and reset at the start of each parse (alongside the parser's existing per-parse reset).
-   When the flag is off, the only cost is one predictable branch per argument — effectively free.
-
-2. In `parseArgumentList`, immediately after `value := p.ParseValue()`,
-   record the argument when the flag is set and `value.Kind != ast.ValueKindVariable`.
-   Because this is the common path for field **and** directive arguments, it captures:
-   - field arguments (`userById(userId: "12345")`),
-   - directive arguments (`@include(if: true)`, `@skip(if: false)`, any directive),
-   - introspection-field arguments (`__type(name: "User")`),
-   - arguments inside fields/fragments that `@skip`/`@include` would later remove (nothing is pruned yet).
-
-   It naturally **excludes** variable-definition defaults (`$x: Int = 5`), because those are parsed
-   on a different path (variable-definition parsing), not through `parseArgumentList` — so the one
-   intended exclusion requires no special-casing.
+After `Parse()`, iterate `o.kit.doc.Arguments` once and check each `Value.Kind`.
+No visitor, no walker, no parser change, **no graphql-go-tools change at all** — the entire feature
+lives in the router:
 
 ```go
-type InlineArgumentInfo struct {
-    ArgumentName string        // e.g. "userId" — available as name.Literal at parser.go:430
-    ValueKind    ast.ValueKind // e.g. ValueKindString — from value.Kind
-    InDirective  string        // directive name if this is a directive argument, else ""
-    Position     position.Position
+// in the router prehandler, immediately after operationKit.Parse(), only when the feature is enabled
+for ref := range o.kit.doc.Arguments {
+    if o.kit.doc.Arguments[ref].Value.Kind != ast.ValueKindVariable {
+        // inline argument found
+        // enforce mode: record it and stop the pipeline here
+        // log mode: collect and continue
+    }
 }
 ```
 
-3. Expose the accumulator (e.g. `func (p *Parser) InlineArguments() []InlineArgumentInfo`).
+Why this satisfies every requirement:
 
-"Return during parse": in enforce mode the parser can fail fast — append the report on the first inline
-argument and stop, surfacing it as a parse-time error so `OperationKit.Parse()` returns it directly
-(the operation name is parsed before the selection set, so it is available for the error/log even on fast-fail).
-In log-only mode the parser collects all inline arguments in the same single pass it already makes,
-so the extensions hint can list every offending argument.
+- **Flags everything.** Because `doc.Arguments` is the flat parse-time slice, it contains field
+  arguments, directive arguments (`@include`/`@skip`/any — they go through the same `parseArgumentList`),
+  introspection-field arguments (`__type(name: "User")`), and arguments inside selections that
+  `@skip`/`@include` would later normalize out — nothing has been pruned or rewritten yet.
+- **Naturally excludes variable-definition defaults.** `$x: Int = 5` is parsed on the
+  variable-definition path, not `parseArgumentList`, so its default never lands in `doc.Arguments`.
+  The one intended exclusion needs no special-casing.
+- **Rejects early, pollutes nothing.** The scan runs right after `Parse()` (`graphql_prehandler.go:687`)
+  and before `NormalizeOperation()` (`:830`), so an enforce-mode stop happens before any cache is
+  consulted or written (§ 4.3).
+- **Cheap, and a true no-op when disabled.** It is a single linear pass over a slice the parser
+  already built — no tree traversal, no recursion. When the feature is off, the loop is never entered.
+  This directly addresses the reviewer concern that parser-level detection would tax every parse: here
+  parsing is untouched, and the only added work is one bounded loop, only when the feature is enabled.
 
-The one ergonomic cost relative to a post-parse AST visitor: a visitor gets a ready-made `Ancestors`
-stack for building a dotted `field.path.argument`, whereas the recursive-descent parser would need a
-small current-field/-directive name stack (maintained only when the flag is on) to produce the same path.
-For v1 the report is argument-level (`ArgumentName` + `InDirective` + position), with the enclosing field
-name supplied by the calling parse frame; richer nested paths are a later refinement (§ 9).
+#### What the lookup can and cannot report
 
-This is additive to graphql-go-tools and changes no existing parse or normalization behavior when the flag is off.
+The flat slice gives, per offending argument, the data on `ast.Argument` (`ast_argument.go:18-25`):
+the argument name (`doc.ArgumentNameString(ref)`) and the source `Position`.
+It does **not** carry parent context, so the enclosing field, a dotted path, or "which directive"
+are not available from this scan.
 
-#### Comparison of approaches
+This is a deliberate v1 scope decision and it resolves two review points directly:
 
-| # | Approach | Flags directive / introspection / skip-removed args? | Reject before 1st cache write? | Extra walk? | Verdict |
-| --- | --- | --- | --- | --- | --- |
-| A | Detect during parse in `parseArgumentList` (RECOMMENDED) | **Yes** — sees the un-normalized operation | **Yes** — runs during `Parse()`, before `NormalizeOperation` and any cache | **No** — rides the parse already performed | Chosen |
-| B | Dedicated argument visitor over the parsed op, after `Parse()` | **Yes** — also sees the un-normalized operation | Yes | Yes — one extra argument-only walk | Fallback (see § 11) |
-| C | Piggyback the static-normalization `cleanup` walk | **No** — `@skip`/`@include` already pruned nodes | Partly | No | Rejected |
-| D | Instrument the variable-extraction visitor (`variables_extraction.go:39`) | **No** — runs after pruning and after the normalization cache write | No | No | Rejected |
-| E | `astvalidation` rule | **No** — post-normalization; literals already variables | No | Yes | Rejected |
+- **No path/argument duplication (Noroth).** The reported shape is argument-name + value-kind + position
+  only — there is no separate dotted `path` field to drift from `argument`. The struct is:
 
-Approaches C, D and E observe the operation *after* normalization has rewritten literals or deleted
-skipped nodes, so none can flag normalized-out arguments.
-Approach B sees the operation intact but pays for a second argument walk.
-Approach A sees the operation intact, adds no traversal, and is the earliest possible decision point;
-its only real cost is the minor path-reconstruction ergonomics noted above, which is an acceptable trade.
+```go
+type InlineArgument struct {
+    Name      string            // argument name, e.g. "userId"
+    ValueKind ast.ValueKind     // e.g. ValueKindString
+    Position  position.Position // line/column in the operation as the router parsed it
+}
+```
+
+- **Positions are accurate (Noroth).** Because the scan runs on the **first** parse of the operation
+  text, before any normalization, re-print, or re-parse, the `Position` refers to the operation exactly
+  as the client sent it (or, for persisted operations, the stored document) — it is the correct frame
+  for telling a developer where to fix their query. Detecting later (post-normalization) is exactly the
+  case where positions would drift, which is a further reason to detect here.
+
+Reconstructing enclosing fields or full paths would require a walk (the visitor variant in § 11)
+and is deferred; for v1 the source position is what pinpoints the argument for the developer.
 
 ### 4.2 Detection scope
 
@@ -207,17 +200,16 @@ There is exactly one structural exclusion (variable-definition defaults) and one
 | Enum literals | `field(order: ASC)` | **Yes** | A hardcoded value is still a hardcoded value |
 | Null literals | `field(arg: null)` | **Yes** | Explicit `null` is an inline literal (distinct from an omitted argument, which produces no `Argument` node) |
 | List / object literals | `filter(by: [1,2,3])`, `filter(by: {a: 1})` | **Yes** | Recorded as one inline argument at the argument level |
-| Directive arguments | `field @include(if: true)`, `@skip(if: false)` | **Yes** | Per requirement: directive inline values are flagged (`InDirective` records the directive name) |
-| Introspection-field arguments | `__type(name: "User")` | **Yes** | Per requirement: introspection is not exempt |
-| Arguments under a node `@skip`/`@include` would remove | `user @skip(if: true) { posts(first: 10) }` | **Yes** | Detection runs pre-normalization, so the still-present `first: 10` is flagged even though normalization would delete the `user` selection |
+| Directive arguments | `field @include(if: true)`, `@skip(if: false)` | **Yes** | Directive arguments are parsed through the same `parseArgumentList`, so they land in `doc.Arguments` |
+| Introspection-field arguments | `__type(name: "User")` | **Yes** | Introspection-field arguments are ordinary arguments in `doc.Arguments`; not exempt |
+| Arguments under a node `@skip`/`@include` would remove | `user @skip(if: true) { posts(first: 10) }` | **Yes** | The scan runs pre-normalization, so the still-present `first: 10` is flagged even though normalization would delete the `user` selection |
 | Variable arguments | `userById(userId: $userId)` | No | `ValueKindVariable` — the compliant form |
-| Variable-definition default values | `query q($x: Int = 5)` | No | A definition default is not an argument the client passed to a field or directive; it is parsed off the variable-definition path, not `parseArgumentList`, so detection never sees it (see Non-Goals / Open Questions) |
+| Variable-definition default values | `query q($x: Int = 5)` | No | A definition default is not an argument the client passed to a field or directive; it is parsed off the variable-definition path, so it never lands in `doc.Arguments` (see Non-Goals / Open Questions) |
 
 Explicit decisions:
 
 - **Directive and introspection arguments count.**
-  This is the deliberate inversion of `variablesExtractionVisitor`'s guards;
-  the policy treats any inline value the client typed as something to flag.
+  The scan applies no context guards — any argument in `doc.Arguments` whose value is not a variable is flagged.
 - **`@skip(if: true)` / `@include(if: false)` removed selections still count.**
   The argument existed in the operation the client sent; that it would be normalized away is irrelevant to "did the client use an inline value." This is why detection must precede normalization.
 - **Required-literal cases still count.**
@@ -233,35 +225,34 @@ Parse (687) -> NormalizeOperation (830) -> NormalizeVariables (855)
   -> Validate (1059) -> ValidateStaticCost (1149) -> Plan (1119)
 ```
 
-Detection happens **inside `Parse()` (line 687)** — the parser records inline arguments as it
-builds the AST (§ 4.1). At every later line in the order above, normalization has already begun
-rewriting or pruning the operation, so parse time is the only complete view.
+Detection is a single scan of `o.kit.doc.Arguments` run **immediately after `Parse()` (line 687)
+and before `NormalizeOperation()` (line 830)**. At every later line in the order above, normalization
+has already begun rewriting or pruning the operation, so just-after-parse is the only complete view.
 
 ```
-Parse (687)   <- parser records inline arguments here; enforce mode fails the parse
-              <- enforce-mode rejection is returned by Parse(), before any cache is consulted or written
+Parse (687)
+  === scan doc.Arguments here (only when the feature is enabled) ===
+  === enforce mode: stop the pipeline here, before any cache is consulted or written ===
 NormalizeOperation (830)   -> first cache write at :885
 NormalizeVariables (855)   -> variables cache
 ... RemapVariables / Validate / Plan, each with its own cache
 ```
 
-Persisted-operation gating (decided before `Parse()`):
+Persisted-operation gating (checked before the scan):
 
 - A persisted operation is identified by `parsedOperation.IsPersistedOperation`,
-  which is set during `FetchPersistedOperation` (`graphql_prehandler.go:638`, field at `operation_processor.go:75`) —
-  **before** `Parse()` at line 687. So the gating decision is available in time.
-- `OperationKit.Parse()` sets the parser's detection flag for this request to
-  `enabled && (!parsedOperation.IsPersistedOperation || includePersistedOperations)`.
-- **By default the policy skips persisted operations** — they are stored server-side,
-  so an inline value in a persisted operation was an intentional, pre-vetted choice;
-  the parser flag stays off for them and the operation executes normally.
-- With `include_persisted_operations: true` (§ 5), the flag is set for persisted operations too,
-  and they are treated identically to dynamic ones.
+  set during `FetchPersistedOperation` (`graphql_prehandler.go:638`, field at `operation_processor.go:75`) —
+  before `Parse()` at line 687.
+- The scan runs only when `enabled && (!parsedOperation.IsPersistedOperation || includePersistedOperations)`.
+- **By default the policy skips persisted operations** — they are stored server-side, so an inline value
+  in a persisted operation was an intentional, pre-vetted choice; the operation executes normally.
+- With `include_persisted_operations: true` (§ 5), persisted operations are scanned too,
+  and treated identically to dynamic ones.
 
 Enforce mode:
 
-- The parser fails fast on the first inline argument, so `OperationKit.Parse()` returns an
-  `*inlineArgumentsError` (a typed error like the existing `reportError`) **from `Parse()` itself**.
+- The scan stops at the first inline argument and the prehandler returns an `*inlineArgumentsError`
+  (a typed error like the existing `reportError`) right there, before `NormalizeOperation()`.
   Because this is before the normalization-cache consult/write (`:819`/`:885`),
   before `NormalizeVariables`, `RemapVariables`, `Validate`, `ValidateStaticCost`, complexity, and planning,
   **no internal cache is consulted or written for the rejected operation** — the request stops at the
@@ -270,10 +261,9 @@ Enforce mode:
 
 Log-only / annotate mode:
 
-- The parser collects all inline arguments in its single pass (no fail-fast); the operation is valid
-  and proceeds through the normal pipeline (and is cached normally).
-  The detection result is read off the parser and stored on `parsedOperation`
-  (`HadInlineArguments bool`, `InlineArguments []InlineArgumentInfo`),
+- The scan collects all inline arguments (no early stop); the operation is valid and proceeds through
+  the normal pipeline (and is cached normally).
+  The result is stored on `parsedOperation` (`HadInlineArguments bool`, `InlineArguments []InlineArgument`),
   and the prehandler emits the Warn log line and attaches the `extensions` annotation after resolve.
 
 Threading (config side):
@@ -282,22 +272,20 @@ Threading (config side):
   -> `OperationProcessor` (`operation_processor.go:137-150`),
   initialized in `NewOperationProcessor` (`operation_processor.go:1539`),
   consistent with how existing operation-processing limits are threaded.
-  `OperationKit.Parse()` reads it to set the per-request parser flag described above.
-  When `mode == off`, the flag is never set and the parser's per-argument branch is the only residual cost
-  (one predictable, never-taken branch) — effectively zero.
+  When `mode == off`, the scan is never entered — there is no added per-request work and no change to parsing.
 
 #### Why detection is intentionally not cached
 
-Detection rides parsing, which runs on every request regardless of downstream cache state,
-so there is no cache-hit gap to close (unlike a normalization-stage byproduct, which would go silent on a hit).
-Rejected operations are never inserted into any cache.
-There is no separate detection walk to memoize — the work is folded into the parse the router already does.
+The scan runs on the freshly parsed document, which exists on every request regardless of downstream
+cache state, so there is no cache-hit gap to close (unlike a normalization-stage byproduct, which would
+go silent on a hit). Rejected operations are never inserted into any cache.
+The work is a single linear pass over an existing slice; there is nothing to memoize.
 
 ### 4.4 The three modes
 
-- **off** (default): the parser detection flag is never set; the only residual cost is one never-taken branch per argument; effectively zero.
-- **enabled-non-enforcing**: the parser collects inline arguments during `Parse()` (line 687) without failing; the prehandler logs a structured Warn line and attaches an `extensions` annotation to the otherwise-successful response.
-- **enabled-enforcing**: the parser fails fast on the first inline argument, so `Parse()` (line 687) returns the error before `NormalizeOperation()` (line 830) and before any cache is consulted or written; the prehandler returns a GraphQL error with the configured `extensions.code` and HTTP status code. No internal cache is touched for the rejected operation.
+- **off** (default): the scan is never entered; parsing is unchanged; zero added work.
+- **enabled-non-enforcing**: after `Parse()` (line 687) the scan collects all inline arguments without stopping; the prehandler logs a structured Warn line and attaches an `extensions` annotation to the otherwise-successful response.
+- **enabled-enforcing**: the scan stops at the first inline argument and the prehandler rejects before `NormalizeOperation()` (line 830) and before any cache is consulted or written, returning a GraphQL error with the configured `extensions.code` and HTTP status code. No internal cache is touched for the rejected operation.
 
 In all enabled modes, persisted operations are skipped unless `include_persisted_operations: true`.
 
@@ -388,10 +376,14 @@ ExtCodeErrInlineArgumentValuesNotAllowed = "INLINE_ARGUMENT_VALUES_NOT_ALLOWED"
 
 ### 6.1 Enforce (`enabled-enforcing`)
 
-Detection finds inline args, the request is short-circuited before `Validate()`,
+The scan finds inline args, the request is short-circuited before `NormalizeOperation()`,
 and a GraphQL error is returned via `NewHttpGraphqlError(message, code, statusCode)`
 (`http_graphql_error.go:22-28`), written through `writeOperationError()` (`errors.go:361-433`).
 HTTP status is the configured `enforce_http_status_code` (default 400).
+
+Each reported argument carries its name, value kind, and source position (line/column in the operation
+as the router parsed it). There is no dotted `path` field — the flat scan has no parent context (§ 4.1);
+the position is what locates the argument for the developer.
 
 Exact response body:
 
@@ -404,9 +396,10 @@ Exact response body:
         "code": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
         "inlineArguments": [
           {
-            "path": "userById.userId",
             "argument": "userId",
-            "valueKind": "String"
+            "valueKind": "String",
+            "line": 2,
+            "column": 14
           }
         ]
       }
@@ -418,7 +411,7 @@ Exact response body:
 ### 6.2 Non-Enforce (`enabled-non-enforcing`)
 
 The operation succeeds (HTTP 200).
-The result carries an `extensions` annotation that lists the offending paths and a migration hint,
+The result carries an `extensions` annotation that lists the offending arguments and a migration hint,
 following the warn-mode extensions pattern used by rate limiting and authorization
 (`HasResponseExtensionData()` / `RenderResponseExtension()`,
 `authorizer.go:32-48`, `ratelimiter.go:173-182`, attached via `response.Extensions`).
@@ -438,9 +431,10 @@ Exact response body (data shown illustratively):
       "message": "Inline argument values are not allowed. Use variables instead.",
       "arguments": [
         {
-          "path": "userById.userId",
           "argument": "userId",
-          "valueKind": "String"
+          "valueKind": "String",
+          "line": 2,
+          "column": 14
         }
       ]
     }
@@ -453,7 +447,7 @@ Structured log line (also emitted):
 ```
 WARN inline arguments found in operation
   count=1
-  paths=["userById.userId"]
+  arguments=["userId"]
   operation_name="GetUserById"
   operation_hash=12345678901234567890
   client_name="web"
@@ -462,8 +456,8 @@ WARN inline arguments found in operation
 
 ### 6.3 Off (`off`, default)
 
-The parser's detection flag is never set, so parsing behaves exactly as today.
-Complete no-op aside from one never-taken branch per argument.
+The scan is never entered, so the request path behaves exactly as today.
+Complete no-op.
 
 ## 7. Migration Strategy
 
@@ -474,10 +468,10 @@ The rollout path is `off` -> `enabled-non-enforcing` -> `enabled-enforcing`.
 2. **enabled-non-enforcing (discovery).**
    Operators turn this on with `logging.enabled: true`.
    Every request that uses inline args produces a structured Warn log
-   (`operation_name`, `operation_hash`, `client_name`, `client_version`, `inline_argument_paths`)
+   (`operation_name`, `operation_hash`, `client_name`, `client_version`, `arguments`)
    and an `extensions.inlineArguments` block in the response.
    Operators discover affected clients three ways:
-   logs (filter on the message / paths fields),
+   logs (filter on the message / argument fields),
    the response extensions (clients/SDKs surface the hint directly to their teams),
    and the OTEL attribute / metric (per-client aggregation; see Observability).
    Client teams migrate inline values to variables at their own pace.
@@ -501,7 +495,7 @@ Emitted via the request-scoped `requestContext.logger` (`graphql_prehandler.go`,
 following the `operation_blocker.go` precedent:
 
 - `count` (`zap.Int`) — number of inline arguments found.
-- `paths` (`zap.Strings`) — list of `field.path.argument` strings.
+- `arguments` (`zap.Strings`) — argument names that were inline (no enclosing path; see § 4.1).
 - `operation_name` (`zap.String`).
 - `operation_hash` (`zap.Uint64`).
 - `client_name` (`zap.String`).
@@ -534,8 +528,24 @@ to drive the migration decision before enforcing.
   treating them exactly like dynamic operations.
   (Safelisting is a separate, stronger control; this flag governs only the inline-argument policy.)
 - **`@defer` and other directive arguments.**
-  Directive arguments are now in scope: an inline value on `@defer`, `@include`, `@skip`,
-  or any custom directive is flagged, with `InDirective` set to the directive name.
+  Directive arguments are in scope: an inline value on `@defer`, `@include`, `@skip`, or any custom
+  directive is flagged, because directive arguments land in `doc.Arguments` like field arguments.
+  The flat scan does not record *which* directive an argument belongs to (no parent context);
+  reporting that would require a walk (§ 11) and is out of scope for v1.
+- **Variable-name variance is out of scope (cannot be prevented).**
+  Reviewers (Noroth, jensneuse on PR #2998) noted that the same operation shape can still produce
+  distinct query strings via different *variable names*
+  (`userById(userId: $userId1)` vs `userById(userId: $userId2)`).
+  This policy only forces values to be variables; it does not, and cannot, normalize variable names —
+  `jensneuse: "we cannot prevent this"`. It is explicitly not a goal; cardinality from variable-name
+  variance is the client's responsibility (or a separate normalization concern).
+- **Multi-operation documents.**
+  The scan covers `doc.Arguments`, which includes every operation and fragment in the request document,
+  not only the operation selected by `operationName`.
+  For the common single-operation request this is exactly right; for a multi-operation document it means
+  an inline argument in a non-executed operation is also flagged.
+  Scoping strictly to the selected operation would require post-normalization (which removes the others)
+  or a walk; treating any inline argument in the document as a violation is the v1 behavior.
 - **Batched operations.**
   Each operation in a batch is parsed and processed independently,
   so detection applies per operation;
@@ -544,21 +554,26 @@ to drive the migration decision before enforcing.
   `field(by: [1,2,3])` is recorded as one inline argument at the argument level.
   An operation that mixes variables and literals
   (`field(a: $a, b: "lit")`) is flagged for `b` only;
-  the `paths` list reflects exactly which arguments were inline.
-- **Nested object/list path construction.**
-  For the log-only mode, paths are built at the argument level (`field.path.argument`);
-  deep paths into nested object literals are out of scope for v1 (the argument is reported as a single inline value).
+  the reported list reflects exactly which arguments were inline.
+- **Nested object/list values.**
+  A list or object literal argument is reported once at the argument level
+  (`ValueKindList` / `ValueKindObject`); the scan does not descend into nested values.
+- **Open question: enclosing-field / path reporting.**
+  The flat scan reports argument name + value kind + position, not the enclosing field or a path.
+  If reviewers want richer location info in the error/hint, the visitor variant (§ 11) provides it
+  at the cost of one extra walk. Open for decision.
 - **Open question: per-argument allowlist.**
   Some operators may want to permit specific arguments (e.g. a constant enum) to remain inline.
-  Out of scope for v1; the `InlineArgumentInfo` shape leaves room to add this later.
+  Out of scope for v1; the `InlineArgument` shape leaves room to add this later.
 
 ## 10. Testing Plan
 
 All assertions compare the FULL response body / struct, never substrings.
 
-### graphql-go-tools parser unit tests
+### Detector unit tests (router package)
 
-In `pkg/astparser` (`parser_test.go`), parse each operation with the detection flag set and assert the full recorded `[]InlineArgumentInfo`; also assert the fail-fast variant returns a parse error on the first inline argument:
+The detector is a router-local function (`detectInlineArguments(doc *ast.Document) []InlineArgument`) — there is no graphql-go-tools change to test.
+Table-driven tests parse a query with the router parser, run the detector, and assert the full `[]InlineArgument` slice (name + value kind + position):
 
 - Inline string/int/float/boolean field argument -> recorded.
 - Inline enum -> recorded.
@@ -567,13 +582,14 @@ In `pkg/astparser` (`parser_test.go`), parse each operation with the detection f
 - Inline object literal -> recorded (one entry at argument level).
 - Variable argument -> NOT recorded.
 - Mixed variable + literal (`field(a: $a, b: "lit")`) -> only `b` recorded.
-- `@include(if: true)` / `@skip(if: false)` literal argument -> **recorded**, with `InDirective` set.
-- Arbitrary custom-directive literal argument -> **recorded**, with `InDirective` set.
-- Inline argument under a node `@skip(if: true)` would remove (`user @skip(if: true) { posts(first: 10) }`) -> **recorded** (`posts.first` and the `@skip.if`) — proves the parser sees it before normalization prunes the node.
+- `@include(if: true)` / `@skip(if: false)` literal argument -> **recorded** (lands in `doc.Arguments`).
+- Arbitrary custom-directive literal argument -> **recorded**.
+- Inline argument under a node `@skip(if: true)` would remove (`user @skip(if: true) { posts(first: 10) }`) -> **recorded** (`first`, plus the `@skip` `if`) — proves the scan runs before normalization prunes the node.
 - Introspection-field argument (`__type(name: "User")`) -> **recorded**.
 - Field inside a fragment definition with an inline argument -> **recorded**.
-- Variable-definition default value (`$x: Int = 5`) -> NOT recorded (parsed off the `parseArgumentList` path).
-- Detection flag off -> nothing recorded, parse output byte-identical to baseline.
+- Variable-definition default value (`$x: Int = 5`) -> NOT recorded (never enters `doc.Arguments`).
+- Positions: assert the recorded `line`/`column` match the original query text.
+- Empty result when there are no inline arguments (all variables).
 
 ### Router integration tests
 
@@ -599,7 +615,7 @@ func TestDisallowInlineArguments(t *testing.T) {
             })
             require.NoError(t, err)
             require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-            require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":[{"path":"employee.id","argument":"id","valueKind":"Int"}]}}]}`, res.Body)
+            require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":[{"argument":"id","valueKind":"Int","line":1,"column":18}]}}]}`, res.Body)
         })
     })
 }
@@ -609,8 +625,8 @@ Cases (each via `testenv.Run` + `ModifySecurityConfiguration`, asserting the FUL
 
 - **off (baseline)**: inline-bearing query returns the normal success body; no `extensions.inlineArguments`; HTTP 200.
 - **enforce, inline field argument**: HTTP = configured status (default 400); body equals the exact § 6.1 error body.
-- **enforce, inline `@include`/`@skip` argument** (`field @include(if: true)`): rejected; `inlineArguments[].path` records the directive (e.g. `field.@include.if`).
-- **enforce, inline argument under a skipped node** (`user @skip(if: true) { posts(first: 10) }`): rejected; both `posts.first` and `@skip.if` reported — proves pre-normalization detection.
+- **enforce, inline `@include`/`@skip` argument** (`field @include(if: true)`): rejected; the `if` argument is reported.
+- **enforce, inline argument under a skipped node** (`user @skip(if: true) { posts(first: 10) }`): rejected; the `first` and `if` arguments are reported — proves pre-normalization detection.
 - **enforce, introspection** (`__type(name: "User")`): rejected.
 - **enforce, compliant operation (variables only)**: passes through; full success body unchanged; HTTP 200.
 - **non-enforce**: HTTP 200; body equals data plus the exact § 6.2 `extensions.inlineArguments` block; assert the Warn log line via the test logger/observer (`testenv` zap observer).
@@ -621,27 +637,33 @@ Cases (each via `testenv.Run` + `ModifySecurityConfiguration`, asserting the FUL
 
 Per the project test convention, every assertion compares the FULL response body with `require.Equal`, never a substring.
 
-## 11. Alternatives Considered
-
-- **Approach B — a dedicated argument visitor over the parsed operation, run after `Parse()`** (the documented fallback).
+- **Approach B — a dedicated argument visitor over the parsed operation, run after `Parse()`** (the richer-info fallback).
   A fresh `astvisitor.Walker` with one `RegisterEnterArgumentVisitor`, run on `operationKit.kit.doc`
   between `Parse()` (`graphql_prehandler.go:687`) and `NormalizeOperation()` (`:830`).
-  Sees the same fully un-normalized operation as the chosen approach (so it flags directive, introspection,
-  and skip-removed arguments equally) and rejects before any cache write — but it pays for one extra
-  argument walk that the parser approach folds into the parse already happening.
-  Its one advantage is isolation: it requires **no change to `pkg/astparser`**, only a new visitor file and
-  a prehandler call. Choose this if touching the parser is considered too invasive;
-  it also gives ancestor-based paths for free (no manual name stack). The trade is the extra traversal.
-- **Approach C — piggyback the static-normalization `cleanup` walk.**
+  Sees the same un-normalized operation as the chosen scan and rejects before any cache write, but pays for
+  one extra argument walk. Its one advantage over the flat scan: an `Ancestors` stack, so it can report the
+  enclosing field, a dotted path, and which directive an argument belongs to.
+  This is the upgrade path if reviewers decide the error/hint needs more than argument-name + position
+  (§ 9 open question).
+- **Approach C — instrument the parser** (`pkg/astparser` `parseArgumentList`).
+  Record inline arguments during parsing itself, with an opt-in `reportInlineArguments` flag.
+  Zero extra walk and the earliest possible point. **Rejected on review (Noroth, PR #2998):** it taxes the
+  hottest code path with a per-argument flag check on every parse (including when the feature is off), and
+  the same un-normalized AST is available one step later via the flat `doc.Arguments` scan with no parser
+  change. The chosen approach gets the same coverage without touching `pkg/astparser`.
+- **Approach D — reuse / add a validation walker** (Noroth / @devsergiy suggestion, PR #2998).
+  Reuse an existing validation pass (`astvalidation`) or add a rule rather than write new detection code.
+  Rejected because validation runs on the *post-normalization* document
+  (`Validate()` at `operation_processor.go:1059`), where literals are already variables and `@skip`/`@include`
+  nodes are gone — systematic false negatives — and it cannot express the log-only mode (validation is
+  binary pass/fail). The intent (don't add bespoke machinery) is honored more directly by the flat scan,
+  which is a few lines over an existing slice and adds no walker at all.
+- **Approach E — piggyback the static-normalization `cleanup` walk.**
   Adds an `EnterArgument` visitor to an existing normalization-stage walker (no extra walk).
   Rejected because by the time the `cleanup` stage runs, the `@skip`/`@include` stage has already
   deleted skipped nodes (`directive_include_skip.go:128-135`), so inline arguments inside those nodes
-  are gone — it cannot satisfy "flag arguments that normalization would remove."
-- **Approach D — instrument the variable-extraction visitor** (`variables_extraction.go:39`).
+  are gone.
+- **Approach F — instrument the variable-extraction visitor** (`variables_extraction.go:39`).
   Reuses the exact literal detector, but runs even later (`NormalizeVariables`, `operation_processor.go:953`),
   after node pruning *and* after the normalization cache write.
-  Rejected for the same reason as C, plus it cannot reject before polluting the normalization cache.
-- **Approach E — `astvalidation` rule.**
-  Rejected: validation runs on the post-normalization document (`Validate()` at `operation_processor.go:1059`),
-  where literals are already variables and skipped nodes are gone — systematic false negatives;
-  it also cannot express the log-only mode (validation is binary pass/fail).
+  Rejected for the same reason as E, plus it cannot reject before polluting the normalization cache.
