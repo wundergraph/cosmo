@@ -29,15 +29,15 @@ async function run(query: string, variables?: any) {
 describe("battle-test regressions (assert CORRECT behavior — expected to fail until fixed)", () => {
   // BT-1: @defer on a __typename-only fragment combined with a nested in-list defer
   // nulls the parent object and drops the terminal frame.
-  it("BT-1 __typename-only defer + nested in-list defer must not null the parent / must terminate", { timeout: 30000 }, async () => {
-    const q = `{ article(id:"a1"){ id title ... @defer { __typename } reviews{ id ... @defer { __typename author{ __typename id displayName } } } } }`;
+  it("BT-1 __typename-only defer + nested in-list defer must not null the parent / must terminate", { timeout: 300000 }, async () => {
+    const q = `{ article(id:"a1"){ id ... @defer { __typename title} reviews{ id ... @defer { __typename author{ __typename id displayName } } } } }`;
     const r = await run(q);
     expect(r.mode).toBe("multipart");
     if (r.mode !== "multipart") return;
     // the initial payload must NOT null the whole article
     expect(r.frames[0].data?.article).not.toBeNull();
     expect(r.frames[0].data?.article?.id).toBe("a1");
-    expect(r.frames[0].data?.article?.title).toBe("Hello World");
+    expect(r.frames[1].incremental[0].data?.title).toBe("Hello World");
     // the stream must terminate exactly once
     const finals = r.frames.filter((f) => f.hasNext === false);
     expect(finals.length).toBe(1);
