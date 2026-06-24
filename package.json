@@ -113,7 +113,8 @@
       "picomatch@4.x": "4.0.4",
       "brace-expansion@1.x": "1.1.13",
       "brace-expansion@2.x": "2.0.3",
-      "yaml@2.x": "2.8.3"
+      "yaml@2.x": "2.8.3",
+      "path-to-regexp@8.x": "8.4.0"
     },
     "patchedDependencies": {
       "graphql@16.9.0": "patches/graphql@16.9.0.patch"
