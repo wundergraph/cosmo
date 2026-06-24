@@ -46,19 +46,6 @@ func Main() {
 	// Parse flags before calling profile.Start(), since it may add flags
 	flag.Parse()
 
-	// Re-read profiling env after flag.Parse() — flag defaults are captured at package
-	// init, before embedders (e.g. platform-api-cosmo-router) can Setenv in main().
-	if *pprofListenAddr == "" {
-		if addr := os.Getenv("PPROF_ADDR"); addr != "" {
-			*pprofListenAddr = addr
-		}
-	}
-	if *pyroscopeAddr == "" {
-		if addr := os.Getenv("PYROSCOPE_ADDR"); addr != "" {
-			*pyroscopeAddr = addr
-		}
-	}
-
 	if *help {
 		flag.PrintDefaults()
 		os.Exit(0)
