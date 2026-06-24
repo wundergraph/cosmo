@@ -43,6 +43,9 @@ func NewServer(addr string, log *zap.Logger) Server {
 	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+	mux.Handle("/debug/pprof/allocs", pprof.Handler("allocs"))
+	mux.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
 	svr := &http.Server{
 		Addr:     addr,
