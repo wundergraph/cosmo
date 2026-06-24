@@ -18,6 +18,7 @@
 package routerconfig
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -104,6 +105,16 @@ func readMapperFile(path string) (map[string]string, error) {
 	}
 
 	return mapper, nil
+}
+
+// ManifestMapperSHA256 returns the SHA-256 digest of mapper.json bytes.
+// Used to skip manifest reload when only the file mtime changed.
+func ManifestMapperSHA256(manifestConfigPath string) ([32]byte, error) {
+	data, err := os.ReadFile(filepath.Join(manifestConfigPath, "mapper.json"))
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("failed to read mapper file: %w", err)
+	}
+	return sha256.Sum256(data), nil
 }
 
 // assembleConfig assembles the router execution config from the base config and the feature flag configs.

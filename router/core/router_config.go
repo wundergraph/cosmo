@@ -153,6 +153,9 @@ type Config struct {
 	grpcPluginDialOptions         []grpc.DialOption
 	tracingAttributes             []config.CustomAttribute
 	subscriptionHooks             subscriptionHooks
+	// lastManifestMapperHash skips manifest reload when mapper.json content is unchanged.
+	lastManifestMapperHash [32]byte
+	manifestMapperHashSeen bool
 }
 
 // Usage returns an anonymized version of the config for usage tracking
