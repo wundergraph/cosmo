@@ -130,6 +130,7 @@ type OperationProcessorOptions struct {
 	CostControl                                            *config.CostControl
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
 	OperationNameLengthLimit                               int
+	EnableDefer                                            bool
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -1491,27 +1492,17 @@ type parseKitOptions struct {
 	apolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
 	disableExposingVariablesContentOnValidationError       bool
 	relaxSubgraphOperationFieldSelectionMergingNullability bool
+	enableDefer                                            bool
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
 	return &parseKit{
-		i:          i,
-		parser:     astparser.NewParser(),
-		doc:        ast.NewSmallDocument(),
-		keyGen:     xxhash.New(),
-		sha256Hash: sha256.New(),
-		staticNormalizer: astnormalization.NewWithOpts(
-			astnormalization.WithRemoveNotMatchingOperationDefinitions(),
-			astnormalization.WithInlineFragmentSpreads(),
-			astnormalization.WithRemoveFragmentDefinitions(),
-			astnormalization.WithRemoveUnusedVariables(),
-			astnormalization.WithEnableDefer(),
-			astnormalization.WithPrevalidationRules(
-				astvalidation.DeferStreamOnValidOperations(),
-				astvalidation.DeferStreamHaveUniqueLabels(),
-				astvalidation.DirectivesAreInValidLocations(),
-				astvalidation.StreamAppliedToListFieldsOnly()),
-		),
+		i:                   i,
+		parser:              astparser.NewParser(),
+		doc:                 ast.NewSmallDocument(),
+		keyGen:              xxhash.New(),
+		sha256Hash:          sha256.New(),
+		staticNormalizer:    astnormalization.NewWithOpts(buildNormalizationOptions(options.enableDefer)...),
 		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
 		variablesRemapper:   astnormalization.NewVariablesMapper(),
 		printer:             &astprinter.Printer{},
@@ -1527,6 +1518,28 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 		}),
 		operationValidator: createOperationValidator(options),
 	}
+}
+
+func buildNormalizationOptions(enableDefer bool) []astnormalization.Option {
+
+	// preValidationRules :=
+
+	opts := []astnormalization.Option{
+		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
+		astnormalization.WithInlineFragmentSpreads(),
+		astnormalization.WithRemoveFragmentDefinitions(),
+		astnormalization.WithRemoveUnusedVariables(),
+	}
+
+	if enableDefer {
+		opts = append(opts, astnormalization.WithEnableDefer(),
+			astnormalization.WithPrevalidationRules(
+				astvalidation.DeferStreamOnValidOperations(),
+				astvalidation.DeferStreamHaveUniqueLabels(),
+				astvalidation.DirectivesAreInValidLocations(),
+				astvalidation.StreamAppliedToListFieldsOnly()))
+	}
+	return opts
 }
 
 func createOperationValidator(options *parseKitOptions) *astvalidation.OperationValidator {
@@ -1562,6 +1575,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,
 			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
+			enableDefer: opts.EnableDefer,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {
