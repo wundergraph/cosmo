@@ -627,6 +627,10 @@ func (r *Router) serverTLSConfig() (*tls.Config, error) {
 
 // newGraphServer creates a new server.
 func (r *Router) newServer(ctx context.Context, response *routerconfig.Response) error {
+	// Extract slow-plan cache entries before building the new graph server, which
+	// overwrites ReloadPersistentState cache references and before the old graphMux shuts down.
+	r.reloadPersistentState.OnRouterConfigReload()
+
 	server, err := newGraphServer(ctx, r, response, r.proxy)
 	if err != nil {
 		r.logger.Error("Failed to create graph server. Keeping the old server", zap.Error(err))
