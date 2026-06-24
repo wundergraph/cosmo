@@ -1,0 +1,10 @@
+query ($shouldDefer: Boolean!) {
+  employee(id: 1) {
+    id
+    ... @defer(if: $shouldDefer) {
+      hobbies {
+        __typename
+      }
+    }
+  }
+}

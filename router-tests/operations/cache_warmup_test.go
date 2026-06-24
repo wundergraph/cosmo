@@ -1458,7 +1458,6 @@ func TestCacheWarmupDefer(t *testing.T) {
 	  }
 	}`
 
-
 	t.Run("warmed defer query hits the plan cache on a live multipart request", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
@@ -1492,24 +1491,24 @@ func TestCacheWarmupDefer(t *testing.T) {
 		})
 	})
 
-	t.Run("@defer with @include(if: $var) is warmed but never matches a live request", func(t *testing.T) {
+	t.Run("@defer with @include(if: $var) should be warm for both values", func(t *testing.T) {
 		t.Parallel()
 
 		// This query is used in the warmup below:
-		const deferIncludeQuery = `query ($withDetails: Boolean!) {
+		const deferIncludeQuery = `query ($withHobbies: Boolean!) {
 		  employee(id: 1) {
 			id
-			details @include(if: $withDetails) {
+			details  {
 			  forename
 			}
-			... @defer {
+			... @defer @include(if: $withHobbies) {
 			  hobbies {
 				__typename
 			  }
 			}
 		  }
 		}`
-		testenv.Run(t, &testenv.Config{
+		testConfig := testenv.Config{
 			NoRetryClient:  true,
 			LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.WarnLevel},
 			RouterOptions: []core.Option{
@@ -1522,31 +1521,108 @@ func TestCacheWarmupDefer(t *testing.T) {
 					},
 				}),
 			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			for _, l := range xEnv.Observer().FilterMessage("Failed to process operation, skipping").All() {
-				t.Fatalf("warmup unexpectedly skipped the operation: %v", l.ContextMap())
+		}
+		t.Run("if=true", func(t *testing.T) {
+			testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
+				for _, l := range xEnv.Observer().FilterMessage("Failed to process operation, skipping").All() {
+					t.Fatalf("warmup unexpectedly skipped the operation: %v", l.ContextMap())
+				}
+
+				status, contentType, planCacheTrue := deferRequest(t, xEnv, deferIncludeQuery, `{"withHobbies": true}`)
+				require.Equal(t, http.StatusOK, status)
+				require.True(t, strings.HasPrefix(contentType, "multipart/mixed"))
+				require.Equal(t, "HIT", planCacheTrue)
+
+				_, _, planCacheTrueRepeat := deferRequest(t, xEnv, deferIncludeQuery, `{"withHobbies": true}`)
+				require.Equal(t, "HIT", planCacheTrueRepeat)
+
+				_, _, planCacheFalse := deferRequest(t, xEnv, deferIncludeQuery, `{"withHobbies": false}`)
+				require.Equal(t, "HIT", planCacheFalse)
+			})
+		})
+		t.Run("if=false", func(t *testing.T) {
+			testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
+				for _, l := range xEnv.Observer().FilterMessage("Failed to process operation, skipping").All() {
+					t.Fatalf("warmup unexpectedly skipped the operation: %v", l.ContextMap())
+				}
+
+				status, contentType, planCacheTrue := deferRequest(t, xEnv, deferIncludeQuery, `{"withHobbies": false}`)
+				require.Equal(t, http.StatusOK, status)
+				require.True(t, strings.HasPrefix(contentType, "multipart/mixed"))
+				require.Equal(t, "HIT", planCacheTrue)
+
+				_, _, planCacheTrueRepeat := deferRequest(t, xEnv, deferIncludeQuery, `{"withHobbies": false}`)
+				require.Equal(t, "HIT", planCacheTrueRepeat)
+
+				_, _, planCacheFalse := deferRequest(t, xEnv, deferIncludeQuery, `{"withHobbies": true}`)
+				require.Equal(t, "HIT", planCacheFalse)
+			})
+		})
+	})
+
+	t.Run("@defer(if) query should warm both the deferred and non-deferred plans", func(t *testing.T) {
+		t.Parallel()
+
+		// Wanted behaviour: warming a @defer(if: $var) query should make BOTH live
+		// variants hit the plan cache, especially the deferred case (if:true),
+		// which is the expensive multipart path that benefits most from a warm plan.
+		const deferIfQuery = `query ($shouldDefer: Boolean!) {
+		  employee(id: 1) {
+			id
+			... @defer(if: $shouldDefer) {
+			  hobbies {
+				__typename
+			  }
 			}
+		  }
+		}`
+		testConfig := testenv.Config{
+			NoRetryClient:  true,
+			LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.WarnLevel},
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled: true,
+					Source: config.CacheWarmupSource{
+						Filesystem: &config.CacheWarmupFileSystemSource{
+							Path: "testdata/cache_warmup/defer_if",
+						},
+					},
+				}),
+			},
+		}
+		t.Run("if=true", func(t *testing.T) {
+			testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
+				for _, l := range xEnv.Observer().FilterMessage("Failed to process operation, skipping").All() {
+					t.Fatalf("warmup unexpectedly skipped the operation: %v", l.ContextMap())
+				}
+				statusTrue, contentTypeTrue, planCacheTrue := deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": true}`)
+				require.Equal(t, http.StatusOK, statusTrue)
+				require.True(t, strings.HasPrefix(contentTypeTrue, "multipart/mixed"),
+					"shouldDefer=true must produce a multipart/mixed response")
+				require.Equal(t, "HIT", planCacheTrue,
+					"the deferred plan (if:true) must be warmed")
 
-			// First request with a concrete @include value: MISS.
-			status, contentType, planCacheTrue := deferRequest(t, xEnv, deferIncludeQuery, `{"withDetails": true}`)
-			require.Equal(t, http.StatusOK, status)
-			require.True(t, strings.HasPrefix(contentType, "multipart/mixed"))
-			require.Equal(t, "MISS", planCacheTrue)
-
-			// An identical repeat gets HIT.
-			_, _, planCacheTrueRepeat := deferRequest(t, xEnv, deferIncludeQuery, `{"withDetails": true}`)
-			require.Equal(t, "HIT", planCacheTrueRepeat)
-
-			// A different @include value is a separate plan cache entry.
-			_, _, planCacheFalse := deferRequest(t, xEnv, deferIncludeQuery, `{"withDetails": false}`)
-			require.Equal(t, "MISS", planCacheFalse,
-				"a different @include value is a distinct plan cache key, also unmatched by warmup")
+			})
+		})
+		t.Run("if=false", func(t *testing.T) {
+			testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
+				for _, l := range xEnv.Observer().FilterMessage("Failed to process operation, skipping").All() {
+					t.Fatalf("warmup unexpectedly skipped the operation: %v", l.ContextMap())
+				}
+				statusFalse, contentTypeFalse, planCacheFalse := deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": false}`)
+				require.Equal(t, http.StatusOK, statusFalse)
+				require.False(t, strings.HasPrefix(contentTypeFalse, "multipart/mixed"),
+					"shouldDefer=false must produce a plain JSON response (fragment inlined)")
+				require.Equal(t, "HIT", planCacheFalse,
+					"the non-deferred plan (if:false) must be warmed")
+			})
 		})
 	})
 
 	// Since the Accept header sent from the client does not affect what server sends in case of defer,
 	// there no tests for that.
 }
+
 // findDataPoint finds a data point in a slice of histogram data points by matching
 // the value of WgEnginePlanCacheHit attribute
 func findDataPoint(t *testing.T, dataPoints []metricdata.HistogramDataPoint[float64], cacheHit bool) metricdata.HistogramDataPoint[float64] {
