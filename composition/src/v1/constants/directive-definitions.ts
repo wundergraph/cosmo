@@ -81,6 +81,8 @@ import {
   UNION_UPPER,
   URL_LOWER,
   WEIGHT,
+  OPENFED_CACHE_INVALIDATE,
+  OPENFED_CACHE_POPULATE,
   OPENFED_ENTITY_CACHE,
   INCLUDE_HEADERS,
   MAX_AGE,
@@ -866,5 +868,28 @@ export const OPENFED_ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([OBJECT_UPPER]),
   name: stringToNameNode(OPENFED_ENTITY_CACHE),
+  repeatable: false,
+};
+
+// @openfed__cacheInvalidate on FIELD_DEFINITION
+export const OPENFED_CACHE_INVALIDATE_DEFINITION: DirectiveDefinitionNode = {
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(OPENFED_CACHE_INVALIDATE),
+  repeatable: false,
+};
+
+// @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
+export const OPENFED_CACHE_POPULATE_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(MAX_AGE),
+      type: stringToNamedTypeNode(INT_SCALAR),
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(OPENFED_CACHE_POPULATE),
   repeatable: false,
 };

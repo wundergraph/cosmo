@@ -81,6 +81,8 @@ import {
   UNION_UPPER,
   URL_LOWER,
   WEIGHT,
+  OPENFED_CACHE_INVALIDATE,
+  OPENFED_CACHE_POPULATE,
   OPENFED_ENTITY_CACHE,
   INCLUDE_HEADERS,
   MAX_AGE,
@@ -118,6 +120,8 @@ import {
   REQUIRES_SCOPES_DEFINITION,
   SEMANTIC_NON_NULL_DEFINITION,
   SHAREABLE_DEFINITION,
+  OPENFED_CACHE_INVALIDATE_DEFINITION,
+  OPENFED_CACHE_POPULATE_DEFINITION,
   OPENFED_ENTITY_CACHE_DEFINITION,
   SPECIFIED_BY_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
@@ -1015,4 +1019,29 @@ export const ENTITY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
   node: OPENFED_ENTITY_CACHE_DEFINITION,
   optionalArgumentNames: new Set<ArgumentName>([NEGATIVE_CACHE_TTL, INCLUDE_HEADERS, PARTIAL_CACHE_LOAD, SHADOW_MODE]),
   requiredArgumentNames: new Set<ArgumentName>([MAX_AGE]),
+});
+
+export const CACHE_INVALIDATE_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>(),
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: OPENFED_CACHE_INVALIDATE,
+  node: OPENFED_CACHE_INVALIDATE_DEFINITION,
+});
+
+export const CACHE_POPULATE_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      MAX_AGE,
+      newDirectiveArgumentData({
+        directive: `@${OPENFED_CACHE_POPULATE}`,
+        name: MAX_AGE,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(INT_SCALAR),
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: OPENFED_CACHE_POPULATE,
+  node: OPENFED_CACHE_POPULATE_DEFINITION,
+  optionalArgumentNames: new Set<ArgumentName>([MAX_AGE]),
 });
