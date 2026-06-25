@@ -1079,7 +1079,7 @@ describe('Contract tests', () => {
       );
     });
 
-    test('that a Union member is removed from a union if not included', () => {
+    test('that a Union member is removed from a Union if the Object is not included by tag', () => {
       const subgraphA = createSubgraph(
         'a',
         `
