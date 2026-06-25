@@ -2085,7 +2085,7 @@ export function invalidMutuallyExclusiveCacheDirectivesError(fieldCoords: string
 export function intersectingExcludeAndIncludeContractTagsError(tagNames: Array<string>): Error {
   return new Error(
     `Cannot create contract because the following tag${tagNames.length > 1 ? 's are' : ' is'}` +
-      ` provided to both the include and  exclude tag sets (which must be mutually exclusive): "` +
+      ` provided to both the include and exclude tag sets (which must be mutually exclusive): "` +
       tagNames.join(QUOTATION_JOIN) +
       `".`,
   );
