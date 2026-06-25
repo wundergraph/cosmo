@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.239.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.238.0...controlplane@0.239.0) (2026-06-25)
+
+### Features
+
+* **cli:** support in/exclude contract tags simultaneously ([#3017](https://github.com/wundergraph/cosmo/issues/3017)) ([5efb3c2](https://github.com/wundergraph/cosmo/commit/5efb3c20fbd44110388e33943e43b13debba4c39)) (@Aenimus)
+
 # [0.238.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.237.1...controlplane@0.238.0) (2026-06-25)
 
 ### Features
