@@ -159,8 +159,8 @@ describe('Contract tests', () => {
     expect(blobStorage.keys().length).toBe(2);
   });
 
-  test('that an error is returned if a contract is created with both excluded and included tags', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname, chClient });
+  test('that a contract is created with both excluded and included tags', async (testContext) => {
+    const { blobStorage, client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
@@ -168,7 +168,7 @@ describe('Contract tests', () => {
     const contractGraphName = genID('contract');
     const label = genUniqueLabel('label');
 
-    const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
+    const subgraphSchemaSDL = 'type Query @tag(name: "include") { hello: String!, hi: String! @tag(name: "exclude") }';
 
     await createThenPublishSubgraph(
       client,
@@ -191,11 +191,29 @@ describe('Contract tests', () => {
       readme: 'test',
     });
 
-    expect(createContractResponse.response?.code).toBe(1);
-    expect(createContractResponse.response?.details).toBe(
-      `The "exclude" and "include" options for tags are currently mutually exclusive.` +
-        ` Both options have been provided, but one of the options must be empty or unset.`,
-    );
+    expect(createContractResponse.response?.code).toBe(0);
+
+    const fedGraphRes = await client.getFederatedGraphByName({
+      name: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(fedGraphRes.graph?.name).toBe(fedGraphName);
+
+    const contractGraphRes = await client.getFederatedGraphByName({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(contractGraphRes.graph?.namespace).toBe(DEFAULT_NAMESPACE);
+    expect(contractGraphRes.subgraphs.length).toBe(1);
+    expect(contractGraphRes.subgraphs[0].name).toBe(subgraphName);
+    expect(contractGraphRes.graph?.contract?.sourceFederatedGraphId).toBe(fedGraphRes.graph?.id);
+    expect(contractGraphRes.graph?.contract?.excludeTags).toEqual(['exclude']);
+    expect(contractGraphRes.graph?.contract?.includeTags).toEqual(['include']);
+    expect(contractGraphRes.graph?.labelMatchers).toEqual(fedGraphRes.graph?.labelMatchers);
+    expect(contractGraphRes.graph?.routingURL).toBe('http://localhost:8081');
+    expect(contractGraphRes.graph?.readme).toBe('test');
+    expect(contractGraphRes.graph?.supportsFederation).toEqual(true);
+    expect(blobStorage.keys().length).toBe(2);
   });
 
   test('that the exclude tags of a contract are updated', async (testContext) => {
@@ -302,8 +320,8 @@ describe('Contract tests', () => {
     expect(contractGraphUpdatedRes.graph?.contract?.includeTags).toEqual(['new']);
   });
 
-  test('that an error is returned if a contract is updated with both excludes and includes', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname, chClient });
+  test('that a contract is updated with both excludes and includes', async (testContext) => {
+    const { blobStorage, client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
@@ -311,7 +329,7 @@ describe('Contract tests', () => {
     const contractGraphName = genID('contract');
     const label = genUniqueLabel('label');
 
-    const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
+    const subgraphSchemaSDL = 'type Query @tag(name: "include") { hello: String!, hi: String! @tag(name: "exclude") }';
 
     await createThenPublishSubgraph(
       client,
@@ -328,30 +346,45 @@ describe('Contract tests', () => {
       name: contractGraphName,
       namespace: DEFAULT_NAMESPACE,
       sourceGraphName: fedGraphName,
-      includeTags: ['test'],
+      includeTags: ['include'],
       routingUrl: 'http://localhost:8081',
       readme: 'test',
     });
 
-    const contractGraphRes = await client.getFederatedGraphByName({
+    const contractGraphResA = await client.getFederatedGraphByName({
       name: contractGraphName,
       namespace: DEFAULT_NAMESPACE,
     });
-    expect(contractGraphRes.graph?.contract?.excludeTags).toEqual([]);
-    expect(contractGraphRes.graph?.contract?.includeTags).toEqual(['test']);
+    expect(contractGraphResA.graph?.contract?.excludeTags).toEqual([]);
+    expect(contractGraphResA.graph?.contract?.includeTags).toEqual(['include']);
 
-    const updateContractResponse = await client.updateContract({
+    await client.updateContract({
       name: contractGraphName,
       namespace: DEFAULT_NAMESPACE,
-      excludeTags: ['test'],
-      includeTags: ['new'],
+      includeTags: ['include'],
+      excludeTags: ['exclude'],
     });
+    const fedGraphRes = await client.getFederatedGraphByName({
+      name: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(fedGraphRes.graph?.name).toBe(fedGraphName);
 
-    expect(updateContractResponse.response?.code).toBe(1);
-    expect(updateContractResponse.response?.details).toBe(
-      `The "exclude" and "include" options for tags are currently mutually exclusive.` +
-        ` Both options have been provided, but one of the options must be empty or unset.`,
-    );
+    const contractGraphResB = await client.getFederatedGraphByName({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(contractGraphResB.graph?.namespace).toBe(DEFAULT_NAMESPACE);
+    expect(contractGraphResB.subgraphs.length).toBe(1);
+    expect(contractGraphResB.subgraphs[0].name).toBe(subgraphName);
+    expect(contractGraphResB.graph?.contract?.sourceFederatedGraphId).toBe(fedGraphRes.graph?.id);
+    expect(contractGraphResB.graph?.contract?.excludeTags).toEqual(['exclude']);
+    expect(contractGraphResB.graph?.contract?.includeTags).toEqual(['include']);
+    expect(contractGraphResB.graph?.labelMatchers).toEqual(fedGraphRes.graph?.labelMatchers);
+    expect(contractGraphResB.graph?.routingURL).toBe('http://localhost:8081');
+    expect(contractGraphResB.graph?.readme).toBe('test');
+    expect(contractGraphResB.graph?.supportsFederation).toEqual(true);
+    expect(blobStorage.keys().length).toBe(2);
   });
 
   test('that contract tags are updated from exclude to include', async (testContext) => {
