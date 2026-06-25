@@ -22,6 +22,7 @@ import {
   organizationsMembers,
   organizationWebhooks,
   slackIntegrationConfigs,
+  slackProposalStateUpdate,
   slackSchemaUpdateEventConfigs,
   users,
 } from '../../db/schema.js';
@@ -1118,12 +1119,25 @@ export class OrganizationRepository {
               case 'federatedGraphSchemaUpdated':
               case 'monographSchemaUpdated': {
                 const ids = eventMeta.meta.value.graphIds;
-
                 if (ids.length === 0) {
                   continue;
                 }
 
                 await tx.insert(slackSchemaUpdateEventConfigs).values(
+                  ids.map((id) => ({
+                    slackIntegrationConfigId: slackIntegrationConfig[0].id,
+                    federatedGraphId: id,
+                  })),
+                );
+                break;
+              }
+              case 'proposalStateUpdated': {
+                const ids = eventMeta.meta.value.graphIds;
+                if (ids.length === 0) {
+                  continue;
+                }
+
+                await tx.insert(slackProposalStateUpdate).values(
                   ids.map((id) => ({
                     slackIntegrationConfigId: slackIntegrationConfig[0].id,
                     federatedGraphId: id,
@@ -1141,64 +1155,16 @@ export class OrganizationRepository {
     });
   }
 
-  public async getIntegrationByName(organizationId: string, integrationName: string): Promise<Integration | undefined> {
+  public async integrationExists(organizationId: string, integrationName: string): Promise<boolean> {
     const res = await this.db.query.organizationIntegrations.findFirst({
+      columns: { id: true },
       where: and(
         eq(organizationIntegrations.organizationId, organizationId),
         eq(organizationIntegrations.name, integrationName),
       ),
     });
 
-    if (!res) {
-      return undefined;
-    }
-
-    switch (res.type) {
-      case integrationTypeEnum.enumValues[0]: {
-        const slackIntegrationConfig = await this.db.query.slackIntegrationConfigs.findFirst({
-          where: eq(slackIntegrationConfigs.integrationId, res.id),
-          with: {
-            slackSchemaUpdateEventConfigs: true,
-          },
-        });
-
-        if (!slackIntegrationConfig) {
-          return undefined;
-        }
-
-        const config: PartialMessage<IntegrationConfig> = {
-          type: IntegrationType.SLACK,
-          config: {
-            case: 'slackIntegrationConfig',
-            value: {
-              endpoint: slackIntegrationConfig.endpoint,
-            },
-          },
-        };
-
-        return {
-          id: res.id,
-          name: res.name,
-          type: res.type,
-          events: res.events || [],
-          integrationConfig: config,
-          eventsMeta: [
-            {
-              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-              meta: {
-                case: 'federatedGraphSchemaUpdated',
-                value: {
-                  graphIds: slackIntegrationConfig.slackSchemaUpdateEventConfigs.map((i) => i.federatedGraphId),
-                },
-              },
-            },
-          ],
-        } as Integration;
-      }
-      default: {
-        throw new Error(`The type of the integration ${res.type} doesnt exist`);
-      }
-    }
+    return !!res?.id;
   }
 
   public async getIntegrations(organizationId: string): Promise<Integration[]> {
@@ -1216,6 +1182,7 @@ export class OrganizationRepository {
             where: eq(slackIntegrationConfigs.integrationId, r.id),
             with: {
               slackSchemaUpdateEventConfigs: true,
+              slackProposalStateUpdate: true,
             },
           });
           if (!slackIntegrationConfig) {
@@ -1233,12 +1200,11 @@ export class OrganizationRepository {
           };
 
           const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
-          const federatedGraphIds = [];
-          const monographIds = [];
+          const federatedGraphIds: string[] = [];
+          const monographIds: string[] = [];
 
           for (const graphId of slackIntegrationConfig.slackSchemaUpdateEventConfigs.map((i) => i.federatedGraphId)) {
             const graph = await fedGraphRepo.byId(graphId);
-
             if (!graph) {
               continue;
             }
@@ -1272,6 +1238,15 @@ export class OrganizationRepository {
                   case: 'monographSchemaUpdated',
                   value: {
                     graphIds: monographIds,
+                  },
+                },
+              },
+              {
+                eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+                meta: {
+                  case: 'proposalStateUpdated',
+                  value: {
+                    graphIds: slackIntegrationConfig.slackProposalStateUpdate.map((spsu) => spsu.federatedGraphId),
                   },
                 },
               },
@@ -1327,11 +1302,17 @@ export class OrganizationRepository {
             .execute();
 
           const graphIds: string[] = [];
+          const proposalGraphIds: string[] = [];
           for (const eventMeta of input.eventsMeta) {
             switch (eventMeta.meta.case) {
               case 'federatedGraphSchemaUpdated':
               case 'monographSchemaUpdated': {
                 graphIds.push(...eventMeta.meta.value.graphIds);
+                break;
+              }
+              case 'proposalStateUpdated': {
+                proposalGraphIds.push(...eventMeta.meta.value.graphIds);
+                break;
               }
             }
           }
@@ -1342,7 +1323,18 @@ export class OrganizationRepository {
               and(
                 eq(slackSchemaUpdateEventConfigs.slackIntegrationConfigId, slackIntegrationConfig[0].id),
                 graphIds.length > 0
-                  ? not(inArray(schema.slackSchemaUpdateEventConfigs.federatedGraphId, graphIds))
+                  ? not(inArray(slackSchemaUpdateEventConfigs.federatedGraphId, graphIds))
+                  : undefined,
+              ),
+            );
+
+          await tx
+            .delete(slackProposalStateUpdate)
+            .where(
+              and(
+                eq(slackProposalStateUpdate.slackIntegrationConfigId, slackIntegrationConfig[0].id),
+                proposalGraphIds.length > 0
+                  ? not(inArray(slackProposalStateUpdate.federatedGraphId, proposalGraphIds))
                   : undefined,
               ),
             );
@@ -1367,6 +1359,24 @@ export class OrganizationRepository {
                   .onConflictDoNothing()
                   .execute();
 
+                break;
+              }
+              case 'proposalStateUpdated': {
+                const ids = eventMeta.meta.value.graphIds;
+                if (ids.length === 0) {
+                  break;
+                }
+
+                await tx
+                  .insert(slackProposalStateUpdate)
+                  .values(
+                    ids.map((id) => ({
+                      slackIntegrationConfigId: slackIntegrationConfig[0].id,
+                      federatedGraphId: id,
+                    })),
+                  )
+                  .onConflictDoNothing()
+                  .execute();
                 break;
               }
             }
