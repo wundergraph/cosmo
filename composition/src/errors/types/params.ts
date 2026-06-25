@@ -95,7 +95,7 @@ export type InvalidArgumentValueErrorParams = {
   expectedTypeString: string;
 };
 
-export type CacheInvalidateOnNonEntityReturnTypeErrorParams = {
+export type InvalidEntityReturnTypeErrorParams = {
   fieldCoords: string;
-  returnType: string;
+  returnTypeName: string;
 };

@@ -24,6 +24,7 @@ import {
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
   CacheInvalidateConfiguration,
+  CachePopulateConfiguration,
   DataSourceKind,
   EngineConfiguration,
   EntityCacheConfiguration,
@@ -84,39 +85,58 @@ function extractEntityCachingConfiguration(
   if (!dataByTypeName) {
     return;
   }
-  const entityCache: EntityCacheConfiguration[] = [];
+  const entityCacheConfigurations: EntityCacheConfiguration[] = [];
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
+  const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
     if (!data.entityCaching) {
       continue;
     }
 
-    for (const ec of data.entityCaching.entityCacheConfigurations) {
-      entityCache.push(
+    for (const config of data.entityCaching.entityCacheConfigurations) {
+      entityCacheConfigurations.push(
         new EntityCacheConfiguration({
-          typeName: ec.typeName,
-          maxAgeSeconds: BigInt(ec.maxAgeSeconds),
-          notFoundCacheTtlSeconds: BigInt(ec.notFoundCacheTtlSeconds),
-          includeHeaders: ec.includeHeaders,
-          partialCacheLoad: ec.partialCacheLoad,
-          shadowMode: ec.shadowMode,
+          typeName: config.typeName,
+          maxAgeSeconds: BigInt(config.maxAgeSeconds),
+          notFoundCacheTtlSeconds: BigInt(config.notFoundCacheTtlSeconds),
+          includeHeaders: config.includeHeaders,
+          partialCacheLoad: config.partialCacheLoad,
+          shadowMode: config.shadowMode,
         }),
       );
     }
-    for (const ci of data.entityCaching?.cacheInvalidateConfigurations) {
+
+    for (const config of data.entityCaching?.cacheInvalidateConfigurations) {
       cacheInvalidateConfigurations.push(
         new CacheInvalidateConfiguration({
-          entityTypeName: ci.entityTypeName,
-          fieldName: ci.fieldName,
-          operationType: ci.operationType,
+          entityTypeName: config.entityTypeName,
+          fieldName: config.fieldName,
+          operationType: config.operationType,
+        }),
+      );
+    }
+
+    for (const config of data.entityCaching?.cachePopulateConfigurations) {
+      cachePopulateConfigurations.push(
+        new CachePopulateConfiguration({
+          entityTypeName: config.entityTypeName,
+          fieldName: config.fieldName,
+          operationType: config.operationType,
+          maxAgeSeconds: BigInt(config.maxAgeSeconds),
         }),
       );
     }
   }
-  if (entityCache.length > 0 || cacheInvalidateConfigurations.length > 0) {
+
+  if (
+    entityCacheConfigurations.length > 0 ||
+    cacheInvalidateConfigurations.length > 0 ||
+    cachePopulateConfigurations.length > 0
+  ) {
     return new EntityCachingConfiguration({
       cacheInvalidateConfigurations,
-      entityCache,
+      cachePopulateConfigurations,
+      entityCacheConfigurations,
     });
   }
 }
