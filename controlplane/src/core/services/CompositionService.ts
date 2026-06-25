@@ -644,6 +644,7 @@ export class CompositionService {
           result,
           composer,
           baseCompositionData,
+          isFeatureFlagComposition,
         });
 
         if (baseCompositionFailed) {
