@@ -10,11 +10,10 @@ import (
 )
 
 type HttpDeferWriter struct {
-	ctx          context.Context
-	writer       io.Writer
-	flusher      http.Flusher
-	buf          *bytes.Buffer
-	firstMessage bool
+	ctx     context.Context
+	writer  io.Writer
+	flusher http.Flusher
+	buf     *bytes.Buffer
 }
 
 var _ resolve.DeferResponseWriter = (*HttpDeferWriter)(nil)
@@ -24,7 +23,9 @@ func (f *HttpDeferWriter) Complete() {
 		return
 	}
 
-	_, _ = f.writer.Write([]byte("\r\n--" + multipartBoundary + "--\r\n"))
+	// Closing boundary terminates the multipart/mixed stream. Each part written
+	// by Flush already ends with "\r\n\r\n", so the boundary follows directly.
+	_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--"))
 
 	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
@@ -46,22 +47,17 @@ func (f *HttpDeferWriter) Flush() (err error) {
 	resp := f.buf.Bytes()
 	f.buf.Reset()
 
-	flushBreak := ""
-	if f.firstMessage {
-		flushBreak = multipartStart
-		f.firstMessage = false
-	}
-
-	// For @defer, each payload must be formatted as a multipart/mixed part.
-	// For Apollo, the payload itself is raw JSON (not wrapped in a `payload` field like subscriptions).
-	// \r\n--graphql\r\n
-	// Content-Type: application/json; charset=utf-8\r\n
+	// For @defer, each payload is a self-contained multipart/mixed part. The
+	// payload itself is raw JSON (not wrapped in a `payload` field like
+	// subscriptions).
+	// --graphql\r\n
+	// Content-Type: application/json\r\n
 	// \r\n
-	// {"data": {...}, "incremental": [...], "hasNext": true}
+	// {"data": {...}, "incremental": [...], "hasNext": true}\r\n
 	// \r\n
-	flushBreak += "\r\nContent-Type: " + jsonContent + "\r\n\r\n"
-
-	separation := "\r\n" + multipartStart
+	// The trailing "\r\n\r\n" separates this part from the next boundary (or the
+	// closing --graphql-- written by Complete).
+	partHeader := "--" + multipartBoundary + "\r\nContent-Type: " + jsonContent + "\r\n\r\n"
 
 	// resp sometimes ends with newlines. We need to remove them
 	// to cleanly add the separation in the next step.
@@ -69,7 +65,7 @@ func (f *HttpDeferWriter) Flush() (err error) {
 		resp = bytes.TrimRight(resp, "\n")
 	}
 
-	full := flushBreak + string(resp) + separation
+	full := partHeader + string(resp) + "\r\n\r\n"
 	_, err = f.writer.Write([]byte(full))
 	if err != nil {
 		return err
@@ -97,10 +93,9 @@ func GetDeferResponseWriter(ctx *resolve.Context, _ *http.Request, w http.Respon
 	w.Header().Set("X-Accel-Buffering", "no")
 
 	flushWriter := &HttpDeferWriter{
-		writer:       w,
-		flusher:      flusher,
-		buf:          &bytes.Buffer{},
-		firstMessage: true,
+		writer:  w,
+		flusher: flusher,
+		buf:     &bytes.Buffer{},
 	}
 
 	flushWriter.ctx = ctx.Context()
