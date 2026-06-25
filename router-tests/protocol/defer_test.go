@@ -49,7 +49,7 @@ func TestDeferTestDataQueries(t *testing.T) {
 	}
 
 	groups := make([]string, 0, len(groupQueries))
-	for k, _ := range groupQueries {
+	for k := range groupQueries {
 		groups = append(groups, k)
 	}
 	slices.Sort(groups)
