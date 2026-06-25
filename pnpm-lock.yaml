@@ -24,6 +24,9 @@ catalogs:
     '@graphql-tools/utils':
       specifier: ^11.0.0
       version: 11.0.0
+    '@hono/node-server':
+      specifier: 1.19.13
+      version: 1.19.13
     '@types/lodash':
       specifier: 4.17.24
       version: 4.17.24
@@ -75,6 +78,9 @@ catalogs:
     pino:
       specifier: ^8.19.0
       version: 8.19.0
+    postcss:
+      specifier: 8.5.10
+      version: 8.5.10
     prettier:
       specifier: ^3.6.2
       version: 3.6.2
@@ -214,7 +220,7 @@ importers:
   admission-server:
     dependencies:
       '@hono/node-server':
-        specifier: 1.19.13
+        specifier: 'catalog:'
         version: 1.19.13(hono@4.12.25)
       '@wundergraph/cosmo-shared':
         specifier: workspace:^
@@ -244,7 +250,7 @@ importers:
         specifier: ^3.996.0
         version: 3.996.0
       '@hono/node-server':
-        specifier: 1.19.13
+        specifier: 'catalog:'
         version: 1.19.13(hono@4.12.25)
       '@wundergraph/cosmo-cdn':
         specifier: workspace:*
@@ -966,7 +972,7 @@ importers:
         specifier: ^10.4.16
         version: 10.4.19(postcss@8.5.10)
       postcss:
-        specifier: ^8.5.10
+        specifier: 'catalog:'
         version: 8.5.10
       tailwind-merge:
         specifier: ^2.0.0
@@ -1429,7 +1435,7 @@ importers:
         specifier: ^23.2.0
         version: 23.2.0
       postcss:
-        specifier: 8.5.10
+        specifier: 'catalog:'
         version: 8.5.10
       prettier-plugin-tailwindcss:
         specifier: ^0.5.6

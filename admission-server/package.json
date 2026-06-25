@@ -10,7 +10,7 @@
     "format": "prettier -w -c ."
   },
   "dependencies": {
-    "@hono/node-server": "1.19.13",
+    "@hono/node-server": "catalog:",
     "@wundergraph/cosmo-shared": "workspace:^",
     "dotenv": "catalog:",
     "hono": "catalog:"
