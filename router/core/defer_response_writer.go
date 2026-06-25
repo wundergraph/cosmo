@@ -18,14 +18,29 @@ type HttpDeferWriter struct {
 
 var _ resolve.DeferResponseWriter = (*HttpDeferWriter)(nil)
 
+const (
+	// deferPartHeader prefixes every @defer payload as a multipart/mixed part.
+	// Unlike subscriptions, the payload is raw JSON (not wrapped in a `payload`
+	// field):
+	//   --graphql\r\n
+	//   Content-Type: application/json\r\n
+	//   \r\n
+	deferPartHeader = "--" + multipartBoundary + "\r\nContent-Type: " + jsonContent + "\r\n\r\n"
+	// deferPartTrailer separates a part from the next boundary (or the closing
+	// boundary written by Complete).
+	deferPartTrailer = "\r\n\r\n"
+	// deferCloseBoundary terminates the multipart/mixed stream.
+	deferCloseBoundary = "--" + multipartBoundary + "--"
+)
+
 func (f *HttpDeferWriter) Complete() {
 	if f.ctx.Err() != nil {
 		return
 	}
 
-	// Closing boundary terminates the multipart/mixed stream. Each part written
-	// by Flush already ends with "\r\n\r\n", so the boundary follows directly.
-	_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--"))
+	// Each part written by Flush already ends with deferPartTrailer, so the
+	// closing boundary follows directly.
+	_, _ = io.WriteString(f.writer, deferCloseBoundary)
 
 	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
@@ -44,30 +59,23 @@ func (f *HttpDeferWriter) Flush() (err error) {
 		return err
 	}
 
-	resp := f.buf.Bytes()
+	// resp points at the buffer's backing array; it stays valid until the next
+	// Write into f.buf, which can't happen before we finish writing it out here.
+	// resp sometimes ends with newlines, trim them so the trailer attaches cleanly.
+	resp := bytes.TrimRight(f.buf.Bytes(), "\n")
 	f.buf.Reset()
 
-	// For @defer, each payload is a self-contained multipart/mixed part. The
-	// payload itself is raw JSON (not wrapped in a `payload` field like
-	// subscriptions).
-	// --graphql\r\n
-	// Content-Type: application/json\r\n
-	// \r\n
-	// {"data": {...}, "incremental": [...], "hasNext": true}\r\n
-	// \r\n
-	// The trailing "\r\n\r\n" separates this part from the next boundary (or the
-	// closing --graphql-- written by Complete).
-	partHeader := "--" + multipartBoundary + "\r\nContent-Type: " + jsonContent + "\r\n\r\n"
-
-	// resp sometimes ends with newlines. We need to remove them
-	// to cleanly add the separation in the next step.
-	if bytes.HasSuffix(resp, []byte{'\n'}) {
-		resp = bytes.TrimRight(resp, "\n")
+	// Write the part directly to the underlying writer rather than assembling a
+	// new buffer: the header/trailer are tiny constants and the (potentially
+	// large) JSON payload is written without copying. The net/http response is
+	// buffered, so these writes coalesce into a single chunk on Flush.
+	if _, err = io.WriteString(f.writer, deferPartHeader); err != nil {
+		return err
 	}
-
-	full := partHeader + string(resp) + "\r\n\r\n"
-	_, err = f.writer.Write([]byte(full))
-	if err != nil {
+	if _, err = f.writer.Write(resp); err != nil {
+		return err
+	}
+	if _, err = io.WriteString(f.writer, deferPartTrailer); err != nil {
 		return err
 	}
 
