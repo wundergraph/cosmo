@@ -17,6 +17,8 @@ export type FieldName = string;
 
 export type FieldCoords = string;
 
+export type FieldSet = string;
+
 export type InterfaceTypeName = string;
 
 export type SubgraphName = string;

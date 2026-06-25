@@ -1065,7 +1065,7 @@ export const QUERY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
       INCLUDE_HEADERS,
       newDirectiveArgumentData({
         directive: `@${OPENFED_QUERY_CACHE}`,
-        defaultValue: { kind: Kind.BOOLEAN, value: false },
+        defaultValue: FALSE_BOOLEAN_VALUE_NODE,
         name: INCLUDE_HEADERS,
         namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
         typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
@@ -1075,7 +1075,7 @@ export const QUERY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
       SHADOW_MODE,
       newDirectiveArgumentData({
         directive: `@${OPENFED_QUERY_CACHE}`,
-        defaultValue: { kind: Kind.BOOLEAN, value: false },
+        defaultValue: FALSE_BOOLEAN_VALUE_NODE,
         name: SHADOW_MODE,
         namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
         typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),

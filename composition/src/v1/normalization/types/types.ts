@@ -38,9 +38,12 @@ import {
   type NEGATIVE_CACHE_TTL,
   type OPENFED_CACHE_POPULATE,
   type OPENFED_ENTITY_CACHE,
+  OPENFED_IS,
+  OPENFED_QUERY_CACHE,
   type PARTIAL_CACHE_LOAD,
   type SHADOW_MODE,
 } from '../../../utils/string-constants';
+import type { TypeNode } from 'graphql/index';
 
 export type KeyFieldSetData = {
   documentNode: DocumentNode;
@@ -163,12 +166,6 @@ export type EntityCacheDirectiveNode = {
   readonly loc?: Location;
 };
 
-export type EntityCacheOptionalArgumentNodes =
-  | NegativeCacheTtlArgumentNode
-  | IncludeHeadersArgumentNode
-  | PartialCacheLoadArgumentNode
-  | ShadowModeArgumentNode;
-
 export type MaxAgeArgumentNode = {
   readonly kind: Kind.ARGUMENT;
   readonly name: NameNode & { readonly value: typeof MAX_AGE };
@@ -204,24 +201,26 @@ export type ShadowModeArgumentNode = {
   readonly loc?: Location;
 };
 
-export type QueryCacheDirectiveNode = {
-  readonly arguments: ReadonlyArray<QueryCacheArgumentNode>;
+export type IsDirectiveNode = {
+  readonly arguments: readonly [string];
   readonly kind: Kind.DIRECTIVE;
-  readonly name: NameNode;
+  readonly name: NameNode & { readonly value: typeof OPENFED_IS };
   readonly loc?: Location;
 };
 
-export type QueryCacheArgumentNode = {
-  readonly kind: Kind.ARGUMENT;
-  readonly name: NameNode;
-  // maxAge is Int; includeHeaders/shadowMode are Boolean.
-  // validateDirectives() guarantees each argument's value matches its declared type.
-  readonly value: IntValueNode | BooleanValueNode;
+export type QueryCacheDirectiveNode = {
+  readonly arguments:
+    | readonly [MaxAgeArgumentNode]
+    | readonly [MaxAgeArgumentNode, IncludeHeadersArgumentNode]
+    | readonly [MaxAgeArgumentNode, ShadowModeArgumentNode]
+    | readonly [MaxAgeArgumentNode, IncludeHeadersArgumentNode, ShadowModeArgumentNode];
+  readonly kind: Kind.DIRECTIVE;
+  readonly name: NameNode & { readonly value: typeof OPENFED_QUERY_CACHE };
   readonly loc?: Location;
 };
 
 export type CachePopulateDirectiveNode = {
-  readonly arguments: ReadonlyArray<CachePopulateArgumentNode>;
+  readonly arguments: readonly [CachePopulateArgumentNode];
   readonly kind: Kind.DIRECTIVE;
   readonly name: NameNode & { readonly value: typeof OPENFED_CACHE_POPULATE };
   readonly loc?: Location;
@@ -241,4 +240,12 @@ export type LinkImportData = {
   minorVersion: number;
   node?: ConstDirectiveNode;
   rename?: DirectiveName;
+};
+
+export type ArgumentInfo = {
+  data: InputValueData;
+  isList: boolean;
+  name: string;
+  typeNode: TypeNode;
+  isFieldValue?: string | undefined;
 };

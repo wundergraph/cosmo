@@ -22,6 +22,8 @@ import {
   type OneOfRequiredFieldsErrorParams,
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   type SemanticNonNullLevelsNonNullErrorParams,
+  QueryCacheMissingEntityCacheErrorParams,
+  InvalidIsDirectivesErrorParams,
 } from './types/params';
 import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
 import {
@@ -2065,16 +2067,18 @@ export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(value: number)
 }
 
 export function queryCacheOnNonQueryFieldErrorMessage(fieldCoords: string): string {
-  return (
-    `@openfed__queryCache must only be defined on fields of the root query type; found on "${fieldCoords}".` +
-    ` Use @openfed__cachePopulate or @openfed__cacheInvalidate on mutation or subscription fields.`
-  );
+  return `Field coordinates "${fieldCoords}" are not a Query root field.`;
 }
 
-export function queryCacheOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
+export function queryCacheMissingEntityCacheErrorMessage({
+  entityTypeName,
+  fieldCoords,
+}: QueryCacheMissingEntityCacheErrorParams): string {
   return (
-    `Field "${fieldCoords}" has @openfed__queryCache but returns non-entity type "${returnType}".` +
-    ` @openfed__queryCache requires the return type to be an entity with @key.`
+    `Field coordinates "${fieldCoords}" define the "@openfed__queryCache" directive with return type` +
+    ` "${entityTypeName}".` +
+    ` However, the "${entityTypeName}" entity node does not define a "@openfed__entityCache" directive,` +
+    ` which is required for caching.`
   );
 }
 
@@ -2089,6 +2093,13 @@ export function invalidEntityReturnTypeErrorMessage({
   return `Field coordinates "${fieldCoords}" return non-entity type "${returnTypeName}".`;
 }
 
+export function invalidObjectEntityReturnTypeErrorMessage({
+  fieldCoords,
+  returnTypeName,
+}: InvalidEntityReturnTypeErrorParams): string {
+  return `Field coordinates "${fieldCoords}" return non-Object entity "${returnTypeName}" (not yet supported).`;
+}
+
 export function invalidMutuallyExclusiveCacheDirectivesError(fieldCoords: string): Error {
   return new Error(
     `Field coordinates "${fieldCoords}" define both mutually exclusive directives "@openfed__cacheInvalidate"` +
@@ -2096,8 +2107,14 @@ export function invalidMutuallyExclusiveCacheDirectivesError(fieldCoords: string
   );
 }
 
-export function isWithoutQueryCacheErrorMessage(argumentName: string, fieldCoords: string): string {
-  return `@openfed__is on argument "${argumentName}" of field "${fieldCoords}" has no effect without @openfed__queryCache.`;
+export function invalidIsDirectivesError({ argumentNames, fieldCoords }: InvalidIsDirectivesErrorParams): Error {
+  const isPlural = argumentNames.length > 1;
+  return new Error(
+    `The "@openfed__is" directive is only valid if declared on arguments defined by a Query root field that declares` +
+      ` an "@openfed__queryCache" directive.` +
+      ` Consequently, the directive defined by the following "${fieldCoords}" argument${isPlural ? 's' : ''}` +
+      ` ${isPlural ? 'are' : 'is'} invalid: "${argumentNames.join(QUOTATION_JOIN)}".`,
+  );
 }
 
 export function isReferencesUnknownKeyFieldErrorMessage(

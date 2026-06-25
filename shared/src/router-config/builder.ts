@@ -110,7 +110,7 @@ function extractEntityCachingConfiguration(
       );
     }
 
-    for (const config of data.entityCaching?.cacheInvalidateConfigurations) {
+    for (const config of data.entityCaching.cacheInvalidateConfigurations) {
       cacheInvalidateConfigurations.push(
         new CacheInvalidateConfiguration({
           entityTypeName: config.entityTypeName,
@@ -120,7 +120,7 @@ function extractEntityCachingConfiguration(
       );
     }
 
-    for (const config of data.entityCaching?.cachePopulateConfigurations) {
+    for (const config of data.entityCaching.cachePopulateConfigurations) {
       cachePopulateConfigurations.push(
         new CachePopulateConfiguration({
           entityTypeName: config.entityTypeName,
@@ -130,15 +130,15 @@ function extractEntityCachingConfiguration(
         }),
       );
     }
-    for (const rfc of data.entityCaching?.queryCacheConfigurations ?? []) {
+    for (const config of data.entityCaching.queryCacheConfigurations) {
       queryCacheConfigurations.push(
         new QueryCacheConfiguration({
-          fieldName: rfc.fieldName,
-          maxAgeSeconds: BigInt(rfc.maxAgeSeconds),
-          includeHeaders: rfc.includeHeaders,
-          shadowMode: rfc.shadowMode,
-          entityTypeName: rfc.entityTypeName,
-          entityKeyMappings: rfc.entityKeyMappings.map(
+          fieldName: config.fieldName,
+          maxAgeSeconds: BigInt(config.maxAgeSeconds),
+          includeHeaders: config.includeHeaders,
+          shadowMode: config.shadowMode,
+          entityTypeName: config.entityTypeName,
+          entityKeyMappings: config.entityKeyMappings.map(
             (m) =>
               new EntityKeyMapping({
                 entityTypeName: m.entityTypeName,

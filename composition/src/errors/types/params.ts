@@ -99,3 +99,13 @@ export type InvalidEntityReturnTypeErrorParams = {
   fieldCoords: string;
   returnTypeName: string;
 };
+
+export type QueryCacheMissingEntityCacheErrorParams = {
+  entityTypeName: TypeName;
+  fieldCoords: string;
+};
+
+export type InvalidIsDirectivesErrorParams = {
+  argumentNames: Array<ArgumentName>;
+  fieldCoords: string;
+};

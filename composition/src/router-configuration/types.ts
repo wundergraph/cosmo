@@ -23,7 +23,7 @@ export type KafkaEventConfiguration = {
   fieldName: string;
   providerId: string;
   providerType: 'kafka';
-  topics: string[];
+  topics: Array<string>;
   type: KafkaEventType;
 };
 
@@ -31,7 +31,7 @@ export type NatsEventConfiguration = {
   fieldName: string;
   providerId: string;
   providerType: 'nats';
-  subjects: string[];
+  subjects: Array<string>;
   type: NatsEventType;
   streamConfiguration?: StreamConfiguration;
 };
@@ -40,7 +40,7 @@ export type RedisEventConfiguration = {
   fieldName: string;
   providerId: string;
   providerType: 'redis';
-  channels: string[];
+  channels: Array<string>;
   type: RedisEventType;
 };
 
@@ -49,21 +49,21 @@ export type EventConfiguration = KafkaEventConfiguration | NatsEventConfiguratio
 export type SubscriptionFilterValue = boolean | null | number | string;
 
 export type SubscriptionFieldCondition = {
-  fieldPath: string[];
-  values: SubscriptionFilterValue[];
+  fieldPath: Array<string>;
+  values: Array<SubscriptionFilterValue>;
 };
 
 export type SubscriptionCondition = {
-  and?: SubscriptionCondition[];
+  and?: Array<SubscriptionCondition>;
   in?: SubscriptionFieldCondition;
   not?: SubscriptionCondition;
-  or?: SubscriptionCondition[];
+  or?: Array<SubscriptionCondition>;
 };
 
 export type FieldConfiguration = {
-  argumentNames: string[];
-  fieldName: string;
-  typeName: string;
+  argumentNames: Array<ArgumentName>;
+  fieldName: FieldName;
+  typeName: TypeName;
   subscriptionFilterCondition?: SubscriptionCondition;
   requiresAuthentication?: boolean;
   requiredScopes?: Array<Array<string>>;
@@ -91,15 +91,15 @@ export type ConfigurationData = {
   fieldNames: Set<FieldName>;
   isRootNode: boolean;
   typeName: TypeName;
+  entityCaching?: EntityCachingConfiguration;
   entityInterfaceConcreteTypeNames?: Set<TypeName>;
-  events?: EventConfiguration[];
+  events?: Array<EventConfiguration>;
   externalFieldNames?: Set<FieldName>;
   isInterfaceObject?: boolean;
-  provides?: RequiredFieldConfiguration[];
-  keys?: RequiredFieldConfiguration[];
+  keys?: Array<RequiredFieldConfiguration>;
+  provides?: Array<RequiredFieldConfiguration>;
   requireFetchReasonsFieldNames?: Array<FieldName>;
-  requires?: RequiredFieldConfiguration[];
-  entityCaching?: EntityCachingConfiguration;
+  requires?: Array<RequiredFieldConfiguration>;
 };
 
 // Extracted from @openfed__entityCache(maxAge: Int!, negativeCacheTTL: Int, includeHeaders: Boolean,
@@ -120,13 +120,14 @@ export type EntityCacheConfiguration = {
   shadowMode: boolean;
 };
 
-// Maps a single query argument to an entity's @key field. Every mapping is declared explicitly with
-// @openfed__is; an argument is never matched to a @key field by name alone.
-// Example: product(productId: ID! @openfed__is(fields: "id")) on a @openfed__queryCache field
-//   → entityKeyField: "id", argumentPath: ["productId"]
+/* Maps a single query argument to an entity's @key field. Every mapping is declared explicitly with
+ * @openfed__is; an argument is never matched to a @key field by name alone.
+ * Example: product(productId: ID! @openfed__is(fields: "id")) on a @openfed__queryCache field
+ *   → entityKeyField: "id", argumentPath: ["productId"]
+ */
 export type FieldMappingConfig = {
-  entityKeyField: FieldName;
   argumentPath: Array<string>;
+  entityKeyField: FieldName;
   isBatch?: boolean;
 };
 
@@ -139,28 +140,30 @@ export type EntityKeyMappingConfig = {
 // Extracted from @openfed__queryCache(maxAge: Int!, includeHeaders: Boolean, shadowMode: Boolean)
 // on Query fields. Tells the router which query fields can serve entities from cache.
 export type QueryCacheConfig = {
-  fieldName: FieldName;
-  maxAgeSeconds: number;
-  includeHeaders: boolean;
-  shadowMode: boolean;
   // The entity type this query field returns (must have @openfed__entityCache).
   entityTypeName: TypeName;
   // Maps query arguments to entity @key fields so the router can construct cache keys from query
   // arguments. Empty for list-returning fields without batch mappings (cache reads are skipped).
   entityKeyMappings: Array<EntityKeyMappingConfig>;
+  fieldName: FieldName;
+  includeHeaders: boolean;
+  maxAgeSeconds: number;
+  shadowMode: boolean;
 };
 
-// Extracted from @openfed__cacheInvalidate on Mutation/Subscription fields.
-// Tells the router to evict the returned entity from the cache after the operation completes.
+/* Extracted from @openfed__cacheInvalidate on Mutation/Subscription fields.
+ * Tells the router to evict the returned entity from the cache after the operation completes.
+ */
 export type CacheInvalidateConfiguration = {
   entityTypeName: TypeName;
   fieldName: FieldName;
   operationType: OperationTypeNode;
 };
 
-// Extracted from @openfed__cachePopulate on Mutation/Subscription fields.
-// Tells the router to populate the entity cache with the operation's return value.
-// maxAgeSeconds overrides the entity's default TTL when provided.
+/* Extracted from @openfed__cachePopulate on Mutation/Subscription fields.
+ * Tells the router to populate the entity cache with the operation's return value.
+ * maxAgeSeconds overrides the entity's default TTL when provided.
+ */
 export type CachePopulateConfiguration = {
   entityTypeName: TypeName;
   fieldName: FieldName;
@@ -176,7 +179,7 @@ export type EntityCachingConfiguration = {
   // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
   entityCacheConfigurations: Array<EntityCacheConfiguration>;
   // Attached to the Query type's ConfigurationData from @openfed__queryCache.
-  queryCacheConfigurations?: Array<QueryCacheConfig>;
+  queryCacheConfigurations: Array<QueryCacheConfig>;
 };
 
 export type Costs = {
@@ -197,8 +200,8 @@ export type FieldWeightConfiguration = {
 export type FieldListSizeConfiguration = {
   fieldName: FieldName;
   requireOneSlicingArgument: boolean;
-  sizedFields: Array<FieldName>;
   slicingArguments: Array<ArgumentName>;
+  sizedFields: Array<FieldName>;
   typeName: TypeName;
   assumedSize?: number;
 };
