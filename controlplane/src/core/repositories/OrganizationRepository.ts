@@ -1302,7 +1302,7 @@ export class OrganizationRepository {
             .execute();
 
           const graphIds: string[] = [];
-          const v: string[] = [];
+          const proposalGraphIds: string[] = [];
           for (const eventMeta of input.eventsMeta) {
             switch (eventMeta.meta.case) {
               case 'federatedGraphSchemaUpdated':
@@ -1311,7 +1311,7 @@ export class OrganizationRepository {
                 break;
               }
               case 'proposalStateUpdated': {
-                v.push(...eventMeta.meta.value.graphIds);
+                proposalGraphIds.push(...eventMeta.meta.value.graphIds);
                 break;
               }
             }
@@ -1333,7 +1333,9 @@ export class OrganizationRepository {
             .where(
               and(
                 eq(slackProposalStateUpdate.slackIntegrationConfigId, slackIntegrationConfig[0].id),
-                v.length > 0 ? not(inArray(slackProposalStateUpdate.federatedGraphId, v)) : undefined,
+                proposalGraphIds.length > 0
+                  ? not(inArray(slackProposalStateUpdate.federatedGraphId, proposalGraphIds))
+                  : undefined,
               ),
             );
 
