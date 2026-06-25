@@ -49,7 +49,7 @@ func TestDeferTestDataQueries(t *testing.T) {
 	}
 
 	groups := make([]string, 0, len(groupQueries))
-	for k, _ := range groupQueries {
+	for k := range groupQueries {
 		groups = append(groups, k)
 	}
 	slices.Sort(groups)
@@ -361,7 +361,11 @@ func appendArrayValues(a, b *astjson.Value) *astjson.Value {
 // parseMultipartParts splits a multipart/mixed body on the --graphql boundary
 // and returns the raw JSON bytes of each part.
 func parseMultipartParts(body []byte) ([][]byte, error) {
-	boundary := []byte("\r\n--graphql")
+	// Each part is delimited by the --graphql boundary. The first part has no
+	// leading CRLF (the body starts directly with the boundary), so we split on
+	// the boundary itself rather than "\r\n--graphql". Empty leading segments and
+	// the closing "--" terminator are skipped below.
+	boundary := []byte("--graphql")
 	parts := bytes.Split(body, boundary)
 	var result [][]byte
 	for _, part := range parts {
