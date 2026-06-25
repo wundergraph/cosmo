@@ -1,4 +1,3 @@
-
 --graphql
 Content-Type: application/json
 
@@ -9,5 +8,4 @@ Content-Type: application/json
 
 {"incremental":[{"data":{"role":{"departments":["ENGINEERING","MARKETING"],"title":["Founder","CEO"],"engineerType":"BACKEND"}},"id":"1","subPath":[0]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Co-founder","Tech Lead"],"engineerType":"FULLSTACK"}},"id":"1","subPath":[1]},{"data":{"role":{"departments":["MARKETING"],"title":["Co-founder","Head of Growth"]}},"id":"1","subPath":[2]},{"data":{"role":{"departments":["OPERATIONS","MARKETING"],"title":["Co-founder","COO"],"operatorType":["HUMAN_RESOURCES","FINANCE"]}},"id":"1","subPath":[3]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Senior GO Engineer"],"engineerType":"BACKEND"}},"id":"1","subPath":[4]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Software Engineer"],"engineerType":"FULLSTACK"}},"id":"1","subPath":[5]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Software Engineer"],"engineerType":"FULLSTACK"}},"id":"1","subPath":[6]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Senior Frontend Engineer"],"engineerType":"FRONTEND"}},"id":"1","subPath":[7]},{"data":{"role":{"departments":["OPERATIONS"],"title":["Accounting & Finance"],"operatorType":["FINANCE"]}},"id":"1","subPath":[8]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Software Engineer"],"engineerType":"FULLSTACK"}},"id":"1","subPath":[9]}],"completed":[{"id":"1"}],"hasNext":false}
 
---graphql
 --graphql--
