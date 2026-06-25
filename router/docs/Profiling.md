@@ -118,5 +118,12 @@ To use Pyroscope for continuous profiling of the router:
 2. Run the router with either `PYROSCOPE_ADDR=http://localhost:4040` or
    `-pyroscope-addr http://localhost:4040` to enable sending continuous profiling data to Pyroscope.
    You can view this data in Grafana.
+
+   Optional Pyroscope environment variables:
+
+   - `PYROSCOPE_APPLICATION_NAME` — overrides the application name sent to Pyroscope. When unset,
+     falls back to `telemetry.service_name` from config, then `wundergraph.cosmo.router`.
+   - `PYROSCOPE_TAGS` — comma-separated `key=value` pairs appended to built-in tags (e.g.
+     `region=us-east-1,team=platform`). Custom tags override built-in tags on key collision.
 3. Visit the drilldown profiles section in Grafana at `http://localhost:9300`
 4. Select the router from the service dropdown

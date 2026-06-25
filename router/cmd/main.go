@@ -19,6 +19,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/versioninfo"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/mondaytweaks"
 	"github.com/wundergraph/cosmo/router/pkg/profile"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 
@@ -45,6 +46,21 @@ func Main() {
 
 	// Parse flags before calling profile.Start(), since it may add flags
 	flag.Parse()
+
+	// Re-read profiling env after flag.Parse() — flag defaults are captured at package
+	// init, before embedders (e.g. platform-api-cosmo-router) can Setenv in main().
+	if mondaytweaks.RereadProfilingEnvAfterFlagParse {
+		if *pprofListenAddr == "" {
+			if addr := os.Getenv("PPROF_ADDR"); addr != "" {
+				*pprofListenAddr = addr
+			}
+		}
+		if *pyroscopeAddr == "" {
+			if addr := os.Getenv("PYROSCOPE_ADDR"); addr != "" {
+				*pyroscopeAddr = addr
+			}
+		}
+	}
 
 	if *help {
 		flag.PrintDefaults()
@@ -122,11 +138,14 @@ func Main() {
 		logger := baseLogger.With(zap.String("component", "pyroscope"))
 		logger.Info("starting pyroscope server")
 
+		applicationName := profile.PyroscopeApplicationName(result.Config.Telemetry.ServiceName)
+		tags := profile.PyroscopeTags()
+
 		pyro, err := pyroscope.Start(pyroscope.Config{
-			ApplicationName: "wundergraph.cosmo.router",
+			ApplicationName: applicationName,
 			ServerAddress:   *pyroscopeAddr,
 			Logger:          logger.Sugar(),
-			Tags:            map[string]string{"hostname": os.Getenv("HOSTNAME")},
+			Tags:            tags,
 
 			ProfileTypes: []pyroscope.ProfileType{
 				pyroscope.ProfileCPU,
