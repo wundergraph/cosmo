@@ -100,5 +100,5 @@ import { describe, it } from "vitest";
  * deferred frame. Distinct finding.
  */
 describe("F15 · KI-DEFER-DUPLICATE-AUTH-ERROR-TWO-PASS", () => {
-  it.skip("duplicates a pass-through-ancestor field error across the two ResolveDefer walks (CONFIRMED_IN_SOURCE_ONLY — no authorizer / frozen resolvers / list-nulling at fetch boundary make it HTTP-unreachable on this demo)", () => {});
+  it.skip("SKIPPED: NOT REPRODUCED. Wired live via x-defer-sim:authz-deny-ancestor (the authorizer returns a DENY on the pass-through ancestor User.reviews) — the deferred frame carried the field error EXACTLY ONCE, never duplicated. The two-pass duplication does not manifest on this demo's shapes against his v2.5.1 engine; mechanism present in source but no live RED repro.", () => {});
 });

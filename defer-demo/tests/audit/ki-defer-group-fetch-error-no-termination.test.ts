@@ -86,7 +86,13 @@ import { describe, it } from "vitest";
  * Go error returned before the atomic decrement. Distinct mechanism. Does not map
  * to B1/B6/B7.
  */
-describe("F03 KI-DEFER-GROUP-FETCH-ERROR-NO-TERMINATION (CONFIRMED_IN_SOURCE_ONLY)", () => {
+// SKIPPED — pre-fetch auth is NOT reachable on this demo: AuthorizePreFetch only fires
+// for fetches whose RootFields carry HasAuthorizationRule, which the demo's entity/root
+// fetches never set (auth here enforces at AuthorizeObjectField, verified with
+// x-defer-sim:authz-prefetch), and the rate-limiter alternative needs a live Redis. The
+// SAME termination bug (deferred error -> orphaned pending, no hasNext:false) is
+// reproduced LIVE by F04 via `x-defer-sim: authz-objectfield`.
+describe("F03 KI-DEFER-GROUP-FETCH-ERROR-NO-TERMINATION (SKIPPED: pre-fetch path not reachable; F04 is the live repro)", () => {
   it.skip(
     "a deferred group whose fetch phase returns a hard Go error (pre-fetch " +
       "authorizer/rate-limiter error, or astjson merge mismatch) should NOT skip " +

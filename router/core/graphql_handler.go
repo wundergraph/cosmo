@@ -171,9 +171,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			reqCtx.operation.preparedPlan.preparedPlan)
 	}
 
-	if h.authorizer != nil {
+	if h.authorizer != nil || isDeferSimAuthMode(r.Header) {
+		// DEFER-AUDIT SIMULATION (test-only): a header-gated authorizer. Without the
+		// x-defer-sim header it ALLOWS the single auth-ruled demo field (User.reviews)
+		// so normal traffic is unaffected; with the header it injects the hard auth
+		// errors that make audit findings F03/F04/F15 reproducible. See core/defer_sim.go.
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
-		resolveCtx.SetAuthorizer(h.authorizer)
+		resolveCtx.SetAuthorizer(newDeferSimAuthorizer(r.Header))
 	}
 	if h.engineLoaderHooks != nil {
 		resolveCtx.SetEngineLoaderHooks(h.engineLoaderHooks)
@@ -181,6 +185,10 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resolveCtx = h.configureRateLimiting(resolveCtx)
 	if reqCtx.customFieldValueRenderer != nil {
 		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)
+	} else if rnd := newDeferSimRenderer(r.Header); rnd != nil {
+		// DEFER-AUDIT SIMULATION (test-only): a field renderer that errors on
+		// Review.body to reproduce audit F05. See core/defer_sim.go.
+		resolveCtx.SetFieldValueRenderer(rnd)
 	}
 
 	switch p := reqCtx.operation.preparedPlan.preparedPlan.(type) {

@@ -1,6 +1,6 @@
 extend schema
   @link(url: "https://specs.apollo.dev/federation/v2.7",
-        import: ["@key", "@requires", "@external", "@shareable"])
+        import: ["@key", "@requires", "@external", "@shareable", "@requiresScopes"])
 
 type Review @key(fields: "id") {
   id: ID!
@@ -26,5 +26,10 @@ type Podcast @key(fields: "id") {
 type User @key(fields: "id") {
   id: ID!
   displayName: String! @shareable
-  reviews: [Review!]!
+  # @requiresScopes here exists ONLY to make the authorizer fire on this deferred
+  # field, so the defer-audit simulation (core/defer_sim.go, x-defer-sim header) can
+  # inject hard auth/prefetch errors (audit F03/F04). Without the sim header the
+  # field is allowed (the sim authorizer allows by default), so normal demo traffic
+  # is unaffected.
+  reviews: [Review!]! @requiresScopes(scopes: [["read:reviews"]])
 }

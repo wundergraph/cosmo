@@ -57,7 +57,11 @@ import { describe, it } from "vitest";
  * index bug, unrelated to the runtime defer/termination/data-race/validation bugs
  * those entries cover.
  */
-describe("F08 KI-DEFER-ASSIGNDEFER-UNDEFINED-FIELD-PANIC (CONFIRMED_IN_SOURCE_ONLY)", () => {
+// SKIPPED — NOT a live bug. Planner.Plan rejects the undefined field FIRST (validator +
+// nodesResolvableVisitor), so the router returns a clean HTTP 200 validation error with
+// no panic. The index-out-of-range in assignDefer is reachable only by driving the
+// planning Visitor directly (an embedder hand-walking it), which no HTTP request can do.
+describe("F08 KI-DEFER-ASSIGNDEFER-UNDEFINED-FIELD-PANIC (SKIPPED: gated out of the request path — router rejects cleanly, no live panic)", () => {
   it.skip(
     "an undefined field inside @defer must be cleanly rejected by operation " +
       "validation (HTTP 200, 'Cannot query field ... on type ...', no 500/panic) — " +

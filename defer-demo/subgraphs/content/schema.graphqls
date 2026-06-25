@@ -1,6 +1,6 @@
 extend schema
   @link(url: "https://specs.apollo.dev/federation/v2.7",
-        import: ["@key", "@shareable", "@provides", "@external", "@tag"])
+        import: ["@key", "@shareable", "@provides", "@external", "@tag", "@requiresScopes"])
 
 type Query {
   article(id: ID!): Article
@@ -9,7 +9,10 @@ type Query {
   podcast(id: ID!): Podcast
   search(term: String!): [SearchResult!]!
   featuredArticle: Article @provides(fields: "author { displayName }")
-  firstArticle: Article @tag(name: "internal")
+  # @requiresScopes makes the authorizer fire on this ROOT fetch field so the
+  # defer-audit simulation can inject a PRE-FETCH auth error (audit F03) when
+  # firstArticle is deferred. Allowed by default (sim authorizer) without the header.
+  firstArticle: Article @tag(name: "internal") @requiresScopes(scopes: [["read:articles"]])
 }
 
 interface Publishable {
