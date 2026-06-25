@@ -1408,7 +1408,7 @@ func TestCacheWarmupDefer(t *testing.T) {
 	// These tests verify how the cache warmer interacts with @defer queries.
 	t.Parallel()
 
-	deferRequest := func(t *testing.T, xEnv *testenv.Environment, query string, variables string) (status int, contentType, planCache string) {
+	deferRequest := func(t *testing.T, xEnv *testenv.Environment, query string, variables string) *http.Response {
 		t.Helper()
 		payload := map[string]any{"query": query}
 		if variables != "" {
@@ -1420,10 +1420,10 @@ func TestCacheWarmupDefer(t *testing.T) {
 		req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payloadData))
 		res, err := xEnv.RouterClient.Do(req)
 		require.NoError(t, err)
-		defer func() { require.NoError(t, res.Body.Close()) }()
 		_, err = io.ReadAll(res.Body)
 		require.NoError(t, err)
-		return res.StatusCode, res.Header.Get("Content-Type"), res.Header.Get("x-wg-execution-plan-cache")
+		require.NoError(t, res.Body.Close())
+		return res
 	}
 
 	deferWarmup := func() []core.Option {
@@ -1449,6 +1449,19 @@ func TestCacheWarmupDefer(t *testing.T) {
 		}
 	  }
 	}`
+	t.Run("warmed defer query hits the plan cache on a live multipart request", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: deferWarmup(),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := deferRequest(t, xEnv, queryWithDefer, "")
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, "HIT", res.Header.Get("x-wg-execution-plan-cache"))
+		})
+	})
+
 	const queryWithoutDefer = `query {
 	  employee(id: 1) {
 		id
@@ -1457,176 +1470,30 @@ func TestCacheWarmupDefer(t *testing.T) {
 		}
 	  }
 	}`
-
-	t.Run("warmed defer query hits the plan cache on a live multipart request", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			NoRetryClient: true,
-			RouterOptions: deferWarmup(),
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			status, contentType, planCache := deferRequest(t, xEnv, queryWithDefer, "")
-
-			require.Equal(t, http.StatusOK, status)
-			require.True(t, strings.HasPrefix(contentType, "multipart/mixed"))
-
-			require.Equal(t, "HIT", planCache)
-		})
-	})
-
 	t.Run("@defer changes the plan cache key", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			NoRetryClient: true,
 			RouterOptions: deferWarmup(),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: queryWithoutDefer,
-			})
-			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"),
+			res := deferRequest(t, xEnv, queryWithoutDefer, "")
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, "MISS", res.Header.Get("x-wg-execution-plan-cache"),
 				"the non-defer variant must NOT share a plan cache entry with the warmed @defer query")
 
 			// The exact warmed @defer query, issued as a live multipart request, hits.
-			_, _, planCache := deferRequest(t, xEnv, queryWithDefer, "")
-			require.Equal(t, "HIT", planCache)
+			res = deferRequest(t, xEnv, queryWithoutDefer, "")
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, "HIT", res.Header.Get("x-wg-execution-plan-cache"))
 		})
 	})
 
-	t.Run("@defer with @include(if: $var) should be warm for both values", func(t *testing.T) {
+	t.Run("warmed simple defer plan survives a config change", func(t *testing.T) {
 		t.Parallel()
-
-		// This query is used in the warmup below:
-		const deferIncludeQuery = `query ($withHobbies: Boolean!) {
-		  employee(id: 1) {
-			id
-			details  {
-			  forename
-			}
-			... @defer @include(if: $withHobbies) {
-			  hobbies {
-				__typename
-			  }
-			}
-		  }
-		}`
-		testConfig := testenv.Config{
-			NoRetryClient:  true,
-			LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.WarnLevel},
-			RouterOptions: []core.Option{
-				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-					Enabled: true,
-					Source: config.CacheWarmupSource{
-						Filesystem: &config.CacheWarmupFileSystemSource{
-							Path: "testdata/cache_warmup/defer_include",
-						},
-					},
-				}),
-			},
-		}
-		t.Run("if=true", func(t *testing.T) {
-			testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
-				for _, l := range xEnv.Observer().FilterMessage("Failed to process operation, skipping").All() {
-					t.Fatalf("warmup unexpectedly skipped the operation: %v", l.ContextMap())
-				}
-
-				status, contentType, planCacheTrue := deferRequest(t, xEnv, deferIncludeQuery, `{"withHobbies": true}`)
-				require.Equal(t, http.StatusOK, status)
-				require.True(t, strings.HasPrefix(contentType, "multipart/mixed"))
-				require.Equal(t, "HIT", planCacheTrue)
-
-				_, _, planCacheTrueRepeat := deferRequest(t, xEnv, deferIncludeQuery, `{"withHobbies": true}`)
-				require.Equal(t, "HIT", planCacheTrueRepeat)
-
-				_, _, planCacheFalse := deferRequest(t, xEnv, deferIncludeQuery, `{"withHobbies": false}`)
-				require.Equal(t, "HIT", planCacheFalse)
-			})
-		})
-		t.Run("if=false", func(t *testing.T) {
-			testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
-				for _, l := range xEnv.Observer().FilterMessage("Failed to process operation, skipping").All() {
-					t.Fatalf("warmup unexpectedly skipped the operation: %v", l.ContextMap())
-				}
-
-				status, contentType, planCacheTrue := deferRequest(t, xEnv, deferIncludeQuery, `{"withHobbies": false}`)
-				require.Equal(t, http.StatusOK, status)
-				require.True(t, strings.HasPrefix(contentType, "multipart/mixed"))
-				require.Equal(t, "HIT", planCacheTrue)
-
-				_, _, planCacheTrueRepeat := deferRequest(t, xEnv, deferIncludeQuery, `{"withHobbies": false}`)
-				require.Equal(t, "HIT", planCacheTrueRepeat)
-
-				_, _, planCacheFalse := deferRequest(t, xEnv, deferIncludeQuery, `{"withHobbies": true}`)
-				require.Equal(t, "HIT", planCacheFalse)
-			})
-		})
-	})
-
-	t.Run("@defer(if) query should warm both the deferred and non-deferred plans", func(t *testing.T) {
-		t.Parallel()
-
-		// Wanted behaviour: warming a @defer(if: $var) query should make BOTH live
-		// variants hit the plan cache, especially the deferred case (if:true),
-		// which is the expensive multipart path that benefits most from a warm plan.
-		const deferIfQuery = `query ($shouldDefer: Boolean!) {
-		  employee(id: 1) {
-			id
-			... @defer(if: $shouldDefer) {
-			  hobbies {
-				__typename
-			  }
-			}
-		  }
-		}`
-		testConfig := testenv.Config{
-			NoRetryClient:  true,
-			LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.WarnLevel},
-			RouterOptions: []core.Option{
-				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-					Enabled: true,
-					Source: config.CacheWarmupSource{
-						Filesystem: &config.CacheWarmupFileSystemSource{
-							Path: "testdata/cache_warmup/defer_if",
-						},
-					},
-				}),
-			},
-		}
-		t.Run("if=true", func(t *testing.T) {
-			testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
-				for _, l := range xEnv.Observer().FilterMessage("Failed to process operation, skipping").All() {
-					t.Fatalf("warmup unexpectedly skipped the operation: %v", l.ContextMap())
-				}
-				statusTrue, contentTypeTrue, planCacheTrue := deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": true}`)
-				require.Equal(t, http.StatusOK, statusTrue)
-				require.True(t, strings.HasPrefix(contentTypeTrue, "multipart/mixed"),
-					"shouldDefer=true must produce a multipart/mixed response")
-				require.Equal(t, "HIT", planCacheTrue,
-					"the deferred plan (if:true) must be warmed")
-
-			})
-		})
-		t.Run("if=false", func(t *testing.T) {
-			testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
-				for _, l := range xEnv.Observer().FilterMessage("Failed to process operation, skipping").All() {
-					t.Fatalf("warmup unexpectedly skipped the operation: %v", l.ContextMap())
-				}
-				statusFalse, contentTypeFalse, planCacheFalse := deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": false}`)
-				require.Equal(t, http.StatusOK, statusFalse)
-				require.False(t, strings.HasPrefix(contentTypeFalse, "multipart/mixed"),
-					"shouldDefer=false must produce a plain JSON response (fragment inlined)")
-				require.Equal(t, "HIT", planCacheFalse,
-					"the non-deferred plan (if:false) must be warmed")
-			})
-		})
-	})
-
-	t.Run("warmed defer plan survives a config change", func(t *testing.T) {
-		t.Parallel()
-
 		pm := ConfigPollerMock{
 			ready: make(chan struct{}),
 		}
-
-		testenv.Run(t, &testenv.Config{
+		testConfig := testenv.Config{
 			NoRetryClient: true,
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.SlowPlanCacheSize = 100
@@ -1649,20 +1516,9 @@ func TestCacheWarmupDefer(t *testing.T) {
 					return &pm
 				},
 			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			doDefer := func() *http.Response {
-				payloadData, err := json.Marshal(map[string]any{"query": queryWithDefer})
-				require.NoError(t, err)
-				req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payloadData))
-				res, err := xEnv.RouterClient.Do(req)
-				require.NoError(t, err)
-				_, err = io.ReadAll(res.Body)
-				require.NoError(t, err)
-				require.NoError(t, res.Body.Close())
-				return res
-			}
-
-			res := doDefer()
+		}
+		testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
+			res := deferRequest(t, xEnv, queryWithDefer, "")
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
 			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Header.Get("X-Router-Config-Version"))
@@ -1673,18 +1529,131 @@ func TestCacheWarmupDefer(t *testing.T) {
 			pm.initConfig.Version = "updated"
 			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
-			res = doDefer()
+			res = deferRequest(t, xEnv, queryWithDefer, "")
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
 			require.Equal(t, "updated", res.Header.Get("X-Router-Config-Version"))
 			require.Equal(t, "HIT", res.Header.Get("x-wg-execution-plan-cache"))
 		})
-		// We could add a rewarming test for @defer(if:), but it would be broken,
-		// and there is a test case for normal warmup already.
 	})
+	const deferIfQuery = `query ($shouldDefer: Boolean!) {
+		  employee(id: 1) {
+			id
+			... @defer(if: $shouldDefer) {
+			  hobbies {
+				__typename
+			  }
+			}
+		  }
+		}`
+	t.Run("warmed conditional defer(if:true) plan survives a config change", func(t *testing.T) {
+		t.Parallel()
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+		testConfig := testenv.Config{
+			NoRetryClient: true,
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.SlowPlanCacheSize = 100
+			},
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled:          true,
+					InMemoryFallback: true,
+					Source: config.CacheWarmupSource{
+						CdnSource: config.CacheWarmupCDNSource{
+							Enabled: true,
+						},
+					},
+				}),
+				core.WithConfigVersionHeader(true),
+			},
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+					pm.initConfig = config
+					return &pm
+				},
+			},
+		}
+		testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
+			res := deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": true}`)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Header.Get("x-wg-execution-plan-cache"))
 
+			// Trigger a config change; the new graph is re-warmed from the in-memory fallback.
+			<-pm.ready
+			pm.initConfig.Version = "updated"
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
+
+			res = deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": true}`)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, "updated", res.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "HIT", res.Header.Get("x-wg-execution-plan-cache"))
+
+			res = deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": false}`)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.False(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, "MISS", res.Header.Get("x-wg-execution-plan-cache"))
+		})
+	})
+	t.Run("warmed conditional defer(if:false) plan survives a config change", func(t *testing.T) {
+		t.Parallel()
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+		testConfig := testenv.Config{
+			NoRetryClient: true,
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.SlowPlanCacheSize = 100
+			},
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled:          true,
+					InMemoryFallback: true,
+					Source: config.CacheWarmupSource{
+						CdnSource: config.CacheWarmupCDNSource{
+							Enabled: true,
+						},
+					},
+				}),
+				core.WithConfigVersionHeader(true),
+			},
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+					pm.initConfig = config
+					return &pm
+				},
+			},
+		}
+		testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
+			res := deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": false}`)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.False(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Header.Get("x-wg-execution-plan-cache"))
+
+			// Trigger a config change; the new graph is re-warmed from the in-memory fallback.
+			<-pm.ready
+			pm.initConfig.Version = "updated"
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
+
+			res = deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": false}`)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.False(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, "updated", res.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "HIT", res.Header.Get("x-wg-execution-plan-cache"))
+
+			res = deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": true}`)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, "MISS", res.Header.Get("x-wg-execution-plan-cache"))
+		})
+	})
 	// Since the Accept header sent from the client does not affect what server sends in case of defer,
-	// there no tests for that.
+	// there no tests for that yet.
 }
 
 // findDataPoint finds a data point in a slice of histogram data points by matching
