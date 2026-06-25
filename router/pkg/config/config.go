@@ -577,6 +577,11 @@ type CostControl struct {
 
 	// ExposeHeaders adds X-WG-Cost-* response headers.
 	ExposeHeaders bool `yaml:"expose_headers,omitempty" envDefault:"false" env:"EXPOSE_HEADERS"`
+
+	// IgnoreImplementingTypeWeights, when true, ignores @cost weights contributed by
+	// implementing types on abstract (interface/union) fields that have no weight of
+	// their own. Emulates Apollo's cost behavior.
+	IgnoreImplementingTypeWeights bool `yaml:"ignore_implementing_type_weights,omitempty" envDefault:"false" env:"IGNORE_IMPLEMENTING_TYPE_WEIGHTS"`
 }
 
 type ComplexityLimit struct {

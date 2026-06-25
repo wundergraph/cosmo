@@ -6,7 +6,6 @@ import {
   type DirectiveDefinitionNode,
   type DocumentNode,
   type GraphQLSchema,
-  isAbstractType,
   Kind,
   type ListTypeNode,
   type NamedTypeNode,
@@ -23,7 +22,7 @@ import {
   type MutableIntermediateTypeNode,
   type MutableTypeNode,
 } from '../../schema-building/ast';
-import { stringToNamedTypeNode, stringToNameNode, isKindAbstract } from '../../ast/utils';
+import { isKindAbstract, stringToNamedTypeNode, stringToNameNode } from '../../ast/utils';
 import {
   allChildDefinitionsAreInaccessibleError,
   allExternalFieldInstancesError,
@@ -200,6 +199,7 @@ import {
   INPUT_OBJECT,
   LEFT_PARENTHESIS,
   LIST,
+  LITERAL_NEW_LINE,
   LITERAL_PERIOD,
   NON_REPEATABLE_FEDERATED_DIRECTIVES,
   NOT_UPPER,
@@ -213,7 +213,6 @@ import {
   TAG,
   UNION,
   VALUES,
-  LITERAL_NEW_LINE,
 } from '../../utils/string-constants';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../../utils/integer-constants';
 import {
@@ -256,8 +255,8 @@ import {
   type FederationParams,
   type MergeSubscriptionFilterTargetResultParams,
   type UpsertDirectiveArgumentDataParams,
-  type ValidateSubscriptionFilterAndGenerateConfigurationParams,
   type ValidateOneOfDirectiveParams,
+  type ValidateSubscriptionFilterAndGenerateConfigurationParams,
 } from './types/params';
 import { INACCESSIBLE_DEFINITION } from '../constants/directive-definitions';
 import type { CompositionOptions } from '../../types/params';

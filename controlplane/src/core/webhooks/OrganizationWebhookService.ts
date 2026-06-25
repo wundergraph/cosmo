@@ -291,11 +291,7 @@ export class OrganizationWebhookService {
         return config.meta.value.graphIds?.includes(eventData.payload.monograph.id);
       }
       case OrganizationEventName.PROPOSAL_STATE_UPDATED: {
-        if (
-          config.meta.case !== 'proposalStateUpdated' ||
-          config.meta.value.graphIds?.length === 0 ||
-          config.type === 'slack'
-        ) {
+        if (config.meta.case !== 'proposalStateUpdated' || config.meta.value.graphIds?.length === 0) {
           return false;
         }
 
@@ -461,6 +457,38 @@ export class OrganizationWebhookService {
           }
         }
         return tempData;
+      }
+      case OrganizationEventName.PROPOSAL_STATE_UPDATED: {
+        const proposal = eventData.payload.proposal;
+        const graph = eventData.payload.federated_graph;
+
+        const linkToGraph = `${process.env.WEB_BASE_URL}/${eventData.payload.organization.slug}/${graph.namespace}/graph/${graph.name}`;
+        const linkToProposal = `${linkToGraph}/proposals/${proposal.id}`;
+        return {
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `🚀 The state of the proposal *<${linkToProposal} | ${proposal.name}>* in namespace *${graph.namespace}* has changed to *${proposal.state}*`,
+              },
+            },
+          ],
+          attachments: [
+            {
+              color: '#fafafa',
+              blocks: [
+                {
+                  type: 'section',
+                  text: {
+                    type: 'mrkdwn',
+                    text: `Click <${linkToProposal} | here> for more details.`,
+                  },
+                },
+              ],
+            },
+          ],
+        };
       }
       default: {
         return { blocks: [], attachments: [] };

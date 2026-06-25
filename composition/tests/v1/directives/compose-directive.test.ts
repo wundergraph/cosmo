@@ -9,7 +9,9 @@ import {
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 import {
+  FIRST_ORDINAL,
   invalidCustomDirectiveError,
+  invalidDirectiveError,
   invalidLinkDirectiveImportObjectError,
   invalidLinkDirectiveUrlError,
   invalidRepeatedComposedDirectiveWarning,
@@ -1031,6 +1033,179 @@ describe('@composeDirective tests', () => {
         `,
         ),
       );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that subgraph order does not affect the propagation of a composed directive', () => {
+      const aaaaa = createSubgraph(
+        'aaaaa',
+        `
+        schema
+        @link(import: ["@a"], url: "https://a/a/v1.0")
+        @composeDirective(name: "@a")  {
+          query: Query
+        }
+        
+        directive @a on FIELD_DEFINITION
+        
+        type Query @shareable {
+          a: ID
+        }
+        `,
+      );
+      const aaaab = createSubgraph(
+        'aaaab',
+        `
+        schema
+        @link(import: ["@a"], url: "https://a/a/v1.0")
+        @composeDirective(name: "@a")  {
+          query: Query
+        }
+        
+        directive @a on FIELD_DEFINITION
+        
+        type Query @shareable {
+          a: ID @a
+        }
+        `,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+        [aaaaa, aaaab],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+      
+      type Query {
+        a: ID
+      }
+    `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+      directive @a on FIELD_DEFINITION
+      
+      type Query {
+        a: ID @a
+      }
+    `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that version does not affect propagation of a composed directive', () => {
+      const aaaaa = createSubgraph(
+        'aaaaa',
+        `
+        schema
+        @link(import: ["@a"], url: "https://a/a/v1.0")
+        @composeDirective(name: "@a")  {
+          query: Query
+        }
+        
+        directive @a on FIELD_DEFINITION
+        
+        type Query {
+          a: ID @a
+        }
+        `,
+      );
+      const aaaab = createSubgraph(
+        'aaaab',
+        `
+        schema
+        @link(import: ["@a"], url: "https://a/a/v1.1")
+        @composeDirective(name: "@a")  {
+          query: Query
+        }
+        
+        directive @a on FIELD_DEFINITION
+        
+        type Query {
+          b: ID
+        }
+        `,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+        [aaaaa, aaaab],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+      
+      type Query {
+        a: ID
+        b: ID
+      }
+    `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+      directive @a on FIELD_DEFINITION
+      
+      type Query {
+        a: ID @a
+        b: ID
+      }
+    `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is returned if a composed directive does not satisfy the directive definition with the highest version', () => {
+      const aaaaa = createSubgraph(
+        'aaaaa',
+        `
+        schema
+        @link(import: ["@a"], url: "https://a/a/v1.0")
+        @composeDirective(name: "@a")  {
+          query: Query
+        }
+        
+        directive @a on FIELD_DEFINITION
+        
+        type Query {
+          a: ID @a
+        }
+        `,
+      );
+      const aaaab = createSubgraph(
+        'aaaab',
+        `
+        schema
+        @link(import: ["@a"], url: "https://a/a/v1.1")
+        @composeDirective(name: "@a")  {
+          query: Query
+        }
+        
+        directive @a(a: Int!) on FIELD_DEFINITION
+        
+        type Query {
+          b: ID
+        }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([aaaaa, aaaab], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        invalidCustomDirectiveError({
+          directiveCoords: 'Query.a',
+          directiveName: 'a',
+          errors: [undefinedRequiredArgumentsError(['a'])],
+          ordinal: FIRST_ORDINAL,
+        }),
+      ]);
       expect(warnings).toHaveLength(0);
     });
   });
