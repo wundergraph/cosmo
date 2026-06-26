@@ -2,11 +2,6 @@ name: Release
 
 on:
   workflow_dispatch:
-    inputs:
-      scope:
-        description: 'Package to republish (e.g. wgc). Leave empty for a full release.'
-        required: false
-        default: ''
 
 permissions:
   contents: write
@@ -60,7 +55,6 @@ jobs:
         # commits and bumps CHANGELOG.md and package.json files, but does not
         # publish anything.
       - name: Generate next version (dry-run)
-        if: inputs.scope == ''
         run: pnpm lerna version --ignore-scripts --dry-run --yes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -71,11 +65,9 @@ jobs:
 
         # Reset dry-run changes to let publish do the real thing for the release
       - name: Revert changes
-        if: inputs.scope == ''
         run: git reset --hard
 
       - name: Publish packages & Create Github Releases
-        if: inputs.scope == ''
         run: |
           git config --global user.email "bot@wundergraph.com"
           git config --global user.name "hardworker-bot"
@@ -83,16 +75,3 @@ jobs:
           pnpm release
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-
-      - name: Republish single package
-        if: inputs.scope != ''
-        env:
-          PACKAGE_SCOPE: ${{ inputs.scope }}
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          # Validate package name (scoped or unscoped), reject shell metacharacters
-          [[ "$PACKAGE_SCOPE" =~ ^@?[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] || {
-            echo "Error: Invalid package name format: $PACKAGE_SCOPE" >&2
-            exit 1
-          }
-          pnpm lerna publish from-package --scope "$PACKAGE_SCOPE" -y
