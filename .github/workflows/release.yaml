@@ -86,6 +86,14 @@ jobs:
 
       - name: Republish single package
         if: inputs.scope != ''
-        run: pnpm lerna publish from-package --scope ${{ inputs.scope }} -y
+        env:
+          PACKAGE_SCOPE: ${{ inputs.scope }}
+        run: |
+          # Validate package name (scoped or unscoped), reject shell metacharacters
+          [[ "$PACKAGE_SCOPE" =~ ^@?[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] || {
+            echo "Error: Invalid package name format: $PACKAGE_SCOPE" >&2
+            exit 1
+          }
+          pnpm lerna publish from-package --scope "$PACKAGE_SCOPE" -y
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
