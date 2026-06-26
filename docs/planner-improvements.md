@@ -3,7 +3,7 @@
 Five federation **correctness and parity** fixes, each spanning the Cosmo
 composition library (TypeScript) and/or the `graphql-go-tools` query planner (Go).
 Every fix is grounded in a decision record under [`adr/`](./adr), validated against the
-public [federation-gateway-audit](https://github.com/the federation-gateway-audit project/federation-gateway-audit),
+public federation-gateway-audit compatibility suite,
 and gated for zero plan-snapshot regression.
 
 This branch (`planner-improvements`) pairs with the `planner-improvements` branch in

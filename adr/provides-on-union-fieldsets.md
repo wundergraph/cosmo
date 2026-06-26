@@ -234,6 +234,6 @@ the explicit reject for scalar / enum / input-object parents is kept (negative t
 the relaxation is scoped to the `@provides` call path rather than silently widening `@key` and `@requires`,
 and the walker's existing union and inline-fragment branches still reject bare field selections on a union and inline fragments whose type condition is not a member of the union.
 
-There is no runtime or planner change,
-so there is no execution-path risk;
+The planner change is strictly gated to the union-`@provides` shape,
+so every graph that does not use a union-typed `@provides` plans byte-identically and carries no execution-path risk;
 the celestial snapshot run is the guard that confirms previously-composing graphs are unaffected.

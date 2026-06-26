@@ -110,7 +110,7 @@ query {
 HTTP 500, `internal server error`.
 The captured planner error is:
 
-```
+```text
 printOperation planner id: N: validation failed:
 internal: astvalidation selection set on path query.node.results is empty
 ```
