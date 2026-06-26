@@ -3480,7 +3480,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
-		t.Run("verify UTC_to_epochUnix combined with subgraph startTime", func(t *testing.T) {
+		t.Run("verify date combined with subgraph startTime", func(t *testing.T) {
 			t.Parallel()
 
 			serverStart := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -3491,13 +3491,13 @@ func TestFlakyAccessLogs(t *testing.T) {
 					{
 						Key: "server_start_epoch",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "UTC_to_epochUnix(subgraph.response.header.Get('X-Server-Start'))",
+							Expression: "date(subgraph.response.header.Get('X-Server-Start')).UnixMilli()",
 						},
 					},
 					{
 						Key: "subgraph_start_latency",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "(UTC_to_epochUnix(subgraph.response.header.Get('X-Server-Start')) - subgraph.request.startTime) / 1000",
+							Expression: "(date(subgraph.response.header.Get('X-Server-Start')).UnixMilli() - subgraph.request.startTime) / 1000",
 						},
 					},
 				},
@@ -3543,7 +3543,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						Key:     "server_start_epoch",
 						Default: "n/a",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "UTC_to_epochUnix(subgraph.response.header.Get('X-Absent-Header'))",
+							Expression: "date(subgraph.response.header.Get('X-Absent-Header')).Unix()",
 						},
 					},
 				},

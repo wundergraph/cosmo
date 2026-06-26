@@ -175,8 +175,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	exprCtx.Subgraph.Name = ds.Name
 	exprCtx.Subgraph.Request.Error = WrapExprError(responseInfo.Err)
 	// Expose the start of the subgraph latency measurement (OnLoad) as a Unix epoch in
-	// milliseconds so expressions can combine it with timestamps parsed from subgraph response
-	// headers via UTC_to_epochUnix.
+	// milliseconds
 	exprCtx.Subgraph.Request.StartTime = hookCtx.startTime.UnixMilli()
 	// Expose the subgraph response headers (after response header rules have been applied above)
 	// so expressions can read them, e.g. subgraph.response.header.Get('X-Custom-Header'). A nil

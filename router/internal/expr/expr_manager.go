@@ -3,13 +3,14 @@ package expr
 import (
 	"errors"
 	"fmt"
+	"reflect"
+
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/ast"
 	"github.com/expr-lang/expr/checker"
 	"github.com/expr-lang/expr/conf"
 	"github.com/expr-lang/expr/parser"
 	"github.com/expr-lang/expr/vm"
-	"reflect"
 )
 
 type Manager struct {
@@ -51,7 +52,6 @@ func (c *Manager) compileOptions(extra ...expr.Option) []expr.Option {
 	options := []expr.Option{
 		expr.Env(Context{}),
 	}
-	options = append(options, customFunctions()...)
 	options = append(options, extra...)
 
 	for _, visitor := range c.VisitorManager.globalVisitors {

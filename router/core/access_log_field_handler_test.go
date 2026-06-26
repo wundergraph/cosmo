@@ -2,14 +2,15 @@ package core
 
 import (
 	"errors"
+	"net/http"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.uber.org/zap"
-	"net/http"
-	"testing"
 )
 
 func TestAccessLogsFieldHandler(t *testing.T) {
@@ -134,8 +135,8 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 
 		manager := expr.CreateNewExprManager()
 		// Compiles successfully but errors at request time because the header is absent,
-		// so UTC_to_epochUnix receives an empty string.
-		expression, err := manager.CompileAnyExpression("UTC_to_epochUnix(subgraph.response.header.Get('X-Missing'))")
+		// so date receives an empty string.
+		expression, err := manager.CompileAnyExpression("date(subgraph.response.header.Get('X-Missing'))")
 		require.NoError(t, err)
 
 		exprAttributes := []requestlogger.ExpressionAttribute{
@@ -167,7 +168,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 		logger := zap.NewNop()
 
 		manager := expr.CreateNewExprManager()
-		expression, err := manager.CompileAnyExpression("UTC_to_epochUnix(subgraph.response.header.Get('X-Missing'))")
+		expression, err := manager.CompileAnyExpression("date(subgraph.response.header.Get('X-Missing'))")
 		require.NoError(t, err)
 
 		exprAttributes := []requestlogger.ExpressionAttribute{

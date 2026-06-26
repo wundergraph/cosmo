@@ -161,7 +161,7 @@ func processExpressionAttributes(
 		if err != nil {
 			// Expression resolution failures at request time are almost always driven by
 			// request/response data (e.g. an absent or non-numeric header passed to
-			// UTC_to_epochUnix/float), not by a broken configuration: invalid expressions are
+			// date/float), not by a broken configuration: invalid expressions are
 			// rejected at startup during compilation. Log at debug to avoid flooding the access
 			// log on the hot path, and fall back to the configured default so the field still
 			// behaves as documented (the field is skipped when no default is set).

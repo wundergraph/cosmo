@@ -155,9 +155,9 @@ type SubgraphRequest struct {
 	ClientTrace ClientTrace `expr:"clientTrace"`
 	// StartTime is the Unix epoch in milliseconds at which the router started the subgraph
 	// fetch. It marks the start of the subgraph "latency" measurement reported in the
-	// subgraph access log. It is expressed in the same unit as UTC_to_epochUnix so the two can
+	// subgraph access log. It is expressed in the same unit as datetime so the two can
 	// be combined directly, e.g. to compute how long it took the subgraph to start processing:
-	// (UTC_to_epochUnix(subgraph.response.header.Get('X-Server-Start')) - subgraph.request.startTime) / 1000
+	// (datetime(subgraph.response.header.Get('X-Server-Start')).UnixMilli() - subgraph.request.startTime) / 1000
 	StartTime int64 `expr:"startTime"`
 }
 
