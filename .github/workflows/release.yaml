@@ -89,4 +89,3 @@ jobs:
         run: pnpm lerna publish from-package --scope ${{ inputs.scope }} -y
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
