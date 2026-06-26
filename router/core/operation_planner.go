@@ -20,11 +20,11 @@ import (
 type planWithMetaData struct {
 	preparedPlan       plan.Plan
 	operationDocument  *ast.Document
-	typeFieldUsageInfo                []*graphqlschemausage.TypeFieldUsageInfo
-	argumentUsageInfo                 []*graphqlmetricsv1.ArgumentUsageInfo
-	content                           string
-	operationName                     string
-	planningDuration                  time.Duration
+	typeFieldUsageInfo []*graphqlschemausage.TypeFieldUsageInfo
+	argumentUsageInfo  []*graphqlmetricsv1.ArgumentUsageInfo
+	content            string
+	operationName      string
+	planningDuration   time.Duration
 }
 
 type OperationPlanner struct {
