@@ -230,6 +230,9 @@ func (c *Cache[V]) Close() {
 			c.entries.Delete(key)
 			return true
 		})
+
 		c.size = 0
+		c.minKey = 0
+		c.minDur = 0
 	})
 }
