@@ -1,59 +1,51 @@
 {
-  "$typeName": "wg.cosmo.node.v1.GRPCMapping",
   "version": 1,
   "service": "CoursesService",
   "operationMappings": [
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "courses",
       "mapped": "QueryCourses",
       "request": "QueryCoursesRequest",
       "response": "QueryCoursesResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "course",
       "mapped": "QueryCourse",
       "request": "QueryCourseRequest",
       "response": "QueryCourseResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "lessons",
       "mapped": "QueryLessons",
       "request": "QueryLessonsRequest",
       "response": "QueryLessonsResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "killCoursesService",
       "mapped": "QueryKillCoursesService",
       "request": "QueryKillCoursesServiceRequest",
       "response": "QueryKillCoursesServiceResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "throwErrorCourses",
       "mapped": "QueryThrowErrorCourses",
       "request": "QueryThrowErrorCoursesRequest",
       "response": "QueryThrowErrorCoursesResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 2,
+      "type": "OPERATION_TYPE_MUTATION",
       "original": "addCourse",
       "mapped": "MutationAddCourse",
       "request": "MutationAddCourseRequest",
       "response": "MutationAddCourseResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 2,
+      "type": "OPERATION_TYPE_MUTATION",
       "original": "addLesson",
       "mapped": "MutationAddLesson",
       "request": "MutationAddLessonRequest",
@@ -62,103 +54,82 @@
   ],
   "entityMappings": [
     {
-      "$typeName": "wg.cosmo.node.v1.EntityMapping",
       "typeName": "Employee",
       "kind": "entity",
       "key": "id",
       "rpc": "LookupEmployeeById",
       "request": "LookupEmployeeByIdRequest",
-      "response": "LookupEmployeeByIdResponse",
-      "requiredFieldMappings": []
+      "response": "LookupEmployeeByIdResponse"
     }
   ],
   "typeFieldMappings": [
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Query",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "courses",
-          "mapped": "courses",
-          "argumentMappings": []
+          "mapped": "courses"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "course",
           "mapped": "course",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "id",
               "mapped": "id"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "lessons",
           "mapped": "lessons",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "courseId",
               "mapped": "course_id"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "killCoursesService",
-          "mapped": "kill_courses_service",
-          "argumentMappings": []
+          "mapped": "kill_courses_service"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "throwErrorCourses",
-          "mapped": "throw_error_courses",
-          "argumentMappings": []
+          "mapped": "throw_error_courses"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Mutation",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "addCourse",
           "mapped": "add_course",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "title",
               "mapped": "title"
             },
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "instructorId",
               "mapped": "instructor_id"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "addLesson",
           "mapped": "add_lesson",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "courseId",
               "mapped": "course_id"
             },
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "title",
               "mapped": "title"
             },
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "order",
               "mapped": "order"
             }
@@ -167,102 +138,71 @@
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Course",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "title",
-          "mapped": "title",
-          "argumentMappings": []
+          "mapped": "title"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "instructor",
-          "mapped": "instructor",
-          "argumentMappings": []
+          "mapped": "instructor"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "lessons",
-          "mapped": "lessons",
-          "argumentMappings": []
+          "mapped": "lessons"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Lesson",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "courseId",
-          "mapped": "course_id",
-          "argumentMappings": []
+          "mapped": "course_id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "title",
-          "mapped": "title",
-          "argumentMappings": []
+          "mapped": "title"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "order",
-          "mapped": "order",
-          "argumentMappings": []
+          "mapped": "order"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "course",
-          "mapped": "course",
-          "argumentMappings": []
+          "mapped": "course"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Employee",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "taughtCourses",
-          "mapped": "taught_courses",
-          "argumentMappings": []
+          "mapped": "taught_courses"
         }
       ]
     }
-  ],
-  "enumMappings": [],
-  "resolveMappings": []
+  ]
 }

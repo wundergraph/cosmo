@@ -4,6 +4,8 @@ import { existsSync } from 'node:fs';
 import { basename, join, resolve } from 'pathe';
 import pc from 'picocolors';
 import { execa } from 'execa';
+import { toJsonString } from '@bufbuild/protobuf';
+import { GRPCMappingSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   compileGraphQLToMapping,
   compileGraphQLToProto,
@@ -556,7 +558,7 @@ export async function generateProtoAndMapping(pluginDir: string, protoOptions: P
     spinner.text = 'Generating mapping and proto files...';
 
     const mapping = compileGraphQLToMapping(schema, serviceName);
-    await writeFile(resolve(generatedDir, 'mapping.json'), JSON.stringify(mapping, null, 2));
+    await writeFile(resolve(generatedDir, 'mapping.json'), toJsonString(GRPCMappingSchema, mapping, { prettySpaces: 2 }));
 
     const proto = compileGraphQLToProto(schema, {
       serviceName,

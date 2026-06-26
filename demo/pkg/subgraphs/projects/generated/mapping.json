@@ -1,163 +1,142 @@
 {
-  "$typeName": "wg.cosmo.node.v1.GRPCMapping",
   "version": 1,
   "service": "ProjectsService",
   "operationMappings": [
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "projects",
       "mapped": "QueryProjects",
       "request": "QueryProjectsRequest",
       "response": "QueryProjectsResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "project",
       "mapped": "QueryProject",
       "request": "QueryProjectRequest",
       "response": "QueryProjectResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "projectStatuses",
       "mapped": "QueryProjectStatuses",
       "request": "QueryProjectStatusesRequest",
       "response": "QueryProjectStatusesResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "projectsByStatus",
       "mapped": "QueryProjectsByStatus",
       "request": "QueryProjectsByStatusRequest",
       "response": "QueryProjectsByStatusResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "projectResources",
       "mapped": "QueryProjectResources",
       "request": "QueryProjectResourcesRequest",
       "response": "QueryProjectResourcesResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "searchProjects",
       "mapped": "QuerySearchProjects",
       "request": "QuerySearchProjectsRequest",
       "response": "QuerySearchProjectsResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "milestones",
       "mapped": "QueryMilestones",
       "request": "QueryMilestonesRequest",
       "response": "QueryMilestonesResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "tasks",
       "mapped": "QueryTasks",
       "request": "QueryTasksRequest",
       "response": "QueryTasksResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "projectActivities",
       "mapped": "QueryProjectActivities",
       "request": "QueryProjectActivitiesRequest",
       "response": "QueryProjectActivitiesResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "projectTags",
       "mapped": "QueryProjectTags",
       "request": "QueryProjectTagsRequest",
       "response": "QueryProjectTagsResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "archivedProjects",
       "mapped": "QueryArchivedProjects",
       "request": "QueryArchivedProjectsRequest",
       "response": "QueryArchivedProjectsResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "tasksByPriority",
       "mapped": "QueryTasksByPriority",
       "request": "QueryTasksByPriorityRequest",
       "response": "QueryTasksByPriorityResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "resourceMatrix",
       "mapped": "QueryResourceMatrix",
       "request": "QueryResourceMatrixRequest",
       "response": "QueryResourceMatrixResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "killService",
       "mapped": "QueryKillService",
       "request": "QueryKillServiceRequest",
       "response": "QueryKillServiceResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "panic",
       "mapped": "QueryPanic",
       "request": "QueryPanicRequest",
       "response": "QueryPanicResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "nodesById",
       "mapped": "QueryNodesById",
       "request": "QueryNodesByIdRequest",
       "response": "QueryNodesByIdResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 2,
+      "type": "OPERATION_TYPE_MUTATION",
       "original": "addProject",
       "mapped": "MutationAddProject",
       "request": "MutationAddProjectRequest",
       "response": "MutationAddProjectResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 2,
+      "type": "OPERATION_TYPE_MUTATION",
       "original": "addMilestone",
       "mapped": "MutationAddMilestone",
       "request": "MutationAddMilestoneRequest",
       "response": "MutationAddMilestoneResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 2,
+      "type": "OPERATION_TYPE_MUTATION",
       "original": "addTask",
       "mapped": "MutationAddTask",
       "request": "MutationAddTaskRequest",
       "response": "MutationAddTaskResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 2,
+      "type": "OPERATION_TYPE_MUTATION",
       "original": "updateProjectStatus",
       "mapped": "MutationUpdateProjectStatus",
       "request": "MutationUpdateProjectStatusRequest",
@@ -166,37 +145,30 @@
   ],
   "entityMappings": [
     {
-      "$typeName": "wg.cosmo.node.v1.EntityMapping",
       "typeName": "Project",
       "kind": "entity",
       "key": "id",
       "rpc": "LookupProjectById",
       "request": "LookupProjectByIdRequest",
-      "response": "LookupProjectByIdResponse",
-      "requiredFieldMappings": []
+      "response": "LookupProjectByIdResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.EntityMapping",
       "typeName": "Milestone",
       "kind": "entity",
       "key": "id",
       "rpc": "LookupMilestoneById",
       "request": "LookupMilestoneByIdRequest",
-      "response": "LookupMilestoneByIdResponse",
-      "requiredFieldMappings": []
+      "response": "LookupMilestoneByIdResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.EntityMapping",
       "typeName": "Task",
       "kind": "entity",
       "key": "id",
       "rpc": "LookupTaskById",
       "request": "LookupTaskByIdRequest",
-      "response": "LookupTaskByIdResponse",
-      "requiredFieldMappings": []
+      "response": "LookupTaskByIdResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.EntityMapping",
       "typeName": "Employee",
       "kind": "entity",
       "key": "id",
@@ -205,276 +177,217 @@
       "response": "LookupEmployeeByIdResponse",
       "requiredFieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.RequiredFieldMapping",
+          "fieldMapping": {
+            "original": "taggedProjectSummary",
+            "mapped": "tagged_project_summary"
+          },
           "rpc": "RequireEmployeeTaggedProjectSummaryById",
           "request": "RequireEmployeeTaggedProjectSummaryByIdRequest",
-          "response": "RequireEmployeeTaggedProjectSummaryByIdResponse",
-          "fieldMapping": {
-            "$typeName": "wg.cosmo.node.v1.FieldMapping",
-            "original": "taggedProjectSummary",
-            "mapped": "tagged_project_summary",
-            "argumentMappings": []
-          }
+          "response": "RequireEmployeeTaggedProjectSummaryByIdResponse"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.RequiredFieldMapping",
-          "rpc": "RequireEmployeeFilteredProjectSummaryById",
-          "request": "RequireEmployeeFilteredProjectSummaryByIdRequest",
-          "response": "RequireEmployeeFilteredProjectSummaryByIdResponse",
           "fieldMapping": {
-            "$typeName": "wg.cosmo.node.v1.FieldMapping",
             "original": "filteredProjectSummary",
             "mapped": "filtered_project_summary",
             "argumentMappings": [
               {
-                "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
                 "original": "tag",
                 "mapped": "tag"
               }
             ]
-          }
+          },
+          "rpc": "RequireEmployeeFilteredProjectSummaryById",
+          "request": "RequireEmployeeFilteredProjectSummaryByIdRequest",
+          "response": "RequireEmployeeFilteredProjectSummaryByIdResponse"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.RequiredFieldMapping",
+          "fieldMapping": {
+            "original": "workItemInfo",
+            "mapped": "work_item_info"
+          },
           "rpc": "RequireEmployeeWorkItemInfoById",
           "request": "RequireEmployeeWorkItemInfoByIdRequest",
-          "response": "RequireEmployeeWorkItemInfoByIdResponse",
-          "fieldMapping": {
-            "$typeName": "wg.cosmo.node.v1.FieldMapping",
-            "original": "workItemInfo",
-            "mapped": "work_item_info",
-            "argumentMappings": []
-          }
+          "response": "RequireEmployeeWorkItemInfoByIdResponse"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.RequiredFieldMapping",
+          "fieldMapping": {
+            "original": "reviewReport",
+            "mapped": "review_report"
+          },
           "rpc": "RequireEmployeeReviewReportById",
           "request": "RequireEmployeeReviewReportByIdRequest",
-          "response": "RequireEmployeeReviewReportByIdResponse",
-          "fieldMapping": {
-            "$typeName": "wg.cosmo.node.v1.FieldMapping",
-            "original": "reviewReport",
-            "mapped": "review_report",
-            "argumentMappings": []
-          }
+          "response": "RequireEmployeeReviewReportByIdResponse"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.RequiredFieldMapping",
+          "fieldMapping": {
+            "original": "workSetupSummary",
+            "mapped": "work_setup_summary"
+          },
           "rpc": "RequireEmployeeWorkSetupSummaryById",
           "request": "RequireEmployeeWorkSetupSummaryByIdRequest",
-          "response": "RequireEmployeeWorkSetupSummaryByIdResponse",
-          "fieldMapping": {
-            "$typeName": "wg.cosmo.node.v1.FieldMapping",
-            "original": "workSetupSummary",
-            "mapped": "work_setup_summary",
-            "argumentMappings": []
-          }
+          "response": "RequireEmployeeWorkSetupSummaryByIdResponse"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.RequiredFieldMapping",
+          "fieldMapping": {
+            "original": "workItemHandlerInfo",
+            "mapped": "work_item_handler_info"
+          },
           "rpc": "RequireEmployeeWorkItemHandlerInfoById",
           "request": "RequireEmployeeWorkItemHandlerInfoByIdRequest",
-          "response": "RequireEmployeeWorkItemHandlerInfoByIdResponse",
-          "fieldMapping": {
-            "$typeName": "wg.cosmo.node.v1.FieldMapping",
-            "original": "workItemHandlerInfo",
-            "mapped": "work_item_handler_info",
-            "argumentMappings": []
-          }
+          "response": "RequireEmployeeWorkItemHandlerInfoByIdResponse"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.RequiredFieldMapping",
+          "fieldMapping": {
+            "original": "workItemSpecsInfo",
+            "mapped": "work_item_specs_info"
+          },
           "rpc": "RequireEmployeeWorkItemSpecsInfoById",
           "request": "RequireEmployeeWorkItemSpecsInfoByIdRequest",
-          "response": "RequireEmployeeWorkItemSpecsInfoByIdResponse",
-          "fieldMapping": {
-            "$typeName": "wg.cosmo.node.v1.FieldMapping",
-            "original": "workItemSpecsInfo",
-            "mapped": "work_item_specs_info",
-            "argumentMappings": []
-          }
+          "response": "RequireEmployeeWorkItemSpecsInfoByIdResponse"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.RequiredFieldMapping",
+          "fieldMapping": {
+            "original": "deepWorkItemInfo",
+            "mapped": "deep_work_item_info"
+          },
           "rpc": "RequireEmployeeDeepWorkItemInfoById",
           "request": "RequireEmployeeDeepWorkItemInfoByIdRequest",
-          "response": "RequireEmployeeDeepWorkItemInfoByIdResponse",
-          "fieldMapping": {
-            "$typeName": "wg.cosmo.node.v1.FieldMapping",
-            "original": "deepWorkItemInfo",
-            "mapped": "deep_work_item_info",
-            "argumentMappings": []
-          }
+          "response": "RequireEmployeeDeepWorkItemInfoByIdResponse"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.EntityMapping",
       "typeName": "Product",
       "kind": "entity",
       "key": "upc",
       "rpc": "LookupProductByUpc",
       "request": "LookupProductByUpcRequest",
-      "response": "LookupProductByUpcResponse",
-      "requiredFieldMappings": []
+      "response": "LookupProductByUpcResponse"
     }
   ],
   "typeFieldMappings": [
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Query",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projects",
-          "mapped": "projects",
-          "argumentMappings": []
+          "mapped": "projects"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "project",
           "mapped": "project",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "id",
               "mapped": "id"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projectStatuses",
-          "mapped": "project_statuses",
-          "argumentMappings": []
+          "mapped": "project_statuses"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projectsByStatus",
           "mapped": "projects_by_status",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "status",
               "mapped": "status"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projectResources",
           "mapped": "project_resources",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "projectId",
               "mapped": "project_id"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "searchProjects",
           "mapped": "search_projects",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "query",
               "mapped": "query"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "milestones",
           "mapped": "milestones",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "projectId",
               "mapped": "project_id"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "tasks",
           "mapped": "tasks",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "projectId",
               "mapped": "project_id"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projectActivities",
           "mapped": "project_activities",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "projectId",
               "mapped": "project_id"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projectTags",
-          "mapped": "project_tags",
-          "argumentMappings": []
+          "mapped": "project_tags"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "archivedProjects",
-          "mapped": "archived_projects",
-          "argumentMappings": []
+          "mapped": "archived_projects"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "tasksByPriority",
           "mapped": "tasks_by_priority",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "projectId",
               "mapped": "project_id"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "resourceMatrix",
           "mapped": "resource_matrix",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "projectId",
               "mapped": "project_id"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "killService",
-          "mapped": "kill_service",
-          "argumentMappings": []
+          "mapped": "kill_service"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "panic",
-          "mapped": "panic",
-          "argumentMappings": []
+          "mapped": "panic"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "nodesById",
           "mapped": "nodes_by_id",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "id",
               "mapped": "id"
             }
@@ -483,57 +396,47 @@
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Mutation",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "addProject",
           "mapped": "add_project",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "project",
               "mapped": "project"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "addMilestone",
           "mapped": "add_milestone",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "milestone",
               "mapped": "milestone"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "addTask",
           "mapped": "add_task",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "task",
               "mapped": "task"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "updateProjectStatus",
           "mapped": "update_project_status",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "projectId",
               "mapped": "project_id"
             },
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "status",
               "mapped": "status"
             }
@@ -542,428 +445,307 @@
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "ProjectInput",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "startDate",
-          "mapped": "start_date",
-          "argumentMappings": []
+          "mapped": "start_date"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "endDate",
-          "mapped": "end_date",
-          "argumentMappings": []
+          "mapped": "end_date"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "status",
-          "mapped": "status",
-          "argumentMappings": []
+          "mapped": "status"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "MilestoneInput",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projectId",
-          "mapped": "project_id",
-          "argumentMappings": []
+          "mapped": "project_id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "dueDate",
-          "mapped": "due_date",
-          "argumentMappings": []
+          "mapped": "due_date"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "status",
-          "mapped": "status",
-          "argumentMappings": []
+          "mapped": "status"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "TaskInput",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projectId",
-          "mapped": "project_id",
-          "argumentMappings": []
+          "mapped": "project_id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "assigneeId",
-          "mapped": "assignee_id",
-          "argumentMappings": []
+          "mapped": "assignee_id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "priority",
-          "mapped": "priority",
-          "argumentMappings": []
+          "mapped": "priority"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "status",
-          "mapped": "status",
-          "argumentMappings": []
+          "mapped": "status"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "estimatedHours",
-          "mapped": "estimated_hours",
-          "argumentMappings": []
+          "mapped": "estimated_hours"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Project",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "startDate",
-          "mapped": "start_date",
-          "argumentMappings": []
+          "mapped": "start_date"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "endDate",
-          "mapped": "end_date",
-          "argumentMappings": []
+          "mapped": "end_date"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "status",
-          "mapped": "status",
-          "argumentMappings": []
+          "mapped": "status"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "teamMembers",
-          "mapped": "team_members",
-          "argumentMappings": []
+          "mapped": "team_members"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "relatedProducts",
-          "mapped": "related_products",
-          "argumentMappings": []
+          "mapped": "related_products"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "milestoneIds",
-          "mapped": "milestone_ids",
-          "argumentMappings": []
+          "mapped": "milestone_ids"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "milestones",
-          "mapped": "milestones",
-          "argumentMappings": []
+          "mapped": "milestones"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "tasks",
-          "mapped": "tasks",
-          "argumentMappings": []
+          "mapped": "tasks"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "progress",
-          "mapped": "progress",
-          "argumentMappings": []
+          "mapped": "progress"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "tags",
-          "mapped": "tags",
-          "argumentMappings": []
+          "mapped": "tags"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "alternativeProjects",
-          "mapped": "alternative_projects",
-          "argumentMappings": []
+          "mapped": "alternative_projects"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "dependencies",
-          "mapped": "dependencies",
-          "argumentMappings": []
+          "mapped": "dependencies"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "resourceGroups",
-          "mapped": "resource_groups",
-          "argumentMappings": []
+          "mapped": "resource_groups"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "tasksByPhase",
-          "mapped": "tasks_by_phase",
-          "argumentMappings": []
+          "mapped": "tasks_by_phase"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "milestoneGroups",
-          "mapped": "milestone_groups",
-          "argumentMappings": []
+          "mapped": "milestone_groups"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "priorityMatrix",
-          "mapped": "priority_matrix",
-          "argumentMappings": []
+          "mapped": "priority_matrix"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "subProjects",
           "mapped": "sub_projects",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "includeArchived",
               "mapped": "include_archived"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "filteredTasks",
           "mapped": "filtered_tasks",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "status",
               "mapped": "status"
             },
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "priority",
               "mapped": "priority"
             },
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "limit",
               "mapped": "limit"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "completionRate",
           "mapped": "completion_rate",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "includeSubtasks",
               "mapped": "include_subtasks"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "estimatedDaysRemaining",
           "mapped": "estimated_days_remaining",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "fromDate",
               "mapped": "from_date"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "criticalDeadline",
           "mapped": "critical_deadline",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "withinDays",
               "mapped": "within_days"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "topPriorityItem",
           "mapped": "top_priority_item",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "category",
               "mapped": "category"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "taskCount",
-          "mapped": "task_count",
-          "argumentMappings": []
+          "mapped": "task_count"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "activeMilestoneCount",
-          "mapped": "active_milestone_count",
-          "argumentMappings": []
+          "mapped": "active_milestone_count"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Milestone",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projectId",
-          "mapped": "project_id",
-          "argumentMappings": []
+          "mapped": "project_id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "startDate",
-          "mapped": "start_date",
-          "argumentMappings": []
+          "mapped": "start_date"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "endDate",
-          "mapped": "end_date",
-          "argumentMappings": []
+          "mapped": "end_date"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "status",
-          "mapped": "status",
-          "argumentMappings": []
+          "mapped": "status"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "completionPercentage",
-          "mapped": "completion_percentage",
-          "argumentMappings": []
+          "mapped": "completion_percentage"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "dependencies",
-          "mapped": "dependencies",
-          "argumentMappings": []
+          "mapped": "dependencies"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "subtasks",
-          "mapped": "subtasks",
-          "argumentMappings": []
+          "mapped": "subtasks"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "reviewers",
-          "mapped": "reviewers",
-          "argumentMappings": []
+          "mapped": "reviewers"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "isAtRisk",
           "mapped": "is_at_risk",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "threshold",
               "mapped": "threshold"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "daysUntilDue",
           "mapped": "days_until_due",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "fromDate",
               "mapped": "from_date"
             }
@@ -972,130 +754,91 @@
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Task",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projectId",
-          "mapped": "project_id",
-          "argumentMappings": []
+          "mapped": "project_id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "milestoneId",
-          "mapped": "milestone_id",
-          "argumentMappings": []
+          "mapped": "milestone_id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "assigneeId",
-          "mapped": "assignee_id",
-          "argumentMappings": []
+          "mapped": "assignee_id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "priority",
-          "mapped": "priority",
-          "argumentMappings": []
+          "mapped": "priority"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "status",
-          "mapped": "status",
-          "argumentMappings": []
+          "mapped": "status"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "estimatedHours",
-          "mapped": "estimated_hours",
-          "argumentMappings": []
+          "mapped": "estimated_hours"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "actualHours",
-          "mapped": "actual_hours",
-          "argumentMappings": []
+          "mapped": "actual_hours"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "createdAt",
-          "mapped": "created_at",
-          "argumentMappings": []
+          "mapped": "created_at"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "completedAt",
-          "mapped": "completed_at",
-          "argumentMappings": []
+          "mapped": "completed_at"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "labels",
-          "mapped": "labels",
-          "argumentMappings": []
+          "mapped": "labels"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "subtasks",
-          "mapped": "subtasks",
-          "argumentMappings": []
+          "mapped": "subtasks"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "dependencies",
-          "mapped": "dependencies",
-          "argumentMappings": []
+          "mapped": "dependencies"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "attachmentUrls",
-          "mapped": "attachment_urls",
-          "argumentMappings": []
+          "mapped": "attachment_urls"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "reviewerIds",
-          "mapped": "reviewer_ids",
-          "argumentMappings": []
+          "mapped": "reviewer_ids"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "isBlocked",
           "mapped": "is_blocked",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "checkDependencies",
               "mapped": "check_dependencies"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "totalEffort",
           "mapped": "total_effort",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "includeSubtasks",
               "mapped": "include_subtasks"
             }
@@ -1104,590 +847,433 @@
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "ProjectUpdate",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projectId",
-          "mapped": "project_id",
-          "argumentMappings": []
+          "mapped": "project_id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "updatedById",
-          "mapped": "updated_by_id",
-          "argumentMappings": []
+          "mapped": "updated_by_id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "updateType",
-          "mapped": "update_type",
-          "argumentMappings": []
+          "mapped": "update_type"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "timestamp",
-          "mapped": "timestamp",
-          "argumentMappings": []
+          "mapped": "timestamp"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "metadata",
-          "mapped": "metadata",
-          "argumentMappings": []
+          "mapped": "metadata"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "TechnicalWorkItem",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "priority",
-          "mapped": "priority",
-          "argumentMappings": []
+          "mapped": "priority"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "codeCount",
-          "mapped": "code_count",
-          "argumentMappings": []
+          "mapped": "code_count"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "handler",
-          "mapped": "handler",
-          "argumentMappings": []
+          "mapped": "handler"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "specs",
-          "mapped": "specs",
-          "argumentMappings": []
+          "mapped": "specs"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "ManagementWorkItem",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "priority",
-          "mapped": "priority",
-          "argumentMappings": []
+          "mapped": "priority"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "teamSize",
-          "mapped": "team_size",
-          "argumentMappings": []
+          "mapped": "team_size"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "handler",
-          "mapped": "handler",
-          "argumentMappings": []
+          "mapped": "handler"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "specs",
-          "mapped": "specs",
-          "argumentMappings": []
+          "mapped": "specs"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "WorkItemHandler",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "assignedItem",
-          "mapped": "assigned_item",
-          "argumentMappings": []
+          "mapped": "assigned_item"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "TechnicalSpecs",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "complexity",
-          "mapped": "complexity",
-          "argumentMappings": []
+          "mapped": "complexity"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "metrics",
-          "mapped": "metrics",
-          "argumentMappings": []
+          "mapped": "metrics"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "ManagementSpecs",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "scope",
-          "mapped": "scope",
-          "argumentMappings": []
+          "mapped": "scope"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "metrics",
-          "mapped": "metrics",
-          "argumentMappings": []
+          "mapped": "metrics"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "WorkMetrics",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "score",
-          "mapped": "score",
-          "argumentMappings": []
+          "mapped": "score"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "efficiency",
-          "mapped": "efficiency",
-          "argumentMappings": []
+          "mapped": "efficiency"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "WorkApproval",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "comment",
-          "mapped": "comment",
-          "argumentMappings": []
+          "mapped": "comment"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "approvedAt",
-          "mapped": "approved_at",
-          "argumentMappings": []
+          "mapped": "approved_at"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "WorkRejection",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "reason",
-          "mapped": "reason",
-          "argumentMappings": []
+          "mapped": "reason"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "rejectionCode",
-          "mapped": "rejection_code",
-          "argumentMappings": []
+          "mapped": "rejection_code"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "WorkSetup",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "priority",
-          "mapped": "priority",
-          "argumentMappings": []
+          "mapped": "priority"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "primaryItem",
-          "mapped": "primary_item",
-          "argumentMappings": []
+          "mapped": "primary_item"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Employee",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "expertise",
-          "mapped": "expertise",
-          "argumentMappings": []
+          "mapped": "expertise"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projects",
-          "mapped": "projects",
-          "argumentMappings": []
+          "mapped": "projects"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "assignedTasks",
-          "mapped": "assigned_tasks",
-          "argumentMappings": []
+          "mapped": "assigned_tasks"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "completedTasks",
-          "mapped": "completed_tasks",
-          "argumentMappings": []
+          "mapped": "completed_tasks"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "skills",
-          "mapped": "skills",
-          "argumentMappings": []
+          "mapped": "skills"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "certifications",
-          "mapped": "certifications",
-          "argumentMappings": []
+          "mapped": "certifications"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projectHistory",
-          "mapped": "project_history",
-          "argumentMappings": []
+          "mapped": "project_history"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "taggedProjectSummary",
-          "mapped": "tagged_project_summary",
-          "argumentMappings": []
+          "mapped": "tagged_project_summary"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "filteredProjectSummary",
           "mapped": "filtered_project_summary",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "tag",
               "mapped": "tag"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "primaryWorkItem",
-          "mapped": "primary_work_item",
-          "argumentMappings": []
+          "mapped": "primary_work_item"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "lastWorkReview",
-          "mapped": "last_work_review",
-          "argumentMappings": []
+          "mapped": "last_work_review"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "workSetup",
-          "mapped": "work_setup",
-          "argumentMappings": []
+          "mapped": "work_setup"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "workItemInfo",
-          "mapped": "work_item_info",
-          "argumentMappings": []
+          "mapped": "work_item_info"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "reviewReport",
-          "mapped": "review_report",
-          "argumentMappings": []
+          "mapped": "review_report"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "workSetupSummary",
-          "mapped": "work_setup_summary",
-          "argumentMappings": []
+          "mapped": "work_setup_summary"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "workItemHandlerInfo",
-          "mapped": "work_item_handler_info",
-          "argumentMappings": []
+          "mapped": "work_item_handler_info"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "workItemSpecsInfo",
-          "mapped": "work_item_specs_info",
-          "argumentMappings": []
+          "mapped": "work_item_specs_info"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "deepWorkItemInfo",
-          "mapped": "deep_work_item_info",
-          "argumentMappings": []
+          "mapped": "deep_work_item_info"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "currentWorkload",
           "mapped": "current_workload",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "includeCompleted",
               "mapped": "include_completed"
             },
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "projectId",
               "mapped": "project_id"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "averageTaskCompletionDays",
           "mapped": "average_task_completion_days",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "projectId",
               "mapped": "project_id"
             },
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "priority",
               "mapped": "priority"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "totalProjectCount",
-          "mapped": "total_project_count",
-          "argumentMappings": []
+          "mapped": "total_project_count"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Product",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "upc",
-          "mapped": "upc",
-          "argumentMappings": []
+          "mapped": "upc"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "projects",
-          "mapped": "projects",
-          "argumentMappings": []
+          "mapped": "projects"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "featureMatrix",
-          "mapped": "feature_matrix",
-          "argumentMappings": []
+          "mapped": "feature_matrix"
         }
       ]
     }
   ],
   "enumMappings": [
     {
-      "$typeName": "wg.cosmo.node.v1.EnumMapping",
       "type": "ProjectStatus",
       "values": [
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "PLANNING",
           "mapped": "PROJECT_STATUS_PLANNING"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "ACTIVE",
           "mapped": "PROJECT_STATUS_ACTIVE"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "COMPLETED",
           "mapped": "PROJECT_STATUS_COMPLETED"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "ON_HOLD",
           "mapped": "PROJECT_STATUS_ON_HOLD"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.EnumMapping",
       "type": "MilestoneStatus",
       "values": [
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "PENDING",
           "mapped": "MILESTONE_STATUS_PENDING"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "IN_PROGRESS",
           "mapped": "MILESTONE_STATUS_IN_PROGRESS"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "COMPLETED",
           "mapped": "MILESTONE_STATUS_COMPLETED"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "DELAYED",
           "mapped": "MILESTONE_STATUS_DELAYED"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.EnumMapping",
       "type": "TaskStatus",
       "values": [
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "TODO",
           "mapped": "TASK_STATUS_TODO"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "IN_PROGRESS",
           "mapped": "TASK_STATUS_IN_PROGRESS"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "REVIEW",
           "mapped": "TASK_STATUS_REVIEW"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "COMPLETED",
           "mapped": "TASK_STATUS_COMPLETED"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "BLOCKED",
           "mapped": "TASK_STATUS_BLOCKED"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.EnumMapping",
       "type": "TaskPriority",
       "values": [
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "LOW",
           "mapped": "TASK_PRIORITY_LOW"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "MEDIUM",
           "mapped": "TASK_PRIORITY_MEDIUM"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "HIGH",
           "mapped": "TASK_PRIORITY_HIGH"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "URGENT",
           "mapped": "TASK_PRIORITY_URGENT"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.EnumMapping",
       "type": "ProjectUpdateType",
       "values": [
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "STATUS_CHANGE",
           "mapped": "PROJECT_UPDATE_TYPE_STATUS_CHANGE"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "MILESTONE_ADDED",
           "mapped": "PROJECT_UPDATE_TYPE_MILESTONE_ADDED"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "TASK_ASSIGNED",
           "mapped": "PROJECT_UPDATE_TYPE_TASK_ASSIGNED"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "PROGRESS_UPDATE",
           "mapped": "PROJECT_UPDATE_TYPE_PROGRESS_UPDATE"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.EnumValueMapping",
           "original": "TEAM_CHANGE",
           "mapped": "PROJECT_UPDATE_TYPE_TEAM_CHANGE"
         }
@@ -1696,351 +1282,287 @@
   ],
   "resolveMappings": [
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
-      "rpc": "ResolveProjectSubProjects",
-      "request": "ResolveProjectSubProjectsRequest",
-      "response": "ResolveProjectSubProjectsResponse",
+      "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
         "type": "Project",
         "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "subProjects",
           "mapped": "sub_projects",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "includeArchived",
               "mapped": "include_archived"
             }
           ]
         }
-      }
+      },
+      "rpc": "ResolveProjectSubProjects",
+      "request": "ResolveProjectSubProjectsRequest",
+      "response": "ResolveProjectSubProjectsResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
-      "rpc": "ResolveProjectFilteredTasks",
-      "request": "ResolveProjectFilteredTasksRequest",
-      "response": "ResolveProjectFilteredTasksResponse",
+      "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
         "type": "Project",
         "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "filteredTasks",
           "mapped": "filtered_tasks",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "status",
               "mapped": "status"
             },
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "priority",
               "mapped": "priority"
             },
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "limit",
               "mapped": "limit"
             }
           ]
         }
-      }
+      },
+      "rpc": "ResolveProjectFilteredTasks",
+      "request": "ResolveProjectFilteredTasksRequest",
+      "response": "ResolveProjectFilteredTasksResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
-      "rpc": "ResolveProjectCompletionRate",
-      "request": "ResolveProjectCompletionRateRequest",
-      "response": "ResolveProjectCompletionRateResponse",
+      "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
         "type": "Project",
         "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "completionRate",
           "mapped": "completion_rate",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "includeSubtasks",
               "mapped": "include_subtasks"
             }
           ]
         }
-      }
+      },
+      "rpc": "ResolveProjectCompletionRate",
+      "request": "ResolveProjectCompletionRateRequest",
+      "response": "ResolveProjectCompletionRateResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
-      "rpc": "ResolveProjectEstimatedDaysRemaining",
-      "request": "ResolveProjectEstimatedDaysRemainingRequest",
-      "response": "ResolveProjectEstimatedDaysRemainingResponse",
+      "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
         "type": "Project",
         "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "estimatedDaysRemaining",
           "mapped": "estimated_days_remaining",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "fromDate",
               "mapped": "from_date"
             }
           ]
         }
-      }
+      },
+      "rpc": "ResolveProjectEstimatedDaysRemaining",
+      "request": "ResolveProjectEstimatedDaysRemainingRequest",
+      "response": "ResolveProjectEstimatedDaysRemainingResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
-      "rpc": "ResolveProjectCriticalDeadline",
-      "request": "ResolveProjectCriticalDeadlineRequest",
-      "response": "ResolveProjectCriticalDeadlineResponse",
+      "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
         "type": "Project",
         "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "criticalDeadline",
           "mapped": "critical_deadline",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "withinDays",
               "mapped": "within_days"
             }
           ]
         }
-      }
+      },
+      "rpc": "ResolveProjectCriticalDeadline",
+      "request": "ResolveProjectCriticalDeadlineRequest",
+      "response": "ResolveProjectCriticalDeadlineResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
-      "rpc": "ResolveProjectTopPriorityItem",
-      "request": "ResolveProjectTopPriorityItemRequest",
-      "response": "ResolveProjectTopPriorityItemResponse",
+      "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
         "type": "Project",
         "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "topPriorityItem",
           "mapped": "top_priority_item",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "category",
               "mapped": "category"
             }
           ]
         }
-      }
+      },
+      "rpc": "ResolveProjectTopPriorityItem",
+      "request": "ResolveProjectTopPriorityItemRequest",
+      "response": "ResolveProjectTopPriorityItemResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "taskCount",
+          "mapped": "task_count"
+        }
+      },
       "rpc": "ResolveProjectTaskCount",
       "request": "ResolveProjectTaskCountRequest",
-      "response": "ResolveProjectTaskCountResponse",
-      "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
-        "type": "Project",
-        "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
-          "original": "taskCount",
-          "mapped": "task_count",
-          "argumentMappings": []
-        }
-      }
+      "response": "ResolveProjectTaskCountResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "activeMilestoneCount",
+          "mapped": "active_milestone_count"
+        }
+      },
       "rpc": "ResolveProjectActiveMilestoneCount",
       "request": "ResolveProjectActiveMilestoneCountRequest",
-      "response": "ResolveProjectActiveMilestoneCountResponse",
-      "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
-        "type": "Project",
-        "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
-          "original": "activeMilestoneCount",
-          "mapped": "active_milestone_count",
-          "argumentMappings": []
-        }
-      }
+      "response": "ResolveProjectActiveMilestoneCountResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
-      "rpc": "ResolveMilestoneIsAtRisk",
-      "request": "ResolveMilestoneIsAtRiskRequest",
-      "response": "ResolveMilestoneIsAtRiskResponse",
+      "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
         "type": "Milestone",
         "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "isAtRisk",
           "mapped": "is_at_risk",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "threshold",
               "mapped": "threshold"
             }
           ]
         }
-      }
+      },
+      "rpc": "ResolveMilestoneIsAtRisk",
+      "request": "ResolveMilestoneIsAtRiskRequest",
+      "response": "ResolveMilestoneIsAtRiskResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
-      "rpc": "ResolveMilestoneDaysUntilDue",
-      "request": "ResolveMilestoneDaysUntilDueRequest",
-      "response": "ResolveMilestoneDaysUntilDueResponse",
+      "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
         "type": "Milestone",
         "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "daysUntilDue",
           "mapped": "days_until_due",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "fromDate",
               "mapped": "from_date"
             }
           ]
         }
-      }
+      },
+      "rpc": "ResolveMilestoneDaysUntilDue",
+      "request": "ResolveMilestoneDaysUntilDueRequest",
+      "response": "ResolveMilestoneDaysUntilDueResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
-      "rpc": "ResolveTaskIsBlocked",
-      "request": "ResolveTaskIsBlockedRequest",
-      "response": "ResolveTaskIsBlockedResponse",
+      "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
         "type": "Task",
         "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "isBlocked",
           "mapped": "is_blocked",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "checkDependencies",
               "mapped": "check_dependencies"
             }
           ]
         }
-      }
+      },
+      "rpc": "ResolveTaskIsBlocked",
+      "request": "ResolveTaskIsBlockedRequest",
+      "response": "ResolveTaskIsBlockedResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
-      "rpc": "ResolveTaskTotalEffort",
-      "request": "ResolveTaskTotalEffortRequest",
-      "response": "ResolveTaskTotalEffortResponse",
+      "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
         "type": "Task",
         "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "totalEffort",
           "mapped": "total_effort",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "includeSubtasks",
               "mapped": "include_subtasks"
             }
           ]
         }
-      }
+      },
+      "rpc": "ResolveTaskTotalEffort",
+      "request": "ResolveTaskTotalEffortRequest",
+      "response": "ResolveTaskTotalEffortResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
-      "rpc": "ResolveEmployeeCurrentWorkload",
-      "request": "ResolveEmployeeCurrentWorkloadRequest",
-      "response": "ResolveEmployeeCurrentWorkloadResponse",
+      "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
         "type": "Employee",
         "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "currentWorkload",
           "mapped": "current_workload",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "includeCompleted",
               "mapped": "include_completed"
             },
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "projectId",
               "mapped": "project_id"
             }
           ]
         }
-      }
+      },
+      "rpc": "ResolveEmployeeCurrentWorkload",
+      "request": "ResolveEmployeeCurrentWorkloadRequest",
+      "response": "ResolveEmployeeCurrentWorkloadResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
-      "rpc": "ResolveEmployeeAverageTaskCompletionDays",
-      "request": "ResolveEmployeeAverageTaskCompletionDaysRequest",
-      "response": "ResolveEmployeeAverageTaskCompletionDaysResponse",
+      "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
         "type": "Employee",
         "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "averageTaskCompletionDays",
           "mapped": "average_task_completion_days",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "projectId",
               "mapped": "project_id"
             },
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "priority",
               "mapped": "priority"
             }
           ]
         }
-      }
+      },
+      "rpc": "ResolveEmployeeAverageTaskCompletionDays",
+      "request": "ResolveEmployeeAverageTaskCompletionDaysRequest",
+      "response": "ResolveEmployeeAverageTaskCompletionDaysResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.LookupMapping",
-      "type": 1,
-      "rpc": "ResolveEmployeeTotalProjectCount",
-      "request": "ResolveEmployeeTotalProjectCountRequest",
-      "response": "ResolveEmployeeTotalProjectCountResponse",
+      "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
-        "$typeName": "wg.cosmo.node.v1.LookupFieldMapping",
         "type": "Employee",
         "fieldMapping": {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "totalProjectCount",
-          "mapped": "total_project_count",
-          "argumentMappings": []
+          "mapped": "total_project_count"
         }
-      }
+      },
+      "rpc": "ResolveEmployeeTotalProjectCount",
+      "request": "ResolveEmployeeTotalProjectCountRequest",
+      "response": "ResolveEmployeeTotalProjectCountResponse"
     }
   ]
 }
