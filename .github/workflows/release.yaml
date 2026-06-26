@@ -2,6 +2,11 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      scope:
+        description: 'Package to republish (e.g. wgc). Leave empty for a full release.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -42,11 +47,6 @@ jobs:
 
       - uses: ./.github/actions/node
 
-      - run: npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
-        shell: bash
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Install
         run: pnpm install --frozen-lockfile
 
@@ -60,6 +60,7 @@ jobs:
         # commits and bumps CHANGELOG.md and package.json files, but does not
         # publish anything.
       - name: Generate next version (dry-run)
+        if: inputs.scope == ''
         run: pnpm lerna version --ignore-scripts --dry-run --yes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -70,14 +71,22 @@ jobs:
 
         # Reset dry-run changes to let publish do the real thing for the release
       - name: Revert changes
+        if: inputs.scope == ''
         run: git reset --hard
 
       - name: Publish packages & Create Github Releases
+        if: inputs.scope == ''
         run: |
           git config --global user.email "bot@wundergraph.com"
           git config --global user.name "hardworker-bot"
           pnpm whoami
           pnpm release
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Republish single package
+        if: inputs.scope != ''
+        run: pnpm lerna publish from-package --scope ${{ inputs.scope }} -y
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
