@@ -681,7 +681,7 @@ type graphMux struct {
 	mux    *chi.Mux
 	reused atomic.Bool
 
-	planCacheOnEvictEnabled atomic.Bool
+	planCacheHookEnabled atomic.Bool
 
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
 	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
@@ -723,12 +723,12 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			BufferItems:        64,
 		}
 		if srv.cacheWarmup != nil && srv.cacheWarmup.Enabled && srv.cacheWarmup.InMemoryFallback {
-			s.planCacheOnEvictEnabled.Store(true)
+			s.planCacheHookEnabled.Store(true)
 			planCacheConfig.OnEvict = func(item *ristretto.Item[*planWithMetaData]) {
 				// This could be called before planFallbackCache is set, but it's not a problem
 				// because there is a nil guard inside, as well as items should not really be evicted
 				// on startup
-				if !s.planCacheOnEvictEnabled.Load() {
+				if !s.planCacheHookEnabled.Load() {
 					return
 				}
 				s.planFallbackCache.Set(item.Key, item.Value, item.Value.planningDuration)
@@ -967,12 +967,11 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	// cancel the graph muxes context to close its resources like websocket connections, resolvers, etc.
 	s.cancel()
 
-	// ristretto Close() invokes OnEvict for every entry; skip slow-cache migration during shutdown.
-	s.planCacheOnEvictEnabled.Store(false)
-	if s.planFallbackCache != nil {
-		s.planFallbackCache.Wait()
-	}
+	// Bypass ristretto OnEvict hook, to avoid it migrating plan caches into slowplancache.
+	// This is not meant to run on graph mux shutdown.
+	s.planCacheHookEnabled.Store(false)
 	s.planCache.Close()
+
 	s.planFallbackCache.Close()
 	s.persistedOperationCache.Close()
 	s.normalizationCache.Close()
