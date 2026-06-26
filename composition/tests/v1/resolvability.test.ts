@@ -751,6 +751,66 @@ describe('Field resolvability tests', () => {
     ]);
   });
 
+  test('that a compound key remains unresolvable when a missing sibling key member is external', () => {
+    const fieldPath = 'query.vehicle';
+    const rootFieldData = newRootFieldData(QUERY, 'vehicle', new Set<SubgraphName>([externalCompoundSource.name]));
+    const entityAncestors: EntityAncestorCollection = {
+      fieldSetsByTargetSubgraphName: new Map<SubgraphName, Set<string>>([
+        [externalCompoundBridge.name, new Set<string>(['id', 'code id'])],
+        [externalCompoundSource.name, new Set<string>(['id'])],
+        [externalCompoundTarget.name, new Set<string>(['code id'])],
+      ]),
+      sourceSubgraphNamesBySatisfiedFieldSet: new Map<string, Array<SubgraphName>>([
+        ['id', [externalCompoundSource.name]],
+      ]),
+      subgraphNames: [externalCompoundSource.name],
+      typeName: 'Vehicle',
+    };
+    const codeFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<SubgraphName>([externalCompoundBridge.name]),
+      fieldName: 'code',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: true,
+        name: 'code',
+      } as GraphFieldData),
+      subgraphNames: new Set<SubgraphName>([externalCompoundBridge.name, externalCompoundTarget.name]),
+      typeName: 'Vehicle',
+    };
+    const nameFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<SubgraphName>(),
+      fieldName: 'name',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: true,
+        name: 'name',
+      } as GraphFieldData),
+      subgraphNames: new Set<SubgraphName>([externalCompoundTarget.name]),
+      typeName: 'Vehicle',
+    };
+    const { errors } = federateSubgraphsFailure(
+      [externalCompoundSource, externalCompoundBridge, externalCompoundTarget],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+
+    expect(errors).toStrictEqual([
+      unresolvablePathError(
+        codeFieldData,
+        generateSharedResolvabilityErrorReasons({
+          entityAncestors,
+          rootFieldData,
+          unresolvableFieldData: codeFieldData,
+        }),
+      ),
+      unresolvablePathError(
+        nameFieldData,
+        generateSharedResolvabilityErrorReasons({
+          entityAncestors,
+          rootFieldData,
+          unresolvableFieldData: nameFieldData,
+        }),
+      ),
+    ]);
+  });
+
   test('that entity resolve chains (leapfrogging) are valid', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess(
       [subgraphAK, subgraphAL, subgraphAM],
@@ -3990,6 +4050,40 @@ const multiHopPricing = createSubgraph(
     type Category @key(fields: "id tag") {
       id: ID!
       tag: String!
+    }
+  `,
+);
+
+const externalCompoundSource = createSubgraph(
+  'source',
+  `
+    type Query {
+      vehicle: Vehicle!
+    }
+
+    type Vehicle @key(fields: "id") {
+      id: ID!
+    }
+  `,
+);
+
+const externalCompoundBridge = createSubgraph(
+  'bridge',
+  `
+    type Vehicle @key(fields: "id") @key(fields: "id code") {
+      id: ID!
+      code: String! @external
+    }
+  `,
+);
+
+const externalCompoundTarget = createSubgraph(
+  'target',
+  `
+    type Vehicle @key(fields: "id code") {
+      id: ID!
+      code: String!
+      name: String!
     }
   `,
 );

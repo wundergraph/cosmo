@@ -778,7 +778,7 @@ export function incompatibleTypeWithProvidesErrorMessage({
 }: IncompatibleTypeWithProvidesErrorMessageParams): string {
   return (
     ` A "@provides" directive is declared on field "${fieldCoords}" in subgraph "${subgraphName}".\n` +
-    ` However, the response type "${responseType}" is not an Object nor Interface.`
+    ` However, the response type "${responseType}" is not an Object, Interface, nor Union.`
   );
 }
 
