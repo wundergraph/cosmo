@@ -1009,6 +1009,13 @@
       "when": 1781559948131,
       "tag": "0143_naive_overlord",
       "breakpoints": true
+    },
+    {
+      "idx": 144,
+      "version": "7",
+      "when": 1781883363831,
+      "tag": "0144_jittery_master_chief",
+      "breakpoints": true
     }
   ]
 }
