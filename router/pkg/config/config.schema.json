@@ -4154,6 +4154,17 @@
               "default": false
             }
           }
+        },
+        "skip_null_variables_error": {
+          "type": "object",
+          "description": "Skips the error when a null variable is supplied, similar to Apollo Router.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     },
