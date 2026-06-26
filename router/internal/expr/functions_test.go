@@ -115,7 +115,7 @@ func TestSubgraphResponseHeaderExpression(t *testing.T) {
 
 		ctx := Context{}
 		ctx.Subgraph.Response.Header = ResponseHeaders{
-			Header: http.Header{"X-Ebay-Mesh-Gw-Duration": []string{"1234"}},
+			Header: http.Header{"X-Duration": []string{"1234"}},
 		}
 
 		result, err := ResolveAnyExpression(program, ctx)
@@ -146,7 +146,7 @@ func TestSubgraphResponseHeaderExpression(t *testing.T) {
 
 		ctx := Context{}
 		ctx.Subgraph.Response.Header = ResponseHeaders{
-			Header: http.Header{"X-Ebay-Mesh-Gw-Duration": []string{"1500"}},
+			Header: http.Header{"X-Duration": []string{"1500"}},
 		}
 
 		result, err := ResolveAnyExpression(program, ctx)

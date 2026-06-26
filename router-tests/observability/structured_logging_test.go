@@ -3257,7 +3257,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					{
 						Key: "gw_duration",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "subgraph.response.header.Get('X-Ebay-Mesh-Gw-Duration')",
+							Expression: "subgraph.response.header.Get('X-Duration')",
 						},
 					},
 				},
@@ -3269,7 +3269,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					Employees: testenv.SubgraphConfig{
 						Middleware: func(next http.Handler) http.Handler {
 							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-								w.Header().Set("X-Ebay-Mesh-Gw-Duration", "1500")
+								w.Header().Set("X-Duration", "1500")
 								next.ServeHTTP(w, r)
 							})
 						},
@@ -3288,16 +3288,16 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
-		t.Run("verify subgraph response header is usable in arithmetic", func(t *testing.T) {
+		t.Run("verify subgraph response header missing is ignored", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				SubgraphAccessLogsEnabled: true,
 				SubgraphAccessLogFields: []config.CustomAttribute{
 					{
-						Key: "gw_duration_clean",
+						Key: "gw_duration",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "float(subgraph.response.header.Get('X-Ebay-Mesh-Gw-Duration')) / 1000",
+							Expression: "subgraph.response.header.Get('X-Duration')",
 						},
 					},
 				},
@@ -3309,7 +3309,86 @@ func TestFlakyAccessLogs(t *testing.T) {
 					Employees: testenv.SubgraphConfig{
 						Middleware: func(next http.Handler) http.Handler {
 							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-								w.Header().Set("X-Ebay-Mesh-Gw-Duration", "1500")
+								w.Header().Set("X-Duration2", "1500")
+								next.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestContextMap := requestLog.All()[0].ContextMap()
+
+				_, ok := requestContextMap["gw_duration"]
+				require.False(t, ok)
+			})
+		})
+
+		t.Run("verify subgraph response header missing fallback is used", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "gw_duration",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.response.header.Get('X-Duration') == '' ? 'default' : subgraph.response.header.Get('X-Duration')",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(next http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("X-Duration2", "1500")
+								next.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestContextMap := requestLog.All()[0].ContextMap()
+
+				gwHeader, ok := requestContextMap["gw_duration"].(string)
+				require.True(t, ok)
+				require.Equal(t, "default", gwHeader)
+			})
+		})
+
+		t.Run("verify subgraph response header is usable in arithmetic", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "gw_duration_clean",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "float(subgraph.response.header.Get('X-Duration')) / 1000",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(next http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("X-Duration", "1500")
 								next.ServeHTTP(w, r)
 							})
 						},
@@ -3325,6 +3404,45 @@ func TestFlakyAccessLogs(t *testing.T) {
 				gwDuration, ok := requestContextMap["gw_duration_clean"].(float64)
 				require.True(t, ok)
 				require.Equal(t, 1.5, gwDuration)
+			})
+		})
+
+		t.Run("verify if subgraph response header is not usable in arithmetic nothing breaks", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "gw_duration_clean",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "float(subgraph.response.header.Get('X-Duration')) / 1000",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(next http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("X-Duration", "fifty")
+								next.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestContextMap := requestLog.All()[0].ContextMap()
+
+				_, ok := requestContextMap["gw_duration_clean"]
+				require.False(t, ok)
 			})
 		})
 
@@ -3373,13 +3491,13 @@ func TestFlakyAccessLogs(t *testing.T) {
 					{
 						Key: "server_start_epoch",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "UTC_to_epochUnix(subgraph.response.header.Get('X-Ebay-Mesh-Server-Start'))",
+							Expression: "UTC_to_epochUnix(subgraph.response.header.Get('X-Server-Start'))",
 						},
 					},
 					{
 						Key: "subgraph_start_latency",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "(UTC_to_epochUnix(subgraph.response.header.Get('X-Ebay-Mesh-Server-Start')) - subgraph.request.startTime) / 1000",
+							Expression: "(UTC_to_epochUnix(subgraph.response.header.Get('X-Server-Start')) - subgraph.request.startTime) / 1000",
 						},
 					},
 				},
@@ -3391,7 +3509,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					Employees: testenv.SubgraphConfig{
 						Middleware: func(next http.Handler) http.Handler {
 							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-								w.Header().Set("X-Ebay-Mesh-Server-Start", serverStart.Format(time.RFC3339))
+								w.Header().Set("X-Server-Start", serverStart.Format(time.RFC3339))
 								next.ServeHTTP(w, r)
 							})
 						},
