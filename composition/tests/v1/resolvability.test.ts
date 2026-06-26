@@ -622,6 +622,135 @@ describe('Field resolvability tests', () => {
     expect(result.success).toBe(true);
   });
 
+  test('that a compound key can be satisfied by gathering a missing nested entity member from one hop', () => {
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [multiHopCatalog, multiHopCollection, multiHopLink, multiHopPricing],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        type Category {
+          id: ID!
+          tag: String!
+        }
+
+        type Product {
+          category: Category
+          id: ID!
+          pid: ID!
+        }
+
+        type ProductList {
+          first: Product
+          products: [Product!]!
+          selected: Product
+        }
+
+        type Query {
+          topProducts: ProductList!
+        }
+      `,
+      ),
+    );
+  });
+
+  test('that a compound key remains unresolvable when a missing nested entity member is not gatherable', () => {
+    const fieldPath = 'query.topProducts';
+    const rootFieldData = newRootFieldData(QUERY, 'topProducts', new Set<string>(['catalog']));
+    const entityAncestorData: EntityAncestorData = {
+      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([
+        ['catalog', new Set<string>(['products { id }'])],
+        ['collection', new Set<string>(['products { id pid }'])],
+        ['pricing', new Set<string>(['products { category { id tag } id pid } selected { id }'])],
+      ]),
+      subgraphName: 'catalog',
+      typeName: 'ProductList',
+    };
+    const firstFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
+      fieldName: 'first',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: false,
+        name: 'first',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>(['collection']),
+      typeName: 'ProductList',
+    };
+    const selectedFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
+      fieldName: 'selected',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: false,
+        name: 'selected',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>(['collection', 'pricing']),
+      typeName: 'ProductList',
+    };
+    const pidFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
+      fieldName: 'pid',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(`${fieldPath}.products`), {
+        isLeaf: true,
+        name: 'pid',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>(['collection', 'pricing']),
+      typeName: 'Product',
+    };
+    const categoryFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
+      fieldName: 'category',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(`${fieldPath}.products`), {
+        isLeaf: false,
+        name: 'category',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>(['pricing']),
+      typeName: 'Product',
+    };
+
+    const { errors } = federateSubgraphsFailure(
+      [multiHopCatalog, multiHopCollection, multiHopLinkWithoutPid, multiHopPricing],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+
+    expect(errors).toStrictEqual([
+      unresolvablePathError(
+        firstFieldData,
+        generateResolvabilityErrorReasons({
+          entityAncestorData,
+          rootFieldData,
+          unresolvableFieldData: firstFieldData,
+        }),
+      ),
+      unresolvablePathError(
+        selectedFieldData,
+        generateResolvabilityErrorReasons({
+          entityAncestorData,
+          rootFieldData,
+          unresolvableFieldData: selectedFieldData,
+        }),
+      ),
+      unresolvablePathError(
+        pidFieldData,
+        generateResolvabilityErrorReasons({
+          entityAncestorData,
+          rootFieldData,
+          unresolvableFieldData: pidFieldData,
+        }),
+      ),
+      unresolvablePathError(
+        categoryFieldData,
+        generateResolvabilityErrorReasons({
+          entityAncestorData,
+          rootFieldData,
+          unresolvableFieldData: categoryFieldData,
+        }),
+      ),
+    ]);
+  });
+
   test('that entity resolve chains (leapfrogging) are valid', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess(
       [subgraphAK, subgraphAL, subgraphAM],
@@ -3787,6 +3916,80 @@ const kaac = createSubgraph(
     type EntityA @key(fields: "id") @shareable {
       id: ID!
       name: String!
+    }
+  `,
+);
+
+const multiHopCatalog = createSubgraph(
+  'catalog',
+  `
+    type Query {
+      topProducts: ProductList!
+    }
+
+    type ProductList @key(fields: "products { id }") {
+      products: [Product!]!
+    }
+
+    type Product @key(fields: "id") {
+      id: ID!
+    }
+  `,
+);
+
+const multiHopCollection = createSubgraph(
+  'collection',
+  `
+    type ProductList @key(fields: "products { id pid }") {
+      products: [Product!]!
+      first: Product @shareable
+      selected: Product @shareable
+    }
+
+    type Product @key(fields: "id pid") {
+      id: ID!
+      pid: ID!
+    }
+  `,
+);
+
+const multiHopLink = createSubgraph(
+  'link',
+  `
+    type Product @key(fields: "id") @key(fields: "id pid") {
+      id: ID!
+      pid: ID!
+    }
+  `,
+);
+
+const multiHopLinkWithoutPid = createSubgraph(
+  'link',
+  `
+    type Product @key(fields: "id") {
+      id: ID!
+    }
+  `,
+);
+
+const multiHopPricing = createSubgraph(
+  'pricing',
+  `
+    type ProductList
+      @key(fields: "products { id pid category { id tag } } selected { id }") {
+      products: [Product!]!
+      selected: Product @shareable
+    }
+
+    type Product @key(fields: "id pid") {
+      id: ID!
+      pid: ID!
+      category: Category
+    }
+
+    type Category @key(fields: "id tag") {
+      id: ID!
+      tag: String!
     }
   `,
 );

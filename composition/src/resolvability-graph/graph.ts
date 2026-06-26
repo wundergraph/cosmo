@@ -1,3 +1,4 @@
+import { Kind, type SelectionSetNode } from 'graphql';
 import { Edge, EntityDataNode, GraphNode, type GraphNodeOptions, RootNode } from './graph-nodes';
 import {
   generateEntityResolvabilityErrors,
@@ -6,6 +7,7 @@ import {
   getMultipliedRelativeOriginPaths,
   newRootFieldData,
 } from './utils/utils';
+import { safeParse } from '../ast/utils';
 import { type GraphFieldData, type RootTypeName } from '../utils/types';
 import { getFirstEntry, getOrThrowError, getValueOrDefault } from '../utils/utils';
 import {
@@ -31,11 +33,64 @@ import {
 } from './utils/types/params';
 import { type EntityAncestorCollection } from './utils/types/types';
 
+type FieldSetSelectionTree = Map<FieldName, FieldSetSelectionTree>;
+
+function newSelectionTree(): FieldSetSelectionTree {
+  return new Map<FieldName, FieldSetSelectionTree>();
+}
+
+function selectionSetToTree(selectionSet: SelectionSetNode): FieldSetSelectionTree {
+  const tree = newSelectionTree();
+  for (const selection of selectionSet.selections) {
+    if (selection.kind !== Kind.FIELD) {
+      continue;
+    }
+    tree.set(
+      selection.name.value,
+      selection.selectionSet ? selectionSetToTree(selection.selectionSet) : newSelectionTree(),
+    );
+  }
+  return tree;
+}
+
+function cloneSelectionTree(source: FieldSetSelectionTree): FieldSetSelectionTree {
+  const clone = newSelectionTree();
+  for (const [fieldName, sourceChild] of source) {
+    clone.set(fieldName, cloneSelectionTree(sourceChild));
+  }
+  return clone;
+}
+
+function mergeSelectionTree(target: FieldSetSelectionTree, source: FieldSetSelectionTree) {
+  for (const [fieldName, sourceChild] of source) {
+    const targetChild = target.get(fieldName);
+    if (targetChild) {
+      mergeSelectionTree(targetChild, sourceChild);
+      continue;
+    }
+    target.set(fieldName, cloneSelectionTree(sourceChild));
+  }
+}
+
+function selectionTreeContains(source: FieldSetSelectionTree, required: FieldSetSelectionTree): boolean {
+  for (const [fieldName, requiredChild] of required) {
+    const sourceChild = source.get(fieldName);
+    if (!sourceChild) {
+      return false;
+    }
+    if (requiredChild.size > 0 && !selectionTreeContains(sourceChild, requiredChild)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export class Graph {
   edgeId = -1;
   entityDataNodeByTypeName = new Map<TypeName, EntityDataNode>();
   nodeByNodeName = new Map<NodeName, GraphNode>();
   nodesByTypeName = new Map<TypeName, Array<GraphNode>>();
+  parsedSelectionTreeByFieldSet = new Map<string, FieldSetSelectionTree | undefined>();
   resolvedRootFieldNodeNames = new Set<NodeName>();
   rootNodeByTypeName = new Map<RootTypeName, RootNode>();
   subgraphName: SubgraphName = NOT_APPLICABLE;
@@ -101,6 +156,221 @@ export class Graph {
     return (this.walkerIndex += 1);
   }
 
+  getSelectionTreeForFieldSet(fieldSet: string): FieldSetSelectionTree | undefined {
+    if (this.parsedSelectionTreeByFieldSet.has(fieldSet)) {
+      return this.parsedSelectionTreeByFieldSet.get(fieldSet);
+    }
+    const { documentNode, error } = safeParse(`{ ${fieldSet} }`);
+    if (error || !documentNode) {
+      this.parsedSelectionTreeByFieldSet.set(fieldSet, undefined);
+      return undefined;
+    }
+    const operationDefinition = documentNode.definitions[0];
+    const tree =
+      operationDefinition?.kind === Kind.OPERATION_DEFINITION
+        ? selectionSetToTree(operationDefinition.selectionSet)
+        : undefined;
+    this.parsedSelectionTreeByFieldSet.set(fieldSet, tree);
+    return tree;
+  }
+
+  getSatisfiedSelectionTree(node: GraphNode): FieldSetSelectionTree {
+    const tree = newSelectionTree();
+    for (const fieldSet of node.satisfiedFieldSets) {
+      if (node.externalFieldSets.has(fieldSet)) {
+        continue;
+      }
+      const selectionTree = this.getSelectionTreeForFieldSet(fieldSet);
+      if (selectionTree) {
+        mergeSelectionTree(tree, selectionTree);
+      }
+    }
+    return tree;
+  }
+
+  addEntityEdgeIfAbsent(node: GraphNode, subgraphName: SubgraphName): boolean {
+    if (subgraphName === node.subgraphName) {
+      return false;
+    }
+    const siblingNode = this.nodeByNodeName.get(`${subgraphName}.${node.typeName}`);
+    if (!siblingNode || node.entityEdges.some((edge) => edge.node.nodeName === siblingNode.nodeName)) {
+      return false;
+    }
+    node.entityEdges.push(new Edge(this.getNextEdgeId(), siblingNode, ''));
+    return true;
+  }
+
+  isLocallyResolvableField(node: GraphNode, fieldData: GraphFieldData): boolean {
+    return fieldData.subgraphNames.has(node.subgraphName) && !fieldData.externalSubgraphNames.has(node.subgraphName);
+  }
+
+  canResolveSelectionTree(
+    node: GraphNode,
+    requiredTree: FieldSetSelectionTree,
+    availableTree: FieldSetSelectionTree,
+    remainingGatherHops: number,
+    visitedEntityKeyChecks = new Set<string>(),
+  ): boolean {
+    if (node.fieldDataByName.size < 1) {
+      return false;
+    }
+    for (const [fieldName, requiredChildTree] of requiredTree) {
+      const availableChildTree = availableTree.get(fieldName);
+      if (
+        availableChildTree &&
+        (requiredChildTree.size < 1 || selectionTreeContains(availableChildTree, requiredChildTree))
+      ) {
+        continue;
+      }
+      const fieldData = node.fieldDataByName.get(fieldName);
+      if (fieldData && this.isLocallyResolvableField(node, fieldData)) {
+        if (requiredChildTree.size < 1 || fieldData.isLeaf) {
+          continue;
+        }
+        const edge = node.headToTailEdges.get(fieldName);
+        if (
+          edge &&
+          !edge.isEdgeInaccessible() &&
+          !edge.isExternal &&
+          this.canResolveSelectionTree(
+            edge.node,
+            requiredChildTree,
+            availableChildTree ?? newSelectionTree(),
+            remainingGatherHops,
+            visitedEntityKeyChecks,
+          )
+        ) {
+          continue;
+        }
+      }
+      if (
+        this.canResolveFieldThroughEntitySibling({
+          availableTree,
+          fieldName,
+          node,
+          remainingGatherHops,
+          requiredChildTree,
+          visitedEntityKeyChecks,
+        })
+      ) {
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  canResolveFieldThroughEntitySibling({
+    availableTree,
+    fieldName,
+    node,
+    remainingGatherHops,
+    requiredChildTree,
+    visitedEntityKeyChecks,
+  }: {
+    availableTree: FieldSetSelectionTree;
+    fieldName: FieldName;
+    node: GraphNode;
+    remainingGatherHops: number;
+    requiredChildTree: FieldSetSelectionTree;
+    visitedEntityKeyChecks: Set<string>;
+  }): boolean {
+    if (remainingGatherHops < 1) {
+      return false;
+    }
+    const fieldCheck = `field:${node.nodeName}.${fieldName}`;
+    if (visitedEntityKeyChecks.has(fieldCheck)) {
+      return false;
+    }
+    const entityDataNode = this.entityDataNodeByTypeName.get(node.typeName);
+    if (!entityDataNode) {
+      return false;
+    }
+    visitedEntityKeyChecks.add(fieldCheck);
+    const fieldSets = [...entityDataNode.targetSubgraphNamesByFieldSet.keys()].sort();
+    for (const fieldSet of fieldSets) {
+      const keyCheck = `${node.nodeName}.${fieldSet}`;
+      if (visitedEntityKeyChecks.has(keyCheck)) {
+        continue;
+      }
+      const keyTree = this.getSelectionTreeForFieldSet(fieldSet);
+      if (!keyTree) {
+        continue;
+      }
+      visitedEntityKeyChecks.add(keyCheck);
+      const canSatisfyKey = this.canResolveSelectionTree(node, keyTree, availableTree, 0, visitedEntityKeyChecks);
+      visitedEntityKeyChecks.delete(keyCheck);
+      if (!canSatisfyKey) {
+        continue;
+      }
+      const subgraphNames = [...(entityDataNode.targetSubgraphNamesByFieldSet.get(fieldSet) ?? [])].sort();
+      for (const subgraphName of subgraphNames) {
+        if (subgraphName === node.subgraphName) {
+          continue;
+        }
+        const siblingNode = this.nodeByNodeName.get(`${subgraphName}.${node.typeName}`);
+        if (!siblingNode) {
+          continue;
+        }
+        const siblingAvailableTree = this.getSatisfiedSelectionTree(siblingNode);
+        mergeSelectionTree(siblingAvailableTree, keyTree);
+        if (
+          this.canResolveSelectionTree(
+            siblingNode,
+            new Map([[fieldName, requiredChildTree]]),
+            siblingAvailableTree,
+            remainingGatherHops - 1,
+            visitedEntityKeyChecks,
+          )
+        ) {
+          visitedEntityKeyChecks.delete(fieldCheck);
+          return true;
+        }
+      }
+    }
+    visitedEntityKeyChecks.delete(fieldCheck);
+    return false;
+  }
+
+  updateEntityEdges(): boolean {
+    let wasUpdated = false;
+    for (const [typeName, nodes] of this.nodesByTypeName) {
+      const entityDataNode = this.entityDataNodeByTypeName.get(typeName);
+      if (!entityDataNode) {
+        continue;
+      }
+      for (const node of nodes) {
+        if (node.fieldDataByName.size < 1) {
+          continue;
+        }
+        node.hasEntitySiblings = true;
+        for (const fieldSet of node.satisfiedFieldSets) {
+          // If the field set is unresolvable in the entity's own subgraph, it cannot be used to jump to other subgraphs.
+          if (node.externalFieldSets.has(fieldSet)) {
+            continue;
+          }
+          for (const subgraphName of entityDataNode.targetSubgraphNamesByFieldSet.get(fieldSet) ?? []) {
+            wasUpdated = this.addEntityEdgeIfAbsent(node, subgraphName) || wasUpdated;
+          }
+        }
+        const availableTree = this.getSatisfiedSelectionTree(node);
+        for (const [fieldSet, subgraphNames] of entityDataNode.targetSubgraphNamesByFieldSet) {
+          if (node.satisfiedFieldSets.has(fieldSet)) {
+            continue;
+          }
+          const targetTree = this.getSelectionTreeForFieldSet(fieldSet);
+          if (!targetTree || !this.canResolveSelectionTree(node, targetTree, availableTree, 1)) {
+            continue;
+          }
+          for (const subgraphName of subgraphNames) {
+            wasUpdated = this.addEntityEdgeIfAbsent(node, subgraphName) || wasUpdated;
+          }
+        }
+      }
+    }
+    return wasUpdated;
+  }
+
   setNodeInaccessible(typeName: TypeName) {
     const nodes = this.nodesByTypeName.get(typeName);
     if (!nodes) {
@@ -112,7 +382,6 @@ export class Graph {
   }
 
   initializeNode(typeName: TypeName, fieldDataByName: Map<FieldName, GraphFieldData>) {
-    const entityDataNode = this.entityDataNodeByTypeName.get(typeName);
     if (ROOT_TYPE_NAMES.has(typeName)) {
       const rootNode = this.getRootNode(typeName as RootTypeName);
       rootNode.removeInaccessibleEdges(fieldDataByName);
@@ -127,27 +396,9 @@ export class Graph {
       node.fieldDataByName = fieldDataByName;
       node.handleInaccessibleEdges();
       node.isLeaf = false;
-      if (!entityDataNode) {
-        continue;
-      }
-      node.hasEntitySiblings = true;
-      for (const fieldSet of node.satisfiedFieldSets) {
-        // If the field set is unresolvable in the entity's own subgraph, it cannot be used to jump to other subgraphs.
-        if (node.externalFieldSets.has(fieldSet)) {
-          continue;
-        }
-        const subgraphNames = entityDataNode.targetSubgraphNamesByFieldSet.get(fieldSet);
-        for (const subgraphName of subgraphNames ?? []) {
-          // A subgraph should not jump to itself
-          if (subgraphName === node.subgraphName) {
-            continue;
-          }
-          const siblingNode = this.nodeByNodeName.get(`${subgraphName}.${node.typeName}`);
-          if (siblingNode) {
-            node.entityEdges.push(new Edge(this.getNextEdgeId(), siblingNode, ''));
-          }
-        }
-      }
+    }
+    while (this.updateEntityEdges()) {
+      // Updating a child entity can make an ancestor compound key satisfiable.
     }
   }
 
