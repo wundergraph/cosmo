@@ -110,7 +110,7 @@ func TestSubgraphResponseHeaderExpression(t *testing.T) {
 
 		exprManager := CreateNewExprManager()
 
-		program, err := exprManager.CompileAnyExpression("subgraph.response.header.Get('X-Ebay-Mesh-Gw-Duration')")
+		program, err := exprManager.CompileAnyExpression("subgraph.response.header.Get('X-Duration')")
 		require.NoError(t, err)
 
 		ctx := Context{}
@@ -141,7 +141,7 @@ func TestSubgraphResponseHeaderExpression(t *testing.T) {
 
 		exprManager := CreateNewExprManager()
 
-		program, err := exprManager.CompileAnyExpression("float(subgraph.response.header.Get('X-Ebay-Mesh-Gw-Duration')) / 1000")
+		program, err := exprManager.CompileAnyExpression("float(subgraph.response.header.Get('X-Duration')) / 1000")
 		require.NoError(t, err)
 
 		ctx := Context{}
