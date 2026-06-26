@@ -42,11 +42,6 @@ jobs:
 
       - uses: ./.github/actions/node
 
-      - run: npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
-        shell: bash
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Install
         run: pnpm install --frozen-lockfile
 
@@ -80,4 +75,3 @@ jobs:
           pnpm release
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
