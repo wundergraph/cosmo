@@ -24150,6 +24150,11 @@ export class GetProposalsByFederatedGraphResponse extends Message<GetProposalsBy
    */
   isProposalsEnabled = false;
 
+  /**
+   * @generated from field: int32 totalCount = 4;
+   */
+  totalCount = 0;
+
   constructor(data?: PartialMessage<GetProposalsByFederatedGraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -24161,6 +24166,7 @@ export class GetProposalsByFederatedGraphResponse extends Message<GetProposalsBy
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "proposals", kind: "message", T: Proposal, repeated: true },
     { no: 3, name: "isProposalsEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "totalCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProposalsByFederatedGraphResponse {

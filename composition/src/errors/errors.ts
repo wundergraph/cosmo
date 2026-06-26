@@ -6,6 +6,7 @@ import {
   type ObjectDefinitionData,
 } from '../schema-building/types/types';
 import {
+  type InvalidEntityReturnTypeErrorParams,
   type IncompatibleMergedTypesErrorParams,
   type IncompatibleParentTypeMergeErrorParams,
   type IncompatibleTypeWithProvidesErrorMessageParams,
@@ -2055,10 +2056,28 @@ export function entityCacheWithoutKeyErrorMessage(typeName: TypeName): string {
   return `Object "${typeName}" does not define a "@key" directive.`;
 }
 
-export function maxAgeNotPositiveIntegerErrorMessage(value: number): string {
+export function maxAgeNotPositiveIntegerErrorMessage(value: number | string | null): string {
   return `The argument "maxAge" must be provided a positive integer; received "${value}".`;
 }
 
 export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(value: number): string {
   return `The argument "negativeCacheTTL" must be provided zero or a positive integer; received "${value}".`;
+}
+
+export function invalidMutationOrSubscriptionFieldCoordsErrorMessage(fieldCoords: string): string {
+  return `Field coordinates "${fieldCoords}" are not a Mutation or Subscription root field.`;
+}
+
+export function invalidEntityReturnTypeErrorMessage({
+  fieldCoords,
+  returnTypeName,
+}: InvalidEntityReturnTypeErrorParams): string {
+  return `Field coordinates "${fieldCoords}" return non-entity type "${returnTypeName}".`;
+}
+
+export function invalidMutuallyExclusiveCacheDirectivesError(fieldCoords: string): Error {
+  return new Error(
+    `Field coordinates "${fieldCoords}" define both mutually exclusive directives "@openfed__cacheInvalidate"` +
+      ` and "@openfed__cachePopulate".`,
+  );
 }

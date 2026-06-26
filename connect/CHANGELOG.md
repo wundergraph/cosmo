@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.153.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.153.0...@wundergraph/cosmo-connect@0.153.1) (2026-06-23)
+
+### Bug Fixes
+
+* pagination in proposals page ([#2989](https://github.com/wundergraph/cosmo/issues/2989)) ([a45b33c](https://github.com/wundergraph/cosmo/commit/a45b33c03577f615873639c72f6ad310ba71856b)) (@JivusAyrus)
+
+# [0.153.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.152.0...@wundergraph/cosmo-connect@0.153.0) (2026-06-23)
+
+### Bug Fixes
+
+* proto changes for entity cache ([#2996](https://github.com/wundergraph/cosmo/issues/2996)) ([3db24b0](https://github.com/wundergraph/cosmo/commit/3db24b010905daddfa840abba07faaf416dd892d)) (@SkArchon)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cachePopulate directive (3/5) ([#2984](https://github.com/wundergraph/cosmo/issues/2984)) ([a8cc2af](https://github.com/wundergraph/cosmo/commit/a8cc2afa7767c35b71ac4ebd18e2a9e1cc381a66)) (@SkArchon)
+
+# [0.152.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.151.0...@wundergraph/cosmo-connect@0.152.0) (2026-06-22)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cacheInvalidate directive (2/5) ([#2983](https://github.com/wundergraph/cosmo/issues/2983)) ([19bbbe5](https://github.com/wundergraph/cosmo/commit/19bbbe5659011ef4536fe43edbb1ae313bda91e3)) (@SkArchon)
+* **composition:** [@openfed](https://github.com/openfed)__entityCache directive (1/5) ([#2980](https://github.com/wundergraph/cosmo/issues/2980)) ([2075164](https://github.com/wundergraph/cosmo/commit/2075164f18ee0cf953effdef2a031c59b3e8d112)) (@SkArchon)
+
 # [0.151.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.150.0...@wundergraph/cosmo-connect@0.151.0) (2026-06-16)
 
 ### Features
