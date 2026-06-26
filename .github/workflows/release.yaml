@@ -88,6 +88,7 @@ jobs:
         if: inputs.scope != ''
         env:
           PACKAGE_SCOPE: ${{ inputs.scope }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           # Validate package name (scoped or unscoped), reject shell metacharacters
           [[ "$PACKAGE_SCOPE" =~ ^@?[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] || {
@@ -95,5 +96,3 @@ jobs:
             exit 1
           }
           pnpm lerna publish from-package --scope "$PACKAGE_SCOPE" -y
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
