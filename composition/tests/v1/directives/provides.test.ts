@@ -6,7 +6,7 @@ import {
   fieldAlreadyProvidedErrorMessage,
   fieldAlreadyProvidedWarning,
   ID_SCALAR,
-  incompatibleTypeWithProvidesErrorMessage,
+  incompatibleTypeWithProvidesError,
   INTERFACE,
   invalidInlineFragmentTypeConditionErrorMessage,
   invalidInlineFragmentTypeErrorMessage,
@@ -22,8 +22,11 @@ import {
   type TypeName,
   typeNameAlreadyProvidedErrorMessage,
   UNION,
+  unknownInlineFragmentTypeConditionErrorMessage,
+  unknownTypeInFieldSetErrorMessage,
 } from '../../../src';
 import {
+  createSubgraph,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeSubgraphFailure,
@@ -795,11 +798,11 @@ describe('@provides directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          incompatibleTypeWithProvidesErrorMessage({
+          incompatibleTypeWithProvidesError({
             fieldCoords: 'Query.a',
             responseType: ID_SCALAR,
             subgraphName: nakaa.name,
-          }),
+          }).message,
         ]),
       );
     });
@@ -1234,6 +1237,298 @@ describe('@provides directive tests', () => {
       expect(warnings).toHaveLength(2);
       expect(warnings[0]).toStrictEqual(externalEntityExtensionKeyFieldWarning(`Entity`, `id`, [`Entity.id`], af.name));
       expect(warnings[1]).toStrictEqual(externalEntityExtensionKeyFieldWarning(`Object`, `id`, [`Object.id`], af.name));
+    });
+
+    test('that provides on a field that returns a Union is valid #1', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          union: Union @provides(fields: "... on Entity { name }")
+        }
+        
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @external @shareable
+        }
+        
+        union Union = Entity
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        `,
+      );
+      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that provides on a field that returns a Union is valid #2', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@external"]
+          )
+    
+        type Query {
+          media: [Media] @shareable
+        }
+    
+        union Media = Book | Movie
+    
+        type Book @key(fields: "id") {
+          id: ID!
+        }
+    
+        type Movie @key(fields: "id") {
+          id: ID!
+        }
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@provides", "@external"]
+          )
+    
+        type Query {
+          media: [Media] @shareable @provides(fields: "... on Book { title }")
+        }
+    
+        union Media = Book | Movie
+    
+        type Book @key(fields: "id") {
+          id: ID!
+          title: String @external
+        }
+    
+        type Movie @key(fields: "id") {
+          id: ID!
+        }
+        `,
+      );
+      const subgraphC = createSubgraph(
+        'c',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable"]
+          )
+    
+        type Book @key(fields: "id") {
+          id: ID!
+          title: String @shareable
+        }
+    
+        type Movie @key(fields: "id") {
+          id: ID!
+          title: String @shareable
+        }
+        `,
+      );
+      const { warnings } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB, subgraphC],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is returned if a non-external field is provided through a Union type fragment', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          union: Union @provides(fields: "... on Entity { name }")
+        }
+        
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        
+        union Union = Entity
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          nonExternalConditionalFieldError({
+            directiveCoords: 'Query.union',
+            fieldSet: `... on Entity { name }`,
+            directiveName: PROVIDES,
+            subgraphName: subgraphA.name,
+            targetCoords: 'Entity.name',
+          }),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is returned if a Union fieldset defines an unknown type fragment', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          union: Union @provides(fields: "... on Unknown { name }")
+        }
+        
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        
+        union Union = Entity
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          invalidProvidesOrRequiresDirectivesError(PROVIDES, [
+            ` On field "Query.union":\n -` +
+              unknownInlineFragmentTypeConditionErrorMessage(
+                `... on Unknown { name }`,
+                ['Query.union'],
+                UNION,
+                'Unknown',
+              ),
+          ]),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is returned if a Union fieldset defines a non-member type fragment', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          union: Union @provides(fields: "... on EntityB { name }")
+        }
+        
+        type EntityA @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        
+        type EntityB @key(fields: "id") {
+          id: ID!
+        }
+        
+        union Union = EntityA
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        type EntityA @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          invalidProvidesOrRequiresDirectivesError(PROVIDES, [
+            ` On field "Query.union":\n -` +
+              invalidInlineFragmentTypeConditionErrorMessage(
+                `... on EntityB { name }`,
+                ['Query.union'],
+                'EntityB',
+                UNION,
+                UNION,
+              ),
+          ]),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is returned if a Union fieldset defines a non-member type fragment (in the current subgraph)', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          union: Union @provides(fields: "... on EntityB { name }")
+        }
+        
+        type EntityA @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        
+        type EntityB @key(fields: "id") {
+          id: ID!
+        }
+        
+        union Union = EntityA
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        type EntityA @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        
+        type EntityB @key(fields: "id") {
+          id: ID!
+        }
+        
+        union Union = EntityA | EntityB
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          invalidProvidesOrRequiresDirectivesError(PROVIDES, [
+            ` On field "Query.union":\n -` +
+              invalidInlineFragmentTypeConditionErrorMessage(
+                `... on EntityB { name }`,
+                ['Query.union'],
+                'EntityB',
+                UNION,
+                UNION,
+              ),
+          ]),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(0);
     });
 
     // TODO

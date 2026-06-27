@@ -48,7 +48,14 @@ import {
   SCHEMA_UPPER,
   SUBSCRIPTION,
   UNION_UPPER,
+  VALID_PROVIDES_PARENT_KINDS,
 } from '../utils/string-constants';
+import {
+  CompositeOutputData,
+  type ParentDefinitionData,
+  UnionDefinitionData,
+  type ValidProvidesParentData,
+} from '../schema-building/types/types';
 
 export function isObjectLikeNodeEntity(node: CompositeOutputNode): boolean {
   if (!node.directives?.length) {
@@ -301,3 +308,7 @@ export type ParentTypeNode =
 export type InterfaceNodeKind = Kind.INTERFACE_TYPE_DEFINITION | Kind.INTERFACE_TYPE_EXTENSION;
 export type ObjectNodeKind = Kind.OBJECT_TYPE_DEFINITION | Kind.OBJECT_TYPE_EXTENSION;
 export type CompositeOutputNodeKind = InterfaceNodeKind | ObjectNodeKind;
+
+export function isValidProvidesParentData(data: ParentDefinitionData): data is ValidProvidesParentData {
+  return VALID_PROVIDES_PARENT_KINDS.has(data.kind);
+}

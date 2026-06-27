@@ -29,6 +29,7 @@ import {
   type InputObjectTypeNode,
   type InterfaceTypeNode,
   isKindAbstract,
+  isValidProvidesParentData,
   nodeKindToDirectiveLocation,
   type ObjectTypeNode,
   operationTypeNodeToDefaultType,
@@ -83,7 +84,7 @@ import {
   externalInterfaceFieldsError,
   fieldAlreadyProvidedErrorMessage,
   incompatibleInputValueDefaultValueTypeError,
-  incompatibleTypeWithProvidesErrorMessage,
+  incompatibleTypeWithProvidesError,
   inlineFragmentWithoutTypeConditionErrorMessage,
   invalidArgumentValueErrorMessage,
   invalidComposeDirectiveNameError,
@@ -169,6 +170,7 @@ import {
   unimportedComposeDirectiveNameError,
   unknownComposeDirectiveNameError,
   unknownInlineFragmentTypeConditionErrorMessage,
+  unknownNamedTypeError,
   unknownNamedTypeErrorMessage,
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
@@ -376,7 +378,6 @@ import {
   type EntityCacheDirectiveNode,
   type ExtractDirectiveArgumentDataResult,
   type FieldSetData,
-  type FieldSetParentResult,
   type HandleCostDirectiveParams,
   type HandleListSizeDirectiveParams,
   type HandleOverrideDirectiveParams,
@@ -413,7 +414,7 @@ import {
 } from './types/params';
 import { EDFS_NATS_STREAM_CONFIGURATION_DEFINITION } from '../constants/non-directive-definitions';
 import type { CompositionOptions } from '../../types/params';
-import { type SchemaNodeResult } from './types/results';
+import { type FieldSetParentResult, type SchemaNodeResult } from './types/results';
 import { isArgumentValueValid } from '../../validation/validation';
 import {
   type AddDirectiveArgumentDataByNodeParams,
@@ -1784,7 +1785,10 @@ export class NormalizationFactory {
     parentTypeName: string,
   ): FieldSetParentResult {
     if (!isProvides) {
-      return { fieldSetParentData: parentData };
+      return {
+        data: parentData,
+        success: true,
+      };
     }
     const fieldData = getOrThrowError(parentData.fieldDataByName, fieldName, `${parentTypeName}.fieldDataByFieldName`);
     const fieldNamedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
@@ -1792,11 +1796,12 @@ export class NormalizationFactory {
 
     if (BASE_SCALARS.has(fieldNamedTypeName)) {
       return {
-        errorString: incompatibleTypeWithProvidesErrorMessage({
+        error: incompatibleTypeWithProvidesError({
           fieldCoords,
           responseType: fieldNamedTypeName,
           subgraphName: this.subgraphName,
         }),
+        success: false,
       };
     }
 
@@ -1804,20 +1809,26 @@ export class NormalizationFactory {
     // This error should never happen
     if (!namedTypeData) {
       return {
-        errorString: unknownNamedTypeErrorMessage(fieldCoords, fieldNamedTypeName),
+        error: unknownNamedTypeError(fieldCoords, fieldNamedTypeName),
+        success: false,
       };
     }
     // @TODO handle abstract types and fragments
-    if (namedTypeData.kind !== Kind.INTERFACE_TYPE_DEFINITION && namedTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+    if (isValidProvidesParentData(namedTypeData)) {
       return {
-        errorString: incompatibleTypeWithProvidesErrorMessage({
-          fieldCoords,
-          responseType: fieldNamedTypeName,
-          subgraphName: this.subgraphName,
-        }),
+        data: namedTypeData,
+        success: true,
       };
     }
-    return { fieldSetParentData: namedTypeData };
+
+    return {
+      error: incompatibleTypeWithProvidesError({
+        fieldCoords,
+        responseType: fieldNamedTypeName,
+        subgraphName: this.subgraphName,
+      }),
+      success: false,
+    };
   }
 
   #handleNonExternalConditionalField({
@@ -1853,7 +1864,7 @@ export class NormalizationFactory {
   }
 
   validateConditionalFieldSet(
-    selectionSetParentData: CompositeOutputData,
+    selectionSetParentData: CompositeOutputData | UnionDefinitionData,
     fieldSet: string,
     directiveFieldName: string,
     isProvides: boolean,
@@ -2200,22 +2211,15 @@ export class NormalizationFactory {
        Consequently, at that time, it is unknown whether the named type is an entity.
        If it isn't, the @provides directive does not make sense and can be ignored.
       */
-      const { fieldSetParentData, errorString } = this.getFieldSetParent(
-        isProvides,
-        parentData,
-        fieldName,
-        parentTypeName,
-      );
+      const result = this.getFieldSetParent(isProvides, parentData, fieldName, parentTypeName);
+      if (!result.success) {
+        allErrorMessages.push(result.error.message);
+        continue;
+      }
+
       const fieldCoords = `${parentTypeName}.${fieldName}`;
-      if (errorString) {
-        allErrorMessages.push(errorString);
-        continue;
-      }
-      if (!fieldSetParentData) {
-        continue;
-      }
       const { errorMessages, configuration } = this.validateConditionalFieldSet(
-        fieldSetParentData,
+        result.data,
         fieldSet,
         fieldName,
         isProvides,
