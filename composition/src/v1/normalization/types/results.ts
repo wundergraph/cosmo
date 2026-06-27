@@ -1,5 +1,10 @@
-import { type DirectiveName } from '../../../types/types';
-import { type ExecutionMultiFailure, type ExecutionSingleFailure, type ExecutionSuccess } from '../../../types/results';
+import { type DirectiveName, type TypeName } from '../../../types/types';
+import {
+  type ExecutionFailure,
+  type ExecutionMultiFailure,
+  type ExecutionSingleFailure,
+  type ExecutionSuccess,
+} from '../../../types/results';
 import { type SchemaDefinitionNode, type SchemaExtensionNode } from 'graphql';
 import { type LinkImportData } from './types';
 import {
@@ -45,3 +50,9 @@ export interface FieldSetParentSuccess extends ExecutionSuccess {
 }
 
 export type FieldSetParentResult = ExecutionSingleFailure | FieldSetParentSuccess;
+
+export interface IsAnyImplementationFieldExternalSuccess extends ExecutionSuccess {
+  typeName: TypeName;
+}
+
+export type IsAnyImplementationFieldExternalResult = ExecutionFailure | IsAnyImplementationFieldExternalSuccess;

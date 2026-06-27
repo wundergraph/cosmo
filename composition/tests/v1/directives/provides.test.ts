@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   type ConditionalFieldData,
   type ConfigurationData,
+  directlyProvidedInterfaceFieldError,
   externalEntityExtensionKeyFieldWarning,
   fieldAlreadyProvidedErrorMessage,
   fieldAlreadyProvidedWarning,
@@ -23,7 +24,6 @@ import {
   typeNameAlreadyProvidedErrorMessage,
   UNION,
   unknownInlineFragmentTypeConditionErrorMessage,
-  unknownTypeInFieldSetErrorMessage,
 } from '../../../src';
 import {
   createSubgraph,
@@ -1531,9 +1531,508 @@ describe('@provides directive tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    // TODO
-    test.skip('that provides on Interface is valid', () => {
-      const { warnings } = federateSubgraphsSuccess([q, r, s], ROUTER_COMPATIBILITY_VERSION_ONE);
+    test('that an error is returned if a field is directly provided on an Interface', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          interface: Interface! @provides(fields: "name")
+        }
+        
+        interface Interface {
+          name: String!
+        }
+        
+        type Object implements Interface {
+          name: String!
+        }
+      `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          directlyProvidedInterfaceFieldError({
+            directiveCoords: `Query.interface`,
+            directiveName: PROVIDES,
+            fieldSet: 'name',
+            selection: 'interface { name }',
+            subgraphName: subgraphA.name,
+            targetCoords: 'Interface.name',
+          }),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is returned if a field is directly provided on a nested Interface (no external ancestor)', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          object: Object! @provides(fields: "interface { name }")
+        }
+        
+        interface Interface {
+          name: String!
+        }
+        
+        type Object implements Interface {
+          interface: Interface!
+          name: String!
+        }
+      `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          directlyProvidedInterfaceFieldError({
+            directiveCoords: `Query.object`,
+            directiveName: PROVIDES,
+            fieldSet: 'interface { name }',
+            selection: 'interface { name }',
+            subgraphName: subgraphA.name,
+            targetCoords: 'Interface.name',
+          }),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is returned if a field is directly provided on a nested Interface (with external ancestor)', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          objectA: ObjectA! @provides(fields: "interface { name }")
+        }
+        
+        interface Interface {
+          name: String!
+        }
+        
+        type ObjectA @shareable {
+          interface: Interface! @external
+          name: String!
+        }
+        
+        type ObjectB implements Interface @shareable {
+          name: String!
+        }
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        interface Interface {
+          name: String!
+        }
+        
+        type ObjectA @shareable {
+          interface: Interface!
+        }
+        
+        type ObjectB implements Interface @shareable {
+          name: String!
+        }
+      `,
+      );
+      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that provides on an Interface field returning an Interface can be valid (all implementations provide an @external ancestor)', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable", "@external", "@provides"]
+        )
+        
+        type Query {
+          media: Media @shareable
+          book: Book @provides(fields: "animals { ... on Dog { name } }")
+        }
+        
+        interface Media {
+          id: ID!
+        }
+        
+        interface Animal {
+          id: ID!
+        }
+        
+        type Book implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal @key(fields: "id") {
+          id: ID! @external
+          name: String @external
+        }
+        
+        type Cat implements Animal @key(fields: "id") {
+          id: ID! @external
+        }
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable", "@provides", "@external"]
+        )
+        
+        type Query {
+          media: Media @shareable @provides(fields: "animals { id name }")
+        }
+        
+        interface Media {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        interface Animal {
+          id: ID!
+          name: String
+        }
+        
+        type Book implements Media {
+          id: ID! @shareable
+          animals: [Animal] @external
+        }
+        
+        type Dog implements Animal {
+          id: ID! @external
+          name: String @external
+        }
+        
+        type Cat implements Animal {
+          id: ID! @external
+          name: String @external
+        }
+      `,
+      );
+      const subgraphC = createSubgraph(
+        'c',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable"]
+        )
+        
+        interface Media {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        interface Animal {
+          id: ID!
+          name: String
+        }
+        
+        type Book implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal @key(fields: "id") {
+          id: ID!
+          name: String @shareable
+          age: Int
+        }
+        
+        type Cat implements Animal @key(fields: "id") {
+          id: ID!
+          name: String @shareable
+          age: Int
+        }
+      `,
+      );
+      const { warnings } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB, subgraphC],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that provides on an Interface field returning an Interface can be valid (only one implementations provides an @external ancestor)', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable", "@external", "@provides"]
+        )
+        
+        type Query {
+          media: Media @shareable
+          book: Book @provides(fields: "animals { ... on Dog { name } }")
+        }
+        
+        interface Media {
+          id: ID!
+        }
+        
+        interface Animal {
+          id: ID!
+        }
+        
+        type Book implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal @key(fields: "id") {
+          id: ID! @external
+          name: String @external
+        }
+        
+        type Cat implements Animal @key(fields: "id") {
+          id: ID! @external
+        }
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable", "@provides", "@external"]
+        )
+        
+        type Query {
+          media: Media @shareable @provides(fields: "animals { id name }")
+        }
+        
+        interface Media {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        interface Animal {
+          id: ID!
+          name: String
+        }
+        
+        type Book implements Media @shareable {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        type Video implements Media {
+          id: ID! @shareable
+          animals: [Animal] @external
+        }
+        
+        type Dog implements Animal {
+          id: ID! @external
+          name: String @external
+        }
+        
+        type Cat implements Animal {
+          id: ID! @external
+          name: String @external
+        }
+      `,
+      );
+      const subgraphC = createSubgraph(
+        'c',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable"]
+        )
+        
+        interface Media {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        interface Animal {
+          id: ID!
+          name: String
+        }
+        
+        type Book implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Video implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal @key(fields: "id") {
+          id: ID!
+          name: String @shareable
+          age: Int
+        }
+        
+        type Cat implements Animal @key(fields: "id") {
+          id: ID!
+          name: String @shareable
+          age: Int
+        }
+      `,
+      );
+      const { warnings } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB, subgraphC],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is returned if no there no implementation type provides an external ancestor for an Interface field', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable", "@external", "@provides"]
+        )
+        
+        type Query {
+          media: Media @shareable
+          book: Book @provides(fields: "animals { ... on Dog { name } }")
+        }
+        
+        interface Media {
+          id: ID!
+        }
+        
+        interface Animal {
+          id: ID!
+        }
+        
+        type Book implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal @key(fields: "id") {
+          id: ID! @external
+          name: String @external
+        }
+        
+        type Cat implements Animal @key(fields: "id") {
+          id: ID! @external
+        }
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable", "@provides", "@external"]
+        )
+        
+        type Query {
+          media: Media @shareable @provides(fields: "animals { id name }")
+        }
+        
+        interface Media {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        interface Animal {
+          id: ID!
+          name: String
+        }
+        
+        type Book implements Media {
+          id: ID! @shareable
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal {
+          id: ID! @external
+          name: String @external
+        }
+        
+        type Cat implements Animal {
+          id: ID! @external
+          name: String @external
+        }
+      `,
+      );
+      const subgraphC = createSubgraph(
+        'c',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable"]
+        )
+        
+        interface Media {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        interface Animal {
+          id: ID!
+          name: String
+        }
+        
+        type Book implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal @key(fields: "id") {
+          id: ID!
+          name: String @shareable
+          age: Int
+        }
+        
+        type Cat implements Animal @key(fields: "id") {
+          id: ID!
+          name: String @shareable
+          age: Int
+        }
+      `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure(
+        [subgraphA, subgraphB, subgraphC],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphB.name, [
+          directlyProvidedInterfaceFieldError({
+            directiveCoords: 'Query.media',
+            directiveName: PROVIDES,
+            fieldSet: 'animals { id name }',
+            selection: 'animals { id }',
+            subgraphName: subgraphB.name,
+            targetCoords: 'Animal.id',
+          }),
+          directlyProvidedInterfaceFieldError({
+            directiveCoords: 'Query.media',
+            directiveName: PROVIDES,
+            fieldSet: 'animals { id name }',
+            selection: 'animals { name }',
+            subgraphName: subgraphB.name,
+            targetCoords: 'Animal.name',
+          }),
+        ]),
+      ]);
       expect(warnings).toHaveLength(0);
     });
   });
@@ -1869,125 +2368,6 @@ const p: Subgraph = {
     
     type Entity @key(fields: "id") {
       id: ID!
-    }
-  `),
-};
-
-const q: Subgraph = {
-  name: 'q',
-  url: '',
-  definitions: parse(`
-    extend schema
-    @link(
-      url: "https://specs.apollo.dev/federation/v2.3"
-      import: ["@key", "@shareable", "@external", "@provides"]
-    )
-    
-    type Query {
-      media: Media @shareable
-      book: Book @provides(fields: "animals { ... on Dog { name } }")
-    }
-    
-    interface Media {
-      id: ID!
-    }
-    
-    interface Animal {
-      id: ID!
-    }
-    
-    type Book implements Media @key(fields: "id") {
-      id: ID!
-      animals: [Animal] @shareable
-    }
-    
-    type Dog implements Animal @key(fields: "id") {
-      id: ID! @external
-      name: String @external
-    }
-    
-    type Cat implements Animal @key(fields: "id") {
-      id: ID! @external
-    }
-  `),
-};
-
-const r: Subgraph = {
-  name: 'r',
-  url: '',
-  definitions: parse(`
-    extend schema
-    @link(
-      url: "https://specs.apollo.dev/federation/v2.3"
-      import: ["@key", "@shareable", "@provides", "@external"]
-    )
-    
-    type Query {
-      media: Media @shareable @provides(fields: "animals { id name }")
-    }
-    
-    interface Media {
-      id: ID!
-      animals: [Animal]
-    }
-    
-    interface Animal {
-      id: ID!
-      name: String
-    }
-    
-    type Book implements Media {
-      id: ID! @shareable
-      animals: [Animal] @external
-    }
-    
-    type Dog implements Animal {
-      id: ID! @external
-      name: String @external
-    }
-    
-    type Cat implements Animal {
-      id: ID! @external
-      name: String @external
-    }
-  `),
-};
-
-const s: Subgraph = {
-  name: 's',
-  url: '',
-  definitions: parse(`
-    extend schema
-    @link(
-      url: "https://specs.apollo.dev/federation/v2.3"
-      import: ["@key", "@shareable"]
-    )
-    
-    interface Media {
-      id: ID!
-      animals: [Animal]
-    }
-    
-    interface Animal {
-      id: ID!
-      name: String
-    }
-    
-    type Book implements Media @key(fields: "id") {
-      id: ID!
-      animals: [Animal] @shareable
-    }
-    
-    type Dog implements Animal @key(fields: "id") {
-      id: ID!
-      name: String @shareable
-      age: Int
-    }
-    
-    type Cat implements Animal @key(fields: "id") {
-      id: ID!
-      name: String @shareable
-      age: Int
     }
   `),
 };

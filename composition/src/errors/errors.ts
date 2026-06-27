@@ -22,6 +22,7 @@ import {
   type OneOfRequiredFieldsErrorParams,
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   type SemanticNonNullLevelsNonNullErrorParams,
+  type DirectlyProvidedInterfaceFieldErrorParams,
 } from './types/params';
 import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
 import {
@@ -779,6 +780,24 @@ export function incompatibleTypeWithProvidesError({
   return new Error(
     ` A "@provides" directive is declared on field "${fieldCoords}" in subgraph "${subgraphName}".\n` +
       ` However, the response type "${responseType}" is not an Object nor Interface.`,
+  );
+}
+
+export function directlyProvidedInterfaceFieldError({
+  directiveCoords,
+  directiveName,
+  fieldSet,
+  selection,
+  subgraphName,
+  targetCoords,
+}: DirectlyProvidedInterfaceFieldErrorParams): Error {
+  return new Error(
+    `The field "${directiveCoords}" in subgraph "${subgraphName}" defines a "@${directiveName}"` +
+      ` directive with the following field set:\n "${fieldSet}".` +
+      `\n"${selection}" is a direct Interface selection, corresponding to field "${targetCoords}".` +
+      `\nHowever, no selection ancestors are declared "@external", and Interface fields themselves cannot be` +
+      ` declared "@external".\nConsequently, without a type fragment specifying the underlying type, it is` +
+      ` uncertain which fields are actually provided on this path.`,
   );
 }
 

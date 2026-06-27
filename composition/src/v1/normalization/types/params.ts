@@ -22,6 +22,8 @@ export type HandleNonExternalConditionalFieldParams = {
   directiveCoords: string;
   directiveName: DirectiveName;
   fieldSet: string;
+  parentData: CompositeOutputData;
+  selection: string;
 };
 
 export type BatchNormalizeParams = {
