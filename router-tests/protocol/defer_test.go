@@ -180,6 +180,60 @@ func TestDeferTestDataQueries(t *testing.T) {
 	}
 }
 
+// TestDeferRejectsNonMultipartAccept verifies that a query containing the
+// @defer directive is rejected with a DEFER_BAD_HEADER error when the client
+// does not accept multipart/mixed responses (mirroring Apollo Router behavior).
+func TestDeferRejectsNonMultipartAccept(t *testing.T) {
+	t.Parallel()
+
+	const deferQuery = `query { employees { id ... @defer { isAvailable } } }`
+
+	t.Run("rejects when Accept is application/json", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{NoRetryClient: true}, func(t *testing.T, xEnv *testenv.Environment) {
+			payload, err := json.Marshal(map[string]any{"query": deferQuery})
+			require.NoError(t, err)
+
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(payload))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "application/json")
+
+			res, err := xEnv.RouterClient.Do(req)
+			require.NoError(t, err)
+			defer func() { require.NoError(t, res.Body.Close()) }()
+
+			assert.Equal(t, http.StatusOK, res.StatusCode)
+			assert.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "application/json"),
+				"expected application/json, got %q", res.Header.Get("Content-Type"))
+
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+
+			assert.Equal(t, `{"errors":[{"message":"the router received a query with the @defer directive but the client does not accept multipart/mixed HTTP responses. To enable @defer support, add the HTTP header 'Accept: multipart/mixed'","extensions":{"code":"DEFER_BAD_HEADER"}}]}`, string(body))
+		})
+	})
+
+	t.Run("accepts when Accept is multipart/mixed", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{NoRetryClient: true}, func(t *testing.T, xEnv *testenv.Environment) {
+			payload, err := json.Marshal(map[string]any{"query": deferQuery})
+			require.NoError(t, err)
+
+			req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payload))
+			res, err := xEnv.RouterClient.Do(req)
+			require.NoError(t, err)
+			defer func() { require.NoError(t, res.Body.Close()) }()
+
+			assert.Equal(t, http.StatusOK, res.StatusCode)
+			assert.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"),
+				"expected multipart/mixed, got %q", res.Header.Get("Content-Type"))
+		})
+	})
+}
+
 func normalizeWithKeysSort(tb testing.TB, data []byte) []byte {
 	var val map[string]interface{}
 	require.NoError(tb, json.Unmarshal(data, &val))

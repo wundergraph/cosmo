@@ -1193,6 +1193,22 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		}
 	}
 
+	// A DeferResponsePlan is only produced when the operation contains @defer
+	// (and @defer support is enabled). Such operations stream incremental
+	// payloads as multipart/mixed, so reject the request early if the client
+	// does not accept that content type
+	if _, ok := requestContext.operation.preparedPlan.preparedPlan.(*plan.DeferResponsePlan); ok {
+		if !clientAcceptsMultipartMixed(req) {
+			return NewHttpGraphqlError(
+				"the router received a query with the @defer directive but the client does not accept "+
+					"multipart/mixed HTTP responses. To enable @defer support, add the HTTP header "+
+					"'Accept: multipart/mixed'",
+				ExtCodeErrDeferMultipartNotAccepted,
+				http.StatusOK,
+			)
+		}
+	}
+
 	return nil
 }
 

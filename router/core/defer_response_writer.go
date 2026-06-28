@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"mime"
 	"net/http"
+	"strings"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -110,4 +112,30 @@ func GetDeferResponseWriter(ctx *resolve.Context, _ *http.Request, w http.Respon
 
 	// execution engine heartbeat not needed for defer?
 	return ctx, flushWriter, true
+}
+
+// clientAcceptsMultipartMixed reports whether the request's Accept header allows
+// a multipart/mixed response, which @defer requires to stream incremental
+// payloads. The check is lenient: it accepts "multipart/mixed" with any
+// parameters (e.g. with or without deferSpec), the "multipart/*" and "*/*"
+// wildcards, and a missing/empty Accept header (which per RFC 9110 means the
+// client accepts anything).
+func clientAcceptsMultipartMixed(r *http.Request) bool {
+	acceptHeader := r.Header.Get("Accept")
+	if acceptHeader == "" {
+		return true
+	}
+
+	for _, element := range strings.Split(acceptHeader, ",") {
+		mediaType, _, err := mime.ParseMediaType(element)
+		if err != nil {
+			continue
+		}
+		switch mediaType {
+		case multipartMime, "multipart/*", "*/*":
+			return true
+		}
+	}
+
+	return false
 }
