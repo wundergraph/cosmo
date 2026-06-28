@@ -3884,6 +3884,11 @@
           "default": "30s",
           "description": "The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
+        "enable_defer": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enables support for the @defer directive, allowing clients to defer parts of a query so that the initial response is returned faster and deferred fields are streamed incrementally."
+        },
         "validate_required_external_fields": {
           "type": "boolean",
           "default": false,

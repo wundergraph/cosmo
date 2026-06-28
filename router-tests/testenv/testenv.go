@@ -1378,6 +1378,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 		EnableInboundRequestDeduplication: false,
 		EnableRequestTracing:              true,
 		EnableNormalizationCache:          true,
+		EnableDefer:                       true,
 		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
