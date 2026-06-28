@@ -1,12 +1,12 @@
 --graphql
 Content-Type: application/json
 
-{"data":{},"pending":[{"id":"1","path":[]},{"id":"2","path":["findEmployees"]}],"hasNext":true}
+{"data":{},"pending":[{"id":"1","path":[]}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"findEmployees":[{},{},{},{},{},{},{},{},{},{}]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":true}
+{"incremental":[{"data":{"findEmployees":[{},{},{},{},{},{},{},{},{},{}]},"id":"1"}],"completed":[{"id":"1"}],"pending":[{"id":"2","path":["findEmployees"]}],"hasNext":true}
 
 --graphql
 Content-Type: application/json

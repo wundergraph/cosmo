@@ -1,12 +1,12 @@
 --graphql
 Content-Type: application/json
 
-{"data":{"employee":{"id":1},"teammates":[{"id":4,"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"details":{"forename":"Alexandra"},"products":["FINANCE"]}]},"pending":[{"id":"1","path":["employee"]},{"id":"2","path":["employee"]}],"hasNext":true}
+{"data":{"employee":{"id":1},"teammates":[{"id":4,"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"details":{"forename":"Alexandra"},"products":["FINANCE"]}]},"pending":[{"id":"1","path":["employee"]}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"details":{"forename":"Jens","location":{"language":"German"}}},"id":"1"}],"completed":[{"id":"1"}],"hasNext":true}
+{"incremental":[{"data":{"details":{"forename":"Jens","location":{"language":"German"}}},"id":"1"}],"completed":[{"id":"1"}],"pending":[{"id":"2","path":["employee"]}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
