@@ -86,7 +86,7 @@ func (p *OperationPlanner) planOperation(content string, name string, includeQue
 		plannerOptions []plan.Opts
 	)
 
-	if includeQueryPlan || true { // TMP: always calculate query plans
+	if includeQueryPlan {
 		plannerOptions = append(plannerOptions, plan.IncludeQueryPlanInResponse())
 	}
 
