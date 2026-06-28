@@ -1,0 +1,10 @@
+query {
+  employee(id: 1) {
+    id
+    ... @defer {
+      hobbies {
+        __typename
+      }
+    }
+  }
+}
