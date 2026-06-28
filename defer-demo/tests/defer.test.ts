@@ -535,17 +535,17 @@ describe("defer: nested defer (DT-08)", () => {
     const initial = r.frames[0];
     expect(initial.data).toEqual({ user: { id: "u1" } });
     expect(initial.hasNext).toBe(true);
-    // OBSERVED: nested defers are announced EAGERLY — both the outer (id "1")
-    // and the inner (id "2") pending entries appear in the INITIAL payload.
-    // The inner pending path is the static list path ["user","recommendedArticles"]
-    // WITHOUT a list index; the index is carried later in the incremental subPath.
+    // Nested defers are announced LAZILY: the INITIAL payload announces only the
+    // top-level defer (id "1"). The inner defer (id "2") is announced later, in
+    // the frame that releases its parent.
     expect(initial.pending).toEqual([
       { id: "1", path: ["user"] },
-      { id: "2", path: ["user", "recommendedArticles"] },
     ]);
 
-    // Outer frame: delivers recommendedArticles for id "1". No new pending is
-    // introduced (everything was announced up front).
+    // Outer frame: delivers recommendedArticles for id "1" and announces the inner
+    // defer (id "2") now that its anchor exists. The inner pending path is the
+    // static list path ["user","recommendedArticles"] WITHOUT a list index; the
+    // index is carried later in the incremental subPath.
     const outer = r.frames.find((f) =>
       (f.incremental ?? []).some((i) => i.id === "1"),
     );
@@ -554,7 +554,9 @@ describe("defer: nested defer (DT-08)", () => {
       { data: { recommendedArticles: [{ id: "a2" }] }, id: "1" },
     ]);
     expect(outer!.completed).toEqual([{ id: "1" }]);
-    expect(outer!.pending).toBeUndefined();
+    expect(outer!.pending).toEqual([
+      { id: "2", path: ["user", "recommendedArticles"] },
+    ]);
     expect(outer!.hasNext).toBe(true);
 
     // Inner frame: reviews for id "2", with subPath [0] reaching into the

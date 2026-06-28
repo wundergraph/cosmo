@@ -46,8 +46,14 @@ import { describe, it, expect } from "vitest";
  *     vs the healthy defer terminator (same query without the erroring field):
  *       ...{"...","hasNext":false}\r\n\r\n--graphql\r\n--graphql--\r\n
  *
- * This test asserts the CORRECT, spec-conforming behavior and therefore FAILS
- * against rc.267 today (it is a RED test).
+ * RESOLUTION: with the per-defer anchor-survival gate, the engine cancels a defer
+ * whose OWN anchor null-propagated (here `user` becomes null because the non-null
+ * `User.reviews` could not be satisfied) and terminates the stream cleanly — it is
+ * never announced and never delivered, matching graphql-js "Cancels deferred
+ * fields when initial result exhibits null bubbling cancelling the defer". This
+ * test now asserts that corrected behavior (GREEN). The inverse — a defer whose
+ * anchor SURVIVES an unrelated recoverable error must still be delivered — is
+ * covered by ki-defer-recoverable-error-drops-surviving-defer.
  *
  * Overlap: head of the termination cluster (F01/F02/F03/F04 — "error before the
  * hasNext/terminal frame"). F01 is the RECOVERABLE-INITIAL-ERROR trigger and is
@@ -60,8 +66,9 @@ import { describe, it, expect } from "vitest";
 const ROUTER_URL = process.env.ROUTER_URL || "http://localhost:3002/graphql";
 
 // A query whose INITIAL (non-deferred) selection produces a recoverable error
-// (User.reviews -> r5.article is null on a non-null field) alongside a sibling
-// @defer fragment that the engine must still deliver and terminate.
+// (User.reviews -> r5.article is null on a non-null field) that null-propagates
+// onto the defer's OWN anchor (`user`), so the @defer fragment must be cancelled
+// and the stream must still terminate cleanly.
 const QUERY = `{
   user(id: "u1") {
     id
@@ -108,36 +115,28 @@ async function postDefer(query: string): Promise<MultipartResult> {
 }
 
 describe("F01 KI-DEFER-RECOVERABLE-ERROR-DROPS-DEFERS (REPRODUCED_HTTP)", () => {
-  it("delivers the deferred fragment and terminates the stream even when the initial response has a recoverable error", async () => {
+  it("cancels a defer whose own anchor null-propagated and terminates the stream cleanly", async () => {
     const res = await postDefer(QUERY);
 
     // It must be a real multipart stream (deferred mode was requested + accepted).
     expect(res.status).toBe(200);
     expect(res.ctype).toContain("multipart/mixed");
 
-    // 1) The initial frame MUST announce the deferred fragment via `pending`
-    //    and set hasNext:true. (Today: the lone frame has neither.)
     const initial = res.frames[0];
-    expect(initial?.pending).toEqual([{ id: "1", path: ["user"] }]);
-    expect(initial?.hasNext).toBe(true);
 
-    // 2) The deferred payload MUST be delivered in a follow-up incremental frame.
-    //    (Today: recommendedArticles is never delivered.)
+    // 1) The recoverable error null-propagated onto the defer's OWN anchor, so
+    //    `user` is null and the defer is cancelled: never announced via `pending`.
+    expect(initial?.data).toEqual({ user: null });
+    expect(initial?.pending).toBeUndefined();
+
+    // 2) No incremental payload is delivered for the cancelled defer.
     const allIncremental = res.frames.flatMap(
       (f) => (f.incremental as Frame[] | undefined) ?? [],
     );
-    expect(allIncremental).toEqual([
-      {
-        id: "1",
-        data: {
-          recommendedArticles: [{ id: "a2", title: "World News" }],
-        },
-      },
-    ]);
+    expect(allIncremental).toEqual([]);
 
-    // 3) The stream MUST terminate: a frame carrying hasNext:false AND the
-    //    multipart close-delimiter `--graphql--`. (Today: neither is emitted,
-    //    so a streaming client hangs.)
+    // 3) The stream still terminates cleanly: a frame carrying hasNext:false AND
+    //    the multipart close-delimiter `--graphql--`.
     const last = res.frames[res.frames.length - 1];
     expect(last?.hasNext).toBe(false);
     expect(res.raw.includes("--graphql--")).toBe(true);

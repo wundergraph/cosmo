@@ -71,8 +71,9 @@ import { describe, it, expect } from "vitest";
  * `if`/`label` validation gaps. F16 is purely the timing/placement of the
  * `pending` announcement for nested defers and maps to none of them.
  *
- * The test below asserts the SPEC-CORRECT (lazy) wire shape and therefore FAILS
- * against the current router (RED), proving the eager announcement.
+ * RESOLUTION: nested defers are now announced lazily. The initial frame announces
+ * only the top-level defer; the inner defer's `pending` is emitted in the frame
+ * that releases its parent. The test below asserts that lazy shape (GREEN).
  */
 
 const ROUTER = process.env.ROUTER_URL || "http://localhost:3002/graphql";
@@ -117,24 +118,33 @@ async function postDefer(query: string) {
   return { status: r.status, ctype, frames };
 }
 
-describe("F16 KI-DEFER-EAGER-PENDING-ANNOUNCEMENT (REPRODUCED_HTTP)", () => {
+describe("F16 KI-DEFER-EAGER-PENDING-ANNOUNCEMENT (RESOLVED: lazy nested pending)", () => {
   it("announces a nested @defer's pending lazily (on parent release), not eagerly in the initial frame", async () => {
     const res = await postDefer(NESTED_DEFER_QUERY);
 
     expect(res.status).toBe(200);
     expect(res.ctype).toContain("multipart");
 
-    const initial = res.frames[0];
+    // The INITIAL frame announces ONLY the top-level defer (id "1" on ["article"]).
+    expect(res.frames[0].pending).toEqual([{ id: "1", path: ["article"] }]);
 
-    // Spec-correct (lazy): the INITIAL frame announces ONLY the top-level defer
-    // (id "1" on ["article"]). The inner defer (id "2" on ["article","reviews"])
-    // must NOT be announced until its parent is released.
-    //
-    // Today the router emits BOTH pending entries in the initial frame:
-    //   [{"id":"1","path":["article"]},{"id":"2","path":["article","reviews"]}]
-    // so this exact-match assertion FAILS (RED).
-    expect(initial.pending).toEqual([
-      { id: "1", path: ["article"] },
-    ]);
+    // The inner defer (id "2" on ["article","reviews"]) is announced lazily, in a
+    // later frame — the one that releases its parent (id "1").
+    const announcedAfterInitial = res.frames
+      .slice(1)
+      .flatMap((f: any) => (f.pending ?? []) as any[]);
+    expect(announcedAfterInitial).toContainEqual({
+      id: "2",
+      path: ["article", "reviews"],
+    });
+
+    // The same frame that announces id "2" also completes id "1".
+    const childAnnounceFrame = res.frames.find((f: any) =>
+      (f.pending ?? []).some((p: any) => p.id === "2"),
+    );
+    expect(childAnnounceFrame?.completed).toEqual([{ id: "1" }]);
+
+    // The stream terminates exactly once.
+    expect(res.frames.filter((f: any) => f.hasNext === false).length).toBe(1);
   });
 });
