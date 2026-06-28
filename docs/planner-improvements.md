@@ -14,11 +14,11 @@ final commit pins the published `graphql-go-tools` commit in `router/go.mod`.
 
 | # | ADR | Stage | What it fixes | Reference gateways |
 |---|-----|-------|---------------|--------------------|
-| A1 | [provides-on-union-fieldsets](./adr/provides-on-union-fieldsets.md) | composition + planner | `@provides` over a **union**-typed field was rejected at compose time; even composed, the planner did not honor it (it entity-fetched the owner instead of reading the provided value inline). | alternative implementations honor it |
-| A2 | [provides-on-interface-fieldsets](./adr/provides-on-interface-fieldsets.md) | composition + planner | `@provides` over an **interface**-typed field with implementation-level `@external` was rejected by `wgc` (the alternative implementation accepts it), and the planner did not honor it after abstract→concrete rewriting. | alternative implementations accept + honor |
-| A3 | [multi-hop-compound-key-resolvability](./adr/multi-hop-compound-key-resolvability.md) | composition + planner | A field reachable only by gathering a missing **compound-`@key`** member from a third subgraph was declared unresolvable; the planner could not build the two-stage (gather → compound-key) entity fetch. | alternative implementations resolve it |
-| B1 | [abstract-empty-selection-set](./adr/abstract-empty-selection-set.md) | planner | An abstract-typed field whose union members are **split across datasources** pruned to an empty selection set → HTTP 500. | alternative implementations return 200 |
-| B2 | [requires-field-argument-conflict](./adr/requires-field-argument-conflict.md) | planner | Two `@requires` consumers requiring the **same field with different arguments** collapsed to one value → silently wrong data. | Alternative implementations disagree: one is spec-correct, the other is also wrong (collapses to the other argument) |
+| A1 | [provides-on-union-fieldsets](./adr/provides-on-union-fieldsets.md) | composition + planner | `@provides` over a **union**-typed field was rejected at compose time; even composed, the planner did not honor it (it entity-fetched the owner instead of reading the provided value inline). | alternative federation implementations honor it |
+| A2 | [provides-on-interface-fieldsets](./adr/provides-on-interface-fieldsets.md) | composition + planner | `@provides` over an **interface**-typed field with implementation-level `@external` was rejected by `wgc` (alternative federation implementations accept it), and the planner did not honor it after abstract→concrete rewriting. | alternative federation implementations accept + honor |
+| A3 | [multi-hop-compound-key-resolvability](./adr/multi-hop-compound-key-resolvability.md) | composition + planner | A field reachable only by gathering a missing **compound-`@key`** member from a third subgraph was declared unresolvable; the planner could not build the two-stage (gather → compound-key) entity fetch. | alternative federation implementations resolve it |
+| B1 | [abstract-empty-selection-set](./adr/abstract-empty-selection-set.md) | planner | An abstract/union field whose members are **split across subgraphs** returned 500 via an empty selection set; fixed via source-subgraph intersection: members are resolved from the owning subgraph, foreign value-type members are absent, and the resolving subgraph's own non-shared members are response-only nulls, not gathered. | alternative federation implementations return 200 |
+| B2 | [requires-field-argument-conflict](./adr/requires-field-argument-conflict.md) | planner | Two `@requires` consumers requiring the **same field with different arguments** collapsed to one value → silently wrong data. | alternative federation implementations disagree: one is spec-correct, another also collapses to a single argument |
 
 ## Where the code lives (navigation)
 
@@ -37,7 +37,7 @@ test under `router-tests/protocol/`.
 **A2 — provides-on-interface**
 - Composition: `normalization-factory.ts`
   (`#getImplementationExternalFieldDataForProvidesInterfaceLeaf` — resolve `@external`
-  at the implementation level; accepts only what the alternative implementation accepts).
+  at the implementation level; accepts only what alternative federation implementations accept).
 - Planner: `datasource_filter_collect_nodes_visitor.go`, `datasource_filter_visitor.go`,
   `path_builder.go` (match interface-keyed provides against rewritten concrete fragment
   paths; the `isOnAbstractFragment` mechanism generalizes A1's).
@@ -53,10 +53,11 @@ test under `router-tests/protocol/`.
 - e2e: `router-tests/protocol/multihop_compound_key_test.go`.
 
 **B1 — abstract empty-selection-set**
-- Planner: `datasource_filter_visitor.go` (closest-datasource pass for split union
-  fields) + `abstract_selection_rewriter.go` + `node_selection_builder.go` +
-  `node_selection_visitor.go`.
-- e2e: `router-tests/protocol/split_union_test.go`.
+- Planner: `abstract_selection_partial_union.go` (source-subgraph/intersection pass for
+  split non-entity union fields) + the datasource `allowField` guard that keeps the
+  resolving subgraph's response-only null leaves out of upstream fetches.
+- e2e: `TestPartialUnionIntersectionOnShareableField` in
+  `router-tests/protocol/split_union_test.go`.
 
 **B2 — @requires argument conflict**
 - Planner: `graphql_datasource/representation_variable.go` &
@@ -75,10 +76,11 @@ strict fallback brings it to zero.)
 
 ## Verification summary
 
-- **federation-gateway-audit:** the four affected suites flip from failing
+- **federation-gateway-audit:** the five affected suites flip from failing
   to passing — `provides-on-union` (2/2), `provides-on-interface` (2/2),
-  `complex-entity-call` (1/1), `requires-with-argument-conflict` (1/1) — each verified
-  by a clean single-suite run against the router built from all five fixes.
+  `complex-entity-call` (1/1), `partial-union-complex` (5/5),
+  `requires-with-argument-conflict` (1/1) — each verified by a clean single-suite run
+  against the router built from all five fixes.
   (Note: the audit's all-suites bash runner has a router-startup-timing flake that
   yields false `fetch failed` results when suites are cycled rapidly; it is not used as
   evidence — every suite that flakes there passes in a clean single run, e.g.
@@ -86,22 +88,22 @@ strict fallback brings it to zero.)
 - **No regression — the authoritative evidence is celestial:** each planner change
   produced **0 plan diffs across 220 graphs / 13,143 operations**, so the planner emits
   byte-identical plans to stock and no other audit suite's runtime behavior can change.
-  Composition changes are additive / parity with the alternative composer and guarded by negative tests.
+  Composition changes are additive / parity with alternative federation implementations and guarded by negative tests.
 - **Composition test suite (incl. private composition tests):** green
   (1189 tests / 76 files; private tests run from a gitignored copy, never committed).
 - **`graphql-go-tools` `plan` + `graphql_datasource` packages:** green.
 - **Router e2e (`router-tests/protocol`):** all five new tests pass (combined router).
 - **Customer-reported scenarios:** all five reproduce-and-resolve (composition now
   accepts A1/A2/A3; B1 HTTP 500 → 200; B2 now returns spec-correct values matching the
-  spec-correct alternative implementation, where both stock Cosmo and the other alternative return wrong data).
+  spec-correct alternative federation behavior, where stock Cosmo and some alternative federation implementations return wrong data).
 
 ## Notes for reviewers
 
 - **B2 (highest-severity correctness):** this is the highest-severity fix (silently wrong data).
-  Among alternative implementations only one gets it right; with this fix Cosmo matches the spec-correct behavior
-  and is *more correct than the other alternative* (which collapses to the other argument).
+  Among alternative federation implementations only one gets it right; with this fix Cosmo matches the spec-correct behavior
+  and avoids the single-argument collapse.
 - **A2 is a deliberate parity stance, not over-permissiveness:** Cosmo's composer was
-  *stricter* than the alternative implementation's here. The composition relaxation accepts only what the alternative implementation
-  accepts (resolve interface-`@provides` `@external` at the implementation level); a
+  *stricter* than alternative federation implementations here. The composition relaxation accepts only what those implementations
+  accept (resolve interface-`@provides` `@external` at the implementation level); a
   genuinely-invalid `@provides` (no implementation marks the leaf `@external`) is still
   rejected — covered by a negative test.

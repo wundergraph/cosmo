@@ -24,13 +24,17 @@ The observed wrong behavior is therefore a plan-time HTTP 500 (a hard failure), 
 
 ## Reference behavior
 
-alternative federation implementations both accept the same supergraph and the same query and return HTTP 200.
-They plan the union by intersecting the requested members with each subgraph's local union membership, and they dispatch a fetch to a subgraph only for the members that subgraph can actually resolve.
-A member is resolved from a subgraph that defines it, and a non-empty member subset is sent to each subgraph, so no empty upstream selection set is ever produced.
-A member that no chosen datasource can resolve under the final plan is returned as a `null`/absent entry rather than failing the plan.
+Alternative federation implementations both accept the same supergraph and the same query and return HTTP 200.
+They resolve a union field from the subgraph or subgraphs that own the current path.
+For value-type union members, a sibling subgraph's member is absent; it is not gathered from that sibling.
+Gather-all behavior for value-type members is a separate, unimplemented federation feature request.
+Entity-member unions remain different: if a member has a usable `@key`, it can still be gathered through `_entities`.
 
-The correct result for the reproduction below is a heterogeneous `results` array containing every requested member, each resolved from a subgraph that defines it.
-This is the parity target for Cosmo: HTTP 200 with all members present.
+When a `@shareable` path is resolvable from multiple candidate subgraphs, only the intersection of their union members is guaranteed.
+The selected hop-free subgraph's own non-shared members are kept structurally, but their leaf fields are response-only nulls because those leaves are not safe to request under the multi-candidate path.
+Foreign members that belong only to a sibling subgraph are dropped from the result.
+
+This is the parity target for Cosmo: HTTP 200, no empty upstream selection set, and source-subgraph/intersection semantics rather than sibling gathering for value-type members.
 
 ## Reproduction (neutral)
 
@@ -117,7 +121,7 @@ internal: astvalidation selection set on path query.node.results is empty
 
 ### Expected
 
-HTTP 200 with the full result shape (matching alternative federation implementations):
+HTTP 200 with the intersection result shape:
 
 ```json
 {
@@ -125,15 +129,15 @@ HTTP 200 with the full result shape (matching alternative federation implementat
     "node": {
       "results": [
         { "__typename": "Article", "title": "Hello" },
-        { "__typename": "Image", "url": "https://cdn.example/i1.png" },
-        { "__typename": "Video", "duration": 120 }
+        { "__typename": "Image", "url": null }
       ]
     }
   }
 }
 ```
 
-`Article` and `Image` are resolved from subgraph A, `Video` from subgraph B.
+`Video` is absent because it is a foreign value-type member that only subgraph B can produce and is not gathered from the sibling subgraph.
+`Image.url` is a response-only null because `Image` is subgraph A's own non-shared member under a multi-candidate `@shareable` path.
 
 ## Root cause
 
@@ -167,46 +171,37 @@ Instead it emits an unvalidatable upstream operation and fails the entire operat
 The fix is planning-only.
 Composition is unchanged: it already records partial union membership correctly, so no composition area is touched.
 
-The planner work has three parts, in the graphql-go-tools `v2` module.
+The implemented strategy is the canonical source-subgraph/intersection pass in `v2/pkg/engine/plan/abstract_selection_partial_union.go`.
+For a multi-candidate non-entity union field, the planner resolves the field from the source subgraph that owns the current path and keeps only the member set that is guaranteed by the candidate intersection.
+Foreign value-type members that only a sibling subgraph can produce are dropped instead of gathered.
+The resolving subgraph's own non-shared members are kept structurally so the response shape remains coherent, but their leaf fields become response-only nulls.
+Those leaf fields are excluded from the upstream fetch through a datasource `allowField` guard, preventing the planner from emitting an empty or invalid upstream selection set.
 
-1. Consolidate the abstract field onto its closest datasource (primary fix).
-   Add a datasource-selection pass in `v2/pkg/engine/plan/datasource_filter_visitor.go` (a `selectClosestDatasourceForAbstractFields`-style pass that runs alongside `selectDuplicateNodes`): for a field whose return type is abstract and which has more than one selected datasource, keep the datasource that is closest by the existing key-jump score (reuse the `nodeJump.jumpCount` ranking already computed in `checkNodes`) and unselect the losing branch together with any now-empty ancestors.
-   This stops member fragments from being scattered into a datasource whose local union subset would prune them all, so no empty `_entities` selection is built.
-   By itself this pass is byte-identical on every plan that already resolves today, because for already-working shapes there is a single natural closest datasource.
+The pass is gated to non-entity unions.
+Entity-member unions are not changed, because members with usable `@key` fields can still be gathered through `_entities`.
 
-2. Broaden to recover members only available elsewhere (strict fallback).
-   Consolidating onto the closest single datasource can leave out a member that only a sibling datasource defines (in the reproduction, `Video` lives only in B while the closest datasource is A).
-   To reach alternative implementations parity, when the consolidated datasource's local union membership does not cover every requested member, gather the missing members from a sibling datasource that does define them.
-   This broadening is governed by two hard design constraints:
-   - It MUST be gated as a strict fallback that activates only in the genuinely-split case (the primary single-datasource plan cannot cover all requested members), so that celestial plan output is unchanged for every graph and operation that already plans successfully.
-   - Gather depth MUST be bounded to a single key-jump hop, to prevent unbounded entity-jump fan-out when recovering the missing members.
-
-3. Treat empty pruning as "unresolvable", and keep the validator as a safety net.
-   In the abstract-selection rewriter (`rewriteUnionSelection` / `flattenFragmentOnUnion` in `v2/pkg/engine/plan/abstract_selection_rewriter.go`), a union selection that prunes to empty (zero member fragments, or `__typename`-only) should be surfaced as a typed "this datasource cannot resolve this field for these members" outcome rather than silently producing an empty set.
-   The `ValidateEmptySelectionSets()` guard in `printOperation` stays in place as belt-and-suspenders: once parts 1 and 2 land it should never fire on the happy path, and if it ever does it must fail planning of that one fetch (allowing datasource selection to move on) rather than aborting the entire operation.
-
-The intersection that drives all of this is `requestedMembers ∩ localUpstreamUnionMembers`.
-If that intersection carries no selected fields for a datasource, the field is unresolvable by that datasource and selection must move on (or broaden under the gated fallback).
+An earlier gather approach was implemented and then replaced after review because it returned foreign subgraph members for value-type unions, which could produce silently wrong data.
+The corrected behavior is source-subgraph/intersection semantics: absent foreign value-type members are not gathered.
 
 This ADR describes the strategy and the code areas only; it deliberately does not prescribe diffs or line-level edits.
 
 ## Test & verification plan
 
 Planner unit tests (graphql-go-tools `v2/pkg/engine/plan`).
-Add a planner test for the split-union shape above (union members partitioned across two `@shareable` datasources, `node` rooted only in A).
-Assert the full produced plan structure — exact fetch list and exact per-fetch selection sets — not a substring: the `Image` member is fetched only from datasource A, the `Video` member only from datasource B, `Article` from the consolidated closest datasource, and no fetch is emitted with an empty selection set.
-Add a companion negative test asserting that a datasource whose local subset would prune to empty is never the committed datasource for the member.
+Add planner coverage for the split-union shape above (union members partitioned across two `@shareable` datasources, `node` rooted only in A).
+Assert the source-subgraph/intersection behavior: `Article` is selected from the guaranteed intersection, `Image` is kept structurally from subgraph A with response-only null leaves where required, `Video` is absent as a foreign value-type member, and no fetch is emitted with an empty selection set.
 
 End-to-end router test (`router-tests`).
-Add a federation test wiring the two subgraphs and the query above.
-Assert HTTP 200 and the exact JSON response body with a full-value equality assertion, including the heterogeneous `results` array with the `Article`, `Image`, and `Video` entries in the shape shown under "Expected".
+`TestPartialUnionIntersectionOnShareableField` wires the two subgraphs and the query above.
+Assert HTTP 200, one upstream fetch, no sibling gather, and the exact JSON response body shown under "Expected".
 
 Celestial plan-snapshot no-regression.
-Run the celestial plan-snapshot suite and require a plan-diff of zero across all real federated graphs and operations: every already-working plan must be byte-identical.
-The strict-fallback gating in Decision part 2 exists precisely to hold this invariant; any non-zero diff must be limited to previously-failing partial-union shapes that now plan successfully.
+Run the celestial plan-snapshot suite and require a plan-diff of zero across all real federated graphs and operations.
+The verified result for this change is 0-diff.
 
 Federation audit suite.
-The federation-gateway-audit suite that exercises a union whose members are partitioned across subgraphs (the `union-intersection` test case) should flip from failing to passing, with no regressions in the rest of the audit suite.
+The discriminating gate is the federation-gateway-audit `partial-union-complex` suite.
+It now passes 5/5, after the earlier gather approach only passed 1/5.
 
 ## Consequences / risks
 
@@ -214,6 +209,6 @@ The change is confined to the planner: datasource selection (`datasource_filter_
 The regression surface is all abstract-type planning, because the rewriter and datasource-selection code is shared by both unions and interfaces.
 
 The main risk vectors are bounded as follows.
-The closest-datasource consolidation in Decision part 1 is shaped to be a no-op on already-working plans, and the broadening in Decision part 2 is gated as a strict fallback and bounded to a single key-jump hop, so the celestial zero-diff requirement caps unintended plan churn.
-Over-eager pruning — marking a field unresolvable when a non-empty member subset was in fact valid — is caught by the full-plan unit assertions and by the end-to-end body assertion, both of which fail if any legitimate member fragment is dropped.
+The source-subgraph/intersection pass is gated to non-entity unions, so entity-member union gathering remains unchanged.
+Over-eager pruning — dropping a member that belongs to the resolving source subgraph or to the guaranteed candidate intersection — is caught by the full-plan unit assertions and by the end-to-end body assertion.
 The same empty-selection collapse can in principle occur for interfaces partially implemented across subgraphs; the rewriter-side "unresolvable" signal should be shaped to cover the interface path as well, and the audit suite plus the celestial sweep guard against an interface-shaped regression.
