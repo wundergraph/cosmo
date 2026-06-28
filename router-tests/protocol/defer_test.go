@@ -132,6 +132,9 @@ func TestDeferTestDataQueries(t *testing.T) {
 							updateRaw := false
 
 							t.Run("raw multipart body", func(t *testing.T) {
+
+								body := bytes.Replace(body, []byte("\r\n"), []byte("\n"), -1)
+
 								if !updateRaw {
 									gMultipart.Assert(t, name, body)
 								} else {
