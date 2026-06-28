@@ -31,7 +31,7 @@ require (
 	github.com/wundergraph/cosmo/router v0.0.0-20260330183556-dc4388d100a4
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
 	github.com/wundergraph/cosmo/speedtrap v0.0.0-00010101000000-000000000000
-	github.com/wundergraph/graphql-go-tools/v2 v2.5.1-0.20260626212144-c480410cefab
+	github.com/wundergraph/graphql-go-tools/v2 v2.5.1-0.20260628182554-7f8aa908ac4f
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/sdk v1.44.0
 	go.opentelemetry.io/otel/sdk/metric v1.44.0
