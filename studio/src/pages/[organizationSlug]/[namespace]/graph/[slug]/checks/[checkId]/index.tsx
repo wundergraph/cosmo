@@ -1242,9 +1242,7 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                                     </>
                                   )}
                                 </div>
-                                <pre className="whitespace-pre-wrap">
-                                  {entry.message.replace(/^Error:\s*/g, '')}
-                                </pre>
+                                <pre className="whitespace-pre-wrap">{entry.message.replace(/^Error:\s*/g, '')}</pre>
                               </div>
                             ))}
                           </div>

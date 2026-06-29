@@ -181,10 +181,7 @@ export class JsonCheckSchemaOutputBuilder {
   }
 
   addComposedSchemaBreakingChanges(changes: FederatedGraphSchemaChange[]): this {
-    this.data.composedSchemaBreakingChanges = [
-      ...(this.data.composedSchemaBreakingChanges ?? []),
-      ...changes,
-    ];
+    this.data.composedSchemaBreakingChanges = [...(this.data.composedSchemaBreakingChanges ?? []), ...changes];
     return this;
   }
 
