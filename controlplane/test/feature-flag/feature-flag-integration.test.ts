@@ -4030,5 +4030,88 @@ describe('Feature flag integration tests', () => {
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
       },
     );
+
+    test(
+      'that publishing a feature subgraph only recomposes affected feature flags',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+          enabledFeatures: ['split-config-loading'],
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        const labels: Label[] = [];
+        const baseGraphName = genID('baseFederatedGraphName');
+        const ffName1 = genID('featureFlagName1');
+        const ffName2 = genID('featureFlagName2');
+
+        await createNamespace(client, namespace);
+
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: true },
+            { name: 'products-standalone', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        await createThenPublishFeatureSubgraph(
+          client,
+          'products-standalone-feature-v2',
+          'products-standalone',
+          namespace,
+          fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-standalone-feature.graphql`)).toString(),
+          labels,
+          'http://localhost:10000/graphql'
+        );
+
+        expect(blobStorage.keys()).toHaveLength(2);
+        const key = blobStorage.keys()[0];
+        const mapperKey = blobStorage.keys()[1];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/manifest/latest.json`);
+        expect(mapperKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/mapper.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        await createFeatureFlag(client, ffName1, labels, ['users-feature', 'products-standalone-feature-v2'], namespace, true);
+        await createFeatureFlag(client, ffName2, labels, ['products-standalone-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(4);
+        expect(blobStorage.keys()).toEqual(
+          expect.arrayContaining([
+            expect.stringContaining(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${ffName1}.json`),
+            expect.stringContaining(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${ffName2}.json`),
+          ]),
+        )
+
+        // The base composition and the feature flags composition
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // Update the feature subgraph
+        const updateFeatureSubgraphResp = await client.publishFederatedSubgraph({
+          name: 'products-standalone-feature',
+          namespace,
+          schema: fs
+            .readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-feature-update.graphql`))
+            .toString(),
+        });
+
+        expect(updateFeatureSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // Only one feature flag should have composed
+        await assertNumberOfCompositions(client, baseGraphName, 4, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+      },
+    );
   });
 });

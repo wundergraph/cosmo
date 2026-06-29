@@ -595,13 +595,23 @@ export class SubgraphRepository {
             caches: featureFlagCaches,
           });
 
-          // If an enabled feature flag includes the feature graph that has just been published, push it to the array
-          if (enabledFeatureFlags.length > 0 && !splitConfigFeature?.enabled) {
-            affectedFederatedGraphById.set(federatedGraphDTO.id, federatedGraphDTO);
+          /**
+           * When split config is not enabled, the federated graph and all enabled feature flags will be considered
+           * as affected as we need to compose everything; however, if the feature is enabled for the organization,
+           * we need to verify whether the feature subgraph is part of the feature flag, if so, we can consider it
+           * as affected.
+           */
+          const isLegacyComposition = !splitConfigFeature?.enabled;
+          for (const featureFlag of enabledFeatureFlags) {
+            if (isLegacyComposition ||
+              featureFlag.featureSubgraphs.some((fsg) => fsg.id === subgraph.id)) {
+              affectedFeatureFlagIds.add(featureFlag.id);
+            }
           }
 
-          for (const featureFlag of enabledFeatureFlags) {
-            affectedFeatureFlagIds.add(featureFlag.id);
+          if (isLegacyComposition && enabledFeatureFlags.length > 0) {
+            // It looks like the federated graph is affected
+            affectedFederatedGraphById.set(federatedGraphDTO.id, federatedGraphDTO);
           }
         }
       }
