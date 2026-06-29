@@ -99,8 +99,8 @@ func TestHeaderSet(t *testing.T) {
 				require.NoError(t, err)
 
 				bodyString := string(body)
-				assert.Contains(t, bodyString, `{"data":{},"hasNext":true}`)
-				assert.Contains(t, bodyString, fmt.Sprintf(`{"incremental":[{"data":{"headerValue":"%s"},"path":[]}],"hasNext":false}`, employeeVal))
+				assert.Contains(t, bodyString, `{"data":{},"pending":[{"id":"1","path":[]}],"hasNext":true}`)
+				assert.Contains(t, bodyString, fmt.Sprintf(`{"incremental":[{"data":{"headerValue":"%s"},"id":"1"}],"completed":[{"id":"1"}],"hasNext":false}`, employeeVal))
 			})
 		})
 	})
