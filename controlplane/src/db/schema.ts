@@ -1006,11 +1006,9 @@ export const schemaCheckFederatedGraphChanges = pgTable(
       ),
       schemaCheckChangeActionIdIndex: index('scfgsc_schema_check_change_action_id_idx').on(t.schemaCheckChangeActionId),
       featureFlagIdIndex: index('scfgc_feature_flag_id_idx').on(t.featureFlagId),
-      uniqueFedGraphChange: uniqueIndex('scfgc_fed_graph_change_action_unique').on(
-        t.schemaCheckFederatedGraphId,
-        t.schemaCheckChangeActionId,
-        t.featureFlagId,
-      ),
+      uniqueFedGraphChange: unique('scfgc_fed_graph_change_action_unique')
+        .on(t.schemaCheckFederatedGraphId, t.schemaCheckChangeActionId, t.featureFlagId)
+        .nullsNotDistinct(),
     };
   },
 );
@@ -1187,11 +1185,9 @@ export const schemaCheckComposition = pgTable(
       schemaCheckIdIndex: index('scc_schema_check_id_idx').on(t.schemaCheckId),
       federatedTargetIdIndex: index('scc_target_id_idx').on(t.federatedTargetId),
       featureFlagIdIndex: index('scc_feature_flag_id_idx').on(t.featureFlagId),
-      uniqueScc: uniqueIndex('scc_check_target_flag_unique').on(
-        t.schemaCheckId,
-        t.federatedTargetId,
-        t.featureFlagId,
-      ),
+      uniqueScc: unique('scc_check_target_flag_unique')
+        .on(t.schemaCheckId, t.federatedTargetId, t.featureFlagId)
+        .nullsNotDistinct(),
     };
   },
 );
