@@ -116,6 +116,12 @@ func TestDeferTestDataQueries(t *testing.T) {
 								"parallel_defers",
 								"products_defer",
 								"multiple_fields_deferred",
+								// Two @defer on sibling root fields (employee + teammates)
+								// resolve in parallel, so the chunk order is non-deterministic.
+								// The single-defer *_08 variants are deterministic and keep
+								// their raw assertion; products_defer_08 is already covered by
+								// the "products_defer" prefix above.
+								"employee_defer_08_defer_nested_object",
 							}
 
 							for _, skip := range skips {
