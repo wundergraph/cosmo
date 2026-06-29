@@ -1002,4 +1002,45 @@ describe('Feature flag aware subgraph checks', () => {
       );
     }
   });
+
+  test('deleting a feature subgraph that belongs to an enabled flag does not fail on the empty SDL', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    const label = genUniqueLabel();
+    const baseSubgraphName = genID('base');
+    const featureSubgraphName = genID('fs');
+    const fedGraphName = genID('fedgraph');
+    const featureFlagName = genID('flag').toLowerCase();
+
+    await createAndPublishSubgraph(
+      client,
+      baseSubgraphName,
+      'default',
+      BASE_USERS_SDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+    await createThenPublishFeatureSubgraph(
+      client,
+      featureSubgraphName,
+      baseSubgraphName,
+      'default',
+      FS_USERS_SDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], DEFAULT_ROUTER_URL);
+    await createFeatureFlag(client, featureFlagName, [label], [featureSubgraphName], 'default', true);
+
+    // A delete check sends an empty proposed SDL. The flag composition must drop the feature subgraph
+    // instead of parsing the empty SDL (which previously threw).
+    const checkResp = await client.checkSubgraphSchema({
+      subgraphName: featureSubgraphName,
+      namespace: 'default',
+      delete: true,
+    });
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp.compositionErrors).toHaveLength(0);
+  });
 });

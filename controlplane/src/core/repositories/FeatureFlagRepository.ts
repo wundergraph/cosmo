@@ -1373,16 +1373,19 @@ export class FeatureFlagRepository {
       definitions: parse(s.schemaSDL),
     }));
 
-    // Clone each flag and swap in the proposed SDL for the changed FS.
+    // Clone each flag and apply the proposed change to the checked feature subgraph. An empty proposed
+    // SDL means the feature subgraph is being deleted: drop it from the flag so the flag composes
+    // against the base subgraph it overrode, rather than substituting an empty SDL that would fail to
+    // parse. This mirrors the base/new path, which filters out empty SDLs before parsing.
+    const isDeletion = proposedSchemaSDL === '';
     const flagsWithProposedSDL: FeatureFlagWithFeatureSubgraphs[] = flags.map((flag) => ({
       id: flag.id,
       name: flag.name,
-      featureSubgraphs: flag.featureSubgraphs.map((fs) => {
-        if (fs.id !== featureSubgraphId) {
-          return fs;
-        }
-        return { ...fs, schemaSDL: proposedSchemaSDL };
-      }),
+      featureSubgraphs: isDeletion
+        ? flag.featureSubgraphs.filter((fs) => fs.id !== featureSubgraphId)
+        : flag.featureSubgraphs.map((fs) =>
+            fs.id === featureSubgraphId ? { ...fs, schemaSDL: proposedSchemaSDL } : fs,
+          ),
     }));
 
     const flagMap = new Map<string, FeatureFlagWithFeatureSubgraphs>();
