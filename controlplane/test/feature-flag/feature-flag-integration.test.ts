@@ -4102,7 +4102,7 @@ describe('Feature flag integration tests', () => {
           ]),
         );
 
-        // The base composition and the feature flags composition
+        // The base composition + one composition for each feature flag
         await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
 
@@ -4117,7 +4117,7 @@ describe('Feature flag integration tests', () => {
 
         expect(updateFeatureSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 
-        // Only one feature flag should have composed
+        // Only one feature flag should have recomposed
         await assertNumberOfCompositions(client, baseGraphName, 4, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
       },
@@ -4178,7 +4178,7 @@ describe('Feature flag integration tests', () => {
           ]),
         );
 
-        // The base composition and the feature flags composition
+        // The base composition + one composition for each feature flag
         await assertNumberOfCompositions(client, baseGraphName, 4, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
 
@@ -4193,7 +4193,7 @@ describe('Feature flag integration tests', () => {
 
         expect(updateFeatureSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 
-        // Only the feature flags that share `products-standalone-feature` should recompose
+        // Only the two feature flags that share `products-standalone-feature` should recompose
         await assertNumberOfCompositions(client, baseGraphName, 6, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
       },
