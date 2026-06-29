@@ -110,7 +110,9 @@ const identify = ({
     return;
   }
 
-  if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+  // Only attach identity/PII after the user has opted in. Rejected/default
+  // opt-out users are tracked anonymously (cookieless), so no PII is sent.
+  if (process.env.NEXT_PUBLIC_POSTHOG_KEY && posthog.has_opted_in_capturing()) {
     setupPosthog({
       email,
       id,
