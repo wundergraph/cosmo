@@ -2558,12 +2558,13 @@ export class SubgraphRepository {
           plan.map((entry) => ({ ...entry, checkSubgraphIds: [schemaCheckSubgraphId] })),
         );
       } else {
-        // Base subgraph check OR new-subgraph check: resolve currently-published subgraphs and
-        // either substitute the proposed SDL (existing base subgraph) or append a synthetic DTO
-        // (new subgraph), then build the base + feature flag composition plan.
+        // Base subgraph check OR new-subgraph check: resolve all subgraphs of the federated graph
+        // (including unpublished ones, which have an empty schema), substitute the proposed SDL for
+        // the subgraph being checked, and append a synthetic DTO for a brand-new subgraph that does
+        // not exist yet. Any subgraph that still has no schema (unpublished and not the one being
+        // checked) is dropped below before composing.
         const baseSubgraphsForGraph = await subgraphRepo.listByFederatedGraph({
           federatedGraphTargetId: graph.targetId,
-          published: true,
         });
 
         const baseSubgraphsWithProposedSDL: SubgraphDTO[] = subgraph
@@ -2599,16 +2600,17 @@ export class SubgraphRepository {
           } as SubgraphDTO);
         }
 
-        const baseCompositionSubgraphs = baseSubgraphsWithProposedSDL
-          .filter((s) => s.schemaSDL !== '')
-          .map((s) => ({
-            name: s.name,
-            url: s.routingUrl,
-            definitions: parse(s.schemaSDL),
-          }));
+        // Drop subgraphs that still have no schema (unpublished and not the subgraph being checked).
+        const composableBaseSubgraphs = baseSubgraphsWithProposedSDL.filter((s) => s.schemaSDL !== '');
+
+        const baseCompositionSubgraphs = composableBaseSubgraphs.map((s) => ({
+          name: s.name,
+          url: s.routingUrl,
+          definitions: parse(s.schemaSDL),
+        }));
 
         const plan = await featureFlagRepo.getSubgraphsToCompose({
-          baseSubgraphs: baseSubgraphsWithProposedSDL,
+          baseSubgraphs: composableBaseSubgraphs,
           fedGraphLabelMatchers: graph.labelMatchers,
           baseCompositionSubgraphs,
         });

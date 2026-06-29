@@ -1245,6 +1245,11 @@ export class FeatureFlagRepository {
     ];
     const featureFlagToComposeByFlagId = new Map<string, FeatureFlagWithFeatureSubgraphs>();
     for (const subgraph of baseSubgraphs) {
+      // A brand-new subgraph that has not been created yet has no id, so it cannot be the base of any
+      // feature flag. Skip it to avoid querying feature flags with an empty uuid.
+      if (!subgraph.id) {
+        continue;
+      }
       // fetching all the ffs which have fgs whose base subgraph id is the passed as input
       const enabledFeatureFlags = await this.getFeatureFlagsByBaseSubgraphIdAndLabelMatchers({
         baseSubgraphId: subgraph.id,
