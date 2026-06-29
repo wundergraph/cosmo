@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.239.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.239.0...controlplane@0.239.1) (2026-06-26)
+
+**Note:** Version bump only for package controlplane
+
+# [0.239.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.238.0...controlplane@0.239.0) (2026-06-25)
+
+### Features
+
+* **cli:** support in/exclude contract tags simultaneously ([#3017](https://github.com/wundergraph/cosmo/issues/3017)) ([5efb3c2](https://github.com/wundergraph/cosmo/commit/5efb3c20fbd44110388e33943e43b13debba4c39)) (@Aenimus)
+
+# [0.238.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.237.1...controlplane@0.238.0) (2026-06-25)
+
+### Features
+
+* **controlplane:** persist proposal state notification graph ([#2993](https://github.com/wundergraph/cosmo/issues/2993)) ([20bd48f](https://github.com/wundergraph/cosmo/commit/20bd48f6e584bb968d64eeec24d0e401b8f5f82f)) (@wilsonrivera)
+
+## [0.237.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.237.0...controlplane@0.237.1) (2026-06-23)
+
+### Bug Fixes
+
+* pagination in proposals page ([#2989](https://github.com/wundergraph/cosmo/issues/2989)) ([a45b33c](https://github.com/wundergraph/cosmo/commit/a45b33c03577f615873639c72f6ad310ba71856b)) (@JivusAyrus)
+
+# [0.237.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.236.4...controlplane@0.237.0) (2026-06-23)
+
+### Features
+
+* improve performance of subgraph batch-publish ([#2969](https://github.com/wundergraph/cosmo/issues/2969)) ([e920085](https://github.com/wundergraph/cosmo/commit/e9200856e33c7277d99c6903046ac9ce39a25c2f)) (@JivusAyrus)
+
+## [0.236.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.236.3...controlplane@0.236.4) (2026-06-22)
+
+**Note:** Version bump only for package controlplane
+
+## [0.236.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.236.2...controlplane@0.236.3) (2026-06-19)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.236.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.236.1...controlplane@0.236.2) (2026-06-18)
 
 **Note:** Version bump only for package controlplane
