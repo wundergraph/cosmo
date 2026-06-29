@@ -17,16 +17,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// unavailableTestSubConfig is a minimal SubscriptionEventConfiguration used to probe
-// whether a provider rejects subscriptions after being marked unavailable.
-type unavailableTestSubConfig struct{}
-
-func (unavailableTestSubConfig) ProviderID() string { return "redis-1" }
-func (unavailableTestSubConfig) ProviderType() datasource.ProviderType {
-	return datasource.ProviderTypeRedis
-}
-func (unavailableTestSubConfig) RootFieldName() string { return "field" }
-
 func TestStartupPubSubProviders_SkipUnavailableProviders(t *testing.T) {
 	t.Parallel()
 
@@ -51,20 +41,18 @@ func TestStartupPubSubProviders_SkipUnavailableProviders(t *testing.T) {
 		require.Error(t, s.startupPubSubProviders(context.Background()))
 	})
 
-	t.Run("starts anyway and marks the provider unavailable when the flag is enabled", func(t *testing.T) {
+	t.Run("starts anyway when a provider fails and the flag is enabled", func(t *testing.T) {
 		t.Parallel()
 
+		// The provider could not connect at startup, but lenient mode lets the router start
+		// anyway. The adapter keeps a resilient client that reconnects in the background, so
+		// the provider recovers without a restart once the broker becomes reachable.
 		adapter := datasource.NewMockProvider(t)
 		adapter.On("Startup", mock.Anything).Return(errors.New("connection refused"))
 		provider := datasource.NewPubSubProvider("redis-1", "redis", adapter, zap.NewNop(), nil)
 
 		s := newServer(true, provider)
 		require.NoError(t, s.startupPubSubProviders(context.Background()))
-
-		// The provider was marked unavailable: a subscribe attempt returns an error
-		// without ever reaching the (unconnected) adapter, so the router does not panic.
-		err := provider.Subscribe(context.Background(), unavailableTestSubConfig{}, nil)
-		require.Error(t, err)
 	})
 }
 
@@ -100,10 +88,6 @@ func TestProvidersActionWithTimeout_MultipleHangingProvidersDoNotDeadlock(t *tes
 	case <-time.After(5 * time.Second):
 		t.Fatal("providersActionWithTimeout deadlocked with multiple hanging providers")
 	}
-
-	// Both providers must have been marked unavailable by their own timeouts.
-	require.Error(t, p1.UnavailableError())
-	require.Error(t, p2.UnavailableError())
 }
 
 // TestShutdownPubSubProviders_StaysStrictWithSkipUnavailableProviders pins that shutdown

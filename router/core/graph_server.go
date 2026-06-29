@@ -2202,9 +2202,11 @@ func (s *graphServer) startupPubSubProviders(ctx context.Context) error {
 	// Default timeout for pubsub provider startup
 	const defaultStartupTimeout = 5 * time.Second
 
-	// When skip_unavailable_providers is enabled, a provider that fails to start (e.g. the
-	// broker is unreachable) must not prevent the router from starting. The provider is
-	// logged and marked unavailable so requests to its fields fail gracefully instead.
+	// When skip_unavailable_providers is enabled, a provider that fails to connect (e.g. the
+	// broker is unreachable) must not prevent the router from starting. The error is logged
+	// and the router keeps running; the adapter holds a resilient client that reconnects in
+	// the background, so the fields backed by that provider recover without a restart once
+	// the broker becomes reachable again.
 	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.Provider) error {
 		return provider.Startup(ctx)
 	}, defaultStartupTimeout, "pubsub provider startup timed out", s.eventsConfig.SkipUnavailableProviders)
@@ -2222,18 +2224,12 @@ func (s *graphServer) shutdownPubSubProviders(ctx context.Context) error {
 	}, defaultShutdownTimeout, "pubsub provider shutdown timed out", false)
 }
 
-// providerUnavailableMarker is implemented by providers that can be marked unavailable
-// so that requests to their fields fail gracefully instead of using a provider that
-// could not be started.
-type providerUnavailableMarker interface {
-	MarkUnavailable()
-}
-
 // providersActionWithTimeout runs action against every pubsub provider concurrently,
 // bounding each by timeout. When continueOnError is true, a provider whose action fails
-// or times out is logged and marked unavailable instead of aborting the whole action;
-// this is used at startup so an unreachable provider does not prevent the router from
-// starting.
+// or times out is logged instead of aborting the whole action; this is used at startup
+// (events.skip_unavailable_providers) so an unreachable provider does not prevent the
+// router from starting. The provider's adapter keeps a resilient client that reconnects
+// in the background, so the affected fields recover once the broker becomes reachable.
 func (s *graphServer) providersActionWithTimeout(ctx context.Context, action func(ctx context.Context, provider datasource.Provider) error, timeout time.Duration, timeoutMessage string, continueOnError bool) error {
 	cancellableCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -2261,19 +2257,18 @@ func (s *graphServer) providersActionWithTimeout(ctx context.Context, action fun
 			if actionErr == nil || !continueOnError {
 				return actionErr
 			}
-			// Lenient mode: tolerate the failure only if the provider can be marked
-			// unavailable, so that requests to its fields fail gracefully instead of using
-			// an unconnected adapter. If it cannot be marked, do not swallow the error.
-			marker, ok := provider.(providerUnavailableMarker)
-			if !ok {
-				return actionErr
-			}
-			s.logger.Error("EDFS provider is unavailable; the router will keep running and the fields backed by this provider will be unavailable",
+			// Lenient mode (events.skip_unavailable_providers): the provider failed to start.
+			// Log a distinct error and let the router keep running with the affected fields
+			// unavailable. When the cause is an unreachable broker the adapter retains a
+			// resilient client that reconnects in the background, so those fields recover
+			// without a restart once the broker is reachable. When the cause is a
+			// configuration error (e.g. an invalid URL) the provider cannot recover until the
+			// configuration is fixed; the underlying cause is attached as the error field.
+			s.logger.Error("EDFS provider could not be started at startup; the router will keep running and the fields backed by this provider are temporarily unavailable. An unreachable broker reconnects and recovers automatically without a restart; see the error for the cause",
 				zap.String("provider_id", provider.ID()),
 				zap.String("provider_type", provider.TypeID()),
 				zap.Error(actionErr),
 			)
-			marker.MarkUnavailable()
 			return nil
 		})
 	}

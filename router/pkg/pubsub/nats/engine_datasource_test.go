@@ -210,24 +210,6 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 	}
 }
 
-func TestNatsRequestDataSource_Load_UnavailableProvider(t *testing.T) {
-	t.Parallel()
-
-	// No Request expectation is set on the mock, so the request path must not reach the
-	// adapter once the provider is marked unavailable.
-	mockAdapter := NewMockAdapter(t)
-	provider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop(), testNatsEventBuilder)
-	provider.MarkUnavailable()
-
-	dataSource := &NatsRequestDataSource{
-		pubSub: provider,
-	}
-
-	input := []byte(`{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`)
-	_, err := dataSource.Load(context.Background(), nil, input)
-	require.Error(t, err)
-}
-
 func TestNatsRequestDataSource_LoadWithFiles(t *testing.T) {
 	dataSource := &NatsRequestDataSource{}
 	assert.Panics(t, func() {

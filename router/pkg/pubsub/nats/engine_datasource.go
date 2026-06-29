@@ -247,12 +247,6 @@ func (s *NatsRequestDataSource) Load(ctx context.Context, headers http.Header, i
 		return nil, fmt.Errorf("adapter for provider %s is not of the right type", publishData.Provider)
 	}
 
-	// The request path reaches into the underlying adapter directly, so it must honor the
-	// unavailable flag itself (Subscribe/Publish are guarded by the provider wrapper).
-	if err := providerBase.UnavailableError(); err != nil {
-		return nil, err
-	}
-
 	adapter, ok := providerBase.Adapter.(Adapter)
 	if !ok {
 		return nil, fmt.Errorf("adapter for provider %s is not of the right type", publishData.Provider)

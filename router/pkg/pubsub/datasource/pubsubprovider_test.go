@@ -169,53 +169,6 @@ func TestProvider_Subscribe_Error(t *testing.T) {
 	assert.Equal(t, expectedError, err)
 }
 
-func TestProvider_MarkUnavailable_SubscribeReturnsErrorWithoutCallingAdapter(t *testing.T) {
-	// The adapter must NOT be reached once the provider is marked unavailable; the mock
-	// has no expectations set, so any adapter call would fail the test.
-	mockAdapter := NewMockProvider(t)
-	config := &testSubscriptionConfig{
-		providerID:   "test-provider",
-		providerType: ProviderTypeRedis,
-		fieldName:    "testField",
-	}
-
-	provider := PubSubProvider{
-		id:      "test-provider",
-		typeID:  "redis",
-		Adapter: mockAdapter,
-	}
-	provider.MarkUnavailable()
-
-	err := provider.Subscribe(context.Background(), config, nil)
-
-	assert.Error(t, err)
-	var providerErr *Error
-	assert.ErrorAs(t, err, &providerErr)
-}
-
-func TestProvider_MarkUnavailable_PublishReturnsErrorWithoutCallingAdapter(t *testing.T) {
-	mockAdapter := NewMockProvider(t)
-	config := &testPublishConfig{
-		providerID:   "test-provider",
-		providerType: ProviderTypeRedis,
-		fieldName:    "testField",
-	}
-	events := []StreamEvent{&testEvent{mutableTestEvent("test data")}}
-
-	provider := PubSubProvider{
-		id:      "test-provider",
-		typeID:  "redis",
-		Adapter: mockAdapter,
-	}
-	provider.MarkUnavailable()
-
-	err := provider.Publish(context.Background(), config, events)
-
-	assert.Error(t, err)
-	var providerErr *Error
-	assert.ErrorAs(t, err, &providerErr)
-}
-
 func TestProvider_Publish_NoHooks_Success(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
 	config := &testPublishConfig{

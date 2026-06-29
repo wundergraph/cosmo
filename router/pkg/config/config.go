@@ -806,8 +806,9 @@ type EventsConfiguration struct {
 	// configuration, or defined but unreachable at startup (e.g. the broker is down).
 	// When enabled, the router logs an error and starts anyway instead of failing. A
 	// provider that is not defined has its data sources skipped; a provider that fails to
-	// connect is marked unavailable so requests to the affected fields return an error
-	// instead of crashing the router. The rest of the graph keeps serving traffic.
+	// connect keeps a resilient client that reconnects in the background, so the affected
+	// fields are only temporarily unavailable and recover without a restart once the broker
+	// becomes reachable again. The rest of the graph keeps serving traffic throughout.
 	SkipUnavailableProviders bool                        `yaml:"skip_unavailable_providers" envDefault:"false" env:"EVENTS_SKIP_UNAVAILABLE_PROVIDERS"`
 	Handlers                 StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
 }

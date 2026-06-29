@@ -190,12 +190,17 @@ If you run `make edfs-demo` in the Cosmo Monorepo, you'll automatically get a NA
 
 By default the router fails to start if an event provider referenced by the execution config is unavailable. This happens in two cases:
 
-- The provider is not defined under `events.providers`. The router reports an error such as `redis provider with ID my-provider is not defined`.
-- The provider is defined but cannot be reached at startup (e.g. the broker is down).
+- The provider is not defined under `events.providers`. The router reports an error such as `redis provider with ID my-provider is not defined`. This applies to NATS, Kafka, and Redis.
+- The provider is defined but cannot be reached at startup (e.g. the broker is down). This applies to NATS and Redis. The Kafka client connects lazily, so a router with an unreachable Kafka broker still starts by default.
 
 This stops a router from coming up with a broken event setup.
 
-Set `skip_unavailable_providers: true` (or the `EVENTS_SKIP_UNAVAILABLE_PROVIDERS` environment variable) to start the router anyway. The router logs the error and disables only the fields backed by the unavailable provider. The rest of the graph keeps serving traffic. A field whose provider is not defined is dropped (it cannot be queried); a field whose provider failed to connect returns an error at query time. Set up an alert on the logged error to detect the misconfiguration or outage.
+Set `skip_unavailable_providers: true` (or the `EVENTS_SKIP_UNAVAILABLE_PROVIDERS` environment variable) to start the router anyway. The router logs the error and disables only the fields backed by the unavailable provider. The rest of the graph keeps serving traffic. The two cases use distinct log messages and behave differently:
+
+- A provider that is not defined has its data sources dropped. The affected fields cannot be queried until the provider is added to the configuration.
+- A provider that is defined but unreachable keeps a client that retries the connection in the background. Its fields are temporarily unavailable. They recover automatically once the broker becomes reachable, without a router restart. This applies to NATS, Kafka, and Redis.
+
+Set up an alert on the logged error to detect the misconfiguration or outage.
 
 ```yaml config.yaml
 events:

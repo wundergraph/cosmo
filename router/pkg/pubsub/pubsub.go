@@ -162,7 +162,8 @@ func build[P GetID, E GetEngineEventConfiguration](
 			continue
 		}
 		provider, err := builder.BuildProvider(providerData, pubsub_datasource.ProviderOpts{
-			StreamMetricStore: store,
+			StreamMetricStore:        store,
+			SkipUnavailableProviders: skipUnavailableProviders,
 		})
 		if err != nil {
 			return nil, nil, err

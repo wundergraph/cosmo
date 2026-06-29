@@ -76,7 +76,7 @@ func (p *ProviderBuilder) BuildProvider(provider config.NatsEventSource, provide
 	return pubSubProvider, nil
 }
 
-func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([]nats.Option, error) {
+func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger, skipUnavailable bool) ([]nats.Option, error) {
 	opts := []nats.Option{
 		nats.Name(fmt.Sprintf("cosmo.router.edfs.nats.%s", eventSource.ID)),
 		nats.ReconnectJitter(500*time.Millisecond, 2*time.Second),
@@ -152,11 +152,22 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 		opts = append(opts, nats.Secure(tlsCfg))
 	}
 
+	if skipUnavailable {
+		// Lenient mode (events.skip_unavailable_providers): do not fail the initial connect
+		// when the broker is unreachable. nats.Connect then returns a client in the
+		// reconnecting state instead of an error, and unlimited reconnects ensure the
+		// provider recovers on its own once the broker becomes reachable — no restart needed.
+		opts = append(opts,
+			nats.RetryOnFailedConnect(true),
+			nats.MaxReconnects(-1),
+		)
+	}
+
 	return opts, nil
 }
 
 func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string, providerOpts datasource.ProviderOpts) (datasource.Provider, error) {
-	options, err := buildNatsOptions(provider, logger)
+	options, err := buildNatsOptions(provider, logger, providerOpts.SkipUnavailableProviders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", provider.ID, err)
 	}
