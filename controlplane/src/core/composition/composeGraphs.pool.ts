@@ -100,11 +100,19 @@ function deserializeWarning(message: string, subgraphName?: string) {
 
 export type DeserializedComposedGraph = Omit<ComposedFederatedGraph, 'subgraphs'> & {
   subgraphs: CompositionSubgraphRecord[];
+  isFeatureFlagComposition?: boolean;
+  featureFlagId?: string;
+  featureFlagName?: string;
 };
 
 export function deserializeComposedGraphArtifact(
   federatedGraph: Pick<FederatedGraphDTO, 'id' | 'targetId' | 'name' | 'namespace' | 'namespaceId'>,
   artifact: SerializedComposedGraphArtifact,
+  featureFlagMeta?: {
+    isFeatureFlagComposition: boolean;
+    featureFlagId: string;
+    featureFlagName: string;
+  },
 ): DeserializedComposedGraph {
   return Sentry.startSpan({ name: 'ComposeGraphsPool.deserializeComposedGraphArtifact' }, () => ({
     id: federatedGraph.id,
@@ -119,6 +127,9 @@ export function deserializeComposedGraphArtifact(
     fieldConfigurations: artifact.fieldConfigurations,
     subgraphs: artifact.subgraphs,
     warnings: artifact.warnings.map((warning) => deserializeWarning(warning.message, warning.subgraphName)),
+    isFeatureFlagComposition: featureFlagMeta?.isFeatureFlagComposition,
+    featureFlagId: featureFlagMeta?.featureFlagId,
+    featureFlagName: featureFlagMeta?.featureFlagName,
   }));
 }
 

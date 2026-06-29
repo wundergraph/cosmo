@@ -2287,6 +2287,11 @@ export class FederatedGraphSchemaChange extends Message<FederatedGraphSchemaChan
    */
   hasOverride?: boolean;
 
+  /**
+   * @generated from field: string featureFlag = 7;
+   */
+  featureFlag = "";
+
   constructor(data?: PartialMessage<FederatedGraphSchemaChange>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2301,6 +2306,7 @@ export class FederatedGraphSchemaChange extends Message<FederatedGraphSchemaChan
     { no: 4, name: "isBreaking", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 5, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "hasOverride", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 7, name: "featureFlag", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraphSchemaChange {
@@ -2890,6 +2896,14 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
    */
   composedSchemaBreakingChanges: FederatedGraphSchemaChange[] = [];
 
+  /**
+   * Set when a feature subgraph is checked but is not assigned to any enabled feature flag covering a
+   * federated graph, so no composition check was performed. Informational; no composition ran.
+   *
+   * @generated from field: optional string featureSubgraphCheckMessage = 21;
+   */
+  featureSubgraphCheckMessage?: string;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2918,6 +2932,7 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
     { no: 18, name: "checkExtensionErrorMessage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 19, name: "counts", kind: "message", T: SchemaCheckCounts, opt: true },
     { no: 20, name: "composedSchemaBreakingChanges", kind: "message", T: FederatedGraphSchemaChange, repeated: true },
+    { no: 21, name: "featureSubgraphCheckMessage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaResponse {
@@ -4716,6 +4731,11 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   checkExtensionErrorMessage?: string;
 
+  /**
+   * @generated from field: bool hasFeatureSubgraphCheck = 25;
+   */
+  hasFeatureSubgraphCheck = false;
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4748,6 +4768,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 22, name: "linkedChecks", kind: "message", T: SchemaCheck_LinkedCheck, repeated: true },
     { no: 23, name: "check_extension_delivery_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 24, name: "check_extension_error_message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 25, name: "hasFeatureSubgraphCheck", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {
@@ -5149,9 +5170,9 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
   changes: SchemaChange[] = [];
 
   /**
-   * @generated from field: repeated string compositionErrors = 7;
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 7;
    */
-  compositionErrors: string[] = [];
+  compositionErrors: CompositionError[] = [];
 
   /**
    * @generated from field: int32 traffic_check_days = 8;
@@ -5169,9 +5190,9 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
   graphPruningIssues: GraphPruningIssue[] = [];
 
   /**
-   * @generated from field: repeated string compositionWarnings = 11;
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 11;
    */
-  compositionWarnings: string[] = [];
+  compositionWarnings: CompositionWarning[] = [];
 
   /**
    * @generated from field: optional string proposalId = 12;
@@ -5211,11 +5232,11 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
     { no: 3, name: "affected_graphs", kind: "message", T: GetCheckSummaryResponse_AffectedGraph, repeated: true },
     { no: 4, name: "proposedSubgraphSchemaSDL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "changes", kind: "message", T: SchemaChange, repeated: true },
-    { no: 7, name: "compositionErrors", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 8, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 9, name: "lintIssues", kind: "message", T: LintIssue, repeated: true },
     { no: 10, name: "graphPruningIssues", kind: "message", T: GraphPruningIssue, repeated: true },
-    { no: 11, name: "compositionWarnings", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 11, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
     { no: 12, name: "proposalId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 13, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 14, name: "proposalMatches", kind: "message", T: GetCheckSummaryResponse_ProposalSchemaMatch, repeated: true },

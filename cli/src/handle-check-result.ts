@@ -142,6 +142,7 @@ const handleComposedSchemaBreakingChanges = (
       pc.bold(pc.white('CHANGE')),
       pc.bold(pc.white('TYPE')),
       pc.bold(pc.white('FEDERATED_GRAPH')),
+      pc.bold(pc.white('FEATURE_FLAG')),
       pc.bold(pc.white('DESCRIPTION')),
     ],
     wordWrap: true,
@@ -152,6 +153,7 @@ const handleComposedSchemaBreakingChanges = (
       `${logSymbols.error} ${pc.red('BREAKING')}`,
       change.changeType,
       change.federatedGraphName,
+      change.featureFlag || '—',
       change.message,
     ]);
   }
@@ -174,12 +176,17 @@ const handleCompositionErrors = (
 
   if (!shouldOutputJson) {
     const compositionErrorsTable = new Table({
-      head: [pc.bold(pc.white('GRAPH_NAME')), pc.bold(pc.white('NAMESPACE')), pc.bold(pc.white('ERROR_MESSAGE'))],
-      colWidths: [30, 30, 120],
+      head: [
+        pc.bold(pc.white('GRAPH_NAME')),
+        pc.bold(pc.white('NAMESPACE')),
+        pc.bold(pc.white('FEATURE_FLAG')),
+        pc.bold(pc.white('ERROR_MESSAGE')),
+      ],
+      colWidths: [30, 30, 20, 120],
       wordWrap: true,
     });
     for (const error of response.compositionErrors) {
-      compositionErrorsTable.push([error.federatedGraphName, error.namespace, error.message]);
+      compositionErrorsTable.push([error.federatedGraphName, error.namespace, error.featureFlag || '—', error.message]);
     }
     console.log(pc.red('\nDetected composition errors:'));
     console.log(compositionErrorsTable.toString());
@@ -195,12 +202,22 @@ const handleCompositionWarnings = (
 
   if (!shouldOutputJson) {
     const compositionWarningsTable = new Table({
-      head: [pc.bold(pc.white('GRAPH_NAME')), pc.bold(pc.white('NAMESPACE')), pc.bold(pc.white('WARNING_MESSAGE'))],
-      colWidths: [30, 30, 120],
+      head: [
+        pc.bold(pc.white('GRAPH_NAME')),
+        pc.bold(pc.white('NAMESPACE')),
+        pc.bold(pc.white('FEATURE_FLAG')),
+        pc.bold(pc.white('WARNING_MESSAGE')),
+      ],
+      colWidths: [30, 30, 20, 120],
       wordWrap: true,
     });
     for (const warning of response.compositionWarnings) {
-      compositionWarningsTable.push([warning.federatedGraphName, warning.namespace, warning.message]);
+      compositionWarningsTable.push([
+        warning.federatedGraphName,
+        warning.namespace,
+        warning.featureFlag || '—',
+        warning.message,
+      ]);
     }
     console.log(pc.yellow(`\nDetected composition warnings:`));
     console.log(compositionWarningsTable.toString());
@@ -330,6 +347,12 @@ const handleOkResult = ({
       console.log(pc.yellow(`Warning: Proposal match failed`));
       console.log(pc.yellow(response.proposalMatchMessage));
     }
+  }
+
+  // Feature subgraph not assigned to any enabled feature flag — informational, no composition ran.
+  // Printed before the "nothing to report" early-exit below so it always surfaces.
+  if (response.featureSubgraphCheckMessage && !shouldOutputJson) {
+    console.log(response.featureSubgraphCheckMessage);
   }
 
   // Early exit: nothing to report

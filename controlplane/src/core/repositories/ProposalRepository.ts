@@ -759,6 +759,7 @@ export class ProposalRepository {
           linkedChecks,
           checkExtensionDeliveryId: c.checkExtensionDeliveryId || undefined,
           checkExtensionErrorMessage: c.checkExtensionErrorMessage || undefined,
+          hasFeatureSubgraphCheck: checkedSubgraphs.some((cs) => cs.isFeatureSubgraph),
         } satisfies SchemaCheckDTO;
       }),
     );
