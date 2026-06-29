@@ -90,6 +90,10 @@ import { OrganizationRepository } from './OrganizationRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
+// Orders composition entries so base-supergraph ones (no feature flag) come before flag-attributed ones.
+const baseCompositionFirst = (a: { featureFlag: string }, b: { featureFlag: string }) =>
+  Number(Boolean(a.featureFlag)) - Number(Boolean(b.featureFlag));
+
 export type UpdateSubgraphSchemaData = {
   targetId: string;
   labels: Label[];
@@ -1798,8 +1802,6 @@ export class SubgraphRepository {
     }
 
     // List base-supergraph entries (no feature flag) first, then flag-attributed ones.
-    const baseCompositionFirst = (a: { featureFlag: string }, b: { featureFlag: string }) =>
-      Number(Boolean(a.featureFlag)) - Number(Boolean(b.featureFlag));
     compositionErrors.sort(baseCompositionFirst);
     compositionWarnings.sort(baseCompositionFirst);
 
@@ -2914,8 +2916,6 @@ export class SubgraphRepository {
     });
 
     // List base-supergraph composition errors/warnings (no feature flag) first, then flag-attributed ones.
-    const baseCompositionFirst = (a: { featureFlag: string }, b: { featureFlag: string }) =>
-      Number(Boolean(a.featureFlag)) - Number(Boolean(b.featureFlag));
     compositionErrors.sort(baseCompositionFirst);
     compositionWarnings.sort(baseCompositionFirst);
 
