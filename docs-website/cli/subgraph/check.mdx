@@ -43,6 +43,10 @@ npx wgc subgraph check <name> --schema schema.graphql --label team=A
 
 The `npx wgc subgraph check` command checks for breaking changes and composition errors in all connected federated graphs associated with the specified subgraph. This validation process ensures that the new schema you intend to use does not introduce any issues that could negatively impact existing federated graphs.
 
+<Info>
+   This command also works for feature subgraphs. Pass the feature subgraph name to validate a proposed feature subgraph schema against the feature flag compositions it belongs to. See [Schema Checks](/studio/schema-checks#feature-subgraphs-and-feature-flags). Composition errors, composition warnings, and composed breaking changes include a `FEATURE_FLAG` column identifying the feature flag each entry belongs to (empty for the base supergraph).
+</Info>
+
 ## Parameters
 
 * `<name>`: The name of the subgraph for which you want to perform the validation check. This should be the exact name of the subgraph you wish to check.
