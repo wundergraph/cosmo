@@ -10,6 +10,18 @@ declare global {
   }
 }
 
+interface TrackingIdentity {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  plan?: string;
+}
+
 const resetTracking = () => {
   if (typeof window === 'undefined') {
     return;
@@ -36,17 +48,7 @@ const setupPosthog = ({
   organizationName,
   organizationSlug,
   plan,
-}: {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  fullName?: string;
-  organizationId: string;
-  organizationName: string;
-  organizationSlug: string;
-  plan?: string;
-}) => {
+}: TrackingIdentity) => {
   // We allow PostHog tracking for any environment, if the key is provided
   // Identify with PostHog
   let distinctId = posthog.get_distinct_id();
@@ -85,47 +87,19 @@ const setupPosthog = ({
   posthog.reloadFeatureFlags();
 };
 
-const identify = ({
-  email,
-  id,
-  firstName,
-  lastName,
-  fullName,
-  organizationId,
-  organizationName,
-  organizationSlug,
-  plan,
-}: {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  fullName?: string;
-  organizationId: string;
-  organizationName: string;
-  organizationSlug: string;
-  plan?: string;
-}) => {
+const identify = (params: TrackingIdentity) => {
   if (typeof window === 'undefined') {
     return;
   }
 
-  if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-    setupPosthog({
-      email,
-      id,
-      firstName,
-      lastName,
-      fullName,
-      organizationId,
-      organizationName,
-      organizationSlug,
-      plan,
-    });
+  // Only attach identity/PII after the user has opted in. Rejected/default
+  // opt-out users are tracked anonymously (cookieless), so no PII is sent.
+  if (process.env.NEXT_PUBLIC_POSTHOG_KEY && posthog.has_opted_in_capturing()) {
+    setupPosthog(params);
   }
 
   if (process.env.NODE_ENV === 'production') {
-    setupReo(email);
+    setupReo(params.email);
   }
 };
 
