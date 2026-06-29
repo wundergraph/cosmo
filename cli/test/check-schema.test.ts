@@ -907,6 +907,31 @@ describe('json output', () => {
     expect(output.composedSchemaBreakingChanges?.[0].featureFlag).toBe('flag-c');
   });
 
+  test('JSON output includes the feature subgraph check message when the FS is in no enabled flag', async () => {
+    const message = 'Feature subgraph is not assigned to any enabled feature flag; no composition check performed.';
+    await runCheck(
+      {
+        response: { code: EnumStatusCode.OK },
+        featureSubgraphCheckMessage: message,
+        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+      },
+      { json: true },
+    );
+
+    const output = getJsonOutput(logSpy);
+    expect(output.featureSubgraphCheck?.message).toBe(message);
+  });
+
+  test('text output prints the feature subgraph check message when the FS is in no enabled flag', async () => {
+    const message = 'Feature subgraph is not assigned to any enabled feature flag; no composition check performed.';
+    await runCheck({
+      response: { code: EnumStatusCode.OK },
+      featureSubgraphCheckMessage: message,
+    });
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('not assigned to any enabled feature flag'));
+  });
+
   test('lint errors outputs JSON with error status and lint.errors populated', async () => {
     await runCheck(
       {

@@ -350,9 +350,12 @@ const handleOkResult = ({
   }
 
   // Feature subgraph not assigned to any enabled feature flag — informational, no composition ran.
-  // Printed before the "nothing to report" early-exit below so it always surfaces.
-  if (response.featureSubgraphCheckMessage && !shouldOutputJson) {
-    console.log(response.featureSubgraphCheckMessage);
+  // Always build json; print before the "nothing to report" early-exit below so it always surfaces.
+  if (response.featureSubgraphCheckMessage) {
+    jsonBuilder.setFeatureSubgraphCheck(response.featureSubgraphCheckMessage);
+    if (!shouldOutputJson) {
+      console.log(response.featureSubgraphCheckMessage);
+    }
   }
 
   // Early exit: nothing to report
