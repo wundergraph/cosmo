@@ -603,8 +603,7 @@ export class SubgraphRepository {
            */
           const isLegacyComposition = !splitConfigFeature?.enabled;
           for (const featureFlag of enabledFeatureFlags) {
-            if (isLegacyComposition ||
-              featureFlag.featureSubgraphs.some((fsg) => fsg.id === subgraph.id)) {
+            if (isLegacyComposition || featureFlag.featureSubgraphs.some((fsg) => fsg.id === subgraph.id)) {
               affectedFeatureFlagIds.add(featureFlag.id);
             }
           }

@@ -4066,9 +4066,11 @@ describe('Feature flag integration tests', () => {
           'products-standalone-feature-v2',
           'products-standalone',
           namespace,
-          fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-standalone-feature.graphql`)).toString(),
+          fs
+            .readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-standalone-feature.graphql`))
+            .toString(),
           labels,
-          'http://localhost:10000/graphql'
+          'http://localhost:10000/graphql',
         );
 
         expect(blobStorage.keys()).toHaveLength(2);
@@ -4082,7 +4084,14 @@ describe('Feature flag integration tests', () => {
         // The base composition
         await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
 
-        await createFeatureFlag(client, ffName1, labels, ['users-feature', 'products-standalone-feature-v2'], namespace, true);
+        await createFeatureFlag(
+          client,
+          ffName1,
+          labels,
+          ['users-feature', 'products-standalone-feature-v2'],
+          namespace,
+          true,
+        );
         await createFeatureFlag(client, ffName2, labels, ['products-standalone-feature'], namespace, true);
 
         expect(blobStorage.keys()).toHaveLength(4);
@@ -4091,7 +4100,7 @@ describe('Feature flag integration tests', () => {
             expect.stringContaining(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${ffName1}.json`),
             expect.stringContaining(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${ffName2}.json`),
           ]),
-        )
+        );
 
         // The base composition and the feature flags composition
         await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
