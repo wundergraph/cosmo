@@ -3,6 +3,7 @@ package graphqlschemausage
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -12,13 +13,16 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/go-arena"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 
@@ -3003,6 +3007,30 @@ func TestNullListHandling(t *testing.T) {
 	}
 }
 
+func mustSchema(t *testing.T, federationConfiguration *graphql_datasource.FederationConfiguration, schema string) *graphql_datasource.SchemaConfiguration {
+	t.Helper()
+	s, err := graphql_datasource.NewSchemaConfiguration(schema, federationConfiguration)
+	require.NoError(t, err)
+	return s
+}
+
+func mustCustomConfiguration(t *testing.T, input graphql_datasource.ConfigurationInput) graphql_datasource.Configuration {
+	t.Helper()
+
+	cfg, err := graphql_datasource.NewConfiguration(input)
+	require.NoError(t, err)
+	return cfg
+}
+
+func mustDataSourceConfiguration(t *testing.T, id string, metadata *plan.DataSourceMetadata, config graphql_datasource.Configuration) plan.DataSource {
+	t.Helper()
+
+	dsCfg, err := plan.NewDataSourceConfiguration[graphql_datasource.Configuration](id, &graphql_datasource.Factory[graphql_datasource.Configuration]{}, metadata, config)
+	require.NoError(t, err)
+
+	return dsCfg
+}
+
 // TestNestedFieldArguments verifies that arguments on nested fields (not just root Query fields)
 // are tracked correctly with proper type names, paths, and subgraph IDs.
 // This is critical for tracking schema usage on fields like User.friends(limit: Int) or
@@ -3563,65 +3591,323 @@ func TestNestedFieldArguments(t *testing.T) {
 		valid.Validate(&op, &def, report)
 		require.False(t, report.HasErrors())
 
+		usersSubgraphSDL := `
+			schema {
+				query: Query
+			}
+			
+			type Query {
+				user(id: ID!): User
+			}
+			
+			type User @key(fields: "id") {
+				id: ID!
+				name: String!
+				friends(limit: Int, filter: UserFilter): [User!]!
+			}
+
+			input UserFilter {
+				minAge: Int
+				verified: Boolean
+			}
+		`
+
 		// Create THREE subgraphs - users, products, and orders come from different sources
-		usersSubgraph, err := plan.NewDataSourceConfiguration[any](
+		usersSubgraph := mustDataSourceConfiguration(
+			t,
 			"users-subgraph",
-			&FakeFactory[any]{upstreamSchema: &def},
 			&plan.DataSourceMetadata{
 				RootNodes: []plan.TypeField{
 					{TypeName: "Query", FieldNames: []string{"user"}},
+					{TypeName: "User", FieldNames: []string{"id", "name", "friends"}},
 				},
-				ChildNodes: []plan.TypeField{
-					{TypeName: "User", FieldNames: []string{"id", "name", "friends", "orders"}},
+				FederationMetaData: plan.FederationMetaData{
+					Keys: []plan.FederationFieldConfiguration{
+						{
+							TypeName:     "User",
+							SelectionSet: "id",
+						},
+					},
 				},
 			},
-			nil,
+			mustCustomConfiguration(t,
+				graphql_datasource.ConfigurationInput{
+					Fetch: &graphql_datasource.FetchConfiguration{
+						URL: "http://users.service",
+					},
+					SchemaConfiguration: mustSchema(t,
+						&graphql_datasource.FederationConfiguration{
+							Enabled:    true,
+							ServiceSDL: usersSubgraphSDL,
+						},
+						usersSubgraphSDL,
+					),
+				},
+			),
 		)
-		require.NoError(t, err)
 
-		productsSubgraph, err := plan.NewDataSourceConfiguration[any](
+		productSubgraphSDL := `
+			schema {
+				query: Query
+			}
+			
+			type Query {
+				product(id: ID!): Product
+			}
+			
+			type User @key(fields: "id") {
+				id: ID!
+			}
+			
+			type Product @key(fields: "id") {
+				id: ID!
+				name: String!
+				reviews(filter: ReviewFilter!, limit: Int): [Review!]!
+			}
+			
+			type Review {
+				id: ID!
+				rating: Int!
+				author: User
+				comments(first: Int, sortBy: String): [ReviewComment!]!
+			}
+			
+			type ReviewComment {
+				id: ID!
+				text: String!
+			}
+			
+			input ReviewFilter {
+				minRating: Int
+				verified: Boolean
+			}
+		`
+
+		productsSubgraph := mustDataSourceConfiguration(
+			t,
 			"products-subgraph",
-			&FakeFactory[any]{upstreamSchema: &def},
 			&plan.DataSourceMetadata{
 				RootNodes: []plan.TypeField{
 					{TypeName: "Query", FieldNames: []string{"product"}},
 					{TypeName: "Product", FieldNames: []string{"id", "name", "reviews"}},
+					{TypeName: "User", FieldNames: []string{"id"}},
 				},
 				ChildNodes: []plan.TypeField{
-					{TypeName: "Product", FieldNames: []string{"id", "name", "reviews"}},
 					{TypeName: "Review", FieldNames: []string{"id", "rating", "author", "comments"}},
 					{TypeName: "ReviewComment", FieldNames: []string{"id", "text"}},
 				},
+				FederationMetaData: plan.FederationMetaData{
+					Keys: []plan.FederationFieldConfiguration{
+						{
+							TypeName:     "User",
+							SelectionSet: "id",
+						},
+						{
+							TypeName:     "Product",
+							SelectionSet: "id",
+						},
+					},
+				},
 			},
-			nil,
+			mustCustomConfiguration(t,
+				graphql_datasource.ConfigurationInput{
+					Fetch: &graphql_datasource.FetchConfiguration{
+						URL: "http://products.service",
+					},
+					SchemaConfiguration: mustSchema(t,
+						&graphql_datasource.FederationConfiguration{
+							Enabled:    true,
+							ServiceSDL: productSubgraphSDL,
+						},
+						productSubgraphSDL,
+					),
+				},
+			),
 		)
-		require.NoError(t, err)
 
-		ordersSubgraph, err := plan.NewDataSourceConfiguration[any](
+		ordersSubgraphSDL := `
+			schema {
+				query: Query
+			}
+			
+			type Query {
+				order(id: ID!): Order
+			}
+			
+			type User @key(fields: "id") {
+				id: ID!
+				orders(status: OrderStatus, limit: Int): [Order!]!
+			}
+			
+			type Product @key(fields: "id") {
+				id: ID!
+			}
+
+			type Order {
+				id: ID!
+				status: OrderStatus!
+				items(category: String): [OrderItem!]!
+				customer: User
+			}
+			
+			type OrderItem {
+				id: ID!
+				product: Product
+				quantity: Int!
+			}
+
+			enum OrderStatus {
+				PENDING
+				SHIPPED
+				DELIVERED
+			}
+		`
+
+		ordersSubgraph := mustDataSourceConfiguration(
+			t,
 			"orders-subgraph",
-			&FakeFactory[any]{upstreamSchema: &def},
 			&plan.DataSourceMetadata{
 				RootNodes: []plan.TypeField{
 					{TypeName: "Query", FieldNames: []string{"order"}},
-					{TypeName: "Order", FieldNames: []string{"id", "status", "items", "customer"}},
+					{TypeName: "User", FieldNames: []string{"id", "orders"}},
+					{TypeName: "Product", FieldNames: []string{"id"}},
 				},
 				ChildNodes: []plan.TypeField{
 					{TypeName: "Order", FieldNames: []string{"id", "status", "items", "customer"}},
 					{TypeName: "OrderItem", FieldNames: []string{"id", "product", "quantity"}},
 				},
+				FederationMetaData: plan.FederationMetaData{
+					Keys: []plan.FederationFieldConfiguration{
+						{
+							TypeName:     "User",
+							SelectionSet: "id",
+						},
+						{
+							TypeName:     "Product",
+							SelectionSet: "id",
+						},
+					},
+				},
 			},
-			nil,
+			mustCustomConfiguration(t,
+				graphql_datasource.ConfigurationInput{
+					Fetch: &graphql_datasource.FetchConfiguration{
+						URL: "http://products.service",
+					},
+					SchemaConfiguration: mustSchema(t,
+						&graphql_datasource.FederationConfiguration{
+							Enabled:    true,
+							ServiceSDL: ordersSubgraphSDL,
+						},
+						ordersSubgraphSDL,
+					),
+				},
+			),
 		)
-		require.NoError(t, err)
 
 		planner, err := plan.NewPlanner(plan.Configuration{
+			Debug: plan.DebugConfiguration{
+				PrintPlanningPaths: true,
+			},
 			DisableResolveFieldPositions: true,
 			DataSources:                  []plan.DataSource{usersSubgraph, productsSubgraph, ordersSubgraph},
+			Fields: []plan.FieldConfiguration{
+				{
+					TypeName:  "Query",
+					FieldName: "user",
+					Arguments: []plan.ArgumentConfiguration{
+						{
+							Name:         "id",
+							SourceType:   plan.FieldArgumentSource,
+							RenderConfig: plan.RenderArgumentAsGraphQLValue,
+						},
+					},
+				},
+				{
+					TypeName:  "User",
+					FieldName: "friends",
+					Arguments: []plan.ArgumentConfiguration{
+						{
+							Name:         "limit",
+							SourceType:   plan.FieldArgumentSource,
+							RenderConfig: plan.RenderArgumentAsGraphQLValue,
+						},
+						{
+							Name:         "filter",
+							SourceType:   plan.FieldArgumentSource,
+							RenderConfig: plan.RenderArgumentAsGraphQLValue,
+						},
+					},
+				},
+				{
+					TypeName:  "User",
+					FieldName: "orders",
+					Arguments: []plan.ArgumentConfiguration{
+						{
+							Name:         "status",
+							SourceType:   plan.FieldArgumentSource,
+							RenderConfig: plan.RenderArgumentAsGraphQLValue,
+						},
+						{
+							Name:         "limit",
+							SourceType:   plan.FieldArgumentSource,
+							RenderConfig: plan.RenderArgumentAsGraphQLValue,
+						},
+					},
+				},
+				{
+					TypeName:  "Order",
+					FieldName: "items",
+					Arguments: []plan.ArgumentConfiguration{
+						{
+							Name:         "category",
+							SourceType:   plan.FieldArgumentSource,
+							RenderConfig: plan.RenderArgumentAsGraphQLValue,
+						},
+					},
+				},
+				{
+					TypeName:  "Product",
+					FieldName: "reviews",
+					Arguments: []plan.ArgumentConfiguration{
+						{
+							Name:         "filter",
+							SourceType:   plan.FieldArgumentSource,
+							RenderConfig: plan.RenderArgumentAsGraphQLValue,
+						},
+						{
+							Name:         "limit",
+							SourceType:   plan.FieldArgumentSource,
+							RenderConfig: plan.RenderArgumentAsGraphQLValue,
+						},
+					},
+				},
+				{
+					TypeName:  "Review",
+					FieldName: "comments",
+					Arguments: []plan.ArgumentConfiguration{
+						{
+							Name:         "first",
+							SourceType:   plan.FieldArgumentSource,
+							RenderConfig: plan.RenderArgumentAsGraphQLValue,
+						},
+						{
+							Name:         "sortBy",
+							SourceType:   plan.FieldArgumentSource,
+							RenderConfig: plan.RenderArgumentAsGraphQLValue,
+						},
+					},
+				},
+			},
 		})
 		require.NoError(t, err)
 
-		generatedPlan := planner.Plan(&op, &def, "GetUserDataAcrossSubgraphs", report)
+		generatedPlan := planner.Plan(&op, &def, "GetUserDataAcrossSubgraphs", report, plan.IncludeQueryPlanInResponse())
 		require.False(t, report.HasErrors())
+
+		// postprocess query plan to get its final state
+		post := postprocess.NewProcessor(postprocess.CollectDataSourceInfo())
+		post.Process(generatedPlan)
 
 		vars, err := astjson.Parse(variables)
 		require.NoError(t, err)
@@ -3677,16 +3963,16 @@ func TestNestedFieldArguments(t *testing.T) {
 		require.Contains(t, argumentMap, "orders.status", "Should track User.orders(status:)")
 		assert.Equal(t, "User", argumentMap["orders.status"].TypeName)
 		assert.Equal(t, "OrderStatus", argumentMap["orders.status"].NamedType)
-		assert.Equal(t, []string{"users-subgraph"}, argumentMap["orders.status"].SubgraphIDs,
-			"User.orders.status argument should be attributed to users-subgraph")
+		assert.Equal(t, []string{"orders-subgraph"}, argumentMap["orders.status"].SubgraphIDs,
+			"User.orders.status argument should be attributed to orders-subgraph")
 		assert.False(t, argumentMap["orders.status"].IsNull)
 
 		// Nested level 1: User.orders(limit:) -> users-subgraph
 		require.Contains(t, argumentMap, "orders.limit", "Should track User.orders(limit:)")
 		assert.Equal(t, "User", argumentMap["orders.limit"].TypeName)
 		assert.Equal(t, "Int", argumentMap["orders.limit"].NamedType)
-		assert.Equal(t, []string{"users-subgraph"}, argumentMap["orders.limit"].SubgraphIDs,
-			"User.orders.limit argument should be attributed to users-subgraph")
+		assert.Equal(t, []string{"orders-subgraph"}, argumentMap["orders.limit"].SubgraphIDs,
+			"User.orders.limit argument should be attributed to orders-subgraph")
 		assert.False(t, argumentMap["orders.limit"].IsNull)
 
 		// ========================================
@@ -3796,21 +4082,22 @@ func TestNestedFieldArguments(t *testing.T) {
 			}
 		}
 		require.NotNil(t, orderStatusUsage, "Should track OrderStatus enum usage")
-		assert.Equal(t, []string{"users-subgraph"}, orderStatusUsage.SubgraphIDs,
-			"OrderStatus enum should be attributed to users-subgraph (used by User.orders)")
+		assert.Equal(t, []string{"orders-subgraph"}, orderStatusUsage.SubgraphIDs,
+			"OrderStatus enum should be attributed to orders-subgraph (used by User.orders)")
 		assert.Contains(t, orderStatusUsage.EnumValues, "SHIPPED")
 
 		// ========================================
 		// Verify NO CROSS-CONTAMINATION
 		// ========================================
 
-		// Ensure users-subgraph arguments don't have products-subgraph or orders-subgraph
+		// Ensure users-subgraph arguments don't have products-subgraph
+		b, _ := json.MarshalIndent(argumentMap, "", "  ")
+		fmt.Println(string(b))
+
 		for key, arg := range argumentMap {
 			if arg.TypeName == "User" {
 				assert.NotContains(t, arg.SubgraphIDs, "products-subgraph",
 					"User field argument %s should not have products-subgraph", key)
-				assert.NotContains(t, arg.SubgraphIDs, "orders-subgraph",
-					"User field argument %s should not have orders-subgraph", key)
 			}
 			if arg.TypeName == "Product" || arg.TypeName == "Review" {
 				assert.NotContains(t, arg.SubgraphIDs, "users-subgraph",
