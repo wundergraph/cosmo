@@ -1,0 +1,10 @@
+mutation {
+  create_item(
+    board_id: 1234567890
+    group_id: "group_one"
+    item_name: "new item"
+    column_values: "{\"date\":\"2023-05-25\"}"
+  ) {
+    id
+  }
+}

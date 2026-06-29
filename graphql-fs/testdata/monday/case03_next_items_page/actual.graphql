@@ -1,0 +1,9 @@
+query {
+  next_items_page(cursor: "MSw5NzI4MDA5MDAsaV9YcmxJb0p1VEdYc1VWeGlxeF9kLDg4MiwzNXw0MTQ1NzU1MTE5", limit: 50) {
+    cursor
+    items {
+      id
+      name
+    }
+  }
+}

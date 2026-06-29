@@ -1,0 +1,9 @@
+query {
+  items_page_by_column_values(board_id: "1234567890", columns: [{column_id: "text", column_values: ["This is a text column"]}, {column_id: "country", column_values: ["US", "IL"]}], limit: 50) {
+    cursor
+    items {
+      id
+      name
+    }
+  }
+}

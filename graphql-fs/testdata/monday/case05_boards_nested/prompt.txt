@@ -1,0 +1,9 @@
+Query the monday.com board with id 1234567890.
+
+  - restrict the boards query to boards whose hierarchy type is either
+    "classic" or "multi_level"
+  - for the board, return its name, its state, and its permissions
+  - also return a page of the board's items, and for each item its id and name
+
+Use the board's paginated items field for the nested items (no filtering
+arguments are needed on it here).

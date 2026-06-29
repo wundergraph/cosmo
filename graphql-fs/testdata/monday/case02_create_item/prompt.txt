@@ -1,0 +1,12 @@
+Write a monday.com mutation that creates a new item.
+
+  - board id: 1234567890
+  - put it in the group whose id is "group_one"
+  - the new item's name is "new item"
+  - also set the item's date column (column id: "date") to 2023-05-25
+
+The column values must be supplied through the API's single column-values
+argument, which takes a JSON-encoded string (so the value is one string
+containing JSON, e.g. a mapping of column id to value).
+
+Return only the id of the newly created item.

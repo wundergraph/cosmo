@@ -1,0 +1,10 @@
+Continue paginating through monday.com items. You already have a pagination
+cursor from a previous request and now want the next batch.
+
+  - fetch the next 50 items
+  - cursor: "MSw5NzI4MDA5MDAsaV9YcmxJb0p1VEdYc1VWeGlxeF9kLDg4MiwzNXw0MTQ1NzU1MTE5"
+
+Use the dedicated top-level endpoint for fetching the next page from a cursor
+(it is NOT nested under a board or under items_page).
+
+Return the next cursor and, for each item, its id and name.

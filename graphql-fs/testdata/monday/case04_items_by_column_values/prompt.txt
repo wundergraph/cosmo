@@ -1,0 +1,11 @@
+On the monday.com board with id 1234567890, find up to 50 items by matching
+exact column values:
+
+  - the "text" column (column id: "text") equals "This is a text column"
+  - AND the "country" column (column id: "country") is either "US" or "IL"
+
+Use the dedicated top-level endpoint that searches a single board's items by a
+list of column-id / column-values pairs (each entry pairs a column id with the
+list of accepted values for that column).
+
+Return the pagination cursor and, for each item, its id and name.

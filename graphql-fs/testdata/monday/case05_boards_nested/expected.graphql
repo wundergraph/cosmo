@@ -1,0 +1,13 @@
+query {
+  boards(ids: [1234567890], hierarchy_types: [classic, multi_level]) {
+    name
+    state
+    permissions
+    items_page {
+      items {
+        id
+        name
+      }
+    }
+  }
+}

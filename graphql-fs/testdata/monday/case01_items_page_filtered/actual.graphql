@@ -1,0 +1,36 @@
+{
+  boards(ids: ["1234567890"]) {
+    items_page(
+      query_params: {
+        rules: [
+          {
+            column_id: "date"
+            operator: greater_than_or_equals
+            compare_value: "2023-06-01"
+          }
+          {
+            column_id: "date"
+            operator: lower_than_or_equal
+            compare_value: "2023-06-30"
+          }
+          {
+            column_id: "group"
+            operator: any_of
+            compare_value: "new_group12345"
+          }
+          {
+            column_id: "people"
+            operator: not_any_of
+            compare_value: "assigned_to_me"
+          }
+        ]
+      }
+    ) {
+      cursor
+      items {
+        id
+        name
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+On the monday.com board with id 1234567890, fetch a single page of items, but
+only the items that match ALL THREE of these conditions at once:
+
+  1. their "date" column (column id: "date") is between 2023-06-01 and 2023-06-30
+  2. they belong to the group whose id is "new_group12345"
+  3. their "people" column (column id: "people") is NOT assigned to me
+     (use the special value "assigned_to_me")
+
+Use the board-scoped, paginated items endpoint that performs server-side
+filtering with a set of rules (each rule has a column, a comparison value, and
+an operator), and combine the three rules so they must all hold.
+
+Return the pagination cursor and, for each item, its id and name.
