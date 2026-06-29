@@ -4118,6 +4118,7 @@ describe('Feature flag integration tests', () => {
         expect(updateFeatureSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 
         // Only one feature flag should have recomposed
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace, EnumStatusCode.OK, true);
         await assertNumberOfCompositions(client, baseGraphName, 4, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
       },
@@ -4194,6 +4195,7 @@ describe('Feature flag integration tests', () => {
         expect(updateFeatureSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 
         // Only the two feature flags that share `products-standalone-feature` should recompose
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace, EnumStatusCode.OK, true);
         await assertNumberOfCompositions(client, baseGraphName, 6, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
       },
