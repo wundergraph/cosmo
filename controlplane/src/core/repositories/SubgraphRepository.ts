@@ -571,6 +571,7 @@ export class SubgraphRepository {
         const federatedGraphDTOs = await fedGraphRepo.bySubgraphLabels({
           labels: baseSubgraph[0].labels?.map?.((l) => splitLabel(l)) ?? [],
           namespaceId: data.namespaceId,
+          excludeContracts: true,
         });
 
         for (const federatedGraphDTO of federatedGraphDTOs) {

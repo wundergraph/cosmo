@@ -2066,6 +2066,8 @@ message GraphComposition {
   optional string triggeredBySubgraphName = 12;
   optional string compositionWarnings = 13;
   string router_compatibility_version = 14;
+  bool isFeatureFlagComposition = 15;
+  optional string featureFlagName = 16;
 }
 
 message GraphCompositionSubgraph {

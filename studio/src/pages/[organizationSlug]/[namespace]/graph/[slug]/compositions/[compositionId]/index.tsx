@@ -627,6 +627,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
     );
 
   const { composition, changeCounts, compositionSubgraphs, featureFlagCompositions } = data;
+  const isFeatureFlagComposition = composition.isFeatureFlagComposition;
 
   return (
     <GraphPageLayout
@@ -643,8 +644,8 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
         composition={composition}
         changeCounts={changeCounts}
         compositionSubgraphs={compositionSubgraphs}
-        featureFlagCompositions={featureFlagCompositions}
-        isFeatureFlagComposition={false}
+        featureFlagCompositions={isFeatureFlagComposition ? undefined : featureFlagCompositions}
+        isFeatureFlagComposition={isFeatureFlagComposition}
       />
     </GraphPageLayout>
   );

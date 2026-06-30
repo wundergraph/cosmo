@@ -26,6 +26,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { MdNearbyError, MdVerifiedUser } from 'react-icons/md';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { useFeature } from '@/hooks/use-feature';
 
 const CompositionsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -41,6 +42,7 @@ const CompositionsPage: NextPageWithLayout = () => {
     range,
   } = useDateRangeQueryState();
 
+  const splitConfigLoadingEnabled = useFeature('split-config-loading')?.enabled ?? false;
   const startDate = range ? createDateRange(range).start : start;
   const endDate = range ? createDateRange(range).end : end;
 
@@ -53,7 +55,7 @@ const CompositionsPage: NextPageWithLayout = () => {
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
-      excludeFeatureFlagCompositions: true,
+      excludeFeatureFlagCompositions: !splitConfigLoadingEnabled,
     },
     {
       placeholderData: (prev) => prev,
@@ -81,6 +83,7 @@ const CompositionsPage: NextPageWithLayout = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Id</TableHead>
+              {splitConfigLoadingEnabled && <TableHead>Feature Flag</TableHead>}
               <TableHead>Triggered By Subgraph</TableHead>
               <TableHead>Actor</TableHead>
               <TableHead className="flex items-center space-x-1">
@@ -106,9 +109,10 @@ const CompositionsPage: NextPageWithLayout = () => {
                   isLatestValid,
                   admissionError,
                   routerConfigSignature,
-                  deploymentError,
                   hasMultipleChangedSubgraphs,
                   triggeredBySubgraphName,
+                  isFeatureFlagComposition,
+                  featureFlagName,
                 }) => {
                   const path = `${router.asPath.split('?')[0]}/${id}`;
                   return (
@@ -134,6 +138,17 @@ const CompositionsPage: NextPageWithLayout = () => {
                           </Tooltip>
                         </div>
                       </TableCell>
+                      {splitConfigLoadingEnabled && (
+                        <TableCell>
+                          {isFeatureFlagComposition && featureFlagName ? (
+                            <Badge variant="outline" className="py-1.5">
+                              {featureFlagName}
+                            </Badge>
+                          ) : (
+                            '—'
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell
                         className={cn({
                           italic: hasMultipleChangedSubgraphs,
@@ -202,7 +217,7 @@ const CompositionsPage: NextPageWithLayout = () => {
               )
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={splitConfigLoadingEnabled ? 7 : 6} className="h-24 text-center">
                   No results.
                 </TableCell>
               </TableRow>

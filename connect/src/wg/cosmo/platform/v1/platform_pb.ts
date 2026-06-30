@@ -15883,6 +15883,16 @@ export class GraphComposition extends Message<GraphComposition> {
    */
   routerCompatibilityVersion = "";
 
+  /**
+   * @generated from field: bool isFeatureFlagComposition = 15;
+   */
+  isFeatureFlagComposition = false;
+
+  /**
+   * @generated from field: optional string featureFlagName = 16;
+   */
+  featureFlagName?: string;
+
   constructor(data?: PartialMessage<GraphComposition>) {
     super();
     proto3.util.initPartial(data, this);
@@ -15905,6 +15915,8 @@ export class GraphComposition extends Message<GraphComposition> {
     { no: 12, name: "triggeredBySubgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 13, name: "compositionWarnings", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 14, name: "router_compatibility_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 15, name: "isFeatureFlagComposition", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 16, name: "featureFlagName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphComposition {
