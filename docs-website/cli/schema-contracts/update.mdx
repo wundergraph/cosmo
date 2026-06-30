@@ -44,6 +44,13 @@ npx wgc contract update <name> --source <contract-name> --exclude internal
   If the same tag is added to both the include and exclude sets, an error will be returned.
 </Warning>
 
+##### Minimum Requirements
+
+|Package|Minimum version|
+|---|---|
+|[wgc](/cli/intro)|[0.126.2](https://github.com/wundergraph/cosmo/releases/tag/wgc%400.126.2)|
+
+
 If both include and exclude tags are provided, the behaviour is thus:
 1. The schema starts blank (no nodes)
 2. Top-level (parent) nodes (Enums, Inputs, Interfaces, Objects, Scalars, and Unions) are included if they define a
