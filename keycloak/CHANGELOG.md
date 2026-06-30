@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.14.1](https://github.com/wundergraph/cosmo/compare/keycloak@0.14.0...keycloak@0.14.1) (2026-06-25)
+
+### Bug Fixes
+
+* update dependencies ([#3003](https://github.com/wundergraph/cosmo/issues/3003)) ([341f51a](https://github.com/wundergraph/cosmo/commit/341f51a39feed1b4a5af08ab75bced269df2f5a8)) (@pepol)
+
 # [0.14.0](https://github.com/wundergraph/cosmo/compare/keycloak@0.13.0...keycloak@0.14.0) (2026-04-14)
 
 ### Features

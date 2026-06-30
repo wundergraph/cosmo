@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.326.1](https://github.com/wundergraph/cosmo/compare/router@0.326.0...router@0.326.1) (2026-06-25)
+
+### Bug Fixes
+
+* **router:** prevent NATS durable consumer from dropping replayed messages on re-subscribe ([#2991](https://github.com/wundergraph/cosmo/issues/2991)) ([7b40f14](https://github.com/wundergraph/cosmo/commit/7b40f1451d1dd0476029dde2500b1e19b68012ec)) (@endigma)
+
 # [0.326.0](https://github.com/wundergraph/cosmo/compare/router@0.325.0...router@0.326.0) (2026-06-23)
 
 ### Bug Fixes

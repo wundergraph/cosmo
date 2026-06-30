@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.126.2](https://github.com/wundergraph/cosmo/compare/wgc@0.126.0...wgc@0.126.2) (2026-06-26)
+
+### Bug Fixes
+
+* patch bump published npm packages ([#3021](https://github.com/wundergraph/cosmo/issues/3021)) ([f144989](https://github.com/wundergraph/cosmo/commit/f144989f69d58983fea7f74077c1a393395b1a4c)) (@gmas)
+
+# [0.126.0](https://github.com/wundergraph/cosmo/compare/wgc@0.125.6...wgc@0.126.0) (2026-06-25)
+
+### Features
+
+* **cli:** support in/exclude contract tags simultaneously ([#3017](https://github.com/wundergraph/cosmo/issues/3017)) ([5efb3c2](https://github.com/wundergraph/cosmo/commit/5efb3c20fbd44110388e33943e43b13debba4c39)) (@Aenimus)
+
 ## [0.125.6](https://github.com/wundergraph/cosmo/compare/wgc@0.125.5...wgc@0.125.6) (2026-06-23)
 
 **Note:** Version bump only for package wgc

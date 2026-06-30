@@ -36,17 +36,6 @@ export default (opts: BaseCommandOptions) => {
   );
 
   command.action(async (name, options) => {
-    if (options.exclude?.length > 0 && options.include?.length > 0) {
-      program.error(
-        pc.red(
-          pc.bold(
-            `The "exclude" and "include" options for tags are currently mutually exclusive.` +
-              ` Both options have been provided, but one of the options must be empty or unset.`,
-          ),
-        ),
-      );
-    }
-
     let readmeFile;
     if (options.readme) {
       readmeFile = resolve(options.readme);
