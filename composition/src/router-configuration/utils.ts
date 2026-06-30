@@ -20,11 +20,11 @@ export function getOrInitializeEntityCaching(configurationData: ConfigurationDat
   if (!configurationData.entityCaching) {
     configurationData.entityCaching = {
       cacheInvalidateConfigurations: [],
-      entityCacheConfigurations: [],
       cachePopulateConfigurations: [],
-      requestScopedConfigurations: [],
+      entityCacheConfigurations: [],
     };
   }
+
   return configurationData.entityCaching;
 }
 

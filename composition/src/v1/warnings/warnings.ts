@@ -2,8 +2,6 @@ import { Warning } from '../../warnings/types';
 import { QUOTATION_JOIN } from '../../utils/string-constants';
 import {
   type InvalidRepeatedComposedDirectiveWarningParams,
-  type QueryCacheReturnEntityMissingEntityCacheWarningParams,
-  type RequestScopedSingleFieldWarningParams,
   type SingleFederatedInputFieldOneOfWarningParams,
   type SingleSubgraphInputFieldOneOfWarningParams,
 } from './params';
@@ -194,22 +192,6 @@ export function singleSubgraphInputFieldOneOfWarning({
   });
 }
 
-export function requestScopedSingleFieldWarning({
-  subgraphName,
-  key,
-  fieldCoords,
-}: RequestScopedSingleFieldWarningParams): Warning {
-  return new Warning({
-    message:
-      `@openfed__requestScoped(key: "${key}") is declared on only one field ("${fieldCoords}") in this subgraph.` +
-      ` The directive is meaningless unless at least 2 fields share the same key so that the second and` +
-      ` subsequent fields can be served from the per-request L1 cache populated by the first.`,
-    subgraph: {
-      name: subgraphName,
-    },
-  });
-}
-
 export function singleFederatedInputFieldOneOfWarning({
   fieldName,
   typeName,
@@ -251,23 +233,6 @@ export function invalidRepeatedComposedDirectiveWarning({
       ` Consider updating the directive definition for "${directiveName}" to be repeatable.`,
     subgraph: {
       name: '',
-    },
-  });
-}
-
-export function queryCacheReturnEntityMissingEntityCacheWarning({
-  subgraphName,
-  fieldCoords,
-  entityType,
-}: QueryCacheReturnEntityMissingEntityCacheWarningParams): Warning {
-  return new Warning({
-    message:
-      `Field "${fieldCoords}" has @openfed__queryCache and returns entity "${entityType}",` +
-      ` but "${entityType}" has no @openfed__entityCache directive. Add @openfed__entityCache(maxAge: ...)` +
-      ` to "${entityType}" to enable caching, or remove @openfed__queryCache from "${fieldCoords}".` +
-      ' The @openfed__queryCache config for this field was not extracted.',
-    subgraph: {
-      name: subgraphName,
     },
   });
 }

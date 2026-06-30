@@ -85,12 +85,9 @@ import {
   OPENFED_CACHE_POPULATE,
   OPENFED_ENTITY_CACHE,
   INCLUDE_HEADERS,
-  OPENFED_IS,
   MAX_AGE,
   NEGATIVE_CACHE_TTL,
   PARTIAL_CACHE_LOAD,
-  OPENFED_QUERY_CACHE,
-  OPENFED_REQUEST_SCOPED,
   SHADOW_MODE,
 } from '../utils/string-constants';
 import {
@@ -126,9 +123,6 @@ import {
   OPENFED_CACHE_INVALIDATE_DEFINITION,
   OPENFED_CACHE_POPULATE_DEFINITION,
   OPENFED_ENTITY_CACHE_DEFINITION,
-  OPENFED_IS_DEFINITION,
-  OPENFED_QUERY_CACHE_DEFINITION,
-  OPENFED_REQUEST_SCOPED_DEFINITION,
   SPECIFIED_BY_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
   TAG_DEFINITION,
@@ -1050,79 +1044,4 @@ export const CACHE_POPULATE_DEFINITION_DATA = newDirectiveDefinitionData({
   name: OPENFED_CACHE_POPULATE,
   node: OPENFED_CACHE_POPULATE_DEFINITION,
   optionalArgumentNames: new Set<ArgumentName>([MAX_AGE]),
-});
-
-export const QUERY_CACHE_DEFINITION_DATA = newDirectiveDefinitionData({
-  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
-    [
-      MAX_AGE,
-      newDirectiveArgumentData({
-        directive: `@${OPENFED_QUERY_CACHE}`,
-        name: MAX_AGE,
-        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
-        typeNode: REQUIRED_INT_TYPE_NODE,
-      }),
-    ],
-    [
-      INCLUDE_HEADERS,
-      newDirectiveArgumentData({
-        directive: `@${OPENFED_QUERY_CACHE}`,
-        defaultValue: { kind: Kind.BOOLEAN, value: false },
-        name: INCLUDE_HEADERS,
-        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
-        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
-      }),
-    ],
-    [
-      SHADOW_MODE,
-      newDirectiveArgumentData({
-        directive: `@${OPENFED_QUERY_CACHE}`,
-        defaultValue: { kind: Kind.BOOLEAN, value: false },
-        name: SHADOW_MODE,
-        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
-        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
-      }),
-    ],
-  ]),
-  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
-  name: OPENFED_QUERY_CACHE,
-  node: OPENFED_QUERY_CACHE_DEFINITION,
-  optionalArgumentNames: new Set<ArgumentName>([INCLUDE_HEADERS, SHADOW_MODE]),
-  requiredArgumentNames: new Set<ArgumentName>([MAX_AGE]),
-});
-
-export const IS_DEFINITION_DATA = newDirectiveDefinitionData({
-  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
-    [
-      FIELDS,
-      newDirectiveArgumentData({
-        directive: `@${OPENFED_IS}`,
-        name: FIELDS,
-        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
-        typeNode: REQUIRED_STRING_TYPE_NODE,
-      }),
-    ],
-  ]),
-  locations: new Set<DirectiveLocation>([ARGUMENT_DEFINITION_UPPER]),
-  name: OPENFED_IS,
-  node: OPENFED_IS_DEFINITION,
-  requiredArgumentNames: new Set<ArgumentName>([FIELDS]),
-});
-
-export const REQUEST_SCOPED_DEFINITION_DATA = newDirectiveDefinitionData({
-  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
-    [
-      KEY,
-      newDirectiveArgumentData({
-        directive: `@${OPENFED_REQUEST_SCOPED}`,
-        name: KEY,
-        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
-        typeNode: REQUIRED_STRING_TYPE_NODE,
-      }),
-    ],
-  ]),
-  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
-  name: OPENFED_REQUEST_SCOPED,
-  node: OPENFED_REQUEST_SCOPED_DEFINITION,
-  requiredArgumentNames: new Set<ArgumentName>([KEY]),
 });
