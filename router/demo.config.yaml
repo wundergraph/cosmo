@@ -1,9 +1,56 @@
-# yaml-language-server: $schema=./pkg/config/config.schema.json
-
-# See pkg/config/config.go for the full list of configuration options.
-# This file is used for the demo environment
-
 version: "1"
+
+# No control-plane polling — read the locally-composed execution config and watch it
+execution_config:
+  file:
+    path: "../demo/config.json"
+    watch: true
+    watch_interval: 1s
+
+listen_addr: "0.0.0.0:3002"
+
+log_level: "info"
+
+# Expose pprof for heap dumps — this is the main observability surface for the leak
+dev_mode: true                 # enables pprof on the main listener at /debug/pprof/*
+# If you prefer a dedicated port instead of dev_mode, use:
+# prometheus:
+#   enabled: true
+#   listen_addr: "0.0.0.0:8088"
+#   path: "/metrics"
+
+# Make the leak visible: large caches retain plans/schema refs across the swap
+engine:
+  enable_execution_plan_cache_response_header: true
+  execution_plan_cache_size: 10000
+  normalization_cache_size: 10000
+  validation_cache_size: 10000
+  operation_hash_cache_size: 10000
+  enable_net_poll: true        # exercises the websocket netpoll path even with 0 subs
+  # Resolver tuning — keep modest so workers don't mask the issue
+  max_concurrent_resolvers: 32
+
+# Surface plan cache stats so you can see "old" caches sticking around
+telemetry:
+  metrics:
+    otlp:
+      enabled: false
+    prometheus:
+      enabled: true
+      graphql_cache: true
+      engine_stats:
+        subscriptions: false
+
+# Subscriptions off (matches monday.com's situation — no WS holds executor refs)
+websocket:
+  enabled: false
+
+# CORS so you can hit it from a local client easily
+cors:
+  allow_origins: ["*"]
+  allow_methods: ["HEAD", "GET", "POST", "OPTIONS"]
+  allow_headers: ["*"]
+
 
 events:
   providers:

@@ -7,6 +7,28 @@ feature_flags:
       routing_url: http://localhost:4010/graphql
       schema:
         file: ./pkg/subgraphs/products_fg/subgraph/schema.graphqls
+  - name: myff2
+    feature_graphs:
+    - name: products_fg
+      subgraph_name: products
+      routing_url: http://localhost:4010/graphql
+      schema:
+        file: ./pkg/subgraphs/products_fg/subgraph/schema.graphqls
+  - name: myff3
+    feature_graphs:
+    - name: products_fg
+      subgraph_name: products
+      routing_url: http://localhost:4010/graphql
+      schema:
+        file: ./pkg/subgraphs/products_fg/subgraph/schema.graphqls
+  - name: myff4
+    feature_graphs:
+    - name: products_fg
+      subgraph_name: products
+      routing_url: http://localhost:4010/graphql
+      schema:
+        file: ./pkg/subgraphs/products_fg/subgraph/schema.graphqls
+  
 subgraphs:
   - name: employees
     routing_url: http://localhost:4001/graphql
