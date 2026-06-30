@@ -15,6 +15,7 @@ let dbname = '';
 vi.mock('../../src/core/clickhouse/index.js', () => {
   const ClickHouseClient = vi.fn();
   ClickHouseClient.prototype.queryPromise = vi.fn();
+  ClickHouseClient.prototype.queryPromiseWithDefault = vi.fn();
 
   return { ClickHouseClient };
 });
@@ -24,6 +25,10 @@ describe('GetRouters', () => {
 
   beforeEach(() => {
     chClient = new ClickHouseClient();
+    // getRouterRuntime uses queryPromise; getActiveRouters uses queryPromiseWithDefault.
+    // Provide safe defaults so tests only override what they care about.
+    vi.mocked(chClient.queryPromise).mockResolvedValue([]);
+    vi.mocked(chClient.queryPromiseWithDefault).mockResolvedValue({ data: [], ok: true });
   });
 
   afterEach(() => {
@@ -94,19 +99,22 @@ describe('GetRouters', () => {
     const graphName = genID('fedgraph');
     await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, [], 'http://localhost:8080');
 
-    // Mock clickhouse to return some routers
-    vi.mocked(chClient.queryPromise).mockResolvedValue([
-      {
-        hostname: 'router-1',
-        clusterName: 'test-cluster',
-        configVersionId: '',
-        serviceName: 'cosmo-router',
-        serviceVersion: '1.0.0',
-        serviceInstanceId: 'instance-1',
-        processUptimeSeconds: 100,
-        processId: 'pid-1',
-      },
-    ]);
+    // Mock clickhouse to return some routers (getActiveRouters uses queryPromiseWithDefault)
+    vi.mocked(chClient.queryPromiseWithDefault).mockResolvedValue({
+      data: [
+        {
+          hostname: 'router-1',
+          clusterName: 'test-cluster',
+          configVersionId: '',
+          serviceName: 'cosmo-router',
+          serviceVersion: '1.0.0',
+          serviceInstanceId: 'instance-1',
+          processUptimeSeconds: 100,
+          processId: 'pid-1',
+        },
+      ],
+      ok: true,
+    });
 
     const response = await client.getRouters({
       fedGraphName: graphName,
