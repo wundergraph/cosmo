@@ -28,7 +28,7 @@ const baseCompositionSubgraph = (name: string): Subgraph => ({
 });
 
 // Minimal base SubgraphDTO (only `name` is read by the function under test).
-const subgraphDTO = (name: string): SubgraphDTO => ({ name } as unknown as SubgraphDTO);
+const subgraphDTO = (name: string): SubgraphDTO => ({ name }) as unknown as SubgraphDTO;
 
 // Minimal feature subgraph: the function reads name/routingUrl/schemaSDL/baseSubgraphName.
 const featureSubgraph = (name: string, baseSubgraphName: string): FeatureSubgraphDTO =>
@@ -37,7 +37,7 @@ const featureSubgraph = (name: string, baseSubgraphName: string): FeatureSubgrap
     routingUrl: `http://localhost/${name}`,
     schemaSDL: SDL,
     baseSubgraphName,
-  } as unknown as FeatureSubgraphDTO);
+  }) as unknown as FeatureSubgraphDTO;
 
 const flag = (id: string, name: string, featureSubgraphs: FeatureSubgraphDTO[]): FeatureFlagWithFeatureSubgraphs => ({
   id,
