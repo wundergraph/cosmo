@@ -1,6 +1,6 @@
 import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, desc, eq, inArray, like, or, sql, arrayOverlaps } from 'drizzle-orm';
+import { SQL, and, asc, count, desc, eq, inArray, like, or, sql, arrayOverlaps, isNull } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { validate as isValidUuid } from 'uuid';
@@ -1394,8 +1394,15 @@ export class FeatureFlagRepository {
         eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
       )
       .where(
+        /**
+         * When split config is enabled, the feature flag composition will not be tied to the base schema version, so
+         * we need to check that the baseCompositionSchemaVersionId is null
+         */
         splitConfigFeature?.enabled
-          ? eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId)
+          ? and(
+              isNull(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId),
+              eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
+            )
           : and(
               eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
               eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),

@@ -15,6 +15,7 @@ import { DateRange, GraphCompositionDTO } from '../../types/index.js';
 import { CompositionSubgraphRecord } from '../composition/composer.js';
 import { traced } from '../tracing.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
+import { OrganizationRepository } from './OrganizationRepository.js';
 
 @traced
 export class GraphCompositionRepository {
@@ -426,6 +427,7 @@ export class GraphCompositionRepository {
     excludeFeatureFlagCompositions: boolean;
   }) {
     const fedRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
+    const orgRepo = new OrganizationRepository(this.logger, this.db);
     const conditions: SQL<unknown>[] = [
       eq(schemaVersion.targetId, fedGraphTargetId),
       gt(graphCompositions.createdAt, new Date(dateRange.start)),
@@ -476,11 +478,15 @@ export class GraphCompositionRepository {
       triggeredBySubgraphName: string;
     })[] = [];
 
+    const splitConfigFeature = await orgRepo.getFeature({ organizationId, featureId: 'split-config-loading' });
+    const splitConfigLoadingEnabled = !!splitConfigFeature?.enabled;
+
     for (const r of resp) {
       const compositionSubgraphs = await this.getCompositionSubgraphs({
         compositionId: r.id,
         schemaVersionId: r.schemaVersionId,
-        includeChildCompositionSubgraphs: !r.isFeatureFlagComposition,
+        // We only want to include the feature flag subgraphs for legacy compositions
+        includeChildCompositionSubgraphs: !r.isFeatureFlagComposition && !splitConfigLoadingEnabled,
       });
 
       const featureFlagInfo = featureFlagNamesBySchemaVersionId.get(r.schemaVersionId);
