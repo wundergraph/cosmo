@@ -120,7 +120,7 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
     expect(resp.featureFlags).toHaveLength(0);
 
-    // Create a second, enabled feature flag. It is composed into the latest composition, so it shows up too.
+    // Create a second, enabled feature flag
     const secondFlagName = genID('flag');
     await createFeatureFlag(client, secondFlagName, labels, ['users-feature'], namespace, true);
 
