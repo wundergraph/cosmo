@@ -1498,10 +1498,11 @@ func (s *graphServer) buildGraphMux(
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
-	s.pubSubProviders = providers
-	if pubSubStartupErr := s.startupPubSubProviders(s.graphServerCtx); pubSubStartupErr != nil {
+	if pubSubStartupErr := s.startupPubSubProviders(s.graphServerCtx, providers); pubSubStartupErr != nil {
 		return nil, pubSubStartupErr
 	}
+	// buildGraphMux runs once per mux, so accumulate every mux's providers for shutdown.
+	s.pubSubProviders = append(s.pubSubProviders, providers...)
 
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                            executor,
@@ -2195,14 +2196,14 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	return finalErr
 }
 
-// startupPubSubProviders starts all pubsub providers
+// startupPubSubProviders starts the given pubsub providers
 // It returns an error if any of the providers fail to start
 // or if some providers takes to long to start
-func (s *graphServer) startupPubSubProviders(ctx context.Context) error {
+func (s *graphServer) startupPubSubProviders(ctx context.Context, providers []datasource.Provider) error {
 	// Default timeout for pubsub provider startup
 	const defaultStartupTimeout = 5 * time.Second
 
-	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.Provider) error {
+	return s.providersActionWithTimeout(ctx, providers, func(ctx context.Context, provider datasource.Provider) error {
 		return provider.Startup(ctx)
 	}, defaultStartupTimeout, "pubsub provider startup timed out")
 }
@@ -2214,12 +2215,12 @@ func (s *graphServer) shutdownPubSubProviders(ctx context.Context) error {
 	// Default timeout for pubsub provider shutdown
 	const defaultShutdownTimeout = 5 * time.Second
 
-	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.Provider) error {
+	return s.providersActionWithTimeout(ctx, s.pubSubProviders, func(ctx context.Context, provider datasource.Provider) error {
 		return provider.Shutdown(ctx)
 	}, defaultShutdownTimeout, "pubsub provider shutdown timed out")
 }
 
-func (s *graphServer) providersActionWithTimeout(ctx context.Context, action func(ctx context.Context, provider datasource.Provider) error, timeout time.Duration, timeoutMessage string) error {
+func (s *graphServer) providersActionWithTimeout(ctx context.Context, providers []datasource.Provider, action func(ctx context.Context, provider datasource.Provider) error, timeout time.Duration, timeoutMessage string) error {
 	cancellableCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -2227,7 +2228,7 @@ func (s *graphServer) providersActionWithTimeout(ctx context.Context, action fun
 	defer timer.Stop()
 
 	providersGroup := new(errgroup.Group)
-	for _, provider := range s.pubSubProviders {
+	for _, provider := range providers {
 		providersGroup.Go(func() error {
 			actionDone := make(chan error, 1)
 			go func() {
