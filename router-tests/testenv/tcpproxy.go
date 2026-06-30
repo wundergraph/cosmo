@@ -90,10 +90,16 @@ func (p *ToggleableProxy) isReachable() bool {
 	return p.reachable
 }
 
+// trackConn registers c so SetReachable(false) and Close can tear it down, but only while
+// the proxy is open and reachable. Rejecting registration when p.reachable is false, under
+// the same lock SetReachable uses, closes the race where a connection accepted just before
+// SetReachable(false) is added to p.conns after SetReachable has already snapshot-closed the
+// set: such a connection is never tracked, so handle closes it and bails instead of
+// forwarding. It returns false if the connection must not be used.
 func (p *ToggleableProxy) trackConn(c net.Conn) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.closed {
+	if p.closed || !p.reachable {
 		return false
 	}
 	p.conns[c] = struct{}{}
@@ -126,16 +132,24 @@ func (p *ToggleableProxy) acceptLoop() {
 func (p *ToggleableProxy) handle(client net.Conn) {
 	defer client.Close()
 
+	// Register the client before doing any work. If the proxy is (or becomes) unreachable,
+	// trackConn rejects it and the connection is closed without ever forwarding, so a
+	// connection accepted just before SetReachable(false) cannot leak through the toggle.
+	if !p.trackConn(client) {
+		return
+	}
+	defer p.untrackConn(client)
+
 	upstream, err := net.Dial("tcp", p.target)
 	if err != nil {
 		return
 	}
 	defer upstream.Close()
 
-	if !p.trackConn(client) || !p.trackConn(upstream) {
+	// Re-check reachability after the dial: SetReachable(false) may have run while dialing.
+	if !p.trackConn(upstream) {
 		return
 	}
-	defer p.untrackConn(client)
 	defer p.untrackConn(upstream)
 
 	// Closing either side on copy completion unblocks the other copy goroutine.
