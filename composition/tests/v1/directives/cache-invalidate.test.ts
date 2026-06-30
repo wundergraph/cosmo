@@ -15,9 +15,9 @@ import {
   type TypeName,
 } from '../../../src';
 import {
-  cacheInvalidateOnNonEntityReturnTypeErrorMessage,
-  cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage,
-} from '../../../src/errors/errors';
+  invalidEntityReturnTypeErrorMessage,
+  invalidMutationOrSubscriptionFieldCoordsErrorMessage,
+} from '../../../src';
 import { createSubgraphWithDefaultName, normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
 
 describe('@openfed__cacheInvalidate directive tests', () => {
@@ -160,7 +160,7 @@ describe('@openfed__cacheInvalidate directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, 'Query.product', FIRST_ORDINAL, [
-          cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage('Query.product'),
+          invalidMutationOrSubscriptionFieldCoordsErrorMessage('Query.product'),
         ]),
       );
     });
@@ -183,9 +183,9 @@ describe('@openfed__cacheInvalidate directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, 'Mutation.updateProduct', FIRST_ORDINAL, [
-          cacheInvalidateOnNonEntityReturnTypeErrorMessage({
+          invalidEntityReturnTypeErrorMessage({
             fieldCoords: 'Mutation.updateProduct',
-            returnType: 'Result',
+            returnTypeName: 'Result',
           }),
         ]),
       );
@@ -208,9 +208,9 @@ describe('@openfed__cacheInvalidate directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, 'Mutation.updateProduct', FIRST_ORDINAL, [
-          cacheInvalidateOnNonEntityReturnTypeErrorMessage({
+          invalidEntityReturnTypeErrorMessage({
             fieldCoords: 'Mutation.updateProduct',
-            returnType: 'Product',
+            returnTypeName: 'Product',
           }),
         ]),
       );
@@ -235,7 +235,7 @@ describe('@openfed__cacheInvalidate directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(OPENFED_CACHE_INVALIDATE, 'Product.related', FIRST_ORDINAL, [
-          cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage('Product.related'),
+          invalidMutationOrSubscriptionFieldCoordsErrorMessage('Product.related'),
         ]),
       );
     });

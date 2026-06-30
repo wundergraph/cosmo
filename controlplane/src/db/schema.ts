@@ -1926,6 +1926,29 @@ export const slackSchemaUpdateEventConfigs = pgTable(
   },
 );
 
+export const slackProposalStateUpdate = pgTable(
+  'slack_proposal_state_update', // slackpsu
+  {
+    slackIntegrationConfigId: uuid('slack_integration_config_id')
+      .notNull()
+      .references(() => slackIntegrationConfigs.id, {
+        onDelete: 'cascade',
+      }),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.slackIntegrationConfigId, t.federatedGraphId] }),
+      slackIntegrationConfigIdIndex: index('slackpsu_slack_integration_config_id_idx').on(t.slackIntegrationConfigId),
+      federatedGraphIdIndex: index('slackpsu_federated_graph_id_idx').on(t.federatedGraphId),
+    };
+  },
+);
+
 export const organizationIntegrationRelations = relations(organizationIntegrations, ({ one }) => ({
   organization: one(organizations),
   slackIntegrationConfigs: one(slackIntegrationConfigs),
@@ -1933,6 +1956,7 @@ export const organizationIntegrationRelations = relations(organizationIntegratio
 
 export const slackIntegrationConfigsRelations = relations(slackIntegrationConfigs, ({ many }) => ({
   slackSchemaUpdateEventConfigs: many(slackSchemaUpdateEventConfigs),
+  slackProposalStateUpdate: many(slackProposalStateUpdate),
 }));
 
 export const slackSchemaUpdateEventConfigRelations = relations(slackSchemaUpdateEventConfigs, ({ one }) => ({
@@ -1942,6 +1966,17 @@ export const slackSchemaUpdateEventConfigRelations = relations(slackSchemaUpdate
   }),
   federatedGraph: one(federatedGraphs, {
     fields: [slackSchemaUpdateEventConfigs.federatedGraphId],
+    references: [federatedGraphs.id],
+  }),
+}));
+
+export const slackProposalStateUpdateEventConfigRelations = relations(slackProposalStateUpdate, ({ one }) => ({
+  slackIntegrationEventConfig: one(slackIntegrationConfigs, {
+    fields: [slackProposalStateUpdate.slackIntegrationConfigId],
+    references: [slackIntegrationConfigs.id],
+  }),
+  federatedGraph: one(federatedGraphs, {
+    fields: [slackProposalStateUpdate.federatedGraphId],
     references: [federatedGraphs.id],
   }),
 }));

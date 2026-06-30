@@ -88,7 +88,7 @@
       "has-ansi": "<6.0.1",
       "chalk-template": "<1.1.1",
       "backslash": "<0.2.1",
-      "qs": "6.14.1",
+      "qs": "6.15.2",
       "mdast-util-to-hast": ">=13.2.1",
       "js-yaml": ">=4.1.1",
       "fast-uri": "3.1.2",
@@ -104,11 +104,21 @@
       "minimatch@9.x": "9.0.7",
       "minimatch@10.x": "10.2.4",
       "express-rate-limit": "8.2.2",
-      "serialize-javascript": "7.0.3",
+      "serialize-javascript": "7.0.5",
       "markdown-it": "14.1.1",
       "rollup@3.29.5": "3.30.0",
       "@rollup/pluginutils@5.3.0>rollup": "4.59.0",
-      "shell-quote": "1.8.4"
+      "shell-quote": "1.8.4",
+      "picomatch@2.x": "2.3.2",
+      "picomatch@4.x": "4.0.4",
+      "brace-expansion@1.x": "1.1.13",
+      "brace-expansion@2.x": "2.0.3",
+      "yaml@2.x": "2.8.3",
+      "path-to-regexp@8.x": "8.4.0",
+      "ip-address@10.x": "10.1.1",
+      "ws@8.x": "8.21.0",
+      "ajv@6.x": "6.14.0",
+      "hono@4.x": "4.12.25"
     },
     "patchedDependencies": {
       "graphql@16.9.0": "patches/graphql@16.9.0.patch"
