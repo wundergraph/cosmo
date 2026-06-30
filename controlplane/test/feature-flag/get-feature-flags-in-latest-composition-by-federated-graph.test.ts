@@ -68,7 +68,7 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     expect(resp.featureFlags.some((f) => f.name === flagName)).toBe(true);
   });
 
-  test('Should return each feature flag only once when it has multiple compositions against the same base', async (testContext) => {
+  test('that feature flag compositions are decoupled when split config loading is enabled', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['split-config-loading'] });
     testContext.onTestFinished(() => server.close());
 
@@ -115,9 +115,7 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
-    // Despite multiple accumulated composition rows, the flag must appear exactly once.
-    expect(resp.featureFlags).toStrictEqual(expect.arrayContaining([expect.objectContaining({ name: flagName })]));
-    expect(resp.featureFlags).toHaveLength(1);
+    expect(resp.featureFlags).toHaveLength(0);
 
     // Create a second, enabled feature flag. It is composed into the latest composition, so it shows up too.
     const secondFlagName = genID('flag');
@@ -128,24 +126,18 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
       namespace: 'default',
     });
     expect(withSecondFlag.response?.code).toBe(EnumStatusCode.OK);
-    expect(withSecondFlag.featureFlags).toStrictEqual(
+    expect(withSecondFlag.featureFlags).toHaveLength(0);
+
+    // Feature flag compositions should show up in the composition list
+    const compositionsResp = await client.getCompositions({});
+
+    expect(compositionsResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(compositionsResp.compositions).toHaveLength(3);
+    expect(compositionsResp.compositions).toStrictEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: flagName }),
         expect.objectContaining({ name: secondFlagName }),
       ]),
-    );
-    expect(withSecondFlag.featureFlags).toHaveLength(2);
-
-    await toggleFeatureFlag(client, secondFlagName, false, 'default');
-
-    const afterDisable = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
-      federatedGraphName,
-      namespace: 'default',
-    });
-    expect(afterDisable.response?.code).toBe(EnumStatusCode.OK);
-    expect(afterDisable.featureFlags).toHaveLength(1);
-    expect(afterDisable.featureFlags).toStrictEqual(
-      expect.arrayContaining([expect.objectContaining({ name: flagName })]),
     );
   });
 
