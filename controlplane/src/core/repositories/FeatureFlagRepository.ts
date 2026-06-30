@@ -1193,11 +1193,18 @@ export class FeatureFlagRepository {
     baseCompositionSubgraphs: Array<Subgraph>,
     subgraphs: Array<SubgraphDTO>,
     subgraphsToCompose: Array<SubgraphsToCompose>,
+    checkedSubgraphName?: string,
   ): Array<SubgraphsToCompose> {
     for (const flag of featureFlagToComposeByFlagId.values()) {
       let compositionSubgraphs = baseCompositionSubgraphs;
       let subgraphDTOs = subgraphs;
       if (flag.featureSubgraphs.length === 0) {
+        continue;
+      }
+      // During a base subgraph check, this flag's composition replaces the checked subgraph with its
+      // feature subgraph override, so the proposed change never reaches it — recomposing would be
+      // byte-identical to the existing composition and can surface nothing new. Skip it.
+      if (checkedSubgraphName && flag.featureSubgraphs.some((fs) => fs.baseSubgraphName === checkedSubgraphName)) {
         continue;
       }
       for (const featureGraph of flag.featureSubgraphs) {
@@ -1228,10 +1235,14 @@ export class FeatureFlagRepository {
     baseSubgraphs,
     fedGraphLabelMatchers,
     baseCompositionSubgraphs,
+    checkedSubgraphName,
   }: {
     baseSubgraphs: SubgraphDTO[];
     fedGraphLabelMatchers: string[];
     baseCompositionSubgraphs: Subgraph[];
+    // When set (base subgraph checks only), skip recomposing feature flags whose feature subgraph
+    // overrides this subgraph — the proposed change is swapped out, so those compositions are redundant.
+    checkedSubgraphName?: string;
   }): Promise<Array<SubgraphsToCompose>> {
     // Always include the base graph
     const subgraphsToCompose: Array<SubgraphsToCompose> = [
@@ -1271,6 +1282,7 @@ export class FeatureFlagRepository {
       baseCompositionSubgraphs,
       baseSubgraphs,
       subgraphsToCompose,
+      checkedSubgraphName,
     );
   }
 

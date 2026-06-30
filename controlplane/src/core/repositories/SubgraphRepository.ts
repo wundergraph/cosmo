@@ -2622,6 +2622,9 @@ export class SubgraphRepository {
           baseSubgraphs: composableBaseSubgraphs,
           fedGraphLabelMatchers: graph.labelMatchers,
           baseCompositionSubgraphs,
+          // Base subgraph check: skip feature flags that override the checked subgraph — their
+          // compositions can't be affected by the proposed change, so recomposing is redundant.
+          checkedSubgraphName: subgraphName,
         });
 
         subgraphsToComposeByFedGraphId.set(
