@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.176.0](https://github.com/wundergraph/cosmo/compare/studio@0.175.10...studio@0.176.0) (2026-06-29)
+
+### Features
+
+* **studio:** posthog cookieless tracking with consent gating ([#3028](https://github.com/wundergraph/cosmo/issues/3028)) ([b7d9865](https://github.com/wundergraph/cosmo/commit/b7d98658d5fb4ba8830ea0e2a460995478fc6e09)) (@thisisnithin)
+
 ## [0.175.10](https://github.com/wundergraph/cosmo/compare/studio@0.175.9...studio@0.175.10) (2026-06-26)
 
 **Note:** Version bump only for package studio
