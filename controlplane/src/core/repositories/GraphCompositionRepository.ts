@@ -360,8 +360,12 @@ export class GraphCompositionRepository {
     };
   }
 
-  public getCompositionSubgraphs(input: { compositionId: string }) {
-    return this.db
+  public async getCompositionSubgraphs(input: {
+    compositionId: string;
+    schemaVersionId: string;
+    includeChildCompositionSubgraphs?: boolean;
+  }) {
+    const compositionSubgraphs = await this.db
       .select({
         id: graphCompositionSubgraphs.subgraphId,
         schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
@@ -375,6 +379,35 @@ export class GraphCompositionRepository {
       .innerJoin(subgraphs, eq(graphCompositionSubgraphs.subgraphId, subgraphs.id))
       .where(eq(graphCompositionSubgraphs.graphCompositionId, input.compositionId))
       .execute();
+
+    if (!input.includeChildCompositionSubgraphs) {
+      return compositionSubgraphs;
+    }
+
+    const childCompositionSubgraphs = await this.db
+      .select({
+        id: graphCompositionSubgraphs.subgraphId,
+        schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
+        name: graphCompositionSubgraphs.subgraphName,
+        targetId: graphCompositionSubgraphs.subgraphTargetId,
+        isFeatureSubgraph: graphCompositionSubgraphs.isFeatureSubgraph,
+        changeType: graphCompositionSubgraphs.changeType,
+        subgraphType: subgraphs.type,
+      })
+      .from(graphCompositionSubgraphs)
+      .innerJoin(
+        subgraphs,
+        and(eq(graphCompositionSubgraphs.subgraphId, subgraphs.id), eq(subgraphs.isFeatureSubgraph, true)),
+      )
+      .innerJoin(graphCompositions, eq(graphCompositions.id, graphCompositionSubgraphs.graphCompositionId))
+      .innerJoin(
+        federatedGraphsToFeatureFlagSchemaVersions,
+        eq(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, graphCompositions.schemaVersionId),
+      )
+      .where(eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, input.schemaVersionId))
+      .execute();
+
+    return [...compositionSubgraphs, ...childCompositionSubgraphs];
   }
 
   public async getGraphCompositions({
@@ -444,7 +477,12 @@ export class GraphCompositionRepository {
     })[] = [];
 
     for (const r of resp) {
-      const compositionSubgraphs = await this.getCompositionSubgraphs({ compositionId: r.id });
+      const compositionSubgraphs = await this.getCompositionSubgraphs({
+        compositionId: r.id,
+        schemaVersionId: r.schemaVersionId,
+        includeChildCompositionSubgraphs: !r.isFeatureFlagComposition,
+      });
+
       const featureFlagInfo = featureFlagNamesBySchemaVersionId.get(r.schemaVersionId);
       const isCurrentDeployed = await this.isLatestValidComposition({
         fedGraphRepo: fedRepo,

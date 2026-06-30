@@ -141,11 +141,9 @@ const CompositionsPage: NextPageWithLayout = () => {
                       {splitConfigLoadingEnabled && (
                         <TableCell>
                           {isFeatureFlagComposition && featureFlagName ? (
-                            <Badge variant="outline" className="py-1.5">
-                              {featureFlagName}
-                            </Badge>
+                            <>{featureFlagName}</>
                           ) : (
-                            '—'
+                            '-'
                           )}
                         </TableCell>
                       )}
@@ -154,7 +152,7 @@ const CompositionsPage: NextPageWithLayout = () => {
                           italic: hasMultipleChangedSubgraphs,
                         })}
                       >
-                        {hasMultipleChangedSubgraphs ? 'Multiple Subgraphs' : triggeredBySubgraphName}
+                        {hasMultipleChangedSubgraphs ? 'Multiple Subgraphs' : triggeredBySubgraphName || '-'}
                       </TableCell>
                       <TableCell>{createdBy}</TableCell>
                       <TableCell>
