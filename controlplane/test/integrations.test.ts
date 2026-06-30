@@ -4,13 +4,23 @@ import { joinLabel } from '@wundergraph/cosmo-shared';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
+import { ProposalNamingConvention, ProposalOrigin } from '../../connect/src/wg/cosmo/platform/v1/platform_pb.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, type PlainMessage } from '../src/types/index.js';
-import { createNamespace, resolvabilitySDLOne, resolvabilitySDLTwo, SetupTest } from './test-util.js';
+import {
+  createFederatedGraph,
+  createNamespace,
+  createThenPublishSubgraph,
+  DEFAULT_ROUTER_URL,
+  DEFAULT_SUBGRAPH_URL_ONE,
+  resolvabilitySDLOne,
+  resolvabilitySDLTwo,
+  SetupTest
+} from './test-util.js';
 
 let dbname = '';
 
-describe('Federated Graph', (ctx) => {
+describe('Integration tests', (ctx) => {
   const mockServer = setupServer(
     http.post('https://slack.com/api/oauth.v2.access', () => {
       return HttpResponse.json({
@@ -122,6 +132,116 @@ describe('Federated Graph', (ctx) => {
     expect(webhookMetaRes.eventsMeta).toMatchObject(eventsMeta);
   });
 
+  test('Webhook meta for proposal should be stored and retrieved correctly', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['proposals'] });
+    testContext.onTestFinished(() => server.close());
+
+    const namespace = genID('namespace').toLowerCase();
+    const fedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph');
+    const proposalName = genID('proposal');
+    const label = genUniqueLabel();
+
+    const createNsResp = await client.createNamespace({ name: namespace });
+    expect(createNsResp.response?.code).toBe(EnumStatusCode.OK);
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      namespace,
+      `
+      type Query {
+        hello: String!
+      }
+    `,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, namespace, [joinLabel(label)], DEFAULT_ROUTER_URL);
+    const federatedGraphResp = await client.getFederatedGraphByName({
+      name: fedGraphName,
+      namespace,
+    });
+
+    expect(federatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Enable proposals for the namespace
+    const enableResponse = await client.enableProposalsForNamespace({
+      namespace,
+      enableProposals: true,
+    });
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const eventsMeta: PlainMessage<EventMeta>[] = [
+      {
+        eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+        meta: {
+          case: 'federatedGraphSchemaUpdated',
+          value: { graphIds: [] },
+        },
+      },
+      {
+        eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
+        meta: {
+          case: 'monographSchemaUpdated',
+          value: { graphIds: [] },
+        },
+      },
+      {
+        eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+        meta: {
+          case: 'proposalStateUpdated',
+          value: { graphIds: [federatedGraphResp.graph!.id] },
+        },
+      },
+    ];
+
+    // Create a proposal with a schema change to the subgraph
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
+        },
+      ],
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(createProposalResponse.proposalId).toBeDefined();
+    expect(createProposalResponse.checkId).toBeDefined();
+
+    const webhookCreateRes = await client.createOrganizationWebhookConfig({
+      endpoint: 'http://loclhost:4242',
+      events: [OrganizationEventName[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]],
+      eventsMeta,
+    });
+    expect(webhookCreateRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const webhooksRes = await client.getOrganizationWebhookConfigs({});
+    expect(webhooksRes.response?.code).toBe(EnumStatusCode.OK);
+    expect(webhooksRes.configs.length).toBe(1);
+
+    const webhookMetaRes = await client.getOrganizationWebhookMeta({
+      id: webhooksRes.configs[0].id,
+    });
+    expect(webhookMetaRes.response?.code).toBe(EnumStatusCode.OK);
+    expect(webhookMetaRes.eventsMeta).toMatchObject(eventsMeta);
+  });
+
   test('Slack integration meta for monograph and federated graph should be stored and retrieved correctly', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
     testContext.onTestFinished(() => server.close());
@@ -176,12 +296,126 @@ describe('Federated Graph', (ctx) => {
           },
         },
       },
+      {
+        eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+        meta: {
+          case: 'proposalStateUpdated',
+          value: { graphIds: [] },
+        },
+      },
     ];
 
     const slackIntegrationCreateRes = await client.createIntegration({
       name: 'test-slack',
       code: 'test',
       events: [OrganizationEventName[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]],
+      eventsMeta,
+      type: 'slack',
+    });
+    expect(slackIntegrationCreateRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const integrationsRes = await client.getOrganizationIntegrations({});
+    expect(integrationsRes.response?.code).toBe(EnumStatusCode.OK);
+    expect(integrationsRes.integrations.length).toBe(1);
+    expect(integrationsRes.integrations[0].eventsMeta).toMatchObject(eventsMeta);
+  });
+
+  test('Slack integration meta for proposal should be stored and retrieved correctly', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['proposals'] });
+    testContext.onTestFinished(() => server.close());
+
+    const namespace = genID('namespace').toLowerCase();
+    const fedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph');
+    const proposalName = genID('proposal');
+    const label = genUniqueLabel();
+
+    const createNsResp = await client.createNamespace({ name: namespace });
+    expect(createNsResp.response?.code).toBe(EnumStatusCode.OK);
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      namespace,
+      `
+      type Query {
+        hello: String!
+      }
+    `,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, namespace, [joinLabel(label)], DEFAULT_ROUTER_URL);
+    const federatedGraphResp = await client.getFederatedGraphByName({
+      name: fedGraphName,
+      namespace,
+    });
+
+    expect(federatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Enable proposals for the namespace
+    const enableResponse = await client.enableProposalsForNamespace({
+      namespace,
+      enableProposals: true,
+    });
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const eventsMeta: PlainMessage<EventMeta>[] = [
+      {
+        eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+        meta: {
+          case: 'federatedGraphSchemaUpdated',
+          value: { graphIds: [] },
+        },
+      },
+      {
+        eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
+        meta: {
+          case: 'monographSchemaUpdated',
+          value: { graphIds: [] },
+        },
+      },
+      {
+        eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+        meta: {
+          case: 'proposalStateUpdated',
+          value: { graphIds: [federatedGraphResp.graph!.id] },
+        },
+      },
+    ];
+
+    // Create a proposal with a schema change to the subgraph
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
+        },
+      ],
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(createProposalResponse.proposalId).toBeDefined();
+    expect(createProposalResponse.checkId).toBeDefined();
+
+    const slackIntegrationCreateRes = await client.createIntegration({
+      name: 'test-slack',
+      code: 'test',
+      events: [OrganizationEventName[OrganizationEventName.PROPOSAL_STATE_UPDATED]],
       eventsMeta,
       type: 'slack',
     });

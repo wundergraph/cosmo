@@ -34,8 +34,7 @@ export function createIntegration(
       throw new Error('Slack env variables must be set to use this feature.');
     }
 
-    const integration = await orgRepo.getIntegrationByName(authContext.organizationId, req.name);
-    if (integration) {
+    if (await orgRepo.integrationExists(authContext.organizationId, req.name)) {
       return {
         response: {
           code: EnumStatusCode.ERR_ALREADY_EXISTS,
