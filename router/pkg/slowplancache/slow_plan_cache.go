@@ -222,5 +222,13 @@ func (c *Cache[V]) Close() {
 		// This downside is also there in ristretto (if set is called concurrently)
 		// it is even documented in the ristretto code as a comment
 		close(c.writeCh)
+
+		c.entries.Range(func(key, _ any) bool {
+			c.entries.Delete(key)
+			return true
+		})
+		c.size = 0
+		c.minDur = 0
+		c.minKey = 0
 	})
 }
