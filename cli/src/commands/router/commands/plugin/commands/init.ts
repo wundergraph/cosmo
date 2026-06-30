@@ -96,7 +96,10 @@ export default (opts: BaseCommandOptions) => {
 
       await writeFile(resolve(srcDir, 'schema.graphql'), pupa(PluginTemplates.schemaGraphql, { name }));
       const mapping = compileGraphQLToMapping(PluginTemplates.schemaGraphql, serviceName);
-      await writeFile(resolve(generatedDir, 'mapping.json'), toJsonString(GRPCMappingSchema, mapping, { prettySpaces: 2 }));
+      await writeFile(
+        resolve(generatedDir, 'mapping.json'),
+        toJsonString(GRPCMappingSchema, mapping, { prettySpaces: 2 }),
+      );
       await writeFile(resolve(tempDir, 'Makefile'), pupa(PluginTemplates.makefile, { originalPluginName }));
 
       await writeFile(resolve(tempDir, '.gitignore'), PluginTemplates.gitignore);

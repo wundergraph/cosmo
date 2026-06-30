@@ -558,7 +558,10 @@ export async function generateProtoAndMapping(pluginDir: string, protoOptions: P
     spinner.text = 'Generating mapping and proto files...';
 
     const mapping = compileGraphQLToMapping(schema, serviceName);
-    await writeFile(resolve(generatedDir, 'mapping.json'), toJsonString(GRPCMappingSchema, mapping, { prettySpaces: 2 }));
+    await writeFile(
+      resolve(generatedDir, 'mapping.json'),
+      toJsonString(GRPCMappingSchema, mapping, { prettySpaces: 2 }),
+    );
 
     const proto = compileGraphQLToProto(schema, {
       serviceName,

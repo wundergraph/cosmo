@@ -15,7 +15,7 @@ import {
   DEFAULT_SUBGRAPH_URL_ONE,
   resolvabilitySDLOne,
   resolvabilitySDLTwo,
-  SetupTest
+  SetupTest,
 } from './test-util.js';
 
 let dbname = '';
