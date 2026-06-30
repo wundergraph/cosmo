@@ -127,7 +127,6 @@ func TestRedisSkipUnavailableProviders(t *testing.T) {
 			}
 
 			client := graphql.NewSubscriptionClient(xEnv.GraphQLWebSocketSubscriptionURL())
-			t.Cleanup(func() { _ = client.Close() })
 
 			subscriptionArgsCh := make(chan subscriptionArgs)
 			_, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
@@ -136,7 +135,9 @@ func TestRedisSkipUnavailableProviders(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			runCh := make(chan error)
+			// Buffered so the goroutine never blocks delivering Run()'s result, even if the
+			// drain below times out before reading it.
+			runCh := make(chan error, 1)
 			go func() {
 				runCh <- client.Run()
 			}()
@@ -154,6 +155,12 @@ func TestRedisSkipUnavailableProviders(t *testing.T) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 			})
+
+			// Close the client and verify Run() returned cleanly.
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, runCh, func(t *testing.T, runErr error) {
+				require.NoError(t, runErr)
+			}, "unable to close client before timeout")
 		})
 	})
 

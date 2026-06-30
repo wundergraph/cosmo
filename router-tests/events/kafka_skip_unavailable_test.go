@@ -130,7 +130,6 @@ func TestKafkaSkipUnavailableProviders(t *testing.T) {
 			}
 
 			client := graphql.NewSubscriptionClient(xEnv.GraphQLWebSocketSubscriptionURL())
-			t.Cleanup(func() { _ = client.Close() })
 
 			subscriptionArgsCh := make(chan kafkaSubscriptionArgs)
 			_, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
@@ -139,7 +138,9 @@ func TestKafkaSkipUnavailableProviders(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			clientRunCh := make(chan error)
+			// Buffered so the goroutine never blocks delivering Run()'s result, even if the
+			// drain below times out before reading it.
+			clientRunCh := make(chan error, 1)
 			go func() {
 				clientRunCh <- client.Run()
 			}()
@@ -157,6 +158,12 @@ func TestKafkaSkipUnavailableProviders(t *testing.T) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 			})
+
+			// Close the client and verify Run() returned cleanly.
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientRunCh, func(t *testing.T, runErr error) {
+				require.NoError(t, runErr)
+			}, "unable to close client before timeout")
 		})
 	})
 
