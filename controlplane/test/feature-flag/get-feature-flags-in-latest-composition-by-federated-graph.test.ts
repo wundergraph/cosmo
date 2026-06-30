@@ -1,18 +1,18 @@
 import fs from 'node:fs';
 import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { formatISO } from 'date-fns';
+import { addMinutes, formatISO, subDays } from 'date-fns';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
 import {
   createAndPublishSubgraph,
   createFeatureFlag,
   createFederatedGraph,
+  createNamespace,
   createThenPublishFeatureSubgraph,
   DEFAULT_ROUTER_URL,
   DEFAULT_SUBGRAPH_URL_ONE,
   SetupTest,
-  toggleFeatureFlag,
 } from '../test-util.js';
 
 let dbname = '';
@@ -72,13 +72,16 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['split-config-loading'] });
     testContext.onTestFinished(() => server.close());
 
+    const namespace = genID('namespace').toLowerCase();
     const labels = [genUniqueLabel()];
     const federatedGraphName = genID('fedGraph');
+
+    await createNamespace(client, namespace);
 
     await createAndPublishSubgraph(
       client,
       'users',
-      'default',
+      namespace,
       fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/users.graphql')).toString(),
       labels,
       DEFAULT_SUBGRAPH_URL_ONE,
@@ -88,30 +91,30 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
       client,
       'users-feature',
       'users',
-      'default',
+      namespace,
       fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/users-feature.graphql')).toString(),
       labels,
       'http://localhost:4101',
     );
 
     const federatedGraphLabels = labels.map(({ key, value }) => `${key}=${value}`);
-    await createFederatedGraph(client, federatedGraphName, 'default', federatedGraphLabels, DEFAULT_ROUTER_URL);
+    await createFederatedGraph(client, federatedGraphName, namespace, federatedGraphLabels, DEFAULT_ROUTER_URL);
 
     const flagName = genID('flag');
-    await createFeatureFlag(client, flagName, labels, ['users-feature'], 'default', true);
+    await createFeatureFlag(client, flagName, labels, ['users-feature'], namespace, true);
 
     // recomposeFeatureFlag recomposes only the feature flag against the existing base composition (the base
     // schema version is unchanged). Each call creates another feature flag composition for the same\
     // (base composition, feature flag) pair, which is the source of the duplicates in the dropdown.
-    const recomposeResp1 = await client.recomposeFeatureFlag({ name: flagName, namespace: 'default' });
+    const recomposeResp1 = await client.recomposeFeatureFlag({ name: flagName, namespace });
     expect(recomposeResp1.response?.code).toBe(EnumStatusCode.OK);
 
-    const recomposeResp2 = await client.recomposeFeatureFlag({ name: flagName, namespace: 'default' });
+    const recomposeResp2 = await client.recomposeFeatureFlag({ name: flagName, namespace });
     expect(recomposeResp2.response?.code).toBe(EnumStatusCode.OK);
 
     const resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
       federatedGraphName,
-      namespace: 'default',
+      namespace,
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
@@ -119,24 +122,46 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
 
     // Create a second, enabled feature flag. It is composed into the latest composition, so it shows up too.
     const secondFlagName = genID('flag');
-    await createFeatureFlag(client, secondFlagName, labels, ['users-feature'], 'default', true);
+    await createFeatureFlag(client, secondFlagName, labels, ['users-feature'], namespace, true);
 
     const withSecondFlag = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
       federatedGraphName,
-      namespace: 'default',
+      namespace,
     });
     expect(withSecondFlag.response?.code).toBe(EnumStatusCode.OK);
     expect(withSecondFlag.featureFlags).toHaveLength(0);
 
-    // Feature flag compositions should show up in the composition list
-    const compositionsResp = await client.getCompositions({});
+    // Only the base graph composition should show up when excluding feature flag compositions
+    let compositionsResp = await client.getCompositions({
+      fedGraphName: federatedGraphName,
+      namespace,
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addMinutes(new Date(), 1)),
+      excludeFeatureFlagCompositions: true,
+    });
 
     expect(compositionsResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(compositionsResp.compositions).toHaveLength(3);
+    expect(compositionsResp.compositions).toHaveLength(1);
+    expect(compositionsResp.compositions).toStrictEqual(
+      expect.arrayContaining([expect.objectContaining({ isFeatureFlagComposition: false })]),
+    );
+
+    // Feature flag compositions should show up in the composition list
+    compositionsResp = await client.getCompositions({
+      fedGraphName: federatedGraphName,
+      namespace,
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addMinutes(new Date(), 1)),
+    });
+
+    expect(compositionsResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(compositionsResp.compositions).toHaveLength(5);
     expect(compositionsResp.compositions).toStrictEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: flagName }),
-        expect.objectContaining({ name: secondFlagName }),
+        expect.objectContaining({ featureFlagName: flagName, isFeatureFlagComposition: true }),
+        expect.objectContaining({ featureFlagName: flagName, isFeatureFlagComposition: true }),
+        expect.objectContaining({ featureFlagName: flagName, isFeatureFlagComposition: true }),
+        expect.objectContaining({ featureFlagName: secondFlagName, isFeatureFlagComposition: true }),
       ]),
     );
   });
