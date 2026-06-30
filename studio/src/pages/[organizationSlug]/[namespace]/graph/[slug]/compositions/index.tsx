@@ -140,11 +140,7 @@ const CompositionsPage: NextPageWithLayout = () => {
                       </TableCell>
                       {splitConfigLoadingEnabled && (
                         <TableCell>
-                          {isFeatureFlagComposition && featureFlagName ? (
-                            <>{featureFlagName}</>
-                          ) : (
-                            '-'
-                          )}
+                          {isFeatureFlagComposition && featureFlagName ? <>{featureFlagName}</> : '-'}
                         </TableCell>
                       )}
                       <TableCell
