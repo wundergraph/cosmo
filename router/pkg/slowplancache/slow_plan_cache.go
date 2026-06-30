@@ -223,6 +223,12 @@ func (c *Cache[V]) Close() {
 		// it is even documented in the ristretto code as a comment
 		close(c.writeCh)
 
+		// Drain any buffered writes that processWrites didn't consume before it exited.
+		// Without this, setRequest values (and the V they hold) stay reachable through
+		// the closed channel's buffer until the Cache itself is GC'd.
+		for range c.writeCh {
+		}
+
 		c.entries.Range(func(key, _ any) bool {
 			c.entries.Delete(key)
 			return true
