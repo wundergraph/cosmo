@@ -7,24 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"go.uber.org/zap"
 )
-
-// waitFor polls cond until it returns true or the timeout elapses.
-// Returns whether cond was satisfied.
-func waitFor(timeout time.Duration, cond func() bool) bool {
-	deadline := time.Now().Add(timeout)
-	for {
-		if cond() {
-			return true
-		}
-		if !time.Now().Before(deadline) {
-			return false
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-}
 
 // newIdleExporter creates an exporter that won't flush on its own (long interval,
 // no records), so tests can exercise the buffer pool deterministically.
@@ -43,9 +29,7 @@ func newIdleExporter(t *testing.T, batchSize int) *Exporter[*graphqlmetrics.Sche
 			Interval:    time.Second,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Cleanup(func() { _ = e.Shutdown(context.Background()) })
 	return e
 }
@@ -62,9 +46,7 @@ func TestPutBatchBufferClearsElements(t *testing.T) {
 
 	full := buf[:cap(buf)]
 	for i := range full {
-		if full[i] != nil {
-			t.Fatalf("pooled buffer not cleared at slot %d", i)
-		}
+		require.Nilf(t, full[i], "pooled buffer not cleared at slot %d", i)
 	}
 }
 
@@ -78,9 +60,7 @@ func TestPutBatchBufferDropsOversized(t *testing.T) {
 	e.putBatchBuffer(oversized)
 
 	got := e.getBatchBuffer()
-	if cap(got) > e.settings.BatchSize {
-		t.Fatalf("oversized buffer was pooled: cap=%d, want <= %d", cap(got), e.settings.BatchSize)
-	}
+	require.LessOrEqualf(t, cap(got), e.settings.BatchSize, "oversized buffer was pooled: cap=%d, want <= %d", cap(got), e.settings.BatchSize)
 }
 
 // blockingSink blocks every Export until release is closed, tracking how many
@@ -126,9 +106,7 @@ func TestConcurrentExportsRespectCap(t *testing.T) {
 			Interval:    time.Second,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	// Always free blocked export goroutines and shut down, even if an assertion
 	// below fails. Release first to unblock the goroutines Shutdown waits on.
 	t.Cleanup(func() {
@@ -140,18 +118,13 @@ func TestConcurrentExportsRespectCap(t *testing.T) {
 		e.Record(&graphqlmetrics.SchemaUsageInfo{}, false)
 	}
 
-	if !waitFor(3*time.Second, func() bool { return sink.active.Load() >= cap }) {
-		t.Fatalf("cap not saturated: only %d concurrent exports", sink.active.Load())
-	}
+	require.Eventuallyf(t, func() bool { return sink.active.Load() >= cap }, 3*time.Second, 10*time.Millisecond,
+		"cap not saturated: only %d concurrent exports", sink.active.Load())
 	// Give the drain loop a chance to (wrongly) start a 4th export if the cap
 	// weren't enforced; backpressure should keep it blocked on Acquire.
 	time.Sleep(100 * time.Millisecond)
-	if got := sink.active.Load(); got != cap {
-		t.Fatalf("active exports = %d, want %d", got, cap)
-	}
-	if got := sink.maxSeen.Load(); got != cap {
-		t.Fatalf("max observed concurrency = %d, want %d", got, cap)
-	}
+	require.Equal(t, int64(cap), sink.active.Load(), "active exports")
+	require.Equal(t, int64(cap), sink.maxSeen.Load(), "max observed concurrency")
 }
 
 // TestExporterDoesNotRetainExportedItems is the end-to-end guarantee behind the
@@ -175,9 +148,7 @@ func TestExporterDoesNotRetainExportedItems(t *testing.T) {
 			Interval:    time.Second,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Cleanup(func() { _ = e.Shutdown(context.Background()) })
 
 	var finalized atomic.Int64
@@ -186,18 +157,14 @@ func TestExporterDoesNotRetainExportedItems(t *testing.T) {
 		it := &graphqlmetrics.SchemaUsageInfo{}
 		runtime.SetFinalizer(it, func(*graphqlmetrics.SchemaUsageInfo) { finalized.Add(1) })
 		items[i] = it
-		if !e.Record(it, false) {
-			t.Fatalf("record %d unexpectedly dropped", i)
-		}
+		require.Truef(t, e.Record(it, false), "record %d unexpectedly dropped", i)
 	}
 
 	// Wait until the batch is exported and the export goroutine has finished, so
 	// the buffer has been returned to the pool (and cleared, if the fix is in).
-	if !waitFor(5*time.Second, func() bool {
+	require.Eventually(t, func() bool {
 		return sink.exportCount.Load() >= 1 && e.inflightBatches.Load() == 0
-	}) {
-		t.Fatal("batch was not exported in time")
-	}
+	}, 5*time.Second, 10*time.Millisecond, "batch was not exported in time")
 
 	// Drop our references; nothing in the exporter should keep the items alive.
 	for i := range items {
@@ -205,12 +172,10 @@ func TestExporterDoesNotRetainExportedItems(t *testing.T) {
 	}
 	items = nil
 
-	if !waitFor(5*time.Second, func() bool {
+	require.Eventuallyf(t, func() bool {
 		runtime.GC()
 		return finalized.Load() == int64(n)
-	}) {
-		t.Fatalf("exported items were retained: %d/%d finalized", finalized.Load(), n)
-	}
+	}, 5*time.Second, 10*time.Millisecond, "exported items were retained: want %d finalized", n)
 }
 
 // TestNewExporterDefaultsMaxConcurrentExports verifies that leaving the cap unset
@@ -231,15 +196,12 @@ func TestNewExporterDefaultsMaxConcurrentExports(t *testing.T) {
 			Interval:    time.Second,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Cleanup(func() { _ = e.Shutdown(context.Background()) })
 
 	for range 12 {
 		e.Record(&graphqlmetrics.SchemaUsageInfo{}, false)
 	}
-	if !waitFor(3*time.Second, func() bool { return sink.exportCount.Load() >= 1 }) {
-		t.Fatal("exporter with defaulted cap did not export (possible deadlock)")
-	}
+	require.Eventually(t, func() bool { return sink.exportCount.Load() >= 1 }, 3*time.Second, 10*time.Millisecond,
+		"exporter with defaulted cap did not export (possible deadlock)")
 }
