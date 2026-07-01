@@ -1,10 +1,9 @@
 package core
 
 import (
+	"cmp"
 	"slices"
 	"testing"
-
-	"golang.org/x/exp/constraints"
 
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -757,7 +756,7 @@ func toSet[T comparable](slice ...T) map[T]bool {
 	return set
 }
 
-func toKeys[K constraints.Ordered, V any](m map[K]V) []K {
+func toKeys[K cmp.Ordered, V any](m map[K]V) []K {
 	keys := make([]K, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
