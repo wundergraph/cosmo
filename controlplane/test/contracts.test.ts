@@ -4,6 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { Label } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { normalizeString } from '../../composition/tests/utils/utils.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { unsuccessfulBaseCompositionError } from '../src/core/errors/errors.js';
@@ -11,17 +12,19 @@ import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import {
   assertFeatureFlagExecutionConfig,
   assertNumberOfCompositions,
-  createAndPublishSubgraph, createFeatureFlag,
+  createAndPublishSubgraph,
+  createFeatureFlag,
   createFederatedGraph,
   createNamespace,
   createThenPublishSubgraph,
   DEFAULT_NAMESPACE,
   DEFAULT_ROUTER_URL,
   DEFAULT_SUBGRAPH_URL_ONE,
-  DEFAULT_SUBGRAPH_URL_TWO, featureFlagIntegrationTestSetUp, getDebugTestOptions,
+  DEFAULT_SUBGRAPH_URL_TWO,
+  featureFlagIntegrationTestSetUp,
+  getDebugTestOptions,
   SetupTest,
 } from './test-util.js';
-import { Label } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 
 const schemaDefinition = `schema {\n  query: Query\n}\n\n`;
 const isDebugMode = false;
@@ -2235,7 +2238,7 @@ describe('Contract tests', () => {
     'that a contract is not composed multiple times when a feature subgraph is published',
     getDebugTestOptions(isDebugMode),
     async (testContext) => {
-      const { client, server } = await SetupTest({ dbname, chClient, });
+      const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
 
       const namespace = genID('namespace').toLowerCase();
