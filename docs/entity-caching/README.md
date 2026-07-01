@@ -468,17 +468,6 @@ type Query {
 }
 ```
 
-## Verifying It Works
-
-1. Add `@openfed__entityCache` to an entity and republish that subgraph (Step 6), then let Cosmo
-   Cloud compose it.
-2. Run a query that resolves that entity twice. The second request should be served from cache and
-   should not hit the subgraph again (watch your subgraph logs/metrics).
-3. With L2 (Redis) enabled, restart the router and run the query again — the cached entity should
-   still be served from Redis, until its TTL expires.
-4. Warm an entity, run a mutation annotated with `@openfed__cacheInvalidate`, then read again — the
-   post-mutation read should fetch fresh data.
-
 ## Troubleshooting
 
 - **No caching happens.** Confirm `entity_caching.enabled: true` on the router, that the entity has

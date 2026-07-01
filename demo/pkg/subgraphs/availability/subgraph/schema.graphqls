@@ -15,7 +15,7 @@ directive @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
 
 type Mutation {
     """ This mutation updates the availability status of an employee in the system."""
-    updateAvailability(employeeID: Int!, isAvailable: Boolean!): Employee!
+    updateAvailability(employeeID: Int!, isAvailable: Boolean!): Employee! @openfed__cachePopulate(maxAge: 10)
 }
 
 type Employee @key(fields: "id") @openfed__entityCache(maxAge: 120) {
