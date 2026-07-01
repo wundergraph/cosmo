@@ -230,29 +230,49 @@ entity_caching:
       key_prefix: "cosmo_entity_cache"
 ```
 
-### 5c. Run the router
+### 5c. Run the router **from this branch**
 
-Start the demo subgraphs first, then the router:
+> **Do not use the published `ghcr.io/wundergraph/cosmo/router:latest` image.** Entity caching is
+> not in a released router yet — it lives only on this branch. You must run the router built from
+> the local source, otherwise the cache directives and `entity_caching` config are ignored.
+
+Start the demo subgraphs first, then run the source router:
 
 ```bash
 # In one terminal — start the demo subgraphs (ports 4001–4009)
 cd $DEMO && ./run_subgraphs.sh
 
-# In another terminal — start the router
-docker run --rm \
-  -e GRAPH_API_TOKEN=$GRAPH_API_TOKEN \
-  -e LISTEN_ADDR=0.0.0.0:3002 \
-  -p 3002:3002 \
-  -v "$PWD/config.yaml:/config.yaml" \
-  ghcr.io/wundergraph/cosmo/router:latest
+# In another terminal — run the router from source (this branch)
+cd /Users/milindadias/Work/cosmo/router
+GRAPH_API_TOKEN=$GRAPH_API_TOKEN \
+LISTEN_ADDR=localhost:3002 \
+CONFIG_PATH="$PWD/config.yaml" \
+go run cmd/router/main.go
 ```
 
-The router authenticates with the token, pulls the composed config for `entitycachegraph`, and
-serves it at `http://localhost:3002/graphql`.
+Put the `config.yaml` from Step 5b next to the router (`router/config.yaml`) or point `CONFIG_PATH`
+at wherever you saved it. The router authenticates with the token, pulls the composed config for
+`entitycachegraph`, and serves it at `http://localhost:3002/graphql`.
 
-- **Subgraphs must be reachable** from wherever the router runs. The graph points at
-  `localhost:4001–4009`, so run the router on the same host (or `--network host` on Linux).
+- **Subgraphs must be reachable** — the graph points at `localhost:4001–4009`, so run the router on
+  the same host as the demo subgraphs.
 - If you set `l2.enabled: true`, make sure Redis is reachable at the configured URL.
+
+> **Building a local image instead.** If you want a container, build one from this branch rather
+> than pulling `:latest`. The router Dockerfile's build context is the `router/` directory:
+>
+> ```bash
+> docker build -t cosmo-router:local router/
+> docker run --rm \
+>   -e GRAPH_API_TOKEN=$GRAPH_API_TOKEN \
+>   -e LISTEN_ADDR=0.0.0.0:3002 \
+>   -p 3002:3002 \
+>   -v "$PWD/config.yaml:/config.yaml" -e CONFIG_PATH=/config.yaml \
+>   cosmo-router:local
+> ```
+>
+> Run the container with `--network host` (Linux) or point routing URLs at `host.docker.internal`
+> so it can reach the demo subgraphs on the host.
 
 At this point you have a **working baseline**: run a query at `http://localhost:3002/graphql` and
 confirm it resolves across the subgraphs. Entity caching is enabled on the router but does nothing
