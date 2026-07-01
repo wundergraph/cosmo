@@ -2,7 +2,6 @@ package metric
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -34,16 +33,11 @@ type StreamsEvent struct {
 type StreamMetricProvider interface {
 	Produce(ctx context.Context, opts ...otelmetric.AddOption)
 	Consume(ctx context.Context, opts ...otelmetric.AddOption)
-
-	Flush(ctx context.Context) error
 }
 
 type StreamMetricStore interface {
 	Produce(ctx context.Context, event StreamsEvent)
 	Consume(ctx context.Context, event StreamsEvent)
-
-	Flush(ctx context.Context) error
-	Shutdown(ctx context.Context) error
 }
 
 // StreamMetrics is the store for Event (Kafka/Redis/NATS) metrics.
@@ -126,28 +120,4 @@ func (e *StreamMetrics) Consume(ctx context.Context, event StreamsEvent) {
 	for _, provider := range e.providers {
 		provider.Consume(ctx, opt)
 	}
-}
-
-// Flush flushes the metrics to the backend synchronously.
-func (e *StreamMetrics) Flush(ctx context.Context) error {
-	var err error
-
-	for _, provider := range e.providers {
-		if errOtlp := provider.Flush(ctx); errOtlp != nil {
-			err = errors.Join(err, fmt.Errorf("failed to flush metrics: %w", errOtlp))
-		}
-	}
-
-	return err
-}
-
-// Shutdown flushes the metrics and stops observers if any.
-func (e *StreamMetrics) Shutdown(ctx context.Context) error {
-	var err error
-
-	if errFlush := e.Flush(ctx); errFlush != nil {
-		err = errors.Join(err, fmt.Errorf("failed to flush metrics: %w", errFlush))
-	}
-
-	return err
 }
