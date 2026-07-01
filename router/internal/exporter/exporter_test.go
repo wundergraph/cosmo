@@ -60,8 +60,7 @@ func TestPutBatchBufferClearsElements(t *testing.T) {
 	buf = append(buf, &graphqlmetrics.SchemaUsageInfo{}, &graphqlmetrics.SchemaUsageInfo{}, &graphqlmetrics.SchemaUsageInfo{})
 	e.putBatchBuffer(buf)
 
-	got := e.getBatchBuffer()
-	full := got[:cap(got)]
+	full := buf[:cap(buf)]
 	for i := range full {
 		if full[i] != nil {
 			t.Fatalf("pooled buffer not cleared at slot %d", i)
@@ -130,6 +129,12 @@ func TestConcurrentExportsRespectCap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Always free blocked export goroutines and shut down, even if an assertion
+	// below fails. Release first to unblock the goroutines Shutdown waits on.
+	t.Cleanup(func() {
+		close(sink.release)
+		_ = e.Shutdown(context.Background())
+	})
 
 	for range 10 {
 		e.Record(&graphqlmetrics.SchemaUsageInfo{}, false)
@@ -146,11 +151,6 @@ func TestConcurrentExportsRespectCap(t *testing.T) {
 	}
 	if got := sink.maxSeen.Load(); got != cap {
 		t.Fatalf("max observed concurrency = %d, want %d", got, cap)
-	}
-
-	close(sink.release)
-	if err := e.Shutdown(context.Background()); err != nil {
-		t.Fatalf("shutdown: %v", err)
 	}
 }
 

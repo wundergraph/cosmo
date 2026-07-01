@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.175.7",
+  "version": "0.176.0",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -97,7 +97,7 @@
     "monaco-graphql": "^1.4.0",
     "next": "15.5.19",
     "next-themes": "^0.2.1",
-    "posthog-js": "^1.240.6",
+    "posthog-js": "^1.395.0",
     "prettier": "catalog:",
     "pretty-bytes": "^6.1.1",
     "prism-react-renderer": "^2.0.6",
