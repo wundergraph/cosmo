@@ -719,7 +719,7 @@ func (s *graphServer) logEntityCacheOverrideIssues(
 		if entityTypesBySubgraph[sgName] == nil {
 			entityTypesBySubgraph[sgName] = make(map[string]bool)
 		}
-		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCache() {
+		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCacheConfigurations() {
 			entityTypesBySubgraph[sgName][ec.TypeName] = true
 		}
 	}

@@ -1229,7 +1229,7 @@ func (x *DataSourceConfiguration) GetEntityCachingConfiguration() *EntityCaching
 type EntityCachingConfiguration struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Per-entity cache configurations (from @openfed__entityCache directive)
-	EntityCache []*EntityCacheConfiguration `protobuf:"bytes,1,rep,name=entity_cache,json=entityCache,proto3" json:"entity_cache,omitempty"`
+	EntityCacheConfigurations []*EntityCacheConfiguration `protobuf:"bytes,1,rep,name=entity_cache_configurations,json=entityCacheConfigurations,proto3" json:"entity_cache_configurations,omitempty"`
 	// Per-Mutation/Subscription-field cache eviction configs (from @openfed__cacheInvalidate)
 	CacheInvalidateConfigurations []*CacheInvalidateConfiguration `protobuf:"bytes,2,rep,name=cache_invalidate_configurations,json=cacheInvalidateConfigurations,proto3" json:"cache_invalidate_configurations,omitempty"`
 	// Per-Mutation/Subscription-field cache population configs (from @openfed__cachePopulate)
@@ -1272,9 +1272,9 @@ func (*EntityCachingConfiguration) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *EntityCachingConfiguration) GetEntityCache() []*EntityCacheConfiguration {
+func (x *EntityCachingConfiguration) GetEntityCacheConfigurations() []*EntityCacheConfiguration {
 	if x != nil {
-		return x.EntityCache
+		return x.EntityCacheConfigurations
 	}
 	return nil
 }
@@ -5271,9 +5271,9 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\x11entity_interfaces\x18\x0e \x03(\v2..wg.cosmo.node.v1.EntityInterfaceConfigurationR\x10entityInterfaces\x12[\n" +
 	"\x11interface_objects\x18\x0f \x03(\v2..wg.cosmo.node.v1.EntityInterfaceConfigurationR\x10interfaceObjects\x12R\n" +
 	"\x12cost_configuration\x18\x10 \x01(\v2#.wg.cosmo.node.v1.CostConfigurationR\x11costConfiguration\x12n\n" +
-	"\x1centity_caching_configuration\x18\x11 \x01(\v2,.wg.cosmo.node.v1.EntityCachingConfigurationR\x1aentityCachingConfiguration\"\xb0\x04\n" +
-	"\x1aEntityCachingConfiguration\x12M\n" +
-	"\fentity_cache\x18\x01 \x03(\v2*.wg.cosmo.node.v1.EntityCacheConfigurationR\ventityCache\x12v\n" +
+	"\x1centity_caching_configuration\x18\x11 \x01(\v2,.wg.cosmo.node.v1.EntityCachingConfigurationR\x1aentityCachingConfiguration\"\xcd\x04\n" +
+	"\x1aEntityCachingConfiguration\x12j\n" +
+	"\x1bentity_cache_configurations\x18\x01 \x03(\v2*.wg.cosmo.node.v1.EntityCacheConfigurationR\x19entityCacheConfigurations\x12v\n" +
 	"\x1fcache_invalidate_configurations\x18\x02 \x03(\v2..wg.cosmo.node.v1.CacheInvalidateConfigurationR\x1dcacheInvalidateConfigurations\x12p\n" +
 	"\x1dcache_populate_configurations\x18\x03 \x03(\v2,.wg.cosmo.node.v1.CachePopulateConfigurationR\x1bcachePopulateConfigurations\x12p\n" +
 	"\x1drequest_scoped_configurations\x18\x04 \x03(\v2,.wg.cosmo.node.v1.RequestScopedConfigurationR\x1brequestScopedConfigurations\x12g\n" +
@@ -5781,7 +5781,7 @@ var file_wg_cosmo_node_v1_node_proto_depIdxs = []int32{
 	40,  // 25: wg.cosmo.node.v1.DataSourceConfiguration.interface_objects:type_name -> wg.cosmo.node.v1.EntityInterfaceConfiguration
 	28,  // 26: wg.cosmo.node.v1.DataSourceConfiguration.cost_configuration:type_name -> wg.cosmo.node.v1.CostConfiguration
 	20,  // 27: wg.cosmo.node.v1.DataSourceConfiguration.entity_caching_configuration:type_name -> wg.cosmo.node.v1.EntityCachingConfiguration
-	21,  // 28: wg.cosmo.node.v1.EntityCachingConfiguration.entity_cache:type_name -> wg.cosmo.node.v1.EntityCacheConfiguration
+	21,  // 28: wg.cosmo.node.v1.EntityCachingConfiguration.entity_cache_configurations:type_name -> wg.cosmo.node.v1.EntityCacheConfiguration
 	22,  // 29: wg.cosmo.node.v1.EntityCachingConfiguration.cache_invalidate_configurations:type_name -> wg.cosmo.node.v1.CacheInvalidateConfiguration
 	23,  // 30: wg.cosmo.node.v1.EntityCachingConfiguration.cache_populate_configurations:type_name -> wg.cosmo.node.v1.CachePopulateConfiguration
 	24,  // 31: wg.cosmo.node.v1.EntityCachingConfiguration.request_scoped_configurations:type_name -> wg.cosmo.node.v1.RequestScopedConfiguration

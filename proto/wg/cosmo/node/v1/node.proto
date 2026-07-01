@@ -98,7 +98,7 @@ message DataSourceConfiguration {
 // Entity caching configuration for a subgraph data source.
 message EntityCachingConfiguration {
   // Per-entity cache configurations (from @openfed__entityCache directive)
-  repeated EntityCacheConfiguration entity_cache = 1;
+  repeated EntityCacheConfiguration entity_cache_configurations = 1;
   // Per-Mutation/Subscription-field cache eviction configs (from @openfed__cacheInvalidate)
   repeated CacheInvalidateConfiguration cache_invalidate_configurations = 2;
   // Per-Mutation/Subscription-field cache population configs (from @openfed__cachePopulate)

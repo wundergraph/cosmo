@@ -674,7 +674,8 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 	}
 
 	// Entity caching configurations
-	for _, ec := range in.GetEntityCachingConfiguration().GetEntityCache() {
+	cache := in.GetEntityCachingConfiguration().GetEntityCacheConfigurations()
+	for _, ec := range cache {
 		cacheName := resolveEntityCacheProviderID(l.entityCachingConfig, subgraphName, ec.TypeName)
 		out.FederationMetaData.EntityCaching = append(out.FederationMetaData.EntityCaching, plan.EntityCacheConfiguration{
 			TypeName:                    ec.TypeName,
@@ -721,7 +722,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 	for _, cp := range in.GetEntityCachingConfiguration().GetCachePopulateConfigurations() {
 		if cp.OperationType == protoOperationTypeSubscription {
 			var targetEntity *nodev1.EntityCacheConfiguration
-			for _, ec := range in.GetEntityCachingConfiguration().GetEntityCache() {
+			for _, ec := range in.GetEntityCachingConfiguration().GetEntityCacheConfigurations() {
 				if ec.TypeName == cp.EntityTypeName {
 					targetEntity = ec
 					break
@@ -766,7 +767,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 		if ci.OperationType == protoOperationTypeSubscription {
 			cacheName := resolveEntityCacheProviderID(l.entityCachingConfig, subgraphName, ci.EntityTypeName)
 			var includeHeaders bool
-			for _, ec := range in.GetEntityCachingConfiguration().GetEntityCache() {
+			for _, ec := range in.GetEntityCachingConfiguration().GetEntityCacheConfigurations() {
 				if ec.TypeName == ci.EntityTypeName {
 					includeHeaders = ec.IncludeHeaders
 					break
