@@ -40,12 +40,8 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
       });
 
-      let basePath = options.out ? resolve(options.out) : options.out;
-      if (!basePath) {
-        basePath = resolve('fetched-schemas');
-      }
-
-      basePath = join(basePath, `${name}${options.namespace ? `-${options.namespace}` : ''}`);
+      let basePath = options.out ? resolve(options.out) : resolve();
+      basePath = join(basePath, `${name}-${options.namespace || 'default'}`);
       if (!existsSync(basePath)) {
         await mkdir(basePath, { recursive: true });
       }
@@ -62,13 +58,13 @@ export default (opts: BaseCommandOptions) => {
       const scriptsPath = join(basePath, '/scripts/');
 
       if (!existsSync(superGraphPath)) {
-        await mkdir(superGraphPath);
+        await mkdir(superGraphPath, { recursive: true });
       }
       if (!existsSync(subgraphPath)) {
-        await mkdir(subgraphPath);
+        await mkdir(subgraphPath, { recursive: true });
       }
       if (!existsSync(scriptsPath) && options.apolloCompatibility) {
-        await mkdir(scriptsPath);
+        await mkdir(scriptsPath, { recursive: true });
       }
 
       const routerConfig = await fetchRouterConfig({
@@ -78,10 +74,12 @@ export default (opts: BaseCommandOptions) => {
       });
       await writeFile(join(superGraphPath, cosmoConfigFile), routerConfig.routerConfig);
       if (routerConfig.mapper) {
+        // The mapper file is only available when `split-config-loading` is enabled
         await writeFile(join(basePath, cosmoMapperFile), JSON.stringify(routerConfig.mapper));
       }
 
       if (routerConfig.featureFlags?.size) {
+        // Same as the mapper, feature flags are only available when `split-config-loading` is enabled
         const featureFlagsPath = join(basePath, featureFlagsDir);
         if (!existsSync(featureFlagsPath)) {
           await mkdir(featureFlagsPath);

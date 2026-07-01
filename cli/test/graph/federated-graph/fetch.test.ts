@@ -1,4 +1,4 @@
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
@@ -67,9 +67,9 @@ describe('federated-graph fetch command tests', () => {
 
     global.fetch = vi.fn(mockFetchRouterConfig);
 
-    const outputDir = join(tmpdir(), 'federated-graph-fetch');
-    if (!existsSync(outputDir)) {
-      await mkdir(outputDir, { recursive: true });
+    let outputDir = join(tmpdir(), 'federated-graph-fetch');
+    if (existsSync(outputDir)) {
+      await rm(outputDir, { recursive: true });
     }
 
     const program = new Command();
@@ -79,13 +79,14 @@ describe('federated-graph fetch command tests', () => {
       from: 'user',
     });
 
-    expect(existsSync(join(outputDir, 'fake-graph'))).toBe(true);
-    expect(existsSync(join(outputDir, 'fake-graph', 'cosmo-composition.yaml'))).toBe(true);
-    expect(existsSync(join(outputDir, 'fake-graph', 'supergraph'))).toBe(true);
-    expect(existsSync(join(outputDir, 'fake-graph', 'supergraph', 'cosmoConfig.json'))).toBe(true);
+    outputDir = join(outputDir, 'fake-graph-default');
+    expect(existsSync(outputDir)).toBe(true);
+    expect(existsSync(join(outputDir, 'cosmo-composition.yaml'))).toBe(true);
+    expect(existsSync(join(outputDir, 'supergraph'))).toBe(true);
+    expect(existsSync(join(outputDir, 'supergraph', 'cosmoConfig.json'))).toBe(true);
 
     // The output file must match the expected snapshot
-    const content = await readFile(join(outputDir, 'fake-graph', 'supergraph', 'cosmoConfig.json'), 'utf8');
+    const content = await readFile(join(outputDir, 'supergraph', 'cosmoConfig.json'), 'utf8');
     await expect(content).toMatchFileSnapshot(join(FIXTURES_DIR_PATH, 'router-compose', `router-config.json.snap`));
   });
 
@@ -97,8 +98,8 @@ describe('federated-graph fetch command tests', () => {
     global.fetch = vi.fn(mockFetchRouterConfig);
 
     let outputDir = join(tmpdir(), 'federated-graph-fetch-split');
-    if (!existsSync(outputDir)) {
-      await mkdir(outputDir);
+    if (existsSync(outputDir)) {
+      await rm(outputDir, { recursive: true });
     }
 
     const program = new Command();
@@ -108,7 +109,7 @@ describe('federated-graph fetch command tests', () => {
       from: 'user',
     });
 
-    outputDir = join(outputDir, 'fake-graph');
+    outputDir = join(outputDir, 'fake-graph-default');
     expect(existsSync(outputDir)).toBe(true);
     expect(existsSync(join(outputDir, 'cosmo-composition.yaml'))).toBe(true);
     expect(existsSync(join(outputDir, 'cosmo-mapper.json'))).toBe(true);
