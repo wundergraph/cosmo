@@ -41,6 +41,10 @@ type ProviderAdapter struct {
 	closeWg           sync.WaitGroup
 	cancel            context.CancelFunc
 	streamMetricStore metric.StreamMetricStore
+	// skipUnavailable mirrors events.skip_unavailable_providers. When true, Startup probes
+	// connectivity (kgo connects lazily otherwise) so an unreachable broker surfaces a
+	// distinct "could not connect" error, consistent with the NATS and Redis adapters.
+	skipUnavailable bool
 }
 
 type PollerOpts struct {
@@ -289,6 +293,19 @@ func (p *ProviderAdapter) Startup(ctx context.Context) (err error) {
 		return err
 	}
 
+	// In lenient mode probe connectivity so an unreachable broker surfaces a distinct
+	// "could not connect" error at startup, consistent with the NATS and Redis adapters.
+	// The client is kept regardless: kgo connects lazily and reconnects on its own, so the
+	// provider recovers without a restart once the broker is reachable. The probe is bounded
+	// so it completes well within the startup timeout.
+	if p.skipUnavailable {
+		pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+		if pingErr := p.writeClient.Ping(pingCtx); pingErr != nil {
+			return datasource.NewError("kafka provider could not connect to the configured brokers; it will keep retrying in the background", pingErr)
+		}
+	}
+
 	return
 }
 
@@ -338,6 +355,7 @@ func NewProviderAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt,
 		closeWg:           sync.WaitGroup{},
 		cancel:            cancel,
 		streamMetricStore: store,
+		skipUnavailable:   providerOpts.SkipUnavailableProviders,
 	}, nil
 }
 

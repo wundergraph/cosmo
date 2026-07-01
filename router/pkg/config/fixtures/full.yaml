@@ -358,6 +358,7 @@ cdn:
   cache_size: 100MB
 
 events:
+  skip_unavailable_providers: true
   providers:
     nats:
       - id: default

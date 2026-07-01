@@ -1553,7 +1553,7 @@ func (r *Router) Start(ctx context.Context) error {
 	}
 
 	/**
-	* Server logging after features has been initialized / disabled
+	 * Server logging after features has been initialized / disabled
 	 */
 
 	if r.localhostFallbackInsideDocker && docker.Inside() {

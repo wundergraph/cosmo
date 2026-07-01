@@ -177,6 +177,56 @@ engine:
 	})
 }
 
+func TestEventsSkipUnavailableProvidersConfigLoading(t *testing.T) {
+	t.Run("defaults to false", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.False(t, cfg.Config.Events.SkipUnavailableProviders)
+	})
+
+	t.Run("can be enabled from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  skip_unavailable_providers: true
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.True(t, cfg.Config.Events.SkipUnavailableProviders)
+	})
+
+	t.Run("can be enabled from env", func(t *testing.T) {
+		t.Setenv("EVENTS_SKIP_UNAVAILABLE_PROVIDERS", "true")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.True(t, cfg.Config.Events.SkipUnavailableProviders)
+	})
+}
+
 // Confirms https://github.com/caarlos0/env/issues/354 is fixed
 func TestConfigSlicesHaveDefaults(t *testing.T) {
 	t.Parallel()

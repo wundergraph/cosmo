@@ -52,6 +52,11 @@ type ProviderAdapter struct {
 	flushTimeout      time.Duration
 	streamMetricStore metric.StreamMetricStore
 	consumerConfig    consumerConfig
+	// skipUnavailable mirrors events.skip_unavailable_providers. When true, the connection
+	// options enable retry-on-failed-connect with unlimited reconnects, and Startup reports
+	// a connection error without aborting so the router can keep running while the client
+	// reconnects in the background.
+	skipUnavailable bool
 }
 
 // getInstanceIdentifier returns an identifier for the current instance.
@@ -370,11 +375,21 @@ func (p *ProviderAdapter) flush(ctx context.Context) error {
 func (p *ProviderAdapter) Startup(ctx context.Context) (err error) {
 	p.client, err = nats.Connect(p.url, p.opts...)
 	if err != nil {
+		// In lenient mode the connection options enable retry-on-failed-connect, so a
+		// connection failure does not surface here; any error returned is a fatal
+		// misconfiguration (e.g. invalid URL/TLS) that cannot recover by retrying.
 		return err
 	}
 	p.js, err = jetstream.New(p.client)
 	if err != nil {
 		return err
+	}
+	// With retry-on-failed-connect (lenient mode) nats.Connect returns a client in the
+	// reconnecting state instead of an error when the broker is unreachable. Report the
+	// connection failure so the caller can log it, but keep the client: it reconnects in
+	// the background and the provider recovers without a restart once the broker is back.
+	if p.skipUnavailable && !p.client.IsConnected() {
+		return datasource.NewError(fmt.Sprintf("nats provider could not connect to %q; it will keep retrying in the background", p.url), nil)
 	}
 	return nil
 }
@@ -394,14 +409,19 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 		p.deleteDurableConsumers(ctx)
 	}
 
-	fErr := p.flush(ctx)
-	if fErr != nil {
-		shutdownErr = errors.Join(shutdownErr, fErr)
-	}
+	// Only flush and drain an established connection. Under skip_unavailable_providers the
+	// client may have never connected (it is still reconnecting in the background), in which
+	// case there is nothing to flush or drain and attempting it only returns spurious errors.
+	if p.client.IsConnected() {
+		fErr := p.flush(ctx)
+		if fErr != nil {
+			shutdownErr = errors.Join(shutdownErr, fErr)
+		}
 
-	drainErr := p.client.Drain()
-	if drainErr != nil {
-		shutdownErr = errors.Join(shutdownErr, drainErr)
+		drainErr := p.client.Drain()
+		if drainErr != nil {
+			shutdownErr = errors.Join(shutdownErr, drainErr)
+		}
 	}
 
 	// Close the client
@@ -513,6 +533,7 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 		consumerConfig: consumerConfig{
 			deleteOnShutdown: deleteConsumersOnShutdown,
 		},
+		skipUnavailable: providerOpts.SkipUnavailableProviders,
 	}, nil
 }
 

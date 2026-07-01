@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 
@@ -41,6 +42,7 @@ func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, 
 		urls:              urls,
 		clusterEnabled:    clusterEnabled,
 		streamMetricStore: store,
+		skipUnavailable:   opts.SkipUnavailableProviders,
 	}
 }
 
@@ -53,15 +55,37 @@ type ProviderAdapter struct {
 	urls              []string
 	clusterEnabled    bool
 	streamMetricStore metric.StreamMetricStore
+	// skipUnavailable mirrors events.skip_unavailable_providers. When true, Startup keeps
+	// the resilient client even if the initial connection check fails, so go-redis can
+	// reconnect on a later command and the provider recovers without a restart.
+	skipUnavailable bool
 }
 
 func (p *ProviderAdapter) Startup(ctx context.Context) error {
+	// Bound the initial connectivity check so a black-holed broker (SYN dropped) cannot block
+	// Startup for the full go-redis dial timeout, which could exceed the caller's startup
+	// timeout and leave this call running in a leaked goroutine.
+	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
 	rdCloser, err := rd.NewRedisCloser(&rd.RedisCloserOptions{
 		Logger:         p.logger,
 		URLs:           p.urls,
 		ClusterEnabled: p.clusterEnabled,
+		Context:        pingCtx,
 	})
 	if err != nil {
+		if p.skipUnavailable && rdCloser != nil {
+			// Lenient mode: retain the client even though the initial connection check
+			// failed. go-redis is lazy and reconnects on the next command, so the provider
+			// recovers without a restart once the broker is reachable. The error is still
+			// returned so the caller can log a distinct "could not connect" message.
+			p.conn = rdCloser
+			return err
+		}
+		// Strict mode: the router will abort startup, so close the client we won't keep.
+		if rdCloser != nil {
+			_ = rdCloser.Close()
+		}
 		return err
 	}
 
@@ -96,6 +120,14 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		zap.String("method", "subscribe"),
 		zap.Strings("channels", subConf.Channels),
 	)
+
+	// Guard the possibly-nil connection: in strict mode a failed Startup leaves p.conn nil
+	// (under skip_unavailable_providers the resilient client is retained instead), so return
+	// an error rather than panicking if Subscribe is somehow reached without a connection.
+	if p.conn == nil {
+		return datasource.NewError("redis connection not initialized", nil)
+	}
+
 	sub := p.conn.PSubscribe(ctx, subConf.Channels...)
 	msgChan := sub.Channel()
 
