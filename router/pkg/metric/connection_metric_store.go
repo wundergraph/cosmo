@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -21,7 +22,6 @@ type ConnectionMetricProvider interface {
 	MeasureTCPConnectDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
-	Flush(ctx context.Context) error
 	Shutdown() error
 }
 
@@ -32,7 +32,6 @@ type ConnectionMetricStore interface {
 	MeasureTCPConnectDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-	Flush(ctx context.Context) error
 	Shutdown(ctx context.Context) error
 }
 
@@ -126,29 +125,8 @@ func (c *ConnectionMetrics) recordOpts(attrs []attribute.KeyValue) otelmetric.Re
 }
 
 // Flush flushes the metrics to the backend synchronously.
-func (h *ConnectionMetrics) Flush(ctx context.Context) error {
-	var err error
-
-	errOtlp := h.otlpConnectionMetrics.Flush(ctx)
-	if errOtlp != nil {
-		err = errors.Join(err, fmt.Errorf("failed to flush otlp metrics: %w", errOtlp))
-	}
-
-	errProm := h.promConnectionMetrics.Flush(ctx)
-	if errProm != nil {
-		err = errors.Join(err, fmt.Errorf("failed to flush prometheus metrics: %w", errProm))
-	}
-
-	return err
-}
-
-// Shutdown flushes the metrics and stops the runtime metrics.
 func (h *ConnectionMetrics) Shutdown(ctx context.Context) error {
 	var err error
-
-	if errFlush := h.Flush(ctx); errFlush != nil {
-		err = errors.Join(err, fmt.Errorf("failed to flush metrics: %w", errFlush))
-	}
 
 	if errProm := h.promConnectionMetrics.Shutdown(); errProm != nil {
 		err = errors.Join(err, fmt.Errorf("failed to shutdown prom metrics: %w", errProm))

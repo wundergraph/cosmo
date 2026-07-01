@@ -62,6 +62,21 @@ services:
     networks:
       - primary
 
+  test1:
+    environment:
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
+      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
+    container_name: test1
+    build:
+      context: ./demo
+      dockerfile: docker/test1.Dockerfile
+    profiles:
+      - subgraphs
+    ports:
+      - '4006:4006'
+    networks:
+      - primary
+
   availability:
     container_name: availability
     environment:
@@ -89,6 +104,21 @@ services:
       - subgraphs
     ports:
       - '4008:4008'
+    networks:
+      - primary
+
+  countries:
+    container_name: countries
+    environment:
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
+      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
+    build:
+      context: ./demo
+      dockerfile: docker/countries.Dockerfile
+    profiles:
+      - subgraphs
+    ports:
+      - '4009:4009'
     networks:
       - primary
 
@@ -188,7 +218,7 @@ services:
     depends_on:
       rustfs_perms:
         condition: service_completed_successfully
-    command: "rustfs server /data"
+    command: 'rustfs server /data'
     environment:
       RUSTFS_CONSOLE_ENABLE: 'true'
       RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-admin}
@@ -343,7 +373,7 @@ services:
   redis:
     image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 3s
       retries: 5

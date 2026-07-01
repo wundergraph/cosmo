@@ -206,7 +206,7 @@ func (c *CacheMetrics) Shutdown() error {
 
 	for _, reg := range c.instrumentRegistrations {
 		if regErr := reg.Unregister(); regErr != nil {
-			err = errors.Join(regErr)
+			err = errors.Join(err, regErr)
 		}
 	}
 

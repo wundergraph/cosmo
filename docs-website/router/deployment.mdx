@@ -51,9 +51,9 @@ For example, the following configuration was tested and could serve as a good st
 
 **Router**
 
-* `GRACE_PERIOD_SECONDS=20`
+* `GRACE_PERIOD=20s`
 
-* `SHUTDOWN_DELAY_SECONDS=30`
+* `SHUTDOWN_DELAY=30s`
 
 `Pod`
 
@@ -61,7 +61,7 @@ For example, the following configuration was tested and could serve as a good st
 
 With that configuration, your router has 30 seconds to respond to all active connections before forcefully shutting down the server. Kubernetes will not terminate the container until the termination period of 60 seconds is over. Because the readiness endpoint no longer responds `200` and the container is in`TERMINATION` state any new traffic from being redirected to the instance is prevented.
 
-`GRACE_PERIOD_SECONDS` becomes interesting when the router updates its schema. This is also the time the server has to gracefully shut down old clients before the switch is enforced.
+`GRACE_PERIOD` becomes interesting when the router updates its schema. This is also the time the server has to gracefully shut down old clients before the switch is enforced.
 
 <Info>
   For more information, we recommend the [Kubernetes Best Practice Terminating With Grace](https://cloud.google.com/blog/products/containers-kubernetes/kubernetes-best-practices-terminating-with-grace) article.
