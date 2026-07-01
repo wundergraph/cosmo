@@ -1,7 +1,6 @@
 # Entity Caching with Cosmo Cloud — Tutorial
 
-Entity caching lets the router serve resolved federation entities from a cache (in-memory L1
-and/or a shared L2 store such as Redis) instead of re-fetching them from your subgraphs on every
+Entity caching lets the router serve resolved federation entities from a cache, instead of re-fetching them from your subgraphs on every
 request. You declare what is cacheable with directives in your subgraph SDL, publish your
 subgraphs to Cosmo Cloud, and Cosmo Cloud composition turns those directives into router
 configuration automatically.
@@ -47,7 +46,7 @@ The commands below use **absolute** schema paths, so they work from any director
 root once, and authenticate `wgc`:
 
 ```bash
-export DEMO=/Users/milindadias/Work/cosmo/demo
+export DEMO=/Users/username/Work/cosmo/demo
 
 # Authenticate wgc against your Cosmo Cloud org (opens browser)
 wgc auth login
@@ -223,29 +222,13 @@ entity_caching:
   enabled: true
   # Optional prefix applied to every cache key (useful to isolate environments).
   global_cache_key_prefix: ""
-  l1:
-    # In-memory, per-router-instance cache.
-    enabled: true
   l2:
     # Shared cache across router instances, backed by Redis.
     enabled: true
     storage:
       provider_id: "entity-cache-redis"
       key_prefix: "cosmo_entity_cache"
-    circuit_breaker:
-      enabled: false
-      failure_threshold: 5
-      cooldown_period: 10s
 ```
-
-Equivalent environment variables exist for most of these settings, e.g.
-`ENTITY_CACHING_ENABLED`, `ENTITY_CACHING_L1_ENABLED`, `ENTITY_CACHING_L2_ENABLED`, and
-`ENTITY_CACHING_L2_STORAGE_PROVIDER_ID`.
-
-- **L1 only** (single instance, for testing): set `l2.enabled: false` and drop the Redis provider.
-  Cache lives in router memory and is lost on restart.
-- **L1 + L2** (recommended): keep both enabled so the cache survives restarts and is shared
-  across replicas.
 
 ### 5c. Run the router
 
@@ -456,18 +439,6 @@ directive @openfed__requestScoped(key: String!) on FIELD_DEFINITION
 type Query {
   currentViewer: Viewer @openfed__requestScoped(key: "currentViewer")
 }
-```
-
-## Per-Request Cache Controls
-
-When `dev_mode` is enabled (or via your configured header rules), you can influence caching per
-request with these headers — handy for verifying behavior:
-
-```text
-X-WG-Disable-Entity-Cache: true      # bypass L1 and L2 for this request
-X-WG-Disable-Entity-Cache-L1: true   # bypass L1 only
-X-WG-Disable-Entity-Cache-L2: true   # bypass L2 only
-X-WG-Cache-Key-Prefix: test-run-1    # isolate cache entries for a test run
 ```
 
 ## Verifying It Works
