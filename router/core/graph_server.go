@@ -151,7 +151,7 @@ type reusedGraphMux struct {
 }
 
 // newGraphServer creates a new server instance.
-func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig.Response, proxy ProxyFunc) (*graphServer, error) {
+func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig.Response, proxy ProxyFunc) (_ *graphServer, resErr error) {
 	/* Older versions of composition will not populate a compatibility version.
 	 * Currently, all "old" router execution configurations are compatible as there have been no breaking
 	 * changes.
@@ -230,6 +230,16 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		storageProviders:  &r.storageProviders,
 		headerPropagation: r.headerPropagation,
 	}
+
+	defer func() {
+		if resErr == nil {
+			return
+		}
+		// Shutdown the graph server to clean up resources
+		if err := s.Shutdown(routerCtx); err != nil {
+			s.logger.Error("Failed to shut down graph server during failed-build cleanup", zap.Error(err))
+		}
+	}()
 
 	baseOtelAttributes := []attribute.KeyValue{
 		otel.WgRouterVersion.String(Version),
@@ -678,8 +688,9 @@ type graphMux struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	mux    *chi.Mux
-	reused atomic.Bool
+	mux       *chi.Mux
+	reused    atomic.Bool
+	finalized atomic.Bool
 
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
 	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
@@ -958,6 +969,11 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
+	// Make sure we do not shutdown the mux multiple times
+	if !s.finalized.CompareAndSwap(false, true) {
+		return nil
+	}
+
 	// cancel the graph muxes context to close its resources like websocket connections, resolvers, etc.
 	s.cancel()
 
@@ -997,12 +1013,6 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	if s.streamMetricStore != nil {
-		if aErr := s.streamMetricStore.Shutdown(ctx); aErr != nil {
-			err = errors.Join(err, aErr)
-		}
-	}
-
 	if s.prometheusMetricsExporter != nil {
 		if aErr := s.prometheusMetricsExporter.Shutdown(ctx); aErr != nil {
 			err = errors.Join(err, aErr)
@@ -1021,7 +1031,7 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 // The mux is appended internally to the graph server's list of muxes to clean up later when the server is swapped.
 func (s *graphServer) buildGraphMux(
 	opts BuildGraphMuxOptions,
-) (*graphMux, error) {
+) (_ *graphMux, resErr error) {
 	graphMuxCtx, graphMuxCancel := context.WithCancel(s.routerCtx)
 
 	gm := &graphMux{
@@ -1030,6 +1040,21 @@ func (s *graphServer) buildGraphMux(
 		metricStore:       rmetric.NewNoopMetrics(),
 		streamMetricStore: rmetric.NewNoopStreamMetricStore(),
 	}
+
+	// A failed mux isn't in s.graphMuxList yet (added on success below), so the graph
+	// server's Shutdown won't see it. Clean it up here to avoid leaking its callbacks,
+	// context and caches.
+	defer func() {
+		if resErr == nil {
+			return
+		}
+
+		cleanupCtx, cancel := context.WithTimeout(s.routerCtx, time.Second*30)
+		defer cancel()
+		if cErr := gm.Shutdown(cleanupCtx); cErr != nil {
+			s.logger.Error("Failed to clean up partially-built graph mux after build error", zap.Error(cErr))
+		}
+	}()
 
 	httpRouter := chi.NewRouter()
 
@@ -2100,6 +2125,38 @@ func (s *graphServer) wait(ctx context.Context) error {
 	}
 }
 
+// metricsFlushTimeout bounds the single, central flush of the shared meter
+// providers during graph server shutdown.
+const metricsFlushTimeout = 30 * time.Second
+
+// flushMeterProviders flushes the OTLP and Prometheus meter providers once. These
+// providers are shared by every metric store (request, connection, stream,
+// engine, runtime), so a single flush drains all of their metrics.
+func (s *graphServer) flushMeterProviders(ctx context.Context) error {
+	wg := &sync.WaitGroup{}
+
+	var otlpErr error
+	var promErr error
+
+	if s.otlpMeterProvider != nil {
+		wg.Go(func() {
+			if err := s.otlpMeterProvider.ForceFlush(ctx); err != nil {
+				otlpErr = errors.Join(otlpErr, fmt.Errorf("failed to flush otlp metrics: %w", err))
+			}
+		})
+	}
+	if s.promMeterProvider != nil {
+		wg.Go(func() {
+			if err := s.promMeterProvider.ForceFlush(ctx); err != nil {
+				promErr = errors.Join(promErr, fmt.Errorf("failed to flush prometheus metrics: %w", err))
+			}
+		})
+	}
+	wg.Wait()
+
+	return errors.Join(otlpErr, promErr)
+}
+
 // Shutdown gracefully shutdown the server and waits for all in-flight requests to finish.
 // After all requests are done, it will shut down the metric store and runtime metrics.
 // Shutdown does cancel the context after all non-hijacked requests such as WebSockets has been handled.
@@ -2124,6 +2181,16 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		zap.String("grace_period", s.routerGracePeriod.String()),
 		zap.String("config_version", s.baseRouterConfigVersion),
 	)
+
+	// Flush the meter providers exactly once, with their own timeout,
+	// before tearing down the individual metric stores.
+	// As all the stores share the same meter providers, we only need to flush once
+	// before initiating the shutdown of the individual stores.
+	flushCtx, flushCancel := context.WithTimeout(ctx, metricsFlushTimeout)
+	if err := s.flushMeterProviders(flushCtx); err != nil {
+		finalErr = errors.Join(finalErr, fmt.Errorf("failed to flush metrics: %w", err))
+	}
+	flushCancel()
 
 	// Ensure that we don't wait indefinitely for shutdown
 	if s.routerGracePeriod > 0 {
