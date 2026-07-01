@@ -11,18 +11,20 @@ import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import {
   assertFeatureFlagExecutionConfig,
   assertNumberOfCompositions,
-  createAndPublishSubgraph,
+  createAndPublishSubgraph, createFeatureFlag,
   createFederatedGraph,
   createNamespace,
   createThenPublishSubgraph,
   DEFAULT_NAMESPACE,
   DEFAULT_ROUTER_URL,
   DEFAULT_SUBGRAPH_URL_ONE,
-  DEFAULT_SUBGRAPH_URL_TWO,
+  DEFAULT_SUBGRAPH_URL_TWO, featureFlagIntegrationTestSetUp, getDebugTestOptions,
   SetupTest,
 } from './test-util.js';
+import { Label } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 
 const schemaDefinition = `schema {\n  query: Query\n}\n\n`;
+const isDebugMode = false;
 let dbname = '';
 
 vi.mock('../src/core/clickhouse/index.js', () => {
@@ -2228,4 +2230,77 @@ describe('Contract tests', () => {
     `),
     );
   });
+
+  test(
+    'that a contract is not composed multiple times when a feature subgraph is published',
+    getDebugTestOptions(isDebugMode),
+    async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient, });
+      testContext.onTestFinished(() => server.close());
+
+      const namespace = genID('namespace').toLowerCase();
+      const labels: Label[] = [];
+      const baseGraphName = genID('baseFederatedGraph');
+      const contractName = genID('contract');
+      const ffName = genID('featureFlag');
+
+      await createNamespace(client, namespace);
+      await featureFlagIntegrationTestSetUp(
+        client,
+        [
+          { name: 'users', hasFeatureSubgraph: true },
+          { name: 'products-standalone', hasFeatureSubgraph: true },
+        ],
+        baseGraphName,
+        labels,
+        namespace,
+      );
+
+      // Create a contract
+      const createContractResponse = await client.createContract({
+        name: contractName,
+        namespace,
+        sourceGraphName: baseGraphName,
+        excludeTags: [],
+        includeTags: [],
+        routingUrl: 'http://localhost:8081',
+        readme: 'test',
+      });
+
+      expect(createContractResponse.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create a feature flag
+      await createFeatureFlag(client, ffName, labels, ['products-standalone-feature'], namespace, true);
+
+      /**
+       * We expect the base graph and contract to be composed twice, once for the creation and once when the
+       * feature flag was created
+       */
+      await assertNumberOfCompositions(client, baseGraphName, 2, namespace, EnumStatusCode.OK, true);
+      await assertNumberOfCompositions(client, contractName, 2, namespace, EnumStatusCode.OK, true);
+
+      // We expect to see feature flag to be composed
+      await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+      await assertNumberOfCompositions(client, contractName, 3, namespace);
+
+      // Update the feature subgraph
+      const updateFeatureSubgraphResp = await client.publishFederatedSubgraph({
+        name: 'products-standalone-feature',
+        namespace,
+        schema: fs
+          .readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-feature-update.graphql`))
+          .toString(),
+      });
+
+      expect(updateFeatureSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // We expect to see a new composition for both the base graph and contract
+      await assertNumberOfCompositions(client, baseGraphName, 3, namespace, EnumStatusCode.OK, true);
+      await assertNumberOfCompositions(client, contractName, 3, namespace, EnumStatusCode.OK, true);
+
+      // And also expect a new composition for the feature flag
+      await assertNumberOfCompositions(client, baseGraphName, 5, namespace);
+      await assertNumberOfCompositions(client, contractName, 5, namespace);
+    },
+  );
 });
