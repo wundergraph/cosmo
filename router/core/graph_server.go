@@ -692,6 +692,8 @@ type graphMux struct {
 	reused    atomic.Bool
 	finalized atomic.Bool
 
+	executor *Executor
+
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
 	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
 	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -986,6 +988,11 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	s.complexityCalculationCache.Close()
 	s.validationCache.Close()
 	s.operationHashCache.Close()
+
+	if s.executor != nil {
+		s.executor.Close()
+		s.executor = nil
+	}
 
 	var err error
 
@@ -1522,6 +1529,7 @@ func (s *graphServer) buildGraphMux(
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
+	gm.executor = executor
 
 	s.pubSubProviders = providers
 	if pubSubStartupErr := s.startupPubSubProviders(s.graphServerCtx); pubSubStartupErr != nil {
