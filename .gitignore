@@ -29,3 +29,11 @@ go.work.sum
 
 # Claude Code
 .claude/worktrees/
+/.playwright-mcp
+
+# PR review workspace — local-only, never commit
+/TODO.md
+/DONE.md
+/FEEDBACK.md
+/COMMENTS.md
+/docs/superpowers/
