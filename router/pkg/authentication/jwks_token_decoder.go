@@ -71,7 +71,13 @@ type configKey struct {
 type audienceSet map[string]struct{}
 
 type keyFuncEntry struct {
-	jwks              keyfunc.Keyfunc
+	jwks keyfunc.Keyfunc
+	// storage is the raw, refresh-free cache handle for this provider. Reading it directly
+	// (KeyRead) is a non-blocking in-memory lookup that never triggers the rate-limited
+	// unknown-kid HTTP refresh. It is used for the cross-provider cache pre-pass in
+	// keyFuncWrapper. Do NOT use jwks.Storage() here: that returns the combined HTTP client
+	// whose KeyRead performs the blocking refresh on a miss.
+	storage           jwkset.Storage
 	aud               audienceSet
 	allowedAlgorithms []string
 	allowedUse        []string
@@ -135,6 +141,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			}
 			entries = append(entries, keyFuncEntry{
 				jwks:              jwks,
+				storage:           store,
 				aud:               audiencesMap[key],
 				allowedAlgorithms: c.AllowedAlgorithms,
 				allowedUse:        c.AllowedUse,
@@ -195,6 +202,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			}
 			entries = append(entries, keyFuncEntry{
 				jwks:              jwks,
+				storage:           given,
 				aud:               audiencesMap[key],
 				allowedAlgorithms: c.AllowedAlgorithms,
 				allowedUse:        c.AllowedUse,
@@ -203,43 +211,33 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 	}
 
 	keyFuncWrapper := jwt.Keyfunc(func(token *jwt.Token) (any, error) {
+		// Non-blocking cache pre-pass: when the token carries a kid, ask each provider's raw
+		// storage whether it already holds that kid. This is a refresh-free in-memory lookup,
+		// so a provider that does not own the kid is skipped without ever blocking on its
+		// unknown-kid rate limiter or slow endpoint. Validating against the owning provider's
+		// cache (the steady state for known/rotated keys) therefore never pays a sibling
+		// provider's blocking refresh. Kid-less tokens fall through to the loop below, which
+		// preserves keyfunc's "try every key" behavior.
+		if kid, ok := token.Header[jwkset.HeaderKID].(string); ok && kid != "" {
+			for _, entry := range entries {
+				if entry.storage == nil {
+					continue
+				}
+				if _, err := entry.storage.KeyRead(ctx, kid); err != nil {
+					continue // not cached here — cheap, non-blocking miss
+				}
+				// The owning provider has this kid cached, so tryEntry will not block. On
+				// success we are done; on rejection (e.g. aud/alg mismatch) we fall through
+				// to the full loop below, which aggregates errors exactly as before.
+				if pub, err := tryEntry(token, entry); err == nil {
+					return pub, nil
+				}
+			}
+		}
+
 		var errJoin error
 		for _, entry := range entries {
-			if len(entry.aud) > 0 {
-				tokenAudiences, err := token.Claims.GetAudience()
-				if err != nil {
-					errJoin = errors.Join(errJoin, fmt.Errorf("could not get audiences from token claims: %w", err))
-					continue
-				}
-				if !hasAudience(tokenAudiences, entry.aud) {
-					errJoin = errors.Join(errJoin, errUnacceptableAud)
-					continue
-				}
-			}
-
-			// When an algorithm is actually provided in the jwks the current keyfunc will validate the
-			// jwks algorithm with it. But when no algorithm is provided (alg: none or missing alg)
-			// the default keyfunc will not validate the algorithm as it has nothing to cross check.
-			if len(entry.allowedAlgorithms) > 0 {
-				algInter, ok := token.Header["alg"]
-				if !ok {
-					errJoin = errors.Join(errJoin, fmt.Errorf("%w: could not find alg in JWT header", keyfunc.ErrKeyfunc))
-					continue
-				}
-				alg, ok := algInter.(string)
-				if !ok {
-					errJoin = errors.Join(errJoin, fmt.Errorf(`%w: the JWT header did not contain the "alg" parameter, which is required by RFC 7515 section 4.1.1`, keyfunc.ErrKeyfunc))
-					continue
-				}
-
-				// This is a custom validation different from the original keyfunc.Keyfunc
-				if !slices.Contains(entry.allowedAlgorithms, alg) {
-					errJoin = errors.Join(errJoin, fmt.Errorf("%w: could not find alg %s in allow list", keyfunc.ErrKeyfunc, alg))
-					continue
-				}
-			}
-
-			pub, err := entry.jwks.Keyfunc(token)
+			pub, err := tryEntry(token, entry)
 			if err != nil {
 				errJoin = errors.Join(errJoin, err)
 				continue
@@ -253,6 +251,45 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 	return &jwksTokenDecoder{
 		jwks: keyFuncWrapper,
 	}, nil
+}
+
+// tryEntry runs the per-provider audience and algorithm allow-list checks and then resolves
+// the signing key via the provider's keyfunc. It contains the exact validation logic that was
+// previously inlined in the keyFuncWrapper loop, so behavior is identical whether an entry is
+// reached via the non-blocking cache pre-pass or the sequential fallback loop. When the entry's
+// cache holds the token's kid this does not block; on a cache miss for a provider with
+// refresh_unknown_kid enabled, entry.jwks.Keyfunc may block on the rate limiter as before.
+func tryEntry(token *jwt.Token, entry keyFuncEntry) (any, error) {
+	if len(entry.aud) > 0 {
+		tokenAudiences, err := token.Claims.GetAudience()
+		if err != nil {
+			return nil, fmt.Errorf("could not get audiences from token claims: %w", err)
+		}
+		if !hasAudience(tokenAudiences, entry.aud) {
+			return nil, errUnacceptableAud
+		}
+	}
+
+	// When an algorithm is actually provided in the jwks the current keyfunc will validate the
+	// jwks algorithm with it. But when no algorithm is provided (alg: none or missing alg)
+	// the default keyfunc will not validate the algorithm as it has nothing to cross check.
+	if len(entry.allowedAlgorithms) > 0 {
+		algInter, ok := token.Header["alg"]
+		if !ok {
+			return nil, fmt.Errorf("%w: could not find alg in JWT header", keyfunc.ErrKeyfunc)
+		}
+		alg, ok := algInter.(string)
+		if !ok {
+			return nil, fmt.Errorf(`%w: the JWT header did not contain the "alg" parameter, which is required by RFC 7515 section 4.1.1`, keyfunc.ErrKeyfunc)
+		}
+
+		// This is a custom validation different from the original keyfunc.Keyfunc
+		if !slices.Contains(entry.allowedAlgorithms, alg) {
+			return nil, fmt.Errorf("%w: could not find alg %s in allow list", keyfunc.ErrKeyfunc, alg)
+		}
+	}
+
+	return entry.jwks.Keyfunc(token)
 }
 
 func getAudienceSet(audiences []string) audienceSet {
