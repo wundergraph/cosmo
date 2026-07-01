@@ -1,17 +1,18 @@
 package selfregister
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"net/http"
+	"time"
+
+	"connectrpc.com/connect"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1/nodev1connect"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
-	"net/http"
-	"time"
 )
 
 type Option func(cp *selfRegister)
@@ -21,11 +22,14 @@ type SelfRegister interface {
 	Register(ctx context.Context) (*nodev1.RegistrationInfo, error)
 }
 
+const defaultTimeout = 15 * time.Second
+
 type selfRegister struct {
 	nodeServiceClient    nodev1connect.NodeServiceClient
 	graphApiToken        string
 	controlplaneEndpoint string
 	logger               *zap.Logger
+	clientTimeout        time.Duration
 }
 
 func New(endpoint, token string, opts ...Option) (SelfRegister, error) {
@@ -40,6 +44,7 @@ func New(endpoint, token string, opts ...Option) (SelfRegister, error) {
 	c := &selfRegister{
 		controlplaneEndpoint: endpoint,
 		graphApiToken:        token,
+		clientTimeout:        defaultTimeout,
 	}
 
 	for _, opt := range opts {
@@ -61,8 +66,13 @@ func New(endpoint, token string, opts ...Option) (SelfRegister, error) {
 		}
 	}
 
+	// Set the max time to try to register to control plane
+	// This will also interrupt the process if control plane is slow to answer
+	httpClient := retryClient.StandardClient()
+	httpClient.Timeout = c.clientTimeout
+
 	// Uses connect binary protocol by default + gzip compression
-	c.nodeServiceClient = nodev1connect.NewNodeServiceClient(retryClient.StandardClient(), c.controlplaneEndpoint,
+	c.nodeServiceClient = nodev1connect.NewNodeServiceClient(httpClient, c.controlplaneEndpoint,
 		brotli.WithCompression(),
 		// Compress requests with Brotli.
 		connect.WithSendCompression(brotli.Name),
@@ -106,5 +116,11 @@ func (c *selfRegister) Register(ctx context.Context) (*nodev1.RegistrationInfo, 
 func WithLogger(logger *zap.Logger) Option {
 	return func(s *selfRegister) {
 		s.logger = logger
+	}
+}
+
+func WithClientTimeout(timeout time.Duration) Option {
+	return func(s *selfRegister) {
+		s.clientTimeout = timeout
 	}
 }
