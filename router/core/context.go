@@ -133,6 +133,12 @@ type RequestContext interface {
 	// If Authentication is not set, it will be initialized with the scopes
 	SetAuthenticationScopes(scopes []string)
 
+	// SetWildcardScope marks this request as having a wildcard scope that
+	// satisfies all @requiresScopes checks. The request must still be
+	// authenticated; unauthenticated requests are rejected before scope
+	// checks are evaluated.
+	SetWildcardScope(wildcard bool)
+
 	// SetCustomFieldValueRenderer overrides the default field value rendering behavior
 	// This can be used, e.g. to obfuscate sensitive data in the response
 	SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer)
@@ -543,6 +549,21 @@ func (c *requestContext) SetAuthenticationScopes(scopes []string) {
 		c.request = c.request.WithContext(authentication.NewContext(c.request.Context(), auth))
 	}
 	auth.SetScopes(scopes)
+}
+
+type wildcardScopeKey struct{}
+
+func withWildcardScope(ctx context.Context, wildcard bool) context.Context {
+	return context.WithValue(ctx, wildcardScopeKey{}, wildcard)
+}
+
+func hasWildcardScope(ctx context.Context) bool {
+	v, ok := ctx.Value(wildcardScopeKey{}).(bool)
+	return ok && v
+}
+
+func (c *requestContext) SetWildcardScope(wildcard bool) {
+	c.request = c.request.WithContext(withWildcardScope(c.request.Context(), wildcard))
 }
 
 func (c *requestContext) SetForceSha256Compute() {
