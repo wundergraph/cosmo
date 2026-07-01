@@ -674,8 +674,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 	}
 
 	// Entity caching configurations
-	cache := in.GetEntityCachingConfiguration().GetEntityCacheConfigurations()
-	for _, ec := range cache {
+	for _, ec := range in.GetEntityCachingConfiguration().GetEntityCacheConfigurations() {
 		cacheName := resolveEntityCacheProviderID(l.entityCachingConfig, subgraphName, ec.TypeName)
 		out.FederationMetaData.EntityCaching = append(out.FederationMetaData.EntityCaching, plan.EntityCacheConfiguration{
 			TypeName:                    ec.TypeName,
