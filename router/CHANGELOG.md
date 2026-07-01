@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.326.2](https://github.com/wundergraph/cosmo/compare/router@0.326.1...router@0.326.2) (2026-07-01)
+
+### Bug Fixes
+
+* avoid holding previous graphMuxes when reloading ([#3035](https://github.com/wundergraph/cosmo/issues/3035)) ([1d7ba2e](https://github.com/wundergraph/cosmo/commit/1d7ba2e6014fc29e7b23cde0f76b771aeef0135a)) (@endigma)
+* metrics flush timeout canceled shutdown ([#2990](https://github.com/wundergraph/cosmo/issues/2990)) ([7715d70](https://github.com/wundergraph/cosmo/commit/7715d701d90e446fc9915e34ed65f321f54dbd88)) (@Noroth)
+
 ## [0.326.1](https://github.com/wundergraph/cosmo/compare/router@0.326.0...router@0.326.1) (2026-06-25)
 
 ### Bug Fixes
