@@ -243,7 +243,7 @@ Start the demo subgraphs first, then run the source router:
 cd $DEMO && ./run_subgraphs.sh
 
 # In another terminal — run the router from source (this branch)
-cd /Users/milindadias/Work/cosmo/router
+cd /Users/username/Work/cosmo/router
 GRAPH_API_TOKEN=$GRAPH_API_TOKEN \
 LISTEN_ADDR=localhost:3002 \
 CONFIG_PATH="$PWD/config.yaml" \
