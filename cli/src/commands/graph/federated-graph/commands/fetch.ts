@@ -6,7 +6,7 @@ import { join, resolve } from 'pathe';
 import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { getFederatedGraphSchemas, getSubgraphSDL, getSubgraphsOfFedGraph } from '../utils.js';
-import { featureFlagsDir, fetchRouterConfig } from '../../../router/utils.js';
+import { featureFlagsDir, fetchRouterConfig, writeFeatureFlagConfigToFile } from '../../../router/utils.js';
 
 const cosmoConfigFile = 'cosmoConfig.json';
 const cosmoMapperFile = 'cosmo-mapper.json';
@@ -86,7 +86,7 @@ export default (opts: BaseCommandOptions) => {
         }
 
         for (const [featureFlagName, featureFlagConfig] of routerConfig.featureFlags) {
-          await writeFile(join(featureFlagsPath, `${featureFlagName}.json`), featureFlagConfig);
+          await writeFeatureFlagConfigToFile(featureFlagsPath, featureFlagName, featureFlagConfig);
         }
       }
 

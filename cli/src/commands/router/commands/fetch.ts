@@ -4,7 +4,14 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 import { resolve, join } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { fetchRouterConfig, mapperFile, featureFlagsDir, getRouterConfigOutputFile, latestFile } from '../utils.js';
+import {
+  fetchRouterConfig,
+  mapperFile,
+  featureFlagsDir,
+  getRouterConfigOutputFile,
+  latestFile,
+  writeFeatureFlagConfigToFile,
+} from '../utils.js';
 import type { FetchRouterConfigResult } from '../types/types.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -92,7 +99,7 @@ async function handleSplitRouterConfig(
     }
 
     for (const [featureFlagName, featureFlagRouterConfig] of config.featureFlags) {
-      await writeFile(join(ffDir, `${featureFlagName}.json`), featureFlagRouterConfig);
+      await writeFeatureFlagConfigToFile(ffDir, featureFlagName, featureFlagRouterConfig);
     }
   }
 

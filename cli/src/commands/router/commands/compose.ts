@@ -27,7 +27,13 @@ import Table from 'cli-table3';
 import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
-import { mapperFile, routerConfigFile, featureFlagsDir, getRouterConfigOutputFile } from '../utils.js';
+import {
+  mapperFile,
+  routerConfigFile,
+  featureFlagsDir,
+  getRouterConfigOutputFile,
+  writeFeatureFlagConfigToFile,
+} from '../utils.js';
 import {
   Config,
   ConfigSubgraph,
@@ -152,7 +158,7 @@ async function handleSplitRouterConfig({
     });
 
     const routerConfigJson = ffRouterConfig.toJsonString();
-    await writeFile(join(ffDir, `${featureFlagName}.json`), routerConfigJson);
+    await writeFeatureFlagConfigToFile(ffDir, featureFlagName, routerConfigJson);
     mapper.set(featureFlagName, createHash('sha256').update(routerConfigJson).digest('hex'));
   }
 
