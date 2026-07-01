@@ -104,6 +104,25 @@ type SubscriptionEventConfiguration interface {
 	RootFieldName() string // the root field name of the subscription in the schema
 }
 
+// readOnlySubscriptionEventConfiguration wraps a SubscriptionEventConfiguration to prevent
+// hook developers from type-asserting to a concrete type and mutating the live configuration.
+// It is cheaper than a deep copy — only one pointer allocation.
+type readOnlySubscriptionEventConfiguration struct {
+	inner SubscriptionEventConfiguration
+}
+
+func NewReadOnlySubscriptionEventConfiguration(cfg SubscriptionEventConfiguration) SubscriptionEventConfiguration {
+	return &readOnlySubscriptionEventConfiguration{inner: cfg}
+}
+
+func (r *readOnlySubscriptionEventConfiguration) ProviderID() string { return r.inner.ProviderID() }
+func (r *readOnlySubscriptionEventConfiguration) ProviderType() ProviderType {
+	return r.inner.ProviderType()
+}
+func (r *readOnlySubscriptionEventConfiguration) RootFieldName() string {
+	return r.inner.RootFieldName()
+}
+
 // PublishEventConfiguration is the interface that all publish event configurations must implement
 type PublishEventConfiguration interface {
 	ProviderID() string
