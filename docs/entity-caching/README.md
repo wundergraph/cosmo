@@ -423,7 +423,9 @@ type Mutation {
 
 ## Not Yet Available
 
-The following directives are part of the entity-caching design and will be documented and enabled
+Right now with `@openfed__cachePopulate` and `@openfed__cacheInvalidate` we only support simple keys. Using composite keys, alternative keys and/or nested keys could fail and not work as intended.
+
+Additionally the following directives are part of the entity-caching design and will be documented and enabled
 in a later release. **They are not available for use yet** — composition does not accept them on
 Cosmo Cloud today, so do not add them to production subgraphs. They are described here only so you
 know what is coming.
