@@ -408,7 +408,7 @@ import {
 import {
   type HandleFieldInheritableDirectivesParams,
   type HandleNonExternalConditionalFieldParams,
-  IsAnyImplementationFieldExternalParams,
+  type IsAnyImplementationFieldExternalParams,
   type NormalizationFactoryParams,
   type NormalizeSubgraphFromStringParams,
   type NormalizeSubgraphParams,
