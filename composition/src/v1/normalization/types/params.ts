@@ -1,4 +1,4 @@
-import { type DirectiveName, type FieldName, type SubgraphName } from '../../../types/types';
+import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../../../types/types';
 import { type CompositeOutputData, type InputObjectDefinitionData } from '../../../schema-building/types/types';
 import { type ConstDirectiveNode, type DocumentNode } from 'graphql';
 import type { Subgraph } from '../../../subgraph/types';
@@ -46,4 +46,12 @@ export type NormalizeSubgraphFromStringParams = {
   noLocation: boolean;
   sdlString: string;
   options?: CompositionOptions;
+};
+
+export type GetFieldSetParentParams = {
+  fieldName: FieldName;
+  fieldSet: string;
+  isProvides: boolean;
+  parentData: CompositeOutputData;
+  parentTypeName: TypeName;
 };

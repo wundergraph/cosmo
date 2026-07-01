@@ -62,6 +62,7 @@ import {
   isCompositeOutputNodeKind,
   isObjectDefinitionData,
   isObjectNodeKind,
+  isUnionDefinitionData,
   kindToConvertedTypeString,
   mapToArrayOfValues,
   newAuthorizationData,
@@ -171,7 +172,6 @@ import {
   unknownComposeDirectiveNameError,
   unknownInlineFragmentTypeConditionErrorMessage,
   unknownNamedTypeError,
-  unknownNamedTypeErrorMessage,
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
@@ -203,6 +203,7 @@ import {
   fieldAlreadyProvidedWarning,
   invalidExternalFieldWarning,
   nonExternalConditionalFieldWarning,
+  providesOnUnionWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
 } from '../warnings/warnings';
@@ -405,6 +406,7 @@ import {
   type TypeName,
 } from '../../types/types';
 import {
+  type GetFieldSetParentParams,
   type HandleFieldInheritableDirectivesParams,
   type HandleNonExternalConditionalFieldParams,
   type NormalizationFactoryParams,
@@ -1778,12 +1780,13 @@ export class NormalizationFactory {
     }
   }
 
-  getFieldSetParent(
-    isProvides: boolean,
-    parentData: CompositeOutputData,
-    fieldName: string,
-    parentTypeName: string,
-  ): FieldSetParentResult {
+  getFieldSetParent({
+    isProvides,
+    parentData,
+    fieldName,
+    fieldSet,
+    parentTypeName,
+  }: GetFieldSetParentParams): FieldSetParentResult {
     if (!isProvides) {
       return {
         data: parentData,
@@ -1815,6 +1818,17 @@ export class NormalizationFactory {
     }
     // @TODO handle abstract types and fragments
     if (isValidProvidesParentData(namedTypeData)) {
+      if (isUnionDefinitionData(namedTypeData)) {
+        this.warnings.push(
+          providesOnUnionWarning({
+            fieldCoords,
+            fieldSet,
+            namedTypeName: fieldNamedTypeName,
+            subgraphName: this.subgraphName,
+          }),
+        );
+      }
+
       return {
         data: namedTypeData,
         success: true,
@@ -2211,7 +2225,13 @@ export class NormalizationFactory {
        Consequently, at that time, it is unknown whether the named type is an entity.
        If it isn't, the @provides directive does not make sense and can be ignored.
       */
-      const result = this.getFieldSetParent(isProvides, parentData, fieldName, parentTypeName);
+      const result = this.getFieldSetParent({
+        fieldName,
+        fieldSet,
+        isProvides,
+        parentData,
+        parentTypeName,
+      });
       if (!result.success) {
         allErrorMessages.push(result.error.message);
         continue;

@@ -2,6 +2,7 @@ import { Warning } from '../../warnings/types';
 import { QUOTATION_JOIN } from '../../utils/string-constants';
 import {
   type InvalidRepeatedComposedDirectiveWarningParams,
+  type ProvidesOnUnionWarningParams,
   type SingleFederatedInputFieldOneOfWarningParams,
   type SingleSubgraphInputFieldOneOfWarningParams,
 } from './params';
@@ -233,6 +234,25 @@ export function invalidRepeatedComposedDirectiveWarning({
       ` Consider updating the directive definition for "${directiveName}" to be repeatable.`,
     subgraph: {
       name: '',
+    },
+  });
+}
+
+// TODO change router version upon release
+export function providesOnUnionWarning({
+  fieldCoords,
+  fieldSet,
+  namedTypeName,
+  subgraphName,
+}: ProvidesOnUnionWarningParams): Warning {
+  return new Warning({
+    message:
+      `The field "${fieldCoords}" that returns union "${namedTypeName}" defines a "@provides" directive with the` +
+      ` following field set:\n "${fieldSet}"\n` +
+      `The "@provides" directive defined on a field that returns a Union type is only supported by router version` +
+      ` 0.326.3+. Please note that older router versions do not support this functionality.`,
+    subgraph: {
+      name: subgraphName,
     },
   });
 }

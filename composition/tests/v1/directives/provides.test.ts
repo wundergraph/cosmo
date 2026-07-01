@@ -14,8 +14,10 @@ import {
   invalidSelectionOnUnionErrorMessage,
   nonExternalConditionalFieldError,
   nonExternalConditionalFieldWarning,
+  OBJECT,
   parse,
   PROVIDES,
+  providesOnUnionWarning,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
   subgraphValidationError,
@@ -23,7 +25,6 @@ import {
   typeNameAlreadyProvidedErrorMessage,
   UNION,
   unknownInlineFragmentTypeConditionErrorMessage,
-  unknownTypeInFieldSetErrorMessage,
 } from '../../../src';
 import {
   createSubgraph,
@@ -41,11 +42,11 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -58,12 +59,12 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: '... on Entity { name }' }],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -103,14 +104,14 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [
                 { fieldName: 'entity', selectionSet: 'interface { ... on Interface { ... on Interface { name } } }' },
               ],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -149,12 +150,12 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'interface { ... on AnotherObject { name } }' }],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -211,12 +212,12 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'union { ... on AnotherObject { name } }' }],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -277,12 +278,12 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'anotherObject { name }' }],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -313,12 +314,12 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'anotherObject(arg: "string") { name }' }],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -358,12 +359,12 @@ describe('@provides directive tests', () => {
                 {
                   fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
                   fieldPath: ['entity', 'object', 'nestedObject', 'age'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
                 {
                   fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
                   fieldPath: ['entities', 'object', 'nestedObject', 'age'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
               ],
               requiredBy: [],
@@ -376,12 +377,12 @@ describe('@provides directive tests', () => {
                 {
                   fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
                   fieldPath: ['entity', 'object', 'nestedObject', 'name'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
                 {
                   fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
                   fieldPath: ['entities', 'object', 'nestedObject', 'name'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
               ],
               requiredBy: [],
@@ -406,12 +407,12 @@ describe('@provides directive tests', () => {
                 {
                   fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
                   fieldPath: ['entity', 'object', 'nestedObject', 'age'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
                 {
                   fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
                   fieldPath: ['entities', 'object', 'nestedObject', 'age'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
               ],
               requiredBy: [],
@@ -424,12 +425,12 @@ describe('@provides directive tests', () => {
                 {
                   fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
                   fieldPath: ['entity', 'object', 'nestedObject', 'name'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
                 {
                   fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
                   fieldPath: ['entities', 'object', 'nestedObject', 'name'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
               ],
               requiredBy: [],
@@ -558,11 +559,11 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -613,12 +614,12 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               externalFieldNames: new Set<string>(['id', 'name']),
               fieldNames: new Set<string>(),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -666,11 +667,11 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['id', 'name']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -718,12 +719,12 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               externalFieldNames: new Set<string>(['id']),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -780,12 +781,12 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               externalFieldNames: new Set<string>(['id']),
               fieldNames: new Set<string>(['nestedObject']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -863,11 +864,11 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['nestedObject']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -917,11 +918,11 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['nestedObject']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -1073,7 +1074,7 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['id', 'object']),
               externalFieldNames: new Set<string>(['name']),
@@ -1084,7 +1085,7 @@ describe('@provides directive tests', () => {
                   selectionSet: 'name',
                 },
               ],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -1158,12 +1159,12 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['id', 'object']),
               externalFieldNames: new Set<string>(['name']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -1203,7 +1204,7 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['id']),
               isRootNode: true,
@@ -1213,7 +1214,7 @@ describe('@provides directive tests', () => {
                   selectionSet: 'id',
                 },
               ],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -1265,7 +1266,15 @@ describe('@provides directive tests', () => {
         `,
       );
       const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on Entity { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
     });
 
     test('that provides on a field that returns a Union is valid #2', () => {
@@ -1342,7 +1351,16 @@ describe('@provides directive tests', () => {
         [subgraphA, subgraphB, subgraphC],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(1);
+      console.log(warnings);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.media',
+          fieldSet: '... on Book { title }',
+          namedTypeName: 'Media',
+          subgraphName: subgraphB.name,
+        }),
+      ]);
     });
 
     test('that an error is returned if a non-external field is provided through a Union type fragment', () => {
@@ -1383,7 +1401,15 @@ describe('@provides directive tests', () => {
           }),
         ]),
       ]);
-      expect(warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on Entity { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
     });
 
     test('that an error is returned if a Union fieldset defines an unknown type fragment', () => {
@@ -1426,7 +1452,14 @@ describe('@provides directive tests', () => {
           ]),
         ]),
       ]);
-      expect(warnings).toHaveLength(0);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on Unknown { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
     });
 
     test('that an error is returned if a Union fieldset defines a non-member type fragment', () => {
@@ -1474,7 +1507,14 @@ describe('@provides directive tests', () => {
           ]),
         ]),
       ]);
-      expect(warnings).toHaveLength(0);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on EntityB { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
     });
 
     test('that an error is returned if a Union fieldset defines a non-member type fragment (in the current subgraph)', () => {
@@ -1528,7 +1568,15 @@ describe('@provides directive tests', () => {
           ]),
         ]),
       ]);
-      expect(warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on EntityB { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
     });
 
     // TODO
