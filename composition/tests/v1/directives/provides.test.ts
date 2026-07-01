@@ -1338,7 +1338,7 @@ describe('@provides directive tests', () => {
         }
         `,
       );
-      const { warnings } = federateSubgraphsSuccess(
+      const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
         [subgraphA, subgraphB, subgraphC],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
@@ -1756,7 +1756,7 @@ describe('@provides directive tests', () => {
         }
       `,
       );
-      const { warnings } = federateSubgraphsSuccess(
+      const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
         [subgraphA, subgraphB, subgraphC],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );

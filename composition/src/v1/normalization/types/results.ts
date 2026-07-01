@@ -1,17 +1,8 @@
-import { type DirectiveName, type TypeName } from '../../../types/types';
-import {
-  type ExecutionFailure,
-  type ExecutionMultiFailure,
-  type ExecutionSingleFailure,
-  type ExecutionSuccess,
-} from '../../../types/results';
+import { type DirectiveName } from '../../../types/types';
+import { type ExecutionMultiFailure, type ExecutionSingleFailure, type ExecutionSuccess } from '../../../types/results';
 import { type SchemaDefinitionNode, type SchemaExtensionNode } from 'graphql';
 import { type LinkImportData } from './types';
-import {
-  CompositeOutputData,
-  UnionDefinitionData,
-  type ValidProvidesParentData,
-} from '../../../schema-building/types/types';
+import { type ValidProvidesParentData } from '../../../schema-building/types/types';
 
 export interface ExtractLinkArgsSuccess extends ExecutionSuccess {
   importDataByDirectiveName: Map<DirectiveName, LinkImportData>;
@@ -50,9 +41,3 @@ export interface FieldSetParentSuccess extends ExecutionSuccess {
 }
 
 export type FieldSetParentResult = ExecutionSingleFailure | FieldSetParentSuccess;
-
-export interface IsAnyImplementationFieldExternalSuccess extends ExecutionSuccess {
-  typeName: TypeName;
-}
-
-export type IsAnyImplementationFieldExternalResult = ExecutionFailure | IsAnyImplementationFieldExternalSuccess;

@@ -408,6 +408,7 @@ import {
 import {
   type HandleFieldInheritableDirectivesParams,
   type HandleNonExternalConditionalFieldParams,
+  IsAnyImplementationFieldExternalParams,
   type NormalizationFactoryParams,
   type NormalizeSubgraphFromStringParams,
   type NormalizeSubgraphParams,
@@ -415,11 +416,7 @@ import {
 } from './types/params';
 import { EDFS_NATS_STREAM_CONFIGURATION_DEFINITION } from '../constants/non-directive-definitions';
 import type { CompositionOptions } from '../../types/params';
-import {
-  type FieldSetParentResult,
-  type IsAnyImplementationFieldExternalResult,
-  type SchemaNodeResult,
-} from './types/results';
+import { type FieldSetParentResult, type SchemaNodeResult } from './types/results';
 import { isArgumentValueValid } from '../../validation/validation';
 import {
   type AddDirectiveArgumentDataByNodeParams,
@@ -1883,17 +1880,20 @@ export class NormalizationFactory {
     );
   }
 
-  isAnyImplementationFieldExternal(
-    namedTypeName: TypeName,
-    fieldName: FieldName,
-  ): IsAnyImplementationFieldExternalResult {
-    const implementationTypeNames = this.concreteTypeNamesByAbstractTypeName.get(namedTypeName);
+  // Returns true if at least one implementation field is @external
+  handleImplementationField({
+    fieldCoordsPath,
+    fieldName,
+    fieldPath,
+    interfaceTypeName,
+    isProvides,
+  }: IsAnyImplementationFieldExternalParams): boolean {
+    const implementationTypeNames = this.concreteTypeNamesByAbstractTypeName.get(interfaceTypeName);
     if (!implementationTypeNames) {
-      return {
-        success: false,
-      };
+      return false;
     }
 
+    let hasExternalField = false;
     for (const typeName of implementationTypeNames) {
       const data = this.parentDefinitionDataByTypeName.get(typeName);
       if (!isObjectDefinitionData(data)) {
@@ -1906,16 +1906,25 @@ export class NormalizationFactory {
       }
 
       if (fieldData.directivesByName.has(EXTERNAL)) {
-        return {
-          success: true,
-          typeName,
-        };
+        if (!isProvides) {
+          return true;
+        }
+
+        getValueOrDefault(
+          this.conditionalFieldDataByCoords,
+          `${typeName}.${fieldName}`,
+          newConditionalFieldData,
+        ).providedBy.push(
+          newFieldSetConditionData({
+            fieldCoordinatesPath: [...fieldCoordsPath],
+            fieldPath: [...fieldPath],
+          }),
+        );
+        hasExternalField = true;
       }
     }
 
-    return {
-      success: false,
-    };
+    return hasExternalField;
   }
 
   validateConditionalFieldSet(
@@ -2032,6 +2041,15 @@ export class NormalizationFactory {
               });
               return;
             }
+            if (isInterfaceDefinitionData(parentData)) {
+              nf.handleImplementationField({
+                fieldCoordsPath,
+                fieldName,
+                fieldPath,
+                interfaceTypeName: parentData.name,
+                isProvides,
+              });
+            }
             if (externalAncestors.size < 1 && isUnconditionallyProvided) {
               // V2 subgraphs return an error when an external key field on an entity extension is provided.
               if (nf.isSubgraphVersionTwo) {
@@ -2085,17 +2103,26 @@ export class NormalizationFactory {
             }
             externalAncestors.add(currentFieldCoords);
           }
-          if (isValidProvidesParentData(namedTypeData)) {
-            if (externalAncestors.size < 1 && isInterfaceDefinitionData(parentData)) {
-              const result = nf.isAnyImplementationFieldExternal(parentData.name, fieldName);
-              if (result.success) {
-                externalAncestors.add(currentFieldCoords);
-              }
-            }
-            shouldDefineSelectionSet = true;
-            parentDatas.push(namedTypeData);
+          if (!isValidProvidesParentData(namedTypeData)) {
             return;
           }
+
+          if (
+            isInterfaceDefinitionData(parentData) &&
+            nf.handleImplementationField({
+              fieldCoordsPath,
+              fieldName,
+              fieldPath,
+              interfaceTypeName: parentData.name,
+              isProvides,
+            }) &&
+            externalAncestors.size < 1
+          ) {
+            hasConditionalField = true;
+            externalAncestors.add(currentFieldCoords);
+          }
+          shouldDefineSelectionSet = true;
+          parentDatas.push(namedTypeData);
         },
         leave() {
           externalAncestors.delete(fieldCoordsPath.pop() || '');
