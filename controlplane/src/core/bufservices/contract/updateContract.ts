@@ -43,20 +43,6 @@ export function updateContract(
       throw new UnauthorizedError();
     }
 
-    if (req.includeTags.length > 0 && req.excludeTags.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details:
-            `The "exclude" and "include" options for tags are currently mutually exclusive.` +
-            ` Both options have been provided, but one of the options must be empty or unset.`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
-    }
-
     if (!isValidSchemaTags(req.excludeTags)) {
       return {
         response: {

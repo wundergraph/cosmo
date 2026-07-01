@@ -1244,21 +1244,18 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 	now := time.Now()
 
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+
+	wg.Go(func() {
 		if err := h.metrics.MetricStore().Flush(ctx); err != nil {
 			requestLogger.Error("Failed to flush OTEL metrics", zap.Error(err))
 		}
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		if err := h.tracerProvider.ForceFlush(ctx); err != nil {
 			requestLogger.Error("Failed to flush OTEL tracer", zap.Error(err))
 		}
-	}()
+	})
 
 	wg.Wait()
 

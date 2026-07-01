@@ -4,6 +4,66 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.239.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.239.1...controlplane@0.239.2) (2026-06-29)
+
+### Bug Fixes
+
+* incorrect number of feature flag composition when publishing feature subgraphs ([#3031](https://github.com/wundergraph/cosmo/issues/3031)) ([db31b60](https://github.com/wundergraph/cosmo/commit/db31b60e97f7a8f56684015f5cb931c5358c46d1)) (@wilsonrivera)
+
+## [0.239.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.239.0...controlplane@0.239.1) (2026-06-26)
+
+**Note:** Version bump only for package controlplane
+
+# [0.239.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.238.0...controlplane@0.239.0) (2026-06-25)
+
+### Features
+
+* **cli:** support in/exclude contract tags simultaneously ([#3017](https://github.com/wundergraph/cosmo/issues/3017)) ([5efb3c2](https://github.com/wundergraph/cosmo/commit/5efb3c20fbd44110388e33943e43b13debba4c39)) (@Aenimus)
+
+# [0.238.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.237.1...controlplane@0.238.0) (2026-06-25)
+
+### Features
+
+* **controlplane:** persist proposal state notification graph ([#2993](https://github.com/wundergraph/cosmo/issues/2993)) ([20bd48f](https://github.com/wundergraph/cosmo/commit/20bd48f6e584bb968d64eeec24d0e401b8f5f82f)) (@wilsonrivera)
+
+## [0.237.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.237.0...controlplane@0.237.1) (2026-06-23)
+
+### Bug Fixes
+
+* pagination in proposals page ([#2989](https://github.com/wundergraph/cosmo/issues/2989)) ([a45b33c](https://github.com/wundergraph/cosmo/commit/a45b33c03577f615873639c72f6ad310ba71856b)) (@JivusAyrus)
+
+# [0.237.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.236.4...controlplane@0.237.0) (2026-06-23)
+
+### Features
+
+* improve performance of subgraph batch-publish ([#2969](https://github.com/wundergraph/cosmo/issues/2969)) ([e920085](https://github.com/wundergraph/cosmo/commit/e9200856e33c7277d99c6903046ac9ce39a25c2f)) (@JivusAyrus)
+
+## [0.236.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.236.3...controlplane@0.236.4) (2026-06-22)
+
+**Note:** Version bump only for package controlplane
+
+## [0.236.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.236.2...controlplane@0.236.3) (2026-06-19)
+
+**Note:** Version bump only for package controlplane
+
+## [0.236.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.236.1...controlplane@0.236.2) (2026-06-18)
+
+**Note:** Version bump only for package controlplane
+
+## [0.236.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.236.0...controlplane@0.236.1) (2026-06-17)
+
+### Bug Fixes
+
+* **controlplane:** handle unpublished subgraph in proposal update ([#2975](https://github.com/wundergraph/cosmo/issues/2975)) ([7532f9a](https://github.com/wundergraph/cosmo/commit/7532f9a7248ac9cd8369ccfdec43692befa14f35)) (@thisisnithin)
+
+# [0.236.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.235.0...controlplane@0.236.0) (2026-06-16)
+
+### Features
+
+* add script to delete data older than 90 days ([#2693](https://github.com/wundergraph/cosmo/issues/2693)) ([068592b](https://github.com/wundergraph/cosmo/commit/068592b99aaf5650327b7db7a5d0c4d421b345cc)) (@wilsonrivera)
+* controlpanel move to a accept first strategy for batch ([#2963](https://github.com/wundergraph/cosmo/issues/2963)) ([f54ef2a](https://github.com/wundergraph/cosmo/commit/f54ef2a4de3f218810eb2f800ad4e1c8c864496e)) (@wilsonrivera)
+* cron to enqueue inactive organizations for deletion ([#2418](https://github.com/wundergraph/cosmo/issues/2418)) ([1658315](https://github.com/wundergraph/cosmo/commit/1658315cb996954dd00c5c1af1bf2edf3509bb27)) (@wilsonrivera)
+
 # [0.235.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.234.0...controlplane@0.235.0) (2026-06-15)
 
 ### Features

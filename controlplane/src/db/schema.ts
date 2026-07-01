@@ -16,8 +16,13 @@ import {
   json,
   real,
 } from 'drizzle-orm/pg-core';
-import type { JSONContent } from '@tiptap/core';
 import { AxiosHeaderValue } from 'axios';
+import type { PlainMessage } from '@bufbuild/protobuf';
+import type {
+  CompositionError,
+  CompositionWarning,
+  DeploymentError,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FeatureIds } from '../types/index.js';
 import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction } from './models.js';
 
@@ -1921,6 +1926,29 @@ export const slackSchemaUpdateEventConfigs = pgTable(
   },
 );
 
+export const slackProposalStateUpdate = pgTable(
+  'slack_proposal_state_update', // slackpsu
+  {
+    slackIntegrationConfigId: uuid('slack_integration_config_id')
+      .notNull()
+      .references(() => slackIntegrationConfigs.id, {
+        onDelete: 'cascade',
+      }),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.slackIntegrationConfigId, t.federatedGraphId] }),
+      slackIntegrationConfigIdIndex: index('slackpsu_slack_integration_config_id_idx').on(t.slackIntegrationConfigId),
+      federatedGraphIdIndex: index('slackpsu_federated_graph_id_idx').on(t.federatedGraphId),
+    };
+  },
+);
+
 export const organizationIntegrationRelations = relations(organizationIntegrations, ({ one }) => ({
   organization: one(organizations),
   slackIntegrationConfigs: one(slackIntegrationConfigs),
@@ -1928,6 +1956,7 @@ export const organizationIntegrationRelations = relations(organizationIntegratio
 
 export const slackIntegrationConfigsRelations = relations(slackIntegrationConfigs, ({ many }) => ({
   slackSchemaUpdateEventConfigs: many(slackSchemaUpdateEventConfigs),
+  slackProposalStateUpdate: many(slackProposalStateUpdate),
 }));
 
 export const slackSchemaUpdateEventConfigRelations = relations(slackSchemaUpdateEventConfigs, ({ one }) => ({
@@ -1937,6 +1966,17 @@ export const slackSchemaUpdateEventConfigRelations = relations(slackSchemaUpdate
   }),
   federatedGraph: one(federatedGraphs, {
     fields: [slackSchemaUpdateEventConfigs.federatedGraphId],
+    references: [federatedGraphs.id],
+  }),
+}));
+
+export const slackProposalStateUpdateEventConfigRelations = relations(slackProposalStateUpdate, ({ one }) => ({
+  slackIntegrationEventConfig: one(slackIntegrationConfigs, {
+    fields: [slackProposalStateUpdate.slackIntegrationConfigId],
+    references: [slackIntegrationConfigs.id],
+  }),
+  federatedGraph: one(federatedGraphs, {
+    fields: [slackProposalStateUpdate.federatedGraphId],
     references: [federatedGraphs.id],
   }),
 }));
@@ -2760,3 +2800,27 @@ export const onboarding = pgTable(
     };
   },
 );
+
+export const batchPublishJobStatusEnum = pgEnum('batch_publish_job_status', [
+  'pending',
+  'processing',
+  'failed',
+  'completed',
+] as const);
+
+export const batchPublishJobDetails = pgTable('batch_publish_job_details', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  status: batchPublishJobStatusEnum('status').notNull(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  failureReason: text('failure_reason'),
+  compositionResult: json('composition_result').$type<{
+    deploymentErrors: PlainMessage<DeploymentError>[];
+    compositionWarnings: PlainMessage<CompositionWarning>[];
+    compositionErrors: PlainMessage<CompositionError>[];
+    updatedSubgraphNames: string[];
+  }>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+});

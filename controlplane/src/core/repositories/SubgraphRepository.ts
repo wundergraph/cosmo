@@ -73,7 +73,7 @@ import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookServi
 import { traced } from '../tracing.js';
 import type { CompositionService } from '../services/CompositionService.js';
 import { ContractRepository } from './ContractRepository.js';
-import { FeatureFlagRepository } from './FeatureFlagRepository.js';
+import { FeatureFlagCollectCaches, FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { OperationsRepository } from './OperationsRepository.js';
@@ -370,6 +370,12 @@ export class SubgraphRepository {
     tx: PostgresJsDatabase<typeof schema>,
     data: UpdateSubgraphSchemaData,
     splitConfigFeature?: Feature,
+    // When provided (batch path), `listByFederatedGraph` reads are memoized per federated graph across the whole batch.
+    // Without it, every changed feature subgraph re-loads ALL subgraphs (with their SDL) of the same federated graph,
+    // making the collect step scale with (changed subgraphs × subgraphs in the graph).
+    listByFederatedGraphCache?: Map<string, Promise<SubgraphDTO[]>>,
+    // When provided (batch path), the feature-flag sub-queries are memoized across the whole batch.
+    featureFlagCaches?: FeatureFlagCollectCaches,
   ): Promise<{
     subgraph: SubgraphDTO | undefined;
     affectedFederatedGraphById: Map<string, FederatedGraphDTO>;
@@ -568,11 +574,17 @@ export class SubgraphRepository {
         });
 
         for (const federatedGraphDTO of federatedGraphDTOs) {
-          // Retrieve all the subgraphs that compose the federated graph to retrieve the feature flags
-          const subgraphs = await subgraphRepo.listByFederatedGraph({
-            federatedGraphTargetId: federatedGraphDTO.targetId,
-            published: true,
-          });
+          // Retrieve all the subgraphs that compose the federated graph.
+          // Memoized across the batch (see `listByFederatedGraphCache`), so the same federated graph is loaded once, rather than once per changed subgraph.
+          let subgraphsPromise = listByFederatedGraphCache?.get(federatedGraphDTO.targetId);
+          if (!subgraphsPromise) {
+            subgraphsPromise = subgraphRepo.listByFederatedGraph({
+              federatedGraphTargetId: federatedGraphDTO.targetId,
+              published: true,
+            });
+            listByFederatedGraphCache?.set(federatedGraphDTO.targetId, subgraphsPromise);
+          }
+          const subgraphs = await subgraphsPromise;
 
           const enabledFeatureFlags = await featureFlagRepo.getFeatureFlagsByBaseSubgraphIdAndLabelMatchers({
             baseSubgraphId: baseSubgraph[0].id,
@@ -580,15 +592,25 @@ export class SubgraphRepository {
             fedGraphLabelMatchers: federatedGraphDTO.labelMatchers || [],
             baseSubgraphNames: subgraphs.map((subgraph) => subgraph.name),
             excludeDisabled: true,
+            caches: featureFlagCaches,
           });
 
-          // If an enabled feature flag includes the feature graph that has just been published, push it to the array
-          if (enabledFeatureFlags.length > 0 && !splitConfigFeature?.enabled) {
-            affectedFederatedGraphById.set(federatedGraphDTO.id, federatedGraphDTO);
+          /**
+           * When split config is not enabled, the federated graph and all enabled feature flags will be considered
+           * as affected as we need to compose everything; however, if the feature is enabled for the organization,
+           * we need to verify whether the feature subgraph is part of the feature flag, if so, we can consider it
+           * as affected.
+           */
+          const isLegacyComposition = !splitConfigFeature?.enabled;
+          for (const featureFlag of enabledFeatureFlags) {
+            if (isLegacyComposition || featureFlag.featureSubgraphs.some((fsg) => fsg.id === subgraph.id)) {
+              affectedFeatureFlagIds.add(featureFlag.id);
+            }
           }
 
-          for (const featureFlag of enabledFeatureFlags) {
-            affectedFeatureFlagIds.add(featureFlag.id);
+          if (isLegacyComposition && enabledFeatureFlags.length > 0) {
+            // It looks like the federated graph is affected
+            affectedFederatedGraphById.set(federatedGraphDTO.id, federatedGraphDTO);
           }
         }
       }
@@ -667,15 +689,32 @@ export class SubgraphRepository {
     const namespaceId = items[0].namespaceId;
 
     const orgRepo = new OrganizationRepository(this.logger, this.db, this.organizationId);
-    const splitConfigFeature = await orgRepo.getFeature({
+    const splitConfigFeature = (await orgRepo.getFeature({
       organizationId: this.organizationId,
       featureId: 'split-config-loading',
-    });
+    })) || { id: 'split-config-loading', enabled: false };
 
     await this.db.transaction(async (tx) => {
       // Write every schema version and collect the affected graphs/flags. NO composition happens here.
+      // Memoize `listByFederatedGraph` across the batch so a federated graph's subgraphs are loaded once, not once per
+      // changed feature subgraph (the dominant cost when many feature subgraphs of the same graph change at once).
+      const listByFederatedGraphCache = new Map<string, Promise<SubgraphDTO[]>>();
+      // Memoize the feature-flag sub-queries across the batch (matched-flags per graph, feature-subgraphs per flag).
+      const featureFlagCaches: FeatureFlagCollectCaches = {
+        featureFlagsByBaseSubgraphId: new Map(),
+        matchedFeatureFlagsByLabelKey: new Map(),
+        featureSubgraphsByFlagId: new Map(),
+      };
       const results = await Promise.all(
-        items.map((item) => this.writeSchemaAndCollectAffected(tx, item, splitConfigFeature)),
+        items.map((item) =>
+          this.writeSchemaAndCollectAffected(
+            tx,
+            item,
+            splitConfigFeature,
+            listByFederatedGraphCache,
+            featureFlagCaches,
+          ),
+        ),
       );
 
       for (const [index, result] of results.entries()) {

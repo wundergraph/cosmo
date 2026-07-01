@@ -4,6 +4,43 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.62.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.62.0...@wundergraph/composition@0.62.2) (2026-06-26)
+
+### Bug Fixes
+
+* patch bump published npm packages ([#3021](https://github.com/wundergraph/cosmo/issues/3021)) ([f144989](https://github.com/wundergraph/cosmo/commit/f144989f69d58983fea7f74077c1a393395b1a4c)) (@gmas)
+
+# [0.62.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.61.0...@wundergraph/composition@0.62.0) (2026-06-25)
+
+### Features
+
+* **composition:** support in/exclude contract tags simultaneously ([#3016](https://github.com/wundergraph/cosmo/issues/3016)) ([c132b32](https://github.com/wundergraph/cosmo/commit/c132b32192db217ca058b5f50f1b8c56613af63e)) (@Aenimus)
+
+# [0.61.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.60.0...@wundergraph/composition@0.61.0) (2026-06-23)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cachePopulate directive (3/5) ([#2984](https://github.com/wundergraph/cosmo/issues/2984)) ([a8cc2af](https://github.com/wundergraph/cosmo/commit/a8cc2afa7767c35b71ac4ebd18e2a9e1cc381a66)) (@SkArchon)
+
+# [0.60.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.59.2...@wundergraph/composition@0.60.0) (2026-06-22)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cacheInvalidate directive (2/5) ([#2983](https://github.com/wundergraph/cosmo/issues/2983)) ([19bbbe5](https://github.com/wundergraph/cosmo/commit/19bbbe5659011ef4536fe43edbb1ae313bda91e3)) (@SkArchon)
+* **composition:** [@openfed](https://github.com/openfed)__entityCache directive (1/5) ([#2980](https://github.com/wundergraph/cosmo/issues/2980)) ([2075164](https://github.com/wundergraph/cosmo/commit/2075164f18ee0cf953effdef2a031c59b3e8d112)) (@SkArchon)
+
+## [0.59.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.59.1...@wundergraph/composition@0.59.2) (2026-06-19)
+
+### Bug Fixes
+
+* **composition:** composed directive versions should not override dir… ([#2992](https://github.com/wundergraph/cosmo/issues/2992)) ([6cb341b](https://github.com/wundergraph/cosmo/commit/6cb341bd2bb5f687fa462627b4e5cb623a73b89a)) (@Aenimus)
+
+## [0.59.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.59.0...@wundergraph/composition@0.59.1) (2026-06-18)
+
+### Bug Fixes
+
+* **composition:** propagate composed directives regardless of subgrap… ([#2981](https://github.com/wundergraph/cosmo/issues/2981)) ([04f5d0a](https://github.com/wundergraph/cosmo/commit/04f5d0a51013e1bee181ae5fc07b5e92dd78ce36)) (@Aenimus)
+
 # [0.59.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.58.4...@wundergraph/composition@0.59.0) (2026-05-18)
 
 ### Features

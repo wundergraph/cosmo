@@ -102,6 +102,8 @@ message PublishFederatedSubgraphsRequest {
   optional bool disable_resolvability_validation = 3;
   // Optional limit for the number of errors/warnings returned.
   optional int32 limit = 4;
+  // Optional value indicating whether the batch publish should occur asynchronously or wait for completion before returning.
+  optional bool async = 5;
 }
 
 message PublishFederatedSubgraphsResponse {
@@ -112,6 +114,33 @@ message PublishFederatedSubgraphsResponse {
   optional SubgraphPublishStats counts = 5;
   // The names of the subgraphs whose schema actually changed as a result of this batch publish.
   repeated string updatedSubgraphNames = 6;
+  // The job identifier the client can use to obtain details about the status of the enqueued job
+  optional string jobId = 7;
+}
+
+message GetBatchPublishJobStatusRequest {
+  string jobId = 1;
+  // Optional limit for the number of errors/warnings returned.
+  optional int32 limit = 2;
+}
+
+enum BatchPublishJobStatus {
+  PENDING = 0;
+  PROCESSING = 1;
+  FAILED = 2;
+  COMPLETED = 3;
+}
+
+message GetBatchPublishJobStatusResponse {
+  Response response = 1;
+  optional BatchPublishJobStatus status = 2;
+  optional string failureReason = 3;
+  repeated CompositionError compositionErrors = 4;
+  repeated DeploymentError deploymentErrors = 5;
+  repeated CompositionWarning compositionWarnings = 6;
+  optional SubgraphPublishStats counts = 7;
+  // The names of the subgraphs whose schema actually changed as a result of this batch publish.
+  repeated string updatedSubgraphNames = 8;
 }
 
 message GitInfo {
@@ -3074,6 +3103,7 @@ message GetProposalsByFederatedGraphResponse {
   Response response = 1;
   repeated Proposal proposals = 2;
   bool isProposalsEnabled = 3;
+  int32 totalCount = 4;
 }
 
 message GetProposalChecksRequest {
@@ -3485,6 +3515,8 @@ service PlatformService {
   // PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
   // request. Affected federated graphs (and their contracts / feature flags) are composed exactly once each.
   rpc PublishFederatedSubgraphs(PublishFederatedSubgraphsRequest) returns (PublishFederatedSubgraphsResponse) {}
+  // Gets the status of a batch publish job by the provided job identifier.
+  rpc GetBatchPublishJobStatus(GetBatchPublishJobStatusRequest) returns (GetBatchPublishJobStatusResponse) {}
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
   // DeleteFederatedGraph deletes a federated graph from the control plane.

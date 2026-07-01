@@ -157,6 +157,7 @@ import { getSubgraphs } from './subgraph/getSubgraphs.js';
 import { moveSubgraph } from './subgraph/moveSubgraph.js';
 import { publishFederatedSubgraph } from './subgraph/publishFederatedSubgraph.js';
 import { publishFederatedSubgraphs } from './subgraph/publishFederatedSubgraphs.js';
+import { getBatchPublishJobStatus } from './subgraph/getBatchPublishJobStatus.js';
 import { updateSubgraph } from './subgraph/updateSubgraph.js';
 import { acceptOrDeclineInvitation } from './user/acceptOrDeclineInvitation.js';
 import { deleteUser } from './user/deleteUser.js';
@@ -275,6 +276,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     publishFederatedSubgraphs: (req, ctx) => {
       return publishFederatedSubgraphs(opts, req, ctx);
+    },
+
+    getBatchPublishJobStatus: (req, ctx) => {
+      return getBatchPublishJobStatus(opts, req, ctx);
     },
 
     forceCheckSuccess: (req, ctx) => {

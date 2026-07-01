@@ -4,6 +4,60 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.326.2](https://github.com/wundergraph/cosmo/compare/router@0.326.1...router@0.326.2) (2026-07-01)
+
+### Bug Fixes
+
+* avoid holding previous graphMuxes when reloading ([#3035](https://github.com/wundergraph/cosmo/issues/3035)) ([1d7ba2e](https://github.com/wundergraph/cosmo/commit/1d7ba2e6014fc29e7b23cde0f76b771aeef0135a)) (@endigma)
+* metrics flush timeout canceled shutdown ([#2990](https://github.com/wundergraph/cosmo/issues/2990)) ([7715d70](https://github.com/wundergraph/cosmo/commit/7715d701d90e446fc9915e34ed65f321f54dbd88)) (@Noroth)
+
+## [0.326.1](https://github.com/wundergraph/cosmo/compare/router@0.326.0...router@0.326.1) (2026-06-25)
+
+### Bug Fixes
+
+* **router:** prevent NATS durable consumer from dropping replayed messages on re-subscribe ([#2991](https://github.com/wundergraph/cosmo/issues/2991)) ([7b40f14](https://github.com/wundergraph/cosmo/commit/7b40f1451d1dd0476029dde2500b1e19b68012ec)) (@endigma)
+
+# [0.326.0](https://github.com/wundergraph/cosmo/compare/router@0.325.0...router@0.326.0) (2026-06-23)
+
+### Bug Fixes
+
+* proto changes for entity cache ([#2996](https://github.com/wundergraph/cosmo/issues/2996)) ([3db24b0](https://github.com/wundergraph/cosmo/commit/3db24b010905daddfa840abba07faaf416dd892d)) (@SkArchon)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cachePopulate directive (3/5) ([#2984](https://github.com/wundergraph/cosmo/issues/2984)) ([a8cc2af](https://github.com/wundergraph/cosmo/commit/a8cc2afa7767c35b71ac4ebd18e2a9e1cc381a66)) (@SkArchon)
+
+# [0.325.0](https://github.com/wundergraph/cosmo/compare/router@0.324.1...router@0.325.0) (2026-06-22)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cacheInvalidate directive (2/5) ([#2983](https://github.com/wundergraph/cosmo/issues/2983)) ([19bbbe5](https://github.com/wundergraph/cosmo/commit/19bbbe5659011ef4536fe43edbb1ae313bda91e3)) (@SkArchon)
+* **composition:** [@openfed](https://github.com/openfed)__entityCache directive (1/5) ([#2980](https://github.com/wundergraph/cosmo/issues/2980)) ([2075164](https://github.com/wundergraph/cosmo/commit/2075164f18ee0cf953effdef2a031c59b3e8d112)) (@SkArchon)
+
+## [0.324.1](https://github.com/wundergraph/cosmo/compare/router@0.324.0...router@0.324.1) (2026-06-19)
+
+### Bug Fixes
+
+* **router:** accept JSON content type with parameters in MCP requests ([#2988](https://github.com/wundergraph/cosmo/issues/2988)) ([060ecbe](https://github.com/wundergraph/cosmo/commit/060ecbef1501ac512efd13be47c4de9becb53634)) (@asoorm)
+
+# [0.324.0](https://github.com/wundergraph/cosmo/compare/router@0.323.3...router@0.324.0) (2026-06-18)
+
+### Features
+
+* enable to ignore cost weights on implementing types ([#2976](https://github.com/wundergraph/cosmo/issues/2976)) ([91039af](https://github.com/wundergraph/cosmo/commit/91039af80ce600f8948c68d32eb18c8148d6d9b2)) (@ysmolski)
+
+## [0.323.3](https://github.com/wundergraph/cosmo/compare/router@0.323.2...router@0.323.3) (2026-06-18)
+
+### Bug Fixes
+
+* **router:** allow from_file header to be propagated ([#2979](https://github.com/wundergraph/cosmo/issues/2979)) ([60b55da](https://github.com/wundergraph/cosmo/commit/60b55da9223379ef1f5a2a6e74a13f2fe6b9d24e)) (@Noroth)
+
+## [0.323.2](https://github.com/wundergraph/cosmo/compare/router@0.323.1...router@0.323.2) (2026-06-16)
+
+### Bug Fixes
+
+* **router:** close redis connections on unsubscribe ([#2917](https://github.com/wundergraph/cosmo/issues/2917)) ([48e901d](https://github.com/wundergraph/cosmo/commit/48e901da424169980136b697fe900aba90cbff6a)) (@dkorittki)
+
 ## [0.323.1](https://github.com/wundergraph/cosmo/compare/router@0.323.0...router@0.323.1) (2026-06-15)
 
 ### Bug Fixes
