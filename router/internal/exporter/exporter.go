@@ -9,6 +9,7 @@ import (
 	"github.com/cloudflare/backoff"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"golang.org/x/sync/semaphore"
 )
 
 // Exporter is a generic, thread-safe batch exporter that queues items and sends them
@@ -23,7 +24,8 @@ type Exporter[T any] struct {
 	acceptTrafficSema chan struct{}
 	queue             chan T
 	inflightBatches   *atomic.Int64
-	batchBufferPool   *sync.Pool // Pool for batch slice buffers to reduce allocations
+	batchBufferPool   *sync.Pool          // Pool for batch slice buffers to reduce allocations
+	exportSema        *semaphore.Weighted // Bounds the number of concurrent in-flight export goroutines
 
 	// exportRequestContext is used to cancel all requests that started before the shutdown
 	exportRequestContext context.Context
@@ -47,6 +49,7 @@ const (
 	defaultMaxBatchItems          = 1024
 	defaultMaxQueueSize           = 1024 * 10
 	defaultBatchInterval          = time.Duration(10) * time.Second
+	defaultMaxConcurrentExports   = 100
 )
 
 type ExporterSettings struct {
@@ -60,14 +63,19 @@ type ExporterSettings struct {
 	RetryOptions RetryOptions
 	// ExportTimeout is the timeout for the export request.
 	ExportTimeout time.Duration
+	// MaxConcurrentExports caps the number of in-flight export goroutines.
+	// When <= 0, defaultMaxConcurrentExports is used. Bounding this prevents a slow
+	// or failing sink from accumulating unbounded retrying batches in memory.
+	MaxConcurrentExports int
 }
 
 func NewDefaultExporterSettings() *ExporterSettings {
 	return &ExporterSettings{
-		BatchSize:     defaultMaxBatchItems,
-		QueueSize:     defaultMaxQueueSize,
-		Interval:      defaultBatchInterval,
-		ExportTimeout: defaultExportTimeout,
+		BatchSize:            defaultMaxBatchItems,
+		QueueSize:            defaultMaxQueueSize,
+		Interval:             defaultBatchInterval,
+		ExportTimeout:        defaultExportTimeout,
+		MaxConcurrentExports: defaultMaxConcurrentExports,
 		RetryOptions: RetryOptions{
 			Enabled:     true,
 			MaxRetry:    defaultExportMaxRetryAttempts,
@@ -93,6 +101,13 @@ func NewExporter[T any](logger *zap.Logger, sink Sink[T], isRetryableError SinkE
 		isRetryableError = func(err error) bool { return true }
 	}
 
+	// Bound concurrent exports; fall back to the default when unset so callers
+	// that construct ExporterSettings directly don't get an unbounded pipeline.
+	maxConcurrentExports := settings.MaxConcurrentExports
+	if maxConcurrentExports <= 0 {
+		maxConcurrentExports = defaultMaxConcurrentExports
+	}
+
 	e := &Exporter[T]{
 		logger:                  logger.With(zap.String("component", "exporter")),
 		settings:                settings,
@@ -102,6 +117,7 @@ func NewExporter[T any](logger *zap.Logger, sink Sink[T], isRetryableError SinkE
 		shutdownSignal:          make(chan struct{}),
 		acceptTrafficSema:       make(chan struct{}),
 		inflightBatches:         atomic.NewInt64(0),
+		exportSema:              semaphore.NewWeighted(int64(maxConcurrentExports)),
 		exportRequestContext:    ctx,
 		cancelAllExportRequests: cancel,
 		batchBufferPool: &sync.Pool{
@@ -161,9 +177,18 @@ func (e *Exporter[T]) getBatchBuffer() []T {
 }
 
 // putBatchBuffer returns a batch buffer to the pool for reuse.
-// The buffer is reset to zero length before being pooled.
+// Element references are cleared and the slice is reset to zero length before pooling.
 func (e *Exporter[T]) putBatchBuffer(buffer []T) {
-	// Reset the slice to zero length while keeping capacity
+	// Drop buffers that grew beyond the configured batch size instead of pooling
+	// them, so the pool doesn't retain oversized backing arrays indefinitely.
+	if cap(buffer) > e.settings.BatchSize {
+		return
+	}
+	// Clear element references before pooling. Reslicing to [:0] only changes the
+	// length: the backing array still holds the (already-exported) item pointers,
+	// and the GC scans the full capacity, so without this the pooled buffer would
+	// pin every item from the last batch until those slots are overwritten.
+	clear(buffer)
 	buffer = buffer[:0]
 	e.batchBufferPool.Put(&buffer)
 }
@@ -232,8 +257,20 @@ func (e *Exporter[T]) exportBatch(batch []T) error {
 func (e *Exporter[T]) prepareAndSendBatch(batch []T) {
 	e.logger.Debug("Preparing to send batch", zap.Int("batch_size", len(batch)))
 	e.inflightBatches.Inc()
+	// Acquire a slot before spawning the goroutine. When all slots are taken this
+	// blocks the caller (the start/drain loop), applying backpressure all the way
+	// up to Record's queue instead of accumulating retrying batches in memory.
+	// The context is only cancelled on forced shutdown, in which case exports would
+	// fail anyway: return the buffer to the pool and drop the batch.
+	if err := e.exportSema.Acquire(e.exportRequestContext, 1); err != nil {
+		e.logger.Debug("Skipping batch export, exporter is shutting down", zap.Error(err))
+		e.putBatchBuffer(batch)
+		e.inflightBatches.Dec()
+		return
+	}
 	go func() {
 		defer e.inflightBatches.Dec()
+		defer e.exportSema.Release(1) // Release the slot once the export (and any retries) completes
 		defer e.putBatchBuffer(batch) // Return buffer to pool after export completes
 		e.exportBatchWithRetry(batch)
 	}()
