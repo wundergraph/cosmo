@@ -2,18 +2,22 @@ package core
 
 import (
 	"cmp"
+	"context"
 	"net/http"
 	"runtime"
 	"slices"
+	"sync/atomic"
 	"testing"
 	"weak"
+
+	"go.uber.org/zap"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
-	"go.uber.org/zap"
 )
 
 func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
@@ -787,6 +791,57 @@ func TestBuildMultiGraphHandler(t *testing.T) {
 
 		require.Nil(t, weakStale.Value(), "handler retained the previous server's graph muxes")
 		runtime.KeepAlive(handler)
+	})
+}
+
+// reuseTrackingProvider is a pubsub provider that only records whether Shutdown
+// was called. The embedded interface satisfies datasource.Provider; every other
+// method is unused in this test (and would panic on the nil interface if hit).
+// shutdown is atomic because providersActionWithTimeout calls Shutdown from a
+// separate goroutine.
+type reuseTrackingProvider struct {
+	datasource.Provider
+	shutdown atomic.Bool
+}
+
+func (p *reuseTrackingProvider) Shutdown(context.Context) error {
+	p.shutdown.Store(true)
+	return nil
+}
+
+func TestGraphServerShutdown(t *testing.T) {
+	// When the base graph is unchanged, a hot reload reuses the previous server's
+	// base mux, and that mux keeps serving on the new server. Its pubsub providers
+	// are owned by the mux, so shutting down the previous server must leave a
+	// reused mux and the providers it depends on intact.
+	t.Run("keeps a reused mux's pubsub providers alive after the previous server shuts down", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// The base mux and its pubsub provider, built by the previous server.
+		provider := &reuseTrackingProvider{}
+		baseMux := &graphMux{mux: chi.NewMux(), pubSubProviders: []datasource.Provider{provider}}
+
+		prev := &graphServer{
+			Config:            &Config{logger: zap.NewNop()},
+			graphServerCancel: cancel,
+			inFlightRequests:  &atomic.Int64{},
+			baseTransport:     &http.Transport{},
+			graphMuxList:      map[string]*graphMux{"": baseMux},
+		}
+
+		// The next server reuses the unchanged base mux, inheriting its provider
+		// rather than rebuilding it.
+		next := &graphServer{graphMuxList: map[string]*graphMux{}}
+		next.commitReusedMuxes([]reusedGraphMux{{key: "", mux: baseMux}})
+		require.True(t, baseMux.reused.Load(), "base mux must be flagged as reused")
+
+		require.NoError(t, prev.Shutdown(ctx))
+
+		// The reused mux lives on in the next server, and its provider stays up.
+		require.Same(t, baseMux, next.graphMuxList[""], "reused mux must live on in the next server")
+		require.False(t, provider.shutdown.Load(),
+			"provider for a reused mux must stay up after the previous server shuts down")
 	})
 }
 
