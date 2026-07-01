@@ -970,11 +970,9 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
 	// Make sure we do not shutdown the mux multiple times
-	if s.finalized.Load() {
+	if !s.finalized.CompareAndSwap(false, true) {
 		return nil
 	}
-
-	s.finalized.Store(true)
 
 	// cancel the graph muxes context to close its resources like websocket connections, resolvers, etc.
 	s.cancel()
