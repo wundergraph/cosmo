@@ -222,5 +222,17 @@ func (c *Cache[V]) Close() {
 		// This downside is also there in ristretto (if set is called concurrently)
 		// it is even documented in the ristretto code as a comment
 		close(c.writeCh)
+
+		// Drop cached entries so Close releases references to stored values
+		// (e.g. query plans holding schema AST pointers) before the Cache
+		// struct is GC'd.
+		c.entries.Range(func(key, _ any) bool {
+			c.entries.Delete(key)
+			return true
+		})
+
+		c.size = 0
+		c.minKey = 0
+		c.minDur = 0
 	})
 }

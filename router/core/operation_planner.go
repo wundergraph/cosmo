@@ -18,13 +18,13 @@ import (
 )
 
 type planWithMetaData struct {
-	preparedPlan                      plan.Plan
-	operationDocument, schemaDocument *ast.Document
-	typeFieldUsageInfo                []*graphqlschemausage.TypeFieldUsageInfo
-	argumentUsageInfo                 []*graphqlmetricsv1.ArgumentUsageInfo
-	content                           string
-	operationName                     string
-	planningDuration                  time.Duration
+	preparedPlan       plan.Plan
+	operationDocument  *ast.Document
+	typeFieldUsageInfo []*graphqlschemausage.TypeFieldUsageInfo
+	argumentUsageInfo  []*graphqlmetricsv1.ArgumentUsageInfo
+	content            string
+	operationName      string
+	planningDuration   time.Duration
 }
 
 type OperationPlanner struct {
@@ -96,7 +96,6 @@ func (p *OperationPlanner) planOperation(content string, name string, includeQue
 	return &planWithMetaData{
 		preparedPlan:      preparedPlan,
 		operationDocument: &doc,
-		schemaDocument:    p.executor.RouterSchema,
 	}, nil
 }
 
