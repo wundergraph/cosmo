@@ -681,6 +681,8 @@ type graphMux struct {
 	mux    *chi.Mux
 	reused atomic.Bool
 
+	wsHandler *WebsocketHandler
+
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
 	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
 	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -958,6 +960,10 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
+	if s.wsHandler != nil {
+		s.wsHandler.ShutdownConnections()
+	}
+
 	// cancel the graph muxes context to close its resources like websocket connections, resolvers, etc.
 	s.cancel()
 
@@ -1830,7 +1836,7 @@ func (s *graphServer) buildGraphMux(
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
-		wsMiddleware := NewWebsocketMiddleware(graphMuxCtx, WebsocketMiddlewareOptions{
+		wsMiddleware, wsHandler := NewWebsocketMiddleware(graphMuxCtx, WebsocketMiddlewareOptions{
 			OperationProcessor:        operationProcessor,
 			OperationBlocker:          operationBlocker,
 			Planner:                   operationPlanner,
@@ -1850,6 +1856,7 @@ func (s *graphServer) buildGraphMux(
 			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
 			ApolloCompatibilityFlags:  s.apolloCompatibilityFlags,
 		})
+		gm.wsHandler = wsHandler
 
 		// When the playground path is equal to the graphql path, we need to handle
 		// ws upgrades and html requests on the same route.
