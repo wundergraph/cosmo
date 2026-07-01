@@ -968,6 +968,30 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 	return nil
 }
 
+
+func closeRistrettoCacheUint64[V any](cache **ristretto.Cache[uint64, V]) {
+	if *cache != nil {
+		(*cache).Close()
+		*cache = nil
+	}
+}
+
+// releaseOperationCaches closes and nils Ristretto caches on shut-down graphMux.
+func (s *graphMux) releaseOperationCaches() {
+	closeRistrettoCacheUint64(&s.planCache)
+	if s.planFallbackCache != nil {
+		s.planFallbackCache.Close()
+		s.planFallbackCache = nil
+	}
+	closeRistrettoCacheUint64(&s.persistedOperationCache)
+	closeRistrettoCacheUint64(&s.normalizationCache)
+	closeRistrettoCacheUint64(&s.variablesNormalizationCache)
+	closeRistrettoCacheUint64(&s.remapVariablesCache)
+	closeRistrettoCacheUint64(&s.complexityCalculationCache)
+	closeRistrettoCacheUint64(&s.validationCache)
+	closeRistrettoCacheUint64(&s.operationHashCache)
+}
+
 func (s *graphMux) Shutdown(ctx context.Context) error {
 	// Make sure we do not shutdown the mux multiple times
 	if !s.finalized.CompareAndSwap(false, true) {
@@ -977,15 +1001,11 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	// cancel the graph muxes context to close its resources like websocket connections, resolvers, etc.
 	s.cancel()
 
-	s.planCache.Close()
-	s.planFallbackCache.Close()
-	s.persistedOperationCache.Close()
-	s.normalizationCache.Close()
-	s.variablesNormalizationCache.Close()
-	s.remapVariablesCache.Close()
-	s.complexityCalculationCache.Close()
-	s.validationCache.Close()
-	s.operationHashCache.Close()
+	if s.planFallbackCache != nil {
+		s.planFallbackCache.Wait()
+	}
+	s.releaseOperationCaches()
+	s.mux = nil
 
 	var err error
 
@@ -2239,6 +2259,7 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		if err := mux.Shutdown(ctx); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
+		delete(s.graphMuxList, name)
 	}
 
 	// Close idle connections on base and subgraph transports
