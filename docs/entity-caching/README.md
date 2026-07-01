@@ -1,4 +1,4 @@
-# Entity Caching with Cosmo Cloud
+# Entity Caching with Cosmo Cloud — Tutorial
 
 Entity caching lets the router serve resolved federation entities from a cache (in-memory L1
 and/or a shared L2 store such as Redis) instead of re-fetching them from your subgraphs on every
@@ -6,9 +6,16 @@ request. You declare what is cacheable with directives in your subgraph SDL, pub
 subgraphs to Cosmo Cloud, and Cosmo Cloud composition turns those directives into router
 configuration automatically.
 
-This guide uses the **hosted Cosmo Cloud control plane** for composition. You do **not** need to
-compose locally — publish your subgraphs as usual and Cosmo Cloud
-produces an execution config that carries the cache metadata to your router.
+This guide is a **hands-on walkthrough** using the demo subgraphs in this repo
+(`demo/pkg/subgraphs`). It uses the **hosted Cosmo Cloud control plane** for composition — you do
+**not** need to compose locally. Along the way it explains each cache directive so you know what
+you are annotating and why.
+
+By the end you will have:
+
+- a namespace and a federated graph on Cosmo Cloud,
+- the demo subgraphs published and composing,
+- a router connected to the graph with entity caching enabled.
 
 ## How It Works
 
@@ -29,68 +36,181 @@ router (entity caching enabled, L1 in-memory + L2 Redis)
 
 ## Prerequisites
 
-- A Cosmo Cloud account and a federated graph already created and publishing successfully.
-  See the [Cosmo docs](https://cosmo-docs.wundergraph.com/) for the basics of creating a
-  namespace, federated graph, and subgraphs.
-- The [`wgc`](https://cosmo-docs.wundergraph.com/cli) CLI, authenticated against your
-  organization.
-- A router connected to your Cosmo Cloud graph.
-- A Redis instance reachable from the router if you want the shared L2 cache (recommended for
-  multi-replica deployments). You can also use the in memory adapter for testing.
+- A Cosmo Cloud account with access to an organization.
+- The [`wgc`](https://cosmo-docs.wundergraph.com/cli) CLI installed.
+- Docker (to run the router), or a router binary.
+- This repo checked out — the demo subgraph schemas live under `demo/pkg/subgraphs`.
+- A Redis instance reachable from the router **if** you want the shared L2 cache (recommended for
+  multi-replica deployments). You can also use the in-memory adapter for testing.
 
-## Step 1 — Add Cache Directives To Your Subgraph SDL
-
-Add the directive definitions to every subgraph SDL that uses caching, so your subgraph server
-also accepts them at runtime. Cosmo Cloud composition understands these `@openfed__*` directives;
-this block keeps your subgraph server from rejecting them when it parses its own schema.
-
-```graphql
-directive @openfed__entityCache(
-  maxAge: Int!
-  negativeCacheTTL: Int = 0
-  includeHeaders: Boolean = false
-  partialCacheLoad: Boolean = false
-  shadowMode: Boolean = false
-) on OBJECT
-
-directive @openfed__cacheInvalidate on FIELD_DEFINITION
-
-directive @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
-```
-
-Then annotate your schema. A minimal cacheable entity:
-
-```graphql
-type Product @key(fields: "id") @openfed__entityCache(maxAge: 120, partialCacheLoad: true) {
-  id: ID!
-  name: String!
-}
-```
-
-> If your GraphQL server rejects unknown directives, register these definitions (as above) or
-> configure the server to ignore unknown directives.
-
-## Step 2 — Publish To Cosmo Cloud
-
-Publish each subgraph the same way you normally do. Composition runs on Cosmo Cloud and emits the
-cache metadata into the execution config:
+The commands below use **absolute** schema paths, so they work from any directory. Set the demo
+root once, and authenticate `wgc`:
 
 ```bash
-wgc subgraph publish products \
-  --schema ./subgraphs/products/schema.graphqls \
-  --namespace default
+export DEMO=/Users/milindadias/Work/cosmo/demo
+
+# Authenticate wgc against your Cosmo Cloud org (opens browser)
+wgc auth login
 ```
 
-If composition rejects a directive (for example, a non-positive `maxAge`), `wgc` reports the
-error. Fix the SDL and republish. There is no local composition step and no source-built router
-required — the hosted control plane does the work.
+## Step 1 — Create and Select a Namespace
 
-## Step 3 — Enable Entity Caching On The Router
+A namespace isolates this graph and its subgraphs from everything else in the org. Create a
+dedicated one and use it for every command below.
 
-Entity caching is **off by default**. Enable it in your router configuration and point L2 at a
-Redis storage provider:
+```bash
+# Name of the namespace to use throughout this tutorial
+export NS=entity-caching
+
+# Create it (skip if it already exists)
+wgc namespace create $NS
+```
+
+Useful namespace commands:
+
+```bash
+wgc namespace list            # see existing namespaces
+wgc namespace delete $NS      # remove it (also removes graphs/subgraphs in it)
+```
+
+Because every command below passes `--namespace $NS`, all resources land in this namespace.
+
+## Step 2 — Create the Federated Graph
+
+`--routing-url` is where **your router** will serve (adjust to your router's address). The label
+matcher binds subgraphs to this graph: any subgraph whose labels satisfy it is included in
+composition.
+
+```bash
+wgc federated-graph create entitycachegraph \
+  --namespace $NS \
+  --routing-url http://localhost:3002/graphql \
+  --label-matcher "team=demo"
+```
+
+To delete it later (composition/config only — the subgraphs stay):
+
+```bash
+wgc federated-graph delete entitycachegraph --namespace $NS
+```
+
+## Step 3 — Publish The Demo Subgraphs (Baseline, No Caching)
+
+First get a plain, working graph. Publish the demo schemas **as-is** — no cache directives yet —
+so you have a baseline that composes and serves before layering caching on top.
+
+`wgc subgraph publish` creates the subgraph on first publish when you pass `--routing-url` and
+`--label` — so this both registers and pushes the schema. Composition runs on Cosmo Cloud; there
+is no local composition step and no source-built router required — the hosted control plane does
+the work.
+
+`employees` is the base entity graph, so publish it first; the rest extend the `Employee` entity.
+
+> The subgraphs reference each other's entities, so individual publishes may report a transient
+> composition error until every subgraph is present. Once all of them are published, composition
+> succeeds — verify in Step 4.
+
+```bash
+# 1) employees — base entity
+wgc subgraph publish employees \
+  --schema $DEMO/pkg/subgraphs/employees/subgraph/schema.graphqls \
+  --routing-url http://localhost:4001/graphql \
+  --label "team=demo" --namespace $NS
+
+# 2) family
+wgc subgraph publish family \
+  --schema $DEMO/pkg/subgraphs/family/subgraph/schema.graphqls \
+  --routing-url http://localhost:4002/graphql \
+  --label "team=demo" --namespace $NS
+
+# 3) hobbies
+wgc subgraph publish hobbies \
+  --schema $DEMO/pkg/subgraphs/hobbies/subgraph/schema.graphqls \
+  --routing-url http://localhost:4003/graphql \
+  --label "team=demo" --namespace $NS
+
+# 4) products
+wgc subgraph publish products \
+  --schema $DEMO/pkg/subgraphs/products/subgraph/schema.graphqls \
+  --routing-url http://localhost:4004/graphql \
+  --label "team=demo" --namespace $NS
+
+# 5) availability
+wgc subgraph publish availability \
+  --schema $DEMO/pkg/subgraphs/availability/subgraph/schema.graphqls \
+  --routing-url http://localhost:4007/graphql \
+  --label "team=demo" --namespace $NS
+
+# 6) mood
+wgc subgraph publish mood \
+  --schema $DEMO/pkg/subgraphs/mood/subgraph/schema.graphqls \
+  --routing-url http://localhost:4008/graphql \
+  --label "team=demo" --namespace $NS
+
+# 7) countries
+wgc subgraph publish countries \
+  --schema $DEMO/pkg/subgraphs/countries/subgraph/schema.graphqls \
+  --routing-url http://localhost:4009/graphql \
+  --label "team=demo" --namespace $NS
+```
+
+> **Not included:** `test1`, `cachegraph`, `employeeupdated`, `employee-events`, and the
+> `products_fg` feature graph (`myff` feature flag). Add them the same way if you need them. The
+> routing URLs above come from `demo/graph.yaml`; swap in reachable URLs if your subgraphs run
+> elsewhere.
+
+## Step 4 — Verify Composition
+
+```bash
+# Show the graph and its composition status
+wgc federated-graph list --namespace $NS
+
+# Pull the composed schema — fails if composition is broken
+wgc federated-graph fetch entitycachegraph --namespace $NS
+
+# List the published subgraphs
+wgc subgraph list --namespace $NS
+```
+
+Add `-o/--out <dir>` to `fetch` to download the full set of files (all subgraph SDLs, the composed
+supergraph + client schema, the router execution config, and a composition manifest) into a
+folder instead of printing to stdout:
+
+```bash
+wgc federated-graph fetch entitycachegraph --namespace $NS --out entitycachegraph-export
+```
+
+## Step 5 — Connect The Router
+
+The router authenticates to Cosmo Cloud with a **graph API token** and pulls the composed config
+automatically — no local execution config needed. You'll turn entity caching on in the router
+config here; it stays inert until you annotate entities in Step 6.
+
+### 5a. Create a router token
+
+```bash
+wgc router token create entity-cache-router \
+  --graph-name entitycachegraph \
+  --namespace $NS
+```
+
+This prints the token **once**. Copy it and export it:
+
+```bash
+export GRAPH_API_TOKEN=<the-token-it-printed>
+```
+
+### 5b. Router config
+
+Create `config.yaml`. There is **no** `execution_config.file` block — with `GRAPH_API_TOKEN` set,
+the router polls Cosmo Cloud for the composed config. Turn entity caching on and (optionally)
+point L2 at a Redis storage provider:
 
 ```yaml
+version: "1"
+
+listen_addr: "localhost:3002"   # matches the graph's --routing-url
+
 # Define the Redis store used for the shared L2 cache.
 storage_providers:
   redis:
@@ -122,10 +242,120 @@ Equivalent environment variables exist for most of these settings, e.g.
 `ENTITY_CACHING_ENABLED`, `ENTITY_CACHING_L1_ENABLED`, `ENTITY_CACHING_L2_ENABLED`, and
 `ENTITY_CACHING_L2_STORAGE_PROVIDER_ID`.
 
-- **L1 only** (single instance): set `l2.enabled: false`. Cache lives in router memory and is
-  lost on restart.
+- **L1 only** (single instance, for testing): set `l2.enabled: false` and drop the Redis provider.
+  Cache lives in router memory and is lost on restart.
 - **L1 + L2** (recommended): keep both enabled so the cache survives restarts and is shared
   across replicas.
+
+### 5c. Run the router
+
+Start the demo subgraphs first, then the router:
+
+```bash
+# In one terminal — start the demo subgraphs (ports 4001–4009)
+cd $DEMO && ./run_subgraphs.sh
+
+# In another terminal — start the router
+docker run --rm \
+  -e GRAPH_API_TOKEN=$GRAPH_API_TOKEN \
+  -e LISTEN_ADDR=0.0.0.0:3002 \
+  -p 3002:3002 \
+  -v "$PWD/config.yaml:/config.yaml" \
+  ghcr.io/wundergraph/cosmo/router:latest
+```
+
+The router authenticates with the token, pulls the composed config for `entitycachegraph`, and
+serves it at `http://localhost:3002/graphql`.
+
+- **Subgraphs must be reachable** from wherever the router runs. The graph points at
+  `localhost:4001–4009`, so run the router on the same host (or `--network host` on Linux).
+- If you set `l2.enabled: true`, make sure Redis is reachable at the configured URL.
+
+At this point you have a **working baseline**: run a query at `http://localhost:3002/graphql` and
+confirm it resolves across the subgraphs. Entity caching is enabled on the router but does nothing
+yet because no entity is annotated — that's Step 6.
+
+## Step 6 — Add Cache Directives To The Demo SDLs
+
+Now layer caching on. Pick an entity, register the directive definitions in that subgraph's SDL,
+annotate the type, and republish. Composition regenerates the execution config with cache metadata
+and the running router picks it up.
+
+### 6a. Register the directive definitions
+
+Add these definitions to every subgraph SDL you annotate, so the subgraph server itself accepts
+the directives at runtime (Cosmo Cloud composition understands them, but your subgraph parses its
+own schema too):
+
+```graphql
+directive @openfed__entityCache(
+  maxAge: Int!
+  negativeCacheTTL: Int = 0
+  includeHeaders: Boolean = false
+  partialCacheLoad: Boolean = false
+  shadowMode: Boolean = false
+) on OBJECT
+
+directive @openfed__cacheInvalidate on FIELD_DEFINITION
+
+directive @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
+```
+
+> If your GraphQL server rejects unknown directives, register these definitions (as above) or
+> configure the server to ignore unknown directives.
+
+### 6b. Annotate an entity
+
+Start with caching alone — just mark an entity cacheable. The `availability` subgraph is a good
+target: its `Employee` entity has `@key(fields: "id")`, and the demo adds artificial latency
+there, which makes the cache hit easy to observe. Entity caching applies per subgraph, so
+annotating `Employee` here caches the `availability` subgraph's entity resolution specifically.
+
+In `demo/pkg/subgraphs/availability/subgraph/schema.graphqls`, add `@openfed__entityCache` to the
+`Employee` type:
+
+```graphql
+type Employee @key(fields: "id") @openfed__entityCache(maxAge: 120, partialCacheLoad: true) {
+  id: Int!
+  isAvailable: Boolean
+}
+```
+
+See [Available Directives](#available-directives) below for every argument and the other
+directives.
+
+### 6c. Republish and let the router pick it up
+
+Republish only the subgraph you changed:
+
+```bash
+# availability — now carries @openfed__entityCache on Employee
+wgc subgraph publish availability \
+  --schema $DEMO/pkg/subgraphs/availability/subgraph/schema.graphqls \
+  --namespace $NS
+```
+
+If composition rejects a directive (for example, a non-positive `maxAge`), `wgc` reports the error
+— fix the SDL and republish. Composition emits the cache metadata into the execution config, and
+the running router polls and applies it automatically. Confirm the entity is now served from cache
+(second read shouldn't hit the subgraph) using the steps in [Verifying It Works](#verifying-it-works).
+
+### 6d. Add invalidation (optional)
+
+Once the plain cache works, layer on invalidation so writes don't serve stale data. The
+`availability` subgraph owns the `updateAvailability` mutation, which returns an `Employee` — add
+`@openfed__cacheInvalidate` so the router evicts that entity from the cache after the mutation
+resolves:
+
+```graphql
+type Mutation {
+  """This mutation updates the availability status of an employee in the system."""
+  updateAvailability(employeeID: Int!, isAvailable: Boolean!): Employee! @openfed__cacheInvalidate
+}
+```
+
+Republish `availability` again. Now a warm read → `updateAvailability` → read again fetches fresh
+availability instead of the cached value.
 
 ## Available Directives
 
@@ -140,7 +370,7 @@ Equivalent environment variables exist for most of these settings, e.g.
 Use it on entity object types that have at least one federation `@key`.
 
 ```graphql
-type Product @key(fields: "id") @openfed__entityCache(maxAge: 120, partialCacheLoad: true) {
+type Product @key(fields: "id") @openfed__entityCache(maxAge: 120) {
   id: ID!
   name: String!
 }
@@ -242,7 +472,8 @@ X-WG-Cache-Key-Prefix: test-run-1    # isolate cache entries for a test run
 
 ## Verifying It Works
 
-1. Publish a subgraph with `@openfed__entityCache` on an entity and let Cosmo Cloud compose it.
+1. Add `@openfed__entityCache` to an entity and republish that subgraph (Step 6), then let Cosmo
+   Cloud compose it.
 2. Run a query that resolves that entity twice. The second request should be served from cache and
    should not hit the subgraph again (watch your subgraph logs/metrics).
 3. With L2 (Redis) enabled, restart the router and run the query again — the cached entity should
@@ -255,6 +486,8 @@ X-WG-Cache-Key-Prefix: test-run-1    # isolate cache entries for a test run
 - **No caching happens.** Confirm `entity_caching.enabled: true` on the router, that the entity has
   both a federation `@key` and `@openfed__entityCache`, and that the latest composition (with the
   directives) has been published and picked up by the router.
+- **Subgraph not in the graph.** The `--label "team=demo"` on each subgraph must satisfy the
+  graph's `--label-matcher "team=demo"`, or the subgraph is excluded from composition.
 - **L2 entries are not shared / lost on restart.** Confirm `l2.enabled: true` and that
   `l2.storage.provider_id` matches a `storage_providers.redis[].id`, and that the router can reach
   Redis.

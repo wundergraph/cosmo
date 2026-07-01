@@ -1,11 +1,25 @@
 extend schema
 @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
 
+directive @openfed__entityCache(
+  maxAge: Int!
+  negativeCacheTTL: Int = 0
+  includeHeaders: Boolean = false
+  partialCacheLoad: Boolean = false
+  shadowMode: Boolean = false
+) on OBJECT
+
+directive @openfed__cacheInvalidate on FIELD_DEFINITION
+
+directive @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
+
 type Mutation {
     """ This mutation updates the availability status of an employee in the system."""
-    updateAvailability(employeeID: Int!, isAvailable: Boolean!): Employee!
+    updateAvailability(employeeID: Int!, isAvailable: Boolean!): Employee! @openfed__cacheInvalidate
 }
-type Employee @key(fields: "id") {
+
+type Employee @key(fields: "id") @openfed__entityCache(maxAge: 120) {
   id: Int!
   isAvailable: Boolean
+  testAE: String
 }

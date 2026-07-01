@@ -2,21 +2,37 @@
 
 # See pkg/config/config.go for the full list of configuration options.
 # This file is used for the demo environment
-
 version: "1"
 
+listen_addr: "localhost:3002"   # matches the graph's --routing-url
+
+# Event-driven federation (EDFS) providers. The `mood` subgraph publishes
+# updateMood to the NATS provider named "default"; without this the router
+# reports "no nats pubsub default provider found".
 events:
   providers:
     nats:
       - id: default
         url: "nats://localhost:4222"
-      - id: my-nats
-        url: "nats://localhost:4222"
-    kafka:
-      - id: my-kafka
-        brokers:
-          - "localhost:9092"
-    redis:
-      - id: my-redis
-        urls:
-          - "redis://localhost:6379/2"
+
+# Define the Redis store used for the shared L2 cache.
+storage_providers:
+  redis:
+    - id: "entity-cache-redis"
+      urls:
+        - "redis://localhost:6379"
+      cluster_enabled: false
+
+entity_caching:
+  enabled: true
+  # Optional prefix applied to every cache key (useful to isolate environments).
+  global_cache_key_prefix: ""
+  l1:
+    # In-memory, per-router-instance cache.
+    enabled: true
+  l2:
+    # Shared cache across router instances, backed by Redis.
+    enabled: true
+    storage:
+      provider_id: "entity-cache-redis"
+      key_prefix: "cosmo_entity_cache"
