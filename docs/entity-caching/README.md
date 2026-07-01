@@ -7,7 +7,7 @@ subgraphs to Cosmo Cloud, and Cosmo Cloud composition turns those directives int
 configuration automatically.
 
 This guide uses the **hosted Cosmo Cloud control plane** for composition. You do **not** need to
-compose locally or build the router from source — publish your subgraphs as usual and Cosmo Cloud
+compose locally — publish your subgraphs as usual and Cosmo Cloud
 produces an execution config that carries the cache metadata to your router.
 
 ## How It Works
@@ -36,7 +36,7 @@ router (entity caching enabled, L1 in-memory + L2 Redis)
   organization.
 - A router connected to your Cosmo Cloud graph.
 - A Redis instance reachable from the router if you want the shared L2 cache (recommended for
-  multi-replica deployments). L1 alone works for a single router instance.
+  multi-replica deployments). You can also use the in memory adapter for testing.
 
 ## Step 1 — Add Cache Directives To Your Subgraph SDL
 
@@ -156,22 +156,18 @@ type Product @key(fields: "id") @openfed__entityCache(maxAge: 120, partialCacheL
 
 ### `@openfed__cacheInvalidate`
 
-Use it on root `Mutation` or `Subscription` fields that return a cacheable entity. After the field
+Use it on root `Mutation` fields that return a cacheable entity. After the field
 resolves, the router evicts the returned entity from the cache.
 
 ```graphql
 type Mutation {
   updateProduct(id: ID!, name: String!): Product @openfed__cacheInvalidate
 }
-
-type Subscription {
-  productDeleted: Product @openfed__cacheInvalidate
-}
 ```
 
 ### `@openfed__cachePopulate`
 
-Use it on root `Mutation` or `Subscription` fields that return a cacheable entity. After the field
+Use it on root `Mutation` fields that return a cacheable entity. After the field
 resolves, the router writes the returned entity to the cache.
 
 ```graphql
@@ -250,10 +246,8 @@ X-WG-Cache-Key-Prefix: test-run-1    # isolate cache entries for a test run
 2. Run a query that resolves that entity twice. The second request should be served from cache and
    should not hit the subgraph again (watch your subgraph logs/metrics).
 3. With L2 (Redis) enabled, restart the router and run the query again — the cached entity should
-   still be served from Redis after the in-memory L1 is gone, until its TTL expires.
-4. Set `shadowMode: true` first if you want to validate cache reads/writes while still serving live
-   subgraph results, then turn it off to start serving cached data.
-5. Warm an entity, run a mutation annotated with `@openfed__cacheInvalidate`, then read again — the
+   still be served from Redis, until its TTL expires.
+4. Warm an entity, run a mutation annotated with `@openfed__cacheInvalidate`, then read again — the
    post-mutation read should fetch fresh data.
 
 ## Troubleshooting
