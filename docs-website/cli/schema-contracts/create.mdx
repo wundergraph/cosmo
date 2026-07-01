@@ -33,16 +33,16 @@ npx wgc contract create <name> --source <federated-graph-name> --include public 
 ```
 
 #### Include and exclude together
-<Warning>
-  The include and exclude tag sets must be mutually exclusive.
-  If the same tag is added to both the include and exclude sets, an error will be returned.
-</Warning>
-
 ##### Minimum Requirements
 
 |Package|Minimum version|
 |---|---|
 |[wgc](/cli/intro)|[0.126.2](https://github.com/wundergraph/cosmo/releases/tag/wgc%400.126.2)|
+
+<Warning>
+  The include and exclude tag sets must be mutually exclusive.
+  If the same tag is added to both the include and exclude sets, an error will be returned.
+</Warning>
 
 If both include and exclude tags are provided, the behaviour is thus:
 1. The schema starts blank (no nodes)
@@ -54,7 +54,7 @@ the child defines a specified tag to exclude.
 included unless the field argument defines a specified tag to exclude.
 
 ```bash
-npx wgc contract create <name> --source <contract-name> --include public --exclude internal -r <routing-url>
+npx wgc contract create <name> --source <federated-graph-name> --include public --exclude internal -r <routing-url>
 ```
 
 ## Description
@@ -93,10 +93,10 @@ Create a contract graph named `production-external` from the source graph schema
 schema elements tagged with `internal` or `experimental`:
 
 ```bash
-npx wgc contract create production-external --source production --exlude internal experimental -r http://router.example.com/graphql
+npx wgc contract create production-external --source production --exclude internal experimental -r http://router.example.com/graphql
 ```
 
-Create a contract graph named `production-external` from the source graph schema of `production` that excludes all
+Create a contract graph named `production-external` from the source graph schema of `production` that includes all
 schema elements tagged with `public` or `api`:
 
 ```bash
