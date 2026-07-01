@@ -771,14 +771,14 @@ export function duplicateFieldInFieldSetErrorMessage(fieldSet: string, fieldPath
   );
 }
 
-export function incompatibleTypeWithProvidesErrorMessage({
+export function incompatibleTypeWithProvidesError({
   fieldCoords,
   responseType,
   subgraphName,
-}: IncompatibleTypeWithProvidesErrorMessageParams): string {
-  return (
+}: IncompatibleTypeWithProvidesErrorMessageParams): Error {
+  return new Error(
     ` A "@provides" directive is declared on field "${fieldCoords}" in subgraph "${subgraphName}".\n` +
-    ` However, the response type "${responseType}" is not an Object nor Interface.`
+      ` However, the response type "${responseType}" is not an Object nor Interface.`,
   );
 }
 

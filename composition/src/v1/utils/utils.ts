@@ -7,10 +7,10 @@ import type {
   EntityInterfaceSubgraphData,
   FieldAuthorizationData,
   FieldData,
-  NodeData,
   ObjectDefinitionData,
   ParentDefinitionData,
   SimpleFieldData,
+  UnionDefinitionData,
 } from '../../schema-building/types/types';
 import {
   BOOLEAN_SCALAR,
@@ -458,4 +458,11 @@ export function isObjectDefinitionData(data?: ParentDefinitionData): data is Obj
     return false;
   }
   return data.kind === Kind.OBJECT_TYPE_DEFINITION;
+}
+
+export function isUnionDefinitionData(data?: ParentDefinitionData): data is UnionDefinitionData {
+  if (!data) {
+    return false;
+  }
+  return data.kind === Kind.UNION_TYPE_DEFINITION;
 }
