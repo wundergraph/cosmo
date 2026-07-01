@@ -1,10 +1,21 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { Command } from 'commander';
 import yaml from 'js-yaml';
 import { join, resolve } from 'pathe';
 import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
-import { fetchRouterConfig, getFederatedGraphSchemas, getSubgraphSDL, getSubgraphsOfFedGraph } from '../utils.js';
+import { getFederatedGraphSchemas, getSubgraphSDL, getSubgraphsOfFedGraph } from '../utils.js';
+import { featureFlagsDir, fetchRouterConfig, writeFeatureFlagConfigToFile } from '../../../router/utils.js';
+
+const cosmoConfigFile = 'cosmoConfig.json';
+const cosmoMapperFile = 'cosmo-mapper.json';
+const cosmoSchemaFile = 'cosmoSchema.graphql';
+const cosmoClientSchemaFile = 'cosmoClientSchema.graphql';
+const cosmoCompositionFile = 'cosmo-composition.yaml';
+const roverCompositionFile = 'rover-composition.yaml';
+const apolloSchemaFile = 'apolloSchema.graphql';
+const apolloScriptFile = 'apollo.sh';
 
 export default (opts: BaseCommandOptions) => {
   const cmd = new Command('fetch');
@@ -29,19 +40,31 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
       });
 
-      const basePath = resolve(options.out, `${name}${options.namespace ? `-${options.namespace}` : ''}`);
+      let basePath = options.out ? resolve(options.out) : resolve();
+      basePath = join(basePath, `${name}-${options.namespace || 'default'}`);
+      if (!existsSync(basePath)) {
+        await mkdir(basePath, { recursive: true });
+      }
+
+      const entries = await readdir(basePath);
+      if (entries.length > 0) {
+        console.log(pc.red(`Output directory "${basePath}" is not empty. Please provide an empty directory path.`));
+        process.exitCode = 1;
+        return;
+      }
+
       const superGraphPath = join(basePath, '/supergraph/');
       const subgraphPath = join(basePath, '/subgraphs/');
       const scriptsPath = join(basePath, '/scripts/');
 
       if (!existsSync(superGraphPath)) {
-        mkdirSync(superGraphPath, { recursive: true });
+        await mkdir(superGraphPath, { recursive: true });
       }
       if (!existsSync(subgraphPath)) {
-        mkdirSync(subgraphPath, { recursive: true });
+        await mkdir(subgraphPath, { recursive: true });
       }
       if (!existsSync(scriptsPath) && options.apolloCompatibility) {
-        mkdirSync(scriptsPath, { recursive: true });
+        await mkdir(scriptsPath, { recursive: true });
       }
 
       const routerConfig = await fetchRouterConfig({
@@ -49,12 +72,27 @@ export default (opts: BaseCommandOptions) => {
         name,
         namespace: options.namespace,
       });
-      writeFileSync(join(superGraphPath, `cosmoConfig.json`), routerConfig);
+      await writeFile(join(superGraphPath, cosmoConfigFile), routerConfig.routerConfig);
+      if (routerConfig.mapper) {
+        // The mapper file is only available when `split-config-loading` is enabled
+        await writeFile(join(basePath, cosmoMapperFile), JSON.stringify(routerConfig.mapper));
+      }
 
-      writeFileSync(join(superGraphPath, `cosmoSchema.graphql`), fedGraphSchemas.sdl);
+      if (routerConfig.featureFlags?.size) {
+        // Same as the mapper, feature flags are only available when `split-config-loading` is enabled
+        const featureFlagsPath = join(basePath, featureFlagsDir);
+        if (!existsSync(featureFlagsPath)) {
+          await mkdir(featureFlagsPath);
+        }
 
+        for (const [featureFlagName, featureFlagConfig] of routerConfig.featureFlags) {
+          await writeFeatureFlagConfigToFile(featureFlagsPath, featureFlagName, featureFlagConfig);
+        }
+      }
+
+      await writeFile(join(superGraphPath, cosmoSchemaFile), fedGraphSchemas.sdl);
       if (fedGraphSchemas.clientSchema) {
-        writeFileSync(join(superGraphPath, `cosmoClientSchema.graphql`), fedGraphSchemas.clientSchema);
+        await writeFile(join(superGraphPath, cosmoClientSchemaFile), fedGraphSchemas.clientSchema);
       }
 
       const subgraphs = await getSubgraphsOfFedGraph({ client: opts.client, name, namespace: options.namespace });
@@ -125,14 +163,14 @@ export default (opts: BaseCommandOptions) => {
             };
           }
         }
-        writeFileSync(filePath, subgraphSDL);
+        await writeFile(filePath, subgraphSDL);
       }
 
       const cosmoCompositionConfig = yaml.dump({
         version: 1,
         subgraphs: cosmoSubgraphsConfig,
       });
-      writeFileSync(join(basePath, `cosmo-composition.yaml`), cosmoCompositionConfig);
+      await writeFile(join(basePath, cosmoCompositionFile), cosmoCompositionConfig);
 
       if (options.apolloCompatibility) {
         const roverCompositionConfig = yaml.dump({
@@ -156,15 +194,14 @@ export default (opts: BaseCommandOptions) => {
                   },
                 },
         });
-        writeFileSync(join(basePath, `rover-composition.yaml`), roverCompositionConfig);
+
+        const absRoverCompositionFile = join(basePath, roverCompositionFile);
+        await writeFile(absRoverCompositionFile, roverCompositionConfig);
 
         const apolloScript = `npm install -g @apollo/rover
-rover supergraph compose --config '${join(basePath, `rover-composition.yaml`)}' --output '${join(
-          superGraphPath,
-          'apolloSchema.graphql',
-        )}'
+rover supergraph compose --config '${absRoverCompositionFile}' --output '${join(superGraphPath, apolloSchemaFile)}'
 `;
-        writeFileSync(join(scriptsPath, `apollo.sh`), apolloScript);
+        await writeFile(join(scriptsPath, apolloScriptFile), apolloScript);
       }
 
       console.log(

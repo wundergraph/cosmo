@@ -1,0 +1,15 @@
+version: 1
+subgraphs:
+  - name: schema
+    routing_url: http://localhost:4001/graphql
+    schema:
+      file: ../fixtures/full-schema.graphql
+
+feature_flags:
+  - name: my-feature-flag
+    feature_graphs:
+      - name: feature-schema
+        subgraph_name: schema
+        routing_url: http://localhost:4001/graphql-feature-flag
+        schema:
+          file: ../fixtures/full-schema.graphql
