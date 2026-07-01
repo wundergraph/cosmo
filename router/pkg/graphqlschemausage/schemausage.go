@@ -495,6 +495,8 @@ func buildFieldSubgraphIDMap(operationPlan plan.Plan) map[string][]string {
 	switch p := operationPlan.(type) {
 	case *plan.SynchronousResponsePlan:
 		collector.collectFromNode(p.Response.Data)
+	case *plan.DeferResponsePlan:
+		// TODO: handle
 	case *plan.SubscriptionResponsePlan:
 		collector.collectFromNode(p.Response.Response.Data)
 	}

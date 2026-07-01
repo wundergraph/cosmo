@@ -927,6 +927,7 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "EnableDefer": true,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,

@@ -1,0 +1,30 @@
+query {
+  a: findEmployees(criteria: {
+    hasPets: true
+  }) {
+    details {
+      forename
+    }
+  }
+  b: findEmployees(criteria: {
+    hasPets: false, nationality: GERMAN, nested: { maritalStatus: MARRIED }
+  }) {
+    details {
+      forename
+    }
+  }
+  c: findEmployees(criteria: {
+    hasPets: true, nationality: ENGLISH, nested: { maritalStatus: MARRIED }
+  }) {
+    details {
+      forename
+    }
+  }
+  d: findEmployees(criteria: {
+    hasPets: true, nationality: ENGLISH, nested: { maritalStatus: MARRIED, hasChildren: true }
+  }) {
+    details {
+      forename
+    }
+  }
+}

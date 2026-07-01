@@ -25,6 +25,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
+
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/pkg/art"
@@ -1170,6 +1171,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
 		case *plan.SynchronousResponsePlan:
 			p.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
+		case *plan.DeferResponsePlan:
+			// TODO: handle ART
 		}
 
 		if h.queryPlansLoggingEnabled {
@@ -1179,12 +1182,30 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 				printedPlan = p.Response.Fetches.QueryPlan().PrettyPrint()
 			case *plan.SubscriptionResponsePlan:
 				printedPlan = p.Response.Response.Fetches.QueryPlan().PrettyPrint()
+			case *plan.DeferResponsePlan:
+				// TODO: handle
 			}
 			if h.developmentMode {
 				h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
 			} else {
 				h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
 			}
+		}
+	}
+
+	// A DeferResponsePlan is only produced when the operation contains @defer
+	// (and @defer support is enabled). Such operations stream incremental
+	// payloads as multipart/mixed, so reject the request early if the client
+	// does not accept that content type
+	if _, ok := requestContext.operation.preparedPlan.preparedPlan.(*plan.DeferResponsePlan); ok {
+		if !clientAcceptsMultipartMixed(req) {
+			return NewHttpGraphqlError(
+				"the router received a query with the @defer directive but the client does not accept "+
+					"multipart/mixed HTTP responses. To enable @defer support, add the HTTP header "+
+					"'Accept: multipart/mixed'",
+				ExtCodeErrDeferMultipartNotAccepted,
+				http.StatusOK,
+			)
 		}
 	}
 

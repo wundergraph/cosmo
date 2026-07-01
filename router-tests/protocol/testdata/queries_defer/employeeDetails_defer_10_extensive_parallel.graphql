@@ -1,0 +1,17 @@
+query {
+  ... @defer {
+    employees {
+      ... @defer { id }
+      ... @defer { notes }
+      ... @defer {
+        hobbies {
+          __typename
+          employees {
+            id
+            details { forename }
+          }
+        }
+      }
+    }
+  }
+}

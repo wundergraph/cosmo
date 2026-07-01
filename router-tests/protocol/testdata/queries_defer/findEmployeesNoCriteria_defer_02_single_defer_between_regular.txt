@@ -1,0 +1,11 @@
+--graphql
+Content-Type: application/json
+
+{"data":{},"pending":[{"id":"1","path":[]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"findEmployees":[{"details":{"forename":"Jens"}},{"details":{"forename":"Dustin"}},{"details":{"forename":"Stefan"}},{"details":{"forename":"Björn"}},{"details":{"forename":"Sergiy"}},{"details":{"forename":"Suvij"}},{"details":{"forename":"Nithin"}},{"details":{"forename":"Eelco"}},{"details":{"forename":"Alexandra"}},{"details":{"forename":"David"}}]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":false}
+
+--graphql--

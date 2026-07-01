@@ -130,6 +130,7 @@ type OperationProcessorOptions struct {
 	CostControl                                            *config.CostControl
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
 	OperationNameLengthLimit                               int
+	EnableDefer                                            bool
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -738,7 +739,7 @@ func (o *OperationKit) normalizePersistedOperation(clientName string, isApq bool
 		// normalized operation was loaded from cache
 		return true, nil
 	}
-	skipIncludeNames := o.skipIncludeVariableNames()
+	skipIncludeNames := o.conditionalsVariableNames()
 
 	report := &operationreport.Report{}
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
@@ -813,7 +814,7 @@ type ComplexityCacheEntry struct {
 }
 
 func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error) {
-	skipIncludeVariableNames := o.skipIncludeVariableNames()
+	skipIncludeVariableNames := o.conditionalsVariableNames()
 	cacheKey := o.normalizationCacheKey(skipIncludeVariableNames)
 	if o.cache != nil && o.cache.normalizationCache != nil {
 		entry, ok := o.cache.normalizationCache.Get(cacheKey)
@@ -1455,9 +1456,9 @@ var (
 	literalIF = []byte("if")
 )
 
-// skipIncludeVariableNames returns a slice of variable names that are used as arguments
+// conditionalsVariableNames returns a slice of variable names that are used as arguments
 // in the skip/include conditionals.
-func (o *OperationKit) skipIncludeVariableNames() []string {
+func (o *OperationKit) conditionalsVariableNames() []string {
 	if len(o.kit.doc.Directives) == 0 {
 		return nil
 	}
@@ -1465,7 +1466,7 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 	for i := range o.kit.doc.Directives {
 		name := o.kit.doc.DirectiveNameBytes(i)
 		switch string(name) {
-		case "skip", "include":
+		case "skip", "include", "defer", "stream":
 			if value, ok := o.kit.doc.DirectiveArgumentValueByName(i, literalIF); ok {
 				if value.Kind != ast.ValueKindVariable {
 					continue
@@ -1491,21 +1492,17 @@ type parseKitOptions struct {
 	apolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
 	disableExposingVariablesContentOnValidationError       bool
 	relaxSubgraphOperationFieldSelectionMergingNullability bool
+	enableDefer                                            bool
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
 	return &parseKit{
-		i:          i,
-		parser:     astparser.NewParser(),
-		doc:        ast.NewSmallDocument(),
-		keyGen:     xxhash.New(),
-		sha256Hash: sha256.New(),
-		staticNormalizer: astnormalization.NewWithOpts(
-			astnormalization.WithRemoveNotMatchingOperationDefinitions(),
-			astnormalization.WithInlineFragmentSpreads(),
-			astnormalization.WithRemoveFragmentDefinitions(),
-			astnormalization.WithRemoveUnusedVariables(),
-		),
+		i:                   i,
+		parser:              astparser.NewParser(),
+		doc:                 ast.NewSmallDocument(),
+		keyGen:              xxhash.New(),
+		sha256Hash:          sha256.New(),
+		staticNormalizer:    astnormalization.NewWithOpts(buildNormalizationOptions(options.enableDefer)...),
 		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
 		variablesRemapper:   astnormalization.NewVariablesMapper(),
 		printer:             &astprinter.Printer{},
@@ -1521,6 +1518,25 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 		}),
 		operationValidator: createOperationValidator(options),
 	}
+}
+
+func buildNormalizationOptions(enableDefer bool) []astnormalization.Option {
+	opts := []astnormalization.Option{
+		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
+		astnormalization.WithInlineFragmentSpreads(),
+		astnormalization.WithRemoveFragmentDefinitions(),
+		astnormalization.WithRemoveUnusedVariables(),
+	}
+
+	if enableDefer {
+		opts = append(opts, astnormalization.WithEnableDefer(),
+			astnormalization.WithPrevalidationRules(
+				astvalidation.DeferStreamOnValidOperations(),
+				astvalidation.DeferStreamHaveUniqueLabels(),
+				astvalidation.DirectivesAreInValidLocations(),
+				astvalidation.StreamAppliedToListFieldsOnly()))
+	}
+	return opts
 }
 
 func createOperationValidator(options *parseKitOptions) *astvalidation.OperationValidator {
@@ -1552,6 +1568,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		complexityLimits:         opts.ComplexityLimits,
 		costControl:              opts.CostControl,
 		parseKitOptions: &parseKitOptions{
+			enableDefer:                                            opts.EnableDefer,
 			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,
 			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,

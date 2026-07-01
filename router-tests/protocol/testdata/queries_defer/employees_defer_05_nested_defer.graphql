@@ -1,0 +1,41 @@
+query {
+  employees {
+    id
+    notes
+    details {
+      forename
+      surname
+      location { key { name } language }
+      hasChildren
+      maritalStatus
+      nationality
+      pets {
+        class
+        gender
+        name
+        ... on Cat { type }
+        ... on Dog { breed }
+        ... on Alligator { dangerous }
+      }
+    }
+    ... @defer {
+      role {
+        departments
+        title
+        ... on Engineer { engineerType }
+        ... on Operator { operatorType }
+      }
+      ... @defer {
+        hobbies {
+          ... on Exercise { category }
+          ... on Flying { planeModels yearsOfExperience }
+          ... on Gaming { genres name yearsOfExperience }
+          ... on Other { name }
+          ... on Programming { languages }
+          ... on Travelling { countriesLived { language } }
+        }
+      }
+      products
+    }
+  }
+}

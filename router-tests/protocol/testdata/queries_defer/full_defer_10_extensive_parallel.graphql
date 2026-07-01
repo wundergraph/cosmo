@@ -1,0 +1,72 @@
+query {
+  ... @defer {
+    employees {
+      ... @defer { id }
+      ... @defer { notes }
+      ... @defer {
+        details {
+          forename
+          surname
+          location { language }
+          hasChildren
+          maritalStatus
+          nationality
+          pets {
+            class
+            gender
+            name
+            ... on Cat { type }
+            ... on Dog { breed }
+            ... on Alligator { dangerous }
+          }
+        }
+      }
+      ... @defer {
+        role {
+          departments
+          title
+          ... on Engineer { engineerType }
+          ... on Operator { operatorType }
+        }
+      }
+      ... @defer {
+        hobbies {
+          ... on Exercise { category }
+          ... on Flying { planeModels yearsOfExperience }
+          ... on Gaming { genres name yearsOfExperience }
+          ... on Other { name }
+          ... on Programming { languages }
+          ... on Travelling { countriesLived { language key { name } } }
+        }
+      }
+      ... @defer { products }
+    }
+    employee(id: 1) {
+      ... @defer { id }
+      ... @defer { details { forename location { language } } }
+    }
+    teammates(team: OPERATIONS) {
+      ... @defer { id }
+      ... @defer { details { forename } }
+      ... @defer { products }
+    }
+    productTypes {
+      ... @defer {
+        ... on Documentation {
+          url(product: SDK)
+          urls(products: [COSMO, MARKETING])
+        }
+        ... on Consultancy {
+          lead { details { forename } }
+          name
+        }
+      }
+    }
+    a: findEmployees(criteria: { hasPets: true, nationality: UKRAINIAN, nested: { maritalStatus: ENGAGED } }) {
+      ... @defer { details { forename } }
+    }
+    b: findEmployees(criteria: { hasPets: true, nationality: GERMAN, nested: { maritalStatus: MARRIED, hasChildren: true } }) {
+      ... @defer { details { forename } }
+    }
+  }
+}

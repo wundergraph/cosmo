@@ -1,0 +1,17 @@
+query {
+  employee(id: 1) {
+    id
+    ... @defer {
+      hobbies { __typename }
+    }
+    details {
+      forename
+      location { language }
+    }
+  }
+  teammates(team: OPERATIONS) {
+    id
+    details { forename }
+    products
+  }
+}

@@ -398,6 +398,7 @@ engine:
   max_concurrent_resolvers: 32
   enable_net_poll: true
   enable_subgraph_fetch_operation_name: true
+  enable_defer: true
   websocket_client_write_timeout: 10s
   websocket_server_read_timeout: 5s
   websocket_server_write_timeout: 10s

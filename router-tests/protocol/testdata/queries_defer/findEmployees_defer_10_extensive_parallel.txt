@@ -1,0 +1,28 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{},"pending":[{"id":"1","path":[]},{"id":"2","path":[]},{"id":"3","path":[]},{"id":"4","path":[]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"a":[{"details":{"forename":"Stefan"}},{"details":{"forename":"Björn"}},{"details":{"forename":"Sergiy"}},{"details":{"forename":"Eelco"}},{"details":{"forename":"David"}}]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"b":[{"details":{"forename":"Jens"}},{"details":{"forename":"Alexandra"}}]},"id":"2"}],"completed":[{"id":"2"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"d":[]},"id":"4"}],"completed":[{"id":"4"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"c":[{"details":{"forename":"David"}}]},"id":"3"}],"completed":[{"id":"3"}],"hasNext":false}
+
+--graphql
+--graphql--

@@ -470,6 +470,7 @@ type EngineExecutionConfiguration struct {
 	DisableVariablesRemapping                        bool          `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
 	EnableRequireFetchReasons                        bool          `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
 	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
+	EnableDefer                                      bool          `envDefault:"true" env:"ENGINE_ENABLE_DEFER" yaml:"enable_defer"`
 
 	// Server-side WebSocket handler options (router accepting client connections)
 	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`

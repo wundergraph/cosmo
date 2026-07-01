@@ -1,0 +1,19 @@
+query {
+  # Fetch from employees subgraph
+  employees {
+    id
+    # Fetch from products subgraph
+    notes
+    # Fetch from hobbies subgraph
+    hobbies {
+      __typename
+      # Fetch from employees subgraph
+      employees {
+        id
+        details {
+          forename
+        }
+      }
+    }
+  }
+}
