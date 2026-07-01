@@ -24,23 +24,21 @@ your subgraph SDL (with cache directives)
         ▼
 Cosmo Cloud composition  →  execution config (with cache metadata)
         ▼
-router (entity caching enabled, L1 in-memory + L2 Redis)
+router (entity caching enabled)
 ```
 
 1. You annotate subgraph SDL with `@openfed__*` cache directives.
 2. You publish the subgraphs to Cosmo Cloud (`wgc subgraph publish`). Composition runs on the
    hosted control plane and validates the directives.
-3. Your router pulls the composed execution config and enforces the cache behavior, backed by L1
-   (in-memory) and optionally L2 (Redis).
+3. Your router pulls the composed execution config and enforces the cache behavior
 
 ## Prerequisites
 
 - A Cosmo Cloud account with access to an organization.
 - The [`wgc`](https://cosmo-docs.wundergraph.com/cli) CLI installed.
-- Docker (to run the router), or a router binary.
+- Docker and Golang.
 - This repo checked out — the demo subgraph schemas live under `demo/pkg/subgraphs`.
-- A Redis instance reachable from the router **if** you want the shared L2 cache (recommended for
-  multi-replica deployments). You can also use the in-memory adapter for testing.
+- A Redis instance reachable from the router **if** you want the shared L2 cache.
 
 The commands below use **absolute** schema paths, so they work from any directory. Set the demo
 root once, and authenticate `wgc`:
@@ -107,7 +105,7 @@ the work.
 
 > The subgraphs reference each other's entities, so individual publishes may report a transient
 > composition error until every subgraph is present. Once all of them are published, composition
-> succeeds — verify in Step 4.
+> succeeds.
 
 ```bash
 # 1) employees — base entity
@@ -171,14 +169,6 @@ wgc federated-graph fetch entitycachegraph --namespace $NS
 wgc subgraph list --namespace $NS
 ```
 
-Add `-o/--out <dir>` to `fetch` to download the full set of files (all subgraph SDLs, the composed
-supergraph + client schema, the router execution config, and a composition manifest) into a
-folder instead of printing to stdout:
-
-```bash
-wgc federated-graph fetch entitycachegraph --namespace $NS --out entitycachegraph-export
-```
-
 ## Step 5 — Connect The Router
 
 The router authenticates to Cosmo Cloud with a **graph API token** and pulls the composed config
@@ -236,6 +226,11 @@ entity_caching:
 > not in a released router yet — it lives only on this branch. You must run the router built from
 > the local source, otherwise the cache directives and `entity_caching` config are ignored.
 
+Ensure that you have a redis instance running pointed to "redis://localhost:6379" (which was specified in the example router config). Example docker command to run redis.
+```bash
+docker run --name redis -p 6379:6379 redis:<version> --rm
+```
+
 Start the demo subgraphs first, then run the source router:
 
 ```bash
@@ -258,30 +253,21 @@ at wherever you saved it. The router authenticates with the token, pulls the com
   the same host as the demo subgraphs.
 - If you set `l2.enabled: true`, make sure Redis is reachable at the configured URL.
 
-> **Building a local image instead.** If you want a container, build one from this branch rather
-> than pulling `:latest`. The router Dockerfile's build context is the `router/` directory:
->
-> ```bash
-> docker build -t cosmo-router:local router/
-> docker run --rm \
->   -e GRAPH_API_TOKEN=$GRAPH_API_TOKEN \
->   -e LISTEN_ADDR=0.0.0.0:3002 \
->   -p 3002:3002 \
->   -v "$PWD/config.yaml:/config.yaml" -e CONFIG_PATH=/config.yaml \
->   cosmo-router:local
-> ```
->
-> Run the container with `--network host` (Linux) or point routing URLs at `host.docker.internal`
-> so it can reach the demo subgraphs on the host.
-
-At this point you have a **working baseline**: run a query at `http://localhost:3002/graphql` and
-confirm it resolves across the subgraphs. Entity caching is enabled on the router but does nothing
-yet because no entity is annotated — that's Step 6.
+At this point you have a **working baseline**: run the following query at `http://localhost:3002` and
+confirm it resolves across the subgraphs.
+```graphql
+{
+  employee(id: 1) {
+    id
+    expertise
+    isAvailable
+  }
+}
+```
 
 ## Step 6 — Add Cache Directives To The Demo SDLs
 
-Now layer caching on. Pick an entity, register the directive definitions in that subgraph's SDL,
-annotate the type, and republish. Composition regenerates the execution config with cache metadata
+Now we need to register the directive definitions in that subgraph's SDL, annotate the type, and republish. Composition regenerates the execution config with cache metadata
 and the running router picks it up.
 
 ### 6a. Register the directive definitions
@@ -340,10 +326,31 @@ wgc subgraph publish availability \
 
 If composition rejects a directive (for example, a non-positive `maxAge`), `wgc` reports the error
 — fix the SDL and republish. Composition emits the cache metadata into the execution config, and
-the running router polls and applies it automatically. Confirm the entity is now served from cache
-(second read shouldn't hit the subgraph) using the steps in [Verifying It Works](#verifying-it-works).
+the running router polls and applies it automatically.
 
-### 6d. Add invalidation (optional)
+First send the following query with the "Request Trace" dropdown selected on the top right (You should have the "X-WG-HEADER" set to "true"), you should see something similar to the following with "Load Skipped", having an "X" icon.
+
+Your first request
+```graphql
+{
+  employee(id: 1) {
+    id
+    expertise
+    isAvailable
+  }
+}
+```
+
+
+![First request — cache miss](./first-request.png)
+
+Afterwards, simply resend the request, you should now see the following (which is slightly different from the first screenshot), note that "Load Skipped" has been set to "true", which indicates that the subgraph was not called.
+
+![Second request — cache hit](./second-request.png)
+
+You can now confirm this even more by stopping the "availability" subgraph service in docker and resending the request, it should succeed for "120" seconds until the cache expires automatically. 
+
+### 6d. Add invalidation
 
 Once the plain cache works, layer on invalidation so writes don't serve stale data. The
 `availability` subgraph owns the `updateAvailability` mutation, which returns an `Employee` — add
@@ -358,7 +365,7 @@ type Mutation {
 ```
 
 Republish `availability` again. Now a warm read → `updateAvailability` → read again fetches fresh
-availability instead of the cached value.
+availability instead of the stale cached value.
 
 ## Available Directives
 
