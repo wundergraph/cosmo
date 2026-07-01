@@ -297,7 +297,7 @@ func buildEntityCacheInvalidationConfigs(
 			}
 			continue
 		}
-		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCache() {
+		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCacheConfigurations() {
 			if _, ok := result[subgraphName]; !ok {
 				result[subgraphName] = make(map[string]*resolve.EntityCacheInvalidationConfig)
 			}

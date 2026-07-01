@@ -292,7 +292,7 @@ func clearEntityCacheConfigs(rc *nodev1.RouterConfig) {
 // setEntityCacheTTL overrides MaxAgeSeconds on all entity cache configs.
 func setEntityCacheTTL(rc *nodev1.RouterConfig, ttl int64) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCache() {
+		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCacheConfigurations() {
 			ec.MaxAgeSeconds = ttl
 		}
 	}
@@ -301,7 +301,7 @@ func setEntityCacheTTL(rc *nodev1.RouterConfig, ttl int64) {
 // setEntityCacheShadowMode sets ShadowMode on all entity cache configs.
 func setEntityCacheShadowMode(rc *nodev1.RouterConfig, enabled bool) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCache() {
+		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCacheConfigurations() {
 			ec.ShadowMode = enabled
 		}
 	}
@@ -310,7 +310,7 @@ func setEntityCacheShadowMode(rc *nodev1.RouterConfig, enabled bool) {
 // setEntityCachePartialLoad sets PartialCacheLoad on all entity cache configs.
 func setEntityCachePartialLoad(rc *nodev1.RouterConfig, enabled bool) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCache() {
+		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCacheConfigurations() {
 			ec.PartialCacheLoad = enabled
 		}
 	}
@@ -319,7 +319,7 @@ func setEntityCachePartialLoad(rc *nodev1.RouterConfig, enabled bool) {
 // setEntityCacheIncludeHeaders sets IncludeHeaders on all entity cache configs.
 func setEntityCacheIncludeHeaders(rc *nodev1.RouterConfig, enabled bool) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCache() {
+		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCacheConfigurations() {
 			ec.IncludeHeaders = enabled
 		}
 	}
@@ -328,7 +328,7 @@ func setEntityCacheIncludeHeaders(rc *nodev1.RouterConfig, enabled bool) {
 // setNotFoundCacheTTL sets NotFoundCacheTtlSeconds on all entity cache configs.
 func setNotFoundCacheTTL(rc *nodev1.RouterConfig, ttl int64) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCache() {
+		for _, ec := range ds.GetEntityCachingConfiguration().GetEntityCacheConfigurations() {
 			ec.NotFoundCacheTtlSeconds = ttl
 		}
 	}

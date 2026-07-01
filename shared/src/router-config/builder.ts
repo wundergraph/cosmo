@@ -136,7 +136,7 @@ function extractEntityCachingConfiguration(
     return new EntityCachingConfiguration({
       cacheInvalidateConfigurations,
       cachePopulateConfigurations,
-      entityCache: entityCacheConfigurations,
+      entityCacheConfigurations,
     });
   }
 }
