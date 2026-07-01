@@ -622,6 +622,8 @@ func (s *graphServer) buildMultiGraphHandler(
 		featureFlagToMux[featureFlagName] = gm.mux
 	}
 
+	baseMux := opts.baseMux // Capture only baseMux so the closure does not hold the whole opts struct
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract the feature flag and run the corresponding mux
 		// 1. From the request header
@@ -641,7 +643,7 @@ func (s *graphServer) buildMultiGraphHandler(
 			return
 		}
 
-		opts.baseMux.ServeHTTP(w, r)
+		baseMux.ServeHTTP(w, r)
 	}, reused, nil
 }
 
@@ -2196,7 +2198,7 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	return finalErr
 }
 
-// startupPubSubProviders starts all pubsub providers
+// startupPubSubProviders starts the given pubsub providers
 // It returns an error if any of the providers fail to start
 // or if some providers takes to long to start
 func (s *graphServer) startupPubSubProviders(ctx context.Context) error {

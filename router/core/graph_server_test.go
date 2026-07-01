@@ -2,12 +2,18 @@ package core
 
 import (
 	"cmp"
+	"net/http"
+	"runtime"
 	"slices"
 	"testing"
+	"weak"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
+	"go.uber.org/zap"
 )
 
 func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
@@ -745,6 +751,42 @@ func TestCommitReusedMuxes(t *testing.T) {
 		require.Same(t, reusedFFMux, s.graphMuxList["rollout"])
 		require.True(t, reusedFFMux.reused.Load())
 		require.Len(t, s.graphMuxList, 3)
+	})
+}
+
+// The routing handler must not close over opts.currentGraphMuxes (the previous
+// server's muxes); doing so leaks a full graphServer per hot reload. A weak
+// pointer is used instead of a finalizer because the graphServer/mux graph is
+// cyclic, and finalizers never run on objects in a cycle.
+func TestBuildMultiGraphHandler(t *testing.T) {
+	t.Run("does not retain the previous server's graph muxes", func(t *testing.T) {
+		s := &graphServer{Config: &Config{logger: zap.NewNop()}}
+
+		// Build in a nested scope so only the handler can keep the muxes alive.
+		build := func() (http.HandlerFunc, weak.Pointer[graphMux]) {
+			// stale: a previous-server mux the new build never touches; must be collectable.
+			stale := &graphMux{mux: chi.NewMux()}
+			// active: unchanged flag, taken via the reuse branch (no buildGraphMux).
+			active := &graphMux{mux: chi.NewMux()}
+
+			handler, _, err := s.buildMultiGraphHandler(buildMultiGraphHandlerOptions{
+				baseMux:            chi.NewMux(),
+				featureFlagConfigs: map[string]*nodev1.FeatureFlagRouterExecutionConfig{"active": {}},
+				changes:            &routerconfig.Changes{}, // active unchanged => reused
+				currentGraphMuxes:  map[string]*graphMux{"active": active, "stale": stale},
+			})
+			require.NoError(t, err)
+
+			return handler, weak.Make(stale)
+		}
+
+		handler, weakStale := build()
+
+		runtime.GC()
+		runtime.GC()
+
+		require.Nil(t, weakStale.Value(), "handler retained the previous server's graph muxes")
+		runtime.KeepAlive(handler)
 	})
 }
 
