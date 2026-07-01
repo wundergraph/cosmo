@@ -411,6 +411,27 @@ func TestCache_DoubleClose(t *testing.T) {
 	})
 }
 
+func TestCache_CloseReleasesEntries(t *testing.T) {
+	t.Parallel()
+	c, err := New[*testPlan](10, 0)
+	require.NoError(t, err)
+
+	c.Set(1, &testPlan{content: "q1"}, 10*time.Millisecond)
+	c.Set(2, &testPlan{content: "q2"}, 20*time.Millisecond)
+	c.Set(3, &testPlan{content: "q3"}, 30*time.Millisecond)
+	c.Wait()
+
+	c.Close()
+
+	count := 0
+	c.entries.Range(func(_, _ any) bool {
+		count++
+		return true
+	})
+	require.Equal(t, 0, count, "entries sync.Map must be empty after Close")
+	require.Equal(t, int64(0), c.size)
+}
+
 func BenchmarkCache_Set(b *testing.B) {
 	c, err := New[*testPlan](1000, 0)
 	require.NoError(b, err)
