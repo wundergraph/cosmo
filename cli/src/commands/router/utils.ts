@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { basename, resolve, parse, sep } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import jwtDecode from 'jwt-decode';
 import pc from 'picocolors';
@@ -15,6 +14,8 @@ export const featureFlagsDir = 'feature-flags';
 export const latestFile = 'latest.json';
 export const mapperFile = 'mapper.json';
 export const routerConfigFile = 'router-config.json';
+
+const invalidCharacters = /[./]/;
 
 export async function getRouterConfigOutputFile(out: string): Promise<string> {
   let output: string = out;
@@ -127,26 +128,11 @@ export async function writeFeatureFlagConfigToFile(
   featureFlagName: string,
   featureFlagConfig: string,
 ) {
-  let outputDir = basePath;
-  let fileName = featureFlagName;
-  if (featureFlagName.includes('/') || featureFlagName.includes('\\')) {
-    const currentRoot = parse(process.cwd()).root;
-
-    const normalizedSlashes = dirname(fileName.replace(/\\/g, sep).replace(/\//g, sep));
-    fileName = basename(fileName);
-
-    if (normalizedSlashes && normalizedSlashes !== currentRoot) {
-      const normalizedSubpath = resolve(`${currentRoot}${sep}${normalizedSlashes}`);
-      if (normalizedSubpath !== currentRoot) {
-        outputDir = join(outputDir, normalizedSubpath);
-        if (!existsSync(outputDir)) {
-          await mkdir(outputDir, { recursive: true });
-        }
-      }
-    }
+  if (invalidCharacters.test(featureFlagName)) {
+    throw new Error(`The feature flag name "${featureFlagName}" contains invalid characters.`);
   }
 
-  await writeFile(join(outputDir, `${fileName}.json`), featureFlagConfig);
+  await writeFile(join(basePath, `${featureFlagName}.json`), featureFlagConfig);
 }
 
 async function fetchFileContentFromCdn(url: URL, token: string, graphSignKey?: string): Promise<string> {

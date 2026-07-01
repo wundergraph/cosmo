@@ -2,7 +2,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, test } from 'vitest';
 import { writeFeatureFlagConfigToFile, featureFlagsDir } from '../../src/commands/router/utils.js';
 
@@ -18,36 +17,21 @@ describe('writeFeatureFlagConfigToFile', () => {
   });
 
   test('that when no special characters are found, it is written to the base path', async () => {
-    const uniqueName = randomUUID();
+    const name = 'feature-flag';
 
-    expect(existsSync(join(basePath, `${uniqueName}.json`))).toBe(false);
-    await writeFeatureFlagConfigToFile(basePath, uniqueName, '');
-    expect(existsSync(join(basePath, `${uniqueName}.json`))).toBe(true);
-  });
-
-  test('that when a name starts with slash, it is written to the base path', async () => {
-    const uniqueName = randomUUID();
-
-    expect(existsSync(join(basePath, `${uniqueName}.json`))).toBe(false);
-    await writeFeatureFlagConfigToFile(basePath, `/${uniqueName}`, '');
-    expect(existsSync(join(basePath, `${uniqueName}.json`))).toBe(true);
-  });
-
-  test('that when `..` is found in the name, the file does not escape the base path', async () => {
-    const uniqueName = randomUUID();
-    const name = `../../../../${uniqueName}`;
-
-    expect(existsSync(join(basePath, `${uniqueName}.json`))).toBe(false);
+    expect(existsSync(join(basePath, `${name}.json`))).toBe(false);
     await writeFeatureFlagConfigToFile(basePath, name, '');
-    expect(existsSync(join(basePath, `${uniqueName}.json`))).toBe(true);
+    expect(existsSync(join(basePath, `${name}.json`))).toBe(true);
   });
 
-  test('that a name with special characters does not escape the base path', async () => {
-    const uniqueName = randomUUID();
-    const name = `feature/../../flag/${uniqueName}`;
-
-    expect(existsSync(join(basePath, 'flag', `${uniqueName}.json`))).toBe(false);
-    await writeFeatureFlagConfigToFile(basePath, name, '');
-    expect(existsSync(join(basePath, 'flag', `${uniqueName}.json`))).toBe(true);
-  });
+  test.each(['feature/name', 'feature.name', 'feature/../name', '../name'])(
+    'that it throws when name contains invalid characters',
+    async (name) => {
+      expect(existsSync(join(basePath, `${name}.json`))).toBe(false);
+      await expect(async () => await writeFeatureFlagConfigToFile(basePath, name, '')).rejects.toThrowError(
+        `The feature flag name "${name}" contains invalid characters.`,
+      );
+      expect(existsSync(join(basePath, `${name}.json`))).toBe(false);
+    },
+  );
 });
