@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.20.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.19.0...helm-cosmo@0.20.0) (2026-07-01)
+
+
+### Features
+
+* add script to delete data older than 90 days ([#2693](https://github.com/wundergraph/cosmo/issues/2693)) ([068592b](https://github.com/wundergraph/cosmo/commit/068592b99aaf5650327b7db7a5d0c4d421b345cc))
+* cron to enqueue inactive organizations for deletion ([#2418](https://github.com/wundergraph/cosmo/issues/2418)) ([1658315](https://github.com/wundergraph/cosmo/commit/1658315cb996954dd00c5c1af1bf2edf3509bb27))
+
 ## [0.19.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.18.0...helm-cosmo@0.19.0) (2026-06-04)
 
 
