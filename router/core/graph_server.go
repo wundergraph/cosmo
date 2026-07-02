@@ -1825,6 +1825,7 @@ func (s *graphServer) buildGraphMux(
 		Planner:                                operationPlanner,
 		AccessController:                       s.accessController,
 		OperationBlocker:                       operationBlocker,
+		InlineArgumentsChecker:                 NewInlineArgumentsChecker(s.securityConfiguration.DisallowInlineArguments),
 		RouterPublicKey:                        s.publicKey,
 		EnableRequestTracing:                   s.engineExecutionConfiguration.EnableRequestTracing,
 		ForceUnauthenticatedRequestTracing:     s.engineExecutionConfiguration.ForceUnauthenticatedRequestTracing,

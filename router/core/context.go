@@ -651,6 +651,8 @@ type operationContext struct {
 	validationTime    time.Duration
 	planningTime      time.Duration
 	normalizationTime time.Duration
+
+	inlineArgumentsAnnotation []byte
 }
 
 func (o *operationContext) Variables() *astjson.Value {

@@ -39,18 +39,19 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger             *zap.Logger
-	Executor           *Executor
-	Metrics            RouterMetrics
-	OperationProcessor *OperationProcessor
-	Planner            *OperationPlanner
-	AccessController   *AccessController
-	OperationBlocker   *OperationBlocker
-	RouterPublicKey    *ecdsa.PublicKey
-	TracerProvider     *sdktrace.TracerProvider
-	ComplexityLimits   *config.ComplexityLimits
-	MaxUploadFiles     int
-	MaxUploadFileSize  int
+	Logger                 *zap.Logger
+	Executor               *Executor
+	Metrics                RouterMetrics
+	OperationProcessor     *OperationProcessor
+	Planner                *OperationPlanner
+	AccessController       *AccessController
+	OperationBlocker       *OperationBlocker
+	InlineArgumentsChecker *InlineArgumentsChecker
+	RouterPublicKey        *ecdsa.PublicKey
+	TracerProvider         *sdktrace.TracerProvider
+	ComplexityLimits       *config.ComplexityLimits
+	MaxUploadFiles         int
+	MaxUploadFileSize      int
 
 	FlushTelemetryAfterResponse            bool
 	FileUploadEnabled                      bool
@@ -87,6 +88,7 @@ type PreHandler struct {
 	planner                                *OperationPlanner
 	accessController                       *AccessController
 	operationBlocker                       *OperationBlocker
+	inlineArgumentsChecker                 *InlineArgumentsChecker
 	headerPropagation                      *HeaderPropagation
 	developmentMode                        bool
 	forceUnauthenticatedRequestTracing     bool
@@ -153,6 +155,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		planner:                            opts.Planner,
 		accessController:                   opts.AccessController,
 		operationBlocker:                   opts.OperationBlocker,
+		inlineArgumentsChecker:             opts.InlineArgumentsChecker,
 		routerPublicKey:                    opts.RouterPublicKey,
 		developmentMode:                    opts.DevelopmentMode,
 		enableRequestTracing:               opts.EnableRequestTracing,
@@ -444,7 +447,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				}
 			}
 
-			writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
+			var inlineArgsErr *inlineArgumentsError
+			if errors.As(err, &inlineArgsErr) {
+				writeInlineArgumentsError(r, ww, inlineArgsErr, requestLogger, h.headerPropagation)
+			} else {
+				writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
+			}
 			return
 		}
 
@@ -712,6 +720,26 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		engineParseSpan.End()
 	}
 
+	// Set name and type as soon as parsing succeeds so that error paths below
+	// (e.g. the inline arguments checker) see the correct operation type when
+	// negotiating the response transport (SSE/multipart vs. plain JSON).
+	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
+	requestContext.operation.opType = operationKit.parsedOperation.Type
+
+	if h.inlineArgumentsChecker != nil {
+		annotation, inlineErr := h.inlineArgumentsChecker.Check(
+			operationKit.parsedOperation,
+			operationKit.kit.doc,
+			requestContext.logger,
+		)
+		if inlineErr != nil {
+			return inlineErr
+		}
+		if annotation != nil {
+			requestContext.operation.inlineArgumentsAnnotation = annotation
+		}
+	}
+
 	if h.accessController != nil {
 		// Based on the authentication result, the introspection config,
 		// and wether this is an introspection query,
@@ -742,9 +770,6 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 			}
 		}
 	}
-
-	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
-	requestContext.operation.opType = operationKit.parsedOperation.Type
 
 	requestContext.expressionContext.Request.Operation.Name = requestContext.operation.name
 	requestContext.expressionContext.Request.Operation.Type = requestContext.operation.opType

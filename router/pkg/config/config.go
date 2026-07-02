@@ -505,6 +505,7 @@ type SecurityConfiguration struct {
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
 	OperationNameLengthLimit    int                         `yaml:"operation_name_length_limit" envDefault:"512" env:"SECURITY_OPERATION_NAME_LENGTH_LIMIT"` // 0 is disabled
+	DisallowInlineArguments     DisallowInlineArguments     `yaml:"disallow_inline_arguments,omitempty"`
 }
 
 type ParserLimitsConfiguration struct {
@@ -592,6 +593,40 @@ type ComplexityLimit struct {
 
 func (c *ComplexityLimit) ApplyLimit(isPersistent bool) bool {
 	return c.Enabled && (!isPersistent || !c.IgnorePersistedOperations)
+}
+
+// DisallowInlineArgumentsMode controls whether inline argument values are allowed.
+type DisallowInlineArgumentsMode string
+
+const (
+	DisallowInlineArgumentsModeOff     DisallowInlineArgumentsMode = "off"
+	DisallowInlineArgumentsModeWarn    DisallowInlineArgumentsMode = "warn"
+	DisallowInlineArgumentsModeEnforce DisallowInlineArgumentsMode = "enforce"
+)
+
+// DisallowInlineArguments configures a policy that detects and optionally rejects
+// GraphQL operations that carry hardcoded inline argument values instead of variables.
+// The policy covers both field arguments and directive arguments (e.g. @include(if: true)).
+type DisallowInlineArguments struct {
+	// Mode controls the policy behavior:
+	// - "off" (default): the scan is never run; no overhead.
+	// - "warn": inline arguments are detected and logged; the operation succeeds with an extensions annotation.
+	// - "enforce": inline arguments cause the operation to be rejected before normalization.
+	Mode DisallowInlineArgumentsMode `yaml:"mode,omitempty" json:"mode,omitempty" envDefault:"off"`
+
+	// EnforceHTTPStatusCode is the HTTP status returned in enforce mode.
+	// Defaults to 400. Use 200 for strict GraphQL-spec compliance.
+	EnforceHTTPStatusCode int `yaml:"enforce_http_status_code,omitempty" json:"enforce_http_status_code,omitempty" envDefault:"400"`
+
+	// ErrorCode is the GraphQL error extensions.code emitted on rejection or annotation.
+	ErrorCode string `yaml:"error_code,omitempty" json:"error_code,omitempty" envDefault:"INLINE_ARGUMENT_VALUES_NOT_ALLOWED"`
+
+	// ErrorMessage is the human-readable error/hint message.
+	ErrorMessage string `yaml:"error_message,omitempty" json:"error_message,omitempty" envDefault:"Inline argument values are not allowed. Use variables instead."`
+
+	// IncludePersistedOperations, when true, applies the policy to persisted operations as well.
+	// By default (false) persisted operations are exempt because they are stored server-side and intentional.
+	IncludePersistedOperations bool `yaml:"include_persisted_operations,omitempty" json:"include_persisted_operations,omitempty" envDefault:"false"`
 }
 
 type OverrideRoutingURLConfiguration struct {

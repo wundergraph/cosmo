@@ -10,6 +10,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
+
+	"github.com/buger/jsonparser"
 
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -32,6 +35,16 @@ var (
 	errCouldNotFlushResponse    = errors.New("could not flush response")
 	errOperationPlanUnsupported = errors.New("unsupported operation plan")
 )
+
+// inlineArgsCaptureBufPool holds buffers used to capture the resolved response body
+// when the warn-mode inlineArguments extension needs to be injected before writing.
+var inlineArgsCaptureBufPool = sync.Pool{
+	New: func() any { return &bytes.Buffer{} },
+}
+
+// inlineArgsCaptureBufMaxRetainedCap bounds the capacity of buffers returned to the
+// pool so that a single very large response does not pin its memory indefinitely.
+const inlineArgsCaptureBufMaxRetainedCap = 1 << 20
 
 const (
 	ExecutionPlanCacheHeader          = "X-WG-Execution-Plan-Cache"
@@ -243,12 +256,35 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
+		// Capture the response body when warn-mode inline args were detected so we can inject the extension.
+		resolveWriter := io.Writer(hpw)
+		var captureBuf *bytes.Buffer
+		if len(reqCtx.operation.inlineArgumentsAnnotation) > 0 {
+			captureBuf = inlineArgsCaptureBufPool.Get().(*bytes.Buffer)
+			captureBuf.Reset()
+			defer func() {
+				if captureBuf.Cap() <= inlineArgsCaptureBufMaxRetainedCap {
+					inlineArgsCaptureBufPool.Put(captureBuf)
+				}
+			}()
+			resolveWriter = captureBuf
+		}
+
+		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, resolveWriter)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
 		if err != nil {
 			trackFinalResponseError(resolveCtx.Context(), err)
 			h.WriteError(resolveCtx, err, p.Response, w)
 			return
+		}
+
+		if captureBuf != nil {
+			body, setErr := jsonparser.Set(captureBuf.Bytes(), reqCtx.operation.inlineArgumentsAnnotation, "extensions", "inlineArguments")
+			if setErr != nil {
+				reqCtx.logger.Error("failed to inject inlineArguments annotation into response", zap.Error(setErr))
+				body = captureBuf.Bytes()
+			}
+			_, _ = hpw.Write(body)
 		}
 
 		// Compute actual cost for metrics/telemetry if not already set by the header callback
@@ -263,6 +299,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
 		graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
 	case *plan.SubscriptionResponsePlan:
+		if len(reqCtx.operation.inlineArgumentsAnnotation) > 0 {
+			reqCtx.logger.Warn("inline arguments annotation is not supported for subscription responses and will be omitted")
+		}
 		var (
 			writer resolve.SubscriptionResponseWriter
 			ok     bool

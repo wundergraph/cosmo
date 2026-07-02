@@ -427,7 +427,13 @@
       "ApproximateDepthLimit": 200,
       "TotalFieldsLimit": 3500
     },
-    "OperationNameLengthLimit": 512
+    "OperationNameLengthLimit": 512,
+    "DisallowInlineArguments": {
+      "mode": "off",
+      "enforce_http_status_code": 400,
+      "error_code": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
+      "error_message": "Inline argument values are not allowed. Use variables instead."
+    }
   },
   "EngineExecutionConfiguration": {
     "Debug": {

@@ -516,6 +516,12 @@ security:
     estimated_list_size: 10
     expose_headers: false
   operation_name_length_limit: 2000
+  disallow_inline_arguments:
+    mode: enforce
+    enforce_http_status_code: 422
+    error_code: VARIABLES_REQUIRED
+    error_message: 'Please use variables.'
+    include_persisted_operations: true
 persisted_operations:
   safelist:
     enabled: true
