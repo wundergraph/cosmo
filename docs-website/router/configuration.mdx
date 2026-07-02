@@ -2267,6 +2267,12 @@ The configuration for the security. The security is used to configure the securi
 |                                                   | parser_limits.approximate_depth_limit    | <Icon icon="square" /> | The approximate cumulative depth limit of a query, including fragments. Set to 0 to disable.                                       | 200           |
 |                                                   | parser_limits.total_fields_limit         | <Icon icon="square" /> | The total number of fields the parser will allow. Set to 0 to disable.                                                             | 3500          |
 | SECURITY_OPERATION_NAME_LENGTH_LIMIT              | operation_name_length_limit              | <Icon icon="square" /> | The maximum allowed length for the operation name. Set to 0 to disable.                                                            | 512           |
+|                                                   | disallow_inline_arguments                | <Icon icon="square" /> | Detect or reject operations that hardcode argument values instead of using variables. See [Disallow Inline Arguments](/router/security/disallow-inline-arguments). |               |
+|                                                   | disallow_inline_arguments.mode           | <Icon icon="square" /> | `off` disables the check; `warn` logs and annotates the response; `enforce` rejects the operation.                                 | off           |
+|                                                   | disallow_inline_arguments.enforce_http_status_code | <Icon icon="square" /> | The HTTP status code returned in enforce mode. Use 200 for strict GraphQL-spec compliance.                              | 400           |
+|                                                   | disallow_inline_arguments.error_code     | <Icon icon="square" /> | The GraphQL error `extensions.code` emitted on rejection or annotation.                                                            | INLINE_ARGUMENT_VALUES_NOT_ALLOWED |
+|                                                   | disallow_inline_arguments.error_message  | <Icon icon="square" /> | The human-readable error or hint message.                                                                                          | Inline argument values are not allowed. Use variables instead. |
+|                                                   | disallow_inline_arguments.include_persisted_operations | <Icon icon="square" /> | When true, the policy also applies to persisted operations. By default they are exempt.                              | false         |
 
 
 ### Example YAML Configuration
@@ -2309,6 +2315,12 @@ security:
     approximate_depth_limit: 300
     total_fields_limit: 700
   operation_name_length_limit: 1024
+  disallow_inline_arguments:
+    mode: warn # off | warn | enforce
+    enforce_http_status_code: 400
+    error_code: "INLINE_ARGUMENT_VALUES_NOT_ALLOWED"
+    error_message: "Inline argument values are not allowed. Use variables instead."
+    include_persisted_operations: false
 ```
 
 <Warning>

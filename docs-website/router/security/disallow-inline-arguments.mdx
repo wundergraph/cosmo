@@ -1,0 +1,136 @@
+---
+title: "Disallow Inline Arguments"
+description: "Detect or reject GraphQL operations that hardcode argument values instead of using variables"
+icon: brackets-curly
+---
+
+## Overview
+
+Inline argument values embed request data directly in the query document:
+
+```graphql
+query {
+  employee(id: 1) {
+    id
+  }
+}
+```
+
+The same operation written with variables keeps the document stable across requests:
+
+```graphql
+query ($id: Int!) {
+  employee(id: $id) {
+    id
+  }
+}
+```
+
+Hardcoded values cause practical problems at scale. Every distinct value produces a distinct document, which defeats operation-level caching and inflates normalization and plan cache cardinality. Inline values also leak request data such as user IDs into query documents, where they end up in logs and traces. Operations with inline values cannot be registered as persisted operations without one registration per value.
+
+The `security.disallow_inline_arguments` policy detects inline values in field arguments and directive arguments. Depending on the configured mode, the router logs them, annotates the response, or rejects the operation. Detection runs after parsing and before normalization, so it sees the document exactly as the client sent it.
+
+Values supplied through variables are compliant. This includes variable-definition default values and variable usage in directives such as `@include(if: $flag)`. A literal directive argument such as `@include(if: true)` is flagged.
+
+## Modes
+
+| Mode      | Behavior                                                                                                    |
+| --------- | ----------------------------------------------------------------------------------------------------------- |
+| `off`     | The check is disabled. This is the default.                                                                 |
+| `warn`    | The operation executes normally. The router logs a warning and annotates the response with an extensions hint. |
+| `enforce` | The router rejects the operation before execution.                                                          |
+
+The recommended migration path is to run `warn` mode first, identify offending clients from the logs, migrate them to variables, and then switch to `enforce`.
+
+## Configuration
+
+```yaml
+security:
+  disallow_inline_arguments:
+    mode: warn # off | warn | enforce
+    enforce_http_status_code: 400
+    error_code: "INLINE_ARGUMENT_VALUES_NOT_ALLOWED"
+    error_message: "Inline argument values are not allowed. Use variables instead."
+    include_persisted_operations: false
+```
+
+| Option                         | Default                                                          | Description                                                                                       |
+| ------------------------------ | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `mode`                         | `off`                                                            | Controls the policy behavior. One of `off`, `warn`, `enforce`.                                    |
+| `enforce_http_status_code`     | `400`                                                            | The HTTP status code returned in enforce mode. Use `200` for strict GraphQL-spec compliance.      |
+| `error_code`                   | `INLINE_ARGUMENT_VALUES_NOT_ALLOWED`                             | The `extensions.code` value emitted on rejection or annotation.                                   |
+| `error_message`                | `Inline argument values are not allowed. Use variables instead.` | The human-readable error or hint message.                                                         |
+| `include_persisted_operations` | `false`                                                          | When `true`, the policy also applies to persisted operations.                                     |
+
+These options have no environment variable equivalents. Configure them in the router configuration file.
+
+## Warn Mode
+
+In warn mode the operation executes normally and the response gains an `extensions.inlineArguments` annotation listing every offending argument with its position in the document. For the request `{ employee(id: 1) { id } }` the response is:
+
+```json
+{
+  "data": {
+    "employee": {
+      "id": 1
+    }
+  },
+  "extensions": {
+    "inlineArguments": {
+      "code": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
+      "message": "Inline argument values are not allowed. Use variables instead.",
+      "arguments": [
+        { "argument": "id", "valueKind": "Int", "line": 1, "column": 12 }
+      ]
+    }
+  }
+}
+```
+
+The router also emits a structured warning log, `inline arguments found in operation`, with the argument count, argument names, operation name, and the client name and version. Use these fields to build a per-client breakdown of inline argument usage before switching to enforce mode.
+
+<Info>
+  Subscription responses stream and cannot carry a response annotation. For
+  subscriptions and for operations sent over WebSocket connections, warn mode
+  logs only.
+</Info>
+
+## Enforce Mode
+
+In enforce mode the router rejects the operation with the configured HTTP status code before normalization, validation, and planning. No subgraph requests are made. The same request is rejected with:
+
+```json
+{
+  "errors": [
+    {
+      "message": "Inline argument values are not allowed. Use variables instead.",
+      "extensions": {
+        "code": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
+        "inlineArguments": {
+          "code": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
+          "message": "Inline argument values are not allowed. Use variables instead.",
+          "arguments": [
+            { "argument": "id", "valueKind": "Int", "line": 1, "column": 12 }
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+The top-level `extensions.code` supports client and APM error classification. The nested `inlineArguments` object carries the full detail for debugging.
+
+## Transports
+
+The policy applies to HTTP requests and WebSocket operations.
+
+Over WebSocket connections, enforce mode rejects the operation with a terminal `error` message carrying the same `extensions` payload as the HTTP response. The `enforce_http_status_code` option does not apply because WebSocket errors travel as protocol messages.
+
+## Persisted Operations
+
+Persisted operations are exempt by default. They are stored server-side and their contents are intentional. Set `include_persisted_operations: true` to apply the policy to them as well.
+
+## Telemetry
+
+When inline arguments are detected on an HTTP request, the router sets the `wg.operation.inline_arguments.count` attribute on the router root span, in both warn and enforce mode. Combine it with the client attributes on the same span to track which clients still send inline arguments.
