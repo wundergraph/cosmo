@@ -1,10 +1,10 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetInvitationsRequest, GetInvitationsResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OrganizationInvitationRepository } from '../../repositories/OrganizationInvitationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getInvitations(
   opts: RouterOptions,

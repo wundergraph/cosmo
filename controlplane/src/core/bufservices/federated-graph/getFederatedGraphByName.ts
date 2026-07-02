@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -6,13 +5,14 @@ import {
   GetFederatedGraphByNameResponse,
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { PlainMessage } from '../../../types/index.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { AnalyticsDashboardViewRepository } from '../../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
-import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getFederatedGraphByName(
   opts: RouterOptions,

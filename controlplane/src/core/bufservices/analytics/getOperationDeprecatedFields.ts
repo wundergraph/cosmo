@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { buildASTSchema } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -15,7 +14,7 @@ import type { RouterOptions } from '../../routes.js';
 import SchemaGraphPruner from '../../services/SchemaGraphPruner.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
-import { Field } from '../../../types/index.js';
+import { PlainMessage, Field } from '../../../types/index.js';
 
 export function getOperationDeprecatedFields(
   opts: RouterOptions,

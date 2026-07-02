@@ -1,4 +1,6 @@
-import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { RouterConfigSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { fromJson, fromJsonString } from '@bufbuild/protobuf';
+import type { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import type { JsonReadOptions, JsonValue } from '@bufbuild/protobuf';
 
 export function routerConfigFromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RouterConfig {
@@ -6,7 +8,7 @@ export function routerConfigFromJson(jsonValue: JsonValue, options?: Partial<Jso
     ...options,
     ignoreUnknownFields: true,
   };
-  return RouterConfig.fromJson(jsonValue, options);
+  return fromJson(RouterConfigSchema, jsonValue, options);
 }
 
 export function routerConfigFromJsonString(configAsText: string, options?: Partial<JsonReadOptions>): RouterConfig {
@@ -14,5 +16,5 @@ export function routerConfigFromJsonString(configAsText: string, options?: Parti
     ...options,
     ignoreUnknownFields: true,
   };
-  return RouterConfig.fromJsonString(configAsText, options);
+  return fromJsonString(RouterConfigSchema, configAsText, options);
 }

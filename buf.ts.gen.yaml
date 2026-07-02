@@ -2,10 +2,7 @@ version: v2
 plugins:
   - local: protoc-gen-es
     out: connect/src
-    opt: target=ts
-  - local: protoc-gen-connect-es
-    out: connect/src
-    opt: target=ts
+    opt: target=ts,import_extension=js
   - local: protoc-gen-connect-query
     out: connect/src
-    opt: target=ts
+    opt: target=ts,import_extension=js

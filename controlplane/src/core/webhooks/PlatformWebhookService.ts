@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import pino from 'pino';
 import axios, { AxiosError, AxiosInstance } from 'axios';
@@ -111,7 +110,7 @@ export class PlatformWebhookService implements IPlatformWebhookService {
 
 @traced
 export class MockPlatformWebhookService implements IPlatformWebhookService {
-  public sentEvents: Array<{ eventName: keyof EventMap; eventPayload: PlainMessage<any> }> = [];
+  public sentEvents: Array<{ eventName: keyof EventMap; eventPayload: any }> = [];
 
   send<T extends keyof EventMap>(eventName: T, eventPayload: EventMap[T]) {
     this.sentEvents.push({ eventName, eventPayload });

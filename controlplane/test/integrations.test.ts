@@ -1,18 +1,16 @@
-import { PartialMessage } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../src/types/index.js';
 import { ProposalNamingConvention, ProposalOrigin } from '../../connect/src/wg/cosmo/platform/v1/platform_pb.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, type PlainMessage } from '../src/types/index.js';
 import {
   createFederatedGraph,
   createNamespace,
   createThenPublishSubgraph,
-  DEFAULT_NAMESPACE,
   DEFAULT_ROUTER_URL,
   DEFAULT_SUBGRAPH_URL_ONE,
   resolvabilitySDLOne,
@@ -88,7 +86,7 @@ describe('Integration tests', (ctx) => {
     });
     expect(monographRes.response?.code).toBe(EnumStatusCode.OK);
 
-    const eventsMeta: PartialMessage<EventMeta>[] = [
+    const eventsMeta: PlainMessage<EventMeta>[] = [
       {
         eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
         meta: {
@@ -175,7 +173,7 @@ describe('Integration tests', (ctx) => {
     });
     expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    const eventsMeta: PartialMessage<EventMeta>[] = [
+    const eventsMeta: PlainMessage<EventMeta>[] = [
       {
         eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
         meta: {
@@ -279,7 +277,7 @@ describe('Integration tests', (ctx) => {
     });
     expect(monographRes.response?.code).toBe(EnumStatusCode.OK);
 
-    const eventsMeta: PartialMessage<EventMeta>[] = [
+    const eventsMeta: PlainMessage<EventMeta>[] = [
       {
         eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
         meta: {
@@ -363,7 +361,7 @@ describe('Integration tests', (ctx) => {
     });
     expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    const eventsMeta: PartialMessage<EventMeta>[] = [
+    const eventsMeta: PlainMessage<EventMeta>[] = [
       {
         eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
         meta: {

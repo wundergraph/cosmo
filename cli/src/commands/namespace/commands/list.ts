@@ -4,6 +4,7 @@ import { Command, program } from 'commander';
 import pc from 'picocolors';
 import Table from 'cli-table3';
 import { getBaseHeaders } from '../../../core/config.js';
+import { stripProtobufInternals } from '../../../utils.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 type OutputFile = {
@@ -46,7 +47,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.raw || options.json) {
-      console.log(JSON.stringify(resp.namespaces));
+      console.log(JSON.stringify(resp.namespaces, stripProtobufInternals));
       return;
     }
 

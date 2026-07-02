@@ -1,6 +1,8 @@
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+import { create, fromJsonString, toJsonString } from '@bufbuild/protobuf';
+import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
   buildRouterConfig,
   type ComposedSubgraph,
@@ -10,30 +12,34 @@ import {
   type RouterSubgraph,
   SubgraphKind,
 } from '@wundergraph/cosmo-shared';
-import semver from 'semver';
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
-import { basename, dirname, resolve, join } from 'pathe';
+import { basename, dirname, join, resolve } from 'pathe';
 import pc from 'picocolors';
-import { printSchemaWithDirectives } from '@graphql-tools/utils';
+import semver from 'semver';
+
 import {
-  FeatureFlagRouterExecutionConfig,
-  FeatureFlagRouterExecutionConfigs,
-  GRPCMapping,
-  RouterConfig,
+  FeatureFlagRouterExecutionConfigSchema,
+  FeatureFlagRouterExecutionConfigsSchema,
+  GRPCMappingSchema,
+  RouterConfigSchema,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import Table from 'cli-table3';
+
+import type { FeatureFlagRouterExecutionConfigs } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
 import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
+import Table from 'cli-table3';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 import {
-  mapperFile,
-  routerConfigFile,
   featureFlagsDir,
   getRouterConfigOutputFile,
+  mapperFile,
+  routerConfigFile,
   writeFeatureFlagConfigToFile,
 } from '../utils.js';
+import { HandleRouterConfigParams } from './types/params.js';
 import {
   Config,
   ConfigSubgraph,
@@ -45,7 +51,6 @@ import {
   SubgraphPluginConfig,
   SubgraphPluginMetadata,
 } from './types/types.js';
-import { HandleRouterConfigParams } from './types/params.js';
 
 const STATIC_SCHEMA_VERSION_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -126,7 +131,7 @@ async function handleSplitRouterConfig({
     return;
   }
 
-  const routerConfigJSON = routerConfig.toJsonString();
+  const routerConfigJSON = toJsonString(RouterConfigSchema, routerConfig);
   const mapper = new Map<string, string>();
   mapper.set('', createHash('sha256').update(routerConfigJSON).digest('hex'));
   await writeFile(join(outputDir, routerConfigFile), routerConfigJSON);
@@ -150,14 +155,14 @@ async function handleSplitRouterConfig({
   }
 
   for (const [featureFlagName, featureFlagConfig] of Object.entries(ffConfigs.configByFeatureFlagName)) {
-    const ffRouterConfig = new RouterConfig({
+    const ffRouterConfig = create(RouterConfigSchema, {
       engineConfig: featureFlagConfig.engineConfig,
       version: featureFlagConfig.version,
       subgraphs: featureFlagConfig.subgraphs,
       compatibilityVersion: routerConfig.compatibilityVersion,
     });
 
-    const routerConfigJson = ffRouterConfig.toJsonString();
+    const routerConfigJson = toJsonString(RouterConfigSchema, ffRouterConfig);
     await writeFeatureFlagConfigToFile(ffDir, featureFlagName, routerConfigJson);
     mapper.set(featureFlagName, createHash('sha256').update(routerConfigJson).digest('hex'));
   }
@@ -177,7 +182,7 @@ async function handleEmbeddedRouterConfig({
     routerConfig.featureFlagConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
   }
 
-  const routerConfigJson = routerConfig.toJsonString();
+  const routerConfigJson = toJsonString(RouterConfigSchema, routerConfig);
   if (options.out) {
     const output = await getRouterConfigOutputFile(options.out);
     await writeFile(output, routerConfigJson);
@@ -327,7 +332,7 @@ async function toSubgraphMetadataGRPC(inputFileLocation: string, s: GRPCSubgraph
   validateGRPCSubgraph(inputFileLocation, s);
 
   const mappingFileContent = await readFile(resolve(inputFileLocation, s.grpc.mapping_file), 'utf8');
-  const mapping = GRPCMapping.fromJsonString(mappingFileContent);
+  const mapping = fromJsonString(GRPCMappingSchema, mappingFileContent);
 
   const protoSchemaFileContent = await readFile(resolve(inputFileLocation, s.grpc.proto_file), 'utf8');
   const sdl = await readFile(resolve(inputFileLocation, s.grpc.schema_file), 'utf8');
@@ -372,7 +377,7 @@ async function toSubgraphMetadataPlugin(
     protoSchema,
     version: s.plugin.version,
     sdl,
-    mapping: GRPCMapping.fromJsonString(mappingFile),
+    mapping: fromJsonString(GRPCMappingSchema, mappingFile),
   };
 }
 
@@ -539,7 +544,7 @@ async function buildFeatureFlagsConfig(
   subgraphs: SubgraphMetaData[],
   options: any,
 ): Promise<FeatureFlagRouterExecutionConfigs> {
-  const ffConfigs: FeatureFlagRouterExecutionConfigs = new FeatureFlagRouterExecutionConfigs();
+  const ffConfigs: FeatureFlagRouterExecutionConfigs = create(FeatureFlagRouterExecutionConfigsSchema);
 
   // @TODO This logic should exist only once in the shared package and reused across
   // control-plane and cli
@@ -696,7 +701,7 @@ async function buildFeatureFlagsConfig(
       }),
     });
 
-    ffConfigs.configByFeatureFlagName[ff.name] = new FeatureFlagRouterExecutionConfig({
+    ffConfigs.configByFeatureFlagName[ff.name] = create(FeatureFlagRouterExecutionConfigSchema, {
       version: featureRouterConfig.version,
       subgraphs: featureRouterConfig.subgraphs,
       engineConfig: featureRouterConfig.engineConfig,

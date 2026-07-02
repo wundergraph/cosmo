@@ -42,7 +42,7 @@ describe('Subgraph', (ctx) => {
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
 
-    let resp = await client.createFederatedSubgraph({
+    const resp = await client.createFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       labels: [label],
@@ -51,13 +51,13 @@ describe('Subgraph', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    const publishResp = await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       schema: 'type Query { hello: String! }',
     });
 
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
   });
 
   test('Should create a subgraph when subgraph did not exist before on publish', async (testContext) => {
@@ -125,7 +125,7 @@ describe('Subgraph', (ctx) => {
     expect(subgraph.response?.code).toBe(EnumStatusCode.OK);
     expect(subgraph.graph?.readme).toBe(readme);
     expect(subgraph.graph?.routingURL).toBe('http://localhost:8080');
-    expect(subgraph.graph?.labels).toEqual([label]);
+    expect(subgraph.graph?.labels).toMatchObject([label]);
   });
 
   test('Should be able to create a subgraph with a readme and update it later.', async (testContext) => {
@@ -163,6 +163,6 @@ describe('Subgraph', (ctx) => {
     expect(subgraph.response?.code).toBe(EnumStatusCode.OK);
     expect(subgraph.graph?.readme).toBe(updatedReadme);
     expect(subgraph.graph?.routingURL).toBe('http://localhost:8080');
-    expect(subgraph.graph?.labels).toEqual([label]);
+    expect(subgraph.graph?.labels).toMatchObject([label]);
   });
 });

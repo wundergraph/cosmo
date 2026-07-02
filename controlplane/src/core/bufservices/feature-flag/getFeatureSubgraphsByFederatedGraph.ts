@@ -1,10 +1,10 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetFeatureSubgraphsByFederatedGraphRequest,
   GetFeatureSubgraphsByFederatedGraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { PlainMessage } from '../../../types/index.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';

@@ -1,5 +1,5 @@
 import { writeFile } from 'node:fs/promises';
-import { Response } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { Response } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';

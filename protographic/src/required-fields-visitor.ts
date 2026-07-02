@@ -18,7 +18,12 @@ import {
   SelectionSetNode,
   visit,
 } from 'graphql';
-import { ArgumentMapping, FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { create } from '@bufbuild/protobuf';
+import {
+  ArgumentMappingSchema,
+  FieldMappingSchema,
+  type FieldMapping,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   CompositeMessageDefinition,
   CompositeMessageKind,
@@ -153,16 +158,15 @@ export class RequiredFieldsVisitor {
         continue;
       }
 
-      const argumentMappings = this.requiredField.args.map(
-        (arg) =>
-          new ArgumentMapping({
-            original: arg.name,
-            mapped: graphqlArgumentToProtoField(arg.name),
-          }),
+      const argumentMappings = this.requiredField.args.map((arg) =>
+        create(ArgumentMappingSchema, {
+          original: arg.name,
+          mapped: graphqlArgumentToProtoField(arg.name),
+        }),
       );
 
       this.mapping[this.currentKeyFieldsString] = {
-        requiredFieldMapping: new FieldMapping({
+        requiredFieldMapping: create(FieldMappingSchema, {
           original: this.requiredField.name,
           mapped: graphqlFieldToProtoField(this.requiredField.name),
           argumentMappings,

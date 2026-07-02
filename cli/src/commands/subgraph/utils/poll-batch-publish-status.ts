@@ -1,5 +1,7 @@
+import { create } from '@bufbuild/protobuf';
 import {
-  PublishFederatedSubgraphsResponse,
+  type PublishFederatedSubgraphsResponse,
+  PublishFederatedSubgraphsResponseSchema,
   BatchPublishJobStatus,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -23,7 +25,7 @@ export async function pollBatchPublishStatus(
     const resp = await client.platform.getBatchPublishJobStatus({ jobId }, { headers, signal });
     const respCode = resp.response?.code;
     if (respCode === undefined || !EXPECTED_STATUS_CODES.has(respCode)) {
-      return new PublishFederatedSubgraphsResponse({
+      return create(PublishFederatedSubgraphsResponseSchema, {
         response: resp.response,
       });
     }
@@ -35,7 +37,7 @@ export async function pollBatchPublishStatus(
         break;
       }
       case BatchPublishJobStatus.FAILED: {
-        return new PublishFederatedSubgraphsResponse({
+        return create(PublishFederatedSubgraphsResponseSchema, {
           response: {
             code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
             details: resp.failureReason,
@@ -43,9 +45,13 @@ export async function pollBatchPublishStatus(
         });
       }
       case BatchPublishJobStatus.COMPLETED: {
-        return new PublishFederatedSubgraphsResponse({
+        return create(PublishFederatedSubgraphsResponseSchema, {
           response: { code: EnumStatusCode.OK },
-          ...resp,
+          compositionErrors: resp.compositionErrors,
+          deploymentErrors: resp.deploymentErrors,
+          compositionWarnings: resp.compositionWarnings,
+          counts: resp.counts,
+          updatedSubgraphNames: resp.updatedSubgraphNames,
         });
       }
     }
@@ -55,7 +61,7 @@ export async function pollBatchPublishStatus(
    * The only reason we should realistically get here is due to `signal` being aborted; however, we still need
    * to return a response object
    */
-  return new PublishFederatedSubgraphsResponse({
+  return create(PublishFederatedSubgraphsResponseSchema, {
     response: {
       code: EnumStatusCode.ERR,
       details: signal.aborted ? 'Operation was cancelled by the user.' : undefined,

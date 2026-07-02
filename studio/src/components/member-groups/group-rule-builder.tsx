@@ -1,7 +1,10 @@
 import {
-  UpdateOrganizationGroupRequest_GroupRule,
+  type UpdateOrganizationGroupRequest_GroupRule,
+  UpdateOrganizationGroupRequest_GroupRuleSchema,
   GetUserAccessibleResourcesResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
+import { create } from '@bufbuild/protobuf';
 import { roles as originalRoles } from '@/lib/constants';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -53,7 +56,7 @@ export function GroupRuleBuilder({
 
     setPopoverOpen(false);
 
-    onRuleUpdated(new UpdateOrganizationGroupRequest_GroupRule({ role }));
+    onRuleUpdated(create(UpdateOrganizationGroupRequest_GroupRuleSchema, { role }));
   };
 
   return (

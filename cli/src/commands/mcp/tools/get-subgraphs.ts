@@ -1,6 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { z } from 'zod';
-import { Subgraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { Subgraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { getBaseHeaders } from '../../../core/config.js';
 import { ToolContext } from './types.js';
 

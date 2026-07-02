@@ -1,29 +1,30 @@
 import { describe, expect, test } from 'vitest';
+import { create } from '@bufbuild/protobuf';
 import {
-  SubscriptionFieldCondition,
-  SubscriptionFilterCondition,
+  SubscriptionFieldConditionSchema,
+  SubscriptionFilterConditionSchema,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { generateSubscriptionFilterCondition } from '../src/router-config/graphql-configuration';
 import { subscriptionFilterCondition } from './testdata/utils';
 
 describe('Subscription filter proto generation tests', () => {
   test('that a proto message is generated correctly', () => {
-    const proto = new SubscriptionFilterCondition();
+    const proto = create(SubscriptionFilterConditionSchema);
     generateSubscriptionFilterCondition(proto, subscriptionFilterCondition);
     expect(proto).toStrictEqual(
-      new SubscriptionFilterCondition({
+      create(SubscriptionFilterConditionSchema, {
         and: [
-          new SubscriptionFilterCondition({
-            not: new SubscriptionFilterCondition({
+          create(SubscriptionFilterConditionSchema, {
+            not: create(SubscriptionFilterConditionSchema, {
               or: [
-                new SubscriptionFilterCondition({
-                  in: new SubscriptionFieldCondition({
+                create(SubscriptionFilterConditionSchema, {
+                  in: create(SubscriptionFieldConditionSchema, {
                     fieldPath: ['name'],
                     json: `["Jens","Stefan"]`,
                   }),
                 }),
-                new SubscriptionFilterCondition({
-                  in: new SubscriptionFieldCondition({
+                create(SubscriptionFilterConditionSchema, {
+                  in: create(SubscriptionFieldConditionSchema, {
                     fieldPath: ['age'],
                     json: `[11,22]`,
                   }),
@@ -31,18 +32,18 @@ describe('Subscription filter proto generation tests', () => {
               ],
             }),
           }),
-          new SubscriptionFilterCondition({
+          create(SubscriptionFilterConditionSchema, {
             and: [
-              new SubscriptionFilterCondition({
-                not: new SubscriptionFilterCondition({
-                  in: new SubscriptionFieldCondition({
+              create(SubscriptionFilterConditionSchema, {
+                not: create(SubscriptionFilterConditionSchema, {
+                  in: create(SubscriptionFieldConditionSchema, {
                     fieldPath: ['products', 'sku'],
                     json: `["aaa"]`,
                   }),
                 }),
               }),
-              new SubscriptionFilterCondition({
-                in: new SubscriptionFieldCondition({
+              create(SubscriptionFilterConditionSchema, {
+                in: create(SubscriptionFieldConditionSchema, {
                   fieldPath: ['products', 'continent'],
                   json: `["N/A"]`,
                 }),

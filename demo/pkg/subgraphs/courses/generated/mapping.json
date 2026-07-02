@@ -59,8 +59,7 @@
       "key": "id",
       "rpc": "LookupEmployeeById",
       "request": "LookupEmployeeByIdRequest",
-      "response": "LookupEmployeeByIdResponse",
-      "requiredFieldMappings": []
+      "response": "LookupEmployeeByIdResponse"
     }
   ],
   "typeFieldMappings": [
@@ -69,8 +68,7 @@
       "fieldMappings": [
         {
           "original": "courses",
-          "mapped": "courses",
-          "argumentMappings": []
+          "mapped": "courses"
         },
         {
           "original": "course",
@@ -94,13 +92,11 @@
         },
         {
           "original": "killCoursesService",
-          "mapped": "kill_courses_service",
-          "argumentMappings": []
+          "mapped": "kill_courses_service"
         },
         {
           "original": "throwErrorCourses",
-          "mapped": "throw_error_courses",
-          "argumentMappings": []
+          "mapped": "throw_error_courses"
         }
       ]
     },
@@ -146,28 +142,23 @@
       "fieldMappings": [
         {
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
           "original": "title",
-          "mapped": "title",
-          "argumentMappings": []
+          "mapped": "title"
         },
         {
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
           "original": "instructor",
-          "mapped": "instructor",
-          "argumentMappings": []
+          "mapped": "instructor"
         },
         {
           "original": "lessons",
-          "mapped": "lessons",
-          "argumentMappings": []
+          "mapped": "lessons"
         }
       ]
     },
@@ -176,33 +167,27 @@
       "fieldMappings": [
         {
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
           "original": "courseId",
-          "mapped": "course_id",
-          "argumentMappings": []
+          "mapped": "course_id"
         },
         {
           "original": "title",
-          "mapped": "title",
-          "argumentMappings": []
+          "mapped": "title"
         },
         {
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
           "original": "order",
-          "mapped": "order",
-          "argumentMappings": []
+          "mapped": "order"
         },
         {
           "original": "course",
-          "mapped": "course",
-          "argumentMappings": []
+          "mapped": "course"
         }
       ]
     },
@@ -211,17 +196,13 @@
       "fieldMappings": [
         {
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
           "original": "taughtCourses",
-          "mapped": "taught_courses",
-          "argumentMappings": []
+          "mapped": "taught_courses"
         }
       ]
     }
-  ],
-  "enumMappings": [],
-  "resolveMappings": []
+  ]
 }

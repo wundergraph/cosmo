@@ -1,4 +1,4 @@
-import { GRPCMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import type { GRPCMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { SubgraphKind, type SubscriptionProtocol, type WebsocketSubprotocol } from '@wundergraph/cosmo-shared';
 
 export type ConfigSubgraph = StandardSubgraphConfig | SubgraphPluginConfig | GRPCSubgraphConfig;

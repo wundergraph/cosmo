@@ -1,7 +1,7 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetOnboardingRequest, GetOnboardingResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { PlainMessage } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OnboardingRepository } from '../../repositories/OnboardingRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';

@@ -71,13 +71,13 @@ async function setupTestGraphs(postSpy: ReturnType<typeof vi.spyOn>) {
 
   expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-  resp = await client.publishFederatedSubgraph({
+  let publishResp = await client.publishFederatedSubgraph({
     name: subgraph1Name,
     namespace: 'default',
     schema: subgraph1Schema,
   });
 
-  expect(resp.response?.code).toBe(EnumStatusCode.OK);
+  expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
 
   // Create and publish second subgraph
   resp = await client.createFederatedSubgraph({
@@ -89,13 +89,13 @@ async function setupTestGraphs(postSpy: ReturnType<typeof vi.spyOn>) {
 
   expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-  resp = await client.publishFederatedSubgraph({
+  publishResp = await client.publishFederatedSubgraph({
     name: subgraph2Name,
     namespace: 'default',
     schema: subgraph2Schema,
   });
 
-  expect(resp.response?.code).toBe(EnumStatusCode.OK);
+  expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
 
   vi.spyOn(axios, 'create').mockReturnValue({
     post: postSpy,

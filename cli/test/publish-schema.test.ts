@@ -2,10 +2,8 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, test, vi, type MockInstance } from 'vitest';
 import { Command } from 'commander';
-import { type PartialMessage } from '@bufbuild/protobuf';
-import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { PublishFederatedSubgraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { createClient, createRouterTransport } from '@connectrpc/connect';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { dirname } from 'pathe';
 import { Client } from '../src/core/client/client.js';
@@ -14,7 +12,7 @@ import PublishSchema from '../src/commands/subgraph/commands/publish.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const schemaPath = resolve(__dirname, 'fixtures', 'schema.graphql');
 
-function createMockTransport(response: PartialMessage<PublishFederatedSubgraphResponse>) {
+function createMockTransport(response: any) {
   return createRouterTransport(({ service }) => {
     service(PlatformService, {
       publishFederatedSubgraph: () => response,
@@ -23,7 +21,7 @@ function createMockTransport(response: PartialMessage<PublishFederatedSubgraphRe
 }
 
 async function runPublish(
-  response: PartialMessage<PublishFederatedSubgraphResponse>,
+  response: any,
   opts: {
     failOnCompositionError?: boolean;
     failOnAdmissionWebhookError?: boolean;
@@ -42,7 +40,7 @@ async function runPublish(
   }
 
   const client: Client = {
-    platform: createPromiseClient(PlatformService, createMockTransport(response)),
+    platform: createClient(PlatformService, createMockTransport(response)),
   };
   const program = new Command();
   program.addCommand(PublishSchema({ client }));
@@ -65,7 +63,7 @@ export const mockPlatformTransport = () =>
 describe('Schema Command', () => {
   test('Publish Schema', () => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      platform: createClient(PlatformService, mockPlatformTransport()),
       // @ts-ignore
       node: null,
     };

@@ -1,10 +1,10 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   UpdateOrganizationLoginMethodsRequest,
   UpdateOrganizationLoginMethodsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { PlainMessage } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { NamespaceLoginMethodRepository } from '../../repositories/NamespaceLoginMethodRepository.js';
 import { OidcRepository } from '../../repositories/OidcRepository.js';

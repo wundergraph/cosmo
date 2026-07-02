@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { Command } from 'commander';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { createClient, createRouterTransport } from '@connectrpc/connect';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import FetchCommand from '../../../src/commands/graph/federated-graph/commands/fetch.js';
 import { Client } from '../../../src/core/client/client.js';
@@ -62,7 +62,7 @@ describe('federated-graph fetch command tests', () => {
 
   test('that router config matches expected snapshot when config splitting is disabled', async () => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport(false)),
+      platform: createClient(PlatformService, mockPlatformTransport(false)),
     };
 
     global.fetch = vi.fn(mockFetchRouterConfig);
@@ -92,7 +92,7 @@ describe('federated-graph fetch command tests', () => {
 
   test('that router config matches expected snapshot when config splitting is enabled ', async () => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport(true)),
+      platform: createClient(PlatformService, mockPlatformTransport(true)),
     };
 
     global.fetch = vi.fn(mockFetchRouterConfig);

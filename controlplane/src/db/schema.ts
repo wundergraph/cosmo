@@ -17,12 +17,12 @@ import {
   real,
 } from 'drizzle-orm/pg-core';
 import { AxiosHeaderValue } from 'axios';
-import type { PlainMessage } from '@bufbuild/protobuf';
 import type {
   CompositionError,
   CompositionWarning,
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { PlainMessage } from '../types/index.js';
 import { FeatureIds } from '../types/index.js';
 import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction } from './models.js';
 

@@ -1,8 +1,7 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  CreateNamespaceRequest,
+  DeleteNamespaceRequest,
   DeleteNamespaceResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
@@ -13,10 +12,11 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function deleteNamespace(
   opts: RouterOptions,
-  req: CreateNamespaceRequest,
+  req: DeleteNamespaceRequest,
   ctx: HandlerContext,
 ): Promise<PlainMessage<DeleteNamespaceResponse>> {
   let logger = getLogger(ctx, opts.logger);

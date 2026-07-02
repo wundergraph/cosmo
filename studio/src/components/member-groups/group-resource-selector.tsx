@@ -1,8 +1,10 @@
 import { Popover, PopoverTrigger } from '@/components/ui/popover';
 import {
   UpdateOrganizationGroupRequest_GroupRule,
+  UpdateOrganizationGroupRequest_GroupRuleSchema,
   GetUserAccessibleResourcesResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { clone } from '@bufbuild/protobuf';
 import { roles } from '@/lib/constants';
 import { useMemo, useState } from 'react';
 import { PopoverContentWithScrollableContent } from '../popover-content-with-scrollable-content';
@@ -28,7 +30,7 @@ export function GroupResourceSelector({
   const availableResources = useGroupResources({ rule, activeRole, accessibleResources });
 
   const toggleResources = (resources: string[], isNamespaceResource: boolean) => {
-    const newRule = rule.clone();
+    const newRule = clone(UpdateOrganizationGroupRequest_GroupRuleSchema, rule);
     const setOfSelectedResources = new Set(isNamespaceResource ? rule.namespaces : rule.resources);
     for (const res of Array.from(new Set(resources))) {
       if (setOfSelectedResources.has(res)) {

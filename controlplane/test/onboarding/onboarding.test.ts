@@ -99,7 +99,7 @@ describe('Onboarding', () => {
 
       authenticator.changeUserWithSuppliedContext(adminAliceCompanyA);
 
-      await client.createOnboarding({ slack: true, email: false });
+      await client.createOnboarding({});
       await client.finishOnboarding({});
 
       const resp = await client.getOnboarding({});
@@ -140,7 +140,7 @@ describe('Onboarding', () => {
 
       authenticator.changeUserWithSuppliedContext(adminBobCompanyA!);
 
-      const resp = await client.createOnboarding({ slack: true, email: true });
+      const resp = await client.createOnboarding({});
 
       expect(resp.response?.code).toBe(EnumStatusCode.ERR);
       expect(resp.response?.details).toBe('Only the organization creator can create onboarding.');

@@ -1,11 +1,13 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { fromJson } from '@bufbuild/protobuf';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import {
   WorkspaceNamespace,
-  WorkspaceFederatedGraph,
-  WorkspaceSubgraph,
+  WorkspaceNamespaceSchema,
+  WorkspaceFederatedGraphSchema,
+  WorkspaceSubgraphSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, eq, inArray, SQL } from 'drizzle-orm';
+import { PlainMessage } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
 import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
@@ -34,7 +36,7 @@ export class WorkspaceService {
     // Step 2 - Initialize the response model and sort the namespaces alphabetically
     const result = namespaces
       .map((ns) =>
-        WorkspaceNamespace.fromJson({
+        fromJson(WorkspaceNamespaceSchema, {
           id: ns.id,
           name: ns.name,
           graphs: [],
@@ -102,7 +104,7 @@ export class WorkspaceService {
       numberOfFetchedGraphs += namespaceGraphs.length;
       namespace.graphs = namespaceGraphs
         .map((graph) =>
-          WorkspaceFederatedGraph.fromJson({
+          fromJson(WorkspaceFederatedGraphSchema, {
             id: graph.id,
             targetId: graph.targetId,
             name: graph.name,
@@ -152,7 +154,7 @@ export class WorkspaceService {
 
       graph.subgraphs = subgraphs
         .map((sg) =>
-          WorkspaceSubgraph.fromJson({
+          fromJson(WorkspaceSubgraphSchema, {
             id: sg.id,
             targetId: sg.targetId,
             name: sg.name,

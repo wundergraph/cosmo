@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -9,6 +8,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { BillingRepository } from '../../repositories/BillingRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { handleError } from '../../util.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getBillingPlans(
   opts: RouterOptions,

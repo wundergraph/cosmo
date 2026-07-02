@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { create } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { GroupMapper } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { GroupMapperSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { afterAllSetup, beforeAllSetup, TestUser } from '../src/core/test-util.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
@@ -30,7 +31,7 @@ describe('OIDC provider', (ctx) => {
       clientID: '0oab1c2',
       clientSecret: 'secret',
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),
@@ -91,7 +92,7 @@ describe('OIDC provider', (ctx) => {
       clientID: '0oab1c2',
       clientSecret: 'secret',
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),
@@ -110,7 +111,7 @@ describe('OIDC provider', (ctx) => {
       clientID: '0oab1c2',
       clientSecret: 'secret',
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),
@@ -135,7 +136,7 @@ describe('OIDC provider', (ctx) => {
       clientID: '0oab1c2',
       clientSecret: 'secret',
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),
@@ -215,7 +216,7 @@ describe('OIDC provider', (ctx) => {
       clientID: '0oab1c2',
       clientSecret: 'secret',
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),
@@ -266,7 +267,7 @@ describe('OIDC provider', (ctx) => {
       clientID: '0oab1c2',
       clientSecret: 'secret',
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),
@@ -292,11 +293,11 @@ describe('OIDC provider', (ctx) => {
     const updateMappersResponse = await client.updateIDPMappers({
       id: providerId,
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: developerGroup.groupId,
           ssoGroup: 'developer_group',
         }),
@@ -327,7 +328,7 @@ describe('OIDC provider', (ctx) => {
       clientID: '0oab1c2',
       clientSecret: 'secret',
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),
@@ -353,11 +354,11 @@ describe('OIDC provider', (ctx) => {
     let updateMappersResponse = await client.updateIDPMappers({
       id: provider.id,
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: developerGroup.groupId,
           ssoGroup: 'developer_group',
         }),
@@ -373,11 +374,11 @@ describe('OIDC provider', (ctx) => {
     updateMappersResponse = await client.updateIDPMappers({
       id: provider.id,
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: developerGroup.groupId,
           ssoGroup: 'developer_group',
         }),
@@ -401,7 +402,7 @@ describe('OIDC provider', (ctx) => {
       clientID: '0oab1c2',
       clientSecret: 'secret',
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),
@@ -426,7 +427,7 @@ describe('OIDC provider', (ctx) => {
       clientID: '0oab1c2',
       clientSecret: 'secret',
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),
@@ -451,11 +452,11 @@ describe('OIDC provider', (ctx) => {
     const updateMappersResponse = await client.updateIDPMappers({
       id: providerId,
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: developerGroup.groupId,
           ssoGroup: 'developer_group',
         }),
@@ -478,7 +479,7 @@ describe('OIDC provider', (ctx) => {
       clientID: '0oab1c2',
       clientSecret: 'secret',
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: adminGroup.groupId,
           ssoGroup: 'admin_group',
         }),

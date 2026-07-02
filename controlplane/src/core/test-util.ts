@@ -213,7 +213,9 @@ export function createTestContext(
     organizationName,
     email: userId + '@wg.com',
     apiKey: nuid.next(),
-    organizationSlug: `slug-${organizationId}`,
+    // Use only the first UUID segment so the slug stays within the 32-char
+    // limit enforced by organizationSlugSchema while remaining unique per test.
+    organizationSlug: `slug-${organizationId.split('-')[0]}`,
     organizationDeactivated,
     userDisplayName: userId,
     roles: groups,

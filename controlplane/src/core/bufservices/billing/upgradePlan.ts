@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { UpgradePlanRequest, UpgradePlanResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -8,6 +7,7 @@ import type { RouterOptions } from '../../routes.js';
 import { BillingService } from '../../services/BillingService.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function upgradePlan(
   opts: RouterOptions,

@@ -1,4 +1,6 @@
 import { describe, expect, it, test } from 'vitest';
+import { toJson } from '@bufbuild/protobuf';
+import { GRPCMappingSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { compileGraphQLToMapping } from '../../src/index.js';
 
 describe('GraphQL Federation to Proto Mapping', () => {
@@ -20,7 +22,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ProductService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {
@@ -119,7 +121,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ECommerceService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {
@@ -275,7 +277,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'InventoryService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {
@@ -394,7 +396,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ProductCatalogService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {
@@ -577,7 +579,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ProductService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {
@@ -663,7 +665,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ProductService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {
@@ -740,7 +742,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'OrderService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {
@@ -826,7 +828,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ProductService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {
@@ -916,7 +918,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ProductService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {
@@ -1006,7 +1008,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
     const mapping = compileGraphQLToMapping(sdl, 'ProductService');
 
     // RequireWarehouseStockHealthScoreByIdFields.RestockData
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {
@@ -1101,7 +1103,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
     const mapping = compileGraphQLToMapping(sdl, 'ProductService');
 
     // RequireWarehouseStockHealthScoreByIdFields.RestockData
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {
@@ -1207,7 +1209,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ProductService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {
@@ -1323,7 +1325,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'UserService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {
@@ -1464,7 +1466,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
       const mapping = compileGraphQLToMapping(sdl, 'MediaService');
 
-      const json = mapping.toJson() as any;
+      const json = toJson(GRPCMappingSchema, mapping) as any;
 
       // Should have entity mappings for interface AND concrete types
       const entityTypeNames = json.entityMappings.map((e: any) => e.typeName);
@@ -1608,7 +1610,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
       const mapping = compileGraphQLToMapping(sdl, 'AccountService');
 
-      const json = mapping.toJson() as any;
+      const json = toJson(GRPCMappingSchema, mapping) as any;
 
       // Interface gets one lookup by id
       const accountMappings = json.entityMappings.filter((e: any) => e.typeName === 'Account');
@@ -1767,7 +1769,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
       const mapping = compileGraphQLToMapping(sdl, 'VehicleService');
 
-      const json = mapping.toJson() as any;
+      const json = toJson(GRPCMappingSchema, mapping) as any;
 
       // All types should have composite key entity mappings
       const entityTypeNames = json.entityMappings.map((e: any) => e.typeName);
@@ -1906,7 +1908,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ProductService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "entityMappings": [
           {

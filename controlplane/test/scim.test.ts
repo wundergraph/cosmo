@@ -1,8 +1,8 @@
 import { uid } from 'uid';
 import { afterAll, beforeAll, describe, expect, vi, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { PromiseClient } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { Client } from '@connectrpc/connect';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Keycloak from '../src/core/services/Keycloak.js';
 import { afterAllSetup, beforeAllSetup, TestAuthenticator, UserTestData } from '../src/core/test-util.js';
 import { AuthContext } from '../src/types/index.js';
@@ -17,7 +17,7 @@ describe('Scim server v2.0', () => {
   let otherOrgUserTestData: (UserTestData & AuthContext) | undefined;
   let keycloakClient: Keycloak;
   let server: any;
-  let client: PromiseClient<typeof PlatformService>;
+  let client: Client<typeof PlatformService>;
   let authenticator: TestAuthenticator;
 
   beforeAll(async () => {

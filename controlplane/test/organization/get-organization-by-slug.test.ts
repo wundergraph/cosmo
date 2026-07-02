@@ -5,7 +5,7 @@ import { SetupTest } from '../test-util.js';
 import { afterAllSetup, beforeAllSetup } from '../../src/core/test-util.js';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 
-describe('router compatibility-version list tests', () => {
+describe('GetOrganizationBySlug', () => {
   let chClient: ClickHouseClient;
   let dbname = '';
 
@@ -34,7 +34,7 @@ describe('router compatibility-version list tests', () => {
 
   test('that an organization can be fetched by slug', async (testContext) => {
     const organizationId = randomUUID();
-    const organizationSlug = `slug-${organizationId}`;
+    const organizationSlug = `slug-${organizationId.split('-')[0]}`;
     const organizationName = 'company-a';
     const { client, server } = await SetupTest({ dbname, chClient, organizationId });
     testContext.onTestFinished(() => server.close());

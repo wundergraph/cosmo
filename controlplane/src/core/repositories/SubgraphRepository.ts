@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   CheckSubgraphSchemaResponse,
@@ -48,6 +47,7 @@ import {
   SubgraphDTO,
   SubgraphListFilterOptions,
   SubgraphMemberDTO,
+  PlainMessage,
   ComposeAndDeployResult,
   Feature,
 } from '../../types/index.js';

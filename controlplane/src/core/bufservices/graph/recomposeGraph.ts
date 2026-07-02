@@ -1,18 +1,17 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { RecomposeGraphRequest, RecomposeGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { AuthContext, FederatedGraphDTO, PlainMessage } from '../../../types/index.js';
+import { maxRowLimitForChecks } from '../../constants.js';
+import { UnauthorizedError } from '../../errors/errors.js';
+import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { CompositionService } from '../../services/CompositionService.js';
 import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
-import { UnauthorizedError } from '../../errors/errors.js';
-import { AuthContext, FederatedGraphDTO } from '../../../types/index.js';
-import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { maxRowLimitForChecks } from '../../constants.js';
-import { CompositionService } from '../../services/CompositionService.js';
 
 export function recomposeGraph(
   opts: RouterOptions,

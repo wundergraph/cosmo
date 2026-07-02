@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import {
   FederatedGraphMetrics,
   OperationRequestCount,
@@ -9,6 +8,7 @@ import { ClickHouseClient } from '../../clickhouse/index.js';
 import {
   DateRange,
   FederatedGraphRequestRateResult,
+  PlainMessage,
   SubgraphDTO,
   SubgraphLatencyResult,
   SubgraphRequestRateResult,
@@ -21,10 +21,7 @@ import { ClickHouseUnavailableError } from 'src/core/errors/errors.js';
 export class AnalyticsDashboardViewRepository {
   constructor(private client: ClickHouseClient) {}
 
-  public async getWeeklyRequestSeries(
-    federatedGraphId: string,
-    organizationId: string,
-  ): Promise<PlainMessage<RequestSeriesItem>[]> {
+  public async getWeeklyRequestSeries(federatedGraphId: string, organizationId: string) {
     const query = `
     SELECT toDate(timestamp) as timestamp, totalRequests, erroredRequests
       FROM (
