@@ -17,7 +17,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
-	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
@@ -299,9 +298,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
 		graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
 	case *plan.SubscriptionResponsePlan:
-		if len(reqCtx.operation.inlineArgumentsAnnotation) > 0 {
-			reqCtx.logger.Warn("inline arguments annotation is not supported for subscription responses and will be omitted")
-		}
 		var (
 			writer resolve.SubscriptionResponseWriter
 			ok     bool
@@ -586,13 +582,8 @@ func (h *GraphQLHandler) writeError(ctx *resolve.Context, err error, res *resolv
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(response)
-	if err != nil {
-		if rErrors.IsBrokenPipe(err) {
-			requestLogger.Warn("Broken pipe, unable to write error response", zap.Error(err))
-		} else {
-			requestLogger.Error("Unable to write error response", zap.Error(err))
-		}
+	if encErr := json.NewEncoder(w).Encode(response); encErr != nil {
+		logWriteResponseError(requestLogger, encErr)
 	}
 }
 

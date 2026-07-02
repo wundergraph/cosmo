@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"io"
 	"net"
 	"net/http"
 
@@ -242,32 +242,39 @@ func writeRawErrorBody(r *http.Request, w http.ResponseWriter, statusCode int, b
 
 	wgRequestParams := NegotiateSubscriptionParams(r, !isSubscription)
 
+	if wgRequestParams.UseSse || wgRequestParams.UseMultipart {
+		setSubscriptionHeaders(wgRequestParams, r, w)
+	} else {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	}
+	if statusCode != 0 {
+		w.WriteHeader(statusCode)
+	}
+
 	switch {
 	case wgRequestParams.UseSse:
-		setSubscriptionHeaders(wgRequestParams, r, w)
-		if statusCode != 0 {
-			w.WriteHeader(statusCode)
-		}
-		if _, err := fmt.Fprintf(w, "event: next\ndata: %s\n\n", body); err != nil {
+		if err := writeChunks(w, []byte(GetWriterPrefix(true, false, false)), body, []byte("\n\n")); err != nil {
 			logWriteResponseError(logger, err)
 		}
 	case wgRequestParams.UseMultipart:
-		setSubscriptionHeaders(wgRequestParams, r, w)
-		if statusCode != 0 {
-			w.WriteHeader(statusCode)
-		}
 		if err := writeMultipartError(w, body, isSubscription); err != nil && logger != nil {
 			logger.Error("error writing multipart response", zap.Error(err))
 		}
 	default:
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		if statusCode != 0 {
-			w.WriteHeader(statusCode)
-		}
 		if _, err := w.Write(body); err != nil {
 			logWriteResponseError(logger, err)
 		}
 	}
+}
+
+// writeChunks writes each chunk in order, stopping at the first write error.
+func writeChunks(w io.Writer, chunks ...[]byte) error {
+	for _, chunk := range chunks {
+		if _, err := w.Write(chunk); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func logWriteResponseError(logger *zap.Logger, err error) {
@@ -362,7 +369,10 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	var reportErr ReportError
 	var httpErr HttpError
 	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
+	var inlineArgsErr *inlineArgumentsError
 	switch {
+	case errors.As(err, &inlineArgsErr):
+		writeInlineArgumentsError(r, w, inlineArgsErr, requestLogger, propagation)
 	case errors.Is(err, context.Canceled):
 		newErr := NewHttpGraphqlError("request canceled", ExtCodeErrErrorRequestCanceled, http.StatusOK)
 		writeRequestErrors(writeRequestErrorsParams{

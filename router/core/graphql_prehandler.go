@@ -447,12 +447,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				}
 			}
 
-			var inlineArgsErr *inlineArgumentsError
-			if errors.As(err, &inlineArgsErr) {
-				writeInlineArgumentsError(r, ww, inlineArgsErr, requestLogger, h.headerPropagation)
-			} else {
-				writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
-			}
+			writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
 			return
 		}
 
@@ -727,17 +722,22 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.operation.opType = operationKit.parsedOperation.Type
 
 	if h.inlineArgumentsChecker != nil {
-		annotation, inlineErr := h.inlineArgumentsChecker.Check(
+		result, inlineErr := h.inlineArgumentsChecker.Check(
 			operationKit.parsedOperation,
 			operationKit.kit.doc,
+			requestContext.operation.clientInfo,
 			requestContext.logger,
 		)
+		if result.Count > 0 {
+			// Set directly on the router span (also on the rejection path, which returns
+			// before the common after-parse attributes are attached) so operators can
+			// build a per-client breakdown of inline argument usage before enforcing.
+			httpOperation.routerSpan.SetAttributes(otel.WgOperationInlineArgumentsCount.Int(result.Count))
+		}
 		if inlineErr != nil {
 			return inlineErr
 		}
-		if annotation != nil {
-			requestContext.operation.inlineArgumentsAnnotation = annotation
-		}
+		requestContext.operation.inlineArgumentsAnnotation = result.Annotation
 	}
 
 	if h.accessController != nil {

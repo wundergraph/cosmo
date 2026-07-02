@@ -49,32 +49,60 @@ func NewInlineArgumentsChecker(cfg config.DisallowInlineArguments) *InlineArgume
 	}
 }
 
+// InlineArgumentsResult reports the outcome of a Check.
+// Count is the number of inline arguments found (also when the operation is rejected),
+// Annotation is the pre-built extensions.inlineArguments JSON in warn mode.
+type InlineArgumentsResult struct {
+	Count      int
+	Annotation []byte
+}
+
 // Check scans doc.Arguments for non-variable values.
 // Warn mode returns a pre-built annotation JSON for the extensions.inlineArguments response field.
 // Enforce mode returns an error for immediate rejection.
-func (c *InlineArgumentsChecker) Check(op *ParsedOperation, doc *ast.Document, logger *zap.Logger) ([]byte, *inlineArgumentsError) {
+func (c *InlineArgumentsChecker) Check(op *ParsedOperation, doc *ast.Document, clientInfo *ClientInfo, logger *zap.Logger) (InlineArgumentsResult, *inlineArgumentsError) {
 	if op.IsPersistedOperation && !c.includePersistedOperations {
-		return nil, nil
+		return InlineArgumentsResult{}, nil
 	}
 
 	args := detectInlineArguments(doc)
 	if len(args) == 0 {
-		return nil, nil
+		return InlineArgumentsResult{}, nil
+	}
+	result := InlineArgumentsResult{Count: len(args)}
+
+	if ce := logger.Check(zap.WarnLevel, "inline arguments found in operation"); ce != nil {
+		names := make([]string, len(args))
+		for i, arg := range args {
+			names[i] = arg.Name
+		}
+		fields := []zap.Field{
+			zap.Int("count", len(args)),
+			zap.Strings("arguments", names),
+			zap.String("operation_name", op.Request.OperationName),
+		}
+		if clientInfo != nil {
+			fields = append(fields,
+				zap.String("client_name", clientInfo.Name),
+				zap.String("client_version", clientInfo.Version),
+			)
+		}
+		ce.Write(fields...)
 	}
 
-	logger.Warn("inline arguments found in operation",
-		zap.Int("count", len(args)),
-		zap.Any("arguments", args),
-		zap.String("operation_name", op.Request.OperationName),
-	)
-
 	if c.mode == config.DisallowInlineArgumentsModeEnforce {
-		return nil, &inlineArgumentsError{
+		return result, &inlineArgumentsError{
 			message:    c.errorMessage,
 			code:       c.errorCode,
 			statusCode: c.enforceHTTPStatusCode,
 			arguments:  args,
 		}
+	}
+
+	// Subscriptions stream their responses, so there is no single response body
+	// to annotate; the warn log and span attribute still cover them.
+	if op.Type == "subscription" {
+		return result, nil
 	}
 
 	annotation, err := json.Marshal(inlineArgumentsExtension{
@@ -84,9 +112,10 @@ func (c *InlineArgumentsChecker) Check(op *ParsedOperation, doc *ast.Document, l
 	})
 	if err != nil {
 		logger.Error("failed to marshal inlineArguments annotation", zap.Error(err))
-		return nil, nil
+		return result, nil
 	}
-	return annotation, nil
+	result.Annotation = annotation
+	return result, nil
 }
 
 // inlineArgumentsExtension is the extensions.inlineArguments payload, shared by the
