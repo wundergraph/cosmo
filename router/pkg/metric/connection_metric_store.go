@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -17,14 +18,12 @@ import (
 type ConnectionMetricProvider interface {
 	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureMaxConnections(ctx context.Context, count int64, opts ...otelmetric.RecordOption)
-	Flush(ctx context.Context) error
 	Shutdown() error
 }
 
 // ConnectionMetricStore is the interface for connection and pool metrics only.
 type ConnectionMetricStore interface {
 	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-	Flush(ctx context.Context) error
 	Shutdown(ctx context.Context) error
 }
 
@@ -90,30 +89,11 @@ func (c *ConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Context
 	c.promConnectionMetrics.MeasureConnectionAcquireDuration(ctx, duration, opts)
 }
 
-// Flush flushes the metrics to the backend synchronously.
-func (h *ConnectionMetrics) Flush(ctx context.Context) error {
+// Shutdown stops the metric instruments. It does not flush: the shared meter
+// providers are flushed once centrally during graph server shutdown to avoid
+// redundant ForceFlush calls that all compete for a single shutdown deadline.
+func (h *ConnectionMetrics) Shutdown(_ context.Context) error {
 	var err error
-
-	errOtlp := h.otlpConnectionMetrics.Flush(ctx)
-	if errOtlp != nil {
-		err = errors.Join(err, fmt.Errorf("failed to flush otlp metrics: %w", errOtlp))
-	}
-
-	errProm := h.promConnectionMetrics.Flush(ctx)
-	if errProm != nil {
-		err = errors.Join(err, fmt.Errorf("failed to flush prometheus metrics: %w", errProm))
-	}
-
-	return err
-}
-
-// Shutdown flushes the metrics and stops the runtime metrics.
-func (h *ConnectionMetrics) Shutdown(ctx context.Context) error {
-	var err error
-
-	if errFlush := h.Flush(ctx); errFlush != nil {
-		err = errors.Join(err, fmt.Errorf("failed to flush metrics: %w", errFlush))
-	}
 
 	if errProm := h.promConnectionMetrics.Shutdown(); errProm != nil {
 		err = errors.Join(err, fmt.Errorf("failed to shutdown prom metrics: %w", errProm))

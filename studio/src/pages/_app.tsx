@@ -21,6 +21,7 @@ import { useEffect } from 'react';
 import { Router } from 'next/router';
 import posthog from 'posthog-js';
 import { PostHogProvider } from 'posthog-js/react';
+import { hasAnalyticsConsent } from '@/hooks/use-analytics-consent';
 import { withErrorBoundary } from '@sentry/nextjs';
 import { Footer } from '@/components/layout/footer';
 import { OnboardingProvider } from '@/components/onboarding/onboarding-provider';
@@ -44,6 +45,9 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
 
     posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
       api_host: '/ingest',
+      // Track rejected/default opt-out users anonymously (no cookies); switch to
+      // full tracking only once the user opts in via Osano consent.
+      cookieless_mode: 'on_reject',
       loaded: (ph) => {
         if (process.env.NODE_ENV === 'development') ph.debug();
       },
@@ -56,6 +60,35 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
     return () => {
       Router.events.off('routeChangeComplete', handleRouteChange);
     };
+  }, []);
+
+  // Drive PostHog opt-in/out from Osano consent. Without consent (reject or no
+  // prior decision) capturing stays cookieless/anonymous; on accept it switches
+  // to full cookie-based tracking.
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return;
+
+    const applyConsent = () => {
+      if (hasAnalyticsConsent(window.Osano?.cm?.getConsent?.())) {
+        posthog.opt_in_capturing();
+        posthog.reloadFeatureFlags();
+      } else {
+        posthog.opt_out_capturing();
+      }
+    };
+
+    const onOsanoReady = () => {
+      applyConsent();
+      window.Osano?.cm?.addEventListener('osano-cm-consent-changed', applyConsent);
+    };
+
+    if (window.Osano?.cm) {
+      onOsanoReady();
+      return;
+    }
+
+    window.addEventListener('osano-cm-initialized', onOsanoReady, { once: true });
+    return () => window.removeEventListener('osano-cm-initialized', onOsanoReady);
   }, []);
 
   if (pageProps.markdoc) {

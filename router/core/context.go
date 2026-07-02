@@ -298,7 +298,6 @@ func (c *headerBuilder) HeadersForSubgraph(subgraphName string) (http.Header, ui
 }
 
 func SubgraphHeadersBuilder(ctx *requestContext, headerPropagation *HeaderPropagation, executionPlan plan.Plan) resolve.SubgraphHeadersBuilder {
-
 	keyGen := xxhash.New()
 
 	switch p := executionPlan.(type) {
@@ -658,8 +657,8 @@ func (o *operationContext) Variables() *astjson.Value {
 	return o.variables
 }
 
-func (c *operationContext) VariablesView() resolve.VariablesView {
-	return resolve.NewVariablesView(c.variables, c.remapVariables)
+func (o *operationContext) VariablesView() resolve.VariablesView {
+	return resolve.NewVariablesView(o.variables, o.remapVariables)
 }
 
 func (o *operationContext) Files() []*httpclient.FileUpload {
@@ -914,7 +913,6 @@ type requestContextOptions struct {
 }
 
 func buildRequestContext(opts requestContextOptions) *requestContext {
-
 	rootCtx := expr.Context{
 		Request: expr.LoadRequest(opts.r),
 	}

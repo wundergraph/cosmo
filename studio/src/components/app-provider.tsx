@@ -9,6 +9,7 @@ import { LoginMethod as ProtoLoginMethod } from '@wundergraph/cosmo-connect/dist
 import { useRouter } from 'next/router';
 import { ReactNode, createContext, useEffect, useState } from 'react';
 import { useCookieOrganization } from '@/hooks/use-cookie-organization';
+import { useAnalyticsConsent } from '@/hooks/use-analytics-consent';
 import { setUser as setSentryUser } from '@sentry/nextjs';
 import { OrganizationRole } from '@/lib/constants';
 import { WorkspaceProvider } from '@/components/dashboard/workspace-provider';
@@ -145,6 +146,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [queryResetCounter, setQueryResetCounter] = useState(-1);
   const queryClient = useQueryClient();
 
+  // identify() skips PostHog while opted out, so re-run it once consent is granted.
+  const analyticsConsented = useAnalyticsConsent();
+
   const [user, setUser] = useState<User>();
 
   useEffect(() => {
@@ -237,7 +241,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         router.replace(params.size !== 0 ? `/${organization.slug}?${params}` : `/${organization.slug}`);
       }
     }
-  }, [router, data, isFetching, error, cookieOrgSlug, isNewUser]);
+  }, [router, data, isFetching, error, cookieOrgSlug, isNewUser, analyticsConsented]);
 
   useEffect(() => {
     if (!verifiedOrganizationSlug) {

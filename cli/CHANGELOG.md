@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.127.0](https://github.com/wundergraph/cosmo/compare/wgc@0.126.2...wgc@0.127.0) (2026-07-01)
+
+### Features
+
+* add support for config splitting ([#2893](https://github.com/wundergraph/cosmo/issues/2893)) ([4d54ed9](https://github.com/wundergraph/cosmo/commit/4d54ed991997d2700e130e876199b53d4318538c)) (@wilsonrivera)
+
 ## [0.126.2](https://github.com/wundergraph/cosmo/compare/wgc@0.126.0...wgc@0.126.2) (2026-06-26)
 
 ### Bug Fixes

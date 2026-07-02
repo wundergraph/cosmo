@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.240.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.240.0...controlplane@0.240.1) (2026-07-02)
+
+### Bug Fixes
+
+* contracts composed multiple times ([#3040](https://github.com/wundergraph/cosmo/issues/3040)) ([a9650ee](https://github.com/wundergraph/cosmo/commit/a9650ee129698f1c4852ce3f2abcaa41ad488e05)) (@wilsonrivera)
+
+# [0.240.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.239.2...controlplane@0.240.0) (2026-07-01)
+
+### Features
+
+* add support for config splitting ([#2893](https://github.com/wundergraph/cosmo/issues/2893)) ([4d54ed9](https://github.com/wundergraph/cosmo/commit/4d54ed991997d2700e130e876199b53d4318538c)) (@wilsonrivera)
+
+## [0.239.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.239.1...controlplane@0.239.2) (2026-06-29)
+
+### Bug Fixes
+
+* incorrect number of feature flag composition when publishing feature subgraphs ([#3031](https://github.com/wundergraph/cosmo/issues/3031)) ([db31b60](https://github.com/wundergraph/cosmo/commit/db31b60e97f7a8f56684015f5cb931c5358c46d1)) (@wilsonrivera)
+
 ## [0.239.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.239.0...controlplane@0.239.1) (2026-06-26)
 
 **Note:** Version bump only for package controlplane
