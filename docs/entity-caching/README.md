@@ -7,7 +7,7 @@ configuration automatically.
 
 This guide is a **hands-on walkthrough** using the demo subgraphs in this repo
 (`demo/pkg/subgraphs`). It uses the **hosted Cosmo Cloud control plane** for composition — you do
-**not** need to compose locally. Along the way it explains each cache directive so you know what
+**not** need to compose locally. Along the way, it explains each cache directive so you know what
 you are annotating and why.
 
 By the end you will have:
@@ -74,7 +74,7 @@ Because every command below passes `--namespace $NS`, all resources land in this
 
 ## Step 2 — Create the Federated Graph
 
-`--routing-url` is where **your router** will serve (adjust to your router's address). The label
+`--routing-url` is the address your router will serve from (use your own router's address). The label
 matcher binds subgraphs to this graph: any subgraph whose labels satisfy it is included in
 composition.
 
@@ -97,9 +97,9 @@ First get a plain, working graph. Publish the demo schemas **as-is** — no cach
 so you have a baseline that composes and serves before layering caching on top.
 
 `wgc subgraph publish` creates the subgraph on first publish when you pass `--routing-url` and
-`--label` — so this both registers and pushes the schema. Composition runs on Cosmo Cloud; there
-is no local composition step and no source-built router required — the hosted control plane does
-the work.
+`--label`, so one command both registers and pushes the schema. Composition runs on Cosmo Cloud,
+with no local composition step and no source-built router required — the hosted control plane
+does the work.
 
 `employees` is the base entity graph, so publish it first; the rest extend the `Employee` entity.
 
@@ -226,7 +226,7 @@ entity_caching:
 > not in a released router yet — it lives only on this branch. You must run the router built from
 > the local source, otherwise the cache directives and `entity_caching` config are ignored.
 
-Ensure that you have a redis instance running pointed to "redis://localhost:6379" (which was specified in the example router config). Example docker command to run redis.
+Make sure you have a Redis instance running at "redis://localhost:6379" (as specified in the example router config above). Here's an example Docker command to start one:
 ```bash
 docker run --name redis -p 6379:6379 redis:<version> --rm
 ```
@@ -267,7 +267,7 @@ confirm it resolves across the subgraphs.
 
 ## Step 6 — Add Cache Directives To The Demo SDLs
 
-Now we need to register the directive definitions in that subgraph's SDL, annotate the type, and republish. Composition regenerates the execution config with cache metadata
+To add caching, register the directive definitions in the subgraph's SDL, annotate the type, and republish. Composition regenerates the execution config with cache metadata,
 and the running router picks it up.
 
 ### 6a. Register the directive definitions
@@ -328,9 +328,9 @@ If composition rejects a directive (for example, a non-positive `maxAge`), `wgc`
 — fix the SDL and republish. Composition emits the cache metadata into the execution config, and
 the running router polls and applies it automatically.
 
-First send the following query with the "Request Trace" dropdown selected on the top right (You should have the "X-WG-HEADER" set to "true"), you should see something similar to the following with "Load Skipped", having an "X" icon.
+Send the query below with the "Request Trace" dropdown open (top right) and `X-WG-HEADER` set to `true`. You should see a response like the one below, with "Load Skipped" shown as an X icon.
 
-Your first request
+**Your first request:**
 ```graphql
 {
   employee(id: 1) {
@@ -344,11 +344,11 @@ Your first request
 
 ![First request — cache miss](./first-request.png)
 
-Afterwards, simply resend the request, you should now see the following (which is slightly different from the first screenshot), note that "Load Skipped" has been set to "true", which indicates that the subgraph was not called.
+Resend the request. You should now see a response like the one below (slightly different from the first screenshot) — note that "Load Skipped" is now set to "true", which means the subgraph was not called.
 
 ![Second request — cache hit](./second-request.png)
 
-You can now confirm this even more by stopping the "availability" subgraph service in docker and resending the request, it should succeed for "120" seconds until the cache expires automatically. 
+You can confirm this further: stop the "availability" subgraph service in Docker and resend the request. It should keep succeeding for 120 seconds, until the cache expires automatically.
 
 ### 6d. Add invalidation
 
@@ -364,8 +364,9 @@ type Mutation {
 }
 ```
 
-Republish `availability` again. Now a warm read → `updateAvailability` → read again fetches fresh
-availability instead of the stale cached value.
+Republish `availability` again. Now the sequence looks like this: a warm (cached) read, then
+`updateAvailability`, then another read. That last read fetches fresh availability instead of the
+stale cached value.
 
 ## Available Directives
 
@@ -423,9 +424,9 @@ type Mutation {
 
 ## Not Yet Available
 
-Right now with `@openfed__cachePopulate` and `@openfed__cacheInvalidate` we only support simple keys. Using composite keys, alternative keys and/or nested keys could fail and not work as intended.
+Right now, `@openfed__cachePopulate` and `@openfed__cacheInvalidate` only support simple keys. Composite keys, alternative keys, and nested keys may fail or not work as intended.
 
-Additionally the following directives are part of the entity-caching design and will be documented and enabled
+Additionally, the following directives are part of the entity-caching design and will be documented and enabled
 in a later release. **They are not available for use yet** — composition does not accept them on
 Cosmo Cloud today, so do not add them to production subgraphs. They are described here only so you
 know what is coming.
