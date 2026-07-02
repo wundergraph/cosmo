@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { create, fromJsonString, toJsonString } from '@bufbuild/protobuf';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
@@ -12,9 +15,6 @@ import {
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
-import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'pathe';
 import pc from 'picocolors';
 import semver from 'semver';
@@ -26,9 +26,7 @@ import {
   RouterConfigSchema,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
-import type {
-  FeatureFlagRouterExecutionConfigs
-} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import type { FeatureFlagRouterExecutionConfigs } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import Table from 'cli-table3';
