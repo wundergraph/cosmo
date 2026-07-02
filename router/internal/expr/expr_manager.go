@@ -3,13 +3,14 @@ package expr
 import (
 	"errors"
 	"fmt"
+	"reflect"
+
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/ast"
 	"github.com/expr-lang/expr/checker"
 	"github.com/expr-lang/expr/conf"
 	"github.com/expr-lang/expr/parser"
 	"github.com/expr-lang/expr/vm"
-	"reflect"
 )
 
 type Manager struct {

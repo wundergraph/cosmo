@@ -179,6 +179,10 @@ telemetry:
       router_runtime: true
       graphql_cache: true
       connection_stats: true
+      network:
+        enabled: true
+      resolver:
+        enabled: true
       engine_stats:
         subscriptions: true
       cost_stats:
@@ -208,6 +212,10 @@ telemetry:
       listen_addr: '127.0.0.1:8088'
       graphql_cache: true
       connection_stats: true
+      network:
+        enabled: true
+      resolver:
+        enabled: true
       engine_stats:
         subscriptions: true
       cost_stats:

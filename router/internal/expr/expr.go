@@ -79,22 +79,29 @@ type Response struct {
 }
 
 type Operation struct {
-	Sha256Hash        string        `expr:"sha256Hash"`
-	ParsingTime       time.Duration `expr:"parsingTime"`
-	Name              string        `expr:"name"`
-	Type              string        `expr:"type"`
-	PersistedID       string        `expr:"persistedId"`
-	NormalizationTime time.Duration `expr:"normalizationTime"`
-	Hash              string        `expr:"hash"`
-	QueryPlanHash     string        `expr:"queryPlanHash"`
-	ValidationTime    time.Duration `expr:"validationTime"`
-	PlanningTime      time.Duration `expr:"planningTime"`
+	Sha256Hash              string        `expr:"sha256Hash"`
+	ParsingTime             time.Duration `expr:"parsingTime"`
+	Name                    string        `expr:"name"`
+	Type                    string        `expr:"type"`
+	PersistedID             string        `expr:"persistedId"`
+	NormalizationTime       time.Duration `expr:"normalizationTime"`
+	Hash                    string        `expr:"hash"`
+	QueryPlanHash           string        `expr:"queryPlanHash"`
+	ValidationTime          time.Duration `expr:"validationTime"`
+	PlanningTime            time.Duration `expr:"planningTime"`
+	ResolverAcquireDuration time.Duration `expr:"resolverAcquireDuration"`
 
 	NormalizationCacheHit          bool `expr:"normalizationCacheHit"`
 	VariablesNormalizationCacheHit bool `expr:"variablesNormalizationCacheHit"`
 	VariablesRemappingCacheHit     bool `expr:"variablesRemappingCacheHit"`
 	PersistedOperationCacheHit     bool `expr:"persistedOperationCacheHit"`
 	PlanCacheHit                   bool `expr:"planCacheHit"`
+
+	// Variables is the JSON string of the operation variables sent with the request. It is only
+	// populated when an expression references it, to avoid the serialization cost on every request.
+	// The value can contain sensitive data and can be large, so it should be logged with care.
+	// Not populated for WebSocket subscriptions (see request.operation note in the docs).
+	Variables string `expr:"variables"`
 }
 
 type Client struct {
@@ -129,6 +136,13 @@ type RequestHeaders struct {
 	Header http.Header `expr:"-"` // Do not expose the full header
 }
 
+// ResponseHeaders exposes read access to a response's headers in expressions.
+// Like RequestHeaders, the underlying header map is not exposed directly; values must be
+// retrieved through the Get method (e.g. subgraph.response.header.Get('X-Custom-Header')).
+type ResponseHeaders struct {
+	Header http.Header `expr:"-"` // Do not expose the full header
+}
+
 type RequestAuth struct {
 	IsAuthenticated bool           `expr:"isAuthenticated"`
 	Type            string         `expr:"type"`
@@ -139,15 +153,26 @@ type RequestAuth struct {
 type SubgraphRequest struct {
 	Error       error       `expr:"error"`
 	ClientTrace ClientTrace `expr:"clientTrace"`
+	// StartTime is the Unix epoch in milliseconds at which the router started the subgraph
+	// fetch. It marks the start of the subgraph "latency" measurement reported in the
+	// subgraph access log. It is expressed in the same unit as datetime so the two can
+	// be combined directly, e.g. to compute how long it took the subgraph to start processing:
+	// (datetime(subgraph.response.header.Get('X-Server-Start')).UnixMilli() - subgraph.request.startTime) / 1000
+	StartTime int64 `expr:"startTime"`
 }
 
 type SubgraphResponse struct {
-	Body Body `expr:"body"`
+	Body   Body            `expr:"body"`
+	Header ResponseHeaders `expr:"header"`
 }
 
 type ClientTrace struct {
 	FetchDuration             time.Duration `expr:"fetchDuration"`
 	ConnectionAcquireDuration time.Duration `expr:"connAcquireDuration"`
+	DNSLookupDuration         time.Duration `expr:"dnsLookupDuration"`
+	TCPConnectDuration        time.Duration `expr:"tcpConnectDuration"`
+	TLSHandshakeDuration      time.Duration `expr:"tlsHandshakeDuration"`
+	TimeToFirstByte           time.Duration `expr:"timeToFirstByte"`
 }
 
 // Subgraph Related
@@ -162,6 +187,11 @@ type Subgraph struct {
 // The key is case-insensitive and transformed to the canonical format.
 // TODO: Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
 func (r RequestHeaders) Get(key string) string {
+	return r.Header.Get(key)
+}
+
+// TODO: Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
+func (r ResponseHeaders) Get(key string) string {
 	return r.Header.Get(key)
 }
 

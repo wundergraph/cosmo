@@ -617,6 +617,13 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions
 	requestContext.operation.variablesHash = operationKit.parsedOperation.VariablesHash
 	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	// Expose the variables JSON to expressions as early as possible so it is available for access logs
+	// even if a later stage fails. It is only serialized when an expression references
+	// request.operation.variables, to avoid the (potentially large) serialization cost on every request.
+	// The value can contain sensitive data, so it should be logged with care.
+	if h.exprManager.VisitorManager.IsRequestOperationVariablesUsedInExpressions() {
+		requestContext.expressionContext.Request.Operation.Variables = string(operationKit.parsedOperation.Request.Variables)
+	}
 	if err != nil {
 		return &httpGraphqlError{
 			message:    fmt.Sprintf("error parsing variables: %s", err),

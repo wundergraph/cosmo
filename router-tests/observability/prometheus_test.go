@@ -4194,6 +4194,7 @@ func TestPrometheus(t *testing.T) {
 				PrometheusEngineStatsOptions: testenv.EngineStatOptions{
 					EnableSubscription: true,
 				},
+				EnablePrometheusResolverMetrics: true,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			baseAttributes := []*io_prometheus_client.LabelPair{
@@ -4244,18 +4245,22 @@ func TestPrometheus(t *testing.T) {
 
 			require.NoError(t, err)
 			mf := findEngineMetrics(promMetrics)
-			require.Len(t, mf, 4)
+			require.Len(t, mf, 6)
 
 			// Connection stats
 			connectionMetrics := findMetricFamilyByName(mf, "router_engine_connections")
 			subscriptionMetrics := findMetricFamilyByName(mf, "router_engine_subscriptions")
 			triggerMetrics := findMetricFamilyByName(mf, "router_engine_triggers")
 			messagesSentCounter := findMetricFamilyByName(mf, "router_engine_messages_sent_total")
+			resolversMaxConcurrentMetrics := findMetricFamilyByName(mf, "router_engine_resolvers_max_concurrent")
+			resolversInflightMetrics := findMetricFamilyByName(mf, "router_engine_resolvers_inflight")
 
 			require.NotNil(t, connectionMetrics)
 			require.NotNil(t, subscriptionMetrics)
 			require.NotNil(t, triggerMetrics)
 			require.NotNil(t, messagesSentCounter)
+			require.NotNil(t, resolversMaxConcurrentMetrics)
+			require.NotNil(t, resolversInflightMetrics)
 
 			// We only provide base attributes here. In the testing scenario we don't have any additional attributes
 			// that can increase the cardinality.
@@ -4275,6 +4280,14 @@ func TestPrometheus(t *testing.T) {
 			require.GreaterOrEqual(t, messagesSentCounter.Metric[0].GetCounter().GetValue(), float64(1))
 			require.ElementsMatch(t, baseAttributes, messagesSentCounter.Metric[0].Label)
 
+			require.Len(t, resolversMaxConcurrentMetrics.Metric, 1)
+			require.Greater(t, resolversMaxConcurrentMetrics.Metric[0].GetGauge().GetValue(), float64(0))
+			require.ElementsMatch(t, baseAttributes, resolversMaxConcurrentMetrics.Metric[0].Label)
+
+			require.Len(t, resolversInflightMetrics.Metric, 1)
+			require.GreaterOrEqual(t, resolversInflightMetrics.Metric[0].GetGauge().GetValue(), float64(0))
+			require.ElementsMatch(t, baseAttributes, resolversInflightMetrics.Metric[0].Label)
+
 			// close the connection
 			require.NoError(t, conn.Close())
 
@@ -4283,7 +4296,7 @@ func TestPrometheus(t *testing.T) {
 			promMetrics, err = promRegistry.Gather()
 			require.NoError(t, err)
 			mf = findEngineMetrics(promMetrics)
-			require.Len(t, mf, 4)
+			require.Len(t, mf, 6)
 
 			connectionMetrics = findMetricFamilyByName(mf, "router_engine_connections")
 			subscriptionMetrics = findMetricFamilyByName(mf, "router_engine_subscriptions")
@@ -5304,6 +5317,48 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 		})
 	})
 
+	t.Run("validate http client network metrics are present when network metrics are enabled", func(t *testing.T) {
+		t.Parallel()
+
+		promRegistry := prometheus.NewRegistry()
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+			MetricOptions: testenv.MetricOptions{
+				EnablePrometheusNetworkMetrics: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id isAvailable } }`,
+			})
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			// TTFB fires on every HTTP request. TCP connect fires on first
+			// connection to the test subgraph. DNS/TLS phases are skipped here
+			// because subgraphs are HTTP and listen on 127.0.0.1 (no name
+			// resolution, no TLS handshake) — Prometheus only emits histogram
+			// families that have recorded at least one observation, so we don't
+			// assert presence of dns_lookup or tls_handshake here. The
+			// instruments are still created; manual verification with a real
+			// remote HTTPS subgraph would surface them.
+			ttfb := findMetricFamilyByName(mf, "router_http_client_time_to_first_byte")
+			require.NotNil(t, ttfb)
+			require.NotEmpty(t, ttfb.GetMetric())
+
+			tcpConnect := findMetricFamilyByName(mf, "router_http_client_tcp_connect_duration")
+			require.NotNil(t, tcpConnect)
+			require.NotEmpty(t, tcpConnect.GetMetric())
+
+			// And the existing acquire_duration metric must still be there since
+			// enabling network metrics implies enabling the connection metric store.
+			require.NotNil(t, findMetricFamilyByName(mf, "router_http_client_connection_acquire_duration"))
+		})
+	})
+
 }
 
 func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
@@ -5533,6 +5588,7 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 						PrometheusEngineStatsOptions: testenv.EngineStatOptions{
 							EnableSubscription: true,
 						},
+						EnablePrometheusResolverMetrics: true,
 					},
 					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
 				}
@@ -5604,18 +5660,22 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 
 					require.NoError(t, err)
 					mf := findEngineMetrics(promMetrics)
-					require.Len(t, mf, 4)
+					require.Len(t, mf, 6)
 
 					// Connection stats
 					connectionMetrics := findMetricFamilyByName(mf, "router_engine_connections")
 					subscriptionMetrics := findMetricFamilyByName(mf, "router_engine_subscriptions")
 					triggerMetrics := findMetricFamilyByName(mf, "router_engine_triggers")
 					messagesSentCounter := findMetricFamilyByName(mf, "router_engine_messages_sent_total")
+					resolversMaxConcurrentMetrics := findMetricFamilyByName(mf, "router_engine_resolvers_max_concurrent")
+					resolversInflightMetrics := findMetricFamilyByName(mf, "router_engine_resolvers_inflight")
 
 					require.NotNil(t, connectionMetrics)
 					require.NotNil(t, subscriptionMetrics)
 					require.NotNil(t, triggerMetrics)
 					require.NotNil(t, messagesSentCounter)
+					require.NotNil(t, resolversMaxConcurrentMetrics)
+					require.NotNil(t, resolversInflightMetrics)
 
 					// We only provide base attributes here. In the testing scenario we don't have any additional attributes
 					// that can increase the cardinality.
@@ -5631,6 +5691,12 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					require.Len(t, messagesSentCounter.Metric, 1)
 					require.ElementsMatch(t, baseAttributes, messagesSentCounter.Metric[0].Label)
 
+					require.Len(t, resolversMaxConcurrentMetrics.Metric, 1)
+					require.ElementsMatch(t, baseAttributes, resolversMaxConcurrentMetrics.Metric[0].Label)
+
+					require.Len(t, resolversInflightMetrics.Metric, 1)
+					require.ElementsMatch(t, baseAttributes, resolversInflightMetrics.Metric[0].Label)
+
 					// close the connection
 					require.NoError(t, conn.Close())
 
@@ -5639,7 +5705,7 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					promMetrics, err = promRegistry.Gather()
 					require.NoError(t, err)
 					mf = findEngineMetrics(promMetrics)
-					require.Len(t, mf, 4)
+					require.Len(t, mf, 6)
 
 					connectionMetrics = findMetricFamilyByName(mf, "router_engine_connections")
 					subscriptionMetrics = findMetricFamilyByName(mf, "router_engine_subscriptions")

@@ -2,14 +2,15 @@ package core
 
 import (
 	"errors"
+	"net/http"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.uber.org/zap"
-	"net/http"
-	"testing"
 )
 
 func TestAccessLogsFieldHandler(t *testing.T) {
@@ -125,6 +126,71 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 		require.IsType(t, &ExprWrapError{}, expressionResponse.Interface)
 		require.Equal(t, expressionResponseKey, expressionResponse.Key)
 		require.Equal(t, &ExprWrapError{requestError}, expressionResponse.Interface)
+	})
+
+	t.Run("expression failing at runtime falls back to the configured default", func(t *testing.T) {
+		t.Parallel()
+
+		logger := zap.NewNop()
+
+		manager := expr.CreateNewExprManager()
+		// Compiles successfully but errors at request time because the header is absent,
+		// so date receives an empty string.
+		expression, err := manager.CompileAnyExpression("date(subgraph.response.header.Get('X-Missing'))")
+		require.NoError(t, err)
+
+		exprAttributes := []requestlogger.ExpressionAttribute{
+			{
+				Key:     "server_start",
+				Default: "fallback",
+				Expr:    expression,
+			},
+		}
+
+		response := SubgraphAccessLogsFieldHandler(
+			logger,
+			nil,
+			exprAttributes,
+			nil,
+			nil,
+			nil,
+			&expr.Context{},
+		)
+
+		require.Len(t, response, 1)
+		require.Equal(t, "server_start", response[0].Key)
+		require.Equal(t, "fallback", response[0].String)
+	})
+
+	t.Run("expression failing at runtime is skipped when no default is set", func(t *testing.T) {
+		t.Parallel()
+
+		logger := zap.NewNop()
+
+		manager := expr.CreateNewExprManager()
+		expression, err := manager.CompileAnyExpression("date(subgraph.response.header.Get('X-Missing'))")
+		require.NoError(t, err)
+
+		exprAttributes := []requestlogger.ExpressionAttribute{
+			{
+				Key:  "server_start",
+				Expr: expression,
+			},
+		}
+
+		response := SubgraphAccessLogsFieldHandler(
+			logger,
+			nil,
+			exprAttributes,
+			nil,
+			nil,
+			nil,
+			&expr.Context{},
+		)
+
+		for _, f := range response {
+			require.NotEqual(t, "server_start", f.Key)
+		}
 	})
 
 }

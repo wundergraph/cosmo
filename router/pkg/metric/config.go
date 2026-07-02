@@ -43,6 +43,8 @@ func (e ExemplarFilter) toOtelExemplarFilter() exemplar.Filter {
 type PrometheusConfig struct {
 	Enabled         bool
 	ConnectionStats bool
+	NetworkStats    bool
+	ResolverStats   bool
 	ListenAddr      string
 	Path            string
 	GraphqlCache    bool
@@ -111,6 +113,8 @@ type LogExporterConfig struct {
 type OpenTelemetry struct {
 	Enabled         bool
 	ConnectionStats bool
+	NetworkStats    bool
+	ResolverStats   bool
 	RouterRuntime   bool
 	GraphqlCache    bool
 	CircuitBreaker  bool

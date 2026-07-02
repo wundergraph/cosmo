@@ -1053,7 +1053,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if _, isNoop := r.EngineStats.(*statistics.NoopEngineStats); isNoop {
-		if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
+		if r.metricConfig.OpenTelemetry.EngineStats.Enabled() ||
+			r.metricConfig.OpenTelemetry.ResolverStats ||
+			r.metricConfig.Prometheus.EngineStats.Enabled() ||
+			r.metricConfig.Prometheus.ResolverStats ||
+			r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
 			r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
 		}
 	}
@@ -2742,6 +2746,8 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			RouterRuntime:   cfg.Metrics.OTLP.RouterRuntime,
 			GraphqlCache:    cfg.Metrics.OTLP.GraphqlCache,
 			ConnectionStats: cfg.Metrics.OTLP.ConnectionStats,
+			NetworkStats:    cfg.Metrics.OTLP.Network.Enabled,
+			ResolverStats:   cfg.Metrics.OTLP.Resolver.Enabled,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
 			},
@@ -2764,6 +2770,8 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			Path:            cfg.Metrics.Prometheus.Path,
 			GraphqlCache:    cfg.Metrics.Prometheus.GraphqlCache,
 			ConnectionStats: cfg.Metrics.Prometheus.ConnectionStats,
+			NetworkStats:    cfg.Metrics.Prometheus.Network.Enabled,
+			ResolverStats:   cfg.Metrics.Prometheus.Resolver.Enabled,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},

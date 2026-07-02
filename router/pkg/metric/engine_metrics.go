@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -15,18 +16,22 @@ const (
 	cosmoEngineMeterName    = "cosmo.router.engine"
 	cosmoEngineMeterVersion = "0.0.1"
 
-	engineMetricBaseKey        = "router.engine."
-	engineConnectionCountKey   = engineMetricBaseKey + "connections"
-	engineSubscriptionCountKey = engineMetricBaseKey + "subscriptions"
-	engineTriggerCountKey      = engineMetricBaseKey + "triggers"
-	engineMessagesSentKey      = engineMetricBaseKey + "messages.sent"
+	engineMetricBaseKey             = "router.engine."
+	engineConnectionCountKey        = engineMetricBaseKey + "connections"
+	engineSubscriptionCountKey      = engineMetricBaseKey + "subscriptions"
+	engineTriggerCountKey           = engineMetricBaseKey + "triggers"
+	engineMessagesSentKey           = engineMetricBaseKey + "messages.sent"
+	engineResolversMaxConcurrentKey = engineMetricBaseKey + "resolvers.max_concurrent"
+	engineResolversInflightKey      = engineMetricBaseKey + "resolvers.inflight"
 )
 
 type engineInstruments struct {
-	connectionCount   otelmetric.Int64ObservableUpDownCounter
-	subscriptionCount otelmetric.Int64ObservableUpDownCounter
-	triggerCount      otelmetric.Int64ObservableUpDownCounter
-	messagesSent      otelmetric.Int64ObservableCounter
+	connectionCount        otelmetric.Int64ObservableUpDownCounter
+	subscriptionCount      otelmetric.Int64ObservableUpDownCounter
+	triggerCount           otelmetric.Int64ObservableUpDownCounter
+	messagesSent           otelmetric.Int64ObservableCounter
+	resolversMaxConcurrent otelmetric.Int64ObservableUpDownCounter
+	resolversInflight      otelmetric.Int64ObservableUpDownCounter
 }
 
 func (i *engineInstruments) toList() []otelmetric.Observable {
@@ -48,6 +53,14 @@ func (i *engineInstruments) toList() []otelmetric.Observable {
 		result = append(result, i.messagesSent)
 	}
 
+	if i.resolversMaxConcurrent != nil {
+		result = append(result, i.resolversMaxConcurrent)
+	}
+
+	if i.resolversInflight != nil {
+		result = append(result, i.resolversInflight)
+	}
+
 	return result
 }
 
@@ -67,14 +80,15 @@ func NewEngineMetrics(
 	provider *metric.MeterProvider,
 	stats statistics.EngineStatistics,
 	statConfig *EngineStatsConfig,
+	resolverStats bool,
 ) (*EngineMetrics, error) {
-	if !statConfig.Enabled() {
+	if !statConfig.Enabled() && !resolverStats {
 		return nil, nil
 	}
 
 	meter := provider.Meter(cosmoEngineMeterName, otelmetric.WithInstrumentationVersion(cosmoEngineMeterVersion))
 
-	instruments, err := setupInstruments(meter, statConfig)
+	instruments, err := setupInstruments(meter, statConfig, resolverStats)
 	if err != nil {
 		return nil, err
 	}
@@ -93,14 +107,16 @@ func NewEngineMetrics(
 	return em, nil
 }
 
-func setupInstruments(m otelmetric.Meter, statConfig *EngineStatsConfig) (*engineInstruments, error) {
+func setupInstruments(m otelmetric.Meter, statConfig *EngineStatsConfig, resolverStats bool) (*engineInstruments, error) {
 	var (
 		err error
 
-		connectionCount   otelmetric.Int64ObservableUpDownCounter
-		subscriptionCount otelmetric.Int64ObservableUpDownCounter
-		triggerCount      otelmetric.Int64ObservableUpDownCounter
-		messagesSent      otelmetric.Int64ObservableCounter
+		connectionCount        otelmetric.Int64ObservableUpDownCounter
+		subscriptionCount      otelmetric.Int64ObservableUpDownCounter
+		triggerCount           otelmetric.Int64ObservableUpDownCounter
+		messagesSent           otelmetric.Int64ObservableCounter
+		resolversMaxConcurrent otelmetric.Int64ObservableUpDownCounter
+		resolversInflight      otelmetric.Int64ObservableUpDownCounter
 	)
 
 	if statConfig.Subscription {
@@ -130,11 +146,27 @@ func setupInstruments(m otelmetric.Meter, statConfig *EngineStatsConfig) (*engin
 		}
 	}
 
+	if resolverStats {
+		resolversMaxConcurrent, err = m.Int64ObservableUpDownCounter(engineResolversMaxConcurrentKey,
+			otelmetric.WithDescription("Configured maximum number of concurrent GraphQL resolver slots (ENGINE_MAX_CONCURRENT_RESOLVERS)."))
+		if err != nil {
+			return nil, err
+		}
+
+		resolversInflight, err = m.Int64ObservableUpDownCounter(engineResolversInflightKey,
+			otelmetric.WithDescription("Number of GraphQL resolver slots currently in use."))
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &engineInstruments{
-		connectionCount:   connectionCount,
-		subscriptionCount: subscriptionCount,
-		triggerCount:      triggerCount,
-		messagesSent:      messagesSent,
+		connectionCount:        connectionCount,
+		subscriptionCount:      subscriptionCount,
+		triggerCount:           triggerCount,
+		messagesSent:           messagesSent,
+		resolversMaxConcurrent: resolversMaxConcurrent,
+		resolversInflight:      resolversInflight,
 	}, nil
 }
 
@@ -163,10 +195,17 @@ func (e *EngineMetrics) registerObservers(stats statistics.EngineStatistics) err
 func (e *EngineMetrics) observeInstruments(o otelmetric.Observer, stats statistics.EngineStatistics) {
 	report := stats.GetReport()
 
-	o.ObserveInt64(e.instruments.connectionCount, int64(report.Connections), otelmetric.WithAttributes(e.baseAttributes...))
-	o.ObserveInt64(e.instruments.subscriptionCount, int64(report.Subscriptions), otelmetric.WithAttributes(e.baseAttributes...))
-	o.ObserveInt64(e.instruments.triggerCount, int64(report.Triggers), otelmetric.WithAttributes(e.baseAttributes...))
-	o.ObserveInt64(e.instruments.messagesSent, int64(report.MessagesSent), otelmetric.WithAttributes(e.baseAttributes...))
+	if e.instruments.connectionCount != nil {
+		o.ObserveInt64(e.instruments.connectionCount, int64(report.Connections), otelmetric.WithAttributes(e.baseAttributes...))
+		o.ObserveInt64(e.instruments.subscriptionCount, int64(report.Subscriptions), otelmetric.WithAttributes(e.baseAttributes...))
+		o.ObserveInt64(e.instruments.triggerCount, int64(report.Triggers), otelmetric.WithAttributes(e.baseAttributes...))
+		o.ObserveInt64(e.instruments.messagesSent, int64(report.MessagesSent), otelmetric.WithAttributes(e.baseAttributes...))
+	}
+
+	if e.instruments.resolversMaxConcurrent != nil {
+		o.ObserveInt64(e.instruments.resolversMaxConcurrent, int64(report.ResolverMaxConcurrent), otelmetric.WithAttributes(e.baseAttributes...))
+		o.ObserveInt64(e.instruments.resolversInflight, int64(report.ResolverInflight), otelmetric.WithAttributes(e.baseAttributes...))
+	}
 }
 
 func (e *EngineMetrics) Shutdown() error {

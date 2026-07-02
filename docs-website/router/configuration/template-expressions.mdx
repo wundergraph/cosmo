@@ -72,11 +72,20 @@ The `request` object is a read-only entity that provides details about the incom
 - `request.operation.normalizationTime` (time.Duration)
 - `request.operation.validationTime` (time.Duration)
 - `request.operation.planningTime` (time.Duration)
+- `request.operation.resolverAcquireDuration` (time.Duration) - The time spent waiting to acquire a resolver concurrency slot before the operation could be resolved. A high value indicates the engine's resolver pool (`max_concurrent_resolvers`) is saturated.
 - `request.operation.normalizationCacheHit` (bool)
 - `request.operation.variablesNormalizationCacheHit` (bool)
 - `request.operation.variablesRemappingCacheHit` (bool)
 - `request.operation.persistedOperationCacheHit` (bool)
 - `request.operation.planCacheHit` (bool)
+- `request.operation.variables` - The operation variables sent with the request, as a JSON string. The value can contain sensitive data and can be large, so log it with care. It is only serialized when an expression references it, so configurations that do not use it pay no cost.
+
+
+The serialization of `request.operation.variables` is decided once per request across the whole configuration. If any access log, metric, telemetry, tracing, or rate-limiter expression references it, it is serialized; otherwise it is skipped.
+
+<Info>
+`request.operation.*` fields are populated during HTTP request handling. They are not available for WebSocket subscription access logs, which reuse the expression context from the initial HTTP upgrade request.
+</Info>
 
 #### Example expressions
 
@@ -85,6 +94,8 @@ hasPrefix(request.operation.name, 'Delete') == true
 request.operation.sha256Hash != ''
 request.operation.persistedId != ''
 request.operation.planCacheHit == true
+# Log the variables only when the variable remapping cache missed.
+request.operation.variablesRemappingCacheHit ? '' : request.operation.variables
 ```
 
 ### Client Object
@@ -165,10 +176,12 @@ It contains the following properties:
 
 - `subgraph.request.error` (error): Any error that occurred during the subgraph request
 - `subgraph.request.clientTrace` (ClientTrace): Contains tracing information about the client connection
+- `subgraph.request.startTime` (int): The Unix epoch in milliseconds at which the router started the subgraph fetch. This marks the start of the subgraph `latency` measurement reported in the subgraph access log.
 
 #### SubgraphResponse Properties
 
 - `subgraph.response.body` (SubgraphResponseBody)
+- `subgraph.response.header` (ResponseHeaders): The headers of the subgraph response. Values are retrieved with `subgraph.response.header.Get('Header-Name')` (case-insensitive). Rules from [response header propagation](/router/configuration/header-propagation) have already been applied. Accessing a missing header returns `""`.
 
 
 ### SubgraphResponseBody Object
@@ -198,6 +211,10 @@ subgraph.request.error != nil ? subgraph.response.body.raw : ''
 
 - `subgraph.request.clientTrace.fetchDuration` (time.Duration): The duration it took for the router to call the subgraph via HTTP and get a response or error. In case of retries, this value contains the combined duration for all retries. Note: gRPC calls are not supported at the moment.
 - `subgraph.request.clientTrace.connAcquireDuration` (time.Duration): The duration it took to acquire the connection to the subgraph. This includes the dial time if a connection was not reused. If a connection was not successfully acquired, it will be 0. In case of retries, only the last duration is recorded.
+- `subgraph.request.clientTrace.dnsLookupDuration` (time.Duration): The duration of the DNS lookup for the subgraph request. It is 0 when a cached or reused connection skips the lookup. In case of retries, only the last duration is recorded.
+- `subgraph.request.clientTrace.tcpConnectDuration` (time.Duration): The duration of the TCP connect (dial) for the subgraph request. It is 0 when an existing connection is reused. In case of retries, only the last duration is recorded.
+- `subgraph.request.clientTrace.tlsHandshakeDuration` (time.Duration): The duration of the TLS handshake for the subgraph request. It is 0 when an existing connection is reused or the subgraph is reached over plaintext. In case of retries, only the last duration is recorded.
+- `subgraph.request.clientTrace.timeToFirstByte` (time.Duration): The duration from completing the request write to receiving the first response byte from the subgraph. In case of retries, only the last duration is recorded.
 
 This object is available in template expressions and can be accessed using the `subgraph` identifier. For example, you can access the subgraph name using `subgraph.name` or check for errors using `subgraph.request.error`.
 
@@ -208,6 +225,25 @@ subgraph.name == 'products'
 subgraph.request.error != nil
 subgraph.request.clientTrace.connAcquireDuration > 1.0
 ```
+
+#### ResponseHeaders Properties
+
+- `subgraph.response.header.Get('Header-Name')` (string): The value of a subgraph response header. The lookup is case-insensitive. A missing header returns `""`.
+
+#### Example expressions
+
+Read a numeric header and convert it from milliseconds to seconds. `float` is a [built-in](https://expr-lang.org/docs/language-definition#float) that parses the string value.
+
+```bash
+float(subgraph.response.header.Get('X-Upstream-Duration-Ms')) / 1000
+```
+
+Compute how long the subgraph took to start processing the request by combining a timestamp response header with the subgraph fetch start time.
+
+```bash
+(date(subgraph.response.header.Get('X-Server-Start')).UnixMilli() - subgraph.request.startTime) / 1000
+```
+
 ### **Response Object**
 
 The `response` object is a read-only entity that provides details about the outgoing response. It is accessible after the response has been processed by the router.
@@ -242,6 +278,9 @@ request.error != nil ? response.body.raw : ''
 
 You can use expressions to specify the conditions for retries upon subgraph request failures. However, this uses a different expression context, which can be found [here](/router/traffic-shaping/retry#conditional-retry-with-expressions).
 
+## Functions
+
+You can use all the [built-in functions](https://expr-lang.org/docs/language-definition#built-in-functions) of the Expr language.
 
 ### Additional Notes
 

@@ -2,6 +2,7 @@ package traceclient
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
 	"net/http/httptrace"
 	"time"
@@ -25,9 +26,24 @@ type GetConnection struct {
 	HostPort string
 }
 
+// phaseTimings captures start/end timestamps for httptrace phases. Only the
+// timestamps actually observed are non-zero; the rest are left as the zero
+// time.Time and skipped at recording time.
+type phaseTimings struct {
+	DNSStart     time.Time
+	DNSDone      time.Time
+	ConnectStart time.Time
+	ConnectDone  time.Time
+	TLSStart     time.Time
+	TLSDone      time.Time
+	WroteRequest time.Time
+	FirstByte    time.Time
+}
+
 type ClientTrace struct {
 	ConnectionGet      *GetConnection
 	ConnectionAcquired *AcquiredConnection
+	phases             phaseTimings
 }
 
 type ClientTraceContextKey struct{}
@@ -97,6 +113,30 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 				IdleTime: info.IdleTime,
 			}
 		},
+		DNSStart: func(_ httptrace.DNSStartInfo) {
+			eC.phases.DNSStart = time.Now()
+		},
+		DNSDone: func(_ httptrace.DNSDoneInfo) {
+			eC.phases.DNSDone = time.Now()
+		},
+		ConnectStart: func(_, _ string) {
+			eC.phases.ConnectStart = time.Now()
+		},
+		ConnectDone: func(_, _ string, _ error) {
+			eC.phases.ConnectDone = time.Now()
+		},
+		TLSHandshakeStart: func() {
+			eC.phases.TLSStart = time.Now()
+		},
+		TLSHandshakeDone: func(_ tls.ConnectionState, _ error) {
+			eC.phases.TLSDone = time.Now()
+		},
+		WroteRequest: func(_ httptrace.WroteRequestInfo) {
+			eC.phases.WroteRequest = time.Now()
+		},
+		GotFirstResponseByte: func() {
+			eC.phases.FirstByte = time.Now()
+		},
 	}
 	return trace
 }
@@ -117,20 +157,66 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		subgraph = activeSubgraphName
 	}
 
-	if trace.ConnectionGet != nil && trace.ConnectionAcquired != nil {
+	if trace.ConnectionGet == nil {
+		return
+	}
+
+	serverAttributes := rotel.GetServerAttributes(trace.ConnectionGet.HostPort)
+	reused := trace.ConnectionAcquired != nil && trace.ConnectionAcquired.Reused
+	serverAttributes = append(
+		serverAttributes,
+		rotel.WgClientReusedConnection.Bool(reused),
+		rotel.WgSubgraphName.String(subgraph),
+	)
+
+	if trace.ConnectionAcquired != nil {
 		duration := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time)
 		exprContext.Subgraph.Request.ClientTrace.ConnectionAcquireDuration = duration
-
-		serverAttributes := rotel.GetServerAttributes(trace.ConnectionGet.HostPort)
-		serverAttributes = append(
-			serverAttributes,
-			rotel.WgClientReusedConnection.Bool(trace.ConnectionAcquired.Reused),
-			rotel.WgSubgraphName.String(subgraph),
+		t.connectionMetricStore.MeasureConnectionAcquireDuration(
+			ctx,
+			float64(duration)/float64(time.Millisecond),
+			serverAttributes...,
 		)
-
-		connAcquireTime := float64(duration) / float64(time.Millisecond)
-		t.connectionMetricStore.MeasureConnectionAcquireDuration(ctx,
-			connAcquireTime,
-			serverAttributes...)
 	}
+
+	if !trace.phases.DNSStart.IsZero() && !trace.phases.DNSDone.IsZero() {
+		dur := trace.phases.DNSDone.Sub(trace.phases.DNSStart)
+		exprContext.Subgraph.Request.ClientTrace.DNSLookupDuration = dur
+		t.connectionMetricStore.MeasureDNSLookupDuration(
+			ctx,
+			msFromDuration(dur),
+			serverAttributes...,
+		)
+	}
+	if !trace.phases.ConnectStart.IsZero() && !trace.phases.ConnectDone.IsZero() {
+		dur := trace.phases.ConnectDone.Sub(trace.phases.ConnectStart)
+		exprContext.Subgraph.Request.ClientTrace.TCPConnectDuration = dur
+		t.connectionMetricStore.MeasureTCPConnectDuration(
+			ctx,
+			msFromDuration(dur),
+			serverAttributes...,
+		)
+	}
+	if !trace.phases.TLSStart.IsZero() && !trace.phases.TLSDone.IsZero() {
+		dur := trace.phases.TLSDone.Sub(trace.phases.TLSStart)
+		exprContext.Subgraph.Request.ClientTrace.TLSHandshakeDuration = dur
+		t.connectionMetricStore.MeasureTLSHandshakeDuration(
+			ctx,
+			msFromDuration(dur),
+			serverAttributes...,
+		)
+	}
+	if !trace.phases.WroteRequest.IsZero() && !trace.phases.FirstByte.IsZero() {
+		dur := trace.phases.FirstByte.Sub(trace.phases.WroteRequest)
+		exprContext.Subgraph.Request.ClientTrace.TimeToFirstByte = dur
+		t.connectionMetricStore.MeasureTimeToFirstByte(
+			ctx,
+			msFromDuration(dur),
+			serverAttributes...,
+		)
+	}
+}
+
+func msFromDuration(d time.Duration) float64 {
+	return float64(d) / float64(time.Millisecond)
 }
