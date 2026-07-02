@@ -272,6 +272,7 @@ message FederatedGraphSchemaChange {
   bool isBreaking = 4;
   string federatedGraphName = 5;
   optional bool hasOverride = 6;
+  string featureFlag = 7;
 }
 
 message CompositionError {
@@ -363,6 +364,9 @@ message CheckSubgraphSchemaResponse {
   optional SchemaCheckCounts counts = 19;
   // Breaking changes detected in the composed federated graph schema (not subgraph level)
   repeated FederatedGraphSchemaChange composedSchemaBreakingChanges = 20;
+  // Set when a feature subgraph is checked but is not assigned to any enabled feature flag covering a
+  // federated graph, so no composition check was performed. Informational; no composition ran.
+  optional string featureSubgraphCheckMessage = 21;
 }
 
 message SchemaCheckCounts{
@@ -639,6 +643,7 @@ message SchemaCheck {
   repeated LinkedCheck linkedChecks = 22;
   optional string check_extension_delivery_id = 23;
   optional string check_extension_error_message = 24;
+  bool hasFeatureSubgraphCheck = 25;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -682,11 +687,11 @@ message GetCheckSummaryResponse {
   repeated AffectedGraph affected_graphs = 3;
   optional string proposedSubgraphSchemaSDL = 4;
   repeated SchemaChange changes = 6;
-  repeated string compositionErrors = 7;
+  repeated CompositionError compositionErrors = 7;
   int32 traffic_check_days = 8;
   repeated LintIssue lintIssues = 9;
   repeated GraphPruningIssue graphPruningIssues = 10;
-  repeated string compositionWarnings = 11;
+  repeated CompositionWarning compositionWarnings = 11;
   optional string proposalId = 12;
   optional string proposalName = 13;
   repeated ProposalSchemaMatch proposalMatches = 14;

@@ -606,77 +606,43 @@ export class Composer {
   async composeWithProposedSchemas({
     compositionOptions,
     graphs,
-    inputSubgraphs,
+    subgraphsToComposeByFedGraphId,
   }: {
     graphs: FederatedGraphDTO[];
-    inputSubgraphs: Map<string, CheckSubgraph>;
     compositionOptions?: CompositionOptions;
+    /**
+     * Per-federated-graph composition plan built by the caller. Each entry is a single composition
+     * (base or feature flag) along with the set of `checkSubgraphIds` that participate in it; these
+     * are accumulated into `checkSubgraphsByFedGraph` for downstream scsfg link persistence.
+     */
+    subgraphsToComposeByFedGraphId: Map<
+      string,
+      Array<{
+        subgraphs: SubgraphDTO[];
+        isFeatureFlagComposition: boolean;
+        featureFlagName: string;
+        featureFlagId: string;
+        checkSubgraphIds: string[];
+      }>
+    >;
   }) {
     const composedGraphs: DeserializedComposedGraph[] = [];
     // the key is the federated graph id and the value is the list of check subgraph ids which are part of the composition for that federated graph
     const checkSubgraphsByFedGraph = new Map<string, string[]>();
     for (const graph of graphs) {
       try {
-        const subgraphsOfFedGraph = await this.subgraphRepo.listByFederatedGraph({
-          federatedGraphTargetId: graph.targetId,
-        });
-
-        const subgraphsToSend: SubgraphDTO[] = [];
-        for (const subgraph of subgraphsOfFedGraph) {
-          const inputSubgraph = inputSubgraphs.get(subgraph.name);
-          if (inputSubgraph) {
-            checkSubgraphsByFedGraph.set(graph.id, [
-              ...(checkSubgraphsByFedGraph.get(graph.id) || []),
-              inputSubgraph.checkSubgraphId,
-            ]);
-            if (inputSubgraph.newSchemaSDL === '') {
-              continue;
-            }
-            subgraphsToSend.push({ ...subgraph, schemaSDL: inputSubgraph.newSchemaSDL });
-          } else if (subgraph.schemaSDL !== '') {
-            subgraphsToSend.push(subgraph);
-          }
+        const subgraphsToCompose = subgraphsToComposeByFedGraphId.get(graph.id);
+        if (!subgraphsToCompose || subgraphsToCompose.length === 0) {
+          continue;
         }
 
-        // Handles new subgraphs
-        for (const [subgraphName, subgraph] of inputSubgraphs.entries()) {
-          if (subgraph.subgraph || subgraph.newSchemaSDL === '') {
-            continue;
+        const checkSubgraphIdSet = new Set<string>();
+        for (const entry of subgraphsToCompose) {
+          for (const id of entry.checkSubgraphIds) {
+            checkSubgraphIdSet.add(id);
           }
-          // get the fed graphs which match the labels of the new subgraph
-          const fedGraphsOfNewSubgraphs = await this.federatedGraphRepo.bySubgraphLabels({
-            labels: subgraph.labels || [],
-            namespaceId: graph.namespaceId,
-            excludeContracts: true,
-          });
-
-          // if the current fed graph(the main loop) is present in the list of fed graphs which match the labels of the new subgraph, then we can compose the new subgraph
-          if (!fedGraphsOfNewSubgraphs.some((fg) => fg.id === graph.id)) {
-            continue;
-          }
-
-          checkSubgraphsByFedGraph.set(graph.id, [
-            ...(checkSubgraphsByFedGraph.get(graph.id) || []),
-            subgraph.checkSubgraphId,
-          ]);
-          subgraphsToSend.push({
-            id: '',
-            name: subgraphName,
-            targetId: '',
-            routingUrl: '',
-            schemaSDL: subgraph.newSchemaSDL,
-            schemaVersionId: '',
-            isFeatureSubgraph: false,
-            subscriptionUrl: '',
-            subscriptionProtocol: 'ws',
-            namespace: graph.namespace,
-            namespaceId: graph.namespaceId,
-            type: 'standard',
-            labels: subgraph.labels || [],
-            lastUpdatedAt: '',
-            isEventDrivenGraph: false,
-          } as SubgraphDTO);
         }
+        checkSubgraphsByFedGraph.set(graph.id, [...checkSubgraphIdSet]);
 
         const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
         const tagOptionsByContractName = contracts.map((c) => ({
@@ -687,28 +653,34 @@ export class Composer {
 
         const { results } = await composeGraphsInWorker({
           federatedGraph: graph,
-          subgraphsToCompose: [
-            {
-              subgraphs: subgraphsToSend,
-              isFeatureFlagComposition: false,
-              featureFlagName: '',
-              featureFlagId: '',
-            },
-          ],
+          subgraphsToCompose,
           tagOptionsByContractName,
           compositionOptions,
           skipRouterConfig: true,
         });
 
-        const base = results[0];
-        composedGraphs.push(deserializeComposedGraphArtifact(graph, base.base));
+        for (const result of results) {
+          const featureFlagMeta = {
+            isFeatureFlagComposition: result.isFeatureFlagComposition,
+            featureFlagId: result.featureFlagId,
+            featureFlagName: result.featureFlagName,
+          };
 
-        for (const contractArtifact of base.contracts) {
-          const contractGraph = await this.federatedGraphRepo.byName(contractArtifact.contractName, graph.namespace);
-          if (!contractGraph) {
-            throw new Error(`Contract graph ${contractArtifact.contractName} not found`);
+          composedGraphs.push(deserializeComposedGraphArtifact(graph, result.base, featureFlagMeta));
+
+          // Contract compositions only apply to the base (non-flag) composition result.
+          if (!result.isFeatureFlagComposition) {
+            for (const contractArtifact of result.contracts) {
+              const contractGraph = await this.federatedGraphRepo.byName(
+                contractArtifact.contractName,
+                graph.namespace,
+              );
+              if (!contractGraph) {
+                throw new Error(`Contract graph ${contractArtifact.contractName} not found`);
+              }
+              composedGraphs.push(deserializeComposedGraphArtifact(contractGraph, contractArtifact.artifact));
+            }
           }
-          composedGraphs.push(deserializeComposedGraphArtifact(contractGraph, contractArtifact.artifact));
         }
       } catch (e: any) {
         composedGraphs.push({

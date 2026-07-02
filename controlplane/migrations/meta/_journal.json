@@ -1016,6 +1016,20 @@
       "when": 1781883363831,
       "tag": "0144_jittery_master_chief",
       "breakpoints": true
+    },
+    {
+      "idx": 145,
+      "version": "7",
+      "when": 1782738276047,
+      "tag": "0145_goofy_rhodey",
+      "breakpoints": true
+    },
+    {
+      "idx": 146,
+      "version": "7",
+      "when": 1782738797637,
+      "tag": "0146_gorgeous_otto_octavius",
+      "breakpoints": true
     }
   ]
 }

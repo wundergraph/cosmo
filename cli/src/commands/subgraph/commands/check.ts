@@ -13,7 +13,9 @@ import { limitMaxValue } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
-  command.description('Checks for breaking changes and composition errors with all connected federated graphs.');
+  command.description(
+    'Checks for breaking changes and composition errors across all connected federated graphs, including feature flag compositions; also runs when the target is a feature subgraph.',
+  );
   command.argument('<name>', 'The name of the subgraph on which the check operation is to be performed.');
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option('--schema <path-to-schema>', 'The path of the new schema file.');

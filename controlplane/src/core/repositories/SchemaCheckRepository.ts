@@ -34,6 +34,7 @@ import {
   NamespaceDTO,
   SchemaGraphPruningIssues,
   SchemaLintIssues,
+  SubgraphDTO,
 } from '../../types/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { CheckSubgraph, Composer } from '../composition/composer.js';
@@ -172,6 +173,7 @@ export class SchemaCheckRepository {
     schemaCheckId: string;
     schemaCheckFederatedGraphId: string;
     changes: SchemaDiff[];
+    featureFlagId: string | null;
   }) {
     if (data.changes.length === 0) {
       return [];
@@ -198,6 +200,7 @@ export class SchemaCheckRepository {
         insertedChanges.map((change) => ({
           schemaCheckFederatedGraphId: data.schemaCheckFederatedGraphId,
           schemaCheckChangeActionId: change.id,
+          featureFlagId: data.featureFlagId,
         })),
       );
 
@@ -212,6 +215,7 @@ export class SchemaCheckRepository {
       changeMessage: string | null;
       path: string | null;
       isBreaking: boolean;
+      featureFlagName: string;
     }>
   > {
     const changes = await this.db
@@ -221,6 +225,8 @@ export class SchemaCheckRepository {
         changeMessage: schema.schemaCheckChangeAction.changeMessage,
         path: schema.schemaCheckChangeAction.path,
         isBreaking: schema.schemaCheckChangeAction.isBreaking,
+        featureFlagId: schema.schemaCheckFederatedGraphChanges.featureFlagId,
+        featureFlagName: schema.featureFlags.name,
       })
       .from(schema.schemaCheckFederatedGraphChanges)
       .innerJoin(
@@ -231,6 +237,7 @@ export class SchemaCheckRepository {
         schema.schemaCheckFederatedGraphs,
         eq(schema.schemaCheckFederatedGraphChanges.schemaCheckFederatedGraphId, schema.schemaCheckFederatedGraphs.id),
       )
+      .leftJoin(schema.featureFlags, eq(schema.featureFlags.id, schema.schemaCheckFederatedGraphChanges.featureFlagId))
       .where(
         and(
           eq(schema.schemaCheckFederatedGraphs.checkId, data.schemaCheckId),
@@ -244,6 +251,7 @@ export class SchemaCheckRepository {
       changeMessage: change.changeMessage,
       path: change.path,
       isBreaking: change.isBreaking || false,
+      featureFlagName: change.featureFlagName ?? '',
     }));
   }
 
@@ -554,6 +562,7 @@ export class SchemaCheckRepository {
             clientSchema: composition.federatedClientSchema,
             compositionErrors: composition.errors?.map((e) => e.toString()).join('\n'),
             compositionWarnings: composition.warnings?.map((w) => w.toString()).join('\n'),
+            featureFlagId: composition.featureFlagId || null,
           })),
         )
         .execute();
@@ -598,6 +607,7 @@ export class SchemaCheckRepository {
       isNew: boolean;
       namespaceId: string;
       labels?: Label[];
+      isFeatureSubgraph?: boolean;
     };
   }) {
     const schemaCheckSubgraph = await this.db
@@ -605,6 +615,7 @@ export class SchemaCheckRepository {
       .values({
         ...data,
         labels: data.isNew && data.labels ? normalizeLabels(data.labels).map((l) => joinLabel(l)) : undefined,
+        isFeatureSubgraph: data.isFeatureSubgraph ?? false,
       })
       .returning();
     return schemaCheckSubgraph[0].id;
@@ -624,6 +635,7 @@ export class SchemaCheckRepository {
         subgraphName: schema.schemaCheckSubgraphs.subgraphName,
         isDeleted: schema.schemaCheckSubgraphs.isDeleted,
         isNew: schema.schemaCheckSubgraphs.isNew,
+        isFeatureSubgraph: schema.schemaCheckSubgraphs.isFeatureSubgraph,
         labels: schema.schemaCheckSubgraphs.labels,
       })
       .from(schema.schemaCheckFederatedGraphs)
@@ -651,6 +663,7 @@ export class SchemaCheckRepository {
       subgraphName: subgraph.subgraphName,
       isDeleted: subgraph.isDeleted,
       isNew: subgraph.isNew,
+      isFeatureSubgraph: subgraph.isFeatureSubgraph,
       labels: subgraph.labels ? subgraph.labels.map((l) => splitLabel(l)) : [],
     }));
   }
@@ -808,6 +821,7 @@ export class SchemaCheckRepository {
           isNew: !subgraph,
           namespaceId: namespace.id,
           labels: subgraph ? undefined : s.labels,
+          isFeatureSubgraph: subgraph?.isFeatureSubgraph ?? false,
         },
       });
 
@@ -1136,13 +1150,93 @@ export class SchemaCheckRepository {
       });
     }
 
+    // Build a per-federated-graph base composition plan. Proposals never include feature
+    // subgraphs, so each fed graph gets a single base-only entry. For each fed graph, swap the
+    // proposed SDL into existing matching subgraphs and append synthetic DTOs for new ones whose
+    // labels match.
+    const subgraphsToComposeByFedGraphId = new Map<
+      string,
+      Array<{
+        subgraphs: SubgraphDTO[];
+        isFeatureFlagComposition: boolean;
+        featureFlagName: string;
+        featureFlagId: string;
+        checkSubgraphIds: string[];
+      }>
+    >();
+
+    for (const graph of federatedGraphs.filter((g) => !g.contract)) {
+      const subgraphsOfFedGraph = await subgraphRepo.listByFederatedGraph({
+        federatedGraphTargetId: graph.targetId,
+      });
+
+      const subgraphsToSend: SubgraphDTO[] = [];
+      const checkSubgraphIds: string[] = [];
+
+      for (const s of subgraphsOfFedGraph) {
+        const inputSubgraph = checkSubgraphs.get(s.name);
+        if (inputSubgraph) {
+          checkSubgraphIds.push(inputSubgraph.checkSubgraphId);
+          if (inputSubgraph.newSchemaSDL === '') {
+            continue;
+          }
+          subgraphsToSend.push({ ...s, schemaSDL: inputSubgraph.newSchemaSDL });
+        } else if (s.schemaSDL !== '') {
+          subgraphsToSend.push(s);
+        }
+      }
+
+      // Handle new subgraphs (not yet present in this fed graph).
+      for (const [subgraphName, inputSubgraph] of checkSubgraphs.entries()) {
+        if (inputSubgraph.subgraph || inputSubgraph.newSchemaSDL === '') {
+          continue;
+        }
+        const fedGraphsOfNewSubgraphs = await fedGraphRepo.bySubgraphLabels({
+          labels: inputSubgraph.labels || [],
+          namespaceId: graph.namespaceId,
+          excludeContracts: true,
+        });
+        if (!fedGraphsOfNewSubgraphs.some((fg) => fg.id === graph.id)) {
+          continue;
+        }
+        checkSubgraphIds.push(inputSubgraph.checkSubgraphId);
+        subgraphsToSend.push({
+          id: '',
+          name: subgraphName,
+          targetId: '',
+          routingUrl: '',
+          schemaSDL: inputSubgraph.newSchemaSDL,
+          schemaVersionId: '',
+          isFeatureSubgraph: false,
+          subscriptionUrl: '',
+          subscriptionProtocol: 'ws',
+          namespace: graph.namespace,
+          namespaceId: graph.namespaceId,
+          type: 'standard',
+          labels: inputSubgraph.labels || [],
+          lastUpdatedAt: '',
+          isEventDrivenGraph: false,
+        } as SubgraphDTO);
+      }
+
+      subgraphsToComposeByFedGraphId.set(graph.id, [
+        {
+          subgraphs: subgraphsToSend,
+          isFeatureFlagComposition: false,
+          featureFlagName: '',
+          featureFlagId: '',
+          checkSubgraphIds,
+        },
+      ]);
+    }
+
     const { composedGraphs } = await composer.composeWithProposedSchemas({
       compositionOptions: {
         disableResolvabilityValidation: false,
         ignoreExternalKeys,
       },
-      inputSubgraphs: checkSubgraphs,
       graphs: federatedGraphs.filter((g) => !g.contract),
+      subgraphsToComposeByFedGraphId,
     });
 
     await this.createSchemaCheckCompositions({
@@ -1183,16 +1277,17 @@ export class SchemaCheckRepository {
       }
     }
 
-    const composedSchemaBreakingChanges: Array<SchemaDiff & { federatedGraphName: string }> = [];
+    const composedSchemaBreakingChanges: Array<SchemaDiff & { federatedGraphName: string; featureFlag: string }> = [];
     const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
 
     for (const composition of composedGraphs) {
+      const compositionFeatureFlagName = composition.featureFlagName ?? '';
       for (const error of composition.errors) {
         compositionErrors.push({
           message: error.message,
           federatedGraphName: composition.name,
           namespace: composition.namespace,
-          featureFlag: '',
+          featureFlag: compositionFeatureFlagName,
         });
       }
 
@@ -1201,7 +1296,7 @@ export class SchemaCheckRepository {
           message: warning.message,
           federatedGraphName: composition.name,
           namespace: composition.namespace,
-          featureFlag: '',
+          featureFlag: compositionFeatureFlagName,
         });
       }
 
@@ -1239,6 +1334,7 @@ export class SchemaCheckRepository {
                   schemaCheckId: schemaCheckID,
                   schemaCheckFederatedGraphId,
                   changes: uniqueFedGraphBreakingChanges,
+                  featureFlagId: composition.featureFlagId || null,
                 });
 
                 // Convert federated graph changes to inspector changes
@@ -1253,6 +1349,7 @@ export class SchemaCheckRepository {
                 composedSchemaBreakingChanges.push({
                   ...change,
                   federatedGraphName: composition.name,
+                  featureFlag: compositionFeatureFlagName,
                 });
               }
             }

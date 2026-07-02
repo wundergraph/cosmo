@@ -885,6 +885,7 @@ export const schemaCheckSubgraphs = pgTable(
       onDelete: 'cascade',
     }),
     labels: text('labels').array(),
+    isFeatureSubgraph: boolean('is_feature_subgraph').notNull().default(false),
   },
   (t) => {
     return {
@@ -995,6 +996,7 @@ export const schemaCheckFederatedGraphChanges = pgTable(
       .references(() => schemaCheckChangeAction.id, {
         onDelete: 'cascade',
       }),
+    featureFlagId: uuid('feature_flag_id').references(() => featureFlags.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => {
@@ -1003,10 +1005,10 @@ export const schemaCheckFederatedGraphChanges = pgTable(
         t.schemaCheckFederatedGraphId,
       ),
       schemaCheckChangeActionIdIndex: index('scfgsc_schema_check_change_action_id_idx').on(t.schemaCheckChangeActionId),
-      uniqueFedGraphChange: uniqueIndex('scfgc_fed_graph_change_action_unique').on(
-        t.schemaCheckFederatedGraphId,
-        t.schemaCheckChangeActionId,
-      ),
+      featureFlagIdIndex: index('scfgc_feature_flag_id_idx').on(t.featureFlagId),
+      uniqueFedGraphChange: unique('scfgc_fed_graph_change_action_unique')
+        .on(t.schemaCheckFederatedGraphId, t.schemaCheckChangeActionId, t.featureFlagId)
+        .nullsNotDistinct(),
     };
   },
 );
@@ -1171,6 +1173,7 @@ export const schemaCheckComposition = pgTable(
       .references(() => targets.id, {
         onDelete: 'cascade',
       }),
+    featureFlagId: uuid('feature_flag_id').references(() => featureFlags.id, { onDelete: 'set null' }),
     compositionErrors: text('composition_errors'),
     compositionWarnings: text('composition_warnings'),
     composedSchemaSDL: text('composed_schema_sdl'),
@@ -1181,6 +1184,10 @@ export const schemaCheckComposition = pgTable(
     return {
       schemaCheckIdIndex: index('scc_schema_check_id_idx').on(t.schemaCheckId),
       federatedTargetIdIndex: index('scc_target_id_idx').on(t.federatedTargetId),
+      featureFlagIdIndex: index('scc_feature_flag_id_idx').on(t.featureFlagId),
+      uniqueScc: unique('scc_check_target_flag_unique')
+        .on(t.schemaCheckId, t.federatedTargetId, t.featureFlagId)
+        .nullsNotDistinct(),
     };
   },
 );

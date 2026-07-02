@@ -289,6 +289,68 @@ describe('stdout', () => {
     expect(process.exitCode).not.toBe(1);
   });
 
+  test('composition errors table includes FEATURE_FLAG column and flag name when attributed to a feature flag', async () => {
+    await expect(
+      runCheck({
+        response: { code: EnumStatusCode.OK },
+        compositionErrors: [
+          {
+            message: 'FS composition failed',
+            federatedGraphName: 'my-graph',
+            namespace: 'default',
+            featureFlag: 'experimental-flag',
+          },
+        ],
+        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+      }),
+    ).rejects.toThrow();
+
+    const tableOutput = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(tableOutput).toContain('FEATURE_FLAG');
+    expect(tableOutput).toContain('experimental-flag');
+  });
+
+  test('composition warnings table includes FEATURE_FLAG column and flag name when attributed to a feature flag', async () => {
+    await runCheck({
+      response: { code: EnumStatusCode.OK },
+      nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
+      compositionWarnings: [
+        {
+          message: 'Flag deprecation warning',
+          federatedGraphName: 'my-graph',
+          namespace: 'default',
+          featureFlag: 'beta-flag',
+        },
+      ],
+      operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+    });
+
+    const tableOutput = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(tableOutput).toContain('FEATURE_FLAG');
+    expect(tableOutput).toContain('beta-flag');
+  });
+
+  test('composedSchemaBreakingChanges table includes FEATURE_FLAG column and flag name when attributed to a feature flag', async () => {
+    await expect(
+      runCheck({
+        response: { code: EnumStatusCode.OK },
+        composedSchemaBreakingChanges: [
+          {
+            changeType: 'FIELD_REMOVED',
+            message: 'Field removed at FS composition',
+            federatedGraphName: 'my-graph',
+            isBreaking: true,
+            featureFlag: 'fs-flag',
+          },
+        ],
+      }),
+    ).rejects.toThrow();
+
+    const tableOutput = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(tableOutput).toContain('FEATURE_FLAG');
+    expect(tableOutput).toContain('fs-flag');
+  });
+
   test('lint errors logs table and fails', async () => {
     await expect(
       runCheck({
@@ -796,6 +858,78 @@ describe('json output', () => {
     expect(output.composition).toBeDefined();
     expect(Array.isArray(output.composition?.errors)).toBe(true);
     expect(Array.isArray(output.composition?.warnings)).toBe(true);
+  });
+
+  test('JSON output preserves featureFlag on composition errors, warnings, and composed breaking changes', async () => {
+    await runCheck(
+      {
+        response: { code: EnumStatusCode.OK },
+        compositionErrors: [
+          {
+            message: 'FS composition failed',
+            federatedGraphName: 'my-graph',
+            namespace: 'default',
+            featureFlag: 'flag-a',
+          },
+          {
+            message: 'Base composition failed',
+            federatedGraphName: 'my-graph',
+            namespace: 'default',
+            featureFlag: '',
+          },
+        ],
+        compositionWarnings: [
+          {
+            message: 'FS warning',
+            federatedGraphName: 'my-graph',
+            namespace: 'default',
+            featureFlag: 'flag-b',
+          },
+        ],
+        composedSchemaBreakingChanges: [
+          {
+            changeType: 'FIELD_REMOVED',
+            message: 'Field removed',
+            federatedGraphName: 'my-graph',
+            isBreaking: true,
+            featureFlag: 'flag-c',
+          },
+        ],
+        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+      },
+      { json: true },
+    );
+
+    const output = getJsonOutput(logSpy);
+    expect(output.composition?.errors[0].featureFlag).toBe('flag-a');
+    expect(output.composition?.errors[1].featureFlag).toBe('');
+    expect(output.composition?.warnings[0].featureFlag).toBe('flag-b');
+    expect(output.composedSchemaBreakingChanges?.[0].featureFlag).toBe('flag-c');
+  });
+
+  test('JSON output includes the feature subgraph check message when the FS is in no enabled flag', async () => {
+    const message = 'Feature subgraph is not assigned to any enabled feature flag; no composition check performed.';
+    await runCheck(
+      {
+        response: { code: EnumStatusCode.OK },
+        featureSubgraphCheckMessage: message,
+        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+      },
+      { json: true },
+    );
+
+    const output = getJsonOutput(logSpy);
+    expect(output.featureSubgraphCheck?.message).toBe(message);
+  });
+
+  test('text output prints the feature subgraph check message when the FS is in no enabled flag', async () => {
+    const message = 'Feature subgraph is not assigned to any enabled feature flag; no composition check performed.';
+    await runCheck({
+      response: { code: EnumStatusCode.OK },
+      featureSubgraphCheckMessage: message,
+    });
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('not assigned to any enabled feature flag'));
   });
 
   test('lint errors outputs JSON with error status and lint.errors populated', async () => {
