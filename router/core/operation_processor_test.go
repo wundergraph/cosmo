@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/dgraph-io/ristretto/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -708,4 +709,144 @@ func TestSkipIncludeVariableNamesStableAfterKitReuse(t *testing.T) {
 	require.Equal(t, "withCats", names[1],
 		"skipIncludeVariableNames must return cloned (not aliased) strings: "+
 			"'withCats' was corrupted after kit reuse")
+}
+
+// newValidationCacheProcessor builds an OperationProcessor whose operations are
+// validated against clientSchemaSDL and whose validation results are stored in
+// the returned cache, so cache behaviour can be asserted directly.
+func newValidationCacheProcessor(t *testing.T, clientSchemaSDL string) (*OperationProcessor, *ristretto.Cache[uint64, bool]) {
+	t.Helper()
+
+	clientSchema, report := astparser.ParseGraphqlDocumentString(clientSchemaSDL)
+	require.False(t, report.HasErrors(), "failed to parse client schema")
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&clientSchema))
+
+	validationCache, err := ristretto.NewCache[uint64, bool](&ristretto.Config[uint64, bool]{
+		MaxCost:            1024,
+		NumCounters:        1024 * 10,
+		IgnoreInternalCost: true,
+		BufferItems:        64,
+	})
+	require.NoError(t, err)
+
+	processor := NewOperationProcessor(OperationProcessorOptions{
+		Executor:                &Executor{ClientSchema: &clientSchema},
+		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        4,
+		ValidationCache:         validationCache,
+	})
+
+	return processor, validationCache
+}
+
+// validateOperationBody runs the pre-extraction pipeline (Parse + NormalizeOperation)
+// and then ValidateOperation, mirroring what the prehandler does before variable
+// extraction.
+func validateOperationBody(t *testing.T, p *OperationProcessor, body string) (cacheHit bool, err error) {
+	t.Helper()
+
+	kit, err := p.NewKit()
+	require.NoError(t, err)
+	defer kit.Free()
+
+	require.NoError(t, kit.UnmarshalOperationFromBody([]byte(body)))
+	require.NoError(t, kit.Parse())
+	_, err = kit.NormalizeOperation("test", false)
+	require.NoError(t, err)
+
+	return kit.ValidateOperation()
+}
+
+// TestOperationProcessorValidationCache verifies that after splitting schema
+// validation (ValidateOperation) out of Validate and re-keying the validation
+// cache on the pre-extraction normalized representation, the cache still behaves
+// correctly: results are reused across requests, keyed on the operation (not on
+// variable values), and distinct per operation.
+func TestOperationProcessorValidationCache(t *testing.T) {
+	const clientSchemaSDL = `type Query { hello(name: String!): String greet(name: String!): String }`
+
+	t.Run("valid operation is cached as valid", func(t *testing.T) {
+		p, cache := newValidationCacheProcessor(t, clientSchemaSDL)
+
+		cacheHit, err := validateOperationBody(t, p, `{"query":"{ hello(name: \"world\") }"}`)
+		require.NoError(t, err)
+		require.False(t, cacheHit, "first validation of an operation must be a cache miss")
+
+		cache.Wait()
+
+		cacheHit, err = validateOperationBody(t, p, `{"query":"{ hello(name: \"world\") }"}`)
+		require.NoError(t, err)
+		require.True(t, cacheHit, "second validation of the same operation must be a cache hit")
+	})
+
+	t.Run("invalid operation is cached as invalid", func(t *testing.T) {
+		p, cache := newValidationCacheProcessor(t, clientSchemaSDL)
+
+		// Unquoted enum literal for a String argument: rejected by schema validation.
+		cacheHit, err := validateOperationBody(t, p, `{"query":"{ hello(name: nope) }"}`)
+		require.Error(t, err)
+		require.False(t, cacheHit)
+		require.EqualError(t, err, "String cannot represent a non string value: nope")
+
+		cache.Wait()
+
+		cacheHit, err = validateOperationBody(t, p, `{"query":"{ hello(name: nope) }"}`)
+		require.Error(t, err, "an invalid operation must stay invalid on a cache hit")
+		require.True(t, cacheHit, "the invalid result must be served from the cache")
+		require.EqualError(t, err, "String cannot represent a non string value: nope")
+	})
+
+	t.Run("cache key is independent of variable values", func(t *testing.T) {
+		p, cache := newValidationCacheProcessor(t, clientSchemaSDL)
+
+		const query = `query Q($n: String!) { hello(name: $n) }`
+
+		cacheHit, err := validateOperationBody(t, p, `{"query":"`+query+`","variables":{"n":"a"}}`)
+		require.NoError(t, err)
+		require.False(t, cacheHit)
+
+		cache.Wait()
+
+		// Same operation, different variable value: validity does not depend on the
+		// value, so this must hit the cache populated by the previous request.
+		cacheHit, err = validateOperationBody(t, p, `{"query":"`+query+`","variables":{"n":"b"}}`)
+		require.NoError(t, err)
+		require.True(t, cacheHit, "different variable values must reuse the same validation cache entry")
+	})
+
+	t.Run("distinct operations get distinct cache entries", func(t *testing.T) {
+		p, cache := newValidationCacheProcessor(t, clientSchemaSDL)
+
+		cacheHit, err := validateOperationBody(t, p, `{"query":"{ hello(name: \"a\") }"}`)
+		require.NoError(t, err)
+		require.False(t, cacheHit)
+
+		cache.Wait()
+
+		// A different field is a different operation and must not reuse the entry above.
+		cacheHit, err = validateOperationBody(t, p, `{"query":"{ greet(name: \"a\") }"}`)
+		require.NoError(t, err)
+		require.False(t, cacheHit, "a different operation must be a cache miss")
+	})
+
+	t.Run("validation cache is optional", func(t *testing.T) {
+		// No ValidationCache configured: ValidateOperation must still validate and
+		// never report a cache hit.
+		clientSchema, report := astparser.ParseGraphqlDocumentString(clientSchemaSDL)
+		require.False(t, report.HasErrors())
+		require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&clientSchema))
+		p := NewOperationProcessor(OperationProcessorOptions{
+			Executor:                &Executor{ClientSchema: &clientSchema},
+			MaxOperationSizeInBytes: 10 << 20,
+			ParseKitPoolSize:        4,
+		})
+
+		cacheHit, err := validateOperationBody(t, p, `{"query":"{ hello(name: nope) }"}`)
+		require.Error(t, err)
+		require.False(t, cacheHit)
+
+		cacheHit, err = validateOperationBody(t, p, `{"query":"{ hello(name: \"world\") }"}`)
+		require.NoError(t, err)
+		require.False(t, cacheHit)
+	})
 }
