@@ -12,7 +12,7 @@ version: '1'
 execution_config:
   file:
     path: './__schemas/config.json'
-    # watch: true
+    watch: true
 
 router_registration: false
 

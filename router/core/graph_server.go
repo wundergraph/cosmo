@@ -7,12 +7,15 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cespare/xxhash/v2"
@@ -27,10 +30,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
-	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
@@ -95,7 +96,7 @@ type (
 		mux                     *chi.Mux
 		// inFlightRequests is used to track the number of requests currently being processed
 		// does not include websocket (hijacked) connections.
-		inFlightRequests *atomic.Uint64
+		inFlightRequests *atomic.Int64
 		// graphMuxList contains all graph muxes of this graph server.
 		// It's keyed by mux name (feature flag name or empty string for base graph).
 		graphMuxList            map[string]*graphMux
@@ -221,7 +222,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		playgroundHandler:       r.playgroundHandler,
 		traceDialer:             traceDialer,
 		baseRouterConfigVersion: response.Config.GetVersion(),
-		inFlightRequests:        &atomic.Uint64{},
+		inFlightRequests:        &atomic.Int64{},
 		graphMuxList:            make(map[string]*graphMux, 1),
 		instanceData: InstanceData{
 			HostName:      r.hostName,
@@ -385,7 +386,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 
 	featureFlagConfigMap := response.Config.FeatureFlagConfigs.GetConfigByFeatureFlagName()
 	if len(featureFlagConfigMap) > 0 {
-		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
+		s.logger.Info("Feature flags enabled", zap.Strings("flags", slices.Sorted(maps.Keys(featureFlagConfigMap))))
 	}
 
 	multiGraphHandler, ffReusedMuxes, err := s.buildMultiGraphHandler(buildMultiGraphHandlerOptions{
@@ -631,6 +632,8 @@ func (s *graphServer) buildMultiGraphHandler(
 		featureFlagToMux[featureFlagName] = gm.mux
 	}
 
+	baseMux := opts.baseMux // Capture only baseMux so the closure does not hold the whole opts struct
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract the feature flag and run the corresponding mux
 		// 1. From the request header
@@ -650,7 +653,7 @@ func (s *graphServer) buildMultiGraphHandler(
 			return
 		}
 
-		opts.baseMux.ServeHTTP(w, r)
+		baseMux.ServeHTTP(w, r)
 	}, reused, nil
 }
 
@@ -739,7 +742,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 				s.planFallbackCache.Set(item.Key, item.Value, item.Value.planningDuration)
 			}
 		}
-		s.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
+		s.planCache, err = ristretto.NewCache(planCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create planner cache: %w", err)
 		}
@@ -755,7 +758,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			Metrics:            true,
 		}
 
-		s.persistedOperationCache, _ = ristretto.NewCache[uint64, NormalizationCacheEntry](persistedOperationCacheConfig)
+		s.persistedOperationCache, _ = ristretto.NewCache(persistedOperationCacheConfig)
 	}
 
 	if srv.engineExecutionConfiguration.EnableNormalizationCache && srv.engineExecutionConfiguration.NormalizationCacheSize > 0 {
@@ -766,7 +769,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			IgnoreInternalCost: true,
 			BufferItems:        64,
 		}
-		s.normalizationCache, err = ristretto.NewCache[uint64, NormalizationCacheEntry](normalizationCacheConfig)
+		s.normalizationCache, err = ristretto.NewCache(normalizationCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create normalization cache: %w", err)
 		}
@@ -778,7 +781,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			IgnoreInternalCost: true,
 			BufferItems:        64,
 		}
-		s.variablesNormalizationCache, err = ristretto.NewCache[uint64, VariablesNormalizationCacheEntry](variablesNormalizationCacheConfig)
+		s.variablesNormalizationCache, err = ristretto.NewCache(variablesNormalizationCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create variables normalization cache: %w", err)
 		}
@@ -790,7 +793,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			IgnoreInternalCost: true,
 			BufferItems:        64,
 		}
-		s.remapVariablesCache, err = ristretto.NewCache[uint64, RemapVariablesCacheEntry](remapVariablesCacheConfig)
+		s.remapVariablesCache, err = ristretto.NewCache(remapVariablesCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create remap variables cache: %w", err)
 		}
@@ -804,7 +807,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			IgnoreInternalCost: true,
 			BufferItems:        64,
 		}
-		s.validationCache, err = ristretto.NewCache[uint64, bool](validationCacheConfig)
+		s.validationCache, err = ristretto.NewCache(validationCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create validation cache: %w", err)
 		}
@@ -818,7 +821,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			IgnoreInternalCost: true,
 			BufferItems:        64,
 		}
-		s.complexityCalculationCache, err = ristretto.NewCache[uint64, ComplexityCacheEntry](complexityCalculationCacheConfig)
+		s.complexityCalculationCache, err = ristretto.NewCache(complexityCalculationCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create query depth cache: %w", err)
 		}
@@ -862,7 +865,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			BufferItems:        64,
 			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
 		}
-		s.operationHashCache, err = ristretto.NewCache[uint64, string](operationHashCacheConfig)
+		s.operationHashCache, err = ristretto.NewCache(operationHashCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create operation hash cache: %w", err)
 		}
@@ -1899,7 +1902,7 @@ func (s *graphServer) buildGraphMux(
 
 					// Counting like this is safe because according to the go http.ServeHTTP documentation
 					// the requests is guaranteed to be finished when ServeHTTP returns
-					defer s.inFlightRequests.Sub(1)
+					defer s.inFlightRequests.Add(-1)
 				}
 
 				handler.ServeHTTP(w, r)
@@ -2262,7 +2265,7 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	return finalErr
 }
 
-// startupPubSubProviders starts all pubsub providers
+// startupPubSubProviders starts the given pubsub providers
 // It returns an error if any of the providers fail to start
 // or if some providers takes to long to start
 func (s *graphServer) startupPubSubProviders(ctx context.Context) error {
