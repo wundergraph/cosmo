@@ -16,7 +16,8 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
 
-// TestInlineLiteralValidation covers ENG-9820.
+// TestInlineLiteralValidation verifies that invalid inline argument literals are
+// rejected by schema validation.
 //
 // A syntactically valid but type-incorrect *inline* argument literal (most
 // notably an unquoted single-word enum value used for a String argument, e.g.
@@ -43,7 +44,7 @@ func TestInlineLiteralValidation(t *testing.T) {
 		// the exact ValuesOfCorrectType message, before extraction.
 		// -------------------------------------------------------------------
 
-		// The core ENG-9820 reproduction: unquoted enum literal for String!.
+		// The core reproduction: unquoted enum literal for String!.
 		// Currently BUGGY: forwarded to the subgraph as "hello" -> returns data.
 		t.Run("rejects unquoted enum literal for String argument", func(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{

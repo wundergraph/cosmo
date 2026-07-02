@@ -851,8 +851,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// Validate the operation against the schema BEFORE variable extraction. Extraction
 	// serializes inline argument literals into JSON variables, which erases their GraphQL
 	// type (e.g. an enum literal `hello` becomes the string "hello" and would wrongly
-	// satisfy a String argument). See ENG-9820. The error is surfaced later, on the
-	// validation span, so that the normalization span reflects only normalization.
+	// satisfy a String argument). The error is surfaced later, on the validation span, so
+	// that the normalization span reflects only normalization.
 	operationValidationCacheHit, operationValidationErr := operationKit.ValidateOperation()
 
 	/**

@@ -413,7 +413,7 @@ func TestBatch(t *testing.T) {
 				entries := getBatchedEntriesForLength(t, res.Body, 3)
 				expected1 := `{"errors":[{"message":"Cannot query field \"employees2\" on type \"Query\".","path":["query"]}]}`
 				expected2 := `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
-				// The inline literal is now rejected by schema validation before extraction (ENG-9820),
+				// The inline literal is now rejected by schema validation before extraction,
 				// so the clean ValuesOfCorrectType message is returned instead of a variable-scoped one.
 				expected3 := `{"errors":[{"message":"Int cannot represent non-integer value: \"4\"","locations":[{"line":1,"column":31}]}]}`
 				require.Equal(t, expected1, entries[0])
@@ -464,7 +464,7 @@ func TestBatch(t *testing.T) {
 			entries := getBatchedEntriesForLength(t, res.Body, 3)
 			expected1 := `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 			expected2 := `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":403}}],"data":{"employees":[{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null}]}}`
-			// Inline literal rejected by schema validation before extraction (ENG-9820).
+			// Inline literal rejected by schema validation before extraction.
 			expected3 := `{"errors":[{"message":"Int cannot represent non-integer value: \"5\"","locations":[{"line":1,"column":31}]}]}`
 			require.Equal(t, expected1, entries[0])
 			require.Equal(t, expected2, entries[1])
@@ -513,7 +513,7 @@ func TestBatch(t *testing.T) {
 			entries := getBatchedEntriesForLength(t, res.Body, 3)
 			expected1 := `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 			expected2 := `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":[{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null}]}}`
-			// Inline literal rejected by schema validation before extraction (ENG-9820).
+			// Inline literal rejected by schema validation before extraction.
 			expected3 := `{"errors":[{"message":"Int cannot represent non-integer value: \"5\"","locations":[{"line":1,"column":31}]}]}`
 			require.Equal(t, expected1, entries[0])
 			require.Equal(t, expected2, entries[1])

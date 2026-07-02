@@ -10,7 +10,7 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
 
-// TestSubscriptionInlineLiteralValidation covers ENG-9820 for the subscription
+// TestSubscriptionInlineLiteralValidation covers the subscription
 // request pipeline (websocket.go / buildOperation), which validates operations
 // through a separate code path from the HTTP request handler.
 //

@@ -349,7 +349,8 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
-	// Schema validation must run on the pre-extraction document (see ENG-9820).
+	// Schema validation must run before variable extraction, otherwise inline argument
+	// literals are serialized into JSON variables and invalid-type literals slip through.
 	if _, err = k.ValidateOperation(); err != nil {
 		return nil, err
 	}

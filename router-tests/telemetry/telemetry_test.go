@@ -1121,7 +1121,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 								attribute.String("type", "hits"),
 							)...),
 							// One fewer hit than the plan cache: validation is keyed on the pre-extraction
-							// operation (ENG-9820), which includes the operation name, so the persisted
+							// operation, which includes the operation name, so the persisted
 							// "Employees" (dc67…) query misses validation even though it hits the plan cache.
 							Value: 2,
 						},
@@ -1260,7 +1260,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 								attribute.String("operation", "added"),
 							)...),
 							// One more added entry than the plan cache: validation is keyed on the
-							// pre-extraction operation (ENG-9820), so the persisted "Employees" (dc67…)
+							// pre-extraction operation, so the persisted "Employees" (dc67…)
 							// query, which differs only by operation name, gets its own validation entry.
 							Value: 4,
 						},
@@ -1382,7 +1382,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 								attribute.String("operation", "added"),
 							)...),
 							// See the keys.stats assertion above: the pre-extraction validation key
-							// (ENG-9820) adds one more validation entry than the plan cache.
+							// adds one more validation entry than the plan cache.
 							Value: baseCost * 4,
 						},
 						{

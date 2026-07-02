@@ -974,7 +974,8 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	}
 	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
-	// Validate the operation against the schema BEFORE variable extraction (see ENG-9820).
+	// Validate the operation against the schema BEFORE variable extraction, which would
+	// serialize inline literals into JSON variables and let invalid-type literals through.
 	// The error is surfaced later, during validation, so normalization timing stays accurate.
 	_, operationValidationErr := operationKit.ValidateOperation()
 

@@ -150,7 +150,7 @@ func (pl *Planner) PrepareOperation(operation *ast.Document) (*ast.Document, Ope
 	start := time.Now()
 	// Normalize WITHOUT variable extraction first, so schema validation still sees the
 	// original inline argument literals. Extraction serializes them into JSON variables,
-	// erasing their GraphQL type (see ENG-9820).
+	// erasing their GraphQL type and hiding invalid-type literals.
 	err := pl.normalizeOperation(operation, operationName)
 	opTimes.NormalizeTime = time.Since(start)
 	if err != nil {
@@ -201,7 +201,7 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 
 // extractAndRemapVariables extracts inline argument values into variables and remaps
 // variable names. It runs after validateOperation so that schema validation observes the
-// original inline literals (see ENG-9820).
+// original inline literals rather than the JSON variables they would be serialized into.
 func (pl *Planner) extractAndRemapVariables(operation *ast.Document, operationName []byte) (err error) {
 	defer func() {
 		if r := recover(); r != nil {

@@ -1306,7 +1306,7 @@ func (o *OperationKit) operationValidationCacheKey() uint64 {
 // literals into JSON variables which erases their GraphQL type: an enum literal
 // such as `hello` becomes the JSON string "hello" and would then wrongly
 // satisfy a String argument. Validating before extraction lets the
-// ValuesOfCorrectType rule reject such literals (ENG-9820).
+// ValuesOfCorrectType rule reject such literals.
 func (o *OperationKit) ValidateOperation() (cacheHit bool, err error) {
 	var cacheKey uint64
 	useCache := o.cache != nil && o.cache.validationCache != nil
