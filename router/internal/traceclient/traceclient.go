@@ -179,9 +179,6 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		)
 	}
 
-	// Per-phase httptrace metrics. The ConnectionMetricStore method is a no-op
-	// when network metrics are disabled, so unconditionally calling these is
-	// cheap on the disabled path.
 	if !trace.phases.DNSStart.IsZero() && !trace.phases.DNSDone.IsZero() {
 		dur := trace.phases.DNSDone.Sub(trace.phases.DNSStart)
 		exprContext.Subgraph.Request.ClientTrace.DNSLookupDuration = dur
