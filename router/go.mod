@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.8.0
+	github.com/wundergraph/graphql-go-tools/v2 v2.7.0
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.44.0
@@ -181,3 +181,5 @@ require (
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
 // replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+
+replace github.com/wundergraph/graphql-go-tools/v2 => /private/tmp/claude-501/-Users-ale-GolandProjects-cosmo/38ef65b6-a73d-4ca4-a911-9bb5e7c5df36/scratchpad/ggt-bisect/v2
