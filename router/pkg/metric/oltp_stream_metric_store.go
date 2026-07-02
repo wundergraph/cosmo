@@ -46,7 +46,3 @@ func (o *otlpStreamEventMetrics) Produce(ctx context.Context, opts ...otelmetric
 func (o *otlpStreamEventMetrics) Consume(ctx context.Context, opts ...otelmetric.AddOption) {
 	o.instruments.consumedMessages.Add(ctx, 1, opts...)
 }
-
-func (o *otlpStreamEventMetrics) Flush(ctx context.Context) error {
-	return o.meterProvider.ForceFlush(ctx)
-}

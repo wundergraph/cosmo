@@ -1,11 +1,8 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { z } from 'zod';
 import { getBaseHeaders } from '../../../core/config.js';
-import {
-  fetchRouterConfig,
-  getFederatedGraphSchemas,
-  getSubgraphsOfFedGraph,
-} from '../../graph/federated-graph/utils.js';
+import { getFederatedGraphSchemas, getSubgraphsOfFedGraph } from '../../graph/federated-graph/utils.js';
+import { fetchRouterConfig } from '../../router/utils.js';
 import { ToolContext } from './types.js';
 
 export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
@@ -121,14 +118,14 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
     },
     async ({ name, namespace }) => {
       try {
-        const routerConfig = await fetchRouterConfig({
+        const result = await fetchRouterConfig({
           client: opts.client,
           name,
           namespace,
         });
 
         return {
-          content: [{ type: 'text', text: routerConfig }],
+          content: [{ type: 'text', text: result.routerConfig }],
         };
       } catch (e: any) {
         throw new Error(`Failed to fetch router config: ${e.message}`);
