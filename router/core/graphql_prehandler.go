@@ -848,6 +848,13 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 	requestContext.expressionContext.Request.Operation.NormalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
+	// Validate the operation against the schema BEFORE variable extraction. Extraction
+	// serializes inline argument literals into JSON variables, which erases their GraphQL
+	// type (e.g. an enum literal `hello` becomes the string "hello" and would wrongly
+	// satisfy a String argument). See ENG-9820. The error is surfaced later, on the
+	// validation span, so that the normalization span reflects only normalization.
+	operationValidationCacheHit, operationValidationErr := operationKit.ValidateOperation()
+
 	/**
 	* Normalize the variables
 	 */
@@ -1056,7 +1063,14 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		}
 	}
 
-	validationCached, err := operationKit.Validate(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
+	// Schema validation (computed before variable extraction) takes precedence over
+	// variable validation, mirroring the GraphQL spec order (ValuesOfCorrectType before
+	// coerced variable values). Its error is surfaced here so it appears on the
+	// validation span rather than the normalization span.
+	err = operationValidationErr
+	if err == nil {
+		err = operationKit.Validate(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
+	}
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
 
@@ -1074,7 +1088,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		return err
 	}
 
-	engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(validationCached))
+	engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(operationValidationCacheHit))
 	if requestContext.operation.executionOptions.SkipLoader {
 		// In case we're skipping the loader, which means that we won't execute the operation
 		// we skip the validation of variables as we're not using them

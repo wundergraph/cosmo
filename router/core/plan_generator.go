@@ -148,6 +148,9 @@ func (pl *Planner) PrepareOperation(operation *ast.Document) (*ast.Document, Ope
 	opTimes := OperationTimes{}
 
 	start := time.Now()
+	// Normalize WITHOUT variable extraction first, so schema validation still sees the
+	// original inline argument literals. Extraction serializes them into JSON variables,
+	// erasing their GraphQL type (see ENG-9820).
 	err := pl.normalizeOperation(operation, operationName)
 	opTimes.NormalizeTime = time.Since(start)
 	if err != nil {
@@ -157,6 +160,14 @@ func (pl *Planner) PrepareOperation(operation *ast.Document) (*ast.Document, Ope
 	start = time.Now()
 	err = pl.validateOperation(operation)
 	opTimes.ValidateTime = time.Since(start)
+	if err != nil {
+		return nil, opTimes, &PlannerOperationValidationError{err: err}
+	}
+
+	// Extract and remap variables only after validation has passed.
+	start = time.Now()
+	err = pl.extractAndRemapVariables(operation, operationName)
+	opTimes.NormalizeTime += time.Since(start)
 	if err != nil {
 		return nil, opTimes, &PlannerOperationValidationError{err: err}
 	}
@@ -175,11 +186,33 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 
 	normalizer := astnormalization.NewWithOpts(
 		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
-		astnormalization.WithExtractVariables(),
 		astnormalization.WithRemoveFragmentDefinitions(),
 		astnormalization.WithInlineFragmentSpreads(),
 		astnormalization.WithRemoveUnusedVariables(),
 		astnormalization.WithIgnoreSkipInclude(),
+	)
+	normalizer.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
+	if report.HasErrors() {
+		return report
+	}
+
+	return nil
+}
+
+// extractAndRemapVariables extracts inline argument values into variables and remaps
+// variable names. It runs after validateOperation so that schema validation observes the
+// original inline literals (see ENG-9820).
+func (pl *Planner) extractAndRemapVariables(operation *ast.Document, operationName []byte) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic during variable extraction: %v", r)
+		}
+	}()
+
+	report := operationreport.Report{}
+
+	normalizer := astnormalization.NewWithOpts(
+		astnormalization.WithExtractVariables(),
 	)
 	normalizer.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
 	if report.HasErrors() {

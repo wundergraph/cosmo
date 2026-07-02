@@ -974,6 +974,10 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	}
 	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
+	// Validate the operation against the schema BEFORE variable extraction (see ENG-9820).
+	// The error is surfaced later, during validation, so normalization timing stays accurate.
+	_, operationValidationErr := operationKit.ValidateOperation()
+
 	cached, _, err := operationKit.NormalizeVariables()
 	if err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
@@ -1002,13 +1006,20 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	startValidation := time.Now()
 
+	// Surface schema-validation errors (computed before extraction) ahead of variable
+	// validation, matching the GraphQL spec order.
+	if operationValidationErr != nil {
+		opContext.validationTime = time.Since(startValidation)
+		return nil, nil, operationValidationErr
+	}
+
 	_, _, err = operationKit.ValidateQueryComplexity()
 	if err != nil {
 		opContext.validationTime = time.Since(startValidation)
 		return nil, nil, err
 	}
 
-	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader, opContext.remapVariables, &h.apolloCompatibilityFlags); err != nil {
+	if err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader, opContext.remapVariables, &h.apolloCompatibilityFlags); err != nil {
 		opContext.validationTime = time.Since(startValidation)
 		return nil, nil, err
 	}

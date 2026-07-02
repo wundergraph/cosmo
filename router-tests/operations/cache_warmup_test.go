@@ -73,10 +73,13 @@ func TestCacheWarmup(t *testing.T) {
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
 						QueryNormalizationMisses: 3 + employeeWarmedQueryCount + employeeQueryCount,
 						QueryNormalizationHits:   4,
-						ValidationMisses:         3 + employeeWarmedQueryCount,
-						ValidationHits:           4 + employeeQueryCount,
-						PlanMisses:               3 + employeeWarmedQueryCount,
-						PlanHits:                 4 + employeeQueryCount,
+						// Validation is now keyed on the pre-extraction operation (ENG-9820), so the two
+						// `employee(id: $id)` / `employee(id: $jensID)` requests validate separately even
+						// though they share a plan. Hence 2 more misses / 2 fewer hits than the plan cache.
+						ValidationMisses: 5 + employeeWarmedQueryCount,
+						ValidationHits:   2 + employeeQueryCount,
+						PlanMisses:       3 + employeeWarmedQueryCount,
+						PlanHits:         4 + employeeQueryCount,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -718,10 +721,13 @@ func TestCacheWarmup(t *testing.T) {
 						QueryNormalizationHits:            3,
 						PersistedQueryNormalizationMisses: cdnPOCount,
 						PersistedQueryNormalizationHits:   0,
-						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
-						ValidationHits:                    3 + employeeQueryCount,
-						PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
-						PlanHits:                          3 + employeeQueryCount,
+						// Validation is keyed on the pre-extraction operation (ENG-9820). The 2 request-time
+						// employee queries differ (a `$id` variant and an inline `2` variant) from the warmed
+						// operations, so they now miss validation (+2) instead of hitting it (-2).
+						ValidationMisses: cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount + 2,
+						ValidationHits:   1 + employeeQueryCount,
+						PlanMisses:       cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
+						PlanHits:         3 + employeeQueryCount,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -740,7 +746,8 @@ func TestCacheWarmup(t *testing.T) {
 
 				// For the next 2 queries below we will:
 				// - miss normalization cache
-				// - hit validation cache
+				// - miss validation cache (validation is keyed on the pre-extraction operation, ENG-9820,
+				//   and these differ from the warmed operations)
 				// - hit plan cache
 
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -780,10 +787,12 @@ func TestCacheWarmup(t *testing.T) {
 						QueryNormalizationHits:            0,
 						PersistedQueryNormalizationMisses: cdnPOCount + 2,
 						PersistedQueryNormalizationHits:   1, // its 1 because the second query is normalization miss
-						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
-						ValidationHits:                    2,
-						PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
-						PlanHits:                          2,
+						// Validation is keyed on the pre-extraction operation (ENG-9820); the second persisted
+						// operation ("A") differs from the warmed operations, so it misses validation (+1) here.
+						ValidationMisses: cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount + 1,
+						ValidationHits:   1,
+						PlanMisses:       cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
+						PlanHits:         2,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
