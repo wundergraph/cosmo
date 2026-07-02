@@ -206,8 +206,10 @@ export const CompositionDetails = ({
   } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.compositionId as string;
-  const tab = router.query.tab as string;
   const subgraph = router.query.subgraph as string;
+
+  let tab = router.query.tab as string;
+  tab = isFeatureFlagComposition && tab === 'ffCompostions' ? 'output' : tab;
 
   const graphData = useContext(GraphContext);
   const [schemaType, setSchemaType] = useState<'router' | 'client'>('client');
@@ -427,7 +429,7 @@ export const CompositionDetails = ({
                 <TabsTrigger value="warnings" asChild>
                   <Link href={{ query: { ...router.query, tab: 'warnings' } }}>Composition Warnings</Link>
                 </TabsTrigger>
-                {featureFlagCompositions && (
+                {featureFlagCompositions && !isFeatureFlagComposition && (
                   <TabsTrigger value="ffCompostions" asChild className="flex items-center gap-x-2">
                     <Link
                       href={{
@@ -627,6 +629,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
     );
 
   const { composition, changeCounts, compositionSubgraphs, featureFlagCompositions } = data;
+  const isFeatureFlagComposition = composition.isFeatureFlagComposition;
 
   return (
     <GraphPageLayout
@@ -643,8 +646,8 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
         composition={composition}
         changeCounts={changeCounts}
         compositionSubgraphs={compositionSubgraphs}
-        featureFlagCompositions={featureFlagCompositions}
-        isFeatureFlagComposition={false}
+        featureFlagCompositions={isFeatureFlagComposition ? undefined : featureFlagCompositions}
+        isFeatureFlagComposition={isFeatureFlagComposition}
       />
     </GraphPageLayout>
   );

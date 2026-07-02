@@ -1,12 +1,21 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { SQL, and, count, desc, eq, gt, lt, not } from 'drizzle-orm';
+import { SQL, and, count, desc, eq, gt, lt, not, inArray, or, isNull } from 'drizzle-orm';
 import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
-import { graphCompositions, graphCompositionSubgraphs, schemaVersion, subgraphs, users } from '../../db/schema.js';
+import {
+  featureFlags,
+  federatedGraphsToFeatureFlagSchemaVersions,
+  graphCompositions,
+  graphCompositionSubgraphs,
+  schemaVersion,
+  subgraphs,
+  users,
+} from '../../db/schema.js';
 import { DateRange, GraphCompositionDTO } from '../../types/index.js';
 import { CompositionSubgraphRecord } from '../composition/composer.js';
 import { traced } from '../tracing.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
+import { OrganizationRepository } from './OrganizationRepository.js';
 
 @traced
 export class GraphCompositionRepository {
@@ -26,6 +35,7 @@ export class GraphCompositionRepository {
     admissionErrorString,
     deploymentErrorString,
     isFeatureFlagComposition,
+    featureFlagId,
     routerCompatibilityVersion,
   }: {
     fedGraphTargetId: string;
@@ -38,6 +48,7 @@ export class GraphCompositionRepository {
     admissionErrorString?: string;
     deploymentErrorString?: string;
     isFeatureFlagComposition: boolean;
+    featureFlagId: string;
     routerCompatibilityVersion: string;
   }) {
     await this.db.transaction(async (tx) => {
@@ -49,18 +60,51 @@ export class GraphCompositionRepository {
       }
 
       const subgraphSchemaVersionIds = composedSubgraphs.map((subgraph) => subgraph.schemaVersionId);
-      const previousComposition = (
-        await tx
-          .select({
-            id: graphCompositions.id,
-          })
-          .from(graphCompositions)
-          .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-          .where(eq(schemaVersion.targetId, fedGraphTargetId))
-          .orderBy(desc(graphCompositions.createdAt))
-          .limit(1)
-          .execute()
-      )[0];
+
+      let previousCompositionId: string | undefined;
+      if (isFeatureFlagComposition) {
+        previousCompositionId = (
+          await tx
+            .select({ id: graphCompositions.id })
+            .from(graphCompositions)
+            .innerJoin(
+              schemaVersion,
+              and(
+                eq(schemaVersion.targetId, fedGraphTargetId),
+                eq(schemaVersion.id, graphCompositions.schemaVersionId),
+              ),
+            )
+            .innerJoin(
+              federatedGraphsToFeatureFlagSchemaVersions,
+              and(
+                eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
+                eq(
+                  federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
+                  graphCompositions.schemaVersionId,
+                ),
+              ),
+            )
+            .where(eq(graphCompositions.isFeatureFlagComposition, true))
+            .orderBy(desc(graphCompositions.createdAt))
+            .limit(1)
+            .execute()
+        )[0]?.id;
+      } else {
+        previousCompositionId = (
+          await tx
+            .select({
+              id: graphCompositions.id,
+            })
+            .from(graphCompositions)
+            .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+            .where(
+              and(eq(schemaVersion.targetId, fedGraphTargetId), eq(graphCompositions.isFeatureFlagComposition, false)),
+            )
+            .orderBy(desc(graphCompositions.createdAt))
+            .limit(1)
+            .execute()
+        )[0]?.id;
+      }
 
       const insertedComposition = await tx
         .insert(graphCompositions)
@@ -88,7 +132,7 @@ export class GraphCompositionRepository {
           targetId: string;
           isFeatureSubgraph: boolean;
         }[] = [];
-        if (previousComposition) {
+        if (previousCompositionId) {
           const prevSubgraphs = await tx
             .select({
               id: graphCompositionSubgraphs.subgraphId,
@@ -100,7 +144,7 @@ export class GraphCompositionRepository {
             .from(graphCompositionSubgraphs)
             .where(
               and(
-                eq(graphCompositionSubgraphs.graphCompositionId, previousComposition.id),
+                eq(graphCompositionSubgraphs.graphCompositionId, previousCompositionId),
                 not(eq(graphCompositionSubgraphs.changeType, 'removed')),
               ),
             )
@@ -108,27 +152,26 @@ export class GraphCompositionRepository {
           prevCompositionSubgraphs.push(...prevSubgraphs);
         }
 
-        const addedSubgraphs = composedSubgraphs.filter(
-          (subgraph) => !prevCompositionSubgraphs.some((prevSubgraph) => prevSubgraph.id === subgraph.id),
-        );
+        const addedSubgraphs: CompositionSubgraphRecord[] = [];
+        const updatedSubgraphs: CompositionSubgraphRecord[] = [];
+        const unchangedSubgraphs: CompositionSubgraphRecord[] = [];
+        for (const subgraph of composedSubgraphs) {
+          const prevSubgraph = prevCompositionSubgraphs.find((ps) => ps.id === subgraph.id);
+          if (!prevSubgraph) {
+            addedSubgraphs.push(subgraph);
+            continue;
+          }
+
+          if (prevSubgraph.schemaVersionId !== subgraphSchemaVersionIds[composedSubgraphs.indexOf(subgraph)]) {
+            updatedSubgraphs.push(subgraph);
+            continue;
+          }
+
+          unchangedSubgraphs.push(subgraph);
+        }
+
         const removedSubgraphs = prevCompositionSubgraphs.filter(
           (subgraph) => !composedSubgraphs.some((prevSubgraph) => prevSubgraph.id === subgraph.id),
-        );
-
-        const updatedSubgraphs = composedSubgraphs.filter((subgraph) => {
-          const prevSubgraph = prevCompositionSubgraphs.find((prevSubgraph) => prevSubgraph.id === subgraph.id);
-          return (
-            prevSubgraph &&
-            prevSubgraph.schemaVersionId !== subgraphSchemaVersionIds[composedSubgraphs.indexOf(subgraph)]
-          );
-        });
-
-        const unchangedSubgraphs = composedSubgraphs.filter((subgraph) =>
-          prevCompositionSubgraphs.some(
-            (prevSubgraph) =>
-              prevSubgraph.id === subgraph.id &&
-              prevSubgraph.schemaVersionId === subgraphSchemaVersionIds[composedSubgraphs.indexOf(subgraph)],
-          ),
         );
 
         const insertValues: (typeof graphCompositionSubgraphs.$inferInsert)[] = [
@@ -204,6 +247,7 @@ export class GraphCompositionRepository {
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
         routerCompatibilityVersion: graphCompositions.routerCompatibilityVersion,
+        isFeatureFlagComposition: graphCompositions.isFeatureFlagComposition,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
@@ -217,11 +261,17 @@ export class GraphCompositionRepository {
     }
 
     const composition = compositions[0];
-
-    const isCurrentDeployed = await fedRepo.isLatestValidSchemaVersion(
-      composition.targetId,
-      composition.schemaVersionId,
+    const featureFlagNamesBySchemaVersionId = await this.getFeatureFlagBySchemaVersionIds(
+      composition.isFeatureFlagComposition ? [composition.schemaVersionId] : [],
     );
+
+    const featureFlagInfo = featureFlagNamesBySchemaVersionId.get(composition.schemaVersionId);
+    const isCurrentDeployed = await this.isLatestValidComposition({
+      fedGraphRepo: fedRepo,
+      targetId: composition.targetId,
+      featureFlagId: featureFlagInfo?.id,
+      composition,
+    });
 
     return {
       id: composition.id,
@@ -237,6 +287,8 @@ export class GraphCompositionRepository {
       admissionError: composition.admissionError || undefined,
       deploymentError: composition.deploymentError || undefined,
       routerCompatibilityVersion: composition.routerCompatibilityVersion,
+      isFeatureFlagComposition: composition.isFeatureFlagComposition,
+      featureFlagName: featureFlagInfo?.name,
     };
   }
 
@@ -260,6 +312,7 @@ export class GraphCompositionRepository {
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
         routerCompatibilityVersion: graphCompositions.routerCompatibilityVersion,
+        isFeatureFlagComposition: graphCompositions.isFeatureFlagComposition,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
@@ -278,11 +331,17 @@ export class GraphCompositionRepository {
     }
 
     const composition = compositions[0];
-
-    const isCurrentDeployed = await fedRepo.isLatestValidSchemaVersion(
-      composition.targetId,
-      composition.schemaVersionId,
+    const featureFlagNamesBySchemaVersionId = await this.getFeatureFlagBySchemaVersionIds(
+      composition.isFeatureFlagComposition ? [composition.schemaVersionId] : [],
     );
+
+    const featureFlagInfo = featureFlagNamesBySchemaVersionId.get(composition.schemaVersionId);
+    const isCurrentDeployed = await this.isLatestValidComposition({
+      fedGraphRepo: fedRepo,
+      targetId: composition.targetId,
+      featureFlagId: featureFlagInfo?.id,
+      composition,
+    });
 
     return {
       id: composition.id,
@@ -297,11 +356,17 @@ export class GraphCompositionRepository {
       admissionError: composition.admissionError || undefined,
       deploymentError: composition.deploymentError || undefined,
       routerCompatibilityVersion: composition.routerCompatibilityVersion,
+      isFeatureFlagComposition: composition.isFeatureFlagComposition,
+      featureFlagName: featureFlagInfo?.name,
     };
   }
 
-  public async getCompositionSubgraphs(input: { compositionId: string }) {
-    const res = await this.db
+  public async getCompositionSubgraphs(input: {
+    compositionId: string;
+    schemaVersionId: string;
+    includeChildCompositionSubgraphs?: boolean;
+  }) {
+    const compositionSubgraphs = await this.db
       .select({
         id: graphCompositionSubgraphs.subgraphId,
         schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
@@ -316,7 +381,34 @@ export class GraphCompositionRepository {
       .where(eq(graphCompositionSubgraphs.graphCompositionId, input.compositionId))
       .execute();
 
-    return res;
+    if (!input.includeChildCompositionSubgraphs) {
+      return compositionSubgraphs;
+    }
+
+    const childCompositionSubgraphs = await this.db
+      .select({
+        id: graphCompositionSubgraphs.subgraphId,
+        schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
+        name: graphCompositionSubgraphs.subgraphName,
+        targetId: graphCompositionSubgraphs.subgraphTargetId,
+        isFeatureSubgraph: graphCompositionSubgraphs.isFeatureSubgraph,
+        changeType: graphCompositionSubgraphs.changeType,
+        subgraphType: subgraphs.type,
+      })
+      .from(graphCompositionSubgraphs)
+      .innerJoin(
+        subgraphs,
+        and(eq(graphCompositionSubgraphs.subgraphId, subgraphs.id), eq(subgraphs.isFeatureSubgraph, true)),
+      )
+      .innerJoin(graphCompositions, eq(graphCompositions.id, graphCompositionSubgraphs.graphCompositionId))
+      .innerJoin(
+        federatedGraphsToFeatureFlagSchemaVersions,
+        eq(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, graphCompositions.schemaVersionId),
+      )
+      .where(eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, input.schemaVersionId))
+      .execute();
+
+    return [...compositionSubgraphs, ...childCompositionSubgraphs];
   }
 
   public async getGraphCompositions({
@@ -335,6 +427,7 @@ export class GraphCompositionRepository {
     excludeFeatureFlagCompositions: boolean;
   }) {
     const fedRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
+    const orgRepo = new OrganizationRepository(this.logger, this.db);
     const conditions: SQL<unknown>[] = [
       eq(schemaVersion.targetId, fedGraphTargetId),
       gt(graphCompositions.createdAt, new Date(dateRange.start)),
@@ -359,6 +452,7 @@ export class GraphCompositionRepository {
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
         routerCompatibilityVersion: graphCompositions.routerCompatibilityVersion,
+        isFeatureFlagComposition: graphCompositions.isFeatureFlagComposition,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
@@ -375,16 +469,33 @@ export class GraphCompositionRepository {
     }
 
     const resp = await dbQuery.execute();
+    const featureFlagNamesBySchemaVersionId = await this.getFeatureFlagBySchemaVersionIds(
+      resp.filter((r) => r.isFeatureFlagComposition).map((r) => r.schemaVersionId),
+    );
 
     const compositions: (GraphCompositionDTO & {
       hasMultipleChangedSubgraphs: boolean;
       triggeredBySubgraphName: string;
     })[] = [];
 
-    for (const r of resp) {
-      const isCurrentDeployed = await fedRepo.isLatestValidSchemaVersion(fedGraphTargetId, r.schemaVersionId);
+    const splitConfigFeature = await orgRepo.getFeature({ organizationId, featureId: 'split-config-loading' });
+    const splitConfigLoadingEnabled = !!splitConfigFeature?.enabled;
 
-      const compositionSubgraphs = await this.getCompositionSubgraphs({ compositionId: r.id });
+    for (const r of resp) {
+      const compositionSubgraphs = await this.getCompositionSubgraphs({
+        compositionId: r.id,
+        schemaVersionId: r.schemaVersionId,
+        // We only want to include the feature flag subgraphs for legacy compositions
+        includeChildCompositionSubgraphs: !r.isFeatureFlagComposition && !splitConfigLoadingEnabled,
+      });
+
+      const featureFlagInfo = featureFlagNamesBySchemaVersionId.get(r.schemaVersionId);
+      const isCurrentDeployed = await this.isLatestValidComposition({
+        fedGraphRepo: fedRepo,
+        targetId: fedGraphTargetId,
+        featureFlagId: featureFlagInfo?.id,
+        composition: r,
+      });
 
       compositions.push({
         id: r.id,
@@ -401,6 +512,8 @@ export class GraphCompositionRepository {
         hasMultipleChangedSubgraphs: compositionSubgraphs.filter((s) => s.changeType !== 'unchanged').length > 1,
         triggeredBySubgraphName: compositionSubgraphs.find((s) => s.changeType !== 'unchanged')?.name || '',
         routerCompatibilityVersion: r.routerCompatibilityVersion,
+        isFeatureFlagComposition: r.isFeatureFlagComposition,
+        featureFlagName: featureFlagInfo?.name,
       });
     }
 
@@ -441,5 +554,81 @@ export class GraphCompositionRepository {
     }
 
     return compositionsCount[0].count;
+  }
+
+  private async isLatestValidComposition({
+    fedGraphRepo,
+    targetId,
+    featureFlagId,
+    composition: { schemaVersionId, isFeatureFlagComposition },
+  }: {
+    fedGraphRepo: FederatedGraphRepository;
+    targetId: string;
+    featureFlagId: string | undefined;
+    composition: { schemaVersionId: string; isFeatureFlagComposition: boolean };
+  }) {
+    if (!isFeatureFlagComposition) {
+      return await fedGraphRepo.isLatestValidSchemaVersion(targetId, schemaVersionId);
+    }
+
+    if (!featureFlagId) {
+      return false;
+    }
+
+    const latestValidFeatureFlagVersion = await this.db
+      .select({
+        id: schemaVersion.id,
+      })
+      .from(schemaVersion)
+      .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+      .innerJoin(
+        federatedGraphsToFeatureFlagSchemaVersions,
+        eq(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, schemaVersion.id),
+      )
+      .where(
+        and(
+          eq(schemaVersion.targetId, targetId),
+          eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
+          eq(graphCompositions.isFeatureFlagComposition, true),
+          eq(graphCompositions.isComposable, true),
+          or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
+          or(isNull(graphCompositions.admissionError), eq(graphCompositions.admissionError, '')),
+        ),
+      )
+      .orderBy(desc(schemaVersion.createdAt))
+      .limit(1)
+      .execute();
+
+    return latestValidFeatureFlagVersion?.[0]?.id === schemaVersionId;
+  }
+
+  private async getFeatureFlagBySchemaVersionIds(
+    composedSchemaVersionIds: string[],
+  ): Promise<Map<string, { id: string; name: string }>> {
+    const metaBySchemaVersionId = new Map<string, { id: string; name: string }>();
+    if (composedSchemaVersionIds.length === 0) {
+      return metaBySchemaVersionId;
+    }
+
+    const rows = await this.db
+      .selectDistinct({
+        composedSchemaVersionId: federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
+        featureFlagId: federatedGraphsToFeatureFlagSchemaVersions.featureFlagId,
+        featureFlagName: featureFlags.name,
+      })
+      .from(federatedGraphsToFeatureFlagSchemaVersions)
+      .innerJoin(featureFlags, eq(featureFlags.id, federatedGraphsToFeatureFlagSchemaVersions.featureFlagId))
+      .where(inArray(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, composedSchemaVersionIds))
+      .execute();
+
+    for (const row of rows) {
+      if (!row.featureFlagId) {
+        continue;
+      }
+
+      metaBySchemaVersionId.set(row.composedSchemaVersionId, { id: row.featureFlagId, name: row.featureFlagName });
+    }
+
+    return metaBySchemaVersionId;
   }
 }

@@ -49,7 +49,7 @@ try {
   // Delete schema versions
   deleteStart = performance.now();
   console.log(`Deleting schema versions created before ${CUTOFF_DATE.toDateString()}...`);
-  const [schemaVersionsDeleted, idsOfSchemaVersionsToKeep] = await deleteOldSchemaVersions(db);
+  const [schemaVersionsDeleted] = await deleteOldSchemaVersions(db);
 
   deleteDurationInSeconds = (performance.now() - deleteStart) / 1000;
   console.log(`  ${schemaVersionsDeleted} schema versions deleted in ${deleteDurationInSeconds.toFixed(3)} seconds`);
@@ -162,7 +162,7 @@ async function getFederatedGraphsFlags(db: PostgresJsDatabase<typeof schema>) {
     .execute();
 
   return [
-    ...rows.map((row) => row.baseCompositionSchemaVersionId!),
+    ...rows.filter((row) => row.baseCompositionSchemaVersionId).map((row) => row.baseCompositionSchemaVersionId!),
     ...rows.map((row) => row.composedSchemaVersionId!),
   ];
 }

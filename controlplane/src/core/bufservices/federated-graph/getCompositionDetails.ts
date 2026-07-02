@@ -66,7 +66,8 @@ export function getCompositionDetails(
     }
 
     const compositionSubgraphs = await compositionRepo.getCompositionSubgraphs({
-      compositionId: req.compositionId,
+      compositionId: composition.id,
+      schemaVersionId: composition.schemaVersionId,
     });
 
     const changelogs = await fedRepo.fetchChangelogByVersion({

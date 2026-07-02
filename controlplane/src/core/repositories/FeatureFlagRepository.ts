@@ -1,6 +1,6 @@
 import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, desc, eq, inArray, like, or, sql, arrayOverlaps } from 'drizzle-orm';
+import { SQL, and, asc, count, desc, eq, inArray, like, or, sql, arrayOverlaps, isNull } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { validate as isValidUuid } from 'uuid';
@@ -37,6 +37,7 @@ import { traced } from '../tracing.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { UserRepository } from './UserRepository.js';
+import { OrganizationRepository } from './OrganizationRepository.js';
 
 export interface FeatureFlagWithFeatureSubgraphs {
   id: string;
@@ -1377,6 +1378,12 @@ export class FeatureFlagRepository {
     baseSchemaVersionId: string;
     featureFlagId: string;
   }) {
+    const orgRepo = new OrganizationRepository(this.logger, this.db);
+    const splitConfigFeature = await orgRepo.getFeature({
+      organizationId: this.organizationId,
+      featureId: 'split-config-loading',
+    });
+
     const schemaVersions = await this.db
       .select({
         id: federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
@@ -1387,10 +1394,19 @@ export class FeatureFlagRepository {
         eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
       )
       .where(
-        and(
-          eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
-          eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
-        ),
+        /**
+         * When split config is enabled, the feature flag composition will not be tied to the base schema version, so
+         * we need to check that the baseCompositionSchemaVersionId is null
+         */
+        splitConfigFeature?.enabled
+          ? and(
+              isNull(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId),
+              eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
+            )
+          : and(
+              eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
+              eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
+            ),
       )
       .orderBy(desc(schemaVersion.createdAt))
       .limit(1)
