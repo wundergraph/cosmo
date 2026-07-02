@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { FeatureIds } from '../types/index.js';
 
 export const hubUserAgent = 'cosmo-hub';
 
@@ -55,3 +56,5 @@ export const organizationSchema = z.object({
 });
 
 export const defaultRetentionLimitInDays = 7;
+
+export const graphTokenFeatures: FeatureIds[] = ['split-config-loading'];
