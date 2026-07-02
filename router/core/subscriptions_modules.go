@@ -454,3 +454,94 @@ type StreamHandlerError struct {
 func (e *StreamHandlerError) Error() string {
 	return e.Message
 }
+
+type SubscriptionOnCreateHandlerContext interface {
+	// Request is the original request received by the router.
+	Request() *http.Request
+	// Logger is the logger for the request.
+	Logger() *zap.Logger
+	// Operation is the GraphQL operation.
+	Operation() OperationContext
+	// Authentication is the authentication for the request.
+	Authentication() authentication.Authentication
+	// SubscriptionEventConfiguration returns the current subscription event configuration.
+	// The returned value is a pointer; mutating it directly takes effect without any additional call.
+	//
+	// This method is currently EXPERIMENTAL.
+	// The signature and behaviour might change without prior notice.
+	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
+}
+
+type pubSubSubscriptionOnCreateHookContext struct {
+	request                        *http.Request
+	logger                         *zap.Logger
+	operation                      OperationContext
+	authentication                 authentication.Authentication
+	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
+}
+
+func (c *pubSubSubscriptionOnCreateHookContext) Request() *http.Request {
+	return c.request
+}
+
+func (c *pubSubSubscriptionOnCreateHookContext) Logger() *zap.Logger {
+	return c.logger
+}
+
+func (c *pubSubSubscriptionOnCreateHookContext) Operation() OperationContext {
+	return c.operation
+}
+
+func (c *pubSubSubscriptionOnCreateHookContext) Authentication() authentication.Authentication {
+	return c.authentication
+}
+
+func (c *pubSubSubscriptionOnCreateHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
+	return c.subscriptionEventConfiguration
+}
+
+type SubscriptionOnCreateHandler interface {
+	// SubscriptionOnCreate allows to modify the event configuration
+	// before the subscription starts. Returning a non-nil error aborts the subscription.
+	//
+	// This method is currently EXPERIMENTAL.
+	// The signature and behaviour might change without prior notice.
+	SubscriptionOnCreate(ctx SubscriptionOnCreateHandlerContext) error
+}
+
+// NewPubSubSubscriptionOnCreateHook converts a SubscriptionOnCreateHandler fn to a datasource.SubscriptionOnCreateFn.
+func NewPubSubSubscriptionOnCreateHook(fn func(ctx SubscriptionOnCreateHandlerContext) error) datasource.SubscriptionOnCreateFn {
+	if fn == nil {
+		return nil
+	}
+
+	return func(ctx context.Context, subConf datasource.SubscriptionEventConfiguration) (datasource.SubscriptionEventConfiguration, error) {
+		requestContext := getRequestContext(ctx)
+
+		logger := requestContext.Logger()
+		if logger != nil {
+			logger = logger.With(zap.String("component", "pubsub_subscription_before_trigger_hook"))
+			if subConf != nil {
+				logger = logger.With(
+					zap.String("provider_id", subConf.ProviderID()),
+					zap.String("provider_type", string(subConf.ProviderType())),
+					zap.String("field_name", subConf.RootFieldName()),
+				)
+			}
+		}
+
+		hookCtx := &pubSubSubscriptionOnCreateHookContext{
+			request:                        requestContext.Request(),
+			logger:                         logger,
+			operation:                      requestContext.Operation(),
+			authentication:                 requestContext.Authentication(),
+			subscriptionEventConfiguration: subConf,
+		}
+
+		if err := fn(hookCtx); err != nil {
+			return nil, err
+		}
+
+		return hookCtx.subscriptionEventConfiguration, nil
+	}
+}
