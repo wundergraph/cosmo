@@ -283,7 +283,7 @@ export class AnalyticsRequestViewRepository {
             ${this.client.database}.traces
           WHERE
             ${baseWhereSql}
-            ${baseOrderSql || 'ORDER BY Timestamp DESC'}
+            ${baseOrderSql || 'ORDER BY toUnixTimestamp(Timestamp) DESC'}
             ${basePaginationSql}
         `;
         break;
@@ -541,7 +541,7 @@ export class AnalyticsRequestViewRepository {
 
     const query = `
       SELECT HttpStatusCode
-        FROM ${this.client.database}.traces
+        FROM ${this.client.database}.traces_by_http_status_code_quarter_hourly
       WHERE ${whereSql}
         GROUP BY HttpStatusCode
       LIMIT 100
@@ -683,7 +683,8 @@ export class AnalyticsRequestViewRepository {
     const allowedColumns = Object.keys(this.columnMetadata);
 
     if (id && allowedColumns.includes(id)) {
-      return `ORDER BY ${id} ${desc ? 'DESC' : 'ASC'}`;
+      const dbExpression = id === 'unixTimestamp' ? 'toUnixTimestamp(Timestamp)' : id;
+      return `ORDER BY ${dbExpression} ${desc ? 'DESC' : 'ASC'}`;
     }
   }
 
