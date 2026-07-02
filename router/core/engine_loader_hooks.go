@@ -180,7 +180,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	// Expose the subgraph response headers (after response header rules have been applied above)
 	// so expressions can read them, e.g. subgraph.response.header.Get('X-Custom-Header'). A nil
 	// header map is safe; http.Header.Get returns an empty string.
-	exprCtx.Subgraph.Response.Header = expr.ResponseHeaders{Header: responseInfo.ResponseHeaders}
+	exprCtx.Subgraph.Response.Header = expr.Headers{Header: responseInfo.ResponseHeaders}
 
 	if value := ctx.Value(rcontext.FetchTimingKey); value != nil {
 		if fetchTiming, ok := value.(*atomic.Int64); ok {

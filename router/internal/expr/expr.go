@@ -64,14 +64,14 @@ func (copyCtx Context) Clone() *Context {
 // Request is the context for the request object in expressions. Be aware, that only value receiver methods
 // are exported in the expr environment. This is because the expressions are evaluated in a read-only context.
 type Request struct {
-	Auth      RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
-	URL       RequestURL     `expr:"url"`
-	Header    RequestHeaders `expr:"header"`
-	Body      Body           `expr:"body"`
-	Trace     Trace          `expr:"trace"`
-	Operation Operation      `expr:"operation"`
-	Client    Client         `expr:"client"`
-	Error     error          `expr:"error"`
+	Auth      RequestAuth `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
+	URL       RequestURL  `expr:"url"`
+	Header    Headers     `expr:"header"`
+	Body      Body        `expr:"body"`
+	Trace     Trace       `expr:"trace"`
+	Operation Operation   `expr:"operation"`
+	Client    Client      `expr:"client"`
+	Error     error       `expr:"error"`
 }
 
 type Response struct {
@@ -132,14 +132,7 @@ type RequestURL struct {
 	Query map[string]string `expr:"query"`
 }
 
-type RequestHeaders struct {
-	Header http.Header `expr:"-"` // Do not expose the full header
-}
-
-// ResponseHeaders exposes read access to a response's headers in expressions.
-// Like RequestHeaders, the underlying header map is not exposed directly; values must be
-// retrieved through the Get method (e.g. subgraph.response.header.Get('X-Custom-Header')).
-type ResponseHeaders struct {
+type Headers struct {
 	Header http.Header `expr:"-"` // Do not expose the full header
 }
 
@@ -162,8 +155,8 @@ type SubgraphRequest struct {
 }
 
 type SubgraphResponse struct {
-	Body   Body            `expr:"body"`
-	Header ResponseHeaders `expr:"header"`
+	Body   Body    `expr:"body"`
+	Header Headers `expr:"header"`
 }
 
 type ClientTrace struct {
@@ -186,19 +179,14 @@ type Subgraph struct {
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
 // The key is case-insensitive and transformed to the canonical format.
 // TODO: Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
-func (r RequestHeaders) Get(key string) string {
-	return r.Header.Get(key)
-}
-
-// TODO: Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
-func (r ResponseHeaders) Get(key string) string {
+func (r Headers) Get(key string) string {
 	return r.Header.Get(key)
 }
 
 // LoadRequest loads the request object into the context.
 func LoadRequest(req *http.Request) Request {
 	r := Request{
-		Header: RequestHeaders{
+		Header: Headers{
 			Header: req.Header,
 		},
 	}
