@@ -238,7 +238,6 @@ export function invalidRepeatedComposedDirectiveWarning({
   });
 }
 
-// TODO change router version upon release
 export function providesOnUnionWarning({
   fieldCoords,
   fieldSet,
