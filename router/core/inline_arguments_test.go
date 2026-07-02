@@ -94,6 +94,13 @@ func TestDetectInlineArguments(t *testing.T) {
 			},
 		},
 		{
+			name:  "inline empty object",
+			query: `query { field(input: {}) }`,
+			want: []InlineArgument{
+				{Name: "input", ValueKind: "Object", Line: 1, Column: 15},
+			},
+		},
+		{
 			name:  "mixed variable and literal",
 			query: `query($id: ID!) { employee(id: $id, role: "admin") { id } }`,
 			want: []InlineArgument{
