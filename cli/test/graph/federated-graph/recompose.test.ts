@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, type MockInstance, test, vi } 
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { runRecompose } from '../utils.js';
 
-describe('federated-graph recompose', () => {
+describe('federated-graph recompose command tests', () => {
   let logSpy: MockInstance<typeof console.log>;
 
   beforeEach(() => {
