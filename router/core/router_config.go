@@ -29,9 +29,14 @@ import (
 )
 
 type subscriptionHooks struct {
+	onCreate        onCreateHooks
 	onStart         onStartHooks
 	onPublishEvents onPublishEventsHooks
 	onReceiveEvents onReceiveEventsHooks
+}
+
+type onCreateHooks struct {
+	handlers []func(ctx SubscriptionOnCreateHandlerContext) error
 }
 
 type onStartHooks struct {
