@@ -181,5 +181,3 @@ require (
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
 // replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
-
-replace github.com/wundergraph/graphql-go-tools/v2 => /private/tmp/claude-501/-Users-ale-GolandProjects-cosmo/38ef65b6-a73d-4ca4-a911-9bb5e7c5df36/scratchpad/ggt-bisect/v2
