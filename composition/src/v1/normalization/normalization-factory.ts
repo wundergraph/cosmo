@@ -1881,7 +1881,7 @@ export class NormalizationFactory {
   }
 
   // Returns true if at least one implementation field is @external
-  handleImplementationField({
+  handleConditionalImplementationField({
     fieldCoordsPath,
     fieldName,
     fieldPath,
@@ -2042,7 +2042,7 @@ export class NormalizationFactory {
               return;
             }
             if (isInterfaceDefinitionData(parentData)) {
-              nf.handleImplementationField({
+              nf.handleConditionalImplementationField({
                 fieldCoordsPath,
                 fieldName,
                 fieldPath,
@@ -2109,7 +2109,7 @@ export class NormalizationFactory {
 
           if (
             isInterfaceDefinitionData(parentData) &&
-            nf.handleImplementationField({
+            nf.handleConditionalImplementationField({
               fieldCoordsPath,
               fieldName,
               fieldPath,
