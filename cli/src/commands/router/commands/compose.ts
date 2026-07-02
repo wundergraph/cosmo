@@ -1,4 +1,4 @@
-import { create, fromJsonString } from '@bufbuild/protobuf';
+import { create, fromJsonString, toJsonString } from '@bufbuild/protobuf';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
   buildRouterConfig,
@@ -22,7 +22,8 @@ import semver from 'semver';
 import {
   FeatureFlagRouterExecutionConfigSchema,
   FeatureFlagRouterExecutionConfigsSchema,
-  GRPCMappingSchema
+  GRPCMappingSchema,
+  RouterConfigSchema,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 import type {
@@ -132,7 +133,7 @@ async function handleSplitRouterConfig({
     return;
   }
 
-  const routerConfigJSON = routerConfig.toJsonString();
+  const routerConfigJSON = toJsonString(RouterConfigSchema, routerConfig);
   const mapper = new Map<string, string>();
   mapper.set('', createHash('sha256').update(routerConfigJSON).digest('hex'));
   await writeFile(join(outputDir, routerConfigFile), routerConfigJSON);
@@ -156,14 +157,14 @@ async function handleSplitRouterConfig({
   }
 
   for (const [featureFlagName, featureFlagConfig] of Object.entries(ffConfigs.configByFeatureFlagName)) {
-    const ffRouterConfig = new RouterConfig({
+    const ffRouterConfig = create(RouterConfigSchema, {
       engineConfig: featureFlagConfig.engineConfig,
       version: featureFlagConfig.version,
       subgraphs: featureFlagConfig.subgraphs,
       compatibilityVersion: routerConfig.compatibilityVersion,
     });
 
-    const routerConfigJson = ffRouterConfig.toJsonString();
+    const routerConfigJson = toJsonString(RouterConfigSchema, ffRouterConfig);
     await writeFeatureFlagConfigToFile(ffDir, featureFlagName, routerConfigJson);
     mapper.set(featureFlagName, createHash('sha256').update(routerConfigJson).digest('hex'));
   }
@@ -183,7 +184,7 @@ async function handleEmbeddedRouterConfig({
     routerConfig.featureFlagConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
   }
 
-  const routerConfigJson = routerConfig.toJsonString();
+  const routerConfigJson = toJsonString(RouterConfigSchema, routerConfig);
   if (options.out) {
     const output = await getRouterConfigOutputFile(options.out);
     await writeFile(output, routerConfigJson);
