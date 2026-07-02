@@ -302,6 +302,65 @@ func TestDisallowInlineArguments(t *testing.T) {
 		})
 	})
 
+	t.Run("enforce mode rejects inline arguments over websocket", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode: config.DisallowInlineArgumentsModeEnforce,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription($i: Int!) { countEmp(max: 5, intervalMilliseconds: $i) }","variables":{"i":500}}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "error", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"max","valueKind":"Int","line":1,"column":35}]}}}]`, string(res.Payload))
+		})
+	})
+
+	t.Run("warn mode logs a warning over websocket", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.WarnLevel,
+			},
+			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode: config.DisallowInlineArgumentsModeWarn,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { countEmp(max: 1, intervalMilliseconds: 100) }"}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+
+			logs := xEnv.Observer().FilterMessage("inline arguments found in operation")
+			require.Equal(t, 1, logs.Len())
+			cm := logs.All()[0].ContextMap()
+			require.Equal(t, int64(2), cm["count"])
+			require.Equal(t, []interface{}{"max", "intervalMilliseconds"}, cm["arguments"])
+		})
+	})
+
 	t.Run("warn mode compliant operation has no annotation", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{

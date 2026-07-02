@@ -177,6 +177,23 @@ type inlineArgumentsError struct {
 
 func (e *inlineArgumentsError) Error() string { return e.message }
 
+// extensionJSON returns the extensions.inlineArguments payload for this error,
+// or nil when marshalling fails (the error code and message still reach the client).
+func (e *inlineArgumentsError) extensionJSON(logger *zap.Logger) json.RawMessage {
+	payload, err := json.Marshal(inlineArgumentsExtension{
+		Code:      e.code,
+		Message:   e.message,
+		Arguments: e.arguments,
+	})
+	if err != nil {
+		if logger != nil {
+			logger.Error("failed to marshal inlineArguments extension", zap.Error(err))
+		}
+		return nil
+	}
+	return payload
+}
+
 type inlineArgumentsErrorResponse struct {
 	Errors []inlineArgumentsErrorEntry `json:"errors"`
 }

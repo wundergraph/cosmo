@@ -1817,6 +1817,8 @@ func (s *graphServer) buildGraphMux(
 		return nil, fmt.Errorf("failed to create operation blocker: %w", err)
 	}
 
+	inlineArgumentsChecker := NewInlineArgumentsChecker(s.securityConfiguration.DisallowInlineArguments)
+
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
 		Logger:                                 s.logger,
 		Executor:                               executor,
@@ -1825,7 +1827,7 @@ func (s *graphServer) buildGraphMux(
 		Planner:                                operationPlanner,
 		AccessController:                       s.accessController,
 		OperationBlocker:                       operationBlocker,
-		InlineArgumentsChecker:                 NewInlineArgumentsChecker(s.securityConfiguration.DisallowInlineArguments),
+		InlineArgumentsChecker:                 inlineArgumentsChecker,
 		RouterPublicKey:                        s.publicKey,
 		EnableRequestTracing:                   s.engineExecutionConfiguration.EnableRequestTracing,
 		ForceUnauthenticatedRequestTracing:     s.engineExecutionConfiguration.ForceUnauthenticatedRequestTracing,
@@ -1862,6 +1864,7 @@ func (s *graphServer) buildGraphMux(
 		wsMiddleware := NewWebsocketMiddleware(graphMuxCtx, WebsocketMiddlewareOptions{
 			OperationProcessor:        operationProcessor,
 			OperationBlocker:          operationBlocker,
+			InlineArgumentsChecker:    inlineArgumentsChecker,
 			Planner:                   operationPlanner,
 			GraphQLHandler:            graphqlHandler,
 			PreHandler:                graphqlPreHandler,

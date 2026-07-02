@@ -48,11 +48,12 @@ type (
 	}
 
 	Extensions struct {
-		RateLimit     json.RawMessage `json:"rateLimit,omitempty"`
-		Authorization json.RawMessage `json:"authorization,omitempty"`
-		Trace         json.RawMessage `json:"trace,omitempty"`
-		StatusCode    int             `json:"statusCode,omitempty"`
-		Code          string          `json:"code,omitempty"`
+		RateLimit       json.RawMessage `json:"rateLimit,omitempty"`
+		Authorization   json.RawMessage `json:"authorization,omitempty"`
+		Trace           json.RawMessage `json:"trace,omitempty"`
+		InlineArguments json.RawMessage `json:"inlineArguments,omitempty"`
+		StatusCode      int             `json:"statusCode,omitempty"`
+		Code            string          `json:"code,omitempty"`
 	}
 )
 
