@@ -283,7 +283,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				reqCtx.logger.Error("failed to inject inlineArguments annotation into response", zap.Error(setErr))
 				body = captureBuf.Bytes()
 			}
-			_, _ = hpw.Write(body)
+			if _, wErr := hpw.Write(body); wErr != nil {
+				trackFinalResponseError(resolveCtx.Context(), wErr)
+				logWriteResponseError(reqCtx.logger, wErr)
+				return
+			}
 		}
 
 		// Compute actual cost for metrics/telemetry if not already set by the header callback

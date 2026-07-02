@@ -105,6 +105,28 @@ version: "1"
 	require.Equal(t, time.Second*20, cfg.Config.WatchConfig.StartupDelay.Maximum)
 }
 
+func TestLoadDisallowInlineArgumentsFromEnvars(t *testing.T) {
+	t.Setenv("SECURITY_DISALLOW_INLINE_ARGUMENTS_MODE", "enforce")
+	t.Setenv("SECURITY_DISALLOW_INLINE_ARGUMENTS_ENFORCE_HTTP_STATUS_CODE", "200")
+	t.Setenv("SECURITY_DISALLOW_INLINE_ARGUMENTS_ERROR_CODE", "CUSTOM_CODE")
+	t.Setenv("SECURITY_DISALLOW_INLINE_ARGUMENTS_ERROR_MESSAGE", "Custom message")
+	t.Setenv("SECURITY_DISALLOW_INLINE_ARGUMENTS_INCLUDE_PERSISTED_OPERATIONS", "true")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+
+	cfg, err := LoadConfig([]string{f})
+
+	require.NoError(t, err)
+
+	require.Equal(t, DisallowInlineArgumentsModeEnforce, cfg.Config.SecurityConfiguration.DisallowInlineArguments.Mode)
+	require.Equal(t, 200, cfg.Config.SecurityConfiguration.DisallowInlineArguments.EnforceHTTPStatusCode)
+	require.Equal(t, "CUSTOM_CODE", cfg.Config.SecurityConfiguration.DisallowInlineArguments.ErrorCode)
+	require.Equal(t, "Custom message", cfg.Config.SecurityConfiguration.DisallowInlineArguments.ErrorMessage)
+	require.True(t, cfg.Config.SecurityConfiguration.DisallowInlineArguments.IncludePersistedOperations)
+}
+
 func TestConfigHasPrecedence(t *testing.T) {
 	t.Setenv("POLL_INTERVAL", "22s")
 
