@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 
@@ -47,19 +48,21 @@ type (
 	}
 
 	Extensions struct {
-		RateLimit     json.RawMessage `json:"rateLimit,omitempty"`
-		Authorization json.RawMessage `json:"authorization,omitempty"`
-		Trace         json.RawMessage `json:"trace,omitempty"`
-		StatusCode    int             `json:"statusCode,omitempty"`
-		Code          string          `json:"code,omitempty"`
+		RateLimit       json.RawMessage `json:"rateLimit,omitempty"`
+		Authorization   json.RawMessage `json:"authorization,omitempty"`
+		Trace           json.RawMessage `json:"trace,omitempty"`
+		InlineArguments json.RawMessage `json:"inlineArguments,omitempty"`
+		StatusCode      int             `json:"statusCode,omitempty"`
+		Code            string          `json:"code,omitempty"`
 	}
 )
 
 const (
-	ExtCodeErrPersistedQueryNotFound        = "PERSISTED_QUERY_NOT_FOUND"
-	ExtCodeErrErrorRequestCanceled          = "REQUEST_CANCELED"
-	ExtCodeErrBatchSizeExceeded             = "BATCH_LIMIT_EXCEEDED"
-	ExtCodeErrBatchSubscriptionsUnsupported = "BATCHING_SUBSCRIPTION_UNSUPPORTED"
+	ExtCodeErrPersistedQueryNotFound         = "PERSISTED_QUERY_NOT_FOUND"
+	ExtCodeErrErrorRequestCanceled           = "REQUEST_CANCELED"
+	ExtCodeErrBatchSizeExceeded              = "BATCH_LIMIT_EXCEEDED"
+	ExtCodeErrBatchSubscriptionsUnsupported  = "BATCHING_SUBSCRIPTION_UNSUPPORTED"
+	ExtCodeErrInlineArgumentValuesNotAllowed = "INLINE_ARGUMENT_VALUES_NOT_ALLOWED"
 )
 
 // isTerminalSubscriptionError reports whether the given error, when surfaced
@@ -218,6 +221,74 @@ func propagateSubgraphErrors(ctx *resolve.Context) {
 	}
 }
 
+// writeRawErrorBody routes a pre-built JSON error body ({"errors":[...]}) through the correct
+// transport framing (SSE, multipart, or plain JSON). All pre-execution error responses funnel
+// through here; use it directly when the error payload cannot be expressed as
+// graphqlerrors.RequestErrors (e.g. when the extensions object has a custom nested shape).
+func writeRawErrorBody(r *http.Request, w http.ResponseWriter, statusCode int, body []byte, logger *zap.Logger, headerPropagation *HeaderPropagation) {
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+
+	// According to the tests requestContext can be nil (when called from module WriteResponseError)
+	// As such we have coded this condition defensively to be safe
+	requestContext := getRequestContext(r.Context())
+	isSubscription := requestContext != nil && requestContext.operation != nil && requestContext.operation.opType == "subscription"
+
+	// We only want to apply header propagation for non-subscription operations
+	// In certain cases the requestContext can be nil, e.g.:- when called from the batch handler
+	if headerPropagation != nil && requestContext != nil && !isSubscription {
+		if err := headerPropagation.ApplyRouterResponseHeaderRules(w, requestContext); err != nil && logger != nil {
+			logger.Error("Failed to apply router response header rules on error cases", zap.Error(err))
+		}
+	}
+
+	wgRequestParams := NegotiateSubscriptionParams(r, !isSubscription)
+
+	if wgRequestParams.UseSse || wgRequestParams.UseMultipart {
+		setSubscriptionHeaders(wgRequestParams, r, w)
+	} else {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	}
+	if statusCode != 0 {
+		w.WriteHeader(statusCode)
+	}
+
+	switch {
+	case wgRequestParams.UseSse:
+		if err := writeChunks(w, []byte(GetWriterPrefix(true, false, false)), body, []byte("\n\n")); err != nil {
+			logWriteResponseError(logger, err)
+		}
+	case wgRequestParams.UseMultipart:
+		if err := writeMultipartError(w, body, isSubscription); err != nil && logger != nil {
+			logger.Error("error writing multipart response", zap.Error(err))
+		}
+	default:
+		if _, err := w.Write(body); err != nil {
+			logWriteResponseError(logger, err)
+		}
+	}
+}
+
+// writeChunks writes each chunk in order, stopping at the first write error.
+func writeChunks(w io.Writer, chunks ...[]byte) error {
+	for _, chunk := range chunks {
+		if _, err := w.Write(chunk); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func logWriteResponseError(logger *zap.Logger, err error) {
+	if logger == nil {
+		return
+	}
+	if rErrors.IsBrokenPipe(err) {
+		logger.Warn("Broken pipe, error writing response", zap.Error(err))
+		return
+	}
+	logger.Error("Error writing response", zap.Error(err))
+}
+
 // writeRequestErrorsParams contains parameters for writing request errors to the response.
 type writeRequestErrorsParams struct {
 	request           *http.Request
@@ -235,95 +306,30 @@ func writeRequestErrors(params writeRequestErrorsParams) {
 		return
 	}
 
-	params.writer.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-
-	// According to the tests requestContext can be nil (when called from module WriteResponseError)
-	// As such we have coded this condition defensively to be safe
-	requestContext := getRequestContext(params.request.Context())
-	isSubscription := requestContext != nil && requestContext.operation != nil && requestContext.operation.opType == "subscription"
-
-	// We only want to apply header propagation for non-subscription operations
-	// In certain cases the requestContext can be nil, e.g.:- when called from the batch handler
-	if params.headerPropagation != nil && requestContext != nil && !isSubscription {
-		err := params.headerPropagation.ApplyRouterResponseHeaderRules(params.writer, requestContext)
-		if err != nil && params.logger != nil {
-			params.logger.Error("Failed to apply router response header rules on error cases", zap.Error(err))
-		}
+	response := graphqlerrors.Response{
+		Errors: params.requestErrors,
 	}
-
-	wgRequestParams := NegotiateSubscriptionParams(params.request, !isSubscription)
-
-	// Is subscription
-	if wgRequestParams.UseSse || wgRequestParams.UseMultipart {
-		setSubscriptionHeaders(wgRequestParams, params.request, params.writer)
-
-		if params.statusCode != 0 {
-			params.writer.WriteHeader(params.statusCode)
-		}
-
-		if wgRequestParams.UseSse {
-			_, err := params.writer.Write([]byte("event: next\ndata: "))
-			if err != nil {
-				if params.logger != nil {
-					if rErrors.IsBrokenPipe(err) {
-						params.logger.Warn("Broken pipe, error writing response", zap.Error(err))
-						return
-					}
-					params.logger.Error("Error writing response", zap.Error(err))
-				}
-				return
-			}
-		} else if wgRequestParams.UseMultipart {
-			// Handle multipart error response
-			if err := writeMultipartError(params.writer, params.requestErrors, isSubscription); err != nil {
-				if params.logger != nil {
-					params.logger.Error("error writing multipart response", zap.Error(err))
-				}
-			}
-			return
-		}
-	} else {
-		// Regular request
-		params.writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-		if params.statusCode != 0 {
-			params.writer.WriteHeader(params.statusCode)
-		}
-	}
-
-	if _, err := params.requestErrors.WriteResponse(params.writer); err != nil {
+	body, err := response.Marshal()
+	if err != nil {
 		if params.logger != nil {
-			if rErrors.IsBrokenPipe(err) {
-				params.logger.Warn("Broken pipe, error writing response", zap.Error(err))
-				return
-			}
-			params.logger.Error("Error writing response", zap.Error(err))
+			params.logger.Error("Error marshalling request errors", zap.Error(err))
 		}
+		params.writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+
+	writeRawErrorBody(params.request, params.writer, params.statusCode, body, params.logger, params.headerPropagation)
 }
 
 // writeMultipartError writes the error response in a multipart format with proper boundaries and headers.
-func writeMultipartError(
-	w http.ResponseWriter,
-	requestErrors graphqlerrors.RequestErrors,
-	isSubscription bool,
-) error {
+func writeMultipartError(w http.ResponseWriter, body []byte, isSubscription bool) error {
 	// Start with the multipart boundary
 	prefix := GetWriterPrefix(false, true, true)
 	if _, err := w.Write([]byte(prefix)); err != nil {
 		return err
 	}
 
-	// Write the actual error payload
-	response := graphqlerrors.Response{
-		Errors: requestErrors,
-	}
-
-	responseBytes, err := response.Marshal()
-	if err != nil {
-		return err
-	}
-
-	resp, err := wrapMultipartMessage(responseBytes, isSubscription)
+	resp, err := wrapMultipartMessage(body, isSubscription)
 	if err != nil {
 		return err
 	}
@@ -333,7 +339,7 @@ func writeMultipartError(
 	// multipart chunks correctly. With this fix here (and in a few other places) the clients are now working.
 	resp = append(resp, []byte("\r\n--graphql--")...)
 
-	if _, err := w.Write([]byte(resp)); err != nil {
+	if _, err := w.Write(resp); err != nil {
 		return err
 	}
 
@@ -364,7 +370,10 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	var reportErr ReportError
 	var httpErr HttpError
 	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
+	var inlineArgsErr *inlineArgumentsError
 	switch {
+	case errors.As(err, &inlineArgsErr):
+		writeInlineArgumentsError(r, w, inlineArgsErr, requestLogger, propagation)
 	case errors.Is(err, context.Canceled):
 		newErr := NewHttpGraphqlError("request canceled", ExtCodeErrErrorRequestCanceled, http.StatusOK)
 		writeRequestErrors(writeRequestErrorsParams{

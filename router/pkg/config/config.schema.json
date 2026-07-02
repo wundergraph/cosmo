@@ -3545,6 +3545,41 @@
           "default": "512",
           "minimum": 0
         },
+        "disallow_inline_arguments": {
+          "type": "object",
+          "description": "A policy that detects and optionally rejects GraphQL operations that carry hardcoded inline argument values instead of variables. Covers field arguments and directive arguments.",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["off", "warn", "enforce"],
+              "default": "off",
+              "description": "Controls the policy behavior: 'off' disables the check entirely; 'warn' detects and logs inline arguments and annotates the successful response with an extensions hint; 'enforce' rejects operations with inline arguments before normalization."
+            },
+            "enforce_http_status_code": {
+              "type": "integer",
+              "default": 400,
+              "minimum": 200,
+              "maximum": 599,
+              "description": "The HTTP status code returned in enforce mode. Use 200 for strict GraphQL-spec compliance."
+            },
+            "error_code": {
+              "type": "string",
+              "default": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
+              "description": "The GraphQL error extensions.code emitted on rejection or annotation."
+            },
+            "error_message": {
+              "type": "string",
+              "default": "Inline argument values are not allowed. Use variables instead.",
+              "description": "The human-readable error / hint message."
+            },
+            "include_persisted_operations": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, the policy also applies to persisted operations. By default they are exempt because they are stored server-side and intentional."
+            }
+          }
+        },
         "depth_limit": {
           "type": "object",
           "description": "DEPRECATED (move to complexity_limits.depth): The configuration for adding a max depth limit for query (how many nested levels you can have in a query).",

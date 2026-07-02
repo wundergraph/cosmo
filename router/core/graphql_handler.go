@@ -10,11 +10,13 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
+
+	"github.com/buger/jsonparser"
 
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
-	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
@@ -32,6 +34,16 @@ var (
 	errCouldNotFlushResponse    = errors.New("could not flush response")
 	errOperationPlanUnsupported = errors.New("unsupported operation plan")
 )
+
+// inlineArgsCaptureBufPool holds buffers used to capture the resolved response body
+// when the warn-mode inlineArguments extension needs to be injected before writing.
+var inlineArgsCaptureBufPool = sync.Pool{
+	New: func() any { return &bytes.Buffer{} },
+}
+
+// inlineArgsCaptureBufMaxRetainedCap bounds the capacity of buffers returned to the
+// pool so that a single very large response does not pin its memory indefinitely.
+const inlineArgsCaptureBufMaxRetainedCap = 1 << 20
 
 const (
 	ExecutionPlanCacheHeader          = "X-WG-Execution-Plan-Cache"
@@ -243,12 +255,39 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
+		// Capture the response body when warn-mode inline args were detected so we can inject the extension.
+		resolveWriter := io.Writer(hpw)
+		var captureBuf *bytes.Buffer
+		if len(reqCtx.operation.inlineArgumentsAnnotation) > 0 {
+			captureBuf = inlineArgsCaptureBufPool.Get().(*bytes.Buffer)
+			captureBuf.Reset()
+			defer func() {
+				if captureBuf.Cap() <= inlineArgsCaptureBufMaxRetainedCap {
+					inlineArgsCaptureBufPool.Put(captureBuf)
+				}
+			}()
+			resolveWriter = captureBuf
+		}
+
+		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, resolveWriter)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
 		if err != nil {
 			trackFinalResponseError(resolveCtx.Context(), err)
 			h.WriteError(resolveCtx, err, p.Response, w)
 			return
+		}
+
+		if captureBuf != nil {
+			body, setErr := jsonparser.Set(captureBuf.Bytes(), reqCtx.operation.inlineArgumentsAnnotation, "extensions", "inlineArguments")
+			if setErr != nil {
+				reqCtx.logger.Error("failed to inject inlineArguments annotation into response", zap.Error(setErr))
+				body = captureBuf.Bytes()
+			}
+			if _, wErr := hpw.Write(body); wErr != nil {
+				trackFinalResponseError(resolveCtx.Context(), wErr)
+				logWriteResponseError(reqCtx.logger, wErr)
+				return
+			}
 		}
 
 		// Compute actual cost for metrics/telemetry if not already set by the header callback
@@ -547,13 +586,8 @@ func (h *GraphQLHandler) writeError(ctx *resolve.Context, err error, res *resolv
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(response)
-	if err != nil {
-		if rErrors.IsBrokenPipe(err) {
-			requestLogger.Warn("Broken pipe, unable to write error response", zap.Error(err))
-		} else {
-			requestLogger.Error("Unable to write error response", zap.Error(err))
-		}
+	if encErr := json.NewEncoder(w).Encode(response); encErr != nil {
+		logWriteResponseError(requestLogger, encErr)
 	}
 }
 

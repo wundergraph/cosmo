@@ -14,14 +14,18 @@ const (
 	WgOperationHash              = attribute.Key("wg.operation.hash")
 	WgOperationVariables         = attribute.Key("wg.operation.variables")
 	WgOperationProtocol          = attribute.Key("wg.operation.protocol")
-	WgComponentName              = attribute.Key("wg.component.name")
-	WgClientName                 = attribute.Key("wg.client.name")
-	WgClientVersion              = attribute.Key("wg.client.version")
-	WgRouterVersion              = attribute.Key("wg.router.version")
-	WgRouterConfigVersion        = attribute.Key("wg.router.config.version")
-	WgFederatedGraphID           = attribute.Key("wg.federated_graph.id")
-	WgSubgraphID                 = attribute.Key("wg.subgraph.id")
-	WgSubgraphName               = attribute.Key("wg.subgraph.name")
+	// WgOperationInlineArgumentsCount is the number of inline (non-variable) argument values
+	// found by the disallow_inline_arguments security policy; only set when the policy is active
+	// and at least one inline argument was found.
+	WgOperationInlineArgumentsCount = attribute.Key("wg.operation.inline_arguments.count")
+	WgComponentName                 = attribute.Key("wg.component.name")
+	WgClientName                    = attribute.Key("wg.client.name")
+	WgClientVersion                 = attribute.Key("wg.client.version")
+	WgRouterVersion                 = attribute.Key("wg.router.version")
+	WgRouterConfigVersion           = attribute.Key("wg.router.config.version")
+	WgFederatedGraphID              = attribute.Key("wg.federated_graph.id")
+	WgSubgraphID                    = attribute.Key("wg.subgraph.id")
+	WgSubgraphName                  = attribute.Key("wg.subgraph.name")
 	// WgRequestError is only used to annotate the request count metric to easily identify errored and non-errored requests
 	// with the same metric. This has simplified the query for the error and request count metric in Cloud.
 	WgRequestError                     = attribute.Key("wg.request.error")

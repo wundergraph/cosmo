@@ -879,7 +879,14 @@
       "ApproximateDepthLimit": 200,
       "TotalFieldsLimit": 3500
     },
-    "OperationNameLengthLimit": 2000
+    "OperationNameLengthLimit": 2000,
+    "DisallowInlineArguments": {
+      "mode": "enforce",
+      "enforce_http_status_code": 422,
+      "error_code": "VARIABLES_REQUIRED",
+      "error_message": "Please use variables.",
+      "include_persisted_operations": true
+    }
   },
   "EngineExecutionConfiguration": {
     "Debug": {
