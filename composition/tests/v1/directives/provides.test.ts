@@ -9,7 +9,6 @@ import {
   incompatibleTypeWithProvidesError,
   INTERFACE,
   invalidInlineFragmentTypeConditionErrorMessage,
-  invalidInlineFragmentTypeErrorMessage,
   invalidProvidesOrRequiresDirectivesError,
   invalidSelectionOnUnionErrorMessage,
   nonExternalConditionalFieldError,
@@ -88,11 +87,13 @@ describe('@provides directive tests', () => {
       expect(errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
           ` On field "Object.entity":\n -` +
-            invalidInlineFragmentTypeErrorMessage(
+            invalidInlineFragmentTypeConditionErrorMessage(
               '... on Interface { name }',
               ['Object.entity'],
               'Interface',
+              OBJECT,
               'Entity',
+              INTERFACE,
             ),
         ]),
       );
@@ -201,6 +202,7 @@ describe('@provides directive tests', () => {
               'AnotherObject',
               INTERFACE,
               'Interface',
+              OBJECT,
             ),
         ]),
       );
@@ -267,6 +269,7 @@ describe('@provides directive tests', () => {
               'YetAnotherObject',
               UNION,
               'Union',
+              OBJECT,
             ),
         ]),
       );
@@ -1352,7 +1355,6 @@ describe('@provides directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(warnings).toHaveLength(1);
-      console.log(warnings);
       expect(warnings).toStrictEqual([
         providesOnUnionWarning({
           fieldCoords: 'Query.media',
@@ -1412,7 +1414,7 @@ describe('@provides directive tests', () => {
       ]);
     });
 
-    test('that an error is returned if a Union fieldset defines an unknown type fragment', () => {
+    test('that an error is returned if a Union fields et defines an unknown type fragment', () => {
       const subgraphA = createSubgraph(
         'a',
         `
@@ -1462,7 +1464,7 @@ describe('@provides directive tests', () => {
       ]);
     });
 
-    test('that an error is returned if a Union fieldset defines a non-member type fragment', () => {
+    test('that an error is returned if a Union field set defines a non-member type fragment', () => {
       const subgraphA = createSubgraph(
         'a',
         `
@@ -1503,6 +1505,7 @@ describe('@provides directive tests', () => {
                 'EntityB',
                 UNION,
                 UNION,
+                OBJECT,
               ),
           ]),
         ]),
@@ -1517,7 +1520,7 @@ describe('@provides directive tests', () => {
       ]);
     });
 
-    test('that an error is returned if a Union fieldset defines a non-member type fragment (in the current subgraph)', () => {
+    test('that an error is returned if a Union field set defines a non-member type fragment (in the current subgraph)', () => {
       const subgraphA = createSubgraph(
         'a',
         `
@@ -1564,6 +1567,7 @@ describe('@provides directive tests', () => {
                 'EntityB',
                 UNION,
                 UNION,
+                OBJECT,
               ),
           ]),
         ]),
@@ -1577,6 +1581,210 @@ describe('@provides directive tests', () => {
           subgraphName: subgraphA.name,
         }),
       ]);
+    });
+
+    test('that a valid Interface type fragment on a concrete selection is valid', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@external"]
+          )
+    
+        type Query {
+          entities: [Entity!]! @provides(fields: "object { ... on Interface { ... on Object { id } }}")
+        }
+    
+        type Entity @key(fields: "id") @shareable {
+          id: ID!
+          object: Object! @external
+        }
+        
+        interface Interface {
+          id: ID
+        }
+        
+        type Object implements Interface @shareable {
+          id: ID
+        }
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@provides", "@external"]
+          )
+    
+          type Entity @key(fields: "id") @shareable {
+            id: ID!
+            object: Object!
+          }
+         
+          type Object @shareable {
+            id: ID
+          }
+        `,
+      );
+      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that a valid Union type fragment on a concrete selection is valid', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@external"]
+          )
+    
+        type Query {
+          entities: [Entity!]! @provides(fields: "object { ... on Union { ... on Object { id } } }")
+        }
+    
+        type Entity @key(fields: "id") @shareable {
+          id: ID!
+          object: Object! @external
+        }
+        
+        type Object @shareable {
+          id: ID
+        }
+        
+        union Union = Object
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@provides", "@external"]
+          )
+    
+          type Entity @key(fields: "id") @shareable {
+            id: ID!
+            object: Object!
+          }
+         
+          type Object @shareable {
+            id: ID
+          }
+        `,
+      );
+      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that a valid Union type fragment on a Union selection is valid', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@external"]
+          )
+    
+        type Query {
+          entities: [Entity!]! @provides(fields: "object { ... on UnionA { ... on UnionB { ... on Object { id } } } }")
+        }
+    
+        type Entity @key(fields: "id") @shareable {
+          id: ID!
+          object: Object! @external
+        }
+        
+        type Object @shareable {
+          id: ID
+        }
+        
+        union UnionA = Object
+        
+        union UnionB = Object
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@provides", "@external"]
+          )
+    
+          type Entity @key(fields: "id") @shareable {
+            id: ID!
+            object: Object!
+          }
+         
+          type Object @shareable {
+            id: ID
+          }
+        `,
+      );
+      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that a valid Interface type fragment on a Union selection is valid', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@external"]
+          )
+    
+        type Query {
+          entities: [Entity!]! @provides(fields: "object { ... on Union { ... on Interface { ... on Object { id } } } }")
+        }
+    
+        type Entity @key(fields: "id") @shareable {
+          id: ID!
+          object: Object! @external
+        }
+        
+        interface Interface {
+          id: ID
+        }
+        
+        type Object implements Interface @shareable {
+          id: ID
+        }
+        
+        union Union = Object
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@provides", "@external"]
+          )
+    
+          type Entity @key(fields: "id") @shareable {
+            id: ID!
+            object: Object!
+          }
+         
+          type Object @shareable {
+            id: ID
+          }
+        `,
+      );
+      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(0);
     });
 
     // TODO

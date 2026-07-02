@@ -2072,12 +2072,6 @@ export class NormalizationFactory {
             shouldDefineSelectionSet = true;
             return;
           }
-          if (!isKindAbstract(parentData.kind)) {
-            errorMessages.push(
-              invalidInlineFragmentTypeErrorMessage(fieldSet, fieldCoordsPath, typeConditionName, parentTypeName),
-            );
-            return BREAK;
-          }
           const fragmentNamedTypeData = nf.parentDefinitionDataByTypeName.get(typeConditionName);
           if (!fragmentNamedTypeData) {
             errorMessages.push(
@@ -2093,13 +2087,39 @@ export class NormalizationFactory {
           shouldDefineSelectionSet = true;
           switch (fragmentNamedTypeData.kind) {
             case Kind.INTERFACE_TYPE_DEFINITION: {
-              if (!fragmentNamedTypeData.implementedInterfaceTypeNames.has(parentTypeName)) {
+              // The enclosing type is an Object
+              if (!isKindAbstract(parentData.kind)) {
+                if (
+                  !isObjectDefinitionData(parentData) ||
+                  !parentData.implementedInterfaceTypeNames.has(typeConditionName)
+                ) {
+                  break;
+                }
+                parentDatas.push(fragmentNamedTypeData);
+                return;
+              }
+
+              // The enclosing type is an Interface or Union
+              const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(typeConditionName);
+              const parentConcreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentData.name);
+              if (
+                !concreteTypeNames ||
+                !parentConcreteTypeNames ||
+                parentConcreteTypeNames.isDisjointFrom(concreteTypeNames)
+              ) {
                 break;
               }
+
               parentDatas.push(fragmentNamedTypeData);
               return;
             }
             case Kind.OBJECT_TYPE_DEFINITION: {
+              if (!isKindAbstract(parentData.kind)) {
+                errorMessages.push(
+                  invalidInlineFragmentTypeErrorMessage(fieldSet, fieldCoordsPath, typeConditionName, parentTypeName),
+                );
+                return BREAK;
+              }
               const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
               if (!concreteTypeNames || !concreteTypeNames.has(typeConditionName)) {
                 break;
@@ -2108,6 +2128,26 @@ export class NormalizationFactory {
               return;
             }
             case Kind.UNION_TYPE_DEFINITION: {
+              const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(typeConditionName);
+              if (!concreteTypeNames) {
+                break;
+              }
+              // The enclosing type is an Object
+              if (!isKindAbstract(parentData.kind)) {
+                // The enclosing Object is a valid part of the Union
+                if (concreteTypeNames.has(parentTypeName)) {
+                  parentDatas.push(fragmentNamedTypeData);
+                  return;
+                }
+                break;
+              }
+
+              // The enclosing type is an Interface or Union; fetch its implementations/members respectively.
+              const parentConcreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
+              if (!parentConcreteTypeNames || parentConcreteTypeNames.isDisjointFrom(concreteTypeNames)) {
+                break;
+              }
+
               parentDatas.push(fragmentNamedTypeData);
               return;
             }
@@ -2131,6 +2171,7 @@ export class NormalizationFactory {
               typeConditionName,
               kindToNodeType(parentData.kind),
               parentTypeName,
+              kindToNodeType(fragmentNamedTypeData.kind),
             ),
           );
           return BREAK;
