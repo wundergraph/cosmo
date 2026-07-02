@@ -1898,7 +1898,14 @@ export class FederationFactory {
 
   fieldDataToGraphFieldData(fieldData: FieldData): GraphFieldData {
     return {
-      externalSubgraphNames: new Set<SubgraphName>(),
+      externalSubgraphNames: new Set<SubgraphName>(
+        [...fieldData.externalFieldDataBySubgraphName]
+          .filter(
+            ([, externalFieldData]) =>
+              externalFieldData.isDefinedExternal && !externalFieldData.isUnconditionallyProvided,
+          )
+          .map(([subgraphName]) => subgraphName),
+      ),
       name: fieldData.name,
       namedTypeName: fieldData.namedTypeName,
       isLeaf: isNodeLeaf(this.parentDefinitionDataByTypeName.get(fieldData.namedTypeName)?.kind),

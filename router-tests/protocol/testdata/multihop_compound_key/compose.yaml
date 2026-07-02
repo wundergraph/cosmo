@@ -1,0 +1,18 @@
+version: 1
+subgraphs:
+  - name: link
+    routing_url: http://localhost:4006/graphql
+    schema:
+      file: ./link.graphqls
+  - name: list
+    routing_url: http://localhost:4004/graphql
+    schema:
+      file: ./list.graphqls
+  - name: price
+    routing_url: http://localhost:4007/graphql
+    schema:
+      file: ./price.graphqls
+  - name: products
+    routing_url: http://localhost:4001/graphql
+    schema:
+      file: ./products.graphqls

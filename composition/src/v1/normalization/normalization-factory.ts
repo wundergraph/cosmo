@@ -1807,8 +1807,11 @@ export class NormalizationFactory {
         errorString: unknownNamedTypeErrorMessage(fieldCoords, fieldNamedTypeName),
       };
     }
-    // @TODO handle abstract types and fragments
-    if (namedTypeData.kind !== Kind.INTERFACE_TYPE_DEFINITION && namedTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+    if (
+      namedTypeData.kind !== Kind.INTERFACE_TYPE_DEFINITION &&
+      namedTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION &&
+      namedTypeData.kind !== Kind.UNION_TYPE_DEFINITION
+    ) {
       return {
         errorString: incompatibleTypeWithProvidesErrorMessage({
           fieldCoords,
@@ -1852,8 +1855,43 @@ export class NormalizationFactory {
     );
   }
 
+  #getImplementationExternalFieldDataForProvidesInterfaceLeaf(
+    parentData: CompositeOutputData,
+    fieldName: string,
+    interfaceExternalFieldData: ExternalFieldData,
+  ): ExternalFieldData {
+    if (parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION || interfaceExternalFieldData.isDefinedExternal) {
+      return interfaceExternalFieldData;
+    }
+    const concreteTypeNames = this.concreteTypeNamesByAbstractTypeName.get(parentData.name);
+    if (!concreteTypeNames || concreteTypeNames.size < 1) {
+      return interfaceExternalFieldData;
+    }
+
+    const implementationExternalFieldDatas: ExternalFieldData[] = [];
+    for (const concreteTypeName of concreteTypeNames) {
+      const concreteTypeData = this.parentDefinitionDataByTypeName.get(concreteTypeName);
+      if (!concreteTypeData || concreteTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+        return interfaceExternalFieldData;
+      }
+      const concreteFieldData = concreteTypeData.fieldDataByName.get(fieldName);
+      const concreteExternalFieldData = concreteFieldData?.externalFieldDataBySubgraphName.get(this.subgraphName);
+      if (!concreteExternalFieldData?.isDefinedExternal) {
+        return interfaceExternalFieldData;
+      }
+      implementationExternalFieldDatas.push(concreteExternalFieldData);
+    }
+
+    return {
+      isDefinedExternal: true,
+      isUnconditionallyProvided: implementationExternalFieldDatas.every(
+        (externalFieldData) => externalFieldData.isUnconditionallyProvided,
+      ),
+    };
+  }
+
   validateConditionalFieldSet(
-    selectionSetParentData: CompositeOutputData,
+    selectionSetParentData: CompositeOutputData | UnionDefinitionData,
     fieldSet: string,
     directiveFieldName: string,
     isProvides: boolean,
@@ -1935,24 +1973,29 @@ export class NormalizationFactory {
             return BREAK;
           }
           definedFields[currentDepth].add(fieldName);
-          const { isDefinedExternal, isUnconditionallyProvided } = getOrThrowError(
+          const externalFieldData = getOrThrowError(
             fieldData.externalFieldDataBySubgraphName,
             nf.subgraphName,
             `${currentFieldCoords}.externalFieldDataBySubgraphName`,
           );
+          const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+          // The child could itself be a parent
+          const namedTypeData = nf.parentDefinitionDataByTypeName.get(namedTypeName);
+          const isLeafField =
+            BASE_SCALARS.has(namedTypeName) ||
+            namedTypeData?.kind === Kind.SCALAR_TYPE_DEFINITION ||
+            namedTypeData?.kind === Kind.ENUM_TYPE_DEFINITION;
+          const effectiveExternalFieldData =
+            isProvides && isLeafField
+              ? nf.#getImplementationExternalFieldDataForProvidesInterfaceLeaf(parentData, fieldName, externalFieldData)
+              : externalFieldData;
+          const { isDefinedExternal, isUnconditionallyProvided } = effectiveExternalFieldData;
           const isFieldConditional = isDefinedExternal && !isUnconditionallyProvided;
           if (!isUnconditionallyProvided) {
             hasConditionalField = true;
           }
-          const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-          // The child could itself be a parent
-          const namedTypeData = nf.parentDefinitionDataByTypeName.get(namedTypeName);
           // The base scalars are not in the parents map
-          if (
-            BASE_SCALARS.has(namedTypeName) ||
-            namedTypeData?.kind === Kind.SCALAR_TYPE_DEFINITION ||
-            namedTypeData?.kind === Kind.ENUM_TYPE_DEFINITION
-          ) {
+          if (isLeafField) {
             if (externalAncestors.size < 1 && !isDefinedExternal) {
               nf.#handleNonExternalConditionalField({
                 currentFieldCoords,

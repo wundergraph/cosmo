@@ -5,6 +5,7 @@ import {
   type InputValueData,
   type NodeData,
   type SchemaData,
+  type UnionDefinitionData,
 } from '../../../schema-building/types/types';
 import {
   type BooleanValueNode,
@@ -61,7 +62,7 @@ export type ConditionalFieldSetValidationResult = {
 
 export type FieldSetParentResult = {
   errorString?: string;
-  fieldSetParentData?: CompositeOutputData;
+  fieldSetParentData?: CompositeOutputData | UnionDefinitionData;
 };
 
 export type ExtractDirectiveArgumentDataResult = {

@@ -18,6 +18,7 @@ import {
   PROVIDES,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
+  federateSubgraphs,
   subgraphValidationError,
   type TypeName,
   typeNameAlreadyProvidedErrorMessage,
@@ -28,6 +29,7 @@ import {
   federateSubgraphsSuccess,
   normalizeSubgraphFailure,
   normalizeSubgraphSuccess,
+  schemaToSortedNormalizedString,
 } from '../../utils/utils';
 
 describe('@provides directive tests', () => {
@@ -237,6 +239,46 @@ describe('@provides directive tests', () => {
         ]),
       );
       expect(warnings).toHaveLength(0);
+    });
+
+    test('that a @provides field set supports a union response type with an inline fragment', () => {
+      const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
+        unionProvidesProvider,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['media']),
+              isRootNode: true,
+              provides: [{ fieldName: 'media', selectionSet: '... on Book { title }' }],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Book',
+            {
+              externalFieldNames: new Set<string>(['title']),
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id' }],
+              typeName: 'Book',
+            },
+          ],
+          [
+            'Movie',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id' }],
+              typeName: 'Movie',
+            },
+          ],
+        ]),
+      );
+      expect(warnings).toStrictEqual([]);
     });
 
     test('that a @provides field set returns an error if a union does not define a fragment', () => {
@@ -804,6 +846,20 @@ describe('@provides directive tests', () => {
       );
     });
 
+    test('that an error is returned if @provides is defined on an enum response type', () => {
+      const { errors, warnings } = normalizeSubgraphFailure(enumProvides, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toStrictEqual([]);
+      expect(errors).toStrictEqual([
+        invalidProvidesOrRequiresDirectivesError(PROVIDES, [
+          incompatibleTypeWithProvidesErrorMessage({
+            fieldCoords: 'Query.media',
+            responseType: 'Media',
+            subgraphName: enumProvides.name,
+          }),
+        ]),
+      ]);
+    });
+
     test('that __typename can be provided', () => {
       const { errors, warnings } = normalizeSubgraphFailure(nalaa, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(warnings).toHaveLength(0);
@@ -817,6 +873,26 @@ describe('@provides directive tests', () => {
   });
 
   describe('Federation tests', () => {
+    test('that a @provides directive composes on a union response type with inline fragments', () => {
+      const result = federateSubgraphs({
+        subgraphs: [unionProvidesProvider, unionProvidesOwner],
+        version: ROUTER_COMPATIBILITY_VERSION_ONE,
+      });
+      expect(result.success).toBe(true);
+      if (!result.success) {
+        expect(result.errors).toStrictEqual([]);
+        return;
+      }
+      expect(result.warnings).toStrictEqual([]);
+      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toStrictEqual(
+        'schema { query: Query } type Book { id: ID! title: String! } union Media = Book | Movie type Movie { id: ID! } type Query { media: [Media] }',
+      );
+      expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toStrictEqual(
+        'schema { query: Query } type Book { id: ID! title: String! } union Media = Book | Movie type Movie { id: ID! } type Query { media: [Media] }',
+      );
+      expect(result.federatedGraphAST.kind).toStrictEqual('Document');
+    });
+
     test('that non-external v1 fields that form part of a @provides field set are treated as non-conditional but return a warning', () => {
       const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
         [u, v],
@@ -1236,10 +1312,50 @@ describe('@provides directive tests', () => {
       expect(warnings[1]).toStrictEqual(externalEntityExtensionKeyFieldWarning(`Object`, `id`, [`Object.id`], af.name));
     });
 
-    // TODO
-    test.skip('that provides on Interface is valid', () => {
-      const { warnings } = federateSubgraphsSuccess([q, r, s], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(warnings).toHaveLength(0);
+    test('that a @provides field set on an interface response type can provide interface fields that are external on all implementations', () => {
+      const result = federateSubgraphs({
+        subgraphs: [r, s],
+        version: ROUTER_COMPATIBILITY_VERSION_ONE,
+      });
+      expect(result.success).toBe(true);
+      if (!result.success) {
+        expect(result.errors).toStrictEqual([]);
+        return;
+      }
+      expect(result.warnings).toStrictEqual([]);
+      expect(result.federatedGraphAST.kind).toStrictEqual('Document');
+      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toStrictEqual(
+        'schema { query: Query } interface Animal { id: ID! name: String } type Book implements Media { animals: [Animal] id: ID! } type Cat implements Animal { age: Int id: ID! name: String } type Dog implements Animal { age: Int id: ID! name: String } interface Media { animals: [Animal] id: ID! } type Query { media: Media }',
+      );
+      expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toStrictEqual(
+        'schema { query: Query } interface Animal { id: ID! name: String } type Book implements Media { animals: [Animal] id: ID! } type Cat implements Animal { age: Int id: ID! name: String } type Dog implements Animal { age: Int id: ID! name: String } interface Media { animals: [Animal] id: ID! } type Query { media: Media }',
+      );
+    });
+
+    test('that a @provides field set on an interface response type returns an error if the interface fields are not external on all implementations', () => {
+      const { errors, warnings } = federateSubgraphsFailure(
+        [providesInterfaceInvalidProvider, s],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        subgraphValidationError(providesInterfaceInvalidProvider.name, [
+          nonExternalConditionalFieldError({
+            directiveCoords: 'Query.media',
+            directiveName: PROVIDES,
+            fieldSet: 'animals { id name }',
+            subgraphName: providesInterfaceInvalidProvider.name,
+            targetCoords: 'Animal.id',
+          }),
+          nonExternalConditionalFieldError({
+            directiveCoords: 'Query.media',
+            directiveName: PROVIDES,
+            fieldSet: 'animals { id name }',
+            subgraphName: providesInterfaceInvalidProvider.name,
+            targetCoords: 'Animal.name',
+          }),
+        ]),
+      ]);
+      expect(warnings).toStrictEqual([]);
     });
   });
 });
@@ -1697,6 +1813,47 @@ const s: Subgraph = {
   `),
 };
 
+const providesInterfaceInvalidProvider: Subgraph = {
+  name: 'providesInterfaceInvalidProvider',
+  url: '',
+  definitions: parse(`
+    extend schema
+    @link(
+      url: "https://specs.apollo.dev/federation/v2.3"
+      import: ["@key", "@shareable", "@provides", "@external"]
+    )
+    
+    type Query {
+      media: Media @shareable @provides(fields: "animals { id name }")
+    }
+    
+    interface Media {
+      id: ID!
+      animals: [Animal]
+    }
+    
+    interface Animal {
+      id: ID!
+      name: String
+    }
+    
+    type Book implements Media {
+      id: ID! @shareable
+      animals: [Animal] @external
+    }
+    
+    type Dog implements Animal {
+      id: ID!
+      name: String
+    }
+    
+    type Cat implements Animal {
+      id: ID!
+      name: String
+    }
+  `),
+};
+
 const t: Subgraph = {
   name: 't',
   url: '',
@@ -2033,6 +2190,59 @@ const nakaa: Subgraph = {
     type Query {
       a: ID @provides(fields: "b")
       b: ID
+    }
+  `),
+};
+
+const unionProvidesProvider: Subgraph = {
+  name: 'unionProvidesProvider',
+  url: '',
+  definitions: parse(`
+    type Query {
+      media: [Media] @shareable @provides(fields: "... on Book { title }")
+    }
+
+    union Media = Book | Movie
+
+    type Book @key(fields: "id") {
+      id: ID!
+      title: String! @external
+    }
+
+    type Movie @key(fields: "id") {
+      id: ID!
+    }
+  `),
+};
+
+const unionProvidesOwner: Subgraph = {
+  name: 'unionProvidesOwner',
+  url: '',
+  definitions: parse(`
+    union Media = Book | Movie
+
+    type Book @key(fields: "id") {
+      id: ID!
+      title: String!
+    }
+
+    type Movie @key(fields: "id") {
+      id: ID!
+    }
+  `),
+};
+
+const enumProvides: Subgraph = {
+  name: 'enumProvides',
+  url: '',
+  definitions: parse(`
+    type Query {
+      media: Media @provides(fields: "title")
+    }
+
+    enum Media {
+      BOOK
+      MOVIE
     }
   `),
 };
