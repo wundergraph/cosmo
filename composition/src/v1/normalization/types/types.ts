@@ -4,7 +4,6 @@ import {
   type InputValueData,
   type NodeData,
   type SchemaData,
-  UnionDefinitionData,
 } from '../../../schema-building/types/types';
 import {
   type BooleanValueNode,

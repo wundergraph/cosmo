@@ -62,6 +62,6 @@ export type IsAnyImplementationFieldExternalParams = {
   fieldCoordsPath: Array<string>;
   fieldPath: Array<FieldName>;
   fieldName: FieldName;
-  isProvides: boolean;
   interfaceTypeName: TypeName;
+  isProvides: boolean;
 };
