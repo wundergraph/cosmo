@@ -979,15 +979,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		return nil, nil, fmt.Errorf("request context not found")
 	}
 
-	if h.inlineArgumentsChecker != nil {
-		// Warn-mode annotations are dropped here: websocket responses stream through the
-		// subscription writer, so there is no single response body to annotate. The warn
-		// log emitted by Check still covers observability for this transport.
-		if _, inlineErr := h.inlineArgumentsChecker.Check(operationKit.parsedOperation, operationKit.kit.doc, h.clientInfo, h.logger); inlineErr != nil {
-			return nil, nil, inlineErr
-		}
-	}
-
 	if blocked := h.operationBlocker.OperationIsBlocked(h.logger, reqCtx.expressionContext, operationKit.parsedOperation); blocked != nil {
 		return nil, nil, blocked
 	}
@@ -1004,6 +995,15 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	// serialize inline literals into JSON variables and let invalid-type literals through.
 	// The error is surfaced later, during validation, so normalization timing stays accurate.
 	_, operationValidationErr := operationKit.ValidateOperation()
+
+	// Check for inline argument values. Warn-mode annotations are dropped here:
+	// streamed responses have no single body to annotate; the warn log emitted
+	// by the check still covers this transport.
+	if h.inlineArgumentsChecker != nil {
+		if _, inlineArgumentsErr := operationKit.CheckInlineArguments(h.inlineArgumentsChecker, h.clientInfo, h.logger); inlineArgumentsErr != nil && operationValidationErr == nil {
+			operationValidationErr = inlineArgumentsErr
+		}
+	}
 
 	cached, _, err := operationKit.NormalizeVariables()
 	if err != nil {

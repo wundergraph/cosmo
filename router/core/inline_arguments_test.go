@@ -6,8 +6,40 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
+
+const inlineArgumentsTestSchema = `
+type Query {
+	employee(id: ID, active: Boolean, role: String): Employee
+	employees(order: Order, ids: [Int], filter: Filter): [Employee]
+	score(min: Float): Employee
+	field(input: Filter): String
+}
+
+type Employee {
+	id: ID
+	posts(first: Int): [Employee]
+}
+
+enum Order {
+	ASC
+	DESC
+}
+
+input Filter {
+	active: Boolean
+}
+`
+
+func parseTestSchema(t *testing.T) *ast.Document {
+	t.Helper()
+	definition, report := astparser.ParseGraphqlDocumentString(inlineArgumentsTestSchema)
+	require.False(t, report.HasErrors(), "schema parse error: %s", report.Error())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&definition))
+	return &definition
+}
 
 func parseQuery(t *testing.T, query string) *ast.Document {
 	t.Helper()
@@ -19,8 +51,14 @@ func parseQuery(t *testing.T, query string) *ast.Document {
 	return doc
 }
 
+// TestDetectInlineArguments exercises the detection walk in isolation on parsed
+// documents. In the request pipeline the walk runs on the normalized document
+// (see detectInlineArguments); the pruning behavior that implies is covered by
+// the integration tests in router-tests/security/disallow_inline_arguments_test.go.
 func TestDetectInlineArguments(t *testing.T) {
 	t.Parallel()
+
+	definition := parseTestSchema(t)
 
 	tests := []struct {
 		name  string
@@ -41,104 +79,103 @@ func TestDetectInlineArguments(t *testing.T) {
 			name:  "inline string",
 			query: `query { employee(id: "1") { id } }`,
 			want: []InlineArgument{
-				{Name: "id", ValueKind: "String", Line: 1, Column: 18},
+				{Name: "id", ValueKind: "String"},
 			},
 		},
 		{
 			name:  "inline integer",
 			query: `query { employee(id: 1) { id } }`,
 			want: []InlineArgument{
-				{Name: "id", ValueKind: "Int", Line: 1, Column: 18},
+				{Name: "id", ValueKind: "Int"},
 			},
 		},
 		{
 			name:  "inline float",
 			query: `query { score(min: 1.5) { id } }`,
 			want: []InlineArgument{
-				{Name: "min", ValueKind: "Float", Line: 1, Column: 15},
+				{Name: "min", ValueKind: "Float"},
 			},
 		},
 		{
 			name:  "inline boolean",
 			query: `query { employee(active: true) { id } }`,
 			want: []InlineArgument{
-				{Name: "active", ValueKind: "Boolean", Line: 1, Column: 18},
+				{Name: "active", ValueKind: "Boolean"},
 			},
 		},
 		{
 			name:  "inline enum",
 			query: `query { employees(order: ASC) { id } }`,
 			want: []InlineArgument{
-				{Name: "order", ValueKind: "Enum", Line: 1, Column: 19},
+				{Name: "order", ValueKind: "Enum"},
 			},
 		},
 		{
 			name:  "inline null",
 			query: `query { employee(id: null) { id } }`,
 			want: []InlineArgument{
-				{Name: "id", ValueKind: "Null", Line: 1, Column: 18},
+				{Name: "id", ValueKind: "Null"},
 			},
 		},
 		{
 			name:  "inline list",
 			query: `query { employees(ids: [1, 2]) { id } }`,
 			want: []InlineArgument{
-				{Name: "ids", ValueKind: "List", Line: 1, Column: 19},
+				{Name: "ids", ValueKind: "List"},
 			},
 		},
 		{
 			name:  "inline object",
 			query: `query { employees(filter: {active: true}) { id } }`,
 			want: []InlineArgument{
-				{Name: "filter", ValueKind: "Object", Line: 1, Column: 19},
+				{Name: "filter", ValueKind: "Object"},
 			},
 		},
 		{
 			name:  "inline empty object",
 			query: `query { field(input: {}) }`,
 			want: []InlineArgument{
-				{Name: "input", ValueKind: "Object", Line: 1, Column: 15},
+				{Name: "input", ValueKind: "Object"},
 			},
 		},
 		{
 			name:  "mixed variable and literal",
 			query: `query($id: ID!) { employee(id: $id, role: "admin") { id } }`,
 			want: []InlineArgument{
-				{Name: "role", ValueKind: "String", Line: 1, Column: 37},
+				{Name: "role", ValueKind: "String"},
 			},
 		},
 		{
 			name:  "directive inline argument",
-			query: `query { employee(id: $id) @include(if: true) { id } }`,
+			query: `query($id: ID!) { employee(id: $id) @include(if: true) { id } }`,
 			want: []InlineArgument{
-				{Name: "if", ValueKind: "Boolean", Line: 1, Column: 36},
+				{Name: "if", ValueKind: "Boolean"},
 			},
 		},
 		{
-			name:  "inline arg in skipped node still detected",
-			query: `query { employee(id: $id) { posts(first: 10) @skip(if: true) { id } } }`,
+			name:  "nested field argument",
+			query: `query($id: ID!) { employee(id: $id) { posts(first: 10) { id } } }`,
 			want: []InlineArgument{
-				{Name: "first", ValueKind: "Int", Line: 1, Column: 35},
-				{Name: "if", ValueKind: "Boolean", Line: 1, Column: 52},
+				{Name: "first", ValueKind: "Int"},
 			},
 		},
 		{
 			name:  "introspection field argument",
 			query: `query { __type(name: "User") { name } }`,
 			want: []InlineArgument{
-				{Name: "name", ValueKind: "String", Line: 1, Column: 16},
+				{Name: "name", ValueKind: "String"},
 			},
 		},
 		{
-			name:  "inline arg inside fragment",
+			name:  "inline arg inside spread fragment",
 			query: `query { ...F } fragment F on Query { employee(id: "1") { id } }`,
 			want: []InlineArgument{
-				{Name: "id", ValueKind: "String", Line: 1, Column: 47},
+				{Name: "id", ValueKind: "String"},
 			},
 		},
 		{
 			name:  "variable definition default not detected",
-			query: `query($x: Int = 5) { employee(id: $x) { id } }`,
+			query: `query($x: ID = "5") { employee(id: $x) { id } }`,
 			want:  nil,
 		},
 	}
@@ -147,7 +184,7 @@ func TestDetectInlineArguments(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			doc := parseQuery(t, tc.query)
-			got := detectInlineArguments(doc)
+			got := detectInlineArguments(doc, definition)
 			require.Equal(t, tc.want, got)
 		})
 	}

@@ -6,14 +6,17 @@ import (
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvisitor"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.uber.org/zap"
 )
 
+// InlineArgument identifies an offending argument by name and value kind. Positions
+// are omitted: the normalized document they would refer to is re-parsed on a cache
+// hit, so they would not reliably map to the text the client submitted.
 type InlineArgument struct {
 	Name      string `json:"argument"`
 	ValueKind string `json:"valueKind"`
-	Line      uint32 `json:"line"`
-	Column    uint32 `json:"column"`
 }
 
 type InlineArgumentsChecker struct {
@@ -57,15 +60,21 @@ type InlineArgumentsResult struct {
 	Annotation []byte
 }
 
-// Check scans doc.Arguments for non-variable values.
+// CheckInlineArguments runs the disallow-inline-arguments policy check on the kit's
+// current document, after NormalizeOperation and before NormalizeVariables (see detectInlineArguments).
+func (o *OperationKit) CheckInlineArguments(checker *InlineArgumentsChecker, clientInfo *ClientInfo, logger *zap.Logger) (InlineArgumentsResult, *inlineArgumentsError) {
+	return checker.Check(o.parsedOperation, o.kit.doc, o.operationProcessor.executor.ClientSchema, clientInfo, logger)
+}
+
+// Check walks the operation document for non-variable argument values.
 // Warn mode returns a pre-built annotation JSON for the extensions.inlineArguments response field.
 // Enforce mode returns an error for immediate rejection.
-func (c *InlineArgumentsChecker) Check(op *ParsedOperation, doc *ast.Document, clientInfo *ClientInfo, logger *zap.Logger) (InlineArgumentsResult, *inlineArgumentsError) {
+func (c *InlineArgumentsChecker) Check(op *ParsedOperation, doc, definition *ast.Document, clientInfo *ClientInfo, logger *zap.Logger) (InlineArgumentsResult, *inlineArgumentsError) {
 	if op.IsPersistedOperation && !c.includePersistedOperations {
 		return InlineArgumentsResult{}, nil
 	}
 
-	args := detectInlineArguments(doc)
+	args := detectInlineArguments(doc, definition)
 	if len(args) == 0 {
 		return InlineArgumentsResult{}, nil
 	}
@@ -126,23 +135,38 @@ type inlineArgumentsExtension struct {
 	Arguments []InlineArgument `json:"arguments"`
 }
 
-// detectInlineArguments scans the flat doc.Arguments slice, which the parser populates
-// before any normalization stage can rewrite or prune arguments.
-func detectInlineArguments(doc *ast.Document) []InlineArgument {
-	var result []InlineArgument
-	for ref := range doc.Arguments {
-		arg := doc.Arguments[ref]
-		if arg.Value.Kind == ast.ValueKindVariable {
-			continue
-		}
-		result = append(result, InlineArgument{
-			Name:      doc.ArgumentNameString(ref),
-			ValueKind: valueKindName(arg.Value.Kind),
-			Line:      arg.Position.LineStart,
-			Column:    arg.Position.CharStart,
-		})
+// detectInlineArguments walks the operation document and collects arguments with
+// non-variable values. It expects the normalized, pre-extraction document (after
+// NormalizeOperation, before NormalizeVariables): non-executed sibling operations,
+// unused fragments and static @skip/@include are already pruned, while inline
+// literals are not yet extracted into variables. It must walk rather than scan the
+// flat doc.Arguments slice, which keeps pruned nodes orphaned on a normalization
+// cache miss but is re-parsed clean on a hit.
+func detectInlineArguments(doc, definition *ast.Document) []InlineArgument {
+	walker := astvisitor.WalkerFromPool()
+	defer walker.Release()
+	visitor := &inlineArgumentsVisitor{operation: doc}
+	walker.RegisterEnterArgumentVisitor(visitor)
+	// Walk errors can only stem from a schema-invalid operation, whose
+	// schema-validation error takes precedence over this policy check anyway.
+	walker.Walk(doc, definition, &operationreport.Report{})
+	return visitor.args
+}
+
+type inlineArgumentsVisitor struct {
+	operation *ast.Document
+	args      []InlineArgument
+}
+
+func (v *inlineArgumentsVisitor) EnterArgument(ref int) {
+	arg := v.operation.Arguments[ref]
+	if arg.Value.Kind == ast.ValueKindVariable {
+		return
 	}
-	return result
+	v.args = append(v.args, InlineArgument{
+		Name:      v.operation.ArgumentNameString(ref),
+		ValueKind: valueKindName(arg.Value.Kind),
+	})
 }
 
 func valueKindName(k ast.ValueKind) string {

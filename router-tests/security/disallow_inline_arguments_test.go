@@ -73,7 +73,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int","line":1,"column":12}]}}}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int"}]}}}]}`, res.Body)
 		})
 	})
 
@@ -97,7 +97,9 @@ func TestDisallowInlineArguments(t *testing.T) {
 		})
 	})
 
-	t.Run("enforce mode rejects inline directive argument", func(t *testing.T) {
+	// Normalization resolves @skip/@include directives with a static condition,
+	// so their inline boolean is never reported.
+	t.Run("enforce mode allows statically resolved include directive", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
@@ -107,11 +109,50 @@ func TestDisallowInlineArguments(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query: `query($id: Int!) { employee(id: $id) @include(if: true) { id } }`,
+				Query:     `query($id: Int!) { employee(id: $id) @include(if: true) { id } }`,
+				Variables: json.RawMessage(`{"id":1}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+		})
+	})
+
+	t.Run("enforce mode ignores non-executed sibling operation", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode: config.DisallowInlineArgumentsModeEnforce,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:         `query A($id: Int!) { employee(id: $id) { id } } query B { employee(id: 1) { id } }`,
+				OperationName: []byte(`"A"`),
+				Variables:     json.RawMessage(`{"id":1}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+		})
+	})
+
+	t.Run("enforce mode rejects inline argument inside used fragment", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode: config.DisallowInlineArgumentsModeEnforce,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query { ...F } fragment F on Query { employee(id: 1) { id } }`,
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"if","valueKind":"Boolean","line":1,"column":47}]}}}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int"}]}}}]}`, res.Body)
 		})
 	})
 
@@ -132,7 +173,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusUnprocessableEntity, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Please use variables.","extensions":{"code":"VARIABLES_REQUIRED","inlineArguments":{"code":"VARIABLES_REQUIRED","message":"Please use variables.","arguments":[{"argument":"id","valueKind":"Int","line":1,"column":12}]}}}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Please use variables.","extensions":{"code":"VARIABLES_REQUIRED","inlineArguments":{"code":"VARIABLES_REQUIRED","message":"Please use variables.","arguments":[{"argument":"id","valueKind":"Int"}]}}}]}`, res.Body)
 		})
 	})
 
@@ -158,9 +199,30 @@ func TestDisallowInlineArguments(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":{"employee":{"id":1}},"extensions":{"inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int","line":1,"column":31}]}}}`, res.Body)
+			require.Equal(t, `{"data":{"employee":{"id":1}},"extensions":{"inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int"}]}}}`, res.Body)
 
 			requireInlineArgumentsLogEntry(t, xEnv)
+		})
+	})
+
+	// Pins the cache-consistency property documented on detectInlineArguments.
+	t.Run("warn mode reports identically across normalization cache miss and hit", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode: config.DisallowInlineArgumentsModeWarn,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := `query { ...F } fragment F on Query { employee(id: 1) { id } }`
+			want := `{"data":{"employee":{"id":1}},"extensions":{"inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int"}]}}}`
+			for range 2 {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: query})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.Equal(t, want, res.Body)
+			}
 		})
 	})
 
@@ -298,7 +360,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int","line":1,"column":49}]}}}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int"}]}}}]}`, res.Body)
 		})
 	})
 
@@ -323,7 +385,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.JSONEq(t, `[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"max","valueKind":"Int","line":1,"column":35}]}}}]`, string(res.Payload))
+			require.JSONEq(t, `[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"max","valueKind":"Int"}]}}}]`, string(res.Payload))
 		})
 	})
 

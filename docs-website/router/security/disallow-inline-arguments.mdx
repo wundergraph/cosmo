@@ -28,9 +28,9 @@ query ($id: Int!) {
 
 Hardcoded values cause practical problems at scale. Every distinct value produces a distinct document, which defeats operation-level caching and inflates normalization and plan cache cardinality. Inline values also leak request data such as user IDs into query documents, where they end up in logs and traces. Operations with inline values cannot be registered as persisted operations without one registration per value.
 
-The `security.disallow_inline_arguments` policy detects inline values in field arguments and directive arguments. Depending on the configured mode, the router logs them, annotates the response, or rejects the operation. Detection runs after parsing and before normalization, so it sees the document exactly as the client sent it.
+The `security.disallow_inline_arguments` policy detects inline values in field arguments and directive arguments. Depending on the configured mode, the router logs them, annotates the response, or rejects the operation. Detection runs on the normalized operation, before inline values are extracted into variables, so it checks exactly what the router will execute: inline values in a non-executed sibling operation of a multi-operation document, in an unused fragment, or in a statically resolved `@skip`/`@include` directive are not flagged, because normalization removes them from the executed operation.
 
-Values supplied through variables are compliant. This includes variable-definition default values and variable usage in directives such as `@include(if: $flag)`. A literal directive argument such as `@include(if: true)` is flagged.
+Values supplied through variables are compliant. This includes variable-definition default values and variable usage in directives such as `@include(if: $flag)`. A literal directive argument on a directive that survives normalization is flagged; `@include(if: true)` and `@skip(if: false)` are resolved away by normalization and therefore compliant.
 
 ## Modes
 
@@ -66,7 +66,7 @@ These options have no environment variable equivalents. Configure them in the ro
 
 ## Warn Mode
 
-In warn mode the operation executes normally and the response gains an `extensions.inlineArguments` annotation listing every offending argument with its position in the document. For the request `{ employee(id: 1) { id } }` the response is:
+In warn mode the operation executes normally and the response gains an `extensions.inlineArguments` annotation listing every offending argument by name and value kind. For the request `{ employee(id: 1) { id } }` the response is:
 
 ```json
 {
@@ -80,7 +80,7 @@ In warn mode the operation executes normally and the response gains an `extensio
       "code": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
       "message": "Inline argument values are not allowed. Use variables instead.",
       "arguments": [
-        { "argument": "id", "valueKind": "Int", "line": 1, "column": 12 }
+        { "argument": "id", "valueKind": "Int" }
       ]
     }
   }
@@ -97,7 +97,7 @@ The router also emits a structured warning log, `inline arguments found in opera
 
 ## Enforce Mode
 
-In enforce mode the router rejects the operation with the configured HTTP status code before normalization, validation, and planning. No subgraph requests are made. The same request is rejected with:
+In enforce mode the router rejects the operation with the configured HTTP status code during validation, before planning and execution. No subgraph requests are made. A schema-invalid operation is rejected with its schema-validation error first; this policy applies to valid operations. The same request is rejected with:
 
 ```json
 {
@@ -110,7 +110,7 @@ In enforce mode the router rejects the operation with the configured HTTP status
           "code": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
           "message": "Inline argument values are not allowed. Use variables instead.",
           "arguments": [
-            { "argument": "id", "valueKind": "Int", "line": 1, "column": 12 }
+            { "argument": "id", "valueKind": "Int" }
           ]
         }
       }

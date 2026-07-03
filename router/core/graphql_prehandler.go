@@ -724,29 +724,10 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	}
 
 	// Set name and type as soon as parsing succeeds so that error paths below
-	// (e.g. the inline arguments checker) see the correct operation type when
-	// negotiating the response transport (SSE/multipart vs. plain JSON).
+	// see the correct operation type when negotiating the response transport
+	// (SSE/multipart vs. plain JSON).
 	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
 	requestContext.operation.opType = operationKit.parsedOperation.Type
-
-	if h.inlineArgumentsChecker != nil {
-		result, inlineErr := h.inlineArgumentsChecker.Check(
-			operationKit.parsedOperation,
-			operationKit.kit.doc,
-			requestContext.operation.clientInfo,
-			requestContext.logger,
-		)
-		if result.Count > 0 {
-			// Set directly on the router span (also on the rejection path, which returns
-			// before the common after-parse attributes are attached) so operators can
-			// build a per-client breakdown of inline argument usage before enforcing.
-			httpOperation.routerSpan.SetAttributes(otel.WgOperationInlineArgumentsCount.Int(result.Count))
-		}
-		if inlineErr != nil {
-			return inlineErr
-		}
-		requestContext.operation.inlineArgumentsAnnotation = result.Annotation
-	}
 
 	if h.accessController != nil {
 		// Based on the authentication result, the introspection config,
@@ -887,6 +868,20 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// satisfy a String argument). The error is surfaced later, on the validation span, so
 	// that the normalization span reflects only normalization.
 	operationValidationCacheHit, operationValidationErr := operationKit.ValidateOperation()
+
+	// Check for inline argument values; the enforce-mode error is held and
+	// surfaced during validation, after the schema-validation error.
+	var inlineArgumentsErr *inlineArgumentsError
+	if h.inlineArgumentsChecker != nil {
+		var result InlineArgumentsResult
+		result, inlineArgumentsErr = operationKit.CheckInlineArguments(h.inlineArgumentsChecker, requestContext.operation.clientInfo, requestContext.logger)
+		if result.Count > 0 {
+			// Set directly on the router span so operators can build a per-client
+			// breakdown of inline argument usage before enforcing.
+			httpOperation.routerSpan.SetAttributes(otel.WgOperationInlineArgumentsCount.Int(result.Count))
+		}
+		requestContext.operation.inlineArgumentsAnnotation = result.Annotation
+	}
 
 	/**
 	* Normalize the variables
@@ -1101,6 +1096,10 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// coerced variable values). Its error is surfaced here so it appears on the
 	// validation span rather than the normalization span.
 	err = operationValidationErr
+	if err == nil && inlineArgumentsErr != nil {
+		// A schema-invalid operation gets the more fundamental error first.
+		err = inlineArgumentsErr
+	}
 	if err == nil {
 		err = operationKit.ValidateOperationVariables(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
 	}
