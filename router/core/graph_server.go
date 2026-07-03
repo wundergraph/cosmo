@@ -2292,8 +2292,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		subgraphTransport.CloseIdleConnections()
 	}
 
-	// Pubsub providers are shut down per-mux in the loop above (skipping reused muxes).
-
 	if s.connector != nil {
 		s.logger.Debug("Stopping old plugins")
 		if err := s.connector.StopAllProviders(); err != nil {
