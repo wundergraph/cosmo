@@ -716,10 +716,6 @@ type graphMux struct {
 	streamMetricStore         rmetric.StreamMetricStore
 	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
 
-	// pubSubProviders are the EDFS providers built for this mux. They are owned by
-	// the mux (not the server) so that a mux reused by the next server keeps its
-	// providers alive: Shutdown skips reused muxes, so their providers are not torn
-	// down until the mux itself is finally discarded.
 	pubSubProviders []datasource.Provider
 }
 
@@ -981,6 +977,32 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 	return nil
 }
 
+func (s *graphMux) addPubsubProviders(providers []datasource.Provider) {
+	s.pubSubProviders = append(s.pubSubProviders, providers...)
+}
+
+// startPubsubProviders starts all pubsub providers of s.
+func (s *graphMux) startPubsubProviders(ctx context.Context) error {
+	timeout := 5 * time.Second
+
+	err := providersActionWithTimeout(ctx, s.pubSubProviders, func(ctx context.Context, provider datasource.Provider) error {
+		return provider.Startup(ctx)
+	}, timeout, "pubsub provider startup timed out")
+
+	return err
+}
+
+// stopPubsubProviders stops all pubsub providers of s.
+func (s *graphMux) stopPubsubProviders(ctx context.Context) error {
+	timeout := 5 * time.Second
+
+	err := providersActionWithTimeout(ctx, s.pubSubProviders, func(ctx context.Context, provider datasource.Provider) error {
+		return provider.Shutdown(ctx)
+	}, timeout, "pubsub provider shutdown timed out")
+
+	return err
+}
+
 func (s *graphMux) Shutdown(ctx context.Context) error {
 	// Make sure we do not shutdown the mux multiple times
 	if !s.finalized.CompareAndSwap(false, true) {
@@ -1032,12 +1054,8 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	// Shut down the pubsub providers owned by this mux. A reused mux never reaches
-	// here (Shutdown skips it), so its providers stay alive for the next server.
-	const defaultShutdownTimeout = 5 * time.Second
-	if pErr := providersActionWithTimeout(ctx, s.pubSubProviders, func(ctx context.Context, provider datasource.Provider) error {
-		return provider.Shutdown(ctx)
-	}, defaultShutdownTimeout, "pubsub provider shutdown timed out"); pErr != nil {
+	pErr := s.stopPubsubProviders(ctx)
+	if pErr != nil {
 		err = errors.Join(err, pErr)
 	}
 
@@ -1554,11 +1572,11 @@ func (s *graphServer) buildGraphMux(
 		})
 	}
 
-	if pubSubStartupErr := s.startupPubSubProviders(s.graphServerCtx, providers); pubSubStartupErr != nil {
-		return nil, pubSubStartupErr
+	gm.addPubsubProviders(providers)
+	pErr := gm.startPubsubProviders(s.graphServerCtx)
+	if pErr != nil {
+		return nil, pErr
 	}
-	// Providers are owned by the mux so they follow its reuse/shutdown lifecycle.
-	gm.pubSubProviders = providers
 
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                            executor,
@@ -2291,18 +2309,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	}
 
 	return finalErr
-}
-
-// startupPubSubProviders starts the given pubsub providers
-// It returns an error if any of the providers fail to start
-// or if some providers takes to long to start
-func (s *graphServer) startupPubSubProviders(ctx context.Context, providers []datasource.Provider) error {
-	// Default timeout for pubsub provider startup
-	const defaultStartupTimeout = 5 * time.Second
-
-	return providersActionWithTimeout(ctx, providers, func(ctx context.Context, provider datasource.Provider) error {
-		return provider.Startup(ctx)
-	}, defaultStartupTimeout, "pubsub provider startup timed out")
 }
 
 func providersActionWithTimeout(ctx context.Context, providers []datasource.Provider, action func(ctx context.Context, provider datasource.Provider) error, timeout time.Duration, timeoutMessage string) error {
