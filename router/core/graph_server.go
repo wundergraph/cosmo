@@ -67,6 +67,7 @@ import (
 const (
 	featureFlagHeader = "X-Feature-Flag"
 	featureFlagCookie = "feature_flag"
+	providerTimeout   = 5 * time.Second
 )
 
 type (
@@ -983,24 +984,16 @@ func (s *graphMux) addPubsubProviders(providers []datasource.Provider) {
 
 // startPubsubProviders starts all pubsub providers of s.
 func (s *graphMux) startPubsubProviders(ctx context.Context) error {
-	timeout := 5 * time.Second
-
-	err := providersActionWithTimeout(ctx, s.pubSubProviders, func(ctx context.Context, provider datasource.Provider) error {
+	return providersActionWithTimeout(ctx, s.pubSubProviders, func(ctx context.Context, provider datasource.Provider) error {
 		return provider.Startup(ctx)
-	}, timeout, "pubsub provider startup timed out")
-
-	return err
+	}, providerTimeout, "pubsub provider startup timed out")
 }
 
 // stopPubsubProviders stops all pubsub providers of s.
 func (s *graphMux) stopPubsubProviders(ctx context.Context) error {
-	timeout := 5 * time.Second
-
-	err := providersActionWithTimeout(ctx, s.pubSubProviders, func(ctx context.Context, provider datasource.Provider) error {
+	return providersActionWithTimeout(ctx, s.pubSubProviders, func(ctx context.Context, provider datasource.Provider) error {
 		return provider.Shutdown(ctx)
-	}, timeout, "pubsub provider shutdown timed out")
-
-	return err
+	}, providerTimeout, "pubsub provider shutdown timed out")
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
