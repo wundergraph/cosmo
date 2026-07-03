@@ -162,9 +162,12 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, response.Config.CompatibilityVersion)
 	}
 
-	isConnStoreEnabled := r.metricConfig.OpenTelemetry.ConnectionStats || r.metricConfig.Prometheus.ConnectionStats
+	// Active-connection tracking via TraceDialer is only needed when ConnectionStats is on.
+	// The httptrace-based network metrics attach in the RoundTripper and don't require the dialer.
+	networkStatsEnabled := r.metricConfig.OpenTelemetry.NetworkStats || r.metricConfig.Prometheus.NetworkStats
+	connectionStatsEnabled := networkStatsEnabled || r.metricConfig.OpenTelemetry.ConnectionStats || r.metricConfig.Prometheus.ConnectionStats
 	var traceDialer *TraceDialer
-	if isConnStoreEnabled {
+	if connectionStatsEnabled {
 		traceDialer = NewTraceDialer()
 	}
 
@@ -276,7 +279,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		}
 	}
 
-	if isConnStoreEnabled {
+	if connectionStatsEnabled {
 		connStore, err := rmetric.NewConnectionMetricStore(
 			s.logger,
 			nil,
@@ -667,6 +670,7 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 		s.otlpMeterProvider,
 		s.engineStats,
 		&s.metricConfig.OpenTelemetry.EngineStats,
+		s.metricConfig.OpenTelemetry.ResolverStats,
 	)
 	if err != nil {
 		return err
@@ -678,6 +682,7 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 		s.promMeterProvider,
 		s.engineStats,
 		&s.metricConfig.Prometheus.EngineStats,
+		s.metricConfig.Prometheus.ResolverStats,
 	)
 	if err != nil {
 		return err
@@ -1127,10 +1132,12 @@ func (s *graphServer) buildGraphMux(
 		// but in this case we use the same metric store
 		otlpOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.OpenTelemetry.Enabled,
+			ResolverStats:        s.metricConfig.OpenTelemetry.ResolverStats,
 			CostStats:            s.metricConfig.OpenTelemetry.CostStats,
 		}
 		promOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.Prometheus.Enabled,
+			ResolverStats:        s.metricConfig.Prometheus.ResolverStats,
 			CostStats:            s.metricConfig.Prometheus.CostStats,
 		}
 
@@ -1540,6 +1547,13 @@ func (s *graphServer) buildGraphMux(
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
+	if s.engineStats != nil && executor.Resolver != nil {
+		s.engineStats.RegisterResolver(executor.Resolver)
+		context.AfterFunc(graphMuxCtx, func() {
+			s.engineStats.UnregisterResolver(executor.Resolver)
+		})
+	}
+
 	if pubSubStartupErr := s.startupPubSubProviders(s.graphServerCtx, providers); pubSubStartupErr != nil {
 		return nil, pubSubStartupErr
 	}
@@ -1570,8 +1584,9 @@ func (s *graphServer) buildGraphMux(
 		ApolloRouterCompatibilityFlags:                         s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
-		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
-		CostControl:                                            s.securityConfiguration.CostControl,
+		EnableDefer:      s.engineExecutionConfiguration.EnableDefer,
+		ComplexityLimits: s.securityConfiguration.ComplexityLimits,
+		CostControl:      s.securityConfiguration.CostControl,
 	})
 
 	if opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled() {
@@ -1777,6 +1792,7 @@ func (s *graphServer) buildGraphMux(
 		EnableResponseHeaderPropagation: s.headerPropagation.HasResponseRules(),
 		EnableCostResponseHeaders:       s.securityConfiguration.CostControl != nil && s.securityConfiguration.CostControl.ExposeHeaders,
 		EngineStats:                     s.engineStats,
+		MetricStore:                     gm.metricStore,
 		TracerProvider:                  s.tracerProvider,
 		Authorizer:                      NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:        s.subgraphErrorPropagation,

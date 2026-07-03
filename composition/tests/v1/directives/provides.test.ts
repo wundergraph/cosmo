@@ -6,24 +6,27 @@ import {
   fieldAlreadyProvidedErrorMessage,
   fieldAlreadyProvidedWarning,
   ID_SCALAR,
-  incompatibleTypeWithProvidesErrorMessage,
+  incompatibleTypeWithProvidesError,
   INTERFACE,
   invalidInlineFragmentTypeConditionErrorMessage,
-  invalidInlineFragmentTypeErrorMessage,
   invalidProvidesOrRequiresDirectivesError,
   invalidSelectionOnUnionErrorMessage,
   nonExternalConditionalFieldError,
   nonExternalConditionalFieldWarning,
+  OBJECT,
   parse,
   PROVIDES,
+  providesOnUnionWarning,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
   subgraphValidationError,
   type TypeName,
   typeNameAlreadyProvidedErrorMessage,
   UNION,
+  unknownInlineFragmentTypeConditionErrorMessage,
 } from '../../../src';
 import {
+  createSubgraph,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeSubgraphFailure,
@@ -38,11 +41,11 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -55,12 +58,12 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: '... on Entity { name }' }],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -84,11 +87,13 @@ describe('@provides directive tests', () => {
       expect(errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
           ` On field "Object.entity":\n -` +
-            invalidInlineFragmentTypeErrorMessage(
+            invalidInlineFragmentTypeConditionErrorMessage(
               '... on Interface { name }',
               ['Object.entity'],
               'Interface',
+              OBJECT,
               'Entity',
+              INTERFACE,
             ),
         ]),
       );
@@ -100,14 +105,14 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [
                 { fieldName: 'entity', selectionSet: 'interface { ... on Interface { ... on Interface { name } } }' },
               ],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -146,12 +151,12 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'interface { ... on AnotherObject { name } }' }],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -197,6 +202,7 @@ describe('@provides directive tests', () => {
               'AnotherObject',
               INTERFACE,
               'Interface',
+              OBJECT,
             ),
         ]),
       );
@@ -208,12 +214,12 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'union { ... on AnotherObject { name } }' }],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -263,6 +269,7 @@ describe('@provides directive tests', () => {
               'YetAnotherObject',
               UNION,
               'Union',
+              OBJECT,
             ),
         ]),
       );
@@ -274,12 +281,12 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'anotherObject { name }' }],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -310,12 +317,12 @@ describe('@provides directive tests', () => {
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'anotherObject(arg: "string") { name }' }],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -355,12 +362,12 @@ describe('@provides directive tests', () => {
                 {
                   fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
                   fieldPath: ['entity', 'object', 'nestedObject', 'age'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
                 {
                   fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
                   fieldPath: ['entities', 'object', 'nestedObject', 'age'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
               ],
               requiredBy: [],
@@ -373,12 +380,12 @@ describe('@provides directive tests', () => {
                 {
                   fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
                   fieldPath: ['entity', 'object', 'nestedObject', 'name'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
                 {
                   fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
                   fieldPath: ['entities', 'object', 'nestedObject', 'name'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
               ],
               requiredBy: [],
@@ -403,12 +410,12 @@ describe('@provides directive tests', () => {
                 {
                   fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
                   fieldPath: ['entity', 'object', 'nestedObject', 'age'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
                 {
                   fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
                   fieldPath: ['entities', 'object', 'nestedObject', 'age'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
               ],
               requiredBy: [],
@@ -421,12 +428,12 @@ describe('@provides directive tests', () => {
                 {
                   fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
                   fieldPath: ['entity', 'object', 'nestedObject', 'name'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
                 {
                   fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
                   fieldPath: ['entities', 'object', 'nestedObject', 'name'],
-                  // typePath: ['Query', 'Entity', 'Object', 'NestedObject'],
+                  // typePath: ['Query', 'Entity', OBJECT, 'NestedObject'],
                 },
               ],
               requiredBy: [],
@@ -555,11 +562,11 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -610,12 +617,12 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               externalFieldNames: new Set<string>(['id', 'name']),
               fieldNames: new Set<string>(),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -663,11 +670,11 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['id', 'name']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -715,12 +722,12 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               externalFieldNames: new Set<string>(['id']),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -777,12 +784,12 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               externalFieldNames: new Set<string>(['id']),
               fieldNames: new Set<string>(['nestedObject']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -795,11 +802,11 @@ describe('@provides directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          incompatibleTypeWithProvidesErrorMessage({
+          incompatibleTypeWithProvidesError({
             fieldCoords: 'Query.a',
             responseType: ID_SCALAR,
             subgraphName: nakaa.name,
-          }),
+          }).message,
         ]),
       );
     });
@@ -860,11 +867,11 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['nestedObject']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -914,11 +921,11 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['nestedObject']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
           [
@@ -1070,7 +1077,7 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['id', 'object']),
               externalFieldNames: new Set<string>(['name']),
@@ -1081,7 +1088,7 @@ describe('@provides directive tests', () => {
                   selectionSet: 'name',
                 },
               ],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -1155,12 +1162,12 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['id', 'object']),
               externalFieldNames: new Set<string>(['name']),
               isRootNode: false,
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -1200,7 +1207,7 @@ describe('@provides directive tests', () => {
             },
           ],
           [
-            'Object',
+            OBJECT,
             {
               fieldNames: new Set<string>(['id']),
               isRootNode: true,
@@ -1210,7 +1217,7 @@ describe('@provides directive tests', () => {
                   selectionSet: 'id',
                 },
               ],
-              typeName: 'Object',
+              typeName: OBJECT,
             },
           ],
         ]),
@@ -1234,6 +1241,550 @@ describe('@provides directive tests', () => {
       expect(warnings).toHaveLength(2);
       expect(warnings[0]).toStrictEqual(externalEntityExtensionKeyFieldWarning(`Entity`, `id`, [`Entity.id`], af.name));
       expect(warnings[1]).toStrictEqual(externalEntityExtensionKeyFieldWarning(`Object`, `id`, [`Object.id`], af.name));
+    });
+
+    test('that provides on a field that returns a Union is valid #1', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          union: Union @provides(fields: "... on Entity { name }")
+        }
+        
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @external @shareable
+        }
+        
+        union Union = Entity
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        `,
+      );
+      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on Entity { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
+    });
+
+    test('that provides on a field that returns a Union is valid #2', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@external"]
+          )
+    
+        type Query {
+          media: [Media] @shareable
+        }
+    
+        union Media = Book | Movie
+    
+        type Book @key(fields: "id") {
+          id: ID!
+        }
+    
+        type Movie @key(fields: "id") {
+          id: ID!
+        }
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@provides", "@external"]
+          )
+    
+        type Query {
+          media: [Media] @shareable @provides(fields: "... on Book { title }")
+        }
+    
+        union Media = Book | Movie
+    
+        type Book @key(fields: "id") {
+          id: ID!
+          title: String @external
+        }
+    
+        type Movie @key(fields: "id") {
+          id: ID!
+        }
+        `,
+      );
+      const subgraphC = createSubgraph(
+        'c',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable"]
+          )
+    
+        type Book @key(fields: "id") {
+          id: ID!
+          title: String @shareable
+        }
+    
+        type Movie @key(fields: "id") {
+          id: ID!
+          title: String @shareable
+        }
+        `,
+      );
+      const { warnings } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB, subgraphC],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.media',
+          fieldSet: '... on Book { title }',
+          namedTypeName: 'Media',
+          subgraphName: subgraphB.name,
+        }),
+      ]);
+    });
+
+    test('that an error is returned if a non-external field is provided through a Union type fragment', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          union: Union @provides(fields: "... on Entity { name }")
+        }
+        
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        
+        union Union = Entity
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          nonExternalConditionalFieldError({
+            directiveCoords: 'Query.union',
+            fieldSet: `... on Entity { name }`,
+            directiveName: PROVIDES,
+            subgraphName: subgraphA.name,
+            targetCoords: 'Entity.name',
+          }),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on Entity { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
+    });
+
+    test('that an error is returned if a Union fields et defines an unknown type fragment', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          union: Union @provides(fields: "... on Unknown { name }")
+        }
+        
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        
+        union Union = Entity
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          invalidProvidesOrRequiresDirectivesError(PROVIDES, [
+            ` On field "Query.union":\n -` +
+              unknownInlineFragmentTypeConditionErrorMessage(
+                `... on Unknown { name }`,
+                ['Query.union'],
+                UNION,
+                'Unknown',
+              ),
+          ]),
+        ]),
+      ]);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on Unknown { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
+    });
+
+    test('that an error is returned if a Union field set defines a non-member type fragment', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          union: Union @provides(fields: "... on EntityB { name }")
+        }
+        
+        type EntityA @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        
+        type EntityB @key(fields: "id") {
+          id: ID!
+        }
+        
+        union Union = EntityA
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        type EntityA @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          invalidProvidesOrRequiresDirectivesError(PROVIDES, [
+            ` On field "Query.union":\n -` +
+              invalidInlineFragmentTypeConditionErrorMessage(
+                `... on EntityB { name }`,
+                ['Query.union'],
+                'EntityB',
+                UNION,
+                UNION,
+                OBJECT,
+              ),
+          ]),
+        ]),
+      ]);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on EntityB { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
+    });
+
+    test('that an error is returned if a Union field set defines a non-member type fragment (in the current subgraph)', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          union: Union @provides(fields: "... on EntityB { name }")
+        }
+        
+        type EntityA @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        
+        type EntityB @key(fields: "id") {
+          id: ID!
+        }
+        
+        union Union = EntityA
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        type EntityA @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        
+        type EntityB @key(fields: "id") {
+          id: ID!
+        }
+        
+        union Union = EntityA | EntityB
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          invalidProvidesOrRequiresDirectivesError(PROVIDES, [
+            ` On field "Query.union":\n -` +
+              invalidInlineFragmentTypeConditionErrorMessage(
+                `... on EntityB { name }`,
+                ['Query.union'],
+                'EntityB',
+                UNION,
+                UNION,
+                OBJECT,
+              ),
+          ]),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on EntityB { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
+    });
+
+    test('that a valid Interface type fragment on a concrete selection is valid', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@external"]
+          )
+    
+        type Query {
+          entities: [Entity!]! @provides(fields: "object { ... on Interface { ... on Object { id } }}")
+        }
+    
+        type Entity @key(fields: "id") @shareable {
+          id: ID!
+          object: Object! @external
+        }
+        
+        interface Interface {
+          id: ID
+        }
+        
+        type Object implements Interface @shareable {
+          id: ID
+        }
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@provides", "@external"]
+          )
+    
+          type Entity @key(fields: "id") @shareable {
+            id: ID!
+            object: Object!
+          }
+         
+          type Object @shareable {
+            id: ID
+          }
+        `,
+      );
+      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that a valid Union type fragment on a concrete selection is valid', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@external"]
+          )
+    
+        type Query {
+          entities: [Entity!]! @provides(fields: "object { ... on Union { ... on Object { id } } }")
+        }
+    
+        type Entity @key(fields: "id") @shareable {
+          id: ID!
+          object: Object! @external
+        }
+        
+        type Object @shareable {
+          id: ID
+        }
+        
+        union Union = Object
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@provides", "@external"]
+          )
+    
+          type Entity @key(fields: "id") @shareable {
+            id: ID!
+            object: Object!
+          }
+         
+          type Object @shareable {
+            id: ID
+          }
+        `,
+      );
+      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that a valid Union type fragment on a Union selection is valid', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@external"]
+          )
+    
+        type Query {
+          entities: [Entity!]! @provides(fields: "object { ... on UnionA { ... on UnionB { ... on Object { id } } } }")
+        }
+    
+        type Entity @key(fields: "id") @shareable {
+          id: ID!
+          object: Object! @external
+        }
+        
+        type Object @shareable {
+          id: ID
+        }
+        
+        union UnionA = Object
+        
+        union UnionB = Object
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@provides", "@external"]
+          )
+    
+          type Entity @key(fields: "id") @shareable {
+            id: ID!
+            object: Object!
+          }
+         
+          type Object @shareable {
+            id: ID
+          }
+        `,
+      );
+      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that a valid Interface type fragment on a Union selection is valid', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@external"]
+          )
+    
+        type Query {
+          entities: [Entity!]! @provides(fields: "object { ... on Union { ... on Interface { ... on Object { id } } } }")
+        }
+    
+        type Entity @key(fields: "id") @shareable {
+          id: ID!
+          object: Object! @external
+        }
+        
+        interface Interface {
+          id: ID
+        }
+        
+        type Object implements Interface @shareable {
+          id: ID
+        }
+        
+        union Union = Object
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@provides", "@external"]
+          )
+    
+          type Entity @key(fields: "id") @shareable {
+            id: ID!
+            object: Object!
+          }
+         
+          type Object @shareable {
+            id: ID
+          }
+        `,
+      );
+      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(0);
     });
 
     // TODO

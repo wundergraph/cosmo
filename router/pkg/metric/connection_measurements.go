@@ -2,6 +2,7 @@ package metric
 
 import (
 	"fmt"
+
 	otelmetric "go.opentelemetry.io/otel/metric"
 )
 
@@ -10,6 +11,11 @@ const (
 	maxConnections            = "router.http.client.max_connections"
 	connectionsActive         = "router.http.client.active_connections"
 	connectionAcquireDuration = "router.http.client.connection.acquire_duration"
+
+	dnsLookupDuration    = "router.http.client.dns_lookup_duration"
+	tcpConnectDuration   = "router.http.client.tcp_connect_duration"
+	tlsHandshakeDuration = "router.http.client.tls_handshake_duration"
+	timeToFirstByte      = "router.http.client.time_to_first_byte"
 )
 
 var (
@@ -25,15 +31,41 @@ var (
 	connectionsActiveOptions = []otelmetric.Int64ObservableGaugeOption{
 		otelmetric.WithDescription("Connections active"),
 	}
+
+	dnsLookupDurationOptions = []otelmetric.Float64HistogramOption{
+		otelmetric.WithUnit("ms"),
+		otelmetric.WithDescription("DNS lookup duration for outgoing subgraph requests"),
+	}
+
+	tcpConnectDurationOptions = []otelmetric.Float64HistogramOption{
+		otelmetric.WithUnit("ms"),
+		otelmetric.WithDescription("TCP connect duration for outgoing subgraph requests"),
+	}
+
+	tlsHandshakeDurationOptions = []otelmetric.Float64HistogramOption{
+		otelmetric.WithUnit("ms"),
+		otelmetric.WithDescription("TLS handshake duration for outgoing subgraph requests"),
+	}
+
+	timeToFirstByteOptions = []otelmetric.Float64HistogramOption{
+		otelmetric.WithUnit("ms"),
+		otelmetric.WithDescription("Time from request write completion to first response byte from subgraph"),
+	}
 )
 
 type connectionInstruments struct {
 	maxConnections            otelmetric.Int64Gauge
 	connectionAcquireDuration otelmetric.Float64Histogram
 	connectionsActive         otelmetric.Int64ObservableGauge
+
+	// Per-request httptrace phase histograms — only created when enhancedConnectionStats is true.
+	dnsLookupDuration    otelmetric.Float64Histogram
+	tcpConnectDuration   otelmetric.Float64Histogram
+	tlsHandshakeDuration otelmetric.Float64Histogram
+	timeToFirstByte      otelmetric.Float64Histogram
 }
 
-func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, error) {
+func newConnectionInstruments(meter otelmetric.Meter, enhancedConnectionStats bool) (*connectionInstruments, error) {
 	maxConnectionsGauge, err := meter.Int64Gauge(
 		maxConnections,
 		maxConnectionOptions...,
@@ -58,9 +90,28 @@ func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, e
 		return nil, fmt.Errorf("failed to create connections available: %w", err)
 	}
 
-	return &connectionInstruments{
+	ci := &connectionInstruments{
 		maxConnections:            maxConnectionsGauge,
 		connectionAcquireDuration: acquireDurationHistogram,
 		connectionsActive:         connectionsActiveGauge,
-	}, nil
+	}
+
+	if !enhancedConnectionStats {
+		return ci, nil
+	}
+
+	if ci.dnsLookupDuration, err = meter.Float64Histogram(dnsLookupDuration, dnsLookupDurationOptions...); err != nil {
+		return nil, fmt.Errorf("failed to create dns lookup duration histogram: %w", err)
+	}
+	if ci.tcpConnectDuration, err = meter.Float64Histogram(tcpConnectDuration, tcpConnectDurationOptions...); err != nil {
+		return nil, fmt.Errorf("failed to create tcp connect duration histogram: %w", err)
+	}
+	if ci.tlsHandshakeDuration, err = meter.Float64Histogram(tlsHandshakeDuration, tlsHandshakeDurationOptions...); err != nil {
+		return nil, fmt.Errorf("failed to create tls handshake duration histogram: %w", err)
+	}
+	if ci.timeToFirstByte, err = meter.Float64Histogram(timeToFirstByte, timeToFirstByteOptions...); err != nil {
+		return nil, fmt.Errorf("failed to create time to first byte histogram: %w", err)
+	}
+
+	return ci, nil
 }
