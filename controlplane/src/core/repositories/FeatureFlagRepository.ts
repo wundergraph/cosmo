@@ -1373,9 +1373,11 @@ export class FeatureFlagRepository {
   // input: base schema version id and feature flag id
   public async getFeatureFlagSchemaVersionByBaseSchemaVersion({
     baseSchemaVersionId,
+    federatedGraphId,
     featureFlagId,
   }: {
     baseSchemaVersionId: string;
+    federatedGraphId: string;
     featureFlagId: string;
   }) {
     const orgRepo = new OrganizationRepository(this.logger, this.db);
@@ -1402,7 +1404,7 @@ export class FeatureFlagRepository {
           ? and(
               isNull(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId),
               eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
-              eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
+              eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, federatedGraphId),
             )
           : and(
               eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
