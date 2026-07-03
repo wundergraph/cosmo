@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -29,11 +30,6 @@ import (
 //     skip/include variable from Request.Variables. The cached normalized operation
 //     still declares the variable as Boolean!, so validation fails.
 //
-// The first request misses the cache and succeeds; ristretto's Set is buffered, so
-// the entry lands shortly after, and every subsequent identical request hits the
-// cache and fails until the router restarts. The test uses the debug cache response
-// header to deterministically wait for the first HIT instead of sleeping.
-//
 // See also TestPersistedOperationSkipIncludeConcurrency for the related (already
 // fixed) persisted-operation cache-key aliasing bug.
 func TestNormalizationCacheHitWithIncludeVariableAlsoUsedAsArgument(t *testing.T) {
@@ -49,9 +45,8 @@ func TestNormalizationCacheHitWithIncludeVariableAlsoUsedAsArgument(t *testing.T
 			c.Debug.EnableNormalizationCacheResponseHeader = true
 		},
 		Subgraphs: testenv.SubgraphsConfig{
-			// The real updateAvailability resolver publishes to NATS, which is not
-			// available here. The subgraph response is irrelevant to the bug (it is
-			// about router-side normalization caching), so stub it out.
+			// Stub the subgraph: the real updateAvailability resolver needs NATS,
+			// and the bug is entirely router-side.
 			Availability: testenv.SubgraphConfig{
 				Middleware: func(_ http.Handler) http.Handler {
 					return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -62,34 +57,30 @@ func TestNormalizationCacheHitWithIncludeVariableAlsoUsedAsArgument(t *testing.T
 			},
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
-		makeRequest := func() *testenv.TestResponse {
-			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+		makeRequest := func() (*testenv.TestResponse, error) {
+			return xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:     query,
 				Variables: []byte(variables),
 			})
-			require.NoError(t, err)
-			return res
 		}
 
 		// First request populates the cache (miss path) and must succeed.
-		res := makeRequest()
+		res, err := makeRequest()
+		require.NoError(t, err)
 		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
 		require.Equal(t, expected, res.Body)
 
 		// Repeat the identical request until the normalization cache entry lands
-		// (ristretto sets are async) and we observe the first cache hit. Every
-		// response — miss or hit — must return the same data as the first request.
-		// Before the fix, the first cache hit instead returns:
+		// (ristretto sets are async) and it is served from the cache with the same
+		// data. Before the fix, cache hits instead return:
 		// Variable "$flag" of required type "Boolean!" was not provided.
-		deadline := time.Now().Add(10 * time.Second)
-		for {
-			res := makeRequest()
-			require.Equal(t, expected, res.Body)
-			if res.Response.Header.Get(core.NormalizationCacheHeader) == "HIT" {
-				break
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			res, err := makeRequest()
+			if !assert.NoError(ct, err) {
+				return
 			}
-			require.False(t, time.Now().After(deadline), "normalization cache entry never became visible")
-			time.Sleep(10 * time.Millisecond)
-		}
+			assert.Equal(ct, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+			assert.Equal(ct, expected, res.Body)
+		}, 10*time.Second, 10*time.Millisecond)
 	})
 }
