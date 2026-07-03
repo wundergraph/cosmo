@@ -1,5 +1,4 @@
 import {
-  type CompositeOutputData,
   type FieldData,
   type InputObjectDefinitionData,
   type InputValueData,
@@ -57,11 +56,6 @@ export type FieldSetData = {
 export type ConditionalFieldSetValidationResult = {
   errorMessages: Array<string>;
   configuration?: RequiredFieldConfiguration;
-};
-
-export type FieldSetParentResult = {
-  errorString?: string;
-  fieldSetParentData?: CompositeOutputData;
 };
 
 export type ExtractDirectiveArgumentDataResult = {
