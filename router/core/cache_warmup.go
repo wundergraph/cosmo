@@ -349,6 +349,12 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
+	// Schema validation must run before variable extraction, otherwise inline argument
+	// literals are serialized into JSON variables and invalid-type literals slip through.
+	if _, err = k.ValidateOperation(); err != nil {
+		return nil, err
+	}
+
 	_, _, err = k.NormalizeVariables()
 	if err != nil {
 		return nil, err
@@ -359,12 +365,8 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
-	// NOTE: we do not validate query complexity here, because queries come from analytics, so they should be valid
-
-	_, err = k.Validate(true, k.parsedOperation.RemapVariables, nil)
-	if err != nil {
-		return nil, err
-	}
+	// NOTE: we do not validate query complexity here, because queries come from analytics, so they should be valid.
+	// We also skip variable validation (skipLoader=true) because warmup items may not carry variables.
 
 	planOptions := PlanOptions{
 		ClientInfo: item.Client,

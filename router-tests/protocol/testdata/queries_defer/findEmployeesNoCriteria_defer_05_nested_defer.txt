@@ -1,0 +1,16 @@
+--graphql
+Content-Type: application/json
+
+{"data":{},"pending":[{"id":"1","path":[]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"findEmployees":[{},{},{},{},{},{},{},{},{},{}]},"id":"1"}],"completed":[{"id":"1"}],"pending":[{"id":"2","path":["findEmployees"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"details":{"forename":"Jens"}},"id":"2","subPath":[0]},{"data":{"details":{"forename":"Dustin"}},"id":"2","subPath":[1]},{"data":{"details":{"forename":"Stefan"}},"id":"2","subPath":[2]},{"data":{"details":{"forename":"Björn"}},"id":"2","subPath":[3]},{"data":{"details":{"forename":"Sergiy"}},"id":"2","subPath":[4]},{"data":{"details":{"forename":"Suvij"}},"id":"2","subPath":[5]},{"data":{"details":{"forename":"Nithin"}},"id":"2","subPath":[6]},{"data":{"details":{"forename":"Eelco"}},"id":"2","subPath":[7]},{"data":{"details":{"forename":"Alexandra"}},"id":"2","subPath":[8]},{"data":{"details":{"forename":"David"}},"id":"2","subPath":[9]}],"completed":[{"id":"2"}],"hasNext":false}
+
+--graphql--

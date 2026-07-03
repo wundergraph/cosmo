@@ -1,0 +1,69 @@
+query {
+  products {
+    ...IProductFragment
+    ...CosmoFragment
+    ...SDKFragment
+  }
+  productTypes {
+    __typename
+    ... on Documentation {
+      url(product: COSMO)
+      urls(products: [CONSULTANCY, ENGINE, HUMAN_RESOURCES, SDK])
+    }
+    ...IProductFragment
+    ... on Consultancy {
+      lead {
+        details {
+          forename
+        }
+      }
+      name
+    }
+  }
+}
+
+fragment IProductFragment on IProduct {
+  ... @defer {
+    upc
+  }
+}
+
+fragment CosmoFragment on Cosmo {
+  name
+  lead {
+    ... @defer {
+      details {
+        forename
+      }
+    }
+  }
+  repositoryURL
+}
+
+fragment SDKFragment on SDK {
+  owner {
+    details {
+      forename
+    }
+  }
+  clientLanguages
+  unicode
+}
+
+fragment EmployeeFragment on Employee {
+  id
+  details {
+    ... @defer {
+      forename
+      location {
+        language
+      }
+    }
+    maritalStatus
+  }
+  role {
+    departments
+    title
+  }
+  products
+}

@@ -25,6 +25,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
+
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/pkg/art"
@@ -617,6 +618,13 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions
 	requestContext.operation.variablesHash = operationKit.parsedOperation.VariablesHash
 	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	// Expose the variables JSON to expressions as early as possible so it is available for access logs
+	// even if a later stage fails. It is only serialized when an expression references
+	// request.operation.variables, to avoid the (potentially large) serialization cost on every request.
+	// The value can contain sensitive data, so it should be logged with care.
+	if h.exprManager.VisitorManager.IsRequestOperationVariablesUsedInExpressions() {
+		requestContext.expressionContext.Request.Operation.Variables = string(operationKit.parsedOperation.Request.Variables)
+	}
 	if err != nil {
 		return &httpGraphqlError{
 			message:    fmt.Sprintf("error parsing variables: %s", err),
@@ -848,6 +856,13 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 	requestContext.expressionContext.Request.Operation.NormalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
+	// Validate the operation against the schema BEFORE variable extraction. Extraction
+	// serializes inline argument literals into JSON variables, which erases their GraphQL
+	// type (e.g. an enum literal `hello` becomes the string "hello" and would wrongly
+	// satisfy a String argument). The error is surfaced later, on the validation span, so
+	// that the normalization span reflects only normalization.
+	operationValidationCacheHit, operationValidationErr := operationKit.ValidateOperation()
+
 	/**
 	* Normalize the variables
 	 */
@@ -1056,7 +1071,14 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		}
 	}
 
-	validationCached, err := operationKit.Validate(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
+	// Schema validation (computed before variable extraction) takes precedence over
+	// variable validation, mirroring the GraphQL spec order (ValuesOfCorrectType before
+	// coerced variable values). Its error is surfaced here so it appears on the
+	// validation span rather than the normalization span.
+	err = operationValidationErr
+	if err == nil {
+		err = operationKit.ValidateOperationVariables(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
+	}
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
 
@@ -1074,7 +1096,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		return err
 	}
 
-	engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(validationCached))
+	engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(operationValidationCacheHit))
 	if requestContext.operation.executionOptions.SkipLoader {
 		// In case we're skipping the loader, which means that we won't execute the operation
 		// we skip the validation of variables as we're not using them
@@ -1170,6 +1192,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
 		case *plan.SynchronousResponsePlan:
 			p.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
+		case *plan.DeferResponsePlan:
+			// TODO: handle ART
 		}
 
 		if h.queryPlansLoggingEnabled {
@@ -1179,12 +1203,30 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 				printedPlan = p.Response.Fetches.QueryPlan().PrettyPrint()
 			case *plan.SubscriptionResponsePlan:
 				printedPlan = p.Response.Response.Fetches.QueryPlan().PrettyPrint()
+			case *plan.DeferResponsePlan:
+				// TODO: handle
 			}
 			if h.developmentMode {
 				h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
 			} else {
 				h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
 			}
+		}
+	}
+
+	// A DeferResponsePlan is only produced when the operation contains @defer
+	// (and @defer support is enabled). Such operations stream incremental
+	// payloads as multipart/mixed, so reject the request early if the client
+	// does not accept that content type
+	if _, ok := requestContext.operation.preparedPlan.preparedPlan.(*plan.DeferResponsePlan); ok {
+		if !clientAcceptsMultipartMixed(req) {
+			return NewHttpGraphqlError(
+				"the router received a query with the @defer directive but the client does not accept "+
+					"multipart/mixed HTTP responses. To enable @defer support, add the HTTP header "+
+					"'Accept: multipart/mixed'",
+				ExtCodeErrDeferMultipartNotAccepted,
+				http.StatusOK,
+			)
 		}
 	}
 
@@ -1244,21 +1286,18 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 	now := time.Now()
 
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+
+	wg.Go(func() {
 		if err := h.metrics.MetricStore().Flush(ctx); err != nil {
 			requestLogger.Error("Failed to flush OTEL metrics", zap.Error(err))
 		}
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		if err := h.tracerProvider.ForceFlush(ctx); err != nil {
 			requestLogger.Error("Failed to flush OTEL tracer", zap.Error(err))
 		}
-	}()
+	})
 
 	wg.Wait()
 

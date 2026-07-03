@@ -1,0 +1,15 @@
+{
+  "data": {
+    "products": [
+      {
+        "lead": {
+          "__typename": "Employee",
+          "id": 1,
+          "derivedMood": "HAPPY"
+        }
+      },
+      {},
+      {}
+    ]
+  }
+}

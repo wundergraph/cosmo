@@ -1,0 +1,188 @@
+#!/usr/bin/env bash
+#MISE description="Hot-reload a router N times and (if a pprof port is reachable) capture a heap profile after each reload"
+#MISE raw=true
+#USAGE flag "-r --reloads <reloads>" help="Number of hot reloads to perform" default="10"
+#USAGE flag "-s --settle <settle>" help="Settling period (seconds) after each reload before capturing" default="15"
+#USAGE flag "-p --pprof-port <pprof_port>" help="pprof port to capture heap from; omit to skip profiling (defaults to 6060 with --run-router)"
+#USAGE flag "-o --outdir <outdir>" help="Directory (relative to repo root) for heap profiles and logs" default="profiles"
+#USAGE flag "-l --log-file <log_file>" help="Log to monitor for reload confirmation; omit to wait blindly on a fixed cadence"
+#USAGE flag "-c --router-config <router_config>" help="Router config (YAML), relative to router/ — the CONFIG_PATH (only used with --run-router)" default="debug.config.yaml"
+#USAGE flag "-e --execution-config <execution_config>" help="Execution config (JSON) to append to so the router reloads; pass empty to have reloads triggered externally" default="router/__schemas/config.json"
+#USAGE flag "--run-router" help="Build and run the router ourselves (redirected log, confirmed reloads, profiling)"
+
+set -euo pipefail
+
+# --- args (usage spec sets usage_*, with fallbacks) --------------------------
+reloads="${usage_reloads:-10}"
+settle="${usage_settle:-15}"
+outdir_rel="${usage_outdir:-profiles}"
+router_config="${usage_router_config:-debug.config.yaml}"
+run_router="${usage_run_router:-false}"
+port="${usage_pprof_port:-}"
+# no-colon default so an explicit empty value (external reloads) is preserved.
+execution_config="${usage_execution_config-router/__schemas/config.json}"
+
+# --- paths -------------------------------------------------------------------
+root="${MISE_PROJECT_ROOT:-$(git rev-parse --show-toplevel)}"
+router_dir="$root/router"
+[[ $outdir_rel == /* ]] && outdir="$outdir_rel" || outdir="$root/$outdir_rel"
+[[ -n $execution_config && $execution_config != /* ]] && execution_config="$root/$execution_config"
+bin="$outdir/router"
+mkdir -p "$outdir"
+
+# --- mode: degrade gracefully as flags are omitted ---------------------------
+# --run-router implies profiling, so default the port when it wasn't given.
+[[ $run_router == true && -z $port ]] && port=6060
+base="http://localhost:$port"
+
+# Which log to watch, and whether to gate reloads on it (else blind cadence).
+log="$outdir/router.log"
+monitor=false
+if [[ $run_router == true ]]; then
+    monitor=true
+elif [[ -n ${usage_log_file:-} ]]; then
+    [[ ${usage_log_file} == /* ]] && log="$usage_log_file" || log="$root/$usage_log_file"
+    monitor=true
+fi
+
+# --- helpers -----------------------------------------------------------------
+die() { echo "error: $*" >&2; exit 1; }
+
+# grep -c prints "0" *and* exits non-zero on no matches, so branch on the
+# file's existence rather than chaining on grep's status (which emits 0 twice).
+count_reloads() {
+    if [[ -f $log ]]; then
+        grep -c 'Config file changed' "$log" || true
+    else
+        echo 0
+    fi
+}
+
+# Force two GC cycles, then capture an inuse heap profile (also gc=1) to $1.
+capture_heap() {
+    curl -sf "$base/debug/pprof/heap?gc=1" -o /dev/null
+    sleep 1
+    curl -sf "$base/debug/pprof/heap?gc=1" -o /dev/null
+    sleep 1
+    curl -sf "$base/debug/pprof/heap?gc=1" -o "$1"
+}
+
+# Block until $log records more than $1 reloads (or the router dies / we time out).
+wait_for_reload() {
+    local before=$1 n=0
+    while (($(count_reloads) <= before)); do
+        if [[ -n ${router_pid:-} ]] && ! kill -0 "$router_pid" 2>/dev/null; then
+            die "router exited during reload; see $log"
+        fi
+        sleep 0.2
+        n=$((n + 1))
+        ((n > 300)) && die "timed out waiting for reload (60s); see $log"
+    done
+}
+
+# Diff the baseline against the final reload profile and print the top growth.
+report_diff() {
+    printf -v final "%s/heap-%03d.pb.gz" "$outdir" "$reloads"
+    local diff="$outdir/diff-inuse_space.txt"
+    local args=(-base "$baseline" -inuse_space -cum -top)
+    [[ -f $bin ]] && args+=("$bin")
+    go tool pprof "${args[@]}" "$final" >"$diff" 2>&1
+    echo "baseline: $baseline"
+    echo "final:    $final"
+    echo "diff:     $diff"
+    echo
+    echo "Top inuse_space growth (baseline → final):"
+    head -n 25 "$diff"
+}
+
+# --- cleanup -----------------------------------------------------------------
+cleanup() {
+    if [[ -n ${router_pid:-} ]] && kill -0 "$router_pid" 2>/dev/null; then
+        echo "Stopping router (pid $router_pid)"
+        kill "$router_pid" 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT
+
+# --- preflight ---------------------------------------------------------------
+if [[ $run_router == true && -z $execution_config ]]; then
+    die "--execution-config is required with --run-router (the file whose change triggers a reload)"
+fi
+[[ -n $execution_config && ! -f $execution_config ]] && die "execution config not found: $execution_config"
+
+# --- build & launch (only when asked to run the router) ----------------------
+if [[ $run_router == true ]]; then
+    cd "$router_dir"
+    echo "Building router binary"
+    go build -o "$bin" ./cmd/router || die "go build failed"
+
+    echo "Starting router (PPROF_ADDR=:$port, CONFIG_PATH=$router_config)"
+    env PPROF_ADDR=":$port" CONFIG_PATH="$router_config" "$bin" >"$log" 2>&1 &
+    router_pid=$!
+
+    echo "Waiting for router to become ready on :$port"
+    n=0
+    until curl -sf "$base/debug/pprof/heap" -o /dev/null 2>/dev/null; do
+        kill -0 "$router_pid" 2>/dev/null || die "router exited early; see $log"
+        sleep 0.5
+        n=$((n + 1))
+        ((n > 120)) && die "timed out waiting for router (60s)"
+    done
+    echo "Router ready (pid $router_pid)"
+fi
+
+# --- decide whether to profile -----------------------------------------------
+# A port makes profiling possible; when attaching, only if it actually responds.
+profile=false
+if [[ -n $port ]]; then
+    if [[ $run_router == true ]] || curl -sf "$base/debug/pprof/heap" -o /dev/null 2>/dev/null; then
+        profile=true
+    else
+        echo "pprof :$port unreachable — continuing without profiling"
+    fi
+fi
+
+echo "Router hot-reload profiler — reloads=$reloads settle=${settle}s profile=$profile monitor=$monitor"
+
+# --- baseline ----------------------------------------------------------------
+if [[ $profile == true ]]; then
+    baseline="$outdir/heap-000-baseline.pb.gz"
+    capture_heap "$baseline"
+    echo "Baseline captured => $baseline"
+fi
+
+# --- reload loop -------------------------------------------------------------
+for ((i = 1; i <= reloads; i++)); do
+    [[ $monitor == true ]] && before=$(count_reloads)
+
+    # Trigger a reload by appending to the execution config; if none was given,
+    # a reload is expected to come from elsewhere and we just wait/settle.
+    if [[ -n $execution_config ]]; then
+        printf '\n' >>"$execution_config"
+        echo "Reload $i/$reloads · triggered"
+    fi
+
+    if [[ $monitor == true ]]; then
+        echo "Reload $i/$reloads · waiting for router to pick up config change"
+        wait_for_reload "$before"
+    fi
+
+    sleep "$settle"
+
+    if [[ $profile == true ]]; then
+        printf -v out "%s/heap-%03d.pb.gz" "$outdir" "$i"
+        capture_heap "$out"
+        echo "Reload $i/$reloads captured → $out"
+    fi
+done
+
+# --- diff --------------------------------------------------------------------
+if [[ $profile == true ]]; then
+    echo "Done — $reloads reloads profiled"
+    report_diff
+    echo
+    echo "Inspect interactively with:"
+    echo "  go tool pprof -base $baseline -inuse_space -cum $bin $final"
+else
+    echo "Done — $reloads reloads triggered (no profiling)"
+fi
