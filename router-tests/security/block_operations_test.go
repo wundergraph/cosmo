@@ -595,7 +595,7 @@ func TestBlockOperations(t *testing.T) {
 				t.Fatal("this should not be possible")
 			})
 
-			require.ErrorContains(t, err, "line 1, column 15: type expr.RequestHeaders has no field Header")
+			require.ErrorContains(t, err, "line 1, column 15: type expr.Headers has no field Header")
 		})
 	})
 }
