@@ -2,33 +2,17 @@ import fs from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { eq } from 'drizzle-orm';
 import { addMinutes, formatISO, subDays } from 'date-fns';
 import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
 import { Label } from '../../src/types/index.js';
-import { unsuccessfulBaseCompositionError } from '../../src/core/errors/errors.js';
 import {
-  assertExecutionConfigSubgraphNames,
-  assertFeatureFlagExecutionConfig,
-  assertNumberOfCompositions,
-  createAndPublishSubgraph,
   createFeatureFlag,
-  createFederatedGraph,
   createNamespace,
-  createThenPublishFeatureSubgraph,
-  DEFAULT_ROUTER_URL,
-  DEFAULT_SUBGRAPH_URL_ONE,
-  DEFAULT_SUBGRAPH_URL_THREE,
-  DEFAULT_SUBGRAPH_URL_TWO,
-  deleteFeatureFlag,
   featureFlagIntegrationTestSetUp,
   getDebugTestOptions,
-  GraphNameAndKey,
   SetupTest,
-  toggleFeatureFlag,
 } from '../test-util.js';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
-import { graphCompositions } from '../../src/db/schema.js';
 
 // Change to true to enable a longer timeout
 const isDebugMode = false;
