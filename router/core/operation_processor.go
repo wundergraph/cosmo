@@ -771,6 +771,12 @@ type NormalizationCacheEntry struct {
 	normalizedRepresentation string
 	operationType            string
 	operationDefinitionRef   int
+
+	// removedSkipIncludeVariableNames are the skip/include variables that normalization
+	// removed from the operation and its variables. Variables that are also used
+	// elsewhere (e.g. as field arguments) stay declared in the normalized operation
+	// and must NOT be removed from the request variables on a cache hit.
+	removedSkipIncludeVariableNames []string
 }
 
 type VariablesNormalizationCacheEntry struct {
@@ -822,10 +828,12 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 			o.parsedOperation.Type = entry.operationType
 			o.parsedOperation.NormalizationCacheHit = true
 
-			// Remove skip/include variables because they come directly from the user.
-			// They were removed during normalization, but we did not cache variables,
-			// thus we have to do it every time.
-			for _, varName := range skipIncludeVariableNames {
+			// Remove the skip/include variables that normalization removed, because they
+			// come directly from the user. They were removed during normalization, but we
+			// did not cache variables, thus we have to do it every time. Skip/include
+			// variables that are also used elsewhere (e.g. as field arguments) are still
+			// declared in the cached normalized operation and must be kept.
+			for _, varName := range entry.removedSkipIncludeVariableNames {
 				o.parsedOperation.Request.Variables = jsonparser.Delete(o.parsedOperation.Request.Variables, varName)
 			}
 
@@ -876,11 +884,21 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 
 	if o.cache != nil && o.cache.normalizationCache != nil {
+		// A skip/include variable that is no longer declared in the normalized operation
+		// was removed by the normalizer, along with its value.
+		var removedSkipIncludeVariableNames []string
+		for _, varName := range skipIncludeVariableNames {
+			if !o.kit.doc.OperationDefinitionHasVariableDefinition(o.operationDefinitionRef, varName) {
+				removedSkipIncludeVariableNames = append(removedSkipIncludeVariableNames, varName)
+			}
+		}
+
 		// Do not cache variables because, because we allow different values of variables
 		// for the same normalized entry cache.
 		entry := NormalizationCacheEntry{
-			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
-			operationType:            o.parsedOperation.Type,
+			normalizedRepresentation:        o.parsedOperation.NormalizedRepresentation,
+			operationType:                   o.parsedOperation.Type,
+			removedSkipIncludeVariableNames: removedSkipIncludeVariableNames,
 		}
 		o.cache.normalizationCache.Set(cacheKey, entry, 1)
 	}
