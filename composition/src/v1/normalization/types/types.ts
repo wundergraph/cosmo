@@ -1,5 +1,4 @@
 import {
-  type CompositeOutputData,
   type FieldData,
   type InputObjectDefinitionData,
   type InputValueData,

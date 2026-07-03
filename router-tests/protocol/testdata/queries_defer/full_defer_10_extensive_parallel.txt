@@ -1,0 +1,78 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{},"pending":[{"id":"1","path":[]},{"id":"2","path":["employees"]},{"id":"3","path":["employees"]},{"id":"4","path":["employees"]},{"id":"5","path":["employees"]},{"id":"6","path":["employees"]},{"id":"7","path":["employees"]},{"id":"8","path":["employee"]},{"id":"9","path":["employee"]},{"id":"10","path":["teammates"]},{"id":"11","path":["teammates"]},{"id":"12","path":["teammates"]},{"id":"13","path":["a"]},{"id":"14","path":["b"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"employees":[{},{},{},{},{},{},{},{},{},{}],"employee":{},"teammates":[{},{}],"productTypes":[{},{"lead":{"details":{"forename":"Jens"}},"name":"CONSULTANCY"},{"url":"https://docs.wundergraph.com/","urls":["https://cosmo-docs.wundergraph.com/","https://wundergraph.com/pricing"]}],"a":[{}],"b":[{}]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"id":1},"id":"2","subPath":[0]},{"data":{"id":2},"id":"2","subPath":[1]},{"data":{"id":3},"id":"2","subPath":[2]},{"data":{"id":4},"id":"2","subPath":[3]},{"data":{"id":5},"id":"2","subPath":[4]},{"data":{"id":7},"id":"2","subPath":[5]},{"data":{"id":8},"id":"2","subPath":[6]},{"data":{"id":10},"id":"2","subPath":[7]},{"data":{"id":11},"id":"2","subPath":[8]},{"data":{"id":12},"id":"2","subPath":[9]}],"completed":[{"id":"2"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"details":{"forename":"Björn"}},"id":"14","subPath":[0]}],"completed":[{"id":"14"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"notes":"Jens notes resolved by products"},"id":"3","subPath":[0]},{"data":{"notes":"Dustin notes resolved by products"},"id":"3","subPath":[1]},{"data":{"notes":"Stefan notes resolved by products"},"id":"3","subPath":[2]},{"data":{"notes":"Björn notes resolved by products"},"id":"3","subPath":[3]},{"data":{"notes":"Sergiy notes resolved by products"},"id":"3","subPath":[4]},{"data":{"notes":"Suvij notes resolved by products"},"id":"3","subPath":[5]},{"data":{"notes":"Nithin notes resolved by products"},"id":"3","subPath":[6]},{"data":{"notes":"Eelco notes resolved by products"},"id":"3","subPath":[7]},{"data":{"notes":"Alexandra notes resolved by products"},"id":"3","subPath":[8]},{"data":{"notes":"David notes resolved by products"},"id":"3","subPath":[9]}],"completed":[{"id":"3"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"id":4},"id":"10","subPath":[0]},{"data":{"id":11},"id":"10","subPath":[1]}],"completed":[{"id":"10"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"details":{"forename":"Björn"}},"id":"11","subPath":[0]},{"data":{"details":{"forename":"Alexandra"}},"id":"11","subPath":[1]}],"completed":[{"id":"11"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"details":{"forename":"Sergiy"}},"id":"13","subPath":[0]}],"completed":[{"id":"13"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"id":1},"id":"8"}],"completed":[{"id":"8"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},"id":"12","subPath":[0]},{"data":{"products":["FINANCE"]},"id":"12","subPath":[1]}],"completed":[{"id":"12"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"role":{"departments":["ENGINEERING","MARKETING"],"title":["Founder","CEO"],"engineerType":"BACKEND"}},"id":"5","subPath":[0]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Co-founder","Tech Lead"],"engineerType":"FULLSTACK"}},"id":"5","subPath":[1]},{"data":{"role":{"departments":["MARKETING"],"title":["Co-founder","Head of Growth"]}},"id":"5","subPath":[2]},{"data":{"role":{"departments":["OPERATIONS","MARKETING"],"title":["Co-founder","COO"],"operatorType":["HUMAN_RESOURCES","FINANCE"]}},"id":"5","subPath":[3]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Senior GO Engineer"],"engineerType":"BACKEND"}},"id":"5","subPath":[4]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Software Engineer"],"engineerType":"FULLSTACK"}},"id":"5","subPath":[5]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Software Engineer"],"engineerType":"FULLSTACK"}},"id":"5","subPath":[6]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Senior Frontend Engineer"],"engineerType":"FRONTEND"}},"id":"5","subPath":[7]},{"data":{"role":{"departments":["OPERATIONS"],"title":["Accounting & Finance"],"operatorType":["FINANCE"]}},"id":"5","subPath":[8]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Software Engineer"],"engineerType":"FULLSTACK"}},"id":"5","subPath":[9]}],"completed":[{"id":"5"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"products":["CONSULTANCY","COSMO","ENGINE","MARKETING","SDK"]},"id":"7","subPath":[0]},{"data":{"products":["COSMO","SDK"]},"id":"7","subPath":[1]},{"data":{"products":["CONSULTANCY","MARKETING"]},"id":"7","subPath":[2]},{"data":{"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},"id":"7","subPath":[3]},{"data":{"products":["ENGINE","SDK"]},"id":"7","subPath":[4]},{"data":{"products":["COSMO","SDK"]},"id":"7","subPath":[5]},{"data":{"products":["COSMO","SDK"]},"id":"7","subPath":[6]},{"data":{"products":["CONSULTANCY","COSMO","SDK"]},"id":"7","subPath":[7]},{"data":{"products":["FINANCE"]},"id":"7","subPath":[8]},{"data":{"products":["CONSULTANCY","COSMO","ENGINE","SDK"]},"id":"7","subPath":[9]}],"completed":[{"id":"7"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"details":{"forename":"Jens","location":{"language":"German"}}},"id":"9"}],"completed":[{"id":"9"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"details":{"forename":"Jens","surname":"Neuse","location":{"language":"German"},"hasChildren":true,"maritalStatus":"MARRIED","nationality":"GERMAN","pets":null}},"id":"4","subPath":[0]},{"data":{"details":{"forename":"Dustin","surname":"Deus","location":{"language":"German"},"hasChildren":false,"maritalStatus":"ENGAGED","nationality":"GERMAN","pets":null}},"id":"4","subPath":[1]},{"data":{"details":{"forename":"Stefan","surname":"Avram","location":{"language":"English"},"hasChildren":false,"maritalStatus":"ENGAGED","nationality":"AMERICAN","pets":[{"class":"REPTILE","gender":"UNKNOWN","name":"Snappy","dangerous":"yes"}]}},"id":"4","subPath":[2]},{"data":{"details":{"forename":"Björn","surname":"Schwenzer","location":{"language":"German"},"hasChildren":true,"maritalStatus":"MARRIED","nationality":"GERMAN","pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Abby","breed":"GOLDEN_RETRIEVER"},{"class":"MAMMAL","gender":"MALE","name":"Survivor"}]}},"id":"4","subPath":[3]},{"data":{"details":{"forename":"Sergiy","surname":"Petrunin","location":{"language":"Ukrainian"},"hasChildren":false,"maritalStatus":"ENGAGED","nationality":"UKRAINIAN","pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Blotch","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Grayone","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Rusty","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Manya","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Peach","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Panda","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Mommy","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Terry","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Tilda","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Vasya","type":"HOME"}]}},"id":"4","subPath":[4]},{"data":{"details":{"forename":"Suvij","surname":"Surya","location":{"language":"Hindi"},"hasChildren":false,"maritalStatus":null,"nationality":"INDIAN","pets":null}},"id":"4","subPath":[5]},{"data":{"details":{"forename":"Nithin","surname":"Kumar","location":{"language":"Hindi"},"hasChildren":false,"maritalStatus":null,"nationality":"INDIAN","pets":null}},"id":"4","subPath":[6]},{"data":{"details":{"forename":"Eelco","surname":"Wiersma","location":{"language":"Dutch"},"hasChildren":false,"maritalStatus":null,"nationality":"DUTCH","pets":[{"class":"MAMMAL","gender":"UNKNOWN","name":"Vanson"}]}},"id":"4","subPath":[7]},{"data":{"details":{"forename":"Alexandra","surname":"Neuse","location":{"language":"German"},"hasChildren":true,"maritalStatus":"MARRIED","nationality":"GERMAN","pets":null}},"id":"4","subPath":[8]},{"data":{"details":{"forename":"David","surname":"Stutt","location":{"language":"English"},"hasChildren":false,"maritalStatus":"MARRIED","nationality":"ENGLISH","pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Pepper","type":"HOME"}]}},"id":"4","subPath":[9]}],"completed":[{"id":"4"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"hobbies":[{"category":"SPORT"},{"genres":["FPS"],"name":"Counter Strike","yearsOfExperience":20},{"name":"WunderGraph"},{"languages":["GO","TYPESCRIPT"]},{"countriesLived":[{"language":"English","key":{"name":"England"}},{"language":"German","key":{"name":"Germany"}}]}]},"id":"6","subPath":[0]},{"data":{"hobbies":[{"category":"STRENGTH_TRAINING"},{"genres":["FPS"],"name":"Counter Strike","yearsOfExperience":0.5},{"languages":["GO","RUST"]}]},"id":"6","subPath":[1]},{"data":{"hobbies":[{"category":"HIKING"},{"category":"SPORT"},{"name":"Reading"},{"countriesLived":[{"language":"English","key":{"name":"America"}},{"language":"Serbian","key":{"name":"Serbia"}}]}]},"id":"6","subPath":[2]},{"data":{"hobbies":[{"category":"HIKING"},{"planeModels":["Aquila AT01","Cessna C172","Cessna C206","Cirrus SR20","Cirrus SR22","Diamond DA40","Diamond HK36","Diamond DA20","Piper Cub","Pitts Special","Robin DR400"],"yearsOfExperience":20},{"countriesLived":[{"language":"English","key":{"name":"America"}},{"language":"German","key":{"name":"Germany"}}]}]},"id":"6","subPath":[3]},{"data":{"hobbies":[{"name":"Building a house"},{"name":"Forumla 1"},{"name":"Raising cats"}]},"id":"6","subPath":[4]},{"data":{"hobbies":[{"genres":["BOARD"],"name":"Chess","yearsOfExperience":9.5},{"name":"Watching anime"}]},"id":"6","subPath":[5]},{"data":{"hobbies":[{"category":"STRENGTH_TRAINING"},{"genres":["ADVENTURE","RPG","SIMULATION","STRATEGY"],"name":"Miscellaneous","yearsOfExperience":17},{"name":"Watching anime"}]},"id":"6","subPath":[6]},{"data":{"hobbies":[{"languages":["TYPESCRIPT"]},{"category":"CALISTHENICS"},{"category":"HIKING"},{"category":"STRENGTH_TRAINING"},{"name":"saas-ui"},{"countriesLived":[{"language":"German","key":{"name":"Germany"}},{"language":"Indonesian","key":{"name":"Indonesia"}},{"language":"Dutch","key":{"name":"Netherlands"}},{"language":"Portuguese","key":{"name":"Portugal"}},{"language":"Spanish","key":{"name":"Spain"}},{"language":"Thai","key":{"name":"Thailand"}}]}]},"id":"6","subPath":[7]},{"data":{"hobbies":[{"name":"Spending time with the family"}]},"id":"6","subPath":[8]},{"data":{"hobbies":[{"languages":["CSHARP","GO","RUST","TYPESCRIPT"]},{"category":"STRENGTH_TRAINING"},{"genres":["ADVENTURE","BOARD","CARD","ROGUELITE","RPG","SIMULATION","STRATEGY"],"name":"Miscellaneous","yearsOfExperience":25.5},{"countriesLived":[{"language":"English","key":{"name":"England"}},{"language":"Korean","key":{"name":"Korea"}},{"language":"Taiwanese","key":{"name":"Taiwan"}}]}]},"id":"6","subPath":[9]}],"completed":[{"id":"6"}],"hasNext":false}
+
+--graphql
+--graphql--

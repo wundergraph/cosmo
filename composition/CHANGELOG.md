@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.63.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.62.2...@wundergraph/composition@0.63.0) (2026-07-02)
+
+### Features
+
+* **composition:** support [@provides](https://github.com/provides) on fields returning a Union type ([#3026](https://github.com/wundergraph/cosmo/issues/3026)) ([8fd5a7c](https://github.com/wundergraph/cosmo/commit/8fd5a7c3dba68178ad2704d84e7ec6d9e1ae35c4)) (@Aenimus)
+
 ## [0.62.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.62.0...@wundergraph/composition@0.62.2) (2026-06-26)
 
 ### Bug Fixes

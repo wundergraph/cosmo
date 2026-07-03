@@ -62,6 +62,7 @@ import {
   isCompositeOutputNodeKind,
   isObjectDefinitionData,
   isObjectNodeKind,
+  isUnionDefinitionData,
   kindToConvertedTypeString,
   mapToArrayOfValues,
   newAuthorizationData,
@@ -203,6 +204,7 @@ import {
   fieldAlreadyProvidedWarning,
   invalidExternalFieldWarning,
   nonExternalConditionalFieldWarning,
+  providesOnUnionWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
 } from '../warnings/warnings';
@@ -406,6 +408,7 @@ import {
   type TypeName,
 } from '../../types/types';
 import {
+  type GetFieldSetParentParams,
   type HandleFieldInheritableDirectivesParams,
   type HandleNonExternalConditionalFieldParams,
   type IsAnyImplementationFieldExternalParams,
@@ -1780,12 +1783,13 @@ export class NormalizationFactory {
     }
   }
 
-  getFieldSetParent(
-    isProvides: boolean,
-    parentData: CompositeOutputData,
-    fieldName: string,
-    parentTypeName: string,
-  ): FieldSetParentResult {
+  getFieldSetParent({
+    isProvides,
+    parentData,
+    fieldName,
+    fieldSet,
+    parentTypeName,
+  }: GetFieldSetParentParams): FieldSetParentResult {
     if (!isProvides) {
       return {
         data: parentData,
@@ -1817,6 +1821,17 @@ export class NormalizationFactory {
     }
     // @TODO handle abstract types and fragments
     if (isValidProvidesParentData(namedTypeData)) {
+      if (isUnionDefinitionData(namedTypeData)) {
+        this.warnings.push(
+          providesOnUnionWarning({
+            fieldCoords,
+            fieldSet,
+            namedTypeName: fieldNamedTypeName,
+            subgraphName: this.subgraphName,
+          }),
+        );
+      }
+
       return {
         data: namedTypeData,
         success: true,
@@ -2146,12 +2161,6 @@ export class NormalizationFactory {
             shouldDefineSelectionSet = true;
             return;
           }
-          if (!isKindAbstract(parentData.kind)) {
-            errorMessages.push(
-              invalidInlineFragmentTypeErrorMessage(fieldSet, fieldCoordsPath, typeConditionName, parentTypeName),
-            );
-            return BREAK;
-          }
           const fragmentNamedTypeData = nf.parentDefinitionDataByTypeName.get(typeConditionName);
           if (!fragmentNamedTypeData) {
             errorMessages.push(
@@ -2167,13 +2176,39 @@ export class NormalizationFactory {
           shouldDefineSelectionSet = true;
           switch (fragmentNamedTypeData.kind) {
             case Kind.INTERFACE_TYPE_DEFINITION: {
-              if (!fragmentNamedTypeData.implementedInterfaceTypeNames.has(parentTypeName)) {
+              // The enclosing type is an Object
+              if (!isKindAbstract(parentData.kind)) {
+                if (
+                  !isObjectDefinitionData(parentData) ||
+                  !parentData.implementedInterfaceTypeNames.has(typeConditionName)
+                ) {
+                  break;
+                }
+                parentDatas.push(fragmentNamedTypeData);
+                return;
+              }
+
+              // The enclosing type is an Interface or Union
+              const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(typeConditionName);
+              const parentConcreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentData.name);
+              if (
+                !concreteTypeNames ||
+                !parentConcreteTypeNames ||
+                parentConcreteTypeNames.isDisjointFrom(concreteTypeNames)
+              ) {
                 break;
               }
+
               parentDatas.push(fragmentNamedTypeData);
               return;
             }
             case Kind.OBJECT_TYPE_DEFINITION: {
+              if (!isKindAbstract(parentData.kind)) {
+                errorMessages.push(
+                  invalidInlineFragmentTypeErrorMessage(fieldSet, fieldCoordsPath, typeConditionName, parentTypeName),
+                );
+                return BREAK;
+              }
               const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
               if (!concreteTypeNames || !concreteTypeNames.has(typeConditionName)) {
                 break;
@@ -2182,6 +2217,26 @@ export class NormalizationFactory {
               return;
             }
             case Kind.UNION_TYPE_DEFINITION: {
+              const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(typeConditionName);
+              if (!concreteTypeNames) {
+                break;
+              }
+              // The enclosing type is an Object
+              if (!isKindAbstract(parentData.kind)) {
+                // The enclosing Object is a valid part of the Union
+                if (concreteTypeNames.has(parentTypeName)) {
+                  parentDatas.push(fragmentNamedTypeData);
+                  return;
+                }
+                break;
+              }
+
+              // The enclosing type is an Interface or Union; fetch its implementations/members respectively.
+              const parentConcreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
+              if (!parentConcreteTypeNames || parentConcreteTypeNames.isDisjointFrom(concreteTypeNames)) {
+                break;
+              }
+
               parentDatas.push(fragmentNamedTypeData);
               return;
             }
@@ -2205,6 +2260,7 @@ export class NormalizationFactory {
               typeConditionName,
               kindToNodeType(parentData.kind),
               parentTypeName,
+              kindToNodeType(fragmentNamedTypeData.kind),
             ),
           );
           return BREAK;
@@ -2299,7 +2355,13 @@ export class NormalizationFactory {
        Consequently, at that time, it is unknown whether the named type is an entity.
        If it isn't, the @provides directive does not make sense and can be ignored.
       */
-      const result = this.getFieldSetParent(isProvides, parentData, fieldName, parentTypeName);
+      const result = this.getFieldSetParent({
+        fieldName,
+        fieldSet,
+        isProvides,
+        parentData,
+        parentTypeName,
+      });
       if (!result.success) {
         allErrorMessages.push(result.error.message);
         continue;

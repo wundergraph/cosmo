@@ -50,6 +50,14 @@ export type NormalizeSubgraphFromStringParams = {
   options?: CompositionOptions;
 };
 
+export type GetFieldSetParentParams = {
+  fieldName: FieldName;
+  fieldSet: string;
+  isProvides: boolean;
+  parentData: CompositeOutputData;
+  parentTypeName: TypeName;
+};
+
 export type IsAnyImplementationFieldExternalParams = {
   fieldCoordsPath: Array<string>;
   fieldPath: Array<FieldName>;
