@@ -644,6 +644,7 @@ export class CompositionService {
           result,
           composer,
           baseCompositionData,
+          isFeatureFlagComposition,
         });
 
         if (baseCompositionFailed) {
@@ -1173,6 +1174,7 @@ export class CompositionService {
     result,
     composer,
     baseCompositionData,
+    isFeatureFlagComposition,
   }: {
     actorId: string;
     federatedGraph: FederatedGraphDTO;
@@ -1180,6 +1182,7 @@ export class CompositionService {
     result: ComposeAndDeployResult;
     composer: Composer;
     baseCompositionData: BaseCompositionData;
+    isFeatureFlagComposition: boolean;
   }): Promise<{
     baseCompositionFailed: boolean;
     federatedSchemaVersionId: string;
@@ -1260,6 +1263,10 @@ export class CompositionService {
         );
       }
 
+      if (isFeatureFlagComposition) {
+        baseCompositionData.schemaVersionId = baseComposition.schemaVersionId;
+      }
+
       baseCompositionData.featureFlagRouterExecutionConfigByFeatureFlagName.set(
         compositionResult.featureFlagName,
         routerConfigToFeatureFlagExecutionConfig(routerExecutionConfig),
@@ -1333,6 +1340,7 @@ export class CompositionService {
           result,
           composer,
           baseCompositionData,
+          isFeatureFlagComposition,
         });
 
         if (baseCompositionFailed) {
@@ -1456,6 +1464,7 @@ export class CompositionService {
         await this.deployFeatureFlags(
           actorId,
           graph,
+          baseCompositionData.schemaVersionId ?? '',
           baseCompositionData.featureFlagRouterExecutionConfigByFeatureFlagName,
           composer,
           result,
@@ -1589,6 +1598,7 @@ export class CompositionService {
       await this.deployFeatureFlags(
         actorId,
         graph,
+        schemaVersionId,
         featureFlagRouterExecutionConfigByFeatureFlagName,
         composer,
         result,
@@ -1599,6 +1609,7 @@ export class CompositionService {
   private async deployFeatureFlags(
     actorId: string,
     graph: FederatedGraphDTO,
+    baseCompositionSchemaVersionId: string,
     featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>,
     composer: Composer,
     result: ComposeAndDeployResult,
@@ -1619,7 +1630,7 @@ export class CompositionService {
           jwtSecret: this.admissionConfig.webhookJWTSecret,
         },
         baseCompositionRouterExecutionConfig: routerExecutionConfig,
-        baseCompositionSchemaVersionId: '',
+        baseCompositionSchemaVersionId,
         blobStorage: this.blobStorage,
         featureFlagRouterExecutionConfigByFeatureFlagName: new Map(),
         federatedGraphId: graph.id,

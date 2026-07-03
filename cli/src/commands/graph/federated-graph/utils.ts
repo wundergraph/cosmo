@@ -1,71 +1,8 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Subgraph as ProtoSubgraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { program } from 'commander';
-import jwtDecode from 'jwt-decode';
 import pc from 'picocolors';
 import { Client } from '../../../core/client/client.js';
-import { config, getBaseHeaders } from '../../../core/config.js';
-import { GraphToken } from '../../auth/utils.js';
-
-export const fetchRouterConfig = async ({
-  client,
-  name,
-  namespace,
-}: {
-  client: Client;
-  name: string;
-  namespace?: string;
-}) => {
-  const resp = await client.platform.generateRouterToken(
-    {
-      fedGraphName: name,
-      namespace,
-    },
-    {
-      headers: getBaseHeaders(),
-    },
-  );
-
-  if (resp.response?.code !== EnumStatusCode.OK) {
-    throw new Error(
-      `${pc.red(`Could not fetch the router config for the graph ${pc.bold(name)}`)} \n${pc.red(
-        pc.bold(resp.response?.details || ''),
-      )}`,
-    );
-  }
-
-  let decoded: GraphToken;
-
-  try {
-    decoded = jwtDecode<GraphToken>(resp.token);
-  } catch {
-    program.error('Could not fetch the router config. Please try again');
-  }
-
-  const requestBody = JSON.stringify({
-    Version: '',
-  });
-
-  const headers = new Headers();
-  headers.append('Content-Type', 'application/json; charset=UTF-8');
-  headers.append('Authorization', 'Bearer ' + resp.token);
-  headers.append('Accept-Encoding', 'gzip');
-
-  const url = new URL(
-    `/${decoded.organization_id}/${decoded.federated_graph_id}/routerconfigs/latest.json`,
-    config.cdnURL,
-  );
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: requestBody,
-  });
-
-  const routerConfig = await response.text();
-
-  return routerConfig;
-};
+import { getBaseHeaders } from '../../../core/config.js';
 
 export interface Subgraph {
   name: string;
