@@ -300,12 +300,10 @@ func (c *headerBuilder) HeadersForSubgraph(subgraphName string) (http.Header, ui
 func SubgraphHeadersBuilder(ctx *requestContext, headerPropagation *HeaderPropagation, executionPlan plan.Plan) resolve.SubgraphHeadersBuilder {
 	keyGen := xxhash.New()
 
-	switch p := executionPlan.(type) {
-	case *plan.SynchronousResponsePlan:
-		headers := make(map[string]*HeaderWithHash, len(p.Response.DataSources))
-		for i := range p.Response.DataSources {
-			h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.DataSources[i].Name, ctx)
-			headers[p.Response.DataSources[i].Name] = &HeaderWithHash{
+	makeHeaders := func(headers map[string]*HeaderWithHash, dataSources []resolve.DataSourceInfo) {
+		for i := range dataSources {
+			h, hh := headerPropagation.BuildRequestHeaderForSubgraph(dataSources[i].Name, ctx)
+			headers[dataSources[i].Name] = &HeaderWithHash{
 				Header: h,
 				Hash:   hh,
 			}
@@ -313,22 +311,29 @@ func SubgraphHeadersBuilder(ctx *requestContext, headerPropagation *HeaderPropag
 			binary.LittleEndian.PutUint64(b[:], hh)
 			_, _ = keyGen.Write(b[:])
 		}
+	}
+
+	switch p := executionPlan.(type) {
+	case *plan.SynchronousResponsePlan:
+		headers := make(map[string]*HeaderWithHash, len(p.Response.DataSources))
+		makeHeaders(headers, p.Response.DataSources)
+
+		return &headerBuilder{
+			headers: headers,
+			allHash: keyGen.Sum64(),
+		}
+	case *plan.DeferResponsePlan:
+		headers := make(map[string]*HeaderWithHash, len(p.Response.Response.DataSources))
+		makeHeaders(headers, p.Response.Response.DataSources)
+
 		return &headerBuilder{
 			headers: headers,
 			allHash: keyGen.Sum64(),
 		}
 	case *plan.SubscriptionResponsePlan:
 		headers := make(map[string]*HeaderWithHash, len(p.Response.Response.DataSources)+1)
-		for i := range p.Response.Response.DataSources {
-			h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.Response.DataSources[i].Name, ctx)
-			headers[p.Response.Response.DataSources[i].Name] = &HeaderWithHash{
-				Header: h,
-				Hash:   hh,
-			}
-			var b [8]byte
-			binary.LittleEndian.PutUint64(b[:], hh)
-			_, _ = keyGen.Write(b[:])
-		}
+		makeHeaders(headers, p.Response.Response.DataSources)
+
 		h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.Trigger.SourceName, ctx)
 		headers[p.Response.Trigger.SourceName] = &HeaderWithHash{
 			Header: h,

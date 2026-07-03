@@ -1378,6 +1378,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 		EnableInboundRequestDeduplication: false,
 		EnableRequestTracing:              true,
 		EnableNormalizationCache:          true,
+		EnableDefer:                       true,
 		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
@@ -2416,6 +2417,17 @@ func (e *Environment) MakeGraphQLMultipartRequest(method string, body io.Reader)
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "multipart/mixed;subscriptionSpec=\"1.0\", application/json")
+	req.Header.Set("Connection", "keep-alive")
+
+	return req
+}
+
+func (e *Environment) MakeGraphQLDeferRequest(method string, body io.Reader) *http.Request {
+	req, err := http.NewRequest(method, e.GraphQLRequestURL(), body)
+	require.NoError(e.t, err)
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "multipart/mixed")
 	req.Header.Set("Connection", "keep-alive")
 
 	return req

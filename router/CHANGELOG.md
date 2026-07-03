@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.328.0](https://github.com/wundergraph/cosmo/compare/router@0.327.0...router@0.328.0) (2026-07-03)
+
+### Features
+
+* add defer support ([#2697](https://github.com/wundergraph/cosmo/issues/2697)) ([3c22488](https://github.com/wundergraph/cosmo/commit/3c22488ec283ec27b8ea57be70313ff5efcb2fef)) (@devsergiy)
+
+# [0.327.0](https://github.com/wundergraph/cosmo/compare/router@0.326.3...router@0.327.0) (2026-07-02)
+
+### Features
+
+* **router:** add SubscriptionOnCreate hook ([#2972](https://github.com/wundergraph/cosmo/issues/2972)) ([285ab20](https://github.com/wundergraph/cosmo/commit/285ab203a83355ea7e14e275587bcd4257f92870)) (@dkorittki)
+
 ## [0.326.3](https://github.com/wundergraph/cosmo/compare/router@0.326.2...router@0.326.3) (2026-07-02)
 
 ### Bug Fixes

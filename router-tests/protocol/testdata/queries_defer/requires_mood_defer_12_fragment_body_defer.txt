@@ -1,0 +1,11 @@
+--graphql
+Content-Type: application/json
+
+{"data":{"products":[{"lead":{"__typename":"Employee","id":1}},{},{}]},"pending":[{"id":"1","path":["products"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"derivedMood":"HAPPY"},"id":"1","subPath":[0,"lead"]}],"completed":[{"id":"1"}],"hasNext":false}
+
+--graphql--

@@ -1,0 +1,16 @@
+--graphql
+Content-Type: application/json
+
+{"data":{"d":[]},"pending":[{"id":"1","path":[]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"a":[{"details":{"forename":"Stefan"}},{"details":{"forename":"Björn"}},{"details":{"forename":"Sergiy"}},{"details":{"forename":"Eelco"}},{"details":{"forename":"David"}}],"b":[{"details":{"forename":"Jens"}},{"details":{"forename":"Alexandra"}}]},"id":"1"}],"completed":[{"id":"1"}],"pending":[{"id":"2","path":[]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"c":[{"details":{"forename":"David"}}]},"id":"2"}],"completed":[{"id":"2"}],"hasNext":false}
+
+--graphql--
