@@ -3886,7 +3886,7 @@
         },
         "enable_defer": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Enables support for the @defer directive, allowing clients to defer parts of a query so that the initial response is returned faster and deferred fields are streamed incrementally."
         },
         "validate_required_external_fields": {
