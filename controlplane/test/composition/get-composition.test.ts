@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { join } from 'node:path';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { addMinutes, formatISO, subDays } from 'date-fns';
 import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
@@ -18,24 +18,7 @@ import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 const isDebugMode = false;
 let dbname = '';
 
-vi.mock('../src/core/clickhouse/index.js', () => {
-  const ClickHouseClient = vi.fn();
-  ClickHouseClient.prototype.queryPromise = vi.fn();
-
-  return { ClickHouseClient };
-});
-
 describe('getCompositions tests', () => {
-  let chClient: ClickHouseClient;
-
-  beforeEach(() => {
-    chClient = new ClickHouseClient();
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -48,10 +31,7 @@ describe('getCompositions tests', () => {
     'that the name of the subgraph that triggered a composition is correct',
     getDebugTestOptions(isDebugMode),
     async (testContext) => {
-      const { client, server } = await SetupTest({
-        dbname,
-        chClient,
-      });
+      const { client, server } = await SetupTest({ dbname });
       testContext.onTestFinished(() => server.close());
 
       const namespace = genID('namespace').toLowerCase();
@@ -96,10 +76,7 @@ describe('getCompositions tests', () => {
     'that the name of a feature subgraph that triggered a composition is correct',
     getDebugTestOptions(isDebugMode),
     async (testContext) => {
-      const { client, server } = await SetupTest({
-        dbname,
-        chClient,
-      });
+      const { client, server } = await SetupTest({ dbname });
       testContext.onTestFinished(() => server.close());
 
       const namespace = genID('namespace').toLowerCase();
