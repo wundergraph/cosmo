@@ -230,6 +230,8 @@ export type ChildData = EnumValueData | FieldData | InputValueData;
 
 export type CompositeOutputData = InterfaceDefinitionData | ObjectDefinitionData;
 
+export type ValidProvidesParentData = CompositeOutputData | UnionDefinitionData;
+
 export type DefinitionData =
   | DirectiveArgumentData
   | DirectiveDefinitionData

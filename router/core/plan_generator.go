@@ -27,7 +27,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/introspection_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
@@ -110,7 +109,7 @@ func (pl *Planner) PlanOperation(operationFilePath string, outputFormat PlanOutp
 	case PlanOutputFormatText:
 		return rawPlan.PrettyPrint(), opTimes, nil
 	case PlanOutputFormatJSON:
-		marshal, err := json.Marshal(rawPlan)
+		marshal, err := rawPlan.Marshal()
 		if err != nil {
 			return "", opTimes, fmt.Errorf("failed to marshal raw plan: %w", err)
 		}
@@ -180,6 +179,12 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 		astnormalization.WithInlineFragmentSpreads(),
 		astnormalization.WithRemoveUnusedVariables(),
 		astnormalization.WithIgnoreSkipInclude(),
+		astnormalization.WithEnableDefer(),
+		astnormalization.WithPrevalidationRules(
+			astvalidation.DeferStreamOnValidOperations(),
+			astvalidation.DeferStreamHaveUniqueLabels(),
+			astvalidation.DirectivesAreInValidLocations(),
+			astvalidation.StreamAppliedToListFieldsOnly()),
 	)
 	normalizer.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
 	if report.HasErrors() {
@@ -195,8 +200,40 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 	return nil
 }
 
+type PlanWrapper struct {
+	Plan plan.Plan
+}
+
+func (p *PlanWrapper) PrettyPrint() string {
+	switch p := p.Plan.(type) {
+	case *plan.SynchronousResponsePlan:
+
+		return p.Response.Fetches.QueryPlan().PrettyPrint()
+	case *plan.SubscriptionResponsePlan:
+		return p.Response.Response.Fetches.QueryPlan().PrettyPrint()
+	case *plan.DeferResponsePlan:
+		return p.Response.QueryPlanString()
+	}
+
+	return ""
+}
+
+func (p *PlanWrapper) Marshal() ([]byte, error) {
+	switch p := p.Plan.(type) {
+	case *plan.SynchronousResponsePlan:
+
+		return json.Marshal(p.Response.Fetches.QueryPlan())
+	case *plan.SubscriptionResponsePlan:
+		return json.Marshal(p.Response.Response.Fetches.QueryPlan())
+	case *plan.DeferResponsePlan:
+		return nil, errors.New("defer marshal unsupported yet")
+	}
+
+	return nil, nil
+}
+
 // PlanPreparedOperation creates a query plan from a normalized and validated operation
-func (pl *Planner) PlanPreparedOperation(operation *ast.Document) (planNode *resolve.FetchTreeQueryPlanNode, opTimes OperationTimes, err error) {
+func (pl *Planner) PlanPreparedOperation(operation *ast.Document) (planNode *PlanWrapper, opTimes OperationTimes, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("panic during plan generation: %v", r)
@@ -224,14 +261,7 @@ func (pl *Planner) PlanPreparedOperation(operation *ast.Document) (planNode *res
 	// measure postprocessing time as part of planning time
 	opTimes.PlanTime = time.Since(start)
 
-	switch p := preparedPlan.(type) {
-	case *plan.SynchronousResponsePlan:
-		return p.Response.Fetches.QueryPlan(), opTimes, nil
-	case *plan.SubscriptionResponsePlan:
-		return p.Response.Response.Fetches.QueryPlan(), opTimes, nil
-	}
-
-	return &resolve.FetchTreeQueryPlanNode{}, opTimes, nil
+	return &PlanWrapper{preparedPlan}, opTimes, nil
 }
 
 func (pl *Planner) validateOperation(operation *ast.Document) (err error) {

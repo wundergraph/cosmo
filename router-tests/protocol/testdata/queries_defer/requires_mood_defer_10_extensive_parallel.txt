@@ -1,0 +1,28 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{},"pending":[{"id":"1","path":[]},{"id":"2","path":["products"]},{"id":"3","path":["products"]},{"id":"4","path":["products"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"products":[{},{},{}]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"lead":{"__typename":"Employee"}},"id":"2","subPath":[0]}],"completed":[{"id":"2"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"id":1},"id":"3","subPath":[0,"lead"]}],"completed":[{"id":"3"}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"derivedMood":"HAPPY"},"id":"4","subPath":[0,"lead"]}],"completed":[{"id":"4"}],"hasNext":false}
+
+--graphql
+--graphql--
