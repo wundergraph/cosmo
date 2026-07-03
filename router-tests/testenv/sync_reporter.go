@@ -31,9 +31,10 @@ type Event struct {
 // snapshot-based wait semantics local to router-tests while also emitting
 // buffered events for publish-retry helpers.
 type SyncReporter struct {
-	cond   *sync.Cond
-	report statistics.UsageReport
-	events chan Event
+	cond              *sync.Cond
+	report            statistics.UsageReport
+	events            chan Event
+	resolverReporters map[statistics.ResolverConcurrencyReporter]struct{}
 }
 
 var _ statistics.EngineStatistics = (*SyncReporter)(nil)
@@ -41,8 +42,9 @@ var _ statistics.EngineStatistics = (*SyncReporter)(nil)
 // NewSyncReporter creates a SyncReporter for router-tests.
 func NewSyncReporter(_ context.Context, _ *zap.Logger) *SyncReporter {
 	return &SyncReporter{
-		cond:   sync.NewCond(&sync.Mutex{}),
-		events: make(chan Event, 256),
+		cond:              sync.NewCond(&sync.Mutex{}),
+		events:            make(chan Event, 256),
+		resolverReporters: make(map[statistics.ResolverConcurrencyReporter]struct{}),
 	}
 }
 
@@ -153,7 +155,29 @@ func (sr *SyncReporter) withReport(update func(report *statistics.UsageReport)) 
 
 func (sr *SyncReporter) snapshotLocked() *statistics.UsageReport {
 	report := sr.report
+	for r := range sr.resolverReporters {
+		report.ResolverMaxConcurrent += uint64(r.MaxConcurrentResolves())
+		report.ResolverInflight += uint64(r.InflightResolves())
+	}
 	return &report
+}
+
+func (sr *SyncReporter) RegisterResolver(r statistics.ResolverConcurrencyReporter) {
+	if r == nil {
+		return
+	}
+	sr.cond.L.Lock()
+	sr.resolverReporters[r] = struct{}{}
+	sr.cond.L.Unlock()
+}
+
+func (sr *SyncReporter) UnregisterResolver(r statistics.ResolverConcurrencyReporter) {
+	if r == nil {
+		return
+	}
+	sr.cond.L.Lock()
+	delete(sr.resolverReporters, r)
+	sr.cond.L.Unlock()
 }
 
 // WaitForEvent drains events until one matching kind is received, or ctx is cancelled.

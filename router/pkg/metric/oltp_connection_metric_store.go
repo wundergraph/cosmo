@@ -26,13 +26,13 @@ type otlpConnectionMetrics struct {
 	instrumentRegistrations []otelmetric.Registration
 }
 
-func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, stats *ConnectionPoolStats, baseAttributes []attribute.KeyValue) (*otlpConnectionMetrics, error) {
+func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, stats *ConnectionPoolStats, baseAttributes []attribute.KeyValue, enhancedConnectionStats bool) (*otlpConnectionMetrics, error) {
 	meter := meterProvider.Meter(
 		cosmoRouterConnectionMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterConnectionMeterVersion),
 	)
 
-	instruments, err := newConnectionInstruments(meter)
+	instruments, err := newConnectionInstruments(meter, enhancedConnectionStats)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create otlp connection instruments: %w", err)
 	}
@@ -91,6 +91,34 @@ func (h *otlpConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Con
 
 func (h *otlpConnectionMetrics) MeasureMaxConnections(ctx context.Context, count int64, opts ...otelmetric.RecordOption) {
 	h.instruments.maxConnections.Record(ctx, count, opts...)
+}
+
+func (h *otlpConnectionMetrics) MeasureDNSLookupDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if h.instruments.dnsLookupDuration != nil {
+		h.instruments.dnsLookupDuration.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *otlpConnectionMetrics) MeasureTCPConnectDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if h.instruments.tcpConnectDuration != nil {
+		h.instruments.tcpConnectDuration.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *otlpConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if h.instruments.tlsHandshakeDuration != nil {
+		h.instruments.tlsHandshakeDuration.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *otlpConnectionMetrics) MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if h.instruments.timeToFirstByte != nil {
+		h.instruments.timeToFirstByte.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *otlpConnectionMetrics) Flush(ctx context.Context) error {
+	return h.meterProvider.ForceFlush(ctx)
 }
 
 func (h *otlpConnectionMetrics) Shutdown() error {

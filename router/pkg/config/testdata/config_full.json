@@ -62,6 +62,12 @@
         "RouterRuntime": true,
         "GraphqlCache": true,
         "ConnectionStats": true,
+        "Network": {
+          "Enabled": true
+        },
+        "Resolver": {
+          "Enabled": true
+        },
         "EngineStats": {
           "Subscriptions": true
         },
@@ -99,6 +105,12 @@
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": true,
         "ConnectionStats": true,
+        "Network": {
+          "Enabled": true
+        },
+        "Resolver": {
+          "Enabled": true
+        },
         "Streams": false,
         "EngineStats": {
           "Subscriptions": true
@@ -927,6 +939,7 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "EnableDefer": false,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,
