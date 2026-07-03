@@ -843,6 +843,27 @@ func TestGraphServerShutdown(t *testing.T) {
 		require.False(t, provider.shutdown.Load(),
 			"provider for a reused mux must stay up after the previous server shuts down")
 	})
+
+	t.Run("shuts down pubsub providers of a non-reused mux", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		provider := &reuseTrackingProvider{}
+		mux := &graphMux{mux: chi.NewMux(), pubSubProviders: []datasource.Provider{provider}, cancel: func() {}}
+
+		srv := &graphServer{
+			Config:            &Config{logger: zap.NewNop()},
+			graphServerCancel: cancel,
+			inFlightRequests:  &atomic.Int64{},
+			baseTransport:     &http.Transport{},
+			graphMuxList:      map[string]*graphMux{"": mux},
+		}
+
+		require.NoError(t, srv.Shutdown(ctx))
+
+		require.True(t, provider.shutdown.Load(),
+			"provider for a non-reused mux must be shut down when the server shuts down")
+	})
 }
 
 func toSet[T comparable](slice ...T) map[T]bool {

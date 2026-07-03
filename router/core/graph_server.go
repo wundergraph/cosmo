@@ -978,6 +978,7 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 	return nil
 }
 
+// addPubsubProviders appends providers to s. Currently not thread-safe.
 func (s *graphMux) addPubsubProviders(providers []datasource.Provider) {
 	s.pubSubProviders = append(s.pubSubProviders, providers...)
 }
