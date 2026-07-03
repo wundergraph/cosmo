@@ -585,6 +585,122 @@ describe('Update proposal tests', () => {
     expect(subgraph2?.schemaSDL).toBe(updatedSubgraph2SDL);
   });
 
+  test('should reject updating a proposal to add a new subgraph whose labels do not match the federated graph', async (testContext) => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
+    });
+    testContext.onTestFinished(() => server.close());
+
+    const existingSubgraphName = genID('subgraph1');
+    const newSubgraphName = genID('subgraph2');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const mismatchedLabel = genUniqueLabel('other');
+    const proposalName = genID('proposal');
+
+    const existingSubgraphSDL = `
+      type Query {
+        users: [User!]!
+      }
+
+      type User {
+        id: ID!
+        name: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      existingSubgraphName,
+      DEFAULT_NAMESPACE,
+      existingSubgraphSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const updatedExistingSDL = `
+      type Query {
+        users: [User!]!
+        user(id: ID!): User
+      }
+
+      type User {
+        id: ID!
+        name: String!
+      }
+    `;
+
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      origin: ProposalOrigin.INTERNAL,
+      subgraphs: [
+        {
+          name: existingSubgraphName,
+          schemaSDL: updatedExistingSDL,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
+        },
+      ],
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const newSubgraphSDL = `
+      type Query {
+        posts: [Post!]!
+      }
+
+      type Post {
+        id: ID!
+        title: String!
+      }
+    `;
+
+    const updateProposalResponse = await client.updateProposal({
+      proposalName: createProposalResponse.proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'updatedSubgraphs',
+        value: {
+          subgraphs: [
+            {
+              name: existingSubgraphName,
+              schemaSDL: updatedExistingSDL,
+              isDeleted: false,
+              isNew: false,
+              labels: [],
+            },
+            {
+              name: newSubgraphName,
+              schemaSDL: newSubgraphSDL,
+              isDeleted: false,
+              isNew: true,
+              // labels that do not match the federated graph's label matchers
+              labels: [mismatchedLabel],
+            },
+          ],
+        },
+      },
+    });
+
+    expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(updateProposalResponse.response?.details).toBe(
+      `The labels of the new subgraph ${newSubgraphName} do not match the label matchers of the federated graph ${fedGraphName}. Please provide labels that match the federated graph.`,
+    );
+  });
+
   test('should handle removing subgraphs from an existing proposal', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,

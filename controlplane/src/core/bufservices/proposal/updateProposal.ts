@@ -414,6 +414,36 @@ export function updateProposal(
               composedSchemaBreakingChanges: [],
             };
           }
+        } else {
+          // For a new subgraph, its labels determine which federated graph it composes into.
+          // If they do not match the label matchers of the federated graph this proposal targets,
+          // the subgraph would never be composed.
+          const matchingFederatedGraphs = await federatedGraphRepo.bySubgraphLabels({
+            labels: proposalSubgraph.labels,
+            namespaceId: namespace.id,
+          });
+          if (!matchingFederatedGraphs.some((graph) => graph.id === federatedGraph.id)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `The labels of the new subgraph ${proposalSubgraph.name} do not match the label matchers of the federated graph ${federatedGraph.name}. Please provide labels that match the federated graph.`,
+              },
+              proposalId: '',
+              breakingChanges: [],
+              nonBreakingChanges: [],
+              compositionErrors: [],
+              checkId: '',
+              lintWarnings: [],
+              lintErrors: [],
+              graphPruneWarnings: [],
+              graphPruneErrors: [],
+              compositionWarnings: [],
+              lintingSkipped: false,
+              graphPruningSkipped: false,
+              checkUrl: '',
+              composedSchemaBreakingChanges: [],
+            };
+          }
         }
 
         proposalSubgraphs.push({
