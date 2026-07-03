@@ -1404,7 +1404,7 @@ export class FeatureFlagRepository {
           ? and(
               isNull(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId),
               eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
-              eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, federatedGraphId),
+              eq(federatedGraphsToFeatureFlagSchemaVersions.federatedGraphId, federatedGraphId),
             )
           : and(
               eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
