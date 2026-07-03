@@ -2989,8 +2989,12 @@ func TestFlakyAccessLogs(t *testing.T) {
 					},
 				},
 				func(t *testing.T, xEnv *testenv.Environment) {
+					// Use a variable (not an inline literal) to exercise variable validation, which is
+					// what produces the input-type error codes below. Inline literals are validated at
+					// operation-validation time before extraction and would not carry these codes.
 					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-						Query: `query employee { employee(id: "7") { id } }`,
+						Query:     `query employee($id: Int!) { employee(id: $id) { id } }`,
+						Variables: json.RawMessage(`{"id":"7"}`),
 					})
 
 					requestLog := xEnv.Observer().FilterMessage("/graphql")
@@ -3034,8 +3038,12 @@ func TestFlakyAccessLogs(t *testing.T) {
 					},
 				},
 				func(t *testing.T, xEnv *testenv.Environment) {
+					// Use a variable (not an inline literal) to exercise variable validation, which is
+					// what produces the input-type error codes below. Inline literals are validated at
+					// operation-validation time before extraction and would not carry these codes.
 					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-						Query: `query employee { employee(id: "7") { id } }`,
+						Query:     `query employee($id: Int!) { employee(id: $id) { id } }`,
+						Variables: json.RawMessage(`{"id":"7"}`),
 					})
 
 					requestLog := xEnv.Observer().FilterMessage("/graphql")
