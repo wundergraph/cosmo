@@ -711,6 +711,8 @@ This option may change or be removed in future versions as the OpenTelemetry SDK
 | METRICS_OTLP_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        | The metrics to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                        | []            |
 | METRICS_OTLP_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        | The metric labels to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                  | []            |
 | METRICS_OTLP_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false         |
+| METRICS_OTLP_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, and time-to-first-byte histograms.                                                  | false         |
+| METRICS_OTLP_RESOLVER_ENABLED      | resolver.enabled      | <Icon icon="square" />                        | Enable resolver metrics: resolver concurrency gauges and the resolver acquire duration histogram.                                                                           | false         |
 | METRICS_OTLP_CIRCUIT_BREAKER       | circuit_breaker       | <Icon icon="square" />                        | Ensure that circuit breaker metrics are enabled for OTEL.                                                                                                                  | false         |
 | METRICS_OTLP_STREAM                | streams               | <Icon icon="square" />                        | Enable Cosmo Streams metrics.                                                                                                                                              | false         |
 | METRICS_OTLP_EXEMPLAR_FILTER       | exemplar_filter       | <Icon icon="square" />                        | Controls which measurements are eligible to record exemplars. One of: `always_off`, `trace_based`, `always_on`. See [Exemplars](/router/metrics-and-monitoring/exemplars). | always_off    |
@@ -747,6 +749,13 @@ telemetry:
       enabled: true
       router_runtime: true
       graphql_cache: true
+      connection_stats: false
+      # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first byte)
+      network:
+        enabled: false
+      # Resolver concurrency gauges and resolver acquire duration histogram
+      resolver:
+        enabled: false
       exclude_metrics: []
       exclude_metric_labels: []
       streams: true
@@ -778,6 +787,8 @@ telemetry:
 | PROMETHEUS_LISTEN_ADDR           | listen_addr           | <Icon icon="square" />                        | The address to listen on for the prometheus metrics endpoint.                                                                                                              | "127.0.0.1:8088" |
 | PROMETHEUS_GRAPHQL_CACHE         | graphql_cache         | <Icon icon="square" />                        | Enable the collection of metrics for the GraphQL operation router caches.                                                                                                  | false            |
 | PROMETHEUS_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false            |
+| PROMETHEUS_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, and time-to-first-byte histograms.                                                  | false            |
+| PROMETHEUS_RESOLVER_ENABLED      | resolver.enabled      | <Icon icon="square" />                        | Enable resolver metrics: resolver concurrency gauges and the resolver acquire duration histogram.                                                                           | false            |
 | PROMETHEUS_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        |                                                                                                                                                                            |                  |
 | PROMETHEUS_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        |                                                                                                                                                                            |                  |
 | PROMETHEUS_EXCLUDE_SCOPE_INFO    | exclude_scope_info    | <Icon icon="square" />                        | Exclude scope info from Prometheus metrics.                                                                                                                                | false            |
@@ -799,6 +810,13 @@ telemetry:
       path: "/metrics"
       listen_addr: "127.0.0.1:8088"
       graphql_cache: true
+      connection_stats: false
+      # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first byte)
+      network:
+        enabled: false
+      # Resolver concurrency gauges and resolver acquire duration histogram
+      resolver:
+        enabled: false
       exclude_metrics: []
       exclude_metric_labels: []
       streams: true

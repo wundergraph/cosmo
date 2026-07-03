@@ -1390,6 +1390,30 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
+                "network": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure additional network metrics.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, and time-to-first-byte histograms. The default value is false."
+                    }
+                  }
+                },
+                "resolver": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure additional resolver metrics.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable resolver metrics, including resolver concurrency gauges and resolver acquire duration histograms. The default value is false."
+                    }
+                  }
+                },
                 "streams": {
                   "type": "boolean",
                   "default": false,
@@ -1551,6 +1575,30 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
+                },
+                "network": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure additional network metrics.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, and time-to-first-byte histograms. The default value is false."
+                    }
+                  }
+                },
+                "resolver": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure additional resolver metrics.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable resolver metrics, including resolver concurrency gauges and resolver acquire duration histograms. The default value is false."
+                    }
+                  }
                 },
                 "streams": {
                   "type": "boolean",
