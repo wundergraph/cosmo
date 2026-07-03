@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -27,9 +28,17 @@ type InlineArgumentsChecker struct {
 	includePersistedOperations bool
 }
 
-func NewInlineArgumentsChecker(cfg config.DisallowInlineArguments) *InlineArgumentsChecker {
-	if cfg.Mode == config.DisallowInlineArgumentsModeOff || cfg.Mode == "" {
-		return nil
+func NewInlineArgumentsChecker(cfg config.DisallowInlineArguments) (*InlineArgumentsChecker, error) {
+	switch cfg.Mode {
+	case config.DisallowInlineArgumentsModeOff, "":
+		return nil, nil
+	case config.DisallowInlineArgumentsModeWarn, config.DisallowInlineArgumentsModeEnforce:
+	default:
+		// Environment variables bypass the config JSON-schema enum validation, which only
+		// runs against the YAML bytes; without this check an unrecognized mode would fall
+		// through to warn behavior while the operator believes enforce is active.
+		return nil, fmt.Errorf("invalid security.disallow_inline_arguments.mode %q, expected one of %q, %q, %q",
+			cfg.Mode, config.DisallowInlineArgumentsModeOff, config.DisallowInlineArgumentsModeWarn, config.DisallowInlineArgumentsModeEnforce)
 	}
 	errorCode := cfg.ErrorCode
 	if errorCode == "" {
@@ -49,7 +58,7 @@ func NewInlineArgumentsChecker(cfg config.DisallowInlineArguments) *InlineArgume
 		errorCode:                  errorCode,
 		errorMessage:               errorMessage,
 		includePersistedOperations: cfg.IncludePersistedOperations,
-	}
+	}, nil
 }
 
 // InlineArgumentsResult reports the outcome of a Check.
@@ -70,7 +79,11 @@ func (o *OperationKit) CheckInlineArguments(checker *InlineArgumentsChecker, cli
 // Warn mode returns a pre-built annotation JSON for the extensions.inlineArguments response field.
 // Enforce mode returns an error for immediate rejection.
 func (c *InlineArgumentsChecker) Check(op *ParsedOperation, doc, definition *ast.Document, clientInfo *ClientInfo, logger *zap.Logger) (InlineArgumentsResult, *inlineArgumentsError) {
-	if op.IsPersistedOperation && !c.includePersistedOperations {
+	// Only operations whose content was registered in persisted operation storage are
+	// exempt. IsPersistedOperation would be too broad: it is set on mere presence of a
+	// persistedQuery hash, including APQ operations, whose hashes are client-computed
+	// and therefore carry no operator intent.
+	if op.IsRegisteredPersistedOperation && !c.includePersistedOperations {
 		return InlineArgumentsResult{}, nil
 	}
 

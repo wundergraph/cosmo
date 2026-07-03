@@ -62,7 +62,7 @@ security:
 | `error_message`                | `Inline argument values are not allowed. Use variables instead.` | The human-readable error or hint message.                                                         |
 | `include_persisted_operations` | `false`                                                          | When `true`, the policy also applies to persisted operations.                                     |
 
-These options have no environment variable equivalents. Configure them in the router configuration file.
+Each option has an environment variable equivalent: `SECURITY_DISALLOW_INLINE_ARGUMENTS_MODE`, `SECURITY_DISALLOW_INLINE_ARGUMENTS_ENFORCE_HTTP_STATUS_CODE`, `SECURITY_DISALLOW_INLINE_ARGUMENTS_ERROR_CODE`, `SECURITY_DISALLOW_INLINE_ARGUMENTS_ERROR_MESSAGE`, and `SECURITY_DISALLOW_INLINE_ARGUMENTS_INCLUDE_PERSISTED_OPERATIONS`.
 
 ## Warn Mode
 
@@ -129,7 +129,9 @@ Over WebSocket connections, enforce mode rejects the operation with a terminal `
 
 ## Persisted Operations
 
-Persisted operations are exempt by default. They are stored server-side and their contents are intentional. Set `include_persisted_operations: true` to apply the policy to them as well.
+Registered persisted operations are exempt by default. They are stored server-side and their contents are intentional. Set `include_persisted_operations: true` to apply the policy to them as well.
+
+Automatic persisted queries (APQ) are never exempt. Their hashes are computed by the client, so they carry no operator intent and are checked like ad-hoc operations.
 
 ## Telemetry
 

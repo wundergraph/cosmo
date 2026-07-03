@@ -75,6 +75,14 @@ type ParsedOperation struct {
 	IsPersistedOperation       bool
 	PersistedOperationCacheHit bool
 
+	// IsRegisteredPersistedOperation is true when the operation content was loaded from
+	// persisted operation storage (or its normalization cache) and was registered there
+	// ahead of time, as opposed to stored via automatic persisted queries. Unlike
+	// IsPersistedOperation it is never set on mere presence of a persistedQuery hash,
+	// so policies that exempt persisted operations cannot be bypassed by a client
+	// attaching a self-computed hash to the request.
+	IsRegisteredPersistedOperation bool
+
 	// NormalizationCacheHit is set to true if the request is a non-persisted operation,
 	// and the normalized operation was loaded from cache.
 	NormalizationCacheHit bool
@@ -489,6 +497,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 			// but it was passed via body instead of hash, we need to mark operation as persisted
 			// to populate persisted operation cache
 			o.parsedOperation.IsPersistedOperation = true
+			o.parsedOperation.IsRegisteredPersistedOperation = !isAPQ
 		}
 
 		// If the operation was fetched with APQ, save it again to renew the TTL
@@ -772,6 +781,10 @@ type NormalizationCacheEntry struct {
 	normalizedRepresentation string
 	operationType            string
 	operationDefinitionRef   int
+	// isApq records whether the persisted operation was stored via automatic persisted
+	// queries, so cache hits keep the registered/APQ distinction. Unused entries of the
+	// non-persisted normalization cache leave it false.
+	isApq bool
 }
 
 type VariablesNormalizationCacheEntry struct {
@@ -1157,6 +1170,7 @@ func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCac
 	// otherwise in case it was already cached we will try to normalize an empty document
 	// as we skip parse for the cached persisted operations
 	o.parsedOperation.IsPersistedOperation = true
+	o.parsedOperation.IsRegisteredPersistedOperation = !entry.isApq
 	o.parsedOperation.NormalizationCacheHit = true
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 	o.parsedOperation.Type = entry.operationType
@@ -1214,6 +1228,7 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 		operationType:            o.parsedOperation.Type,
 		operationDefinitionRef:   o.operationDefinitionRef,
+		isApq:                    isApq,
 	}
 
 	if isApq {

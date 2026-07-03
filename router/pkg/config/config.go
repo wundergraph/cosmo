@@ -633,8 +633,9 @@ type DisallowInlineArguments struct {
 	// ErrorMessage is the human-readable error/hint message.
 	ErrorMessage string `yaml:"error_message,omitempty" json:"error_message,omitempty" envDefault:"Inline argument values are not allowed. Use variables instead." env:"ERROR_MESSAGE"`
 
-	// IncludePersistedOperations, when true, applies the policy to persisted operations as well.
-	// By default (false) persisted operations are exempt because they are stored server-side and intentional.
+	// IncludePersistedOperations, when true, applies the policy to registered persisted operations as well.
+	// By default (false) they are exempt because they are stored server-side and intentional.
+	// Automatic persisted queries are never exempt: their hashes are client-computed and carry no operator intent.
 	IncludePersistedOperations bool `yaml:"include_persisted_operations,omitempty" json:"include_persisted_operations,omitempty" envDefault:"false" env:"INCLUDE_PERSISTED_OPERATIONS"`
 }
 

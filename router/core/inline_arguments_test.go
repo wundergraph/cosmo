@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -188,4 +189,39 @@ func TestDetectInlineArguments(t *testing.T) {
 			require.Equal(t, tc.want, got)
 		})
 	}
+}
+
+func TestNewInlineArgumentsChecker(t *testing.T) {
+	t.Parallel()
+
+	t.Run("off and empty mode disable the checker", func(t *testing.T) {
+		t.Parallel()
+		for _, mode := range []config.DisallowInlineArgumentsMode{config.DisallowInlineArgumentsModeOff, ""} {
+			checker, err := NewInlineArgumentsChecker(config.DisallowInlineArguments{Mode: mode})
+			require.NoError(t, err)
+			require.Nil(t, checker)
+		}
+	})
+
+	t.Run("warn and enforce create a checker", func(t *testing.T) {
+		t.Parallel()
+		for _, mode := range []config.DisallowInlineArgumentsMode{config.DisallowInlineArgumentsModeWarn, config.DisallowInlineArgumentsModeEnforce} {
+			checker, err := NewInlineArgumentsChecker(config.DisallowInlineArguments{Mode: mode})
+			require.NoError(t, err)
+			require.NotNil(t, checker)
+		}
+	})
+
+	// Environment variables bypass the JSON-schema enum validation, which only runs
+	// against the YAML config bytes. An unrecognized mode must fail startup instead
+	// of silently behaving like warn while the operator believes enforce is active.
+	t.Run("unrecognized mode fails instead of degrading to warn", func(t *testing.T) {
+		t.Parallel()
+		for _, mode := range []config.DisallowInlineArgumentsMode{"ENFORCE", "Enforce", "enfoce", "on"} {
+			checker, err := NewInlineArgumentsChecker(config.DisallowInlineArguments{Mode: mode})
+			require.Error(t, err)
+			require.ErrorContains(t, err, string(mode))
+			require.Nil(t, checker)
+		}
+	})
 }

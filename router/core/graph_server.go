@@ -1833,7 +1833,10 @@ func (s *graphServer) buildGraphMux(
 		return nil, fmt.Errorf("failed to create operation blocker: %w", err)
 	}
 
-	inlineArgumentsChecker := NewInlineArgumentsChecker(s.securityConfiguration.DisallowInlineArguments)
+	inlineArgumentsChecker, err := NewInlineArgumentsChecker(s.securityConfiguration.DisallowInlineArguments)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create inline arguments checker: %w", err)
+	}
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
 		Logger:                                 s.logger,

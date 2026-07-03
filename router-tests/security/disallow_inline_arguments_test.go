@@ -1,7 +1,10 @@
 package integration
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -338,6 +341,49 @@ func TestDisallowInlineArguments(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
 			require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		})
+	})
+
+	// APQ hashes are computed by the client, so an APQ operation carries no operator
+	// intent: the persisted-operation exemption must not apply, or any client could
+	// bypass enforce mode by attaching a persistedQuery extension to its request.
+	t.Run("enforce mode applies to automatic persisted queries", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
+			},
+			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode: config.DisallowInlineArgumentsModeEnforce,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := `{ employee(id: 1) { id } }`
+			hash := sha256.Sum256([]byte(query))
+			extensions := []byte(fmt.Sprintf(`{"persistedQuery": {"version": 1, "sha256Hash": "%s"}}`, hex.EncodeToString(hash[:])))
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			// The APQ registration request carries the query body and its client-computed hash.
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:      query,
+				Extensions: extensions,
+				Header:     header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Contains(t, res.Body, `"INLINE_ARGUMENT_VALUES_NOT_ALLOWED"`)
+
+			// A hash-only request served from the APQ cache is rejected as well.
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Extensions: extensions,
+				Header:     header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Contains(t, res.Body, `"INLINE_ARGUMENT_VALUES_NOT_ALLOWED"`)
 		})
 	})
 
