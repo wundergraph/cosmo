@@ -145,6 +145,12 @@ func (h *PromMetricStore) MeasureOperationPlanningTime(ctx context.Context, plan
 	}
 }
 
+func (h *PromMetricStore) MeasureResolverAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.histograms[ResolverAcquireDurationHistogram]; ok {
+		c.Record(ctx, duration, opts...)
+	}
+}
+
 func (h *PromMetricStore) MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption) {
 	if c, ok := h.measurements.counters[SchemaFieldUsageCounter]; ok {
 		c.Add(ctx, schemaUsage, opts...)

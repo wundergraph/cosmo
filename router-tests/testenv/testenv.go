@@ -290,9 +290,13 @@ type MetricOptions struct {
 	PrometheusEngineStatsOptions          EngineStatOptions
 	PrometheusSchemaFieldUsage            PrometheusSchemaFieldUsage
 	EnableOTLPConnectionMetrics           bool
+	EnableOTLPNetworkMetrics              bool
+	EnableOTLPResolverMetrics             bool
 	EnableOTLPCircuitBreakerMetrics       bool
 	EnableOTLPStreamMetrics               bool
 	EnablePrometheusConnectionMetrics     bool
+	EnablePrometheusNetworkMetrics        bool
+	EnablePrometheusResolverMetrics       bool
 	EnablePrometheusCircuitBreakerMetrics bool
 	EnablePrometheusStreamMetrics         bool
 	LogExporter                           MetricsLogExporterOptions
@@ -1378,6 +1382,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 		EnableInboundRequestDeduplication: false,
 		EnableRequestTracing:              true,
 		EnableNormalizationCache:          true,
+		EnableDefer:                       true,
 		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
@@ -1635,6 +1640,8 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 			TestRegistry:    testConfig.PrometheusRegistry,
 			GraphqlCache:    testConfig.MetricOptions.EnablePrometheusRouterCache,
 			ConnectionStats: testConfig.MetricOptions.EnablePrometheusConnectionMetrics,
+			NetworkStats:    testConfig.MetricOptions.EnablePrometheusNetworkMetrics,
+			ResolverStats:   testConfig.MetricOptions.EnablePrometheusResolverMetrics,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
@@ -1665,6 +1672,8 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
 					Streams:         testConfig.MetricOptions.EnableOTLPStreamMetrics,
 					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
+					Network:         config.TelemetryCategory{Enabled: testConfig.MetricOptions.EnableOTLPNetworkMetrics},
+					Resolver:        config.TelemetryCategory{Enabled: testConfig.MetricOptions.EnableOTLPResolverMetrics},
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},
@@ -2416,6 +2425,17 @@ func (e *Environment) MakeGraphQLMultipartRequest(method string, body io.Reader)
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "multipart/mixed;subscriptionSpec=\"1.0\", application/json")
+	req.Header.Set("Connection", "keep-alive")
+
+	return req
+}
+
+func (e *Environment) MakeGraphQLDeferRequest(method string, body io.Reader) *http.Request {
+	req, err := http.NewRequest(method, e.GraphQLRequestURL(), body)
+	require.NoError(e.t, err)
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "multipart/mixed")
 	req.Header.Set("Connection", "keep-alive")
 
 	return req
