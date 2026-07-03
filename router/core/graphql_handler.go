@@ -14,10 +14,12 @@ import (
 
 	"github.com/buger/jsonparser"
 
+	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
@@ -83,6 +85,7 @@ type HandlerOptions struct {
 	Executor       *Executor
 	Log            *zap.Logger
 	EngineStats    statistics.EngineStatistics
+	MetricStore    rmetric.Store
 	TracerProvider trace.TracerProvider
 	Authorizer     *CosmoAuthorizer
 	RateLimiter    *CosmoRateLimiter
@@ -110,6 +113,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		enableResponseHeaderPropagation:          opts.EnableResponseHeaderPropagation,
 		enableCostResponseHeaders:                opts.EnableCostResponseHeaders,
 		engineStats:                              opts.EngineStats,
+		metricStore:                              opts.MetricStore,
 		tracer:                                   tracer,
 		authorizer:                               opts.Authorizer,
 		rateLimiter:                              opts.RateLimiter,
@@ -136,6 +140,7 @@ type GraphQLHandler struct {
 	log         *zap.Logger
 	executor    *Executor
 	engineStats statistics.EngineStatistics
+	metricStore rmetric.Store
 	tracer      trace.Tracer
 	authorizer  *CosmoAuthorizer
 	rateLimiter *CosmoRateLimiter
@@ -301,6 +306,17 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
 		graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
+
+		reqCtx.expressionContext.Request.Operation.ResolverAcquireDuration = info.ResolveAcquireWaitTime
+
+		if h.metricStore != nil {
+			h.metricStore.MeasureResolverAcquireDuration(
+				resolveCtx.Context(),
+				info.ResolveAcquireWaitTime,
+				reqCtx.telemetry.metricSliceAttrs,
+				otelmetric.WithAttributes(reqCtx.telemetry.metricAttrs...),
+			)
+		}
 	case *plan.SubscriptionResponsePlan:
 		var (
 			writer resolve.SubscriptionResponseWriter

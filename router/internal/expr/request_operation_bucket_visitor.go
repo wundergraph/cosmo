@@ -87,7 +87,11 @@ func (v *RequestOperationBucketVisitor) Visit(baseNode *ast.Node) {
 			v.setBucketIfHigher(BucketNameOrType)
 		case "persistedId":
 			v.setBucketIfHigher(BucketPersistedID)
-		case "normalizationTime":
+		case "normalizationTime", "variables":
+			// Variables are available right after the operation body is parsed, but we group them
+			// with the normalization phase: they are commonly combined with the variables*CacheHit
+			// flags, which are only set during normalization, so evaluating at this phase keeps the
+			// combined value consistent.
 			v.setBucketIfHigher(BucketNormalizationTime)
 		case "hash":
 			v.setBucketIfHigher(BucketHash)

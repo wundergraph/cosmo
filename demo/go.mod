@@ -40,6 +40,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cilium/ebpf v0.16.0 // indirect
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0 // indirect
+	github.com/coder/websocket v1.8.14 // indirect
 	github.com/containerd/cgroups/v3 v3.0.2 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
@@ -119,7 +120,7 @@ require (
 	github.com/prometheus/procfs v0.20.1 // indirect
 	github.com/r3labs/sse/v2 v2.8.1 // indirect
 	github.com/redis/go-redis/v9 v9.7.3 // indirect
-	github.com/rs/xid v1.5.0 // indirect
+	github.com/rs/xid v1.6.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 // indirect
 	github.com/shirou/gopsutil/v3 v3.24.3 // indirect
@@ -145,7 +146,7 @@ require (
 	github.com/wundergraph/astjson v1.1.0 // indirect
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e // indirect
 	github.com/wundergraph/go-arena v1.1.0 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.267 // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.4.5-0.20260610040534-eecda72eb837 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
