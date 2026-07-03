@@ -772,9 +772,6 @@ type NormalizationCacheEntry struct {
 	operationType            string
 	operationDefinitionRef   int
 
-	// removedSkipIncludeVariableNames are the skip/include variables that normalization
-	// removed from the operation. Skip/include variables also used elsewhere (e.g. as
-	// field arguments) stay declared and are not listed here.
 	removedSkipIncludeVariableNames []string
 }
 
