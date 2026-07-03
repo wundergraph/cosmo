@@ -1925,6 +1925,16 @@ func (e *Environment) GetPubSubName(name string) string {
 	return e.getPubSubName(name)
 }
 
+// WaitForCacheWrites blocks until all pending asynchronous operation-cache writes
+// of the router have been applied. Call it after a request that populates a cache
+// to make cache-hit assertions on subsequent requests deterministic.
+func (e *Environment) WaitForCacheWrites() {
+	if e.Router == nil {
+		return
+	}
+	e.Router.WaitForCacheWrites()
+}
+
 func (e *Environment) GetKafkaSeeds() []string {
 	return e.cfg.KafkaSeeds
 }

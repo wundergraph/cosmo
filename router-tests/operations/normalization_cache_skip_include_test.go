@@ -3,9 +3,7 @@ package integration
 import (
 	"net/http"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -70,17 +68,15 @@ func TestNormalizationCacheHitWithIncludeVariableAlsoUsedAsArgument(t *testing.T
 		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
 		require.Equal(t, expected, res.Body)
 
-		// Repeat the identical request until the normalization cache entry lands
-		// (ristretto sets are async) and it is served from the cache with the same
-		// data. Before the fix, cache hits instead return:
+		// Flush the async ristretto write so the entry is visible, then repeat the
+		// identical request: it must be served from the cache with the same data.
+		// Before the fix, cache hits instead return:
 		// Variable "$flag" of required type "Boolean!" was not provided.
-		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			res, err := makeRequest()
-			if !assert.NoError(ct, err) {
-				return
-			}
-			assert.Equal(ct, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
-			assert.Equal(ct, expected, res.Body)
-		}, 10*time.Second, 10*time.Millisecond)
+		xEnv.WaitForCacheWrites()
+
+		res, err = makeRequest()
+		require.NoError(t, err)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+		require.Equal(t, expected, res.Body)
 	})
 }

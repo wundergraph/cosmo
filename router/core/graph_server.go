@@ -900,6 +900,16 @@ func (s *graphMux) waitForCaches() {
 	}
 }
 
+// waitForCaches blocks until pending async operation-cache writes of all graph
+// muxes have been applied. See graphMux.waitForCaches.
+func (s *graphServer) waitForCaches() {
+	s.graphMuxListLock.Lock()
+	defer s.graphMuxListLock.Unlock()
+	for _, mux := range s.graphMuxList {
+		mux.waitForCaches()
+	}
+}
+
 // configureCacheMetrics sets up the cache metrics for this mux if enabled in the config.
 func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []attribute.KeyValue) error {
 	if srv.metricConfig.OpenTelemetry.GraphqlCache {
