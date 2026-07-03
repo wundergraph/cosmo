@@ -1077,7 +1077,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// validation span rather than the normalization span.
 	err = operationValidationErr
 	if err == nil {
-		err = operationKit.Validate(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
+		err = operationKit.ValidateOperationVariables(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
 	}
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)

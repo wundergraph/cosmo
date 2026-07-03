@@ -1334,10 +1334,10 @@ func (o *OperationKit) ValidateOperation() (cacheHit bool, err error) {
 	return cacheHit, nil
 }
 
-// Validate validates the operation variables. Schema validation of the
-// operation itself is performed separately by ValidateOperation, before
+// ValidateOperationVariables validates the operation variables. Schema validation
+// of the operation itself is performed separately by ValidateOperation, before
 // variable extraction.
-func (o *OperationKit) Validate(skipLoader bool, remapVariables map[string]string, apolloCompatibilityFlags *config.ApolloCompatibilityFlags) error {
+func (o *OperationKit) ValidateOperationVariables(skipLoader bool, remapVariables map[string]string, apolloCompatibilityFlags *config.ApolloCompatibilityFlags) error {
 	if skipLoader {
 		// in case we're skipping the loader, it means that we won't execute the operation
 		// this means that we don't need to validate the variables as they are not used
