@@ -1578,6 +1578,7 @@ func (s *graphServer) buildGraphMux(
 		ComplexityLimits:       s.securityConfiguration.ComplexityLimits,
 		CostControl:            s.securityConfiguration.CostControl,
 		InlineArgumentsChecker: inlineArgumentsChecker,
+		Logger:                 s.logger,
 	})
 
 	if opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled() {

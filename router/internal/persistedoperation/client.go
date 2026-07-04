@@ -65,6 +65,24 @@ func NewClient(opts *Options) (*Client, error) {
 }
 
 func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
+	// The cheap local registered sources are consulted before the APQ store: a
+	// registered sha that was also seeded into the APQ store (e.g. sent as
+	// body+hash by an APQ client) must classify as registered, not APQ —
+	// registration carries operator intent that policies like
+	// disallow_inline_arguments rely on.
+	if data := c.cache.Get(clientName, sha256Hash); data != nil {
+		return data, false, nil
+	}
+
+	// PQL manifest hit (local, no network); its authoritative miss is handled
+	// below, after the APQ store had its chance to resolve the hash.
+	manifestLoaded := c.pqlStore != nil && c.pqlStore.IsLoaded()
+	if manifestLoaded {
+		if body, found := c.pqlStore.LookupByHash(sha256Hash); found {
+			return body, false, nil
+		}
+	}
+
 	if c.APQEnabled() {
 		resp, apqErr := c.apqClient.PersistedOperation(ctx, clientName, sha256Hash)
 		if len(resp) > 0 || apqErr != nil {
@@ -72,15 +90,7 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 		}
 	}
 
-	if data := c.cache.Get(clientName, sha256Hash); data != nil {
-		return data, false, nil
-	}
-
-	// PQL manifest check (local, no network)
-	if c.pqlStore != nil && c.pqlStore.IsLoaded() {
-		if body, found := c.pqlStore.LookupByHash(sha256Hash); found {
-			return body, false, nil
-		}
+	if manifestLoaded {
 		// Manifest is authoritative — operation not found
 		if c.APQEnabled() {
 			return nil, true, nil

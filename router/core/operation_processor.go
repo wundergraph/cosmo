@@ -39,6 +39,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
+	"go.uber.org/zap"
 )
 
 var (
@@ -140,6 +141,7 @@ type OperationProcessorOptions struct {
 	OperationNameLengthLimit                               int
 	EnableDefer                                            bool
 	InlineArgumentsChecker                                 *InlineArgumentsChecker
+	Logger                                                 *zap.Logger
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -158,6 +160,7 @@ type OperationProcessor struct {
 	parserTokenizerLimits    astparser.TokenizerLimits
 	operationNameLengthLimit int
 	inlineArgumentsChecker   *InlineArgumentsChecker
+	logger                   *zap.Logger
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -465,48 +468,53 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		return true, false, nil
 	}
 
-	// If APQ is enabled and the query body is in the request, short-circuit
-	if o.parsedOperation.Request.Query != "" && o.operationProcessor.persistedOperationClient.APQEnabled() {
-		isAPQ = true
+	// The lookup runs even when the request carries both a query body and an APQ
+	// hash: the sha may belong to a registered persisted operation (the prehandler
+	// has already verified sha256(body) == hash), and classifying it as APQ would
+	// both skip the registered-operation exemptions and poison the normalization
+	// cache entry for subsequent hash-only requests.
+	var persistedOperationData []byte
 
-		// If the operation was fetched with APQ, save it again to renew the TTL
-		err := o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query)
-		if err != nil {
-			return false, true, err
-		}
-	} else {
-		var persistedOperationData []byte
-		var err error
-
-		persistedOperationData, isAPQ, err = o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
-		if err != nil {
+	persistedOperationData, isAPQ, err = o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+	if err != nil {
+		if o.parsedOperation.Request.Query != "" && o.operationProcessor.persistedOperationClient.APQEnabled() {
+			// A body+hash request is self-contained and never needed the registered
+			// storage before this lookup existed; a provider outage must not fail it.
+			// Fall back to the APQ classification and continue with the client body.
+			if logger := o.operationProcessor.logger; logger != nil {
+				logger.Warn("failed to look up persisted operation for a request carrying its own query body, classifying as APQ",
+					zap.String("sha256_hash", o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash),
+					zap.Error(err))
+			}
+			persistedOperationData, isAPQ, err = nil, true, nil
+		} else {
 			return false, isAPQ, err
 		}
+	}
 
-		if isAPQ && persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
-			// If the client has APQ enabled, throw an error if the operation wasn't attached to the request
-			return false, isAPQ, &persistedoperation.PersistentOperationNotFoundError{
-				ClientName: clientInfo.Name,
-				Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash,
-			}
+	if isAPQ && persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
+		// If the client has APQ enabled, throw an error if the operation wasn't attached to the request
+		return false, isAPQ, &persistedoperation.PersistentOperationNotFoundError{
+			ClientName: clientInfo.Name,
+			Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash,
 		}
+	}
 
-		// it's important to make a copy of the persisted operation data, because it's used in the cache
-		// we might modify it later, so we don't want to modify the cached data
-		if persistedOperationData != nil {
-			o.parsedOperation.Request.Query = string(persistedOperationData)
-			// when we have successfully loaded the operation content from the storage,
-			// but it was passed via body instead of hash, we need to mark operation as persisted
-			// to populate persisted operation cache
-			o.parsedOperation.IsPersistedOperation = true
-			o.parsedOperation.IsRegisteredPersistedOperation = !isAPQ
-		}
+	// it's important to make a copy of the persisted operation data, because it's used in the cache
+	// we might modify it later, so we don't want to modify the cached data
+	if persistedOperationData != nil {
+		o.parsedOperation.Request.Query = string(persistedOperationData)
+		// when we have successfully loaded the operation content from the storage,
+		// but it was passed via body instead of hash, we need to mark operation as persisted
+		// to populate persisted operation cache
+		o.parsedOperation.IsPersistedOperation = true
+		o.parsedOperation.IsRegisteredPersistedOperation = !isAPQ
+	}
 
-		// If the operation was fetched with APQ, save it again to renew the TTL
-		if isAPQ {
-			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
-				return false, true, err
-			}
+	// If the operation was fetched with APQ, save it again to renew the TTL
+	if isAPQ {
+		if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
+			return false, true, err
 		}
 	}
 
@@ -1616,6 +1624,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		complexityLimits:         opts.ComplexityLimits,
 		costControl:              opts.CostControl,
 		inlineArgumentsChecker:   opts.InlineArgumentsChecker,
+		logger:                   opts.Logger,
 		parseKitOptions: &parseKitOptions{
 			enableDefer:                                            opts.EnableDefer,
 			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,

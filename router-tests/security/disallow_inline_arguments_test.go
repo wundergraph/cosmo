@@ -474,6 +474,118 @@ func TestDisallowInlineArguments(t *testing.T) {
 		})
 	})
 
+	// A REGISTERED persisted operation sent APQ-style (query body + sha256 hash,
+	// the shape Apollo clients use to seed APQ) must classify as registered, not
+	// APQ: the exemption applies, and the cached entry must not poison subsequent
+	// hash-only requests for the same operation.
+	t.Run("enforce mode exempts registered operation sent as body plus hash", func(t *testing.T) {
+		t.Parallel()
+
+		// The stored operation 49a2f7dd... for my-client; the body matches the
+		// fixture byte-for-byte so its sha256 equals the registered hash and the
+		// prehandler's hash-body match check passes.
+		const registeredOpBody = "mutation updateEmployeeTag {\n  updateEmployeeTag(id: 10, tag: \"dd\") {\n    id\n  }\n}"
+		registeredOpExtensions := []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "49a2f7dd56b06f620c7d040dd9d562a1c16eadf7c149be5decdd62cfc92e1b12"}}`)
+
+		apqConfig := config.AutomaticPersistedQueriesConfig{
+			Enabled: true,
+			Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
+		}
+
+		t.Run("body plus hash is exempt and does not poison hash-only requests", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ApqConfig: apqConfig,
+				ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+					s.DisallowInlineArguments = config.DisallowInlineArguments{
+						Mode: config.DisallowInlineArgumentsModeEnforce,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query:      registeredOpBody,
+					Extensions: registeredOpExtensions,
+					Header:     header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.Equal(t, `{"data":{"updateEmployeeTag":{"id":10}}}`, res.Body)
+
+				// The body+hash request above must not have cached the operation as
+				// APQ; a hash-only follow-up stays exempt.
+				res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Extensions: registeredOpExtensions,
+					Header:     header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.Equal(t, `{"data":{"updateEmployeeTag":{"id":10}}}`, res.Body)
+			})
+		})
+
+		t.Run("hash-only first then body plus hash are both exempt", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ApqConfig: apqConfig,
+				ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+					s.DisallowInlineArguments = config.DisallowInlineArguments{
+						Mode: config.DisallowInlineArgumentsModeEnforce,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Extensions: registeredOpExtensions,
+					Header:     header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.Equal(t, `{"data":{"updateEmployeeTag":{"id":10}}}`, res.Body)
+
+				res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query:      registeredOpBody,
+					Extensions: registeredOpExtensions,
+					Header:     header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.Equal(t, `{"data":{"updateEmployeeTag":{"id":10}}}`, res.Body)
+			})
+		})
+
+		// Registered operations are per-client: the same body+hash from a client
+		// the operation is not registered for classifies as APQ and stays subject
+		// to the policy.
+		t.Run("body plus hash from another client is not exempt", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ApqConfig: apqConfig,
+				ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+					s.DisallowInlineArguments = config.DisallowInlineArguments{
+						Mode: config.DisallowInlineArgumentsModeEnforce,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "other-client")
+
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query:      registeredOpBody,
+					Extensions: registeredOpExtensions,
+					Header:     header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.Contains(t, res.Body, `"INLINE_ARGUMENT_VALUES_NOT_ALLOWED"`)
+			})
+		})
+	})
+
 	t.Run("enforce mode rejects persisted operations when included", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
