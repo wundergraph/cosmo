@@ -386,7 +386,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.setDebugCacheHeaders(w, reqCtx.operation)
 
 		defer propagateSubgraphErrors(resolveCtx)
-		resolveCtx, writer, ok = GetDeferResponseWriter(resolveCtx, r, w)
+		resolveCtx, writer, ok = GetDeferResponseWriter(resolveCtx, r, w, reqCtx.operation.inlineArgumentsAnnotation, reqCtx.logger)
 		if !ok {
 			reqCtx.logger.Error("unable to get defer response writer", zap.Error(errCouldNotFlushResponse))
 			trackFinalResponseError(r.Context(), errCouldNotFlushResponse)

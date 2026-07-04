@@ -92,7 +92,8 @@ The router also emits a structured warning log, `inline arguments found in opera
 <Info>
   Subscription responses stream and cannot carry a response annotation. For
   subscriptions and for operations sent over WebSocket connections, warn mode
-  logs only.
+  logs only. Queries using `@defer` receive the annotation in the `extensions`
+  of the initial multipart payload.
 </Info>
 
 ## Enforce Mode

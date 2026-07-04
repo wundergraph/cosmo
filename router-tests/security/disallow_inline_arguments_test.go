@@ -1,11 +1,14 @@
 package integration
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -32,6 +35,27 @@ func requireInlineArgumentsLogEntry(t *testing.T, xEnv *testenv.Environment) {
 	require.Equal(t, "FindEmployee", cm["operation_name"])
 	require.Equal(t, "test-client", cm["client_name"])
 	require.Equal(t, "1.2.3", cm["client_version"])
+}
+
+// deferMultipartParts splits a multipart/mixed @defer body on the --graphql
+// boundary and returns the raw JSON bytes of each part.
+func deferMultipartParts(body []byte) [][]byte {
+	var result [][]byte
+	for _, part := range bytes.Split(body, []byte("--graphql")) {
+		if bytes.HasPrefix(part, []byte("--")) {
+			continue
+		}
+		_, jsonBody, found := bytes.Cut(part, []byte("\r\n\r\n"))
+		if !found {
+			continue
+		}
+		jsonBody = bytes.TrimSpace(jsonBody)
+		if len(jsonBody) == 0 {
+			continue
+		}
+		result = append(result, jsonBody)
+	}
+	return result
 }
 
 // inlineArgumentsSpanCounts returns the wg.operation.inline_arguments.count value
@@ -529,6 +553,83 @@ func TestDisallowInlineArguments(t *testing.T) {
 			cm := logs.All()[0].ContextMap()
 			require.Equal(t, int64(2), cm["count"])
 			require.Equal(t, []interface{}{"max", "intervalMilliseconds"}, cm["arguments"])
+		})
+	})
+
+	// Deferred queries stream a multipart response; the annotation belongs in the
+	// initial part's extensions, mirroring the single-body warn-mode behavior.
+	t.Run("warn mode annotates the initial part of a deferred response", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode: config.DisallowInlineArgumentsModeWarn,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			payload, err := json.Marshal(map[string]any{
+				"query": `query { employee(id: 1) { id ... @defer { isAvailable } } }`,
+			})
+			require.NoError(t, err)
+
+			req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payload))
+			res, err := xEnv.RouterClient.Do(req)
+			require.NoError(t, err)
+			defer func() { require.NoError(t, res.Body.Close()) }()
+
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"),
+				"expected multipart/mixed, got %q", res.Header.Get("Content-Type"))
+
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			parts := deferMultipartParts(body)
+			require.NotEmpty(t, parts)
+
+			// The argument appears twice: detection runs on the normalized document
+			// (see detectInlineArguments), and defer normalization duplicates the
+			// deferred field's parent path -- including its arguments -- into the
+			// hoisted deferred selection.
+			annotation := `{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int"},{"argument":"id","valueKind":"Int"}]}`
+			var initial struct {
+				Extensions struct {
+					InlineArguments json.RawMessage `json:"inlineArguments"`
+				} `json:"extensions"`
+			}
+			require.NoError(t, json.Unmarshal(parts[0], &initial))
+			require.JSONEq(t, annotation, string(initial.Extensions.InlineArguments))
+
+			for _, part := range parts[1:] {
+				require.NotContains(t, string(part), `"inlineArguments"`)
+			}
+		})
+	})
+
+	t.Run("enforce mode rejects deferred query with inline arguments", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode: config.DisallowInlineArgumentsModeEnforce,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			payload, err := json.Marshal(map[string]any{
+				"query": `query { employee(id: 1) { id ... @defer { isAvailable } } }`,
+			})
+			require.NoError(t, err)
+
+			req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payload))
+			res, err := xEnv.RouterClient.Do(req)
+			require.NoError(t, err)
+			defer func() { require.NoError(t, res.Body.Close()) }()
+
+			require.Equal(t, http.StatusBadRequest, res.StatusCode)
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Contains(t, string(body), `"INLINE_ARGUMENT_VALUES_NOT_ALLOWED"`)
 		})
 	})
 
