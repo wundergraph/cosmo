@@ -72,6 +72,14 @@ func inlineArgumentsSpanCounts(exporter *sdktracetest.InMemoryExporter) []int64 
 	return counts
 }
 
+// withInlineArgumentsMode returns a testenv security-configuration modifier that
+// enables the disallow-inline-arguments policy in the given mode.
+func withInlineArgumentsMode(mode config.DisallowInlineArgumentsMode) func(*config.SecurityConfiguration) {
+	return func(s *config.SecurityConfiguration) {
+		s.DisallowInlineArguments = config.DisallowInlineArguments{Mode: mode}
+	}
+}
+
 func TestDisallowInlineArguments(t *testing.T) {
 	t.Parallel()
 
@@ -90,11 +98,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 	t.Run("enforce mode rejects inline field argument", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id } }`,
@@ -108,11 +112,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 	t.Run("enforce mode allows compliant operation", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:     `query GetEmployee($id: Int!) { employee(id: $id) { id } }`,
@@ -130,11 +130,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 	t.Run("enforce mode allows statically resolved include directive", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:     `query($id: Int!) { employee(id: $id) @include(if: true) { id } }`,
@@ -149,11 +145,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 	t.Run("enforce mode ignores non-executed sibling operation", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:         `query A($id: Int!) { employee(id: $id) { id } } query B { employee(id: 1) { id } }`,
@@ -169,11 +161,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 	t.Run("enforce mode rejects inline argument inside used fragment", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query: `query { ...F } fragment F on Query { employee(id: 1) { id } }`,
@@ -188,11 +176,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 	t.Run("enforce mode rejects inline introspection argument", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query: `{ __type(name: "Employee") { name } }`,
@@ -213,11 +197,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 				MaxConcurrency:     10,
 				MaxEntriesPerBatch: 100,
 			},
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLBatchedRequestRequest([]testenv.GraphQLRequest{
 				{
@@ -267,11 +247,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 				Enabled:  true,
 				LogLevel: zapcore.WarnLevel,
 			},
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeWarn,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeWarn),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "test-client")
@@ -298,11 +274,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 				Enabled:  true,
 				LogLevel: zapcore.WarnLevel,
 			},
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeWarn,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeWarn),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query: `{ nonExistentField(id: 1) { id } }`,
@@ -318,11 +290,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 	t.Run("warn mode reports identically across normalization cache miss and hit", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeWarn,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeWarn),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			query := `query { ...F } fragment F on Query { employee(id: 1) { id } }`
 			want := `{"data":{"employee":{"id":1}},"extensions":{"inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int"}]}}}`
@@ -342,11 +310,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 				Enabled:  true,
 				LogLevel: zapcore.WarnLevel,
 			},
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "test-client")
@@ -380,11 +344,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 				Enabled:  true,
 				LogLevel: zapcore.InfoLevel,
 			},
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id } }`,
@@ -402,12 +362,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 		t.Parallel()
 		exporter := tracetest.NewInMemoryExporter(t)
 		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeWarn,
-				}
-			},
+			TraceExporter:               exporter,
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeWarn),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id } }`,
@@ -422,12 +378,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 		t.Parallel()
 		exporter := tracetest.NewInMemoryExporter(t)
 		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			TraceExporter:               exporter,
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id } }`,
@@ -442,12 +394,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 		t.Parallel()
 		exporter := tracetest.NewInMemoryExporter(t)
 		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeWarn,
-				}
-			},
+			TraceExporter:               exporter,
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeWarn),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:     `query GetEmployee($id: Int!) { employee(id: $id) { id } }`,
@@ -467,11 +415,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 	t.Run("enforce mode exempts persisted operations by default", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
@@ -496,11 +440,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 				Enabled: true,
 				Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
 			},
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			query := `{ employee(id: 1) { id } }`
 			hash := sha256.Sum256([]byte(query))
@@ -550,12 +490,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 		t.Run("body plus hash is exempt and does not poison hash-only requests", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				ApqConfig: apqConfig,
-				ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-					s.DisallowInlineArguments = config.DisallowInlineArguments{
-						Mode: config.DisallowInlineArgumentsModeEnforce,
-					}
-				},
+				ApqConfig:                   apqConfig,
+				ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				header := make(http.Header)
 				header.Add("graphql-client-name", "my-client")
@@ -584,12 +520,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 		t.Run("hash-only first then body plus hash are both exempt", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				ApqConfig: apqConfig,
-				ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-					s.DisallowInlineArguments = config.DisallowInlineArguments{
-						Mode: config.DisallowInlineArgumentsModeEnforce,
-					}
-				},
+				ApqConfig:                   apqConfig,
+				ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				header := make(http.Header)
 				header.Add("graphql-client-name", "my-client")
@@ -619,12 +551,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 		t.Run("body plus hash from another client is not exempt", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				ApqConfig: apqConfig,
-				ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-					s.DisallowInlineArguments = config.DisallowInlineArguments{
-						Mode: config.DisallowInlineArgumentsModeEnforce,
-					}
-				},
+				ApqConfig:                   apqConfig,
+				ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				header := make(http.Header)
 				header.Add("graphql-client-name", "other-client")
@@ -667,11 +595,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 	t.Run("enforce mode rejects inline arguments over websocket", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
@@ -696,11 +620,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 				Enabled:  true,
 				LogLevel: zapcore.WarnLevel,
 			},
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeWarn,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeWarn),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
@@ -728,12 +648,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 	t.Run("warn mode annotates the initial part of a deferred response", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			NoRetryClient: true,
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeWarn,
-				}
-			},
+			NoRetryClient:               true,
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeWarn),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			payload, err := json.Marshal(map[string]any{
 				"query": `query { employee(id: 1) { id ... @defer { isAvailable } } }`,
@@ -776,12 +692,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 	t.Run("enforce mode rejects deferred query with inline arguments", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			NoRetryClient: true,
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeEnforce,
-				}
-			},
+			NoRetryClient:               true,
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeEnforce),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			payload, err := json.Marshal(map[string]any{
 				"query": `query { employee(id: 1) { id ... @defer { isAvailable } } }`,
@@ -803,11 +715,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 	t.Run("warn mode compliant operation has no annotation", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeWarn,
-				}
-			},
+			ModifySecurityConfiguration: withInlineArgumentsMode(config.DisallowInlineArgumentsModeWarn),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:     `query GetEmployee($id: Int!) { employee(id: $id) { id } }`,

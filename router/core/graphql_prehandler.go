@@ -1268,19 +1268,15 @@ func (h *PreHandler) getErrorCodes(err error) []string {
 		}
 	}
 
-	// If "skipLoader" was passed as false to the Validate function, an httpGraphqlError with
-	// an extension code could be returned
-	var httpGqlError *httpGraphqlError
-	if errors.As(err, &httpGqlError) {
-		extensionCode := httpGqlError.ExtensionCode()
+	// If "skipLoader" was passed as false to the Validate function, an HttpError with
+	// an extension code could be returned; policy errors like inlineArgumentsError
+	// carry their code the same way.
+	var httpErr HttpError
+	if errors.As(err, &httpErr) {
+		extensionCode := httpErr.ExtensionCode()
 		if extensionCode != "" {
 			errorCodes = append(errorCodes, extensionCode)
 		}
-	}
-
-	var inlineArgsErr *inlineArgumentsError
-	if errors.As(err, &inlineArgsErr) && inlineArgsErr.code != "" {
-		errorCodes = append(errorCodes, inlineArgsErr.code)
 	}
 
 	return errorCodes

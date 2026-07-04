@@ -867,13 +867,7 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 	var inlineArgsErr *inlineArgumentsError
 	switch {
 	case errors.As(err, &inlineArgsErr):
-		gqlErr = graphqlError{
-			Message: inlineArgsErr.message,
-			Extensions: &Extensions{
-				Code:            inlineArgsErr.code,
-				InlineArguments: inlineArgsErr.extensionJSON(h.logger),
-			},
-		}
+		gqlErr = inlineArgsErr.graphqlError(h.logger)
 	case errors.As(err, &poNotFoundErr):
 		// We follow the same pattern of not mentioning the sha256hash
 		// in the normal http requests for the same case

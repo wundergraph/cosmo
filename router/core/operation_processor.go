@@ -468,11 +468,24 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		return true, false, nil
 	}
 
-	// The lookup runs even when the request carries both a query body and an APQ
-	// hash: the sha may belong to a registered persisted operation (the prehandler
-	// has already verified sha256(body) == hash), and classifying it as APQ would
-	// both skip the registered-operation exemptions and poison the normalization
-	// cache entry for subsequent hash-only requests.
+	// If APQ is enabled and the query body is in the request, the request is
+	// self-contained and only needs an APQ save. Short-circuit unless a policy
+	// consumes the registered/APQ distinction: the sha may belong to a registered
+	// persisted operation (the prehandler has already verified sha256(body) ==
+	// hash), and classifying it as APQ would both skip the registered-operation
+	// exemptions and poison the normalization cache entry for subsequent hash-only
+	// requests. When nothing consumes the distinction, the (potentially remote)
+	// registered lookup would be wasted work on every body+hash request.
+	if o.parsedOperation.Request.Query != "" &&
+		o.operationProcessor.persistedOperationClient.APQEnabled() &&
+		!o.operationProcessor.inlineArgumentsChecker.needsRegisteredOperationClassification() {
+		// Save the operation again to renew the APQ TTL
+		if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
+			return false, true, err
+		}
+		return false, true, nil
+	}
+
 	var persistedOperationData []byte
 
 	persistedOperationData, isAPQ, err = o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)

@@ -67,6 +67,15 @@ func NewInlineArgumentsChecker(cfg config.DisallowInlineArguments) (*InlineArgum
 	}, nil
 }
 
+// needsRegisteredOperationClassification reports whether the policy consumes the
+// registered/APQ distinction on persisted operations. False when the policy is off
+// (nil checker) or when registered operations are checked like everything else,
+// letting the persisted operation fetch skip the registered-storage lookup for
+// self-contained body+hash requests.
+func (c *InlineArgumentsChecker) needsRegisteredOperationClassification() bool {
+	return c != nil && !c.includePersistedOperations
+}
+
 // InlineArgumentsResult reports the outcome of a Check.
 // Count is the number of inline arguments found (also when the operation is rejected),
 // Annotation is the pre-built extensions.inlineArguments JSON in warn mode.
@@ -232,28 +241,36 @@ type inlineArgumentsError struct {
 	arguments  []InlineArgument
 }
 
-func (e *inlineArgumentsError) Error() string { return e.message }
+// inlineArgumentsError satisfies HttpError so the shared error-dispatch paths
+// (getErrorCodes, transport error writers) pick up its code and status without
+// type-specific branches; only the nested extensions rendering below is bespoke.
+var _ HttpError = (*inlineArgumentsError)(nil)
 
-// extensionJSON returns the extensions.inlineArguments payload for this error,
-// or nil when marshalling fails (the error code and message still reach the client).
-func (e *inlineArgumentsError) extensionJSON(logger *zap.Logger) json.RawMessage {
-	return marshalInlineArgumentsExtension(e.code, e.message, e.arguments, logger)
+func (e *inlineArgumentsError) Error() string         { return e.message }
+func (e *inlineArgumentsError) Message() string       { return e.message }
+func (e *inlineArgumentsError) ExtensionCode() string { return e.code }
+func (e *inlineArgumentsError) StatusCode() int       { return e.statusCode }
+
+// graphqlError returns the error in response shape, shared by the HTTP and
+// WebSocket transports: the extensions carry both the flat code that clients
+// and APM tooling use for classification and the full details under
+// inlineArguments (nil when marshalling fails; code and message still reach
+// the client).
+func (e *inlineArgumentsError) graphqlError(logger *zap.Logger) graphqlError {
+	return graphqlError{
+		Message: e.message,
+		Extensions: &Extensions{
+			Code:            e.code,
+			InlineArguments: marshalInlineArgumentsExtension(e.code, e.message, e.arguments, logger),
+		},
+	}
 }
 
 func writeInlineArgumentsError(r *http.Request, w http.ResponseWriter, e *inlineArgumentsError, logger *zap.Logger, headerPropagation *HeaderPropagation) {
-	// The extensions carry both the flat code that clients and APM tooling use for
-	// classification and the full details under inlineArguments, matching the shape
-	// the WebSocket path produces from the same types.
 	body, err := json.Marshal(struct {
 		Errors []graphqlError `json:"errors"`
 	}{
-		Errors: []graphqlError{{
-			Message: e.message,
-			Extensions: &Extensions{
-				Code:            e.code,
-				InlineArguments: e.extensionJSON(logger),
-			},
-		}},
+		Errors: []graphqlError{e.graphqlError(logger)},
 	})
 	if err != nil {
 		if logger != nil {
