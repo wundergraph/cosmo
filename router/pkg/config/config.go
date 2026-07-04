@@ -615,12 +615,14 @@ const (
 
 // DisallowInlineArguments configures a policy that detects and optionally rejects
 // GraphQL operations that carry hardcoded inline argument values instead of variables.
-// The policy covers both field arguments and directive arguments (e.g. @include(if: true)).
+// The policy covers both field arguments and directive arguments; detection runs on the
+// normalized operation, so literals that normalization resolves away (e.g. a static
+// @include(if: true)) are not reported.
 type DisallowInlineArguments struct {
 	// Mode controls the policy behavior:
 	// - "off" (default): the scan is never run; no overhead.
 	// - "warn": inline arguments are detected and logged; the operation succeeds with an extensions annotation.
-	// - "enforce": inline arguments cause the operation to be rejected before normalization.
+	// - "enforce": inline arguments cause the operation to be rejected during validation, before variable extraction and execution.
 	Mode DisallowInlineArgumentsMode `yaml:"mode,omitempty" json:"mode,omitempty" envDefault:"off" env:"MODE"`
 
 	// EnforceHTTPStatusCode is the HTTP status returned in enforce mode.

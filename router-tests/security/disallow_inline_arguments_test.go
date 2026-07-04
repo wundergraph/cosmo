@@ -184,6 +184,61 @@ func TestDisallowInlineArguments(t *testing.T) {
 		})
 	})
 
+	// Introspection-field arguments are ordinary arguments; they are not exempt.
+	t.Run("enforce mode rejects inline introspection argument", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode: config.DisallowInlineArgumentsModeEnforce,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `{ __type(name: "Employee") { name } }`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Contains(t, res.Body, `"INLINE_ARGUMENT_VALUES_NOT_ALLOWED"`)
+		})
+	})
+
+	// Batch entries are processed independently: one offending entry is rejected
+	// without affecting the compliant entries in the same batch.
+	t.Run("enforce mode rejects only the offending batch entry", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			BatchingConfig: config.BatchingConfig{
+				Enabled:            true,
+				MaxConcurrency:     10,
+				MaxEntriesPerBatch: 100,
+			},
+			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode: config.DisallowInlineArgumentsModeEnforce,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLBatchedRequestRequest([]testenv.GraphQLRequest{
+				{
+					Query:     `query GetEmployee($id: Int!) { employee(id: $id) { id } }`,
+					Variables: json.RawMessage(`{"id":1}`),
+				},
+				{
+					Query: `{ employee(id: 1) { id } }`,
+				},
+			}, nil)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+
+			var entries []json.RawMessage
+			require.NoError(t, json.Unmarshal([]byte(res.Body), &entries))
+			require.Len(t, entries, 2)
+			require.Equal(t, `{"data":{"employee":{"id":1}}}`, string(entries[0]))
+			require.Contains(t, string(entries[1]), `"INLINE_ARGUMENT_VALUES_NOT_ALLOWED"`)
+		})
+	})
+
 	t.Run("enforce mode custom status code and message", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
