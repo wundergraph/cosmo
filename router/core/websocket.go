@@ -47,18 +47,17 @@ var errClientTerminatedConnection = &wsproto.CloseError{
 }
 
 type WebsocketMiddlewareOptions struct {
-	OperationProcessor     *OperationProcessor
-	OperationBlocker       *OperationBlocker
-	InlineArgumentsChecker *InlineArgumentsChecker
-	Planner                *OperationPlanner
-	GraphQLHandler         *GraphQLHandler
-	PreHandler             *PreHandler
-	Metrics                RouterMetrics
-	AccessController       *AccessController
-	Logger                 *zap.Logger
-	Stats                  statistics.EngineStatistics
-	ReadTimeout            time.Duration
-	WriteTimeout           time.Duration
+	OperationProcessor *OperationProcessor
+	OperationBlocker   *OperationBlocker
+	Planner            *OperationPlanner
+	GraphQLHandler     *GraphQLHandler
+	PreHandler         *PreHandler
+	Metrics            RouterMetrics
+	AccessController   *AccessController
+	Logger             *zap.Logger
+	Stats              statistics.EngineStatistics
+	ReadTimeout        time.Duration
+	WriteTimeout       time.Duration
 
 	EnableNetPoll         bool
 	NetPollTimeout        time.Duration
@@ -77,7 +76,6 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		ctx:                       ctx,
 		operationProcessor:        opts.OperationProcessor,
 		operationBlocker:          opts.OperationBlocker,
-		inlineArgumentsChecker:    opts.InlineArgumentsChecker,
 		planner:                   opts.Planner,
 		graphqlHandler:            opts.GraphQLHandler,
 		preHandler:                opts.PreHandler,
@@ -240,17 +238,16 @@ func (c *wsConnectionWrapper) Close() error {
 }
 
 type WebsocketHandler struct {
-	ctx                    context.Context
-	config                 *config.WebSocketConfiguration
-	operationProcessor     *OperationProcessor
-	operationBlocker       *OperationBlocker
-	inlineArgumentsChecker *InlineArgumentsChecker
-	planner                *OperationPlanner
-	graphqlHandler         *GraphQLHandler
-	preHandler             *PreHandler
-	metrics                RouterMetrics
-	accessController       *AccessController
-	logger                 *zap.Logger
+	ctx                context.Context
+	config             *config.WebSocketConfiguration
+	operationProcessor *OperationProcessor
+	operationBlocker   *OperationBlocker
+	planner            *OperationPlanner
+	graphqlHandler     *GraphQLHandler
+	preHandler         *PreHandler
+	metrics            RouterMetrics
+	accessController   *AccessController
+	logger             *zap.Logger
 
 	netPoll       netpoll.Poller
 	connections   map[int]*WebSocketConnectionHandler
@@ -357,7 +354,6 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		ForwardInitialPayload:        h.config.ForwardInitialPayload,
 		OperationProcessor:           h.operationProcessor,
 		OperationBlocker:             h.operationBlocker,
-		InlineArgumentsChecker:       h.inlineArgumentsChecker,
 		Planner:                      h.planner,
 		GraphQLHandler:               h.graphqlHandler,
 		PreHandler:                   h.preHandler,
@@ -757,7 +753,6 @@ type WebSocketConnectionHandlerOptions struct {
 	ForwardInitialPayload        bool
 	OperationProcessor           *OperationProcessor
 	OperationBlocker             *OperationBlocker
-	InlineArgumentsChecker       *InlineArgumentsChecker
 	Planner                      *OperationPlanner
 	GraphQLHandler               *GraphQLHandler
 	PreHandler                   *PreHandler
@@ -779,16 +774,15 @@ type WebSocketConnectionHandlerOptions struct {
 }
 
 type WebSocketConnectionHandler struct {
-	ctx                    context.Context
-	operationProcessor     *OperationProcessor
-	operationBlocker       *OperationBlocker
-	inlineArgumentsChecker *InlineArgumentsChecker
-	planner                *OperationPlanner
-	graphqlHandler         *GraphQLHandler
-	plannerOptions         PlanOptions
-	preHandler             *PreHandler
-	metrics                RouterMetrics
-	w                      http.ResponseWriter
+	ctx                context.Context
+	operationProcessor *OperationProcessor
+	operationBlocker   *OperationBlocker
+	planner            *OperationPlanner
+	graphqlHandler     *GraphQLHandler
+	plannerOptions     PlanOptions
+	preHandler         *PreHandler
+	metrics            RouterMetrics
+	w                  http.ResponseWriter
 	// request is the original client request. It is not safe for concurrent use.
 	// You have to clone it before using it in a goroutine.
 	request    *http.Request
@@ -834,7 +828,6 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		ctx:                          ctx,
 		operationProcessor:           opts.OperationProcessor,
 		operationBlocker:             opts.OperationBlocker,
-		inlineArgumentsChecker:       opts.InlineArgumentsChecker,
 		planner:                      opts.Planner,
 		graphqlHandler:               opts.GraphQLHandler,
 		preHandler:                   opts.PreHandler,
@@ -999,10 +992,8 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	// Check for inline argument values. Warn-mode annotations are dropped here:
 	// streamed responses have no single body to annotate; the warn log emitted
 	// by the check still covers this transport.
-	if h.inlineArgumentsChecker != nil {
-		if _, inlineArgumentsErr := operationKit.CheckInlineArguments(h.inlineArgumentsChecker, h.clientInfo, h.logger); inlineArgumentsErr != nil && operationValidationErr == nil {
-			operationValidationErr = inlineArgumentsErr
-		}
+	if _, inlineArgumentsErr := operationKit.CheckInlineArguments(h.clientInfo, h.logger); inlineArgumentsErr != nil && operationValidationErr == nil {
+		operationValidationErr = inlineArgumentsErr
 	}
 
 	cached, _, err := operationKit.NormalizeVariables()

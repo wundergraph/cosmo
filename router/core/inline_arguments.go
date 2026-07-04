@@ -71,7 +71,12 @@ type InlineArgumentsResult struct {
 
 // CheckInlineArguments runs the disallow-inline-arguments policy check on the kit's
 // current document, after NormalizeOperation and before NormalizeVariables (see detectInlineArguments).
-func (o *OperationKit) CheckInlineArguments(checker *InlineArgumentsChecker, clientInfo *ClientInfo, logger *zap.Logger) (InlineArgumentsResult, *inlineArgumentsError) {
+// It is a no-op when the feature is disabled (no checker configured on the processor).
+func (o *OperationKit) CheckInlineArguments(clientInfo *ClientInfo, logger *zap.Logger) (InlineArgumentsResult, *inlineArgumentsError) {
+	checker := o.operationProcessor.inlineArgumentsChecker
+	if checker == nil {
+		return InlineArgumentsResult{}, nil
+	}
 	return checker.Check(o.parsedOperation, o.kit.doc, o.operationProcessor.executor.ClientSchema, clientInfo, logger)
 }
 

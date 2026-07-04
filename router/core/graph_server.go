@@ -1545,6 +1545,11 @@ func (s *graphServer) buildGraphMux(
 		return nil, pubSubStartupErr
 	}
 
+	inlineArgumentsChecker, err := NewInlineArgumentsChecker(s.securityConfiguration.DisallowInlineArguments)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create inline arguments checker: %w", err)
+	}
+
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                            executor,
 		MaxOperationSizeInBytes:             int64(s.routerTrafficConfig.MaxRequestBodyBytes),
@@ -1569,9 +1574,10 @@ func (s *graphServer) buildGraphMux(
 		ApolloRouterCompatibilityFlags:                         s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
-		EnableDefer:      s.engineExecutionConfiguration.EnableDefer,
-		ComplexityLimits: s.securityConfiguration.ComplexityLimits,
-		CostControl:      s.securityConfiguration.CostControl,
+		EnableDefer:            s.engineExecutionConfiguration.EnableDefer,
+		ComplexityLimits:       s.securityConfiguration.ComplexityLimits,
+		CostControl:            s.securityConfiguration.CostControl,
+		InlineArgumentsChecker: inlineArgumentsChecker,
 	})
 
 	if opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled() {
@@ -1833,11 +1839,6 @@ func (s *graphServer) buildGraphMux(
 		return nil, fmt.Errorf("failed to create operation blocker: %w", err)
 	}
 
-	inlineArgumentsChecker, err := NewInlineArgumentsChecker(s.securityConfiguration.DisallowInlineArguments)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create inline arguments checker: %w", err)
-	}
-
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
 		Logger:                                 s.logger,
 		Executor:                               executor,
@@ -1846,7 +1847,6 @@ func (s *graphServer) buildGraphMux(
 		Planner:                                operationPlanner,
 		AccessController:                       s.accessController,
 		OperationBlocker:                       operationBlocker,
-		InlineArgumentsChecker:                 inlineArgumentsChecker,
 		RouterPublicKey:                        s.publicKey,
 		EnableRequestTracing:                   s.engineExecutionConfiguration.EnableRequestTracing,
 		ForceUnauthenticatedRequestTracing:     s.engineExecutionConfiguration.ForceUnauthenticatedRequestTracing,
@@ -1883,7 +1883,6 @@ func (s *graphServer) buildGraphMux(
 		wsMiddleware := NewWebsocketMiddleware(graphMuxCtx, WebsocketMiddlewareOptions{
 			OperationProcessor:        operationProcessor,
 			OperationBlocker:          operationBlocker,
-			InlineArgumentsChecker:    inlineArgumentsChecker,
 			Planner:                   operationPlanner,
 			GraphQLHandler:            graphqlHandler,
 			PreHandler:                graphqlPreHandler,

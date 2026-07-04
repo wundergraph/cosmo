@@ -40,19 +40,18 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger                 *zap.Logger
-	Executor               *Executor
-	Metrics                RouterMetrics
-	OperationProcessor     *OperationProcessor
-	Planner                *OperationPlanner
-	AccessController       *AccessController
-	OperationBlocker       *OperationBlocker
-	InlineArgumentsChecker *InlineArgumentsChecker
-	RouterPublicKey        *ecdsa.PublicKey
-	TracerProvider         *sdktrace.TracerProvider
-	ComplexityLimits       *config.ComplexityLimits
-	MaxUploadFiles         int
-	MaxUploadFileSize      int
+	Logger             *zap.Logger
+	Executor           *Executor
+	Metrics            RouterMetrics
+	OperationProcessor *OperationProcessor
+	Planner            *OperationPlanner
+	AccessController   *AccessController
+	OperationBlocker   *OperationBlocker
+	RouterPublicKey    *ecdsa.PublicKey
+	TracerProvider     *sdktrace.TracerProvider
+	ComplexityLimits   *config.ComplexityLimits
+	MaxUploadFiles     int
+	MaxUploadFileSize  int
 
 	FlushTelemetryAfterResponse            bool
 	FileUploadEnabled                      bool
@@ -89,7 +88,6 @@ type PreHandler struct {
 	planner                                *OperationPlanner
 	accessController                       *AccessController
 	operationBlocker                       *OperationBlocker
-	inlineArgumentsChecker                 *InlineArgumentsChecker
 	headerPropagation                      *HeaderPropagation
 	developmentMode                        bool
 	forceUnauthenticatedRequestTracing     bool
@@ -156,7 +154,6 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		planner:                            opts.Planner,
 		accessController:                   opts.AccessController,
 		operationBlocker:                   opts.OperationBlocker,
-		inlineArgumentsChecker:             opts.InlineArgumentsChecker,
 		routerPublicKey:                    opts.RouterPublicKey,
 		developmentMode:                    opts.DevelopmentMode,
 		enableRequestTracing:               opts.EnableRequestTracing,
@@ -871,17 +868,13 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	// Check for inline argument values; the enforce-mode error is held and
 	// surfaced during validation, after the schema-validation error.
-	var inlineArgumentsErr *inlineArgumentsError
-	if h.inlineArgumentsChecker != nil {
-		var result InlineArgumentsResult
-		result, inlineArgumentsErr = operationKit.CheckInlineArguments(h.inlineArgumentsChecker, requestContext.operation.clientInfo, requestContext.logger)
-		if result.Count > 0 {
-			// Set directly on the router span so operators can build a per-client
-			// breakdown of inline argument usage before enforcing.
-			httpOperation.routerSpan.SetAttributes(otel.WgOperationInlineArgumentsCount.Int(result.Count))
-		}
-		requestContext.operation.inlineArgumentsAnnotation = result.Annotation
+	result, inlineArgumentsErr := operationKit.CheckInlineArguments(requestContext.operation.clientInfo, requestContext.logger)
+	if result.Count > 0 {
+		// Set directly on the router span so operators can build a per-client
+		// breakdown of inline argument usage before enforcing.
+		httpOperation.routerSpan.SetAttributes(otel.WgOperationInlineArgumentsCount.Int(result.Count))
 	}
+	requestContext.operation.inlineArgumentsAnnotation = result.Annotation
 
 	/**
 	* Normalize the variables

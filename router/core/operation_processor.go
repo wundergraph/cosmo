@@ -139,6 +139,7 @@ type OperationProcessorOptions struct {
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
 	OperationNameLengthLimit                               int
 	EnableDefer                                            bool
+	InlineArgumentsChecker                                 *InlineArgumentsChecker
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -156,6 +157,7 @@ type OperationProcessor struct {
 	costControl              *config.CostControl
 	parserTokenizerLimits    astparser.TokenizerLimits
 	operationNameLengthLimit int
+	inlineArgumentsChecker   *InlineArgumentsChecker
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -1613,6 +1615,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		operationNameLengthLimit: opts.OperationNameLengthLimit,
 		complexityLimits:         opts.ComplexityLimits,
 		costControl:              opts.CostControl,
+		inlineArgumentsChecker:   opts.InlineArgumentsChecker,
 		parseKitOptions: &parseKitOptions{
 			enableDefer:                                            opts.EnableDefer,
 			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
