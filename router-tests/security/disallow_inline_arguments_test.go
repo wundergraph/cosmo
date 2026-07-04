@@ -208,6 +208,32 @@ func TestDisallowInlineArguments(t *testing.T) {
 		})
 	})
 
+	// Schema-invalid operations never execute, so the check is skipped for them:
+	// its warn log and span count would only skew the migration telemetry that
+	// operators use to find non-compliant clients.
+	t.Run("warn mode does not log for schema-invalid operations", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.WarnLevel,
+			},
+			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode: config.DisallowInlineArgumentsModeWarn,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `{ nonExistentField(id: 1) { id } }`,
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `"errors"`)
+			require.NotContains(t, res.Body, `"inlineArguments"`)
+			require.Equal(t, 0, xEnv.Observer().FilterMessage("inline arguments found in operation").Len())
+		})
+	})
+
 	// Pins the cache-consistency property documented on detectInlineArguments.
 	t.Run("warn mode reports identically across normalization cache miss and hit", func(t *testing.T) {
 		t.Parallel()

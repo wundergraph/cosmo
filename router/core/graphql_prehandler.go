@@ -867,14 +867,20 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	operationValidationCacheHit, operationValidationErr := operationKit.ValidateOperation()
 
 	// Check for inline argument values; the enforce-mode error is held and
-	// surfaced during validation, after the schema-validation error.
-	result, inlineArgumentsErr := operationKit.CheckInlineArguments(requestContext.operation.clientInfo, requestContext.logger)
-	if result.Count > 0 {
-		// Set directly on the router span so operators can build a per-client
-		// breakdown of inline argument usage before enforcing.
-		httpOperation.routerSpan.SetAttributes(otel.WgOperationInlineArgumentsCount.Int(result.Count))
+	// surfaced during validation, after the schema-validation error. Schema-invalid
+	// operations are skipped: they never execute, so walking them would only skew
+	// the warn log and span count that operators use to track migration progress.
+	var inlineArgumentsErr *inlineArgumentsError
+	if operationValidationErr == nil {
+		var result InlineArgumentsResult
+		result, inlineArgumentsErr = operationKit.CheckInlineArguments(requestContext.operation.clientInfo, requestContext.logger)
+		if result.Count > 0 {
+			// Set directly on the router span so operators can build a per-client
+			// breakdown of inline argument usage before enforcing.
+			httpOperation.routerSpan.SetAttributes(otel.WgOperationInlineArgumentsCount.Int(result.Count))
+		}
+		requestContext.operation.inlineArgumentsAnnotation = result.Annotation
 	}
-	requestContext.operation.inlineArgumentsAnnotation = result.Annotation
 
 	/**
 	* Normalize the variables

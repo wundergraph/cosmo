@@ -991,9 +991,12 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	// Check for inline argument values. Warn-mode annotations are dropped here:
 	// streamed responses have no single body to annotate; the warn log emitted
-	// by the check still covers this transport.
-	if _, inlineArgumentsErr := operationKit.CheckInlineArguments(h.clientInfo, h.logger); inlineArgumentsErr != nil && operationValidationErr == nil {
-		operationValidationErr = inlineArgumentsErr
+	// by the check still covers this transport. Schema-invalid operations are
+	// skipped: they never execute, so walking them would only skew the warn log.
+	if operationValidationErr == nil {
+		if _, inlineArgumentsErr := operationKit.CheckInlineArguments(h.clientInfo, h.logger); inlineArgumentsErr != nil {
+			operationValidationErr = inlineArgumentsErr
+		}
 	}
 
 	cached, _, err := operationKit.NormalizeVariables()
