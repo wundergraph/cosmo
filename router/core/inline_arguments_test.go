@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -222,6 +223,35 @@ func TestNewInlineArgumentsChecker(t *testing.T) {
 			require.Error(t, err)
 			require.ErrorContains(t, err, string(mode))
 			require.Nil(t, checker)
+		}
+	})
+
+	// Same env-var bypass as the mode check: the JSON schema bounds the status code
+	// to 200-599, but env-derived values skip it, and net/http panics in WriteHeader
+	// for codes outside 100-999. Out-of-range codes must fail startup instead of
+	// panicking on every enforce-mode rejection.
+	t.Run("out-of-range enforce status code fails startup", func(t *testing.T) {
+		t.Parallel()
+		for _, statusCode := range []int{99, 199, 600, 1000, -1} {
+			checker, err := NewInlineArgumentsChecker(config.DisallowInlineArguments{
+				Mode:                  config.DisallowInlineArgumentsModeEnforce,
+				EnforceHTTPStatusCode: statusCode,
+			})
+			require.Error(t, err)
+			require.ErrorContains(t, err, fmt.Sprintf("%d", statusCode))
+			require.Nil(t, checker)
+		}
+	})
+
+	t.Run("in-range enforce status codes are accepted", func(t *testing.T) {
+		t.Parallel()
+		for _, statusCode := range []int{200, 400, 599} {
+			checker, err := NewInlineArgumentsChecker(config.DisallowInlineArguments{
+				Mode:                  config.DisallowInlineArgumentsModeEnforce,
+				EnforceHTTPStatusCode: statusCode,
+			})
+			require.NoError(t, err)
+			require.NotNil(t, checker)
 		}
 	})
 }

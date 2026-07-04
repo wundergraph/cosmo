@@ -52,6 +52,12 @@ func NewInlineArgumentsChecker(cfg config.DisallowInlineArguments) (*InlineArgum
 	if statusCode == 0 {
 		statusCode = http.StatusBadRequest
 	}
+	// Mirrors the JSON-schema bounds, which env vars bypass just like the mode enum
+	// above; without this check an out-of-range code would panic in net/http's
+	// WriteHeader on every enforce-mode rejection.
+	if statusCode < 200 || statusCode > 599 {
+		return nil, fmt.Errorf("invalid security.disallow_inline_arguments.enforce_http_status_code %d, expected a value between 200 and 599", statusCode)
+	}
 	return &InlineArgumentsChecker{
 		mode:                       cfg.Mode,
 		enforceHTTPStatusCode:      statusCode,
