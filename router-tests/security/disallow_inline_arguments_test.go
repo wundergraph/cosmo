@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
@@ -279,6 +280,42 @@ func TestDisallowInlineArguments(t *testing.T) {
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 
 			requireInlineArgumentsLogEntry(t, xEnv)
+		})
+	})
+
+	// Enforce-mode rejections must attribute their error code like other
+	// pre-execution rejections, so operators can dashboard the warn->enforce
+	// migration by error code in access logs and metrics.
+	t.Run("enforce mode rejection records the error code in access logs", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key: "error_codes",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldGraphQLErrorCodes,
+					},
+				},
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+			ModifySecurityConfiguration: func(s *config.SecurityConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode: config.DisallowInlineArgumentsModeEnforce,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id } }`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+
+			requestLog := xEnv.Observer().FilterMessage("/graphql").All()
+			require.Len(t, requestLog, 1)
+			require.Equal(t, []interface{}{"INLINE_ARGUMENT_VALUES_NOT_ALLOWED"}, requestLog[0].ContextMap()["error_codes"])
 		})
 	})
 

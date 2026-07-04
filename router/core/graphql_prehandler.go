@@ -1278,6 +1278,11 @@ func (h *PreHandler) getErrorCodes(err error) []string {
 		}
 	}
 
+	var inlineArgsErr *inlineArgumentsError
+	if errors.As(err, &inlineArgsErr) && inlineArgsErr.code != "" {
+		errorCodes = append(errorCodes, inlineArgsErr.code)
+	}
+
 	return errorCodes
 }
 
