@@ -76,7 +76,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int"}]}}}]}`, res.Body)
+			require.JSONEq(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int"}]}}}]}`, res.Body)
 		})
 	})
 
@@ -155,7 +155,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int"}]}}}]}`, res.Body)
+			require.JSONEq(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int"}]}}}]}`, res.Body)
 		})
 	})
 
@@ -176,7 +176,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusUnprocessableEntity, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Please use variables.","extensions":{"code":"VARIABLES_REQUIRED","inlineArguments":{"code":"VARIABLES_REQUIRED","message":"Please use variables.","arguments":[{"argument":"id","valueKind":"Int"}]}}}]}`, res.Body)
+			require.JSONEq(t, `{"errors":[{"message":"Please use variables.","extensions":{"code":"VARIABLES_REQUIRED","inlineArguments":{"code":"VARIABLES_REQUIRED","message":"Please use variables.","arguments":[{"argument":"id","valueKind":"Int"}]}}}]}`, res.Body)
 		})
 	})
 
@@ -432,7 +432,7 @@ func TestDisallowInlineArguments(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int"}]}}}]}`, res.Body)
+			require.JSONEq(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","message":"Inline argument values are not allowed. Use variables instead.","arguments":[{"argument":"id","valueKind":"Int"}]}}}]}`, res.Body)
 		})
 	})
 

@@ -132,17 +132,26 @@ func (c *InlineArgumentsChecker) Check(op *ParsedOperation, doc, definition *ast
 		return result, nil
 	}
 
-	annotation, err := json.Marshal(inlineArgumentsExtension{
-		Code:      c.errorCode,
-		Message:   c.errorMessage,
+	result.Annotation = marshalInlineArgumentsExtension(c.errorCode, c.errorMessage, args, logger)
+	return result, nil
+}
+
+// marshalInlineArgumentsExtension builds the extensions.inlineArguments payload shared
+// by the warn-mode annotation and both enforce-mode error responses, or nil when
+// marshalling fails (logged; the surrounding response is still delivered).
+func marshalInlineArgumentsExtension(code, message string, args []InlineArgument, logger *zap.Logger) json.RawMessage {
+	payload, err := json.Marshal(inlineArgumentsExtension{
+		Code:      code,
+		Message:   message,
 		Arguments: args,
 	})
 	if err != nil {
-		logger.Error("failed to marshal inlineArguments annotation", zap.Error(err))
-		return result, nil
+		if logger != nil {
+			logger.Error("failed to marshal inlineArguments extension", zap.Error(err))
+		}
+		return nil
 	}
-	result.Annotation = annotation
-	return result, nil
+	return payload
 }
 
 // inlineArgumentsExtension is the extensions.inlineArguments payload, shared by the
@@ -222,47 +231,21 @@ func (e *inlineArgumentsError) Error() string { return e.message }
 // extensionJSON returns the extensions.inlineArguments payload for this error,
 // or nil when marshalling fails (the error code and message still reach the client).
 func (e *inlineArgumentsError) extensionJSON(logger *zap.Logger) json.RawMessage {
-	payload, err := json.Marshal(inlineArgumentsExtension{
-		Code:      e.code,
-		Message:   e.message,
-		Arguments: e.arguments,
-	})
-	if err != nil {
-		if logger != nil {
-			logger.Error("failed to marshal inlineArguments extension", zap.Error(err))
-		}
-		return nil
-	}
-	return payload
-}
-
-type inlineArgumentsErrorResponse struct {
-	Errors []inlineArgumentsErrorEntry `json:"errors"`
-}
-
-type inlineArgumentsErrorEntry struct {
-	Message    string                         `json:"message"`
-	Extensions inlineArgumentsErrorExtensions `json:"extensions"`
-}
-
-type inlineArgumentsErrorExtensions struct {
-	// Code carries the flat error code that clients and APM tooling use for
-	// classification; the full details live under InlineArguments.
-	Code            string                   `json:"code"`
-	InlineArguments inlineArgumentsExtension `json:"inlineArguments"`
+	return marshalInlineArgumentsExtension(e.code, e.message, e.arguments, logger)
 }
 
 func writeInlineArgumentsError(r *http.Request, w http.ResponseWriter, e *inlineArgumentsError, logger *zap.Logger, headerPropagation *HeaderPropagation) {
-	body, err := json.Marshal(inlineArgumentsErrorResponse{
-		Errors: []inlineArgumentsErrorEntry{{
+	// The extensions carry both the flat code that clients and APM tooling use for
+	// classification and the full details under inlineArguments, matching the shape
+	// the WebSocket path produces from the same types.
+	body, err := json.Marshal(struct {
+		Errors []graphqlError `json:"errors"`
+	}{
+		Errors: []graphqlError{{
 			Message: e.message,
-			Extensions: inlineArgumentsErrorExtensions{
-				Code: e.code,
-				InlineArguments: inlineArgumentsExtension{
-					Code:      e.code,
-					Message:   e.message,
-					Arguments: e.arguments,
-				},
+			Extensions: &Extensions{
+				Code:            e.code,
+				InlineArguments: e.extensionJSON(logger),
 			},
 		}},
 	})
