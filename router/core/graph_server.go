@@ -2304,23 +2304,20 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 }
 
 func providersActionWithTimeout(ctx context.Context, providers []datasource.Provider, action func(ctx context.Context, provider datasource.Provider) error, timeout time.Duration, timeoutMessage string) error {
-	cancellableCtx, cancel := context.WithCancel(ctx)
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
 
 	providersGroup := new(errgroup.Group)
 	for _, provider := range providers {
 		providersGroup.Go(func() error {
 			actionDone := make(chan error, 1)
 			go func() {
-				actionDone <- action(cancellableCtx, provider)
+				actionDone <- action(timeoutCtx, provider)
 			}()
 			select {
 			case err := <-actionDone:
 				return err
-			case <-timer.C:
+			case <-timeoutCtx.Done():
 				return errors.New(timeoutMessage)
 			}
 		})
