@@ -7,6 +7,7 @@ import { resolve } from 'pathe';
 import logSymbols from 'log-symbols';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../core/config.js';
+import { stripProtobufInternals } from '../../../../utils.js';
 
 type OutputFile = {
   name: string;
@@ -79,7 +80,7 @@ export default (opts: BaseCommandOptions) => {
             contract: g.contract,
           }) satisfies OutputFile[number],
       );
-      await writeFile(resolve(options.out), JSON.stringify(output));
+      await writeFile(resolve(options.out), JSON.stringify(output, stripProtobufInternals));
       return;
     }
 
@@ -88,7 +89,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.raw || options.json) {
-      console.log(JSON.stringify(filteredGraphs));
+      console.log(JSON.stringify(filteredGraphs, stripProtobufInternals));
       return;
     }
 

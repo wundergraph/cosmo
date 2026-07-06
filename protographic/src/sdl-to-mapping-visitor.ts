@@ -13,7 +13,25 @@ import {
   isObjectType,
   Kind,
 } from 'graphql';
+import { create } from '@bufbuild/protobuf';
+
 import {
+  ArgumentMappingSchema,
+  EntityMappingSchema,
+  EnumMappingSchema,
+  EnumValueMappingSchema,
+  FieldMappingSchema,
+  GRPCMappingSchema,
+  LookupFieldMappingSchema,
+  LookupMappingSchema,
+  LookupType,
+  OperationMappingSchema,
+  OperationType,
+  RequiredFieldMappingSchema,
+  TypeFieldMappingSchema,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
+import type {
   ArgumentMapping,
   EntityMapping,
   EnumMapping,
@@ -22,12 +40,11 @@ import {
   GRPCMapping,
   LookupFieldMapping,
   LookupMapping,
-  LookupType,
   OperationMapping,
-  OperationType,
   RequiredFieldMapping,
   TypeFieldMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
 import { Maybe } from 'graphql/jsutils/Maybe.js';
 import {
   createEntityLookupMethodName,
@@ -67,7 +84,7 @@ export class GraphQLToMappingVisitor {
    */
   constructor(schema: GraphQLSchema, serviceName = 'DefaultService') {
     this.schema = schema;
-    this.mapping = new GRPCMapping({
+    this.mapping = create(GRPCMappingSchema, {
       version: 1,
       service: serviceName,
       operationMappings: [],
@@ -186,7 +203,7 @@ export class GraphQLToMappingVisitor {
         }
 
         em.requiredFieldMappings.push(
-          new RequiredFieldMapping({
+          create(RequiredFieldMappingSchema, {
             fieldMapping: value.requiredFieldMapping,
             request: value.rpc.request,
             response: value.rpc.response,
@@ -236,7 +253,7 @@ export class GraphQLToMappingVisitor {
   private createEntityMapping(typeName: string, keyField: string): void {
     const rpc = createEntityLookupMethodName(typeName, keyField);
 
-    const entityMapping = new EntityMapping({
+    const entityMapping = create(EntityMappingSchema, {
       typeName,
       kind: 'entity',
       key: keyField,
@@ -352,7 +369,7 @@ export class GraphQLToMappingVisitor {
       return;
     }
 
-    const typeFieldMapping = new TypeFieldMapping({
+    const typeFieldMapping = create(TypeFieldMappingSchema, {
       type: operationTypeName,
       fieldMappings: [],
     });
@@ -384,7 +401,7 @@ export class GraphQLToMappingVisitor {
    * @param mappedName - Transformed name for use in gRPC context
    */
   private createOperationMapping(operationType: OperationType, fieldName: string, mappedName: string): void {
-    const operationMapping = new OperationMapping({
+    const operationMapping = create(OperationMappingSchema, {
       type: operationType,
       original: fieldName,
       mapped: mappedName,
@@ -398,7 +415,7 @@ export class GraphQLToMappingVisitor {
   private createLookupMapping(type: LookupType, typeName: string, field: GraphQLField<any, any>): void {
     const methodName = createResolverMethodName(typeName, field.name);
 
-    const lookupMapping = new LookupMapping({
+    const lookupMapping = create(LookupMappingSchema, {
       type,
       lookupMapping: this.createLookupFieldMapping(typeName, field),
       rpc: methodName,
@@ -463,7 +480,7 @@ export class GraphQLToMappingVisitor {
    * @param type - The GraphQL object type to process
    */
   private processObjectType(type: GraphQLObjectType): void {
-    const typeFieldMapping = new TypeFieldMapping({
+    const typeFieldMapping = create(TypeFieldMappingSchema, {
       type: type.name,
       fieldMappings: [],
     });
@@ -492,7 +509,7 @@ export class GraphQLToMappingVisitor {
    * @param type - The GraphQL input object type to process
    */
   private processInputObjectType(type: GraphQLInputObjectType): void {
-    const typeFieldMapping = new TypeFieldMapping({
+    const typeFieldMapping = create(TypeFieldMappingSchema, {
       type: type.name,
       fieldMappings: [],
     });
@@ -502,7 +519,7 @@ export class GraphQLToMappingVisitor {
     for (const fieldName in fields) {
       const field = fields[fieldName];
       // Input fields don't have args, so we create a simpler field mapping
-      const fieldMapping = new FieldMapping({
+      const fieldMapping = create(FieldMappingSchema, {
         original: field.name,
         mapped: graphqlFieldToProtoField(field.name),
         argumentMappings: [],
@@ -525,7 +542,7 @@ export class GraphQLToMappingVisitor {
    * @param type - The GraphQL enum type to process
    */
   private processEnumType(type: GraphQLEnumType): void {
-    const enumMapping = new EnumMapping({
+    const enumMapping = create(EnumMappingSchema, {
       type: type.name,
       values: [],
     });
@@ -535,7 +552,7 @@ export class GraphQLToMappingVisitor {
     // Map each enum value to its Protocol Buffer representation
     for (const enumValue of enumValues) {
       enumMapping.values.push(
-        new EnumValueMapping({
+        create(EnumValueMappingSchema, {
           original: enumValue.name,
           // Convert to UPPER_SNAKE_CASE with type name prefix for Proto enums
           mapped: graphqlEnumValueToProtoEnumValue(type.name, enumValue.name),
@@ -561,7 +578,7 @@ export class GraphQLToMappingVisitor {
     const mappedFieldName = graphqlFieldToProtoField(fieldName);
     const argumentMappings: ArgumentMapping[] = this.createArgumentMappings(field);
 
-    return new FieldMapping({
+    return create(FieldMappingSchema, {
       original: fieldName,
       mapped: mappedFieldName,
       argumentMappings,
@@ -578,7 +595,7 @@ export class GraphQLToMappingVisitor {
    * @returns The created lookup field mapping
    */
   private createLookupFieldMapping(type: string, field: GraphQLField<any, any>): LookupFieldMapping {
-    return new LookupFieldMapping({
+    return create(LookupFieldMappingSchema, {
       type,
       fieldMapping: this.createFieldMapping(field),
     });
@@ -599,7 +616,7 @@ export class GraphQLToMappingVisitor {
     if (field.args && field.args.length > 0) {
       for (const arg of field.args) {
         argumentMappings.push(
-          new ArgumentMapping({
+          create(ArgumentMappingSchema, {
             original: arg.name,
             // Convert argument names to snake_case for Protocol Buffers
             mapped: graphqlArgumentToProtoField(arg.name),

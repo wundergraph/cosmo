@@ -9,8 +9,9 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { availableParallelism } from 'node:os';
+import { fromJson, type JsonValue } from '@bufbuild/protobuf';
 import { Warning } from '@wundergraph/composition';
-import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { RouterConfigSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import WorkerPool, { Options } from 'tinypool';
 import * as Sentry from '@sentry/node';
 import { FederatedGraphDTO } from '../../types/index.js';
@@ -122,13 +123,13 @@ export function deserializeComposedGraphArtifact(
   }));
 }
 
-export function deserializeRouterExecutionConfig(routerExecutionConfigJson?: ReturnType<RouterConfig['toJson']>) {
+export function deserializeRouterExecutionConfig(routerExecutionConfigJson?: JsonValue) {
   if (!routerExecutionConfigJson) {
     return;
   }
 
   return Sentry.startSpan({ name: 'ComposeGraphsPool.deserializeRouterExecutionConfig' }, () =>
-    RouterConfig.fromJson(routerExecutionConfigJson),
+    fromJson(RouterConfigSchema, routerExecutionConfigJson),
   );
 }
 
