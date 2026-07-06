@@ -1,7 +1,7 @@
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { PromiseClient } from '@connectrpc/connect';
+import { Client } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatISO } from 'date-fns';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { QueueEvents } from 'bullmq';
@@ -36,7 +36,7 @@ import { createDeleteBatchPublishJobDetailsWorker } from '../../src/core/workers
 let dbname = '';
 
 const getCompositionCount = async (
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   fedGraphName: string,
   namespace = DEFAULT_NAMESPACE,
   excludeFeatureFlagCompositions = false,
@@ -505,7 +505,7 @@ describe('Batch publish subgraphs tests', () => {
    * recomposed once, and the feature flag must be recomposed. Verified with split-config-loading both off and on.
    */
   // eslint-disable-next-line unicorn/consistent-function-scoping
-  const runFanOutScenario = async (client: PromiseClient<typeof PlatformService>) => {
+  const runFanOutScenario = async (client: Client<typeof PlatformService>) => {
     const labelA = genUniqueLabel('teamA');
     const labelB = genUniqueLabel('teamB');
     const fedGraphA = genID('fedGraphA');

@@ -2,9 +2,12 @@ import { PopoverContentWithScrollableContent } from '@/components/popover-conten
 import { Command, CommandInput } from '@/components/ui/command';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useMemo } from 'react';
+import { clone } from '@bufbuild/protobuf';
 import {
   WorkspaceNamespace,
+  WorkspaceNamespaceSchema,
   WorkspaceFederatedGraph,
+  WorkspaceFederatedGraphSchema,
   WorkspaceSubgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Fuse from 'fuse.js';
@@ -55,7 +58,7 @@ export function WorkspaceCommandWrapper({
       }
 
       // We need to clone the namespace to avoid mutating the original object
-      const clonedWns = wns.clone();
+      const clonedWns = clone(WorkspaceNamespaceSchema, wns);
       clonedWns.graphs = [];
 
       // Apply the filter to the graphs, we need to find at least one to add the namespace to the search results
@@ -82,7 +85,7 @@ export function WorkspaceCommandWrapper({
         }
 
         // We need to clone the graph to avoid mutating the original object
-        const clonedGraph = graph.clone();
+        const clonedGraph = clone(WorkspaceFederatedGraphSchema, graph);
         clonedGraph.subgraphs = matchingSubgraphs
           .sort((a, b) => (a.score ?? 0) - (b.score ?? 0))
           .map((match) => match.item as WorkspaceSubgraph);
