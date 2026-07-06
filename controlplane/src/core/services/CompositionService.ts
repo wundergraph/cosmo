@@ -1,7 +1,12 @@
 /* eslint-disable no-labels */
 import { createHash, randomUUID } from 'node:crypto';
-import { JsonObject, PlainMessage } from '@bufbuild/protobuf';
-import { FeatureFlagRouterExecutionConfig, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { JsonObject, fromJson, toJson, toJsonString } from '@bufbuild/protobuf';
+import {
+  FeatureFlagRouterExecutionConfig,
+  FeatureFlagRouterExecutionConfigSchema,
+  RouterConfig,
+  RouterConfigSchema,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, eq, inArray } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -22,6 +27,7 @@ import {
   FederatedGraphAndCompositionResults,
   FederatedGraphDTO,
   OrganizationFeatures,
+  PlainMessage,
   SPLIT_CONFIG_LOADING_FEATURE_ID,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
@@ -644,6 +650,7 @@ export class CompositionService {
           result,
           composer,
           baseCompositionData,
+          isFeatureFlagComposition,
         });
 
         if (baseCompositionFailed) {
@@ -896,8 +903,8 @@ export class CompositionService {
       featureFlagName,
       featureFlagRouterExecutionConfig,
     ] of featureFlagRouterExecutionConfigByFeatureFlagName) {
-      const routerExecutionConfig = RouterConfig.fromJson({
-        ...(featureFlagRouterExecutionConfig.toJson() as JsonObject),
+      const routerExecutionConfig = fromJson(RouterConfigSchema, {
+        ...(toJson(FeatureFlagRouterExecutionConfigSchema, featureFlagRouterExecutionConfig) as JsonObject),
         compatibilityVersion: graph.routerCompatibilityVersion,
       });
 
@@ -1173,6 +1180,7 @@ export class CompositionService {
     result,
     composer,
     baseCompositionData,
+    isFeatureFlagComposition,
   }: {
     actorId: string;
     federatedGraph: FederatedGraphDTO;
@@ -1180,6 +1188,7 @@ export class CompositionService {
     result: ComposeAndDeployResult;
     composer: Composer;
     baseCompositionData: BaseCompositionData;
+    isFeatureFlagComposition: boolean;
   }): Promise<{
     baseCompositionFailed: boolean;
     federatedSchemaVersionId: string;
@@ -1260,6 +1269,10 @@ export class CompositionService {
         );
       }
 
+      if (isFeatureFlagComposition) {
+        baseCompositionData.schemaVersionId = baseComposition.schemaVersionId;
+      }
+
       baseCompositionData.featureFlagRouterExecutionConfigByFeatureFlagName.set(
         compositionResult.featureFlagName,
         routerConfigToFeatureFlagExecutionConfig(routerExecutionConfig),
@@ -1333,6 +1346,7 @@ export class CompositionService {
           result,
           composer,
           baseCompositionData,
+          isFeatureFlagComposition,
         });
 
         if (baseCompositionFailed) {
@@ -1456,6 +1470,7 @@ export class CompositionService {
         await this.deployFeatureFlags(
           actorId,
           graph,
+          baseCompositionData.schemaVersionId ?? '',
           baseCompositionData.featureFlagRouterExecutionConfigByFeatureFlagName,
           composer,
           result,
@@ -1589,6 +1604,7 @@ export class CompositionService {
       await this.deployFeatureFlags(
         actorId,
         graph,
+        schemaVersionId,
         featureFlagRouterExecutionConfigByFeatureFlagName,
         composer,
         result,
@@ -1599,6 +1615,7 @@ export class CompositionService {
   private async deployFeatureFlags(
     actorId: string,
     graph: FederatedGraphDTO,
+    baseCompositionSchemaVersionId: string,
     featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>,
     composer: Composer,
     result: ComposeAndDeployResult,
@@ -1608,8 +1625,8 @@ export class CompositionService {
       featureFlagName,
       featureFlagRouterExecutionConfig,
     ] of featureFlagRouterExecutionConfigByFeatureFlagName.entries()) {
-      const routerExecutionConfig = RouterConfig.fromJson({
-        ...(featureFlagRouterExecutionConfig.toJson() as JsonObject),
+      const routerExecutionConfig = fromJson(RouterConfigSchema, {
+        ...(toJson(FeatureFlagRouterExecutionConfigSchema, featureFlagRouterExecutionConfig) as JsonObject),
         compatibilityVersion: graph.routerCompatibilityVersion,
       });
 
@@ -1619,7 +1636,7 @@ export class CompositionService {
           jwtSecret: this.admissionConfig.webhookJWTSecret,
         },
         baseCompositionRouterExecutionConfig: routerExecutionConfig,
-        baseCompositionSchemaVersionId: '',
+        baseCompositionSchemaVersionId,
         blobStorage: this.blobStorage,
         featureFlagRouterExecutionConfigByFeatureFlagName: new Map(),
         federatedGraphId: graph.id,
@@ -1651,7 +1668,7 @@ export class CompositionService {
     featureFlagName: string | undefined,
     routerConfig: RouterConfig,
   ): Promise<void> {
-    const hash = createHash('sha256').update(routerConfig.toJsonString()).digest('hex');
+    const hash = createHash('sha256').update(toJsonString(RouterConfigSchema, routerConfig)).digest('hex');
 
     let featureFlag: { id: string } | undefined;
     if (featureFlagName) {

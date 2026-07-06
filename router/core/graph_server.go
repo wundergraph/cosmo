@@ -7,12 +7,15 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cespare/xxhash/v2"
@@ -27,10 +30,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
-	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
@@ -66,6 +67,7 @@ import (
 const (
 	featureFlagHeader = "X-Feature-Flag"
 	featureFlagCookie = "feature_flag"
+	providerTimeout   = 5 * time.Second
 )
 
 type (
@@ -95,7 +97,7 @@ type (
 		mux                     *chi.Mux
 		// inFlightRequests is used to track the number of requests currently being processed
 		// does not include websocket (hijacked) connections.
-		inFlightRequests *atomic.Uint64
+		inFlightRequests *atomic.Int64
 		// graphMuxList contains all graph muxes of this graph server.
 		// It's keyed by mux name (feature flag name or empty string for base graph).
 		graphMuxList            map[string]*graphMux
@@ -105,7 +107,6 @@ type (
 		prometheusEngineMetrics *rmetric.EngineMetrics
 		connectionMetrics       *rmetric.ConnectionMetrics
 		instanceData            InstanceData
-		pubSubProviders         []datasource.Provider
 		traceDialer             *TraceDialer
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
@@ -151,7 +152,7 @@ type reusedGraphMux struct {
 }
 
 // newGraphServer creates a new server instance.
-func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig.Response, proxy ProxyFunc) (*graphServer, error) {
+func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig.Response, proxy ProxyFunc) (_ *graphServer, resErr error) {
 	/* Older versions of composition will not populate a compatibility version.
 	 * Currently, all "old" router execution configurations are compatible as there have been no breaking
 	 * changes.
@@ -162,9 +163,12 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, response.Config.CompatibilityVersion)
 	}
 
-	isConnStoreEnabled := r.metricConfig.OpenTelemetry.ConnectionStats || r.metricConfig.Prometheus.ConnectionStats
+	// Active-connection tracking via TraceDialer is only needed when ConnectionStats is on.
+	// The httptrace-based network metrics attach in the RoundTripper and don't require the dialer.
+	networkStatsEnabled := r.metricConfig.OpenTelemetry.NetworkStats || r.metricConfig.Prometheus.NetworkStats
+	connectionStatsEnabled := networkStatsEnabled || r.metricConfig.OpenTelemetry.ConnectionStats || r.metricConfig.Prometheus.ConnectionStats
 	var traceDialer *TraceDialer
-	if isConnStoreEnabled {
+	if connectionStatsEnabled {
 		traceDialer = NewTraceDialer()
 	}
 
@@ -221,7 +225,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		playgroundHandler:       r.playgroundHandler,
 		traceDialer:             traceDialer,
 		baseRouterConfigVersion: response.Config.GetVersion(),
-		inFlightRequests:        &atomic.Uint64{},
+		inFlightRequests:        &atomic.Int64{},
 		graphMuxList:            make(map[string]*graphMux, 1),
 		instanceData: InstanceData{
 			HostName:      r.hostName,
@@ -230,6 +234,16 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		storageProviders:  &r.storageProviders,
 		headerPropagation: r.headerPropagation,
 	}
+
+	defer func() {
+		if resErr == nil {
+			return
+		}
+		// Shutdown the graph server to clean up resources
+		if err := s.Shutdown(routerCtx); err != nil {
+			s.logger.Error("Failed to shut down graph server during failed-build cleanup", zap.Error(err))
+		}
+	}()
 
 	baseOtelAttributes := []attribute.KeyValue{
 		otel.WgRouterVersion.String(Version),
@@ -266,7 +280,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		}
 	}
 
-	if isConnStoreEnabled {
+	if connectionStatsEnabled {
 		connStore, err := rmetric.NewConnectionMetricStore(
 			s.logger,
 			nil,
@@ -375,7 +389,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 
 	featureFlagConfigMap := response.Config.FeatureFlagConfigs.GetConfigByFeatureFlagName()
 	if len(featureFlagConfigMap) > 0 {
-		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
+		s.logger.Info("Feature flags enabled", zap.Strings("flags", slices.Sorted(maps.Keys(featureFlagConfigMap))))
 	}
 
 	multiGraphHandler, ffReusedMuxes, err := s.buildMultiGraphHandler(buildMultiGraphHandlerOptions{
@@ -621,6 +635,8 @@ func (s *graphServer) buildMultiGraphHandler(
 		featureFlagToMux[featureFlagName] = gm.mux
 	}
 
+	baseMux := opts.baseMux // Capture only baseMux so the closure does not hold the whole opts struct
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract the feature flag and run the corresponding mux
 		// 1. From the request header
@@ -640,7 +656,7 @@ func (s *graphServer) buildMultiGraphHandler(
 			return
 		}
 
-		opts.baseMux.ServeHTTP(w, r)
+		baseMux.ServeHTTP(w, r)
 	}, reused, nil
 }
 
@@ -655,6 +671,7 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 		s.otlpMeterProvider,
 		s.engineStats,
 		&s.metricConfig.OpenTelemetry.EngineStats,
+		s.metricConfig.OpenTelemetry.ResolverStats,
 	)
 	if err != nil {
 		return err
@@ -666,6 +683,7 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 		s.promMeterProvider,
 		s.engineStats,
 		&s.metricConfig.Prometheus.EngineStats,
+		s.metricConfig.Prometheus.ResolverStats,
 	)
 	if err != nil {
 		return err
@@ -678,8 +696,9 @@ type graphMux struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	mux    *chi.Mux
-	reused atomic.Bool
+	mux       *chi.Mux
+	reused    atomic.Bool
+	finalized atomic.Bool
 
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
 	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
@@ -697,6 +716,8 @@ type graphMux struct {
 	otelCacheMetrics          *rmetric.CacheMetrics
 	streamMetricStore         rmetric.StreamMetricStore
 	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
+
+	pubSubProviders []datasource.Provider
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -728,7 +749,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 				s.planFallbackCache.Set(item.Key, item.Value, item.Value.planningDuration)
 			}
 		}
-		s.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
+		s.planCache, err = ristretto.NewCache(planCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create planner cache: %w", err)
 		}
@@ -744,7 +765,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			Metrics:            true,
 		}
 
-		s.persistedOperationCache, _ = ristretto.NewCache[uint64, NormalizationCacheEntry](persistedOperationCacheConfig)
+		s.persistedOperationCache, _ = ristretto.NewCache(persistedOperationCacheConfig)
 	}
 
 	if srv.engineExecutionConfiguration.EnableNormalizationCache && srv.engineExecutionConfiguration.NormalizationCacheSize > 0 {
@@ -755,7 +776,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			IgnoreInternalCost: true,
 			BufferItems:        64,
 		}
-		s.normalizationCache, err = ristretto.NewCache[uint64, NormalizationCacheEntry](normalizationCacheConfig)
+		s.normalizationCache, err = ristretto.NewCache(normalizationCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create normalization cache: %w", err)
 		}
@@ -767,7 +788,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			IgnoreInternalCost: true,
 			BufferItems:        64,
 		}
-		s.variablesNormalizationCache, err = ristretto.NewCache[uint64, VariablesNormalizationCacheEntry](variablesNormalizationCacheConfig)
+		s.variablesNormalizationCache, err = ristretto.NewCache(variablesNormalizationCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create variables normalization cache: %w", err)
 		}
@@ -779,7 +800,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			IgnoreInternalCost: true,
 			BufferItems:        64,
 		}
-		s.remapVariablesCache, err = ristretto.NewCache[uint64, RemapVariablesCacheEntry](remapVariablesCacheConfig)
+		s.remapVariablesCache, err = ristretto.NewCache(remapVariablesCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create remap variables cache: %w", err)
 		}
@@ -793,7 +814,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			IgnoreInternalCost: true,
 			BufferItems:        64,
 		}
-		s.validationCache, err = ristretto.NewCache[uint64, bool](validationCacheConfig)
+		s.validationCache, err = ristretto.NewCache(validationCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create validation cache: %w", err)
 		}
@@ -807,7 +828,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			IgnoreInternalCost: true,
 			BufferItems:        64,
 		}
-		s.complexityCalculationCache, err = ristretto.NewCache[uint64, ComplexityCacheEntry](complexityCalculationCacheConfig)
+		s.complexityCalculationCache, err = ristretto.NewCache(complexityCalculationCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create query depth cache: %w", err)
 		}
@@ -851,7 +872,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			BufferItems:        64,
 			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
 		}
-		s.operationHashCache, err = ristretto.NewCache[uint64, string](operationHashCacheConfig)
+		s.operationHashCache, err = ristretto.NewCache(operationHashCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create operation hash cache: %w", err)
 		}
@@ -957,7 +978,31 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 	return nil
 }
 
+// addPubsubProviders appends providers to s. Currently not thread-safe.
+func (s *graphMux) addPubsubProviders(providers []datasource.Provider) {
+	s.pubSubProviders = append(s.pubSubProviders, providers...)
+}
+
+// startPubsubProviders starts all pubsub providers of s.
+func (s *graphMux) startPubsubProviders(ctx context.Context) error {
+	return providersActionWithTimeout(ctx, s.pubSubProviders, func(ctx context.Context, provider datasource.Provider) error {
+		return provider.Startup(ctx)
+	}, providerTimeout, "pubsub provider startup timed out")
+}
+
+// stopPubsubProviders stops all pubsub providers of s.
+func (s *graphMux) stopPubsubProviders(ctx context.Context) error {
+	return providersActionWithTimeout(ctx, s.pubSubProviders, func(ctx context.Context, provider datasource.Provider) error {
+		return provider.Shutdown(ctx)
+	}, providerTimeout, "pubsub provider shutdown timed out")
+}
+
 func (s *graphMux) Shutdown(ctx context.Context) error {
+	// Make sure we do not shutdown the mux multiple times
+	if !s.finalized.CompareAndSwap(false, true) {
+		return nil
+	}
+
 	// cancel the graph muxes context to close its resources like websocket connections, resolvers, etc.
 	s.cancel()
 
@@ -997,16 +1042,15 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	if s.streamMetricStore != nil {
-		if aErr := s.streamMetricStore.Shutdown(ctx); aErr != nil {
-			err = errors.Join(err, aErr)
-		}
-	}
-
 	if s.prometheusMetricsExporter != nil {
 		if aErr := s.prometheusMetricsExporter.Shutdown(ctx); aErr != nil {
 			err = errors.Join(err, aErr)
 		}
+	}
+
+	pErr := s.stopPubsubProviders(ctx)
+	if pErr != nil {
+		err = errors.Join(err, pErr)
 	}
 
 	if err != nil {
@@ -1021,7 +1065,7 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 // The mux is appended internally to the graph server's list of muxes to clean up later when the server is swapped.
 func (s *graphServer) buildGraphMux(
 	opts BuildGraphMuxOptions,
-) (*graphMux, error) {
+) (_ *graphMux, resErr error) {
 	graphMuxCtx, graphMuxCancel := context.WithCancel(s.routerCtx)
 
 	gm := &graphMux{
@@ -1030,6 +1074,21 @@ func (s *graphServer) buildGraphMux(
 		metricStore:       rmetric.NewNoopMetrics(),
 		streamMetricStore: rmetric.NewNoopStreamMetricStore(),
 	}
+
+	// A failed mux isn't in s.graphMuxList yet (added on success below), so the graph
+	// server's Shutdown won't see it. Clean it up here to avoid leaking its callbacks,
+	// context and caches.
+	defer func() {
+		if resErr == nil {
+			return
+		}
+
+		cleanupCtx, cancel := context.WithTimeout(s.routerCtx, time.Second*30)
+		defer cancel()
+		if cErr := gm.Shutdown(cleanupCtx); cErr != nil {
+			s.logger.Error("Failed to clean up partially-built graph mux after build error", zap.Error(cErr))
+		}
+	}()
 
 	httpRouter := chi.NewRouter()
 
@@ -1085,10 +1144,12 @@ func (s *graphServer) buildGraphMux(
 		// but in this case we use the same metric store
 		otlpOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.OpenTelemetry.Enabled,
+			ResolverStats:        s.metricConfig.OpenTelemetry.ResolverStats,
 			CostStats:            s.metricConfig.OpenTelemetry.CostStats,
 		}
 		promOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.Prometheus.Enabled,
+			ResolverStats:        s.metricConfig.Prometheus.ResolverStats,
 			CostStats:            s.metricConfig.Prometheus.CostStats,
 		}
 
@@ -1498,9 +1559,17 @@ func (s *graphServer) buildGraphMux(
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
-	s.pubSubProviders = providers
-	if pubSubStartupErr := s.startupPubSubProviders(s.graphServerCtx); pubSubStartupErr != nil {
-		return nil, pubSubStartupErr
+	if s.engineStats != nil && executor.Resolver != nil {
+		s.engineStats.RegisterResolver(executor.Resolver)
+		context.AfterFunc(graphMuxCtx, func() {
+			s.engineStats.UnregisterResolver(executor.Resolver)
+		})
+	}
+
+	gm.addPubsubProviders(providers)
+	pErr := gm.startPubsubProviders(s.graphServerCtx)
+	if pErr != nil {
+		return nil, pErr
 	}
 
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
@@ -1527,8 +1596,9 @@ func (s *graphServer) buildGraphMux(
 		ApolloRouterCompatibilityFlags:                         s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
-		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
-		CostControl:                                            s.securityConfiguration.CostControl,
+		EnableDefer:      s.engineExecutionConfiguration.EnableDefer,
+		ComplexityLimits: s.securityConfiguration.ComplexityLimits,
+		CostControl:      s.securityConfiguration.CostControl,
 	})
 
 	if opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled() {
@@ -1734,6 +1804,7 @@ func (s *graphServer) buildGraphMux(
 		EnableResponseHeaderPropagation: s.headerPropagation.HasResponseRules(),
 		EnableCostResponseHeaders:       s.securityConfiguration.CostControl != nil && s.securityConfiguration.CostControl.ExposeHeaders,
 		EngineStats:                     s.engineStats,
+		MetricStore:                     gm.metricStore,
 		TracerProvider:                  s.tracerProvider,
 		Authorizer:                      NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:        s.subgraphErrorPropagation,
@@ -1874,7 +1945,7 @@ func (s *graphServer) buildGraphMux(
 
 					// Counting like this is safe because according to the go http.ServeHTTP documentation
 					// the requests is guaranteed to be finished when ServeHTTP returns
-					defer s.inFlightRequests.Sub(1)
+					defer s.inFlightRequests.Add(-1)
 				}
 
 				handler.ServeHTTP(w, r)
@@ -2100,6 +2171,38 @@ func (s *graphServer) wait(ctx context.Context) error {
 	}
 }
 
+// metricsFlushTimeout bounds the single, central flush of the shared meter
+// providers during graph server shutdown.
+const metricsFlushTimeout = 30 * time.Second
+
+// flushMeterProviders flushes the OTLP and Prometheus meter providers once. These
+// providers are shared by every metric store (request, connection, stream,
+// engine, runtime), so a single flush drains all of their metrics.
+func (s *graphServer) flushMeterProviders(ctx context.Context) error {
+	wg := &sync.WaitGroup{}
+
+	var otlpErr error
+	var promErr error
+
+	if s.otlpMeterProvider != nil {
+		wg.Go(func() {
+			if err := s.otlpMeterProvider.ForceFlush(ctx); err != nil {
+				otlpErr = errors.Join(otlpErr, fmt.Errorf("failed to flush otlp metrics: %w", err))
+			}
+		})
+	}
+	if s.promMeterProvider != nil {
+		wg.Go(func() {
+			if err := s.promMeterProvider.ForceFlush(ctx); err != nil {
+				promErr = errors.Join(promErr, fmt.Errorf("failed to flush prometheus metrics: %w", err))
+			}
+		})
+	}
+	wg.Wait()
+
+	return errors.Join(otlpErr, promErr)
+}
+
 // Shutdown gracefully shutdown the server and waits for all in-flight requests to finish.
 // After all requests are done, it will shut down the metric store and runtime metrics.
 // Shutdown does cancel the context after all non-hijacked requests such as WebSockets has been handled.
@@ -2124,6 +2227,16 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		zap.String("grace_period", s.routerGracePeriod.String()),
 		zap.String("config_version", s.baseRouterConfigVersion),
 	)
+
+	// Flush the meter providers exactly once, with their own timeout,
+	// before tearing down the individual metric stores.
+	// As all the stores share the same meter providers, we only need to flush once
+	// before initiating the shutdown of the individual stores.
+	flushCtx, flushCancel := context.WithTimeout(ctx, metricsFlushTimeout)
+	if err := s.flushMeterProviders(flushCtx); err != nil {
+		finalErr = errors.Join(finalErr, fmt.Errorf("failed to flush metrics: %w", err))
+	}
+	flushCancel()
 
 	// Ensure that we don't wait indefinitely for shutdown
 	if s.routerGracePeriod > 0 {
@@ -2180,11 +2293,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		subgraphTransport.CloseIdleConnections()
 	}
 
-	// Shutdown pubsub providers
-	if err := s.shutdownPubSubProviders(ctx); err != nil {
-		finalErr = errors.Join(finalErr, err)
-	}
-
 	if s.connector != nil {
 		s.logger.Debug("Stopping old plugins")
 		if err := s.connector.StopAllProviders(); err != nil {
@@ -2195,48 +2303,21 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	return finalErr
 }
 
-// startupPubSubProviders starts all pubsub providers
-// It returns an error if any of the providers fail to start
-// or if some providers takes to long to start
-func (s *graphServer) startupPubSubProviders(ctx context.Context) error {
-	// Default timeout for pubsub provider startup
-	const defaultStartupTimeout = 5 * time.Second
-
-	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.Provider) error {
-		return provider.Startup(ctx)
-	}, defaultStartupTimeout, "pubsub provider startup timed out")
-}
-
-// shutdownPubSubProviders shuts down all pubsub providers
-// It returns an error if any of the providers fail to shutdown
-// or if some providers takes to long to shutdown
-func (s *graphServer) shutdownPubSubProviders(ctx context.Context) error {
-	// Default timeout for pubsub provider shutdown
-	const defaultShutdownTimeout = 5 * time.Second
-
-	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.Provider) error {
-		return provider.Shutdown(ctx)
-	}, defaultShutdownTimeout, "pubsub provider shutdown timed out")
-}
-
-func (s *graphServer) providersActionWithTimeout(ctx context.Context, action func(ctx context.Context, provider datasource.Provider) error, timeout time.Duration, timeoutMessage string) error {
-	cancellableCtx, cancel := context.WithCancel(ctx)
+func providersActionWithTimeout(ctx context.Context, providers []datasource.Provider, action func(ctx context.Context, provider datasource.Provider) error, timeout time.Duration, timeoutMessage string) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
-
 	providersGroup := new(errgroup.Group)
-	for _, provider := range s.pubSubProviders {
+	for _, provider := range providers {
 		providersGroup.Go(func() error {
 			actionDone := make(chan error, 1)
 			go func() {
-				actionDone <- action(cancellableCtx, provider)
+				actionDone <- action(timeoutCtx, provider)
 			}()
 			select {
 			case err := <-actionDone:
 				return err
-			case <-timer.C:
+			case <-timeoutCtx.Done():
 				return errors.New(timeoutMessage)
 			}
 		})

@@ -7,6 +7,8 @@ import { resolve } from 'pathe';
 import pc from 'picocolors';
 import pupa from 'pupa';
 import Spinner from 'ora';
+import { toJsonString } from '@bufbuild/protobuf';
+import { GRPCMappingSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { compileGraphQLToMapping, compileGraphQLToProto } from '@wundergraph/protographic';
 import { camelCase, upperFirst } from 'lodash-es';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
@@ -94,7 +96,10 @@ export default (opts: BaseCommandOptions) => {
 
       await writeFile(resolve(srcDir, 'schema.graphql'), pupa(PluginTemplates.schemaGraphql, { name }));
       const mapping = compileGraphQLToMapping(PluginTemplates.schemaGraphql, serviceName);
-      await writeFile(resolve(generatedDir, 'mapping.json'), JSON.stringify(mapping, null, 2));
+      await writeFile(
+        resolve(generatedDir, 'mapping.json'),
+        toJsonString(GRPCMappingSchema, mapping, { prettySpaces: 2 }),
+      );
       await writeFile(resolve(tempDir, 'Makefile'), pupa(PluginTemplates.makefile, { originalPluginName }));
 
       await writeFile(resolve(tempDir, '.gitignore'), PluginTemplates.gitignore);

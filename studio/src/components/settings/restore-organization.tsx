@@ -68,7 +68,7 @@ export const RestoreOrganization = () => {
               <Button variant="outline" isLoading={isPending} onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button isLoading={isPending} onClick={() => mutate({ userID: user?.id })}>
+              <Button isLoading={isPending} onClick={() => mutate({})}>
                 Restore this organization
               </Button>
             </div>

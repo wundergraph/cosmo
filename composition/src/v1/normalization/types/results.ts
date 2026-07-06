@@ -2,6 +2,11 @@ import { type DirectiveName } from '../../../types/types';
 import { type ExecutionMultiFailure, type ExecutionSingleFailure, type ExecutionSuccess } from '../../../types/results';
 import { type SchemaDefinitionNode, type SchemaExtensionNode } from 'graphql';
 import { type LinkImportData } from './types';
+import {
+  CompositeOutputData,
+  UnionDefinitionData,
+  type ValidProvidesParentData,
+} from '../../../schema-building/types/types';
 
 export interface ExtractLinkArgsSuccess extends ExecutionSuccess {
   importDataByDirectiveName: Map<DirectiveName, LinkImportData>;
@@ -34,3 +39,9 @@ export interface ExtractLinkImportObjectSuccess extends ExecutionSuccess {
 }
 
 export type ExtractLinkImportObjectResult = ExecutionMultiFailure | ExtractLinkImportObjectSuccess;
+
+export interface FieldSetParentSuccess extends ExecutionSuccess {
+  data: ValidProvidesParentData;
+}
+
+export type FieldSetParentResult = ExecutionSingleFailure | FieldSetParentSuccess;
