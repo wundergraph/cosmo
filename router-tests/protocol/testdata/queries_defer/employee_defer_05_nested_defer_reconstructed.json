@@ -1,0 +1,52 @@
+{
+  "data": {
+    "employee": {
+      "details": {
+        "forename": "Jens",
+        "location": {
+          "language": "German"
+        }
+      },
+      "hobbies": [
+        {
+          "__typename": "Exercise"
+        },
+        {
+          "__typename": "Gaming"
+        },
+        {
+          "__typename": "Other"
+        },
+        {
+          "__typename": "Programming"
+        },
+        {
+          "__typename": "Travelling"
+        }
+      ],
+      "id": 1
+    },
+    "teammates": [
+      {
+        "details": {
+          "forename": "Björn"
+        },
+        "id": 4,
+        "products": [
+          "FINANCE",
+          "HUMAN_RESOURCES",
+          "MARKETING"
+        ]
+      },
+      {
+        "details": {
+          "forename": "Alexandra"
+        },
+        "id": 11,
+        "products": [
+          "FINANCE"
+        ]
+      }
+    ]
+  }
+}

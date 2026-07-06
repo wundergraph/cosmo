@@ -11,7 +11,6 @@ import {
   INTERFACE,
   invalidDirectiveError,
   invalidInlineFragmentTypeConditionErrorMessage,
-  invalidInlineFragmentTypeErrorMessage,
   invalidProvidesOrRequiresDirectivesError,
   invalidSelectionOnUnionErrorMessage,
   invalidSelectionSetDefinitionErrorMessage,
@@ -383,7 +382,8 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On field "Entity.age":\n -` + invalidInlineFragmentTypeErrorMessage('... on I { name }', [], 'I', 'Entity'),
+          ` On field "Entity.age":\n -` +
+            invalidInlineFragmentTypeConditionErrorMessage('... on I { name }', [], 'I', OBJECT, 'Entity', INTERFACE),
         ]),
       );
       expect(warnings).toHaveLength(0);
@@ -479,6 +479,7 @@ describe('openfed_FieldSet tests', () => {
               OBJECT,
               INTERFACE,
               'I',
+              OBJECT,
             ),
         ]),
       );
@@ -539,6 +540,7 @@ describe('openfed_FieldSet tests', () => {
               'AnotherObject',
               UNION,
               'U',
+              OBJECT,
             ),
         ]),
       );

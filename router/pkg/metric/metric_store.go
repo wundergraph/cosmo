@@ -31,6 +31,8 @@ const (
 
 	OperationPlanningTime = "router.graphql.operation.planning_time" // Time taken to plan the operation
 
+	ResolverAcquireDurationHistogram = "router.graphql.resolver.acquire_duration" // Time spent waiting to acquire a resolver concurrency slot
+
 	OperationCostEstimatedHistogram = "router.graphql.operation.cost.estimated" // Estimated operation cost
 	OperationCostActualHistogram    = "router.graphql.operation.cost.actual"    // Actual operation cost after execution
 
@@ -75,6 +77,12 @@ var (
 	OperationPlanningTimeHistogramOptions     = []otelmetric.Float64HistogramOption{
 		otelmetric.WithUnit("ms"),
 		otelmetric.WithDescription(OperationPlanningTimeHistogramDescription),
+	}
+
+	ResolverAcquireDurationHistogramDescription = "Time spent waiting to acquire a GraphQL resolver concurrency slot, in milliseconds"
+	ResolverAcquireDurationHistogramOptions     = []otelmetric.Float64HistogramOption{
+		otelmetric.WithUnit("ms"),
+		otelmetric.WithDescription(ResolverAcquireDurationHistogramDescription),
 	}
 
 	costBucketBounds = []float64{
@@ -139,10 +147,13 @@ type (
 
 		logger               *zap.Logger
 		routerBaseAttributes otelmetric.ObserveOption
+
+		resolverStats bool
 	}
 
 	MetricOpts struct {
 		EnableCircuitBreaker bool
+		ResolverStats        bool
 		CostStats            config.CostStats
 	}
 
@@ -156,6 +167,7 @@ type (
 		MeasureLatency(ctx context.Context, latency float64, opts ...otelmetric.RecordOption)
 		MeasureRequestError(ctx context.Context, opts ...otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime float64, opts ...otelmetric.RecordOption)
+		MeasureResolverAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption)
 		SetCircuitBreakerState(ctx context.Context, status bool, opts ...otelmetric.RecordOption)
 		MeasureCircuitBreakerShortCircuit(ctx context.Context, opts ...otelmetric.AddOption)
@@ -175,6 +187,7 @@ type (
 		MeasureLatency(ctx context.Context, latency time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureRequestError(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
+		MeasureResolverAcquireDuration(ctx context.Context, duration time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		MeasureCircuitBreakerShortCircuit(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
@@ -197,6 +210,7 @@ func NewStore(otlpOpts MetricOpts, promOpts MetricOpts, opts ...Option) (Store, 
 	}
 
 	h.baseAttributesOpt = otelmetric.WithAttributes(h.baseAttributes...)
+	h.resolverStats = otlpOpts.ResolverStats || promOpts.ResolverStats
 
 	// Create OTLP metrics exported to OTEL
 	otlpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider, h.routerBaseAttributes, otlpOpts)
@@ -412,6 +426,29 @@ func (h *Metrics) MeasureOperationPlanningTime(ctx context.Context, planningTime
 	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
 
 	h.otlpRequestMetrics.MeasureOperationPlanningTime(ctx, elapsedTime, opts...)
+}
+
+func (h *Metrics) MeasureResolverAcquireDuration(ctx context.Context, duration time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
+	if !h.resolverStats {
+		return
+	}
+
+	opts := []otelmetric.RecordOption{h.baseAttributesOpt, opt}
+
+	elapsedTime := float64(duration) / float64(time.Millisecond)
+
+	if len(sliceAttr) == 0 {
+		h.promRequestMetrics.MeasureResolverAcquireDuration(ctx, elapsedTime, opts...)
+	} else {
+		explodeRecordInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.RecordOption) {
+			newOpts = append(newOpts, opts...)
+			h.promRequestMetrics.MeasureResolverAcquireDuration(ctx, elapsedTime, newOpts...)
+		})
+	}
+
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+
+	h.otlpRequestMetrics.MeasureResolverAcquireDuration(ctx, elapsedTime, opts...)
 }
 
 func (h *Metrics) MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {

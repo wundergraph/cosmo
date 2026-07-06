@@ -1,0 +1,13 @@
+fragment ConsultancyLead on Consultancy {
+  lead {
+    __typename
+    id
+    derivedMood
+  }
+}
+
+query RequiresMood {
+  products {
+    ...ConsultancyLead @defer
+  }
+}
