@@ -1,4 +1,4 @@
-import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import type { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { Config, SubgraphMetaData } from './types.js';
 
 export type HandleRouterConfigParams = {

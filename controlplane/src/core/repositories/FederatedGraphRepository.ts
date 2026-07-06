@@ -1,5 +1,6 @@
 /* eslint-disable no-labels */
 import { KeyObject } from 'node:crypto';
+import type { Warning } from '@wundergraph/composition';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import {
   and,
@@ -23,7 +24,6 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { uid } from 'uid/secure';
-import type { Warning } from '@wundergraph/composition';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
@@ -38,6 +38,7 @@ import {
   users,
 } from '../../db/schema.js';
 import {
+  ComposeAndDeployResult,
   DateRange,
   FederatedGraphChangelogDTO,
   FederatedGraphDTO,
@@ -45,19 +46,18 @@ import {
   GraphApiKeyDTO,
   Label,
   RouterRequestKeysDTO,
-  ComposeAndDeployResult,
 } from '../../types/index.js';
 import { CompositionSubgraphRecord } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
+import type { CompositionService } from '../services/CompositionService.js';
+import { RBACEvaluator } from '../services/RBACEvaluator.js';
+import { traced } from '../tracing.js';
 import {
   applyIdpNamespaceGate,
   checkIfLabelMatchersChanged,
   normalizeLabelMatchers,
   normalizeLabels,
 } from '../util.js';
-import { RBACEvaluator } from '../services/RBACEvaluator.js';
-import { traced } from '../tracing.js';
-import type { CompositionService } from '../services/CompositionService.js';
 import { ContractRepository } from './ContractRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';

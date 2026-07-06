@@ -1,11 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import type {
-  GenerateRouterTokenRequest,
-  GenerateRouterTokenResponse,
+import {
+  type GenerateRouterTokenRequest,
+  GenerateRouterTokenResponseSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { PartialMessage } from '@bufbuild/protobuf';
 import { join, resolve } from 'pathe';
 
 export const FIXTURES_DIR_PATH = resolve('./test/fixtures');
@@ -16,7 +16,7 @@ export const CLIENT_SDL = 'type Query {\n  users: [User]!\n}\n\ntype User {\n  i
 export function mockGenerateRouterToken(
   splitConfigsEnabled: boolean,
   _: GenerateRouterTokenRequest,
-): PartialMessage<GenerateRouterTokenResponse> {
+): MessageInitShape<typeof GenerateRouterTokenResponseSchema> {
   return {
     response: {
       code: EnumStatusCode.OK,

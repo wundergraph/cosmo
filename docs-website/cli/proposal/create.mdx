@@ -38,6 +38,7 @@ The `npx wgc proposal create` command allows you to create a new proposal for fe
 
   - Format: `name:subgraph-name,schemaPath:path-to-schema,labels:"key=value key=value"`
   - Example: `--new-subgraph name:reviews,schemaPath:./schemas/reviews.graphql,labels:"team=B department=engineering"`
+  - The labels must match the label matchers of the federated graph the proposal is for. Otherwise the command fails, since the new subgraph would not be part of that federated graph.
 
 - `--deleted-subgraph <name>`: Specify a subgraph to be deleted in the proposal. Can be specified multiple times.
   - Example: `--deleted-subgraph legacy-products`
