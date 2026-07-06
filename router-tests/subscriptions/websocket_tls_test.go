@@ -10,11 +10,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// TestWebSocketOverTLS guards against https://github.com/wundergraph/cosmo/issues/1838:
-// when the router serves TLS, an upgraded wss connection is a *tls.Conn, which
-// the epoll/kqueue poller must be able to resolve to a socket fd. If it cannot,
-// addConnection rejects the connection with "unable to get socket fd for conn"
-// and the subscription never receives data.
 func TestWebSocketOverTLS(t *testing.T) {
 	t.Parallel()
 
