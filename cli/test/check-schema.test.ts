@@ -3,10 +3,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Command } from 'commander';
 import { beforeEach, afterEach, describe, expect, onTestFinished, test, vi, type MockInstance } from 'vitest';
-import { type PartialMessage } from '@bufbuild/protobuf';
-import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { CheckSubgraphSchemaResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { createClient, createRouterTransport } from '@connectrpc/connect';
+import { create } from '@bufbuild/protobuf';
+import {
+  CheckSubgraphSchemaResponseSchema,
+  IsGitHubAppInstalledResponseSchema,
+  PlatformService,
+  type CheckSubgraphSchemaResponse,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Client } from '../src/core/client/client.js';
 import { config } from '../src/core/config.js';
@@ -18,14 +22,15 @@ vi.mock('../src/core/config.js', async (importOriginal) => {
   return { ...mod, config: { ...mod.config } };
 });
 
-function createMockTransport(response: PartialMessage<CheckSubgraphSchemaResponse>) {
+function createMockTransport(response: CheckSubgraphSchemaResponse) {
   return createRouterTransport(({ service }) => {
     service(PlatformService, {
       checkSubgraphSchema: () => response,
-      isGitHubAppInstalled: () => ({
-        response: { code: EnumStatusCode.OK },
-        isInstalled: false,
-      }),
+      isGitHubAppInstalled: () =>
+        create(IsGitHubAppInstalledResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          isInstalled: false,
+        }),
     });
   });
 }
@@ -43,7 +48,7 @@ function resetVcsConfig() {
 }
 
 async function runCheck(
-  response: PartialMessage<CheckSubgraphSchemaResponse>,
+  response: CheckSubgraphSchemaResponse,
   opts: {
     limit?: number | string;
     schema?: string | null;
@@ -75,7 +80,7 @@ async function runCheck(
   }
 
   const client: Client = {
-    platform: createPromiseClient(PlatformService, createMockTransport(response)),
+    platform: createClient(PlatformService, createMockTransport(response)),
   };
   const program = new Command();
   program.addCommand(CheckSchema({ client }));
@@ -120,7 +125,7 @@ describe('stdout', () => {
   });
 
   test('no changes logs no changes, no lint issues, and no graph pruning issues', async () => {
-    await runCheck({ response: { code: EnumStatusCode.OK } });
+    await runCheck(create(CheckSubgraphSchemaResponseSchema, { response: { code: EnumStatusCode.OK } }));
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected no changes.'));
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected no lint issues.'));
@@ -128,10 +133,12 @@ describe('stdout', () => {
   });
 
   test('proposal match warning is logged before no-changes message', async () => {
-    await runCheck({
-      response: { code: EnumStatusCode.OK },
-      proposalMatchMessage: 'Schema does not match approved proposal',
-    });
+    await runCheck(
+      create(CheckSubgraphSchemaResponseSchema, {
+        response: { code: EnumStatusCode.OK },
+        proposalMatchMessage: 'Schema does not match approved proposal',
+      }),
+    );
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Warning: Proposal match failed'));
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Schema does not match approved proposal'));
@@ -139,11 +146,13 @@ describe('stdout', () => {
   });
 
   test('no operations affected succeeds and logs message when no errors', async () => {
-    await runCheck({
-      response: { code: EnumStatusCode.OK },
-      nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
-      operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-    });
+    await runCheck(
+      create(CheckSubgraphSchemaResponseSchema, {
+        response: { code: EnumStatusCode.OK },
+        nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
+        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+      }),
+    );
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('No operations were affected by this schema change.'));
     expect(process.exitCode).not.toBe(1);
@@ -151,26 +160,30 @@ describe('stdout', () => {
 
   test('no operations affected fails when composition errors are present', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
-        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-        compositionErrors: [
-          { message: 'Composition failed', federatedGraphName: 'my-graph', namespace: 'default', featureFlag: '' },
-        ],
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
+          operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+          compositionErrors: [
+            { message: 'Composition failed', federatedGraphName: 'my-graph', namespace: 'default', featureFlag: '' },
+          ],
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('No operations were affected by this schema change.'));
   });
 
   test('all operations safe succeeds and logs safe operations count', async () => {
-    await runCheck({
-      response: { code: EnumStatusCode.OK },
-      nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
-      operationUsageStats: { totalOperations: 5, safeOperations: 5, firstSeenAt: '', lastSeenAt: '' },
-      clientTrafficCheckSkipped: false,
-    });
+    await runCheck(
+      create(CheckSubgraphSchemaResponseSchema, {
+        response: { code: EnumStatusCode.OK },
+        nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
+        operationUsageStats: { totalOperations: 5, safeOperations: 5, firstSeenAt: '', lastSeenAt: '' },
+        clientTrafficCheckSkipped: false,
+      }),
+    );
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('5 operations were considered safe due to overrides.'));
     expect(process.exitCode).not.toBe(1);
@@ -178,16 +191,18 @@ describe('stdout', () => {
 
   test('breaking changes logs count and fails', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
-        operationUsageStats: {
-          totalOperations: 3,
-          safeOperations: 0,
-          firstSeenAt: '2024-01-01T00:00:00Z',
-          lastSeenAt: '2024-01-02T00:00:00Z',
-        },
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
+          operationUsageStats: {
+            totalOperations: 3,
+            safeOperations: 0,
+            firstSeenAt: '2024-01-01T00:00:00Z',
+            lastSeenAt: '2024-01-02T00:00:00Z',
+          },
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(String(logSpy.mock.calls[1]?.[0])).toMatch(/Found .*1.* breaking changes\./);
@@ -195,16 +210,18 @@ describe('stdout', () => {
 
   test('breaking changes reports impacted and safe operation counts', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
-        operationUsageStats: {
-          totalOperations: 3,
-          safeOperations: 1,
-          firstSeenAt: '2024-01-01T00:00:00Z',
-          lastSeenAt: '2024-01-02T00:00:00Z',
-        },
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
+          operationUsageStats: {
+            totalOperations: 3,
+            safeOperations: 1,
+            firstSeenAt: '2024-01-01T00:00:00Z',
+            lastSeenAt: '2024-01-02T00:00:00Z',
+          },
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(String(logSpy.mock.calls[1]?.[0])).toMatch(/2.*operations impacted\./);
@@ -213,17 +230,19 @@ describe('stdout', () => {
 
   test('breaking changes logs client activity timestamps when traffic check not skipped', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
-        operationUsageStats: {
-          totalOperations: 3,
-          safeOperations: 0,
-          firstSeenAt: '2024-01-01T00:00:00Z',
-          lastSeenAt: '2024-01-02T00:00:00Z',
-        },
-        clientTrafficCheckSkipped: false,
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
+          operationUsageStats: {
+            totalOperations: 3,
+            safeOperations: 0,
+            firstSeenAt: '2024-01-01T00:00:00Z',
+            lastSeenAt: '2024-01-02T00:00:00Z',
+          },
+          clientTrafficCheckSkipped: false,
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(String(logSpy.mock.calls[1]?.[0])).toMatch(/Found client activity between/);
@@ -232,7 +251,7 @@ describe('stdout', () => {
   test('breaking changes does not log client activity timestamps when skip-traffic-check is used', async () => {
     await expect(
       runCheck(
-        {
+        create(CheckSubgraphSchemaResponseSchema, {
           response: { code: EnumStatusCode.OK },
           breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
           operationUsageStats: {
@@ -242,7 +261,7 @@ describe('stdout', () => {
             lastSeenAt: '2024-01-02T00:00:00Z',
           },
           clientTrafficCheckSkipped: true,
-        },
+        }),
         { skipTrafficCheck: true },
       ),
     ).rejects.toThrow();
@@ -251,11 +270,13 @@ describe('stdout', () => {
   });
 
   test('non-breaking changes succeeds and logs detected changes table', async () => {
-    await runCheck({
-      response: { code: EnumStatusCode.OK },
-      nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'New field added', isBreaking: false }],
-      operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-    });
+    await runCheck(
+      create(CheckSubgraphSchemaResponseSchema, {
+        response: { code: EnumStatusCode.OK },
+        nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'New field added', isBreaking: false }],
+        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+      }),
+    );
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected the following subgraph schema changes:'));
     expect(process.exitCode).not.toBe(1);
@@ -263,27 +284,31 @@ describe('stdout', () => {
 
   test('composition errors logs table and fails', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        compositionErrors: [
-          { message: 'Type mismatch error', federatedGraphName: 'my-graph', namespace: 'default', featureFlag: '' },
-        ],
-        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          compositionErrors: [
+            { message: 'Type mismatch error', federatedGraphName: 'my-graph', namespace: 'default', featureFlag: '' },
+          ],
+          operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected composition errors:'));
   });
 
   test('composition warnings logs table and succeeds', async () => {
-    await runCheck({
-      response: { code: EnumStatusCode.OK },
-      nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
-      compositionWarnings: [
-        { message: 'Deprecation warning', federatedGraphName: 'my-graph', namespace: 'default', featureFlag: '' },
-      ],
-      operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-    });
+    await runCheck(
+      create(CheckSubgraphSchemaResponseSchema, {
+        response: { code: EnumStatusCode.OK },
+        nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
+        compositionWarnings: [
+          { message: 'Deprecation warning', federatedGraphName: 'my-graph', namespace: 'default', featureFlag: '' },
+        ],
+        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+      }),
+    );
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected composition warnings:'));
     expect(process.exitCode).not.toBe(1);
@@ -291,34 +316,38 @@ describe('stdout', () => {
 
   test('lint errors logs table and fails', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        lintErrors: [
-          {
-            lintRuleType: 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
-            message: 'Field name should be camelCase',
-            issueLocation: { line: 10, column: 1, endLine: 10, endColumn: 20 },
-          },
-        ],
-        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          lintErrors: [
+            {
+              lintRuleType: 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
+              message: 'Field name should be camelCase',
+              issueLocation: { line: 10, column: 1, endLine: 10, endColumn: 20 },
+            },
+          ],
+          operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected lint issues:'));
   });
 
   test('lint warnings logs table and succeeds', async () => {
-    await runCheck({
-      response: { code: EnumStatusCode.OK },
-      lintWarnings: [
-        {
-          lintRuleType: 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
-          message: 'Consider using camelCase',
-          issueLocation: { line: 5, column: 1, endLine: 5, endColumn: 10 },
-        },
-      ],
-      operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-    });
+    await runCheck(
+      create(CheckSubgraphSchemaResponseSchema, {
+        response: { code: EnumStatusCode.OK },
+        lintWarnings: [
+          {
+            lintRuleType: 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
+            message: 'Consider using camelCase',
+            issueLocation: { line: 5, column: 1, endLine: 5, endColumn: 10 },
+          },
+        ],
+        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+      }),
+    );
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected lint issues:'));
     expect(process.exitCode).not.toBe(1);
@@ -326,38 +355,42 @@ describe('stdout', () => {
 
   test('graph pruning errors logs table and fails', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        graphPruneErrors: [
-          {
-            graphPruningRuleType: 'UNUSED_FIELDS',
-            federatedGraphName: 'my-graph',
-            fieldPath: 'Query.deprecatedField',
-            message: 'Field is unused',
-            issueLocation: { line: 15, column: 1, endLine: 15, endColumn: 30 },
-          },
-        ],
-        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          graphPruneErrors: [
+            {
+              graphPruningRuleType: 'UNUSED_FIELDS',
+              federatedGraphName: 'my-graph',
+              fieldPath: 'Query.deprecatedField',
+              message: 'Field is unused',
+              issueLocation: { line: 15, column: 1, endLine: 15, endColumn: 30 },
+            },
+          ],
+          operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected graph pruning issues:'));
   });
 
   test('graph pruning warnings logs table and succeeds', async () => {
-    await runCheck({
-      response: { code: EnumStatusCode.OK },
-      graphPruneWarnings: [
-        {
-          graphPruningRuleType: 'UNUSED_FIELDS',
-          federatedGraphName: 'my-graph',
-          fieldPath: 'Query.deprecatedField',
-          message: 'Field might be unused',
-          issueLocation: { line: 20, column: 1, endLine: 20, endColumn: 25 },
-        },
-      ],
-      operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-    });
+    await runCheck(
+      create(CheckSubgraphSchemaResponseSchema, {
+        response: { code: EnumStatusCode.OK },
+        graphPruneWarnings: [
+          {
+            graphPruningRuleType: 'UNUSED_FIELDS',
+            federatedGraphName: 'my-graph',
+            fieldPath: 'Query.deprecatedField',
+            message: 'Field might be unused',
+            issueLocation: { line: 20, column: 1, endLine: 20, endColumn: 25 },
+          },
+        ],
+        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+      }),
+    );
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected graph pruning issues:'));
     expect(process.exitCode).not.toBe(1);
@@ -365,12 +398,14 @@ describe('stdout', () => {
 
   test('linked traffic check failure fails the check', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
-        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-        isLinkedTrafficCheckFailed: true,
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
+          operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+          isLinkedTrafficCheckFailed: true,
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('target subgraph check has failed'));
@@ -378,12 +413,14 @@ describe('stdout', () => {
 
   test('linked pruning check failure fails the check', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
-        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-        isLinkedPruningCheckFailed: true,
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
+          operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+          isLinkedPruningCheckFailed: true,
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('target subgraph check has failed'));
@@ -391,12 +428,14 @@ describe('stdout', () => {
 
   test('extension check error fails and includes error message in output', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
-        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-        checkExtensionErrorMessage: 'Extension validation failed',
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
+          operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+          checkExtensionErrorMessage: 'Extension validation failed',
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(stderrSpy).toHaveBeenCalledWith(
@@ -406,7 +445,7 @@ describe('stdout', () => {
 
   test('row limit exceeded logs truncation warning', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
@@ -420,7 +459,7 @@ describe('stdout', () => {
           graphPruneErrors: 0,
           graphPruneWarnings: 0,
         },
-      },
+      }),
       { limit: 50 },
     );
 
@@ -431,17 +470,19 @@ describe('stdout', () => {
 
   test('composedSchemaBreakingChanges alone fails the check', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        composedSchemaBreakingChanges: [
-          {
-            changeType: 'FIELD_REMOVED',
-            message: 'Field removed at federated level',
-            federatedGraphName: 'my-graph',
-            isBreaking: true,
-          },
-        ],
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          composedSchemaBreakingChanges: [
+            {
+              changeType: 'FIELD_REMOVED',
+              message: 'Field removed at federated level',
+              federatedGraphName: 'my-graph',
+              isBreaking: true,
+            },
+          ],
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('Schema check failed'));
@@ -449,17 +490,19 @@ describe('stdout', () => {
 
   test('composedSchemaBreakingChanges logs federated graph breaking changes section', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        composedSchemaBreakingChanges: [
-          {
-            changeType: 'FIELD_REMOVED',
-            message: 'Field removed at federated level',
-            federatedGraphName: 'my-graph',
-            isBreaking: true,
-          },
-        ],
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          composedSchemaBreakingChanges: [
+            {
+              changeType: 'FIELD_REMOVED',
+              message: 'Field removed at federated level',
+              federatedGraphName: 'my-graph',
+              isBreaking: true,
+            },
+          ],
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(logSpy).toHaveBeenCalledWith(
@@ -469,17 +512,19 @@ describe('stdout', () => {
 
   test('composedSchemaBreakingChanges suppresses no-changes message', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        composedSchemaBreakingChanges: [
-          {
-            changeType: 'FIELD_REMOVED',
-            message: 'Field removed at federated level',
-            federatedGraphName: 'my-graph',
-            isBreaking: true,
-          },
-        ],
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          composedSchemaBreakingChanges: [
+            {
+              changeType: 'FIELD_REMOVED',
+              message: 'Field removed at federated level',
+              federatedGraphName: 'my-graph',
+              isBreaking: true,
+            },
+          ],
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('Detected no changes.'));
@@ -487,25 +532,27 @@ describe('stdout', () => {
 
   test('combined breaking changes count in traffic warning includes composedSchemaBreakingChanges', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
-        composedSchemaBreakingChanges: [
-          { changeType: 'TYPE_CHANGED', message: 'Type changed', federatedGraphName: 'my-graph', isBreaking: true },
-          {
-            changeType: 'FIELD_TYPE_CHANGED',
-            message: 'Field type changed',
-            federatedGraphName: 'my-graph',
-            isBreaking: true,
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
+          composedSchemaBreakingChanges: [
+            { changeType: 'TYPE_CHANGED', message: 'Type changed', federatedGraphName: 'my-graph', isBreaking: true },
+            {
+              changeType: 'FIELD_TYPE_CHANGED',
+              message: 'Field type changed',
+              federatedGraphName: 'my-graph',
+              isBreaking: true,
+            },
+          ],
+          operationUsageStats: {
+            totalOperations: 3,
+            safeOperations: 0,
+            firstSeenAt: '2024-01-01T00:00:00Z',
+            lastSeenAt: '2024-01-02T00:00:00Z',
           },
-        ],
-        operationUsageStats: {
-          totalOperations: 3,
-          safeOperations: 0,
-          firstSeenAt: '2024-01-01T00:00:00Z',
-          lastSeenAt: '2024-01-02T00:00:00Z',
-        },
-      }),
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(String(logSpy.mock.calls[1]?.[0])).toMatch(/Found .*3.* breaking changes\./);
@@ -513,24 +560,26 @@ describe('stdout', () => {
 
   test('composedSchemaBreakingChanges without subgraph breaking changes counts in traffic warning', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.OK },
-        composedSchemaBreakingChanges: [
-          { changeType: 'TYPE_CHANGED', message: 'Type changed', federatedGraphName: 'my-graph', isBreaking: true },
-          {
-            changeType: 'FIELD_TYPE_CHANGED',
-            message: 'Field type changed',
-            federatedGraphName: 'my-graph',
-            isBreaking: true,
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.OK },
+          composedSchemaBreakingChanges: [
+            { changeType: 'TYPE_CHANGED', message: 'Type changed', federatedGraphName: 'my-graph', isBreaking: true },
+            {
+              changeType: 'FIELD_TYPE_CHANGED',
+              message: 'Field type changed',
+              federatedGraphName: 'my-graph',
+              isBreaking: true,
+            },
+          ],
+          operationUsageStats: {
+            totalOperations: 3,
+            safeOperations: 0,
+            firstSeenAt: '2024-01-01T00:00:00Z',
+            lastSeenAt: '2024-01-02T00:00:00Z',
           },
-        ],
-        operationUsageStats: {
-          totalOperations: 3,
-          safeOperations: 0,
-          firstSeenAt: '2024-01-01T00:00:00Z',
-          lastSeenAt: '2024-01-02T00:00:00Z',
-        },
-      }),
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(String(logSpy.mock.calls[1]?.[0])).toMatch(/Found .*2.* breaking changes\./);
@@ -539,7 +588,7 @@ describe('stdout', () => {
   test('row limit exceeded triggered by composedSchemaBreakingChanges count', async () => {
     await expect(
       runCheck(
-        {
+        create(CheckSubgraphSchemaResponseSchema, {
           response: { code: EnumStatusCode.OK },
           composedSchemaBreakingChanges: [
             { changeType: 'FIELD_REMOVED', message: 'Field removed', federatedGraphName: 'my-graph', isBreaking: true },
@@ -555,7 +604,7 @@ describe('stdout', () => {
             graphPruneWarnings: 0,
             composedSchemaBreakingChanges: 60,
           },
-        },
+        }),
         { limit: 50 },
       ),
     ).rejects.toThrow();
@@ -569,13 +618,15 @@ describe('stdout', () => {
   test('vcs context is constructed when vcs config fields are set', async () => {
     setVcsConfig({ author: 'test-author', commitSha: 'abc123', branch: 'main' });
 
-    await runCheck({ response: { code: EnumStatusCode.OK } });
+    await runCheck(create(CheckSubgraphSchemaResponseSchema, { response: { code: EnumStatusCode.OK } }));
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected no changes.'));
   });
 
   test('missing schema and delete flag logs error and exits', async () => {
-    await expect(runCheck({ response: { code: EnumStatusCode.OK } }, { schema: null })).rejects.toThrow();
+    await expect(
+      runCheck(create(CheckSubgraphSchemaResponseSchema, { response: { code: EnumStatusCode.OK } }), { schema: null }),
+    ).rejects.toThrow();
 
     expect(stderrSpy).toHaveBeenCalledWith(
       expect.stringContaining("'--schema <path-to-schema>' or '--delete' not specified"),
@@ -584,41 +635,54 @@ describe('stdout', () => {
 
   test('non-existent schema file logs error and exits', async () => {
     await expect(
-      runCheck({ response: { code: EnumStatusCode.OK } }, { schema: 'test/fixtures/nonexistent.graphql' }),
+      runCheck(create(CheckSubgraphSchemaResponseSchema, { response: { code: EnumStatusCode.OK } }), {
+        schema: 'test/fixtures/nonexistent.graphql',
+      }),
     ).rejects.toThrow();
 
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('does not exist'));
   });
 
   test('delete flag sends check without schema', async () => {
-    await runCheck({ response: { code: EnumStatusCode.OK } }, { schema: null, delete: true });
+    await runCheck(create(CheckSubgraphSchemaResponseSchema, { response: { code: EnumStatusCode.OK } }), {
+      schema: null,
+      delete: true,
+    });
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected no changes.'));
   });
 
   test('invalid limit logs error and exits', async () => {
-    await expect(runCheck({ response: { code: EnumStatusCode.OK } }, { limit: 'abc' })).rejects.toThrow();
+    await expect(
+      runCheck(create(CheckSubgraphSchemaResponseSchema, { response: { code: EnumStatusCode.OK } }), { limit: 'abc' }),
+    ).rejects.toThrow();
 
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('limit must be a valid number'));
   });
 
   test('limit of zero logs error and exits', async () => {
-    await expect(runCheck({ response: { code: EnumStatusCode.OK } }, { limit: 0 })).rejects.toThrow();
+    await expect(
+      runCheck(create(CheckSubgraphSchemaResponseSchema, { response: { code: EnumStatusCode.OK } }), { limit: 0 }),
+    ).rejects.toThrow();
 
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('limit must be a valid number'));
   });
 
   test('limit exceeding max value logs error and exits', async () => {
-    await expect(runCheck({ response: { code: EnumStatusCode.OK } }, { limit: 10_001 })).rejects.toThrow();
+    await expect(
+      runCheck(create(CheckSubgraphSchemaResponseSchema, { response: { code: EnumStatusCode.OK } }), { limit: 10_001 }),
+    ).rejects.toThrow();
 
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('limit must be a valid number'));
   });
 
   test('ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL logs proposal match failed and sets exit code', async () => {
-    await runCheck({
-      response: { code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL },
-      proposalMatchMessage: 'Schema does not match approved proposal',
-    });
+    await runCheck(
+      create(CheckSubgraphSchemaResponseSchema, {
+        response: { code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL },
+        proposalMatchMessage: 'Schema does not match approved proposal',
+      }),
+    );
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Error: Proposal match failed'));
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Schema does not match approved proposal'));
@@ -627,9 +691,11 @@ describe('stdout', () => {
 
   test('ERR_INVALID_SUBGRAPH_SCHEMA logs early failure message with details and exits', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA, details: 'Syntax error in schema' },
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA, details: 'Syntax error in schema' },
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(logSpy).toHaveBeenCalledWith(
@@ -640,9 +706,11 @@ describe('stdout', () => {
 
   test('default error status logs failed to perform check with details and exits', async () => {
     await expect(
-      runCheck({
-        response: { code: EnumStatusCode.ERR, details: 'Internal server error' },
-      }),
+      runCheck(
+        create(CheckSubgraphSchemaResponseSchema, {
+          response: { code: EnumStatusCode.ERR, details: 'Internal server error' },
+        }),
+      ),
     ).rejects.toThrow();
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to perform the check operation.'));
@@ -669,7 +737,9 @@ describe('json output', () => {
   });
 
   test('no changes outputs JSON with success status and proposals', async () => {
-    await runCheck({ response: { code: EnumStatusCode.OK } }, { json: true });
+    await runCheck(create(CheckSubgraphSchemaResponseSchema, { response: { code: EnumStatusCode.OK } }), {
+      json: true,
+    });
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('success');
@@ -678,10 +748,10 @@ describe('json output', () => {
 
   test('proposal match warning outputs JSON with proposals message', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         proposalMatchMessage: 'Schema does not match approved proposal',
-      },
+      }),
       { json: true },
     );
 
@@ -691,11 +761,11 @@ describe('json output', () => {
 
   test('no operations affected outputs JSON with success status and traffic info', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-      },
+      }),
       { json: true },
     );
 
@@ -706,12 +776,12 @@ describe('json output', () => {
 
   test('all operations safe outputs JSON with success status', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
         operationUsageStats: { totalOperations: 5, safeOperations: 5, firstSeenAt: '', lastSeenAt: '' },
         clientTrafficCheckSkipped: false,
-      },
+      }),
       { json: true },
     );
 
@@ -722,7 +792,7 @@ describe('json output', () => {
 
   test('breaking changes outputs JSON with error status and breaking changes array', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
         operationUsageStats: {
@@ -731,7 +801,7 @@ describe('json output', () => {
           firstSeenAt: '2024-01-01T00:00:00Z',
           lastSeenAt: '2024-01-02T00:00:00Z',
         },
-      },
+      }),
       { json: true },
     );
 
@@ -745,11 +815,11 @@ describe('json output', () => {
 
   test('non-breaking changes outputs JSON with success status and nonBreaking changes', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'New field added', isBreaking: false }],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-      },
+      }),
       { json: true },
     );
 
@@ -761,13 +831,13 @@ describe('json output', () => {
 
   test('composition errors outputs JSON with error status and composition.errors populated', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         compositionErrors: [
           { message: 'Type mismatch error', federatedGraphName: 'my-graph', namespace: 'default', featureFlag: '' },
         ],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-      },
+      }),
       { json: true },
     );
 
@@ -780,14 +850,14 @@ describe('json output', () => {
 
   test('composition warnings outputs JSON with success status and composition.warnings populated', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
         compositionWarnings: [
           { message: 'Deprecation warning', federatedGraphName: 'my-graph', namespace: 'default', featureFlag: '' },
         ],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-      },
+      }),
       { json: true },
     );
 
@@ -800,7 +870,7 @@ describe('json output', () => {
 
   test('lint errors outputs JSON with error status and lint.errors populated', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         lintErrors: [
           {
@@ -810,7 +880,7 @@ describe('json output', () => {
           },
         ],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-      },
+      }),
       { json: true },
     );
 
@@ -823,7 +893,7 @@ describe('json output', () => {
 
   test('lint warnings outputs JSON with success status and lint.warnings populated', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         lintWarnings: [
           {
@@ -833,7 +903,7 @@ describe('json output', () => {
           },
         ],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-      },
+      }),
       { json: true },
     );
 
@@ -846,7 +916,7 @@ describe('json output', () => {
 
   test('graph pruning errors outputs JSON with error status and graphPrune errors', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         graphPruneErrors: [
           {
@@ -858,7 +928,7 @@ describe('json output', () => {
           },
         ],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-      },
+      }),
       { json: true },
     );
 
@@ -870,7 +940,7 @@ describe('json output', () => {
 
   test('graph pruning warnings outputs JSON with success status', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         graphPruneWarnings: [
           {
@@ -882,7 +952,7 @@ describe('json output', () => {
           },
         ],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
-      },
+      }),
       { json: true },
     );
 
@@ -895,12 +965,12 @@ describe('json output', () => {
 
   test('linked traffic check failure outputs JSON with error status and traffic message', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
         isLinkedTrafficCheckFailed: true,
-      },
+      }),
       { json: true },
     );
 
@@ -911,12 +981,12 @@ describe('json output', () => {
 
   test('linked pruning check failure outputs JSON with error status and graphPrune defined', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
         isLinkedPruningCheckFailed: true,
-      },
+      }),
       { json: true },
     );
 
@@ -927,12 +997,12 @@ describe('json output', () => {
 
   test('extension check error outputs JSON with extensions message', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
         checkExtensionErrorMessage: 'Extension validation failed',
-      },
+      }),
       { json: true },
     );
 
@@ -943,7 +1013,7 @@ describe('json output', () => {
 
   test('row limit exceeded outputs JSON with exceededRowLimit true', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
@@ -957,7 +1027,7 @@ describe('json output', () => {
           graphPruneErrors: 0,
           graphPruneWarnings: 0,
         },
-      },
+      }),
       { json: true, limit: 50 },
     );
 
@@ -970,10 +1040,10 @@ describe('json output', () => {
     // When no operationUsageStats is returned (server omits it when traffic check is skipped),
     // the traffic field should be absent from JSON output entirely
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         // No changes, no operationUsageStats — clean check with traffic check skipped
-      },
+      }),
       { json: true, skipTrafficCheck: true },
     );
 
@@ -986,7 +1056,7 @@ describe('json output', () => {
     // When clientTrafficCheckSkipped: true and no breaking changes, traffic should be absent —
     // consistent with stdout which also prints nothing in this case
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
         operationUsageStats: {
@@ -996,7 +1066,7 @@ describe('json output', () => {
           lastSeenAt: '2024-01-02T00:00:00Z',
         },
         clientTrafficCheckSkipped: true,
-      },
+      }),
       { json: true, skipTrafficCheck: true },
     );
 
@@ -1007,10 +1077,10 @@ describe('json output', () => {
 
   test('ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL outputs JSON with error status and details', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL },
         proposalMatchMessage: 'Schema does not match approved proposal',
-      },
+      }),
       { json: true },
     );
 
@@ -1022,9 +1092,9 @@ describe('json output', () => {
 
   test('ERR_INVALID_SUBGRAPH_SCHEMA outputs JSON with error status and details', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA, details: 'Syntax error in schema' },
-      },
+      }),
       { json: true },
     );
 
@@ -1036,9 +1106,9 @@ describe('json output', () => {
 
   test('default error status outputs JSON with error status and details', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.ERR, details: 'Internal server error' },
-      },
+      }),
       { json: true },
     );
 
@@ -1052,7 +1122,10 @@ describe('json output', () => {
     const tmpFile = join(tmpdir(), `cosmo-check-test-${Date.now()}.json`);
     onTestFinished(() => rmSync(tmpFile, { force: true }));
 
-    await runCheck({ response: { code: EnumStatusCode.OK } }, { json: true, outFile: tmpFile });
+    await runCheck(create(CheckSubgraphSchemaResponseSchema, { response: { code: EnumStatusCode.OK } }), {
+      json: true,
+      outFile: tmpFile,
+    });
 
     const written = JSON.parse(readFileSync(tmpFile, 'utf8')) as JsonCheckSchemaOutputDescriptor;
     expect(written.status).toBe('success');
@@ -1063,7 +1136,10 @@ describe('json output', () => {
     const tmpFile = join(tmpdir(), `cosmo-check-test-${Date.now()}.json`);
     onTestFinished(() => rmSync(tmpFile, { force: true }));
 
-    await runCheck({ response: { code: EnumStatusCode.OK } }, { json: true, outFile: tmpFile });
+    await runCheck(create(CheckSubgraphSchemaResponseSchema, { response: { code: EnumStatusCode.OK } }), {
+      json: true,
+      outFile: tmpFile,
+    });
 
     const raw = readFileSync(tmpFile, 'utf8');
     expect(raw).toContain('\n');
@@ -1074,7 +1150,9 @@ describe('json output', () => {
     onTestFinished(() => rmSync(tmpFile, { force: true }));
 
     await runCheck(
-      { response: { code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA, details: 'Syntax error' } },
+      create(CheckSubgraphSchemaResponseSchema, {
+        response: { code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA, details: 'Syntax error' },
+      }),
       { json: true, outFile: tmpFile },
     );
 
@@ -1085,7 +1163,7 @@ describe('json output', () => {
 
   test('composedSchemaBreakingChanges outputs JSON with error status and composedSchemaBreakingChanges array', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         composedSchemaBreakingChanges: [
           {
@@ -1095,7 +1173,7 @@ describe('json output', () => {
             isBreaking: true,
           },
         ],
-      },
+      }),
       { json: true },
     );
 
@@ -1107,7 +1185,7 @@ describe('json output', () => {
 
   test('composedSchemaBreakingChanges combined with subgraph breaking changes outputs combined count in traffic message', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
         composedSchemaBreakingChanges: [
@@ -1125,7 +1203,7 @@ describe('json output', () => {
           firstSeenAt: '2024-01-01T00:00:00Z',
           lastSeenAt: '2024-01-02T00:00:00Z',
         },
-      },
+      }),
       { json: true },
     );
 
@@ -1138,7 +1216,7 @@ describe('json output', () => {
 
   test('composedSchemaBreakingChanges without traffic outputs JSON with error status', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         composedSchemaBreakingChanges: [
           {
@@ -1154,7 +1232,7 @@ describe('json output', () => {
             isBreaking: true,
           },
         ],
-      },
+      }),
       { json: true },
     );
 
@@ -1166,7 +1244,7 @@ describe('json output', () => {
 
   test('skip-traffic-check with composedSchemaBreakingChanges omits traffic and operationUsageStats from JSON', async () => {
     await runCheck(
-      {
+      create(CheckSubgraphSchemaResponseSchema, {
         response: { code: EnumStatusCode.OK },
         composedSchemaBreakingChanges: [
           {
@@ -1178,7 +1256,7 @@ describe('json output', () => {
         ],
         operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
         clientTrafficCheckSkipped: true,
-      },
+      }),
       { json: true, skipTrafficCheck: true },
     );
 
@@ -1192,7 +1270,9 @@ describe('json output', () => {
     const tmpFile = join(tmpdir(), `cosmo-check-test-${Date.now()}.json`);
     onTestFinished(() => rmSync(tmpFile, { force: true }));
 
-    await runCheck({ response: { code: EnumStatusCode.OK } }, { outFile: tmpFile });
+    await runCheck(create(CheckSubgraphSchemaResponseSchema, { response: { code: EnumStatusCode.OK } }), {
+      outFile: tmpFile,
+    });
 
     const written = JSON.parse(readFileSync(tmpFile, 'utf8')) as JsonCheckSchemaOutputDescriptor;
     expect(written.status).toBe('success');

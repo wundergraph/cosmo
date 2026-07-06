@@ -1,6 +1,9 @@
 import {
   type ContractTagOptions,
   type FederationSuccess,
+  inaccessibleQueryRootTypeError,
+  intersectingExcludeAndIncludeContractTagsError,
+  noQueryRootTypeError,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
@@ -8,14 +11,22 @@ import {
 import { describe, expect, test } from 'vitest';
 import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION, TAG_DIRECTIVE } from './utils/utils';
 import {
+  createSubgraph,
   federateSubgraphsContractSuccess,
   federateSubgraphsSuccess,
   federateSubgraphsWithContractsSuccess,
+  getContractFailure,
+  getContractSuccess,
   normalizeString,
   schemaToSortedNormalizedString,
 } from '../utils/utils';
 
 describe('Contract tests', () => {
+  const contractNameA = 'contractA';
+  const contractNameB = 'contractB';
+  const exclude = 'exclude';
+  const include = 'include';
+
   describe('Exclude tags', () => {
     const excludedTagsOne: ContractTagOptions = {
       tagNamesToExclude: new Set<string>(['one', 'includeMe']),
@@ -1066,6 +1077,654 @@ describe('Contract tests', () => {
           `,
         ),
       );
+    });
+
+    test('that a Union member is removed from a Union if the Object is not included by tag', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type ObjectA {
+          a: ID
+        }
+        
+        type ObjectB @tag(name: "include") {
+          a: ID
+        }
+        
+        type Query @tag(name: "include") {
+          a: ID
+        }
+        
+        union Union @tag(name: "include") = ObjectA | ObjectB
+      `,
+      );
+      const { federationResultByContractName } = federateSubgraphsWithContractsSuccess(
+        [subgraphA],
+        new Map<string, ContractTagOptions>([
+          [contractNameA, { tagNamesToExclude: new Set<string>(), tagNamesToInclude: new Set<string>([include]) }],
+        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema, warnings } = getContractSuccess(
+        federationResultByContractName,
+        contractNameA,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            INACCESSIBLE_DIRECTIVE +
+            TAG_DIRECTIVE +
+            `
+          type ObjectA @inaccessible {
+            a: ID
+          }
+          
+          type ObjectB @tag(name: "include") {
+            a: ID
+          }
+          
+          type Query @tag(name: "include") {
+            a: ID
+          }
+          
+          union Union @tag(name: "include") = ObjectA | ObjectB
+          `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema!)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          type ObjectB {
+            a: ID
+          }
+          
+          type Query {
+            a: ID
+          }
+          
+          union Union = ObjectB
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+  });
+
+  describe('Include and exclude tags', () => {
+    test('that an Enum can be included while one of its values are excluded', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        enum Enum @tag(name: "include") {
+          A
+          B @tag(name: "exclude")
+        }
+        
+        type Query @tag(name: "include") {
+          a: ID
+        }
+      `,
+      );
+      const { federationResultByContractName } = federateSubgraphsWithContractsSuccess(
+        [subgraphA],
+        new Map<string, ContractTagOptions>([
+          [
+            contractNameA,
+            { tagNamesToExclude: new Set<string>([exclude]), tagNamesToInclude: new Set<string>([include]) },
+          ],
+        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema, warnings } = getContractSuccess(
+        federationResultByContractName,
+        contractNameA,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            INACCESSIBLE_DIRECTIVE +
+            TAG_DIRECTIVE +
+            `
+            enum Enum @tag(name: "include") {
+              A
+              B @tag(name: "exclude") @inaccessible
+            }
+            
+            type Query @tag(name: "include") {
+              a: ID
+            }
+          `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema!)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+            enum Enum {
+              A
+            }
+            
+            type Query {
+              a: ID
+            }
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an Input can be included while one of its fields are excluded', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        input Input @tag(name: "include") {
+          a: ID
+          b: ID @tag(name: "exclude")
+        }
+        
+        type Query @tag(name: "include") {
+          a: ID
+        }
+      `,
+      );
+      const { federationResultByContractName } = federateSubgraphsWithContractsSuccess(
+        [subgraphA],
+        new Map<string, ContractTagOptions>([
+          [
+            contractNameA,
+            { tagNamesToExclude: new Set<string>([exclude]), tagNamesToInclude: new Set<string>([include]) },
+          ],
+        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema, warnings } = getContractSuccess(
+        federationResultByContractName,
+        contractNameA,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            INACCESSIBLE_DIRECTIVE +
+            TAG_DIRECTIVE +
+            `
+          input Input @tag(name: "include") {
+            a: ID
+            b: ID @tag(name: "exclude") @inaccessible
+          }
+            
+          type Query @tag(name: "include") {
+            a: ID
+          }
+          `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema!)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          input Input {
+            a: ID
+          }
+            
+          type Query {
+            a: ID
+          }
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an Interface can be included while one of its fields are excluded', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        interface Interface @tag(name: "include") {
+          a: ID
+          b: ID @tag(name: "exclude")
+        }
+        
+        type Query @tag(name: "include") {
+          a: ID
+        }
+      `,
+      );
+      const { federationResultByContractName } = federateSubgraphsWithContractsSuccess(
+        [subgraphA],
+        new Map<string, ContractTagOptions>([
+          [
+            contractNameA,
+            { tagNamesToExclude: new Set<string>([exclude]), tagNamesToInclude: new Set<string>([include]) },
+          ],
+        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema, warnings } = getContractSuccess(
+        federationResultByContractName,
+        contractNameA,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            INACCESSIBLE_DIRECTIVE +
+            TAG_DIRECTIVE +
+            `
+          interface Interface @tag(name: "include") {
+            a: ID
+            b: ID @tag(name: "exclude") @inaccessible
+          }
+            
+          type Query @tag(name: "include") {
+            a: ID
+          }
+          `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema!)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          interface Interface {
+            a: ID
+          }
+            
+          type Query {
+            a: ID
+          }
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an Object can be included while one of its fields are excluded', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        enum Enum {
+          A
+        }
+        
+        input Input {
+          a: ID
+        }
+        
+        interface Interface {
+          a: ID
+        }
+        
+        type Object {
+          a: ID
+        }
+        
+        type Query @tag(name: "include") {
+          a: ID
+          b: ID @tag(name: "exclude")
+        }
+        
+        scalar Scalar
+        
+        union Union = Object
+      `,
+      );
+      const { federationResultByContractName } = federateSubgraphsWithContractsSuccess(
+        [subgraphA],
+        new Map<string, ContractTagOptions>([
+          [
+            contractNameA,
+            { tagNamesToExclude: new Set<string>([exclude]), tagNamesToInclude: new Set<string>([include]) },
+          ],
+        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema, warnings } = getContractSuccess(
+        federationResultByContractName,
+        contractNameA,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            INACCESSIBLE_DIRECTIVE +
+            TAG_DIRECTIVE +
+            `
+            enum Enum @inaccessible {
+              A
+            }
+            
+            input Input @inaccessible {
+              a: ID
+            }
+            
+            interface Interface @inaccessible {
+              a: ID
+            }
+            
+            type Object @inaccessible {
+              a: ID
+            }
+            
+            type Query @tag(name: "include") {
+              a: ID
+              b: ID @tag(name: "exclude") @inaccessible
+            }
+            
+                        
+            scalar Scalar @inaccessible
+            
+            union Union @inaccessible = Object
+          `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema!)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+            type Query {
+              a: ID
+            }
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that errors are returned if the last Query field is excluded', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query @tag(name: "include") {
+          a: ID @tag(name: "exclude")
+        }
+      `,
+      );
+      const { federationResultByContractName } = federateSubgraphsWithContractsSuccess(
+        [subgraphA],
+        new Map<string, ContractTagOptions>([
+          [
+            contractNameA,
+            { tagNamesToExclude: new Set<string>([exclude]), tagNamesToInclude: new Set<string>([include]) },
+          ],
+        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const { errors, warnings } = getContractFailure(federationResultByContractName, contractNameA);
+      expect(errors).toHaveLength(2);
+      expect(errors).toStrictEqual([inaccessibleQueryRootTypeError, noQueryRootTypeError()]);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that all tags are respected', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        
+        type ObjectA @tag(name: "tag-a") @tag(name: "tag-c") {
+          a: Float
+          b: Float
+          c: Float
+          d: Float
+          e: Float
+        }
+        
+        type Query {
+          """Check to see if a discount code exists and is available"""
+          a(input: Input!): ObjectB @tag(name: "tag-a") @tag(name: "tag-c")
+          x: ID @tag(name: "tag-c")
+          y: ID @tag(name: "tag-b")
+        }
+        
+        input Input @tag(name: "tag-a") @tag(name: "tag-c") {
+          a: [String!]!
+          b: [String!]!
+          c: String!
+        }
+        
+        type ObjectB @tag(name: "tag-a") @tag(name: "tag-c") {
+          a: Boolean!
+          b: String @tag(name: "tag-b")
+          c: ObjectA
+        }
+      `,
+      );
+      const { federationResultByContractName } = federateSubgraphsWithContractsSuccess(
+        [subgraphA],
+        new Map<string, ContractTagOptions>([
+          [
+            contractNameA,
+            {
+              tagNamesToExclude: new Set<string>(),
+              tagNamesToInclude: new Set<string>(['tag-a', 'tag-b']),
+            },
+          ],
+          [
+            contractNameB,
+            {
+              tagNamesToExclude: new Set<string>(['tag-b']),
+              tagNamesToInclude: new Set<string>(['tag-c']),
+            },
+          ],
+        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const {
+        federatedGraphSchema: routerSchemaA,
+        federatedGraphClientSchema: clientSchemaA,
+        warnings: warningsA,
+      } = getContractSuccess(federationResultByContractName, contractNameA);
+      expect(schemaToSortedNormalizedString(routerSchemaA)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            INACCESSIBLE_DIRECTIVE +
+            TAG_DIRECTIVE +
+            `
+          
+          input Input @tag(name: "tag-a") @tag(name: "tag-c") {
+            a: [String!]!
+            b: [String!]!
+            c: String!
+          }
+          
+          type ObjectA @tag(name: "tag-a") @tag(name: "tag-c") {
+            a: Float
+            b: Float
+            c: Float
+            d: Float
+            e: Float
+          }
+          
+          type ObjectB @tag(name: "tag-a") @tag(name: "tag-c") {
+            a: Boolean!
+            b: String @tag(name: "tag-b")
+            c: ObjectA
+          }
+          
+          type Query {
+            """Check to see if a discount code exists and is available"""
+            a(input: Input!): ObjectB @tag(name: "tag-a") @tag(name: "tag-c")
+            x: ID @tag(name: "tag-c") @inaccessible
+            y: ID @tag(name: "tag-b")
+          }
+          `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(clientSchemaA)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          input Input {
+            a: [String!]!
+            b: [String!]!
+            c: String!
+          }
+          
+          type ObjectA {
+            a: Float
+            b: Float
+            c: Float
+            d: Float
+            e: Float
+          }
+          
+          type ObjectB {
+            a: Boolean!
+            b: String
+            c: ObjectA
+          }
+          
+          type Query {
+            """Check to see if a discount code exists and is available"""
+            a(input: Input!): ObjectB
+            y: ID
+          }
+          `,
+        ),
+      );
+      expect(warningsA).toHaveLength(0);
+      const {
+        federatedGraphSchema: routerSchemaB,
+        federatedGraphClientSchema: clientSchemaB,
+        warnings: warningsB,
+      } = getContractSuccess(federationResultByContractName, contractNameB);
+      expect(schemaToSortedNormalizedString(routerSchemaB)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            INACCESSIBLE_DIRECTIVE +
+            TAG_DIRECTIVE +
+            `
+          input Input @tag(name: "tag-a") @tag(name: "tag-c") {
+            a: [String!]!
+            b: [String!]!
+            c: String!
+          }
+          
+          type ObjectA @tag(name: "tag-a") @tag(name: "tag-c") {
+            a: Float
+            b: Float
+            c: Float
+            d: Float
+            e: Float
+          }
+          
+          type ObjectB @tag(name: "tag-a") @tag(name: "tag-c") {
+            a: Boolean!
+            b: String @tag(name: "tag-b") @inaccessible
+            c: ObjectA
+          }
+          
+          type Query {
+            """Check to see if a discount code exists and is available"""
+            a(input: Input!): ObjectB @tag(name: "tag-a") @tag(name: "tag-c")
+            x: ID @tag(name: "tag-c")
+            y: ID @tag(name: "tag-b") @inaccessible
+          }
+          `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(clientSchemaB)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          input Input {
+            a: [String!]!
+            b: [String!]!
+            c: String!
+          }
+          
+          type ObjectA {
+            a: Float
+            b: Float
+            c: Float
+            d: Float
+            e: Float
+          }
+          
+          type ObjectB {
+            a: Boolean!
+            c: ObjectA
+          }
+          
+          type Query {
+            """Check to see if a discount code exists and is available"""
+            a(input: Input!): ObjectB
+            x: ID
+          }
+          `,
+        ),
+      );
+      expect(warningsB).toHaveLength(0);
+    });
+
+    test('that an error is returned if a tag is added to both the include and exclude sets', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query @tag(name: "a") {
+          a: ID
+        }
+      `,
+      );
+      const { federationResultByContractName } = federateSubgraphsWithContractsSuccess(
+        [subgraphA],
+        new Map<string, ContractTagOptions>([
+          [contractNameA, { tagNamesToExclude: new Set<string>(['a']), tagNamesToInclude: new Set<string>(['a']) }],
+        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const { errors, warnings } = getContractFailure(federationResultByContractName, contractNameA);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([intersectingExcludeAndIncludeContractTagsError(['a'])]);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that if a tag is included and excluded by different tags, it is excluded over all', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query  {
+          a: ID @tag(name: "include")
+          b: ID @tag(name: "include") @tag(name: "exclude")
+        }
+      `,
+      );
+      const { federationResultByContractName } = federateSubgraphsWithContractsSuccess(
+        [subgraphA],
+        new Map<string, ContractTagOptions>([
+          [
+            contractNameA,
+            { tagNamesToExclude: new Set<string>([exclude]), tagNamesToInclude: new Set<string>([include]) },
+          ],
+        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema, warnings } = getContractSuccess(
+        federationResultByContractName,
+        contractNameA,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            INACCESSIBLE_DIRECTIVE +
+            TAG_DIRECTIVE +
+            `
+          type Query  {
+            a: ID @tag(name: "include")
+            b: ID @tag(name: "include") @tag(name: "exclude") @inaccessible
+          }
+          `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema!)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+            type Query {
+              a: ID
+            }
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
     });
   });
 

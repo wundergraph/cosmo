@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -11,6 +10,7 @@ import OidcProvider from '../../services/OidcProvider.js';
 import { enrichLogger, getLogger, handleError, isValidLocalhostOrSecureEndpoint } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function createOIDCProvider(
   opts: RouterOptions,

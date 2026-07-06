@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -6,6 +5,7 @@ import {
   GetBatchPublishJobStatusRequest,
   GetBatchPublishJobStatusResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { PlainMessage } from '../../../types/index.js';
 import { maxRowLimitForChecks } from '../../constants.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { RouterOptions } from '../../routes.js';

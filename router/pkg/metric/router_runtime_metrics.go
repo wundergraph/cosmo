@@ -309,7 +309,7 @@ func (r *RuntimeMetrics) Shutdown() error {
 
 	for _, reg := range r.instrumentRegistrations {
 		if regErr := reg.Unregister(); regErr != nil {
-			err = errors.Join(regErr)
+			err = errors.Join(err, regErr)
 		}
 	}
 

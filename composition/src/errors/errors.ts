@@ -12,6 +12,7 @@ import {
   type InvalidArgumentValueErrorParams,
   type InvalidCustomDirectiveErrorParams,
   type InvalidDirectiveLocationErrorParams,
+  type InvalidEntityReturnTypeErrorParams,
   type InvalidLinkDirectiveImportObjectErrorParams,
   type InvalidNamedTypeErrorParams,
   type InvalidRepeatedDirectiveErrorParams,
@@ -35,6 +36,7 @@ import {
   LITERAL_NEW_LINE,
   LITERAL_PERIOD,
   NOT_UPPER,
+  OBJECT,
   OR_UPPER,
   QUOTATION_JOIN,
   SUBSCRIPTION_FIELD_CONDITION,
@@ -770,14 +772,14 @@ export function duplicateFieldInFieldSetErrorMessage(fieldSet: string, fieldPath
   );
 }
 
-export function incompatibleTypeWithProvidesErrorMessage({
+export function incompatibleTypeWithProvidesError({
   fieldCoords,
   responseType,
   subgraphName,
-}: IncompatibleTypeWithProvidesErrorMessageParams): string {
-  return (
+}: IncompatibleTypeWithProvidesErrorMessageParams): Error {
+  return new Error(
     ` A "@provides" directive is declared on field "${fieldCoords}" in subgraph "${subgraphName}".\n` +
-    ` However, the response type "${responseType}" is not an Object nor Interface.`
+      ` However, the response type "${responseType}" is not an Object, Interface, nor Union.`,
   );
 }
 
@@ -827,8 +829,7 @@ export function invalidInlineFragmentTypeErrorMessage(
     ` This is because an inline fragment with the type condition "${typeConditionName}" is defined on the` +
     ` selection set corresponding to the ` +
     getSelectionSetLocation(fieldCoordinatesPath, selectionSetTypeName, true) +
-    ` However, "${selectionSetTypeName}" is not an abstract (Interface or Union) type.\n` +
-    ` Consequently, the only valid type condition at this selection set would be "${selectionSetTypeName}".`
+    ` However, "${selectionSetTypeName}" is not an abstract (Interface or Union) type and is therefore incompatible.`
   );
 }
 
@@ -876,16 +877,72 @@ export function invalidInlineFragmentTypeConditionErrorMessage(
   typeConditionName: string,
   parentTypeString: string,
   selectionSetTypeName: string,
+  typeConditionTypeString: string,
 ): string {
   const message =
     ` The following field set is invalid:\n  "${fieldSet}"\n` +
     ` This is because an inline fragment with the type condition "${typeConditionName}" is defined on the` +
     ` selection set corresponding to the ` +
     getSelectionSetLocationWithTypeString(fieldCoordinatesPath, selectionSetTypeName, parentTypeString);
-  if (parentTypeString === INTERFACE) {
-    return message + ` However, "${typeConditionName}" does not implement "${selectionSetTypeName}"`;
+  switch (parentTypeString) {
+    case INTERFACE: {
+      switch (typeConditionTypeString) {
+        case INTERFACE: {
+          return (
+            message +
+            ` However, Interfaces "${typeConditionName}" and "${selectionSetTypeName}" are neither an` +
+            ` implementation of the other.`
+          );
+        }
+        case OBJECT: {
+          return (
+            message + ` However, Object "${typeConditionName}" does not implement Interface "${selectionSetTypeName}".`
+          );
+        }
+        case UNION: {
+          return (
+            message +
+            ` However, no members of Union "${typeConditionName}" implement Interface "${selectionSetTypeName}".`
+          );
+        }
+      }
+      break;
+    }
+    case OBJECT: {
+      switch (typeConditionTypeString) {
+        case INTERFACE: {
+          return (
+            message + ` However, Object "${selectionSetTypeName}" does not implement Interface "${typeConditionName}".`
+          );
+        }
+        case UNION: {
+          return (
+            message + ` However, Object "${selectionSetTypeName}" is not a member of Union "${typeConditionName}".`
+          );
+        }
+      }
+      break;
+    }
+    case UNION: {
+      switch (typeConditionTypeString) {
+        case INTERFACE: {
+          return message + ` However, no members of Union "${selectionSetTypeName}" implement "${typeConditionName}".`;
+        }
+        case OBJECT: {
+          return (
+            message + ` However, Object "${typeConditionName}" is not a member of Union "${selectionSetTypeName}".`
+          );
+        }
+        case UNION: {
+          return (
+            message + ` However, Unions "${typeConditionName}" and "${selectionSetTypeName}" share no mutual members.`
+          );
+        }
+      }
+      break;
+    }
   }
-  return message + ` However, "${typeConditionName}" is not a member of "${selectionSetTypeName}".`;
+  return message;
 }
 
 export function invalidSelectionOnUnionErrorMessage(
@@ -2049,4 +2106,43 @@ export function nonEqualComposeDirectiveMajorVersionError(directiveName: Directi
 
 export function unknownSubgraphNameError(subgraphName: SubgraphName): Error {
   return new Error(`Internal Error: Expected subgraph "${subgraphName}" to be a valid record.`);
+}
+
+export function entityCacheWithoutKeyErrorMessage(typeName: TypeName): string {
+  return `Object "${typeName}" does not define a "@key" directive.`;
+}
+
+export function maxAgeNotPositiveIntegerErrorMessage(value: number | string | null): string {
+  return `The argument "maxAge" must be provided a positive integer; received "${value}".`;
+}
+
+export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(value: number): string {
+  return `The argument "negativeCacheTTL" must be provided zero or a positive integer; received "${value}".`;
+}
+
+export function invalidMutationOrSubscriptionFieldCoordsErrorMessage(fieldCoords: string): string {
+  return `Field coordinates "${fieldCoords}" are not a Mutation or Subscription root field.`;
+}
+
+export function invalidEntityReturnTypeErrorMessage({
+  fieldCoords,
+  returnTypeName,
+}: InvalidEntityReturnTypeErrorParams): string {
+  return `Field coordinates "${fieldCoords}" return non-entity type "${returnTypeName}".`;
+}
+
+export function invalidMutuallyExclusiveCacheDirectivesError(fieldCoords: string): Error {
+  return new Error(
+    `Field coordinates "${fieldCoords}" define both mutually exclusive directives "@openfed__cacheInvalidate"` +
+      ` and "@openfed__cachePopulate".`,
+  );
+}
+
+export function intersectingExcludeAndIncludeContractTagsError(tagNames: Array<string>): Error {
+  return new Error(
+    `Cannot create contract because the following tag${tagNames.length > 1 ? 's are' : ' is'}` +
+      ` provided to both the include and exclude tag sets (which must be mutually exclusive): "` +
+      tagNames.join(QUOTATION_JOIN) +
+      `".`,
+  );
 }

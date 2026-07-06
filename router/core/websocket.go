@@ -33,6 +33,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
@@ -573,6 +574,9 @@ func (h *WebsocketHandler) runPoller() {
 
 				msg, err := handler.protocol.ReadMessage()
 				if err != nil {
+					if isReadTimeout(err) {
+						continue
+					}
 					h.logger.Debug("Client closed connection", zap.Error(err))
 					h.removeConnection(conn, handler, fd, wsproto.CloseKindOf(err))
 					continue
@@ -971,6 +975,11 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	}
 	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
+	// Validate the operation against the schema BEFORE variable extraction, which would
+	// serialize inline literals into JSON variables and let invalid-type literals through.
+	// The error is surfaced later, during validation, so normalization timing stays accurate.
+	_, operationValidationErr := operationKit.ValidateOperation()
+
 	cached, _, err := operationKit.NormalizeVariables()
 	if err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
@@ -999,13 +1008,20 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	startValidation := time.Now()
 
+	// Surface schema-validation errors (computed before extraction) ahead of variable
+	// validation, matching the GraphQL spec order.
+	if operationValidationErr != nil {
+		opContext.validationTime = time.Since(startValidation)
+		return nil, nil, operationValidationErr
+	}
+
 	_, _, err = operationKit.ValidateQueryComplexity()
 	if err != nil {
 		opContext.validationTime = time.Since(startValidation)
 		return nil, nil, err
 	}
 
-	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader, opContext.remapVariables, &h.apolloCompatibilityFlags); err != nil {
+	if err := operationKit.ValidateOperationVariables(h.plannerOptions.ExecutionOptions.SkipLoader, opContext.remapVariables, &h.apolloCompatibilityFlags); err != nil {
 		opContext.validationTime = time.Since(startValidation)
 		return nil, nil, err
 	}
@@ -1131,10 +1147,22 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
-		_, err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
+		var info *resolve.GraphQLResolveInfo
+		info, err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
 			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw)
+		}
+		if info != nil {
+			reqContext.expressionContext.Request.Operation.ResolverAcquireDuration = info.ResolveAcquireWaitTime
+			if h.graphqlHandler.metricStore != nil {
+				h.graphqlHandler.metricStore.MeasureResolverAcquireDuration(
+					resolveCtx.Context(),
+					info.ResolveAcquireWaitTime,
+					reqContext.telemetry.metricSliceAttrs,
+					otelmetric.WithAttributes(reqContext.telemetry.metricAttrs...),
+				)
+			}
 		}
 		_ = rw.Flush()
 		rw.Complete()

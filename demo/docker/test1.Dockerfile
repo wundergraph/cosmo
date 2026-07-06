@@ -1,4 +1,4 @@
-FROM golang:1.25 as builder
+FROM golang:1.25 AS builder
 
 WORKDIR /app
 
@@ -10,4 +10,4 @@ RUN go build ./cmd/test1 && mv test1 server
 
 ENTRYPOINT [ "./server" ]
 
-EXPOSE 4002
+EXPOSE 4006

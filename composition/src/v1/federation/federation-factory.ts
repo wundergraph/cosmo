@@ -6,7 +6,6 @@ import {
   type DirectiveDefinitionNode,
   type DocumentNode,
   type GraphQLSchema,
-  isAbstractType,
   Kind,
   type ListTypeNode,
   type NamedTypeNode,
@@ -23,7 +22,7 @@ import {
   type MutableIntermediateTypeNode,
   type MutableTypeNode,
 } from '../../schema-building/ast';
-import { stringToNamedTypeNode, stringToNameNode, isKindAbstract } from '../../ast/utils';
+import { isKindAbstract, stringToNamedTypeNode, stringToNameNode } from '../../ast/utils';
 import {
   allChildDefinitionsAreInaccessibleError,
   allExternalFieldInstancesError,
@@ -36,6 +35,7 @@ import {
   incompatibleParentKindFatalError,
   incompatibleParentTypeMergeError,
   incompatibleSharedEnumError,
+  intersectingExcludeAndIncludeContractTagsError,
   invalidFieldShareabilityError,
   invalidImplementedTypeError,
   invalidInputFieldTypeErrorMessage,
@@ -200,6 +200,7 @@ import {
   INPUT_OBJECT,
   LEFT_PARENTHESIS,
   LIST,
+  LITERAL_NEW_LINE,
   LITERAL_PERIOD,
   NON_REPEATABLE_FEDERATED_DIRECTIVES,
   NOT_UPPER,
@@ -213,7 +214,6 @@ import {
   TAG,
   UNION,
   VALUES,
-  LITERAL_NEW_LINE,
 } from '../../utils/string-constants';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../../utils/integer-constants';
 import {
@@ -256,8 +256,8 @@ import {
   type FederationParams,
   type MergeSubscriptionFilterTargetResultParams,
   type UpsertDirectiveArgumentDataParams,
-  type ValidateSubscriptionFilterAndGenerateConfigurationParams,
   type ValidateOneOfDirectiveParams,
+  type ValidateSubscriptionFilterAndGenerateConfigurationParams,
 } from './types/params';
 import { INACCESSIBLE_DEFINITION } from '../constants/directive-definitions';
 import type { CompositionOptions } from '../../types/params';
@@ -3038,10 +3038,10 @@ export class FederationFactory {
   }
 
   mergeSubscriptionFilterTargetResults({
-    directiveNode,
     abstractTypeData,
-    targets,
+    directiveNode,
     directiveSubgraphName,
+    targets,
   }: MergeSubscriptionFilterTargetResultParams): SubscriptionFilterTargetResult {
     const aggregatedErrors: Array<Error> = [];
     let firstCondition: SubscriptionCondition | null = null;
@@ -3068,7 +3068,6 @@ export class FederationFactory {
               result.errors.map((error) => error.message).join(LITERAL_NEW_LINE),
             );
       aggregatedErrors.push(wrapped);
-      continue;
     }
     if (firstCondition === null || aggregatedErrors.length > 0) {
       return { errors: aggregatedErrors, success: false };
@@ -3253,6 +3252,85 @@ export class FederationFactory {
        ** However, contracts require @inaccessible to exclude applicable tagged types. */
       this.routerDefinitions.push(INACCESSIBLE_DEFINITION);
     }
+    const tagIntersection = contractTagOptions.tagNamesToExclude.intersection(contractTagOptions.tagNamesToInclude);
+    if (tagIntersection.size > 0) {
+      return {
+        errors: [intersectingExcludeAndIncludeContractTagsError([...tagIntersection])],
+        success: false,
+        warnings: this.warnings,
+      };
+    }
+    if (contractTagOptions.tagNamesToInclude.size > 0) {
+      for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
+        if (isNodeDataInaccessible(parentDefinitionData)) {
+          continue;
+        }
+        const parentTagData = this.parentTagDataByTypeName.get(parentTypeName);
+        if (!parentTagData) {
+          parentDefinitionData.federatedDirectivesData.directivesByName.set(INACCESSIBLE, [
+            generateSimpleDirective(INACCESSIBLE),
+          ]);
+          this.inaccessibleCoords.add(parentTypeName);
+          // If the parent is inaccessible, there is no need to assess further
+          continue;
+        }
+        if (!contractTagOptions.tagNamesToInclude.isDisjointFrom(parentTagData.tagNames)) {
+          continue;
+        }
+        if (parentTagData.childTagDataByChildName.size < 1) {
+          parentDefinitionData.federatedDirectivesData.directivesByName.set(INACCESSIBLE, [
+            generateSimpleDirective(INACCESSIBLE),
+          ]);
+          this.inaccessibleCoords.add(parentTypeName);
+          // If the parent is inaccessible, there is no need to assess further
+          continue;
+        }
+        switch (parentDefinitionData.kind) {
+          case Kind.SCALAR_TYPE_DEFINITION:
+          // intentional fallthrough
+          case Kind.UNION_TYPE_DEFINITION:
+            continue;
+          case Kind.ENUM_TYPE_DEFINITION:
+            this.handleChildTagInclusions(
+              parentDefinitionData,
+              parentDefinitionData.enumValueDataByName,
+              parentTagData.childTagDataByChildName,
+              contractTagOptions.tagNamesToInclude,
+            );
+            break;
+          case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+            this.handleChildTagInclusions(
+              parentDefinitionData,
+              parentDefinitionData.inputValueDataByName,
+              parentTagData.childTagDataByChildName,
+              contractTagOptions.tagNamesToInclude,
+            );
+            break;
+          default:
+            let accessibleFields = parentDefinitionData.fieldDataByName.size;
+            for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByName) {
+              if (isNodeDataInaccessible(fieldData)) {
+                accessibleFields -= 1;
+                continue;
+              }
+              const childTagData = parentTagData.childTagDataByChildName.get(fieldName);
+              if (!childTagData || contractTagOptions.tagNamesToInclude.isDisjointFrom(childTagData.tagNames)) {
+                getValueOrDefault(fieldData.federatedDirectivesData.directivesByName, INACCESSIBLE, () => [
+                  generateSimpleDirective(INACCESSIBLE),
+                ]);
+                this.inaccessibleCoords.add(fieldData.federatedCoords);
+                accessibleFields -= 1;
+              }
+            }
+            if (accessibleFields < 1) {
+              parentDefinitionData.federatedDirectivesData.directivesByName.set(INACCESSIBLE, [
+                generateSimpleDirective(INACCESSIBLE),
+              ]);
+              this.inaccessibleCoords.add(parentTypeName);
+            }
+        }
+      }
+    }
     if (contractTagOptions.tagNamesToExclude.size > 0) {
       for (const [parentTypeName, parentTagData] of this.parentTagDataByTypeName) {
         const parentDefinitionData = getOrThrowError(
@@ -3342,76 +3420,6 @@ export class FederationFactory {
               this.inaccessibleCoords.add(parentTypeName);
             }
           }
-        }
-      }
-    } else if (contractTagOptions.tagNamesToInclude.size > 0) {
-      for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
-        if (isNodeDataInaccessible(parentDefinitionData)) {
-          continue;
-        }
-        const parentTagData = this.parentTagDataByTypeName.get(parentTypeName);
-        if (!parentTagData) {
-          parentDefinitionData.federatedDirectivesData.directivesByName.set(INACCESSIBLE, [
-            generateSimpleDirective(INACCESSIBLE),
-          ]);
-          this.inaccessibleCoords.add(parentTypeName);
-          // If the parent is inaccessible, there is no need to assess further
-          continue;
-        }
-        if (!contractTagOptions.tagNamesToInclude.isDisjointFrom(parentTagData.tagNames)) {
-          continue;
-        }
-        if (parentTagData.childTagDataByChildName.size < 1) {
-          parentDefinitionData.federatedDirectivesData.directivesByName.set(INACCESSIBLE, [
-            generateSimpleDirective(INACCESSIBLE),
-          ]);
-          this.inaccessibleCoords.add(parentTypeName);
-          // If the parent is inaccessible, there is no need to assess further
-          continue;
-        }
-        switch (parentDefinitionData.kind) {
-          case Kind.SCALAR_TYPE_DEFINITION:
-          // intentional fallthrough
-          case Kind.UNION_TYPE_DEFINITION:
-            continue;
-          case Kind.ENUM_TYPE_DEFINITION:
-            this.handleChildTagInclusions(
-              parentDefinitionData,
-              parentDefinitionData.enumValueDataByName,
-              parentTagData.childTagDataByChildName,
-              contractTagOptions.tagNamesToInclude,
-            );
-            break;
-          case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-            this.handleChildTagInclusions(
-              parentDefinitionData,
-              parentDefinitionData.inputValueDataByName,
-              parentTagData.childTagDataByChildName,
-              contractTagOptions.tagNamesToInclude,
-            );
-            break;
-          default:
-            let accessibleFields = parentDefinitionData.fieldDataByName.size;
-            for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByName) {
-              if (isNodeDataInaccessible(fieldData)) {
-                accessibleFields -= 1;
-                continue;
-              }
-              const childTagData = parentTagData.childTagDataByChildName.get(fieldName);
-              if (!childTagData || contractTagOptions.tagNamesToInclude.isDisjointFrom(childTagData.tagNames)) {
-                getValueOrDefault(fieldData.federatedDirectivesData.directivesByName, INACCESSIBLE, () => [
-                  generateSimpleDirective(INACCESSIBLE),
-                ]);
-                this.inaccessibleCoords.add(fieldData.federatedCoords);
-                accessibleFields -= 1;
-              }
-            }
-            if (accessibleFields < 1) {
-              parentDefinitionData.federatedDirectivesData.directivesByName.set(INACCESSIBLE, [
-                generateSimpleDirective(INACCESSIBLE),
-              ]);
-              this.inaccessibleCoords.add(parentTypeName);
-            }
         }
       }
     }

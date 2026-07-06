@@ -4,6 +4,66 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.329.0](https://github.com/wundergraph/cosmo/compare/router@0.328.0...router@0.329.0) (2026-07-03)
+
+### Features
+
+* add observability on subgraph connections and resolvers ([#2881](https://github.com/wundergraph/cosmo/issues/2881)) ([4169176](https://github.com/wundergraph/cosmo/commit/4169176f24a7ef6874e33d2838a3779eaa328efb)) (@alepane21)
+
+# [0.328.0](https://github.com/wundergraph/cosmo/compare/router@0.327.0...router@0.328.0) (2026-07-03)
+
+### Features
+
+* add defer support ([#2697](https://github.com/wundergraph/cosmo/issues/2697)) ([3c22488](https://github.com/wundergraph/cosmo/commit/3c22488ec283ec27b8ea57be70313ff5efcb2fef)) (@devsergiy)
+
+# [0.327.0](https://github.com/wundergraph/cosmo/compare/router@0.326.3...router@0.327.0) (2026-07-02)
+
+### Features
+
+* **router:** add SubscriptionOnCreate hook ([#2972](https://github.com/wundergraph/cosmo/issues/2972)) ([285ab20](https://github.com/wundergraph/cosmo/commit/285ab203a83355ea7e14e275587bcd4257f92870)) (@dkorittki)
+
+## [0.326.3](https://github.com/wundergraph/cosmo/compare/router@0.326.2...router@0.326.3) (2026-07-02)
+
+### Bug Fixes
+
+* handling of provides on abstract types ([#3043](https://github.com/wundergraph/cosmo/issues/3043)) ([fcaf176](https://github.com/wundergraph/cosmo/commit/fcaf17616cd20e6febb0aa4a0054781236f76872)) (@devsergiy)
+
+## [0.326.2](https://github.com/wundergraph/cosmo/compare/router@0.326.1...router@0.326.2) (2026-07-01)
+
+### Bug Fixes
+
+* avoid holding previous graphMuxes when reloading ([#3035](https://github.com/wundergraph/cosmo/issues/3035)) ([1d7ba2e](https://github.com/wundergraph/cosmo/commit/1d7ba2e6014fc29e7b23cde0f76b771aeef0135a)) (@endigma)
+* metrics flush timeout canceled shutdown ([#2990](https://github.com/wundergraph/cosmo/issues/2990)) ([7715d70](https://github.com/wundergraph/cosmo/commit/7715d701d90e446fc9915e34ed65f321f54dbd88)) (@Noroth)
+
+## [0.326.1](https://github.com/wundergraph/cosmo/compare/router@0.326.0...router@0.326.1) (2026-06-25)
+
+### Bug Fixes
+
+* **router:** prevent NATS durable consumer from dropping replayed messages on re-subscribe ([#2991](https://github.com/wundergraph/cosmo/issues/2991)) ([7b40f14](https://github.com/wundergraph/cosmo/commit/7b40f1451d1dd0476029dde2500b1e19b68012ec)) (@endigma)
+
+# [0.326.0](https://github.com/wundergraph/cosmo/compare/router@0.325.0...router@0.326.0) (2026-06-23)
+
+### Bug Fixes
+
+* proto changes for entity cache ([#2996](https://github.com/wundergraph/cosmo/issues/2996)) ([3db24b0](https://github.com/wundergraph/cosmo/commit/3db24b010905daddfa840abba07faaf416dd892d)) (@SkArchon)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cachePopulate directive (3/5) ([#2984](https://github.com/wundergraph/cosmo/issues/2984)) ([a8cc2af](https://github.com/wundergraph/cosmo/commit/a8cc2afa7767c35b71ac4ebd18e2a9e1cc381a66)) (@SkArchon)
+
+# [0.325.0](https://github.com/wundergraph/cosmo/compare/router@0.324.1...router@0.325.0) (2026-06-22)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cacheInvalidate directive (2/5) ([#2983](https://github.com/wundergraph/cosmo/issues/2983)) ([19bbbe5](https://github.com/wundergraph/cosmo/commit/19bbbe5659011ef4536fe43edbb1ae313bda91e3)) (@SkArchon)
+* **composition:** [@openfed](https://github.com/openfed)__entityCache directive (1/5) ([#2980](https://github.com/wundergraph/cosmo/issues/2980)) ([2075164](https://github.com/wundergraph/cosmo/commit/2075164f18ee0cf953effdef2a031c59b3e8d112)) (@SkArchon)
+
+## [0.324.1](https://github.com/wundergraph/cosmo/compare/router@0.324.0...router@0.324.1) (2026-06-19)
+
+### Bug Fixes
+
+* **router:** accept JSON content type with parameters in MCP requests ([#2988](https://github.com/wundergraph/cosmo/issues/2988)) ([060ecbe](https://github.com/wundergraph/cosmo/commit/060ecbef1501ac512efd13be47c4de9becb53634)) (@asoorm)
+
 # [0.324.0](https://github.com/wundergraph/cosmo/compare/router@0.323.3...router@0.324.0) (2026-06-18)
 
 ### Features

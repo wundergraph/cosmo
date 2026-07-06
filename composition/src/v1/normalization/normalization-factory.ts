@@ -29,6 +29,7 @@ import {
   type InputObjectTypeNode,
   type InterfaceTypeNode,
   isKindAbstract,
+  isValidProvidesParentData,
   nodeKindToDirectiveLocation,
   type ObjectTypeNode,
   operationTypeNodeToDefaultType,
@@ -61,6 +62,7 @@ import {
   isCompositeOutputNodeKind,
   isObjectDefinitionData,
   isObjectNodeKind,
+  isUnionDefinitionData,
   kindToConvertedTypeString,
   mapToArrayOfValues,
   newAuthorizationData,
@@ -77,12 +79,13 @@ import {
   duplicateImplementedInterfaceError,
   duplicateTypeDefinitionError,
   duplicateUnionMemberDefinitionError,
+  entityCacheWithoutKeyErrorMessage,
   equivalentSourceAndTargetOverrideErrorMessage,
   expectedEntityError,
   externalInterfaceFieldsError,
   fieldAlreadyProvidedErrorMessage,
   incompatibleInputValueDefaultValueTypeError,
-  incompatibleTypeWithProvidesErrorMessage,
+  incompatibleTypeWithProvidesError,
   inlineFragmentWithoutTypeConditionErrorMessage,
   invalidArgumentValueErrorMessage,
   invalidComposeDirectiveNameError,
@@ -90,6 +93,7 @@ import {
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   invalidEdfsPublishResultObjectErrorMessage,
+  invalidEntityReturnTypeErrorMessage,
   invalidEventDirectiveError,
   invalidEventDrivenGraphError,
   invalidEventDrivenMutationResponseTypeErrorMessage,
@@ -104,6 +108,8 @@ import {
   invalidInlineFragmentTypeErrorMessage,
   invalidInterfaceImplementationError,
   invalidKeyFieldSetsEventDrivenErrorMessage,
+  invalidMutationOrSubscriptionFieldCoordsErrorMessage,
+  invalidMutuallyExclusiveCacheDirectivesError,
   invalidNamedTypeError,
   invalidNatsStreamConfigurationDefinitionErrorMessage,
   invalidNatsStreamInputErrorMessage,
@@ -131,7 +137,9 @@ import {
   listSizeSlicingArgumentNotIntErrorMessage,
   listSizeSlicingArgumentSegmentNotFoundErrorMessage,
   listSizeSlicingArgumentSegmentNotInputObjectErrorMessage,
+  maxAgeNotPositiveIntegerErrorMessage,
   multipleNamedTypeDefinitionError,
+  negativeCacheTTLNotNonNegativeIntegerErrorMessage,
   noBaseScalarDefinitionError,
   noDefinedEnumValuesError,
   noDefinedUnionMembersError,
@@ -163,7 +171,7 @@ import {
   unimportedComposeDirectiveNameError,
   unknownComposeDirectiveNameError,
   unknownInlineFragmentTypeConditionErrorMessage,
-  unknownNamedTypeErrorMessage,
+  unknownNamedTypeError,
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
@@ -175,8 +183,11 @@ import {
 } from '../constants/strings';
 import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
+  type CacheInvalidateConfiguration,
+  type CachePopulateConfiguration,
   type ConfigurationData,
   type Costs,
+  type EntityCacheConfiguration,
   type EventConfiguration,
   type FieldListSizeConfiguration,
   type FieldWeightConfiguration,
@@ -192,6 +203,7 @@ import {
   fieldAlreadyProvidedWarning,
   invalidExternalFieldWarning,
   nonExternalConditionalFieldWarning,
+  providesOnUnionWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
 } from '../warnings/warnings';
@@ -281,12 +293,13 @@ import {
   EDFS_REDIS_PUBLISH,
   EDFS_REDIS_SUBSCRIBE,
   ENTITIES_FIELD,
-  EXECUTABLE_DIRECTIVE_LOCATIONS,
   EXTENDS,
   EXTERNAL,
   FIELDS,
+  FIRST_ORDINAL,
   HYPHEN_JOIN,
   INACCESSIBLE,
+  INCLUDE_HEADERS,
   INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
   INT_SCALAR,
@@ -296,15 +309,21 @@ import {
   LIST_SIZE,
   LITERAL_AT,
   LITERAL_PERIOD,
+  MAX_AGE,
   MUTATION,
+  NEGATIVE_CACHE_TTL,
   NON_NULLABLE_BOOLEAN,
   NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
   NON_NULLABLE_INT,
   NON_NULLABLE_STRING,
   NOT_APPLICABLE,
   ONE_OF,
+  OPENFED_CACHE_INVALIDATE,
+  OPENFED_CACHE_POPULATE,
+  OPENFED_ENTITY_CACHE,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
+  PARTIAL_CACHE_LOAD,
   PROPAGATE,
   PROVIDER_ID,
   PROVIDER_TYPE_KAFKA,
@@ -322,6 +341,7 @@ import {
   SCOPES,
   SEMANTIC_NON_NULL,
   SERVICE_FIELD,
+  SHADOW_MODE,
   SHAREABLE,
   SIZED_FIELDS,
   SLICING_ARGUMENTS,
@@ -353,23 +373,28 @@ import {
 } from '../../utils/utils';
 import {
   type AddInputValueDataByNodeParams,
+  type CachePopulateDirectiveNode,
   type ComposeDirectiveNode,
   type ConditionalFieldSetValidationResult,
+  type EntityCacheDirectiveNode,
   type ExtractDirectiveArgumentDataResult,
   type FieldSetData,
-  type FieldSetParentResult,
   type HandleCostDirectiveParams,
   type HandleListSizeDirectiveParams,
-  type RecordDirectiveWeightOnFieldParams,
   type HandleOverrideDirectiveParams,
   type HandleRequiresScopesDirectiveParams,
   type HandleSemanticNonNullDirectiveParams,
   type KeyFieldSetData,
   type LinkImportData,
+  type RecordDirectiveWeightOnFieldParams,
   type UpsertInputObjectResult,
   type ValidateDirectiveParams,
 } from './types/types';
-import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
+import {
+  getOrInitializeEntityCaching,
+  newConfigurationData,
+  newFieldSetConditionData,
+} from '../../router-configuration/utils';
 import { type ImplementationErrors, type InvalidFieldImplementation } from '../../utils/types';
 import {
   type AbstractTypeName,
@@ -381,6 +406,7 @@ import {
   type TypeName,
 } from '../../types/types';
 import {
+  type GetFieldSetParentParams,
   type HandleFieldInheritableDirectivesParams,
   type HandleNonExternalConditionalFieldParams,
   type NormalizationFactoryParams,
@@ -390,7 +416,7 @@ import {
 } from './types/params';
 import { EDFS_NATS_STREAM_CONFIGURATION_DEFINITION } from '../constants/non-directive-definitions';
 import type { CompositionOptions } from '../../types/params';
-import { type SchemaNodeResult } from './types/results';
+import { type FieldSetParentResult, type SchemaNodeResult } from './types/results';
 import { isArgumentValueValid } from '../../validation/validation';
 import {
   type AddDirectiveArgumentDataByNodeParams,
@@ -444,6 +470,11 @@ export class NormalizationFactory {
   directiveDefinitionDataByName = initializeDirectiveDefinitionDatas();
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
+  /* Cached entity configs keyed by type name, populated by extractEntityCacheDirective() from
+   * @openfed__entityCache. Future caching directives (@openfed__queryCache etc.) use this as a lookup
+   * to verify a field's return type is a cached entity.
+   */
+  entityCacheConfigByTypeName = new Map<TypeName, EntityCacheConfiguration>();
   errors = new Array<Error>();
   entityDataByTypeName = new Map<TypeName, EntityData>();
   entityInterfaceDataByTypeName = new Map<TypeName, EntityInterfaceSubgraphData>();
@@ -1440,13 +1471,11 @@ export class NormalizationFactory {
       this.updateCompositeOutputDataByNode(node, parentData, extensionType);
       if (!directivesByName.has(INTERFACE_OBJECT)) {
         this.addConcreteTypeNamesForImplementedInterfaces(parentData.implementedInterfaceTypeNames, typeName);
+        this.extractEntityCacheDirective(parentData);
       }
       return;
     }
     const implementedInterfaceTypeNames = this.extractImplementedInterfaceTypeNames(node, new Set<AbstractTypeName>());
-    if (!directivesByName.has(INTERFACE_OBJECT)) {
-      this.addConcreteTypeNamesForImplementedInterfaces(implementedInterfaceTypeNames, typeName);
-    }
     const newParentData: ObjectDefinitionData = {
       configureDescriptionDataBySubgraphName: new Map<SubgraphName, ConfigureDescriptionData>(),
       directivesByName: directivesByName,
@@ -1465,6 +1494,10 @@ export class NormalizationFactory {
       subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     };
+    if (!directivesByName.has(INTERFACE_OBJECT)) {
+      this.addConcreteTypeNamesForImplementedInterfaces(implementedInterfaceTypeNames, typeName);
+      this.extractEntityCacheDirective(newParentData);
+    }
     this.extractConfigureDescriptionsData(newParentData);
     this.parentDefinitionDataByTypeName.set(typeName, newParentData);
   }
@@ -1747,14 +1780,18 @@ export class NormalizationFactory {
     }
   }
 
-  getFieldSetParent(
-    isProvides: boolean,
-    parentData: CompositeOutputData,
-    fieldName: string,
-    parentTypeName: string,
-  ): FieldSetParentResult {
+  getFieldSetParent({
+    isProvides,
+    parentData,
+    fieldName,
+    fieldSet,
+    parentTypeName,
+  }: GetFieldSetParentParams): FieldSetParentResult {
     if (!isProvides) {
-      return { fieldSetParentData: parentData };
+      return {
+        data: parentData,
+        success: true,
+      };
     }
     const fieldData = getOrThrowError(parentData.fieldDataByName, fieldName, `${parentTypeName}.fieldDataByFieldName`);
     const fieldNamedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
@@ -1762,11 +1799,12 @@ export class NormalizationFactory {
 
     if (BASE_SCALARS.has(fieldNamedTypeName)) {
       return {
-        errorString: incompatibleTypeWithProvidesErrorMessage({
+        error: incompatibleTypeWithProvidesError({
           fieldCoords,
           responseType: fieldNamedTypeName,
           subgraphName: this.subgraphName,
         }),
+        success: false,
       };
     }
 
@@ -1774,20 +1812,37 @@ export class NormalizationFactory {
     // This error should never happen
     if (!namedTypeData) {
       return {
-        errorString: unknownNamedTypeErrorMessage(fieldCoords, fieldNamedTypeName),
+        error: unknownNamedTypeError(fieldCoords, fieldNamedTypeName),
+        success: false,
       };
     }
     // @TODO handle abstract types and fragments
-    if (namedTypeData.kind !== Kind.INTERFACE_TYPE_DEFINITION && namedTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+    if (isValidProvidesParentData(namedTypeData)) {
+      if (isUnionDefinitionData(namedTypeData)) {
+        this.warnings.push(
+          providesOnUnionWarning({
+            fieldCoords,
+            fieldSet,
+            namedTypeName: fieldNamedTypeName,
+            subgraphName: this.subgraphName,
+          }),
+        );
+      }
+
       return {
-        errorString: incompatibleTypeWithProvidesErrorMessage({
-          fieldCoords,
-          responseType: fieldNamedTypeName,
-          subgraphName: this.subgraphName,
-        }),
+        data: namedTypeData,
+        success: true,
       };
     }
-    return { fieldSetParentData: namedTypeData };
+
+    return {
+      error: incompatibleTypeWithProvidesError({
+        fieldCoords,
+        responseType: fieldNamedTypeName,
+        subgraphName: this.subgraphName,
+      }),
+      success: false,
+    };
   }
 
   #handleNonExternalConditionalField({
@@ -1823,7 +1878,7 @@ export class NormalizationFactory {
   }
 
   validateConditionalFieldSet(
-    selectionSetParentData: CompositeOutputData,
+    selectionSetParentData: CompositeOutputData | UnionDefinitionData,
     fieldSet: string,
     directiveFieldName: string,
     isProvides: boolean,
@@ -2017,12 +2072,6 @@ export class NormalizationFactory {
             shouldDefineSelectionSet = true;
             return;
           }
-          if (!isKindAbstract(parentData.kind)) {
-            errorMessages.push(
-              invalidInlineFragmentTypeErrorMessage(fieldSet, fieldCoordsPath, typeConditionName, parentTypeName),
-            );
-            return BREAK;
-          }
           const fragmentNamedTypeData = nf.parentDefinitionDataByTypeName.get(typeConditionName);
           if (!fragmentNamedTypeData) {
             errorMessages.push(
@@ -2038,13 +2087,39 @@ export class NormalizationFactory {
           shouldDefineSelectionSet = true;
           switch (fragmentNamedTypeData.kind) {
             case Kind.INTERFACE_TYPE_DEFINITION: {
-              if (!fragmentNamedTypeData.implementedInterfaceTypeNames.has(parentTypeName)) {
+              // The enclosing type is an Object
+              if (!isKindAbstract(parentData.kind)) {
+                if (
+                  !isObjectDefinitionData(parentData) ||
+                  !parentData.implementedInterfaceTypeNames.has(typeConditionName)
+                ) {
+                  break;
+                }
+                parentDatas.push(fragmentNamedTypeData);
+                return;
+              }
+
+              // The enclosing type is an Interface or Union
+              const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(typeConditionName);
+              const parentConcreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentData.name);
+              if (
+                !concreteTypeNames ||
+                !parentConcreteTypeNames ||
+                parentConcreteTypeNames.isDisjointFrom(concreteTypeNames)
+              ) {
                 break;
               }
+
               parentDatas.push(fragmentNamedTypeData);
               return;
             }
             case Kind.OBJECT_TYPE_DEFINITION: {
+              if (!isKindAbstract(parentData.kind)) {
+                errorMessages.push(
+                  invalidInlineFragmentTypeErrorMessage(fieldSet, fieldCoordsPath, typeConditionName, parentTypeName),
+                );
+                return BREAK;
+              }
               const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
               if (!concreteTypeNames || !concreteTypeNames.has(typeConditionName)) {
                 break;
@@ -2053,6 +2128,26 @@ export class NormalizationFactory {
               return;
             }
             case Kind.UNION_TYPE_DEFINITION: {
+              const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(typeConditionName);
+              if (!concreteTypeNames) {
+                break;
+              }
+              // The enclosing type is an Object
+              if (!isKindAbstract(parentData.kind)) {
+                // The enclosing Object is a valid part of the Union
+                if (concreteTypeNames.has(parentTypeName)) {
+                  parentDatas.push(fragmentNamedTypeData);
+                  return;
+                }
+                break;
+              }
+
+              // The enclosing type is an Interface or Union; fetch its implementations/members respectively.
+              const parentConcreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
+              if (!parentConcreteTypeNames || parentConcreteTypeNames.isDisjointFrom(concreteTypeNames)) {
+                break;
+              }
+
               parentDatas.push(fragmentNamedTypeData);
               return;
             }
@@ -2076,6 +2171,7 @@ export class NormalizationFactory {
               typeConditionName,
               kindToNodeType(parentData.kind),
               parentTypeName,
+              kindToNodeType(fragmentNamedTypeData.kind),
             ),
           );
           return BREAK;
@@ -2170,22 +2266,21 @@ export class NormalizationFactory {
        Consequently, at that time, it is unknown whether the named type is an entity.
        If it isn't, the @provides directive does not make sense and can be ignored.
       */
-      const { fieldSetParentData, errorString } = this.getFieldSetParent(
+      const result = this.getFieldSetParent({
+        fieldName,
+        fieldSet,
         isProvides,
         parentData,
-        fieldName,
         parentTypeName,
-      );
+      });
+      if (!result.success) {
+        allErrorMessages.push(result.error.message);
+        continue;
+      }
+
       const fieldCoords = `${parentTypeName}.${fieldName}`;
-      if (errorString) {
-        allErrorMessages.push(errorString);
-        continue;
-      }
-      if (!fieldSetParentData) {
-        continue;
-      }
       const { errorMessages, configuration } = this.validateConditionalFieldSet(
-        fieldSetParentData,
+        result.data,
         fieldSet,
         fieldName,
         isProvides,
@@ -3987,6 +4082,236 @@ export class NormalizationFactory {
     }
   }
 
+  extractEntityCacheDirective({ directivesByName, name: typeName }: ObjectDefinitionData) {
+    const entityCacheDirectives = directivesByName.get(OPENFED_ENTITY_CACHE);
+    if (!entityCacheDirectives || entityCacheDirectives.length === 0) {
+      return;
+    }
+
+    if (!this.keyFieldSetDatasByTypeName.has(typeName)) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+          entityCacheWithoutKeyErrorMessage(typeName),
+        ]),
+      );
+      return;
+    }
+
+    /* validateDirectives() (run earlier in normalize()) has already guaranteed each argument's type —
+     * Int for maxAge/negativeCacheTTL, Boolean for the flags — so the generic ConstDirectiveNode is
+     * narrowed once to the precise typed node, mirroring RequestScopedDirectiveNode/ComposeDirectiveNode.
+     * Optional arguments may be absent (definition defaults are not materialized onto the usage AST),
+     * so the config starts at the directive's documented defaults and each present argument overrides it.
+     */
+    const directive = entityCacheDirectives[0] as EntityCacheDirectiveNode;
+    if (this.entityCacheConfigByTypeName.has(typeName)) {
+      // The error would be caught in directive validation as an invalid repeated directive use.
+      return;
+    }
+
+    const config: EntityCacheConfiguration = {
+      typeName,
+      maxAgeSeconds: 0,
+      notFoundCacheTtlSeconds: 0,
+      includeHeaders: false,
+      partialCacheLoad: false,
+      shadowMode: false,
+    };
+
+    for (const arg of directive.arguments) {
+      if (!arg) {
+        continue;
+      }
+
+      const { name, value } = arg;
+
+      switch (value.kind) {
+        case Kind.INT: {
+          switch (name.value) {
+            case MAX_AGE: {
+              config.maxAgeSeconds = parseInt(value.value, 10);
+              break;
+            }
+            case NEGATIVE_CACHE_TTL: {
+              config.notFoundCacheTtlSeconds = parseInt(value.value, 10);
+              break;
+            }
+          }
+          break;
+        }
+        default: {
+          switch (name.value) {
+            case INCLUDE_HEADERS: {
+              config.includeHeaders = value.value;
+              break;
+            }
+            case PARTIAL_CACHE_LOAD: {
+              config.partialCacheLoad = value.value;
+              break;
+            }
+            case SHADOW_MODE: {
+              config.shadowMode = value.value;
+              break;
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    const entityCacheErrors: Array<Error> = [];
+
+    if (config.maxAgeSeconds <= 0) {
+      entityCacheErrors.push(
+        invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+          maxAgeNotPositiveIntegerErrorMessage(config.maxAgeSeconds),
+        ]),
+      );
+    }
+
+    if (config.notFoundCacheTtlSeconds < 0) {
+      entityCacheErrors.push(
+        invalidDirectiveError(OPENFED_ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+          negativeCacheTTLNotNonNegativeIntegerErrorMessage(config.notFoundCacheTtlSeconds),
+        ]),
+      );
+    }
+
+    if (entityCacheErrors.length > 0) {
+      this.errors.push(...entityCacheErrors);
+      return;
+    }
+
+    this.entityCacheConfigByTypeName.set(typeName, config);
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
+      newConfigurationData(true, typeName),
+    );
+
+    getOrInitializeEntityCaching(configurationData).entityCacheConfigurations.push(config);
+  }
+
+  // Returns true if the directive is defined and false otherwise
+  extractCacheInvalidateConfig(fieldData: FieldData): boolean {
+    if (!fieldData.directivesByName.has(OPENFED_CACHE_INVALIDATE)) {
+      return false;
+    }
+
+    const operationType = this.getOperationTypeNodeForRootTypeName(fieldData.originalParentTypeName);
+    const fieldCoords = `${fieldData.originalParentTypeName}.${fieldData.name}`;
+    if (!operationType || operationType === OperationTypeNode.QUERY) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
+          invalidMutationOrSubscriptionFieldCoordsErrorMessage(fieldCoords),
+        ]),
+      );
+      return true;
+    }
+
+    const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+    if (!this.entityCacheConfigByTypeName.has(returnTypeName)) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
+          invalidEntityReturnTypeErrorMessage({ fieldCoords, returnTypeName: returnTypeName }),
+        ]),
+      );
+      return true;
+    }
+
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, fieldData.renamedParentTypeName, () =>
+      newConfigurationData(false, fieldData.renamedParentTypeName),
+    );
+
+    const config: CacheInvalidateConfiguration = {
+      entityTypeName: returnTypeName,
+      fieldName: fieldData.name,
+      operationType: operationType,
+    };
+
+    getOrInitializeEntityCaching(configurationData).cacheInvalidateConfigurations.push(config);
+    return true;
+  }
+
+  /* Extracts @openfed__cachePopulate from Mutation/Subscription fields.
+   * The return type must be a cached entity (@key & @openfed__entityCache).
+   * Argument `maxAge` is optional; if absent, the router falls back to the entity's @openfed__entityCache TTL;
+   * if provided, must be a positive integer.
+   *
+   * Returns true if the directive is defined and false otherwise
+   */
+  extractCachePopulateConfig(fieldData: FieldData): boolean {
+    if (!fieldData.directivesByName.has(OPENFED_CACHE_POPULATE)) {
+      return false;
+    }
+
+    const fieldCoords = `${fieldData.originalParentTypeName}.${fieldData.name}`;
+    const operationType = this.getOperationTypeNodeForRootTypeName(fieldData.originalParentTypeName);
+    if (!operationType || operationType === OperationTypeNode.QUERY) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+          invalidMutationOrSubscriptionFieldCoordsErrorMessage(fieldCoords),
+        ]),
+      );
+      return true;
+    }
+
+    const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+    const entityCacheConfig = this.entityCacheConfigByTypeName.get(returnTypeName);
+    if (!entityCacheConfig) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+          invalidEntityReturnTypeErrorMessage({ fieldCoords, returnTypeName }),
+        ]),
+      );
+      return true;
+    }
+
+    /* validateDirectives() has already guaranteed maxAge is an Int when present, so the generic
+     * ConstDirectiveNode is narrowed once to the precise typed node — mirroring the other caching
+     * directives. maxAge is the only argument and is optional.
+     */
+    const cachePopulateDirective = fieldData.directivesByName.get(
+      OPENFED_CACHE_POPULATE,
+    )![0] as CachePopulateDirectiveNode;
+
+    const config: CachePopulateConfiguration = {
+      entityTypeName: returnTypeName,
+      fieldName: fieldData.name,
+      operationType,
+      maxAgeSeconds: entityCacheConfig.maxAgeSeconds, // Set fallback immediately; overridden where appropriate.
+    };
+
+    const maxAgeArgument = cachePopulateDirective.arguments[0];
+    if (!maxAgeArgument) {
+      const configurationData = getValueOrDefault(
+        this.configurationDataByTypeName,
+        fieldData.renamedParentTypeName,
+        () => newConfigurationData(false, fieldData.renamedParentTypeName),
+      );
+
+      getOrInitializeEntityCaching(configurationData).cachePopulateConfigurations.push(config);
+      return true;
+    }
+
+    config.maxAgeSeconds = parseInt(maxAgeArgument.value.value, 10);
+    // This syntax handles possible NaN.
+    if (isNaN(config.maxAgeSeconds) || config.maxAgeSeconds <= 0) {
+      this.errors.push(
+        invalidDirectiveError(OPENFED_CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+          // If null is explicitly provided in GraphQL the value in JS is undefined.
+          maxAgeNotPositiveIntegerErrorMessage(maxAgeArgument.value.value ?? null),
+        ]),
+      );
+      return true;
+    }
+
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, fieldData.renamedParentTypeName, () =>
+      newConfigurationData(false, fieldData.renamedParentTypeName),
+    );
+
+    getOrInitializeEntityCaching(configurationData).cachePopulateConfigurations.push(config);
+    return true;
+  }
+
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
     const externalFieldNames = new Set<string>();
     for (const [fieldName, fieldData] of fieldDataByFieldName) {
@@ -4051,6 +4376,19 @@ export class NormalizationFactory {
     definitions.push(...dependencies);
   }
 
+  // Only Object fields should be passed to this method
+  handleFieldCacheDirectives(data: FieldData): void {
+    /* A field can't both evict (@openfed__cacheInvalidate) and write (@openfed__cachePopulate)
+     * the cache for the same entity, so the two directives are mutually exclusive.
+     */
+    const definesInvalidate = this.extractCacheInvalidateConfig(data);
+    const definesPopulate = this.extractCachePopulateConfig(data);
+    if (definesInvalidate && definesPopulate) {
+      const fieldCoords = `${data.originalParentTypeName}.${data.name}`;
+      this.errors.push(invalidMutuallyExclusiveCacheDirectivesError(fieldCoords));
+    }
+  }
+
   normalize(document: DocumentNode): NormalizationResult {
     // Collect any renamed root types
     upsertDirectiveSchemaAndEntityDefinitions(this, document);
@@ -4092,6 +4430,7 @@ export class NormalizationFactory {
     }
     // Check all key field sets for @external fields to assess whether they are conditional
     this.evaluateExternalKeyFields();
+
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       switch (parentData.kind) {
         case Kind.ENUM_TYPE_DEFINITION: {
@@ -4149,6 +4488,7 @@ export class NormalizationFactory {
           const isEntity = this.entityDataByTypeName.has(parentTypeName);
           const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
           const isObject = parentData.kind === Kind.OBJECT_TYPE_DEFINITION;
+
           if (this.isSubgraphVersionTwo && parentData.extensionType === ExtensionType.EXTENDS) {
             // @extends is essentially ignored in V2. It was only propagated to handle @external key fields.
             parentData.extensionType = ExtensionType.NONE;
@@ -4157,11 +4497,15 @@ export class NormalizationFactory {
             parentData.fieldDataByName.delete(SERVICE_FIELD);
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
           }
+
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
-            if (!isObject && fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
+            if (isObject) {
+              this.handleFieldCacheDirectives(fieldData);
+            } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
               externalInterfaceFieldNames.push(fieldName);
             }
+
             // Arguments can only be fully validated once all parents types are known
             this.validateArguments(fieldData, parentData.kind);
             // Base Scalars have already been set

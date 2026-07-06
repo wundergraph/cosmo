@@ -1,17 +1,17 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { UpdateContractRequest, UpdateContractResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { PlainMessage } from '../../../types/index.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { CompositionService } from '../../services/CompositionService.js';
 import { enrichLogger, getLogger, handleError, isValidSchemaTags } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
-import { UnauthorizedError } from '../../errors/errors.js';
-import { CompositionService } from '../../services/CompositionService.js';
 
 export function updateContract(
   opts: RouterOptions,
@@ -41,20 +41,6 @@ export function updateContract(
 
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
-    }
-
-    if (req.includeTags.length > 0 && req.excludeTags.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details:
-            `The "exclude" and "include" options for tags are currently mutually exclusive.` +
-            ` Both options have been provided, but one of the options must be empty or unset.`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
     }
 
     if (!isValidSchemaTags(req.excludeTags)) {

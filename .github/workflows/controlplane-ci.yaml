@@ -20,7 +20,7 @@ env:
 
 jobs:
   build_test:
-    timeout-minutes: 15
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     services:
       redis:

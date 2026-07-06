@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { describe, test, expect } from 'vitest';
-import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { createClient, createRouterTransport } from '@connectrpc/connect';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { dirname } from 'pathe';
 import GenerateCommand from '../src/commands/grpc-service/commands/generate.js';
 import GRPCCommands from '../src/commands/grpc-service/index.js';
@@ -21,7 +21,7 @@ export const mockPlatformTransport = () =>
 describe('gRPC Generate Command', () => {
   test('should generate proto and mapping files', async (testContext) => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      platform: createClient(PlatformService, mockPlatformTransport()),
     };
 
     const program = new Command();
@@ -48,7 +48,7 @@ describe('gRPC Generate Command', () => {
 
   test('should create output directory if it does not exist', async () => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      platform: createClient(PlatformService, mockPlatformTransport()),
     };
 
     const program = new Command();
@@ -79,7 +79,7 @@ describe('gRPC Generate Command', () => {
 
   test('should fail when input file does not exist', async (testContext) => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      platform: createClient(PlatformService, mockPlatformTransport()),
     };
 
     const program = new Command();
@@ -103,7 +103,7 @@ describe('gRPC Generate Command', () => {
 
   test('should fail when output path is a file', async (testContext) => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      platform: createClient(PlatformService, mockPlatformTransport()),
     };
 
     const program = new Command();
@@ -133,7 +133,7 @@ describe('gRPC Generate Command', () => {
 
   test('should generate all files with warnings', async (testContext) => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      platform: createClient(PlatformService, mockPlatformTransport()),
     };
 
     const program = new Command();
@@ -161,7 +161,7 @@ describe('gRPC Generate Command', () => {
 
   test('should fail when schema has validation errors', async (testContext) => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      platform: createClient(PlatformService, mockPlatformTransport()),
     };
 
     const program = new Command();
@@ -194,7 +194,7 @@ describe('gRPC Generate Command', () => {
 
   test('should display warnings and stop on errors', async (testContext) => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      platform: createClient(PlatformService, mockPlatformTransport()),
     };
 
     const program = new Command();

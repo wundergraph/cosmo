@@ -94,3 +94,8 @@ export type InvalidArgumentValueErrorParams = {
   value: string;
   expectedTypeString: string;
 };
+
+export type InvalidEntityReturnTypeErrorParams = {
+  fieldCoords: string;
+  returnTypeName: string;
+};

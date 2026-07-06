@@ -105,11 +105,8 @@ const ProposalsPage: NextPageWithLayout = () => {
       />
     );
 
-  // Since API doesn't support pagination yet, we need to do client-side pagination
-  const startIndex = (pageNumber - 1) * limit;
-  const endIndex = startIndex + limit;
-  const paginatedProposals = data.proposals.slice(startIndex, endIndex);
-  const noOfPages = Math.ceil(data.proposals.length / limit);
+  const paginatedProposals = data.proposals;
+  const noOfPages = Math.ceil((data.totalCount ?? 0) / limit);
 
   return (
     <div className="flex h-full flex-col gap-y-3">

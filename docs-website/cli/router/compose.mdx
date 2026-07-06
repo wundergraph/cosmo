@@ -26,6 +26,12 @@ The `npx wgc router compose` command allows you to compose subgraphs and build a
 
 * `--suppress-warnings`: This flag suppresses any warnings produced by composition.
 
+* `--split-configs-enabled`: This flag enables splitting the router config into multiple files.
+
+<Note>
+  Note: The `--split-configs-enabled` flag requires Router version [0.315.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.315.0) or higher.
+</Note>
+
 ## Input file structure
 
 ```bash
@@ -88,3 +94,4 @@ Compose subgraphs mentioned in graph.yaml and write it to `router.json`
 
 * The `npx wgc router compose` command does not interact with the control plane and completely runs locally.
 
+* When using the `--split-configs-enabled` option, the `--out` is always treated as a directory.
