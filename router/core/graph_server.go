@@ -1596,9 +1596,10 @@ func (s *graphServer) buildGraphMux(
 		ApolloRouterCompatibilityFlags:                         s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
-		EnableDefer:      s.engineExecutionConfiguration.EnableDefer,
-		ComplexityLimits: s.securityConfiguration.ComplexityLimits,
-		CostControl:      s.securityConfiguration.CostControl,
+		EnableDefer:             s.engineExecutionConfiguration.EnableDefer,
+		ComplexityLimits:        s.securityConfiguration.ComplexityLimits,
+		CostControl:             s.securityConfiguration.CostControl,
+		DisallowInlineArguments: s.engineExecutionConfiguration.DisallowInlineArguments,
 	})
 
 	if opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled() {

@@ -496,6 +496,8 @@ type EngineExecutionConfiguration struct {
 	ValidateRequiredExternalFields bool `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
 
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool `envDefault:"false" env:"ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY" yaml:"relax_subgraph_operation_field_selection_merging_nullability"`
+
+	DisallowInlineArguments DisallowInlineArguments `yaml:"disallow_inline_arguments" envPrefix:"ENGINE_DISALLOW_INLINE_ARGUMENTS_"`
 }
 
 type BlockOperationConfiguration struct {
@@ -591,6 +593,49 @@ type CostControl struct {
 	// implementing types on abstract (interface/union) fields that have no weight of
 	// their own. Emulates Apollo's cost behavior.
 	IgnoreImplementingTypeWeights bool `yaml:"ignore_implementing_type_weights,omitempty" envDefault:"false" env:"IGNORE_IMPLEMENTING_TYPE_WEIGHTS"`
+}
+
+// DisallowInlineArgumentsMode defines how the disallow-inline-arguments policy behaves.
+type DisallowInlineArgumentsMode string
+
+const (
+	// DisallowInlineArgumentsModeOff disables the policy entirely (default).
+	DisallowInlineArgumentsModeOff DisallowInlineArgumentsMode = "off"
+	// DisallowInlineArgumentsModeNonEnforcing detects inline arguments and records
+	// them (log/annotate), but still executes the operation.
+	DisallowInlineArgumentsModeNonEnforcing DisallowInlineArgumentsMode = "enabled-non-enforcing"
+	// DisallowInlineArgumentsModeEnforcing rejects operations that carry inline
+	// argument values instead of variables.
+	DisallowInlineArgumentsModeEnforcing DisallowInlineArgumentsMode = "enabled-enforcing"
+)
+
+// DisallowInlineArguments configures the policy that detects — and optionally
+// rejects — GraphQL operations carrying hardcoded inline argument values instead
+// of variables. Detection runs in the engine (graphql-go-tools) as a
+// normalization prevalidation rule; in non-enforcing mode the findings are cached
+// alongside the normalized operation so warnings survive normalization cache hits.
+type DisallowInlineArguments struct {
+	// Mode controls the policy: off | enabled-non-enforcing | enabled-enforcing.
+	Mode DisallowInlineArgumentsMode `yaml:"mode,omitempty" envDefault:"off" env:"MODE"`
+	// EnforceHTTPStatusCode is the HTTP status returned in enforce mode.
+	EnforceHTTPStatusCode int `yaml:"enforce_http_status_code,omitempty" envDefault:"400" env:"ENFORCE_HTTP_STATUS_CODE"`
+	// ErrorCode is the extensions.code emitted on rejection.
+	ErrorCode string `yaml:"error_code,omitempty" envDefault:"INLINE_ARGUMENT_VALUES_NOT_ALLOWED" env:"ERROR_CODE"`
+	// ErrorMessage is the human-readable error/hint message.
+	ErrorMessage string `yaml:"error_message,omitempty" envDefault:"Inline argument values are not allowed. Use variables instead." env:"ERROR_MESSAGE"`
+	// IncludePersistedOperations, when true, applies the policy to persisted
+	// operations as well. By default persisted operations are exempt.
+	IncludePersistedOperations bool `yaml:"include_persisted_operations,omitempty" envDefault:"false" env:"INCLUDE_PERSISTED_OPERATIONS"`
+}
+
+// Enabled reports whether the policy is active in any mode.
+func (d DisallowInlineArguments) Enabled() bool {
+	return d.Mode == DisallowInlineArgumentsModeNonEnforcing || d.Mode == DisallowInlineArgumentsModeEnforcing
+}
+
+// Enforcing reports whether the policy rejects offending operations.
+func (d DisallowInlineArguments) Enforcing() bool {
+	return d.Mode == DisallowInlineArgumentsModeEnforcing
 }
 
 type ComplexityLimit struct {
