@@ -1,6 +1,5 @@
 import { identify, resetTracking } from '@/lib/track';
 import type { NextRouter } from 'next/router';
-import { PlainMessage } from '@bufbuild/protobuf';
 import { Transport } from '@connectrpc/connect';
 import { TransportProvider } from '@connectrpc/connect-query';
 import { createConnectTransport } from '@connectrpc/connect-web';
@@ -25,7 +24,7 @@ const publicPaths = ['/login', '/signup', '/login-method-restricted'];
 
 // The /session endpoint returns the same shape as the platform LoginMethod proto
 // message (plain JSON), so reuse the generated type instead of duplicating it.
-export type LoginMethod = PlainMessage<ProtoLoginMethod>;
+export type LoginMethod = Omit<ProtoLoginMethod, '$typeName' | '$unknown'>;
 
 export interface User {
   id: string;
@@ -258,7 +257,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         },
       ],
       // Allow cookies to be sent to the server
-      credentials: 'include',
+      fetch: (input, init) => fetch(input, { ...init, credentials: 'include' }),
     });
 
     setTransport(newTransport);

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -8,8 +7,9 @@ import {
   SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
-import { maxRowLimitForChecks } from '../../constants.js';
+import { PlainMessage } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
+import { maxRowLimitForChecks } from '../../constants.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -20,6 +20,7 @@ import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPruningRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { CompositionService } from '../../services/CompositionService.js';
 import {
   clamp,
   convertToSubgraphType,
@@ -36,7 +37,6 @@ import {
   isValidPluginVersion,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
-import { CompositionService } from '../../services/CompositionService.js';
 
 export function publishFederatedSubgraph(
   opts: RouterOptions,

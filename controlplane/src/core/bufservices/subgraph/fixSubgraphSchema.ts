@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -6,7 +5,7 @@ import {
   FixSubgraphSchemaRequest,
   FixSubgraphSchemaResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, PlainMessage } from '../../../types/index.js';
 import { Composer } from '../../composition/composer.js';
 import { buildSchema } from '../../composition/composition.js';
 import { OpenAIGraphql } from '../../openai-graphql/index.js';

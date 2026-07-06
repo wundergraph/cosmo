@@ -5,8 +5,8 @@ import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { Command } from 'commander';
 import { describe, expect, test } from 'vitest';
-import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { createClient, createRouterTransport } from '@connectrpc/connect';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { resolve } from 'pathe';
 import ComposeCommand from '../../src/commands/router/commands/compose.js';
 import { Client } from '../../src/core/client/client.js';
@@ -20,7 +20,7 @@ export const mockPlatformTransport = () =>
 describe('router compose command tests', () => {
   test('that generated router config matches expected snapshot when config splitting is disabled', async () => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      platform: createClient(PlatformService, mockPlatformTransport()),
     };
 
     const outputDir = join(tmpdir(), 'router-compose', randomUUID());
@@ -41,7 +41,7 @@ describe('router compose command tests', () => {
 
   test('that generated router config matches expected snapshot when config splitting is enabled ', async () => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      platform: createClient(PlatformService, mockPlatformTransport()),
     };
 
     const outputDir = join(tmpdir(), 'router-compose-split', randomUUID());

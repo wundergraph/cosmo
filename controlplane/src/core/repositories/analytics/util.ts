@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import {
   AnalyticsFilter,
   AnalyticsViewColumn,
@@ -7,7 +6,7 @@ import {
   RequestSeriesItem,
   Unit,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { DateRange, TimeFilters } from '../../../types/index.js';
+import { DateRange, PlainMessage, TimeFilters } from '../../../types/index.js';
 
 export type ColumnMetaData = Record<string, Partial<PlainMessage<AnalyticsViewColumn>>>;
 

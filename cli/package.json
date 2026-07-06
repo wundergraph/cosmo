@@ -44,7 +44,7 @@
     "@bufbuild/protobuf": "catalog:",
     "@connectrpc/connect": "catalog:",
     "@connectrpc/connect-node": "catalog:",
-    "@graphql-tools/utils": "catalog:",
+    "@graphql-tools/utils": "11.0.0",
     "@modelcontextprotocol/sdk": "1.26.0",
     "@octokit/rest": "22.0.0",
     "@wundergraph/composition": "workspace:*",
