@@ -18311,6 +18311,8 @@ type GraphComposition struct {
 	TriggeredBySubgraphName     *string                `protobuf:"bytes,12,opt,name=triggeredBySubgraphName,proto3,oneof" json:"triggeredBySubgraphName,omitempty"`
 	CompositionWarnings         *string                `protobuf:"bytes,13,opt,name=compositionWarnings,proto3,oneof" json:"compositionWarnings,omitempty"`
 	RouterCompatibilityVersion  string                 `protobuf:"bytes,14,opt,name=router_compatibility_version,json=routerCompatibilityVersion,proto3" json:"router_compatibility_version,omitempty"`
+	IsFeatureFlagComposition    bool                   `protobuf:"varint,15,opt,name=isFeatureFlagComposition,proto3" json:"isFeatureFlagComposition,omitempty"`
+	FeatureFlagName             *string                `protobuf:"bytes,16,opt,name=featureFlagName,proto3,oneof" json:"featureFlagName,omitempty"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -18439,6 +18441,20 @@ func (x *GraphComposition) GetCompositionWarnings() string {
 func (x *GraphComposition) GetRouterCompatibilityVersion() string {
 	if x != nil {
 		return x.RouterCompatibilityVersion
+	}
+	return ""
+}
+
+func (x *GraphComposition) GetIsFeatureFlagComposition() bool {
+	if x != nil {
+		return x.IsFeatureFlagComposition
+	}
+	return false
+}
+
+func (x *GraphComposition) GetFeatureFlagName() string {
+	if x != nil && x.FeatureFlagName != nil {
+		return *x.FeatureFlagName
 	}
 	return ""
 }
@@ -35166,7 +35182,7 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x0eorganizationId\x18\x01 \x01(\tR\x0eorganizationId\x12\x16\n" +
 	"\x06accept\x18\x02 \x01(\bR\x06accept\"_\n" +
 	"!AcceptOrDeclineInvitationResponse\x12:\n" +
-	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\"\xd9\x06\n" +
+	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\"\xd8\a\n" +
 	"\x10GraphComposition\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x0fschemaVersionId\x18\x02 \x01(\tR\x0fschemaVersionId\x12\x1c\n" +
@@ -35182,7 +35198,9 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x1bhasMultipleChangedSubgraphs\x18\v \x01(\bH\x05R\x1bhasMultipleChangedSubgraphs\x88\x01\x01\x12=\n" +
 	"\x17triggeredBySubgraphName\x18\f \x01(\tH\x06R\x17triggeredBySubgraphName\x88\x01\x01\x125\n" +
 	"\x13compositionWarnings\x18\r \x01(\tH\aR\x13compositionWarnings\x88\x01\x01\x12@\n" +
-	"\x1crouter_compatibility_version\x18\x0e \x01(\tR\x1arouterCompatibilityVersionB\x14\n" +
+	"\x1crouter_compatibility_version\x18\x0e \x01(\tR\x1arouterCompatibilityVersion\x12:\n" +
+	"\x18isFeatureFlagComposition\x18\x0f \x01(\bR\x18isFeatureFlagComposition\x12-\n" +
+	"\x0ffeatureFlagName\x18\x10 \x01(\tH\bR\x0ffeatureFlagName\x88\x01\x01B\x14\n" +
 	"\x12_compositionErrorsB\f\n" +
 	"\n" +
 	"_createdByB\x18\n" +
@@ -35191,7 +35209,8 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x10_deploymentErrorB\x1e\n" +
 	"\x1c_hasMultipleChangedSubgraphsB\x1a\n" +
 	"\x18_triggeredBySubgraphNameB\x16\n" +
-	"\x14_compositionWarnings\"\x9b\x02\n" +
+	"\x14_compositionWarningsB\x12\n" +
+	"\x10_featureFlagName\"\x9b\x02\n" +
 	"\x18GraphCompositionSubgraph\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x0fschemaVersionId\x18\x02 \x01(\tR\x0fschemaVersionId\x12\x12\n" +
