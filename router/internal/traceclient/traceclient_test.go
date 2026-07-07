@@ -3,8 +3,11 @@ package traceclient
 import (
 	"context"
 	"crypto/tls"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/http/httptrace"
+	"net/url"
 	"sync"
 	"testing"
 
@@ -42,32 +45,6 @@ func (rt *writeLoopRoundTripper) RoundTrip(req *http.Request) (*http.Response, e
 	}, nil
 }
 
-// allPhasesRoundTripper fires every httptrace callback synchronously so each
-// connection phase is observed and recorded.
-type allPhasesRoundTripper struct{}
-
-func (allPhasesRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	ct := httptrace.ContextClientTrace(req.Context())
-
-	ct.GetConn("subgraph.local:443")
-	ct.DNSStart(httptrace.DNSStartInfo{})
-	ct.DNSDone(httptrace.DNSDoneInfo{})
-	ct.ConnectStart("tcp", "subgraph.local:443")
-	ct.ConnectDone("tcp", "subgraph.local:443", nil)
-	ct.TLSHandshakeStart()
-	ct.TLSHandshakeDone(tls.ConnectionState{}, nil)
-	ct.WroteRequest(httptrace.WroteRequestInfo{})
-	ct.GotFirstResponseByte()
-	ct.GotConn(httptrace.GotConnInfo{Reused: true})
-
-	return &http.Response{
-		StatusCode: http.StatusOK,
-		Body:       http.NoBody,
-		Header:     make(http.Header),
-		Request:    req,
-	}, nil
-}
-
 // recordingConnectionMetricStore counts how many times each measurement is recorded.
 type recordingConnectionMetricStore struct {
 	acquire, dns, tcp, tls, ttfb int
@@ -92,29 +69,42 @@ func (s *recordingConnectionMetricStore) Shutdown(_ context.Context) error { ret
 
 func TestTraceInjectingRoundTripper(t *testing.T) {
 	t.Run("records a metric for every observed connection phase", func(t *testing.T) {
-		store := &recordingConnectionMetricStore{}
-		exprCtx := &expr.Context{}
+		server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte("ok"))
+		}))
+		defer server.Close()
 
+		// Hit the server via the "localhost" hostname (not the 127.0.0.1 literal it
+		// listens on) so the transport actually performs a DNS lookup.
+		serverURL, err := url.Parse(server.URL)
+		require.NoError(t, err)
+		requestURL := "https://localhost:" + serverURL.Port() + "/"
+
+		store := &recordingConnectionMetricStore{}
+		base := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
 		rt := NewTraceInjectingRoundTripper(
-			allPhasesRoundTripper{},
+			base,
 			store,
 			func(ctx context.Context, req *http.Request) (*expr.Context, string) {
-				return exprCtx, "employees"
+				return &expr.Context{}, "employees"
 			},
 		)
 
-		req, err := http.NewRequest(http.MethodPost, "https://subgraph.local/graphql", http.NoBody)
+		req, err := http.NewRequest(http.MethodGet, requestURL, http.NoBody)
 		require.NoError(t, err)
 
 		resp, err := rt.RoundTrip(req)
 		require.NoError(t, err)
+		_, _ = io.Copy(io.Discard, resp.Body)
 		_ = resp.Body.Close()
 
-		require.Equal(t, 1, store.acquire)
-		require.Equal(t, 1, store.dns)
-		require.Equal(t, 1, store.tcp)
-		require.Equal(t, 1, store.tls)
-		require.Equal(t, 1, store.ttfb)
+		require.Positive(t, store.acquire, "connection acquire duration should be recorded")
+		require.Positive(t, store.dns, "DNS lookup duration should be recorded")
+		require.Positive(t, store.tcp, "TCP connect duration should be recorded")
+		require.Positive(t, store.tls, "TLS handshake duration should be recorded")
+		require.Positive(t, store.ttfb, "time to first byte should be recorded")
 	})
 
 	t.Run("records connection phase timings without racing concurrent httptrace callbacks", func(t *testing.T) {
