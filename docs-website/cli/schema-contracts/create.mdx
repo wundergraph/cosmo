@@ -4,23 +4,64 @@ description: "Creates a contract from a federated graph or monograph."
 icon: "plus"
 ---
 
+<Note>
+  To delete a contract, please use [federated-graph delete](/cli/federated-graph/delete).
+</Note>
+
 ## Usage
 
 #### Exclude (the items that have the tag(s) specified will be removed from the federated graph)
+
+By default, all top-level nodes will be included in the schema unless explicitly excluded.
 
 ```bash
 npx wgc contract create <name> --source <federated-graph-name> --exclude internal -r <routing-url>
 ```
 
 #### Include (the items that have the tag(s) specified will be included in the federated graph)
+<Note>
+  Child nodes inherit inclusion from their parent unless explicitly excluded.
+  For example, an included Object would include all its field unless explicitly excluded.
+  Similarly, an included field would include all its field arguments unless explicitly excluded.
+</Note>
+
+By default, no top-level nodes will be included in the schema unless explicitly included.
+Child nodes inherit inclusion from their parents unless explicitly excluded.
 
 ```bash
 npx wgc contract create <name> --source <federated-graph-name> --include public -r <routing-url>
 ```
 
+#### Include and exclude together
+##### Minimum Requirements
+
+|Package|Minimum version|
+|---|---|
+|[wgc](/cli/intro)|[0.126.2](https://github.com/wundergraph/cosmo/releases/tag/wgc%400.126.2)|
+
+<Warning>
+  The include and exclude tag sets must be mutually exclusive.
+  If the same tag is added to both the include and exclude sets, an error will be returned.
+</Warning>
+
+If both include and exclude tags are provided, the behaviour is thus:
+1. The schema starts blank (no nodes)
+2. Top-level (parent) nodes (Enums, Inputs, Interfaces, Objects, Scalars, and Unions) are included if they define a
+specified tag to include.
+3. Child-level nodes (Enum values, Input fields, Interface fields, Object fields) are also included unless
+the child defines a specified tag to exclude.
+4. Argument nodes (Object field arguments and Interface field arguments) are included if the corresponding field is
+included unless the field argument defines a specified tag to exclude.
+
+```bash
+npx wgc contract create <name> --source <federated-graph-name> --include public --exclude internal -r <routing-url>
+```
+
 ## Description
 
-The `npx wgc contract create` command allows you to create a contract from a federated graph or monograph by providing tags to exclude from the schema. This will create a new contract graph linked to the source graph.
+The `npx wgc contract create` command allows you to create a contract from a federated graph or monograph by providing
+tags to exclude from the schema.
+This will create a new contract graph linked to the source graph.
 
 ## Parameters
 
@@ -28,34 +69,44 @@ The `npx wgc contract create` command allows you to create a contract from a fed
 
 ## Required Options
 
-`-r , --routing-url`: The routing URL of your router. This URL defines the endpoint where the router will be accessible. The contract graph will be accessible through this router.
+`-r , --routing-url`: The routing URL of your router. This URL defines the endpoint where the router will be accessible.
+The contract graph will be accessible through this router.
 
 `--source`: The name of the source graph from which contract is created.
 
 ## Options
 
-<Note>
-  The --exclude and --include options are currently _mutually exclusive_. An error will be returned if more than one are defined.
-</Note>
-
 - `-n, --namespace` : The namespace of the contract graph and source graph (Default: "default").
 - `--exclude` : The list of tags that need to be excluded from the source graph schema.
 - `--include` : The list of tags that need to be included from the source graph schema.
-- `--admission-webhook-url <url>` the base url of the admission webhook. This is the url that the controlplane will use to implement admission control for the contract graph. Example: `https://admission.example.com` (without the `/validate-config` path name)
-- `--admission-webhook-secret`: Allows you to sign requests (HMAC) made to your admission webhook url. The header containing this signature is `X-Cosmo-Signature-256`
+- `--admission-webhook-url <url>` the base url of the admission webhook.
+This is the url that the controlplane will use to implement admission control for the contract graph.
+Example: `https://admission.example.com` (without the `/validate-config` path name)
+- `--admission-webhook-secret`: Allows you to sign requests (HMAC) made to your admission webhook url.
+The header containing this signature is `X-Cosmo-Signature-256`
 - `--readme` : The markdown file which describes the contract graph.
 - `--suppress-warnings`: This flag suppresses any warnings produced by composition.
 
 ## Examples
 
+Create a contract graph named `production-external` from the source graph schema of `production` that excludes all
+schema elements tagged with `internal` or `experimental`:
+
 ```bash
-npx wgc contract create production-external --source production --exlude internal experimental -r http://router.example.com/graphql
+npx wgc contract create production-external --source production --exclude internal experimental -r http://router.example.com/graphql
 ```
 
-Create a contract graph named `production-external` from the source graph schema of `production` that excludes all schema elements tagged with `internal` or `experimental`.
+Create a contract graph named `production-external` from the source graph schema of `production` that includes all
+schema elements tagged with `public` or `api`:
 
 ```bash
 npx wgc contract create production-external --source production --include public api -r http://router.example.com/graphql
 ```
 
-Create a contract graph named `production-external` from the source graph schema of `production` that excludes all schema elements tagged with `public` or `api`.
+Create a contract graph named `public-api` from the source graph schema of `supergraph` that includes all
+schema elements tagged with `core` or `api` and excludes all schema elements tagged with `classified` or `internal`:
+
+```bash
+npx wgc contract create public-api --source supergraph --include core api --exclude classified internal -r http://router.example.com/graphql
+```
+

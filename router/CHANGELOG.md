@@ -4,6 +4,37 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.329.0](https://github.com/wundergraph/cosmo/compare/router@0.328.0...router@0.329.0) (2026-07-03)
+
+### Features
+
+* add observability on subgraph connections and resolvers ([#2881](https://github.com/wundergraph/cosmo/issues/2881)) ([4169176](https://github.com/wundergraph/cosmo/commit/4169176f24a7ef6874e33d2838a3779eaa328efb)) (@alepane21)
+
+# [0.328.0](https://github.com/wundergraph/cosmo/compare/router@0.327.0...router@0.328.0) (2026-07-03)
+
+### Features
+
+* add defer support ([#2697](https://github.com/wundergraph/cosmo/issues/2697)) ([3c22488](https://github.com/wundergraph/cosmo/commit/3c22488ec283ec27b8ea57be70313ff5efcb2fef)) (@devsergiy)
+
+# [0.327.0](https://github.com/wundergraph/cosmo/compare/router@0.326.3...router@0.327.0) (2026-07-02)
+
+### Features
+
+* **router:** add SubscriptionOnCreate hook ([#2972](https://github.com/wundergraph/cosmo/issues/2972)) ([285ab20](https://github.com/wundergraph/cosmo/commit/285ab203a83355ea7e14e275587bcd4257f92870)) (@dkorittki)
+
+## [0.326.3](https://github.com/wundergraph/cosmo/compare/router@0.326.2...router@0.326.3) (2026-07-02)
+
+### Bug Fixes
+
+* handling of provides on abstract types ([#3043](https://github.com/wundergraph/cosmo/issues/3043)) ([fcaf176](https://github.com/wundergraph/cosmo/commit/fcaf17616cd20e6febb0aa4a0054781236f76872)) (@devsergiy)
+
+## [0.326.2](https://github.com/wundergraph/cosmo/compare/router@0.326.1...router@0.326.2) (2026-07-01)
+
+### Bug Fixes
+
+* avoid holding previous graphMuxes when reloading ([#3035](https://github.com/wundergraph/cosmo/issues/3035)) ([1d7ba2e](https://github.com/wundergraph/cosmo/commit/1d7ba2e6014fc29e7b23cde0f76b771aeef0135a)) (@endigma)
+* metrics flush timeout canceled shutdown ([#2990](https://github.com/wundergraph/cosmo/issues/2990)) ([7715d70](https://github.com/wundergraph/cosmo/commit/7715d701d90e446fc9915e34ed65f321f54dbd88)) (@Noroth)
+
 ## [0.326.1](https://github.com/wundergraph/cosmo/compare/router@0.326.0...router@0.326.1) (2026-06-25)
 
 ### Bug Fixes

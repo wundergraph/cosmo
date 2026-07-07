@@ -64,14 +64,14 @@ func (copyCtx Context) Clone() *Context {
 // Request is the context for the request object in expressions. Be aware, that only value receiver methods
 // are exported in the expr environment. This is because the expressions are evaluated in a read-only context.
 type Request struct {
-	Auth      RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
-	URL       RequestURL     `expr:"url"`
-	Header    RequestHeaders `expr:"header"`
-	Body      Body           `expr:"body"`
-	Trace     Trace          `expr:"trace"`
-	Operation Operation      `expr:"operation"`
-	Client    Client         `expr:"client"`
-	Error     error          `expr:"error"`
+	Auth      RequestAuth `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
+	URL       RequestURL  `expr:"url"`
+	Header    Headers     `expr:"header"`
+	Body      Body        `expr:"body"`
+	Trace     Trace       `expr:"trace"`
+	Operation Operation   `expr:"operation"`
+	Client    Client      `expr:"client"`
+	Error     error       `expr:"error"`
 }
 
 type Response struct {
@@ -79,22 +79,29 @@ type Response struct {
 }
 
 type Operation struct {
-	Sha256Hash        string        `expr:"sha256Hash"`
-	ParsingTime       time.Duration `expr:"parsingTime"`
-	Name              string        `expr:"name"`
-	Type              string        `expr:"type"`
-	PersistedID       string        `expr:"persistedId"`
-	NormalizationTime time.Duration `expr:"normalizationTime"`
-	Hash              string        `expr:"hash"`
-	QueryPlanHash     string        `expr:"queryPlanHash"`
-	ValidationTime    time.Duration `expr:"validationTime"`
-	PlanningTime      time.Duration `expr:"planningTime"`
+	Sha256Hash              string        `expr:"sha256Hash"`
+	ParsingTime             time.Duration `expr:"parsingTime"`
+	Name                    string        `expr:"name"`
+	Type                    string        `expr:"type"`
+	PersistedID             string        `expr:"persistedId"`
+	NormalizationTime       time.Duration `expr:"normalizationTime"`
+	Hash                    string        `expr:"hash"`
+	QueryPlanHash           string        `expr:"queryPlanHash"`
+	ValidationTime          time.Duration `expr:"validationTime"`
+	PlanningTime            time.Duration `expr:"planningTime"`
+	ResolverAcquireDuration time.Duration `expr:"resolverAcquireDuration"`
 
 	NormalizationCacheHit          bool `expr:"normalizationCacheHit"`
 	VariablesNormalizationCacheHit bool `expr:"variablesNormalizationCacheHit"`
 	VariablesRemappingCacheHit     bool `expr:"variablesRemappingCacheHit"`
 	PersistedOperationCacheHit     bool `expr:"persistedOperationCacheHit"`
 	PlanCacheHit                   bool `expr:"planCacheHit"`
+
+	// Variables is the JSON string of the operation variables sent with the request. It is only
+	// populated when an expression references it, to avoid the serialization cost on every request.
+	// The value can contain sensitive data and can be large, so it should be logged with care.
+	// Not populated for WebSocket subscriptions (see request.operation note in the docs).
+	Variables string `expr:"variables"`
 }
 
 type Client struct {
@@ -125,7 +132,7 @@ type RequestURL struct {
 	Query map[string]string `expr:"query"`
 }
 
-type RequestHeaders struct {
+type Headers struct {
 	Header http.Header `expr:"-"` // Do not expose the full header
 }
 
@@ -139,15 +146,26 @@ type RequestAuth struct {
 type SubgraphRequest struct {
 	Error       error       `expr:"error"`
 	ClientTrace ClientTrace `expr:"clientTrace"`
+	// StartTime is the Unix epoch in milliseconds at which the router started the subgraph
+	// fetch. It marks the start of the subgraph "latency" measurement reported in the
+	// subgraph access log. It is expressed in the same unit as datetime so the two can
+	// be combined directly, e.g. to compute how long it took the subgraph to start processing:
+	// (datetime(subgraph.response.header.Get('X-Server-Start')).UnixMilli() - subgraph.request.startTime) / 1000
+	StartTime int64 `expr:"startTime"`
 }
 
 type SubgraphResponse struct {
-	Body Body `expr:"body"`
+	Body   Body    `expr:"body"`
+	Header Headers `expr:"header"`
 }
 
 type ClientTrace struct {
 	FetchDuration             time.Duration `expr:"fetchDuration"`
 	ConnectionAcquireDuration time.Duration `expr:"connAcquireDuration"`
+	DNSLookupDuration         time.Duration `expr:"dnsLookupDuration"`
+	TCPConnectDuration        time.Duration `expr:"tcpConnectDuration"`
+	TLSHandshakeDuration      time.Duration `expr:"tlsHandshakeDuration"`
+	TimeToFirstByte           time.Duration `expr:"timeToFirstByte"`
 }
 
 // Subgraph Related
@@ -161,14 +179,14 @@ type Subgraph struct {
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
 // The key is case-insensitive and transformed to the canonical format.
 // TODO: Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
-func (r RequestHeaders) Get(key string) string {
+func (r Headers) Get(key string) string {
 	return r.Header.Get(key)
 }
 
 // LoadRequest loads the request object into the context.
 func LoadRequest(req *http.Request) Request {
 	r := Request{
-		Header: RequestHeaders{
+		Header: Headers{
 			Header: req.Header,
 		},
 	}
