@@ -1,29 +1,26 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import {
   AnalyticsConfig,
   AnalyticsFilter,
   AnalyticsViewFilterOperator,
   AnalyticsViewGroupName,
-  AnalyticsViewResult,
-  AnalyticsViewResultFilter,
-  AnalyticsViewRow,
   AnalyticsViewRowValue,
   CustomOptions,
   Unit,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { PlainMessage } from '../../../types/index.js';
 import { ClickHouseClient } from '../../clickhouse/index.js';
 import { traced } from '../../tracing.js';
 import {
   BaseFilters,
+  CoercedFilterValues,
   ColumnMetaData,
   buildAnalyticsViewColumns,
   buildAnalyticsViewFilters,
   buildCoercedFilterSqlStatement,
   buildColumnsFromNames,
   coerceFilterValues,
-  fillColumnMetaData,
-  CoercedFilterValues,
   escapeStringsFromParams,
+  fillColumnMetaData,
 } from './util.js';
 
 /**
@@ -283,7 +280,7 @@ export class AnalyticsRequestViewRepository {
             ${this.client.database}.traces
           WHERE
             ${baseWhereSql}
-            ${baseOrderSql || 'ORDER BY Timestamp DESC'}
+            ${baseOrderSql || 'ORDER BY toUnixTimestamp(Timestamp) DESC'}
             ${basePaginationSql}
         `;
         break;
@@ -541,7 +538,7 @@ export class AnalyticsRequestViewRepository {
 
     const query = `
       SELECT HttpStatusCode
-        FROM ${this.client.database}.traces
+        FROM ${this.client.database}.traces_by_http_status_code_quarter_hourly
       WHERE ${whereSql}
         GROUP BY HttpStatusCode
       LIMIT 100
@@ -616,7 +613,7 @@ export class AnalyticsRequestViewRepository {
     clientNames: string[],
     clientVersions: string[],
     httpStatusCodes: string[],
-  ): Record<string, PlainMessage<AnalyticsViewResultFilter>> {
+  ) {
     const filters = this.getBaseFiltersForGroup(name);
 
     if (filters.operationName) {
@@ -683,7 +680,8 @@ export class AnalyticsRequestViewRepository {
     const allowedColumns = Object.keys(this.columnMetadata);
 
     if (id && allowedColumns.includes(id)) {
-      return `ORDER BY ${id} ${desc ? 'DESC' : 'ASC'}`;
+      const dbExpression = id === 'unixTimestamp' ? 'toUnixTimestamp(Timestamp)' : id;
+      return `ORDER BY ${dbExpression} ${desc ? 'DESC' : 'ASC'}`;
     }
   }
 
@@ -692,7 +690,7 @@ export class AnalyticsRequestViewRepository {
     federatedGraphId: string,
     name: AnalyticsViewGroupName,
     opts?: AnalyticsConfig,
-  ): Promise<PlainMessage<AnalyticsViewResult>> {
+  ) {
     const inputFilters = this.omitGroupedFilters(name, opts?.filters ?? []);
     const columnMetaData = fillColumnMetaData(this.columnMetadata);
     const paginationSql = `LIMIT {limit:Int16} OFFSET {offset:Int64}`;
@@ -797,7 +795,7 @@ export class AnalyticsRequestViewRepository {
     const columns = buildAnalyticsViewColumns(result[0], columnMetaData);
     const filters = buildAnalyticsViewFilters(result[0], columnFilters);
 
-    const rows: PlainMessage<AnalyticsViewRow>[] = result.map((row) => {
+    const rows = result.map((row) => {
       const viewRow: Record<string, PlainMessage<AnalyticsViewRowValue>> = {};
 
       /**

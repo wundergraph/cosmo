@@ -6,6 +6,7 @@ import logSymbols from 'log-symbols';
 import pc from 'picocolors';
 
 import { getBaseHeaders } from '../../../core/config.js';
+import { stripProtobufInternals } from '../../../utils.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 const createJsonSuccessOutput = (clients: Awaited<GetClientsResponse['clients']>) => ({
@@ -105,7 +106,7 @@ export default (opts: BaseCommandOptions) => {
     if (resp.clients.length === 0) {
       if (options.json) {
         const output = createJsonSuccessOutput(resp.clients);
-        console.log(JSON.stringify(output));
+        console.log(JSON.stringify(output, stripProtobufInternals));
         return;
       }
 
@@ -115,7 +116,7 @@ export default (opts: BaseCommandOptions) => {
 
     if (options.json) {
       const output = createJsonSuccessOutput(resp.clients);
-      console.log(JSON.stringify(output));
+      console.log(JSON.stringify(output, stripProtobufInternals));
       return;
     }
 

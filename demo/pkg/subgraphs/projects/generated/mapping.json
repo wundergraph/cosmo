@@ -150,8 +150,7 @@
       "key": "id",
       "rpc": "LookupProjectById",
       "request": "LookupProjectByIdRequest",
-      "response": "LookupProjectByIdResponse",
-      "requiredFieldMappings": []
+      "response": "LookupProjectByIdResponse"
     },
     {
       "typeName": "Milestone",
@@ -159,8 +158,7 @@
       "key": "id",
       "rpc": "LookupMilestoneById",
       "request": "LookupMilestoneByIdRequest",
-      "response": "LookupMilestoneByIdResponse",
-      "requiredFieldMappings": []
+      "response": "LookupMilestoneByIdResponse"
     },
     {
       "typeName": "Task",
@@ -168,8 +166,7 @@
       "key": "id",
       "rpc": "LookupTaskById",
       "request": "LookupTaskByIdRequest",
-      "response": "LookupTaskByIdResponse",
-      "requiredFieldMappings": []
+      "response": "LookupTaskByIdResponse"
     },
     {
       "typeName": "Employee",
@@ -182,8 +179,7 @@
         {
           "fieldMapping": {
             "original": "taggedProjectSummary",
-            "mapped": "tagged_project_summary",
-            "argumentMappings": []
+            "mapped": "tagged_project_summary"
           },
           "rpc": "RequireEmployeeTaggedProjectSummaryById",
           "request": "RequireEmployeeTaggedProjectSummaryByIdRequest",
@@ -207,8 +203,7 @@
         {
           "fieldMapping": {
             "original": "workItemInfo",
-            "mapped": "work_item_info",
-            "argumentMappings": []
+            "mapped": "work_item_info"
           },
           "rpc": "RequireEmployeeWorkItemInfoById",
           "request": "RequireEmployeeWorkItemInfoByIdRequest",
@@ -217,8 +212,7 @@
         {
           "fieldMapping": {
             "original": "reviewReport",
-            "mapped": "review_report",
-            "argumentMappings": []
+            "mapped": "review_report"
           },
           "rpc": "RequireEmployeeReviewReportById",
           "request": "RequireEmployeeReviewReportByIdRequest",
@@ -227,8 +221,7 @@
         {
           "fieldMapping": {
             "original": "workSetupSummary",
-            "mapped": "work_setup_summary",
-            "argumentMappings": []
+            "mapped": "work_setup_summary"
           },
           "rpc": "RequireEmployeeWorkSetupSummaryById",
           "request": "RequireEmployeeWorkSetupSummaryByIdRequest",
@@ -237,8 +230,7 @@
         {
           "fieldMapping": {
             "original": "workItemHandlerInfo",
-            "mapped": "work_item_handler_info",
-            "argumentMappings": []
+            "mapped": "work_item_handler_info"
           },
           "rpc": "RequireEmployeeWorkItemHandlerInfoById",
           "request": "RequireEmployeeWorkItemHandlerInfoByIdRequest",
@@ -247,8 +239,7 @@
         {
           "fieldMapping": {
             "original": "workItemSpecsInfo",
-            "mapped": "work_item_specs_info",
-            "argumentMappings": []
+            "mapped": "work_item_specs_info"
           },
           "rpc": "RequireEmployeeWorkItemSpecsInfoById",
           "request": "RequireEmployeeWorkItemSpecsInfoByIdRequest",
@@ -257,8 +248,7 @@
         {
           "fieldMapping": {
             "original": "deepWorkItemInfo",
-            "mapped": "deep_work_item_info",
-            "argumentMappings": []
+            "mapped": "deep_work_item_info"
           },
           "rpc": "RequireEmployeeDeepWorkItemInfoById",
           "request": "RequireEmployeeDeepWorkItemInfoByIdRequest",
@@ -272,8 +262,7 @@
       "key": "upc",
       "rpc": "LookupProductByUpc",
       "request": "LookupProductByUpcRequest",
-      "response": "LookupProductByUpcResponse",
-      "requiredFieldMappings": []
+      "response": "LookupProductByUpcResponse"
     }
   ],
   "typeFieldMappings": [
@@ -282,8 +271,7 @@
       "fieldMappings": [
         {
           "original": "projects",
-          "mapped": "projects",
-          "argumentMappings": []
+          "mapped": "projects"
         },
         {
           "original": "project",
@@ -297,8 +285,7 @@
         },
         {
           "original": "projectStatuses",
-          "mapped": "project_statuses",
-          "argumentMappings": []
+          "mapped": "project_statuses"
         },
         {
           "original": "projectsByStatus",
@@ -362,13 +349,11 @@
         },
         {
           "original": "projectTags",
-          "mapped": "project_tags",
-          "argumentMappings": []
+          "mapped": "project_tags"
         },
         {
           "original": "archivedProjects",
-          "mapped": "archived_projects",
-          "argumentMappings": []
+          "mapped": "archived_projects"
         },
         {
           "original": "tasksByPriority",
@@ -392,13 +377,11 @@
         },
         {
           "original": "killService",
-          "mapped": "kill_service",
-          "argumentMappings": []
+          "mapped": "kill_service"
         },
         {
           "original": "panic",
-          "mapped": "panic",
-          "argumentMappings": []
+          "mapped": "panic"
         },
         {
           "original": "nodesById",
@@ -466,28 +449,23 @@
       "fieldMappings": [
         {
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
           "original": "startDate",
-          "mapped": "start_date",
-          "argumentMappings": []
+          "mapped": "start_date"
         },
         {
           "original": "endDate",
-          "mapped": "end_date",
-          "argumentMappings": []
+          "mapped": "end_date"
         },
         {
           "original": "status",
-          "mapped": "status",
-          "argumentMappings": []
+          "mapped": "status"
         }
       ]
     },
@@ -496,28 +474,23 @@
       "fieldMappings": [
         {
           "original": "projectId",
-          "mapped": "project_id",
-          "argumentMappings": []
+          "mapped": "project_id"
         },
         {
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
           "original": "dueDate",
-          "mapped": "due_date",
-          "argumentMappings": []
+          "mapped": "due_date"
         },
         {
           "original": "status",
-          "mapped": "status",
-          "argumentMappings": []
+          "mapped": "status"
         }
       ]
     },
@@ -526,38 +499,31 @@
       "fieldMappings": [
         {
           "original": "projectId",
-          "mapped": "project_id",
-          "argumentMappings": []
+          "mapped": "project_id"
         },
         {
           "original": "assigneeId",
-          "mapped": "assignee_id",
-          "argumentMappings": []
+          "mapped": "assignee_id"
         },
         {
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
           "original": "priority",
-          "mapped": "priority",
-          "argumentMappings": []
+          "mapped": "priority"
         },
         {
           "original": "status",
-          "mapped": "status",
-          "argumentMappings": []
+          "mapped": "status"
         },
         {
           "original": "estimatedHours",
-          "mapped": "estimated_hours",
-          "argumentMappings": []
+          "mapped": "estimated_hours"
         }
       ]
     },
@@ -566,98 +532,79 @@
       "fieldMappings": [
         {
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
           "original": "startDate",
-          "mapped": "start_date",
-          "argumentMappings": []
+          "mapped": "start_date"
         },
         {
           "original": "endDate",
-          "mapped": "end_date",
-          "argumentMappings": []
+          "mapped": "end_date"
         },
         {
           "original": "status",
-          "mapped": "status",
-          "argumentMappings": []
+          "mapped": "status"
         },
         {
           "original": "teamMembers",
-          "mapped": "team_members",
-          "argumentMappings": []
+          "mapped": "team_members"
         },
         {
           "original": "relatedProducts",
-          "mapped": "related_products",
-          "argumentMappings": []
+          "mapped": "related_products"
         },
         {
           "original": "milestoneIds",
-          "mapped": "milestone_ids",
-          "argumentMappings": []
+          "mapped": "milestone_ids"
         },
         {
           "original": "milestones",
-          "mapped": "milestones",
-          "argumentMappings": []
+          "mapped": "milestones"
         },
         {
           "original": "tasks",
-          "mapped": "tasks",
-          "argumentMappings": []
+          "mapped": "tasks"
         },
         {
           "original": "progress",
-          "mapped": "progress",
-          "argumentMappings": []
+          "mapped": "progress"
         },
         {
           "original": "tags",
-          "mapped": "tags",
-          "argumentMappings": []
+          "mapped": "tags"
         },
         {
           "original": "alternativeProjects",
-          "mapped": "alternative_projects",
-          "argumentMappings": []
+          "mapped": "alternative_projects"
         },
         {
           "original": "dependencies",
-          "mapped": "dependencies",
-          "argumentMappings": []
+          "mapped": "dependencies"
         },
         {
           "original": "resourceGroups",
-          "mapped": "resource_groups",
-          "argumentMappings": []
+          "mapped": "resource_groups"
         },
         {
           "original": "tasksByPhase",
-          "mapped": "tasks_by_phase",
-          "argumentMappings": []
+          "mapped": "tasks_by_phase"
         },
         {
           "original": "milestoneGroups",
-          "mapped": "milestone_groups",
-          "argumentMappings": []
+          "mapped": "milestone_groups"
         },
         {
           "original": "priorityMatrix",
-          "mapped": "priority_matrix",
-          "argumentMappings": []
+          "mapped": "priority_matrix"
         },
         {
           "original": "subProjects",
@@ -729,13 +676,11 @@
         },
         {
           "original": "taskCount",
-          "mapped": "task_count",
-          "argumentMappings": []
+          "mapped": "task_count"
         },
         {
           "original": "activeMilestoneCount",
-          "mapped": "active_milestone_count",
-          "argumentMappings": []
+          "mapped": "active_milestone_count"
         }
       ]
     },
@@ -744,58 +689,47 @@
       "fieldMappings": [
         {
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
           "original": "projectId",
-          "mapped": "project_id",
-          "argumentMappings": []
+          "mapped": "project_id"
         },
         {
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
           "original": "startDate",
-          "mapped": "start_date",
-          "argumentMappings": []
+          "mapped": "start_date"
         },
         {
           "original": "endDate",
-          "mapped": "end_date",
-          "argumentMappings": []
+          "mapped": "end_date"
         },
         {
           "original": "status",
-          "mapped": "status",
-          "argumentMappings": []
+          "mapped": "status"
         },
         {
           "original": "completionPercentage",
-          "mapped": "completion_percentage",
-          "argumentMappings": []
+          "mapped": "completion_percentage"
         },
         {
           "original": "dependencies",
-          "mapped": "dependencies",
-          "argumentMappings": []
+          "mapped": "dependencies"
         },
         {
           "original": "subtasks",
-          "mapped": "subtasks",
-          "argumentMappings": []
+          "mapped": "subtasks"
         },
         {
           "original": "reviewers",
-          "mapped": "reviewers",
-          "argumentMappings": []
+          "mapped": "reviewers"
         },
         {
           "original": "isAtRisk",
@@ -824,88 +758,71 @@
       "fieldMappings": [
         {
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
           "original": "projectId",
-          "mapped": "project_id",
-          "argumentMappings": []
+          "mapped": "project_id"
         },
         {
           "original": "milestoneId",
-          "mapped": "milestone_id",
-          "argumentMappings": []
+          "mapped": "milestone_id"
         },
         {
           "original": "assigneeId",
-          "mapped": "assignee_id",
-          "argumentMappings": []
+          "mapped": "assignee_id"
         },
         {
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
           "original": "priority",
-          "mapped": "priority",
-          "argumentMappings": []
+          "mapped": "priority"
         },
         {
           "original": "status",
-          "mapped": "status",
-          "argumentMappings": []
+          "mapped": "status"
         },
         {
           "original": "estimatedHours",
-          "mapped": "estimated_hours",
-          "argumentMappings": []
+          "mapped": "estimated_hours"
         },
         {
           "original": "actualHours",
-          "mapped": "actual_hours",
-          "argumentMappings": []
+          "mapped": "actual_hours"
         },
         {
           "original": "createdAt",
-          "mapped": "created_at",
-          "argumentMappings": []
+          "mapped": "created_at"
         },
         {
           "original": "completedAt",
-          "mapped": "completed_at",
-          "argumentMappings": []
+          "mapped": "completed_at"
         },
         {
           "original": "labels",
-          "mapped": "labels",
-          "argumentMappings": []
+          "mapped": "labels"
         },
         {
           "original": "subtasks",
-          "mapped": "subtasks",
-          "argumentMappings": []
+          "mapped": "subtasks"
         },
         {
           "original": "dependencies",
-          "mapped": "dependencies",
-          "argumentMappings": []
+          "mapped": "dependencies"
         },
         {
           "original": "attachmentUrls",
-          "mapped": "attachment_urls",
-          "argumentMappings": []
+          "mapped": "attachment_urls"
         },
         {
           "original": "reviewerIds",
-          "mapped": "reviewer_ids",
-          "argumentMappings": []
+          "mapped": "reviewer_ids"
         },
         {
           "original": "isBlocked",
@@ -934,38 +851,31 @@
       "fieldMappings": [
         {
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
           "original": "projectId",
-          "mapped": "project_id",
-          "argumentMappings": []
+          "mapped": "project_id"
         },
         {
           "original": "updatedById",
-          "mapped": "updated_by_id",
-          "argumentMappings": []
+          "mapped": "updated_by_id"
         },
         {
           "original": "updateType",
-          "mapped": "update_type",
-          "argumentMappings": []
+          "mapped": "update_type"
         },
         {
           "original": "description",
-          "mapped": "description",
-          "argumentMappings": []
+          "mapped": "description"
         },
         {
           "original": "timestamp",
-          "mapped": "timestamp",
-          "argumentMappings": []
+          "mapped": "timestamp"
         },
         {
           "original": "metadata",
-          "mapped": "metadata",
-          "argumentMappings": []
+          "mapped": "metadata"
         }
       ]
     },
@@ -974,28 +884,23 @@
       "fieldMappings": [
         {
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
           "original": "priority",
-          "mapped": "priority",
-          "argumentMappings": []
+          "mapped": "priority"
         },
         {
           "original": "codeCount",
-          "mapped": "code_count",
-          "argumentMappings": []
+          "mapped": "code_count"
         },
         {
           "original": "handler",
-          "mapped": "handler",
-          "argumentMappings": []
+          "mapped": "handler"
         },
         {
           "original": "specs",
-          "mapped": "specs",
-          "argumentMappings": []
+          "mapped": "specs"
         }
       ]
     },
@@ -1004,28 +909,23 @@
       "fieldMappings": [
         {
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
           "original": "priority",
-          "mapped": "priority",
-          "argumentMappings": []
+          "mapped": "priority"
         },
         {
           "original": "teamSize",
-          "mapped": "team_size",
-          "argumentMappings": []
+          "mapped": "team_size"
         },
         {
           "original": "handler",
-          "mapped": "handler",
-          "argumentMappings": []
+          "mapped": "handler"
         },
         {
           "original": "specs",
-          "mapped": "specs",
-          "argumentMappings": []
+          "mapped": "specs"
         }
       ]
     },
@@ -1034,13 +934,11 @@
       "fieldMappings": [
         {
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
           "original": "assignedItem",
-          "mapped": "assigned_item",
-          "argumentMappings": []
+          "mapped": "assigned_item"
         }
       ]
     },
@@ -1049,18 +947,15 @@
       "fieldMappings": [
         {
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
           "original": "complexity",
-          "mapped": "complexity",
-          "argumentMappings": []
+          "mapped": "complexity"
         },
         {
           "original": "metrics",
-          "mapped": "metrics",
-          "argumentMappings": []
+          "mapped": "metrics"
         }
       ]
     },
@@ -1069,18 +964,15 @@
       "fieldMappings": [
         {
           "original": "name",
-          "mapped": "name",
-          "argumentMappings": []
+          "mapped": "name"
         },
         {
           "original": "scope",
-          "mapped": "scope",
-          "argumentMappings": []
+          "mapped": "scope"
         },
         {
           "original": "metrics",
-          "mapped": "metrics",
-          "argumentMappings": []
+          "mapped": "metrics"
         }
       ]
     },
@@ -1089,13 +981,11 @@
       "fieldMappings": [
         {
           "original": "score",
-          "mapped": "score",
-          "argumentMappings": []
+          "mapped": "score"
         },
         {
           "original": "efficiency",
-          "mapped": "efficiency",
-          "argumentMappings": []
+          "mapped": "efficiency"
         }
       ]
     },
@@ -1104,13 +994,11 @@
       "fieldMappings": [
         {
           "original": "comment",
-          "mapped": "comment",
-          "argumentMappings": []
+          "mapped": "comment"
         },
         {
           "original": "approvedAt",
-          "mapped": "approved_at",
-          "argumentMappings": []
+          "mapped": "approved_at"
         }
       ]
     },
@@ -1119,13 +1007,11 @@
       "fieldMappings": [
         {
           "original": "reason",
-          "mapped": "reason",
-          "argumentMappings": []
+          "mapped": "reason"
         },
         {
           "original": "rejectionCode",
-          "mapped": "rejection_code",
-          "argumentMappings": []
+          "mapped": "rejection_code"
         }
       ]
     },
@@ -1134,13 +1020,11 @@
       "fieldMappings": [
         {
           "original": "priority",
-          "mapped": "priority",
-          "argumentMappings": []
+          "mapped": "priority"
         },
         {
           "original": "primaryItem",
-          "mapped": "primary_item",
-          "argumentMappings": []
+          "mapped": "primary_item"
         }
       ]
     },
@@ -1149,48 +1033,39 @@
       "fieldMappings": [
         {
           "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
+          "mapped": "id"
         },
         {
           "original": "expertise",
-          "mapped": "expertise",
-          "argumentMappings": []
+          "mapped": "expertise"
         },
         {
           "original": "projects",
-          "mapped": "projects",
-          "argumentMappings": []
+          "mapped": "projects"
         },
         {
           "original": "assignedTasks",
-          "mapped": "assigned_tasks",
-          "argumentMappings": []
+          "mapped": "assigned_tasks"
         },
         {
           "original": "completedTasks",
-          "mapped": "completed_tasks",
-          "argumentMappings": []
+          "mapped": "completed_tasks"
         },
         {
           "original": "skills",
-          "mapped": "skills",
-          "argumentMappings": []
+          "mapped": "skills"
         },
         {
           "original": "certifications",
-          "mapped": "certifications",
-          "argumentMappings": []
+          "mapped": "certifications"
         },
         {
           "original": "projectHistory",
-          "mapped": "project_history",
-          "argumentMappings": []
+          "mapped": "project_history"
         },
         {
           "original": "taggedProjectSummary",
-          "mapped": "tagged_project_summary",
-          "argumentMappings": []
+          "mapped": "tagged_project_summary"
         },
         {
           "original": "filteredProjectSummary",
@@ -1204,48 +1079,39 @@
         },
         {
           "original": "primaryWorkItem",
-          "mapped": "primary_work_item",
-          "argumentMappings": []
+          "mapped": "primary_work_item"
         },
         {
           "original": "lastWorkReview",
-          "mapped": "last_work_review",
-          "argumentMappings": []
+          "mapped": "last_work_review"
         },
         {
           "original": "workSetup",
-          "mapped": "work_setup",
-          "argumentMappings": []
+          "mapped": "work_setup"
         },
         {
           "original": "workItemInfo",
-          "mapped": "work_item_info",
-          "argumentMappings": []
+          "mapped": "work_item_info"
         },
         {
           "original": "reviewReport",
-          "mapped": "review_report",
-          "argumentMappings": []
+          "mapped": "review_report"
         },
         {
           "original": "workSetupSummary",
-          "mapped": "work_setup_summary",
-          "argumentMappings": []
+          "mapped": "work_setup_summary"
         },
         {
           "original": "workItemHandlerInfo",
-          "mapped": "work_item_handler_info",
-          "argumentMappings": []
+          "mapped": "work_item_handler_info"
         },
         {
           "original": "workItemSpecsInfo",
-          "mapped": "work_item_specs_info",
-          "argumentMappings": []
+          "mapped": "work_item_specs_info"
         },
         {
           "original": "deepWorkItemInfo",
-          "mapped": "deep_work_item_info",
-          "argumentMappings": []
+          "mapped": "deep_work_item_info"
         },
         {
           "original": "currentWorkload",
@@ -1277,8 +1143,7 @@
         },
         {
           "original": "totalProjectCount",
-          "mapped": "total_project_count",
-          "argumentMappings": []
+          "mapped": "total_project_count"
         }
       ]
     },
@@ -1287,18 +1152,15 @@
       "fieldMappings": [
         {
           "original": "upc",
-          "mapped": "upc",
-          "argumentMappings": []
+          "mapped": "upc"
         },
         {
           "original": "projects",
-          "mapped": "projects",
-          "argumentMappings": []
+          "mapped": "projects"
         },
         {
           "original": "featureMatrix",
-          "mapped": "feature_matrix",
-          "argumentMappings": []
+          "mapped": "feature_matrix"
         }
       ]
     }
@@ -1547,8 +1409,7 @@
         "type": "Project",
         "fieldMapping": {
           "original": "taskCount",
-          "mapped": "task_count",
-          "argumentMappings": []
+          "mapped": "task_count"
         }
       },
       "rpc": "ResolveProjectTaskCount",
@@ -1561,8 +1422,7 @@
         "type": "Project",
         "fieldMapping": {
           "original": "activeMilestoneCount",
-          "mapped": "active_milestone_count",
-          "argumentMappings": []
+          "mapped": "active_milestone_count"
         }
       },
       "rpc": "ResolveProjectActiveMilestoneCount",
@@ -1697,8 +1557,7 @@
         "type": "Employee",
         "fieldMapping": {
           "original": "totalProjectCount",
-          "mapped": "total_project_count",
-          "argumentMappings": []
+          "mapped": "total_project_count"
         }
       },
       "rpc": "ResolveEmployeeTotalProjectCount",

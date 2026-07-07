@@ -574,7 +574,6 @@ export const handleCheckResult = async ({
           .setDetails(response.response?.details)
           .setStatus(false)
           .write();
-        console.log(JSON.stringify(jsonBuilder.build()));
         return false;
       } else {
         console.log('\nFailed to perform the check operation.');

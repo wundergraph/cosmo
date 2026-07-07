@@ -1607,12 +1607,18 @@ func TestNatsEvents(t *testing.T) {
 					Key:    "provider_id",
 					String: "my-nats",
 				})
-				return myNatsLogs.FilterMessage("NATS connection established").Len() == 4 &&
-					myNatsLogs.FilterMessage("NATS disconnected").Len() == 1 &&
-					myNatsLogs.FilterMessage("NATS connection closed").Len() == 1 &&
-					defaultLogs.FilterMessage("NATS connection established").Len() == 4 &&
-					defaultLogs.FilterMessage("NATS disconnected").Len() == 1 &&
-					defaultLogs.FilterMessage("NATS connection closed").Len() == 1
+
+				// Verify the connection lifecycle via router logs that for the "default" and "my-nats" pubsub provider.
+				// 4 nats connections opened (base + ff mux get their own * 2 graph mux generations).
+				// 2 get closed (old mux generation shuts down).
+				myNatsProviderLogsComplete := myNatsLogs.FilterMessage("NATS connection established").Len() == 4 &&
+					myNatsLogs.FilterMessage("NATS disconnected").Len() == 2 &&
+					myNatsLogs.FilterMessage("NATS connection closed").Len() == 2
+				defaultProviderLogsComplete := defaultLogs.FilterMessage("NATS connection established").Len() == 4 &&
+					defaultLogs.FilterMessage("NATS disconnected").Len() == 2 &&
+					defaultLogs.FilterMessage("NATS connection closed").Len() == 2
+
+				return myNatsProviderLogsComplete && defaultProviderLogsComplete
 			}, EventWaitTimeout, time.Second)
 
 			// Then wait for subscriptions to be started again

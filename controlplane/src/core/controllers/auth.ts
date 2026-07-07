@@ -1,6 +1,5 @@
 import { FastifyPluginCallback, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
-import { PlainMessage } from '@bufbuild/protobuf';
 import {
   LoginMethod,
   LoginMethodType,
@@ -10,8 +9,8 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import cookie from 'cookie';
+import { PlainMessage, CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import { cosmoIdpHintCookieName, decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
-import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import { isSocialLoginProvider, resolveLoginMethod } from '../util.js';
 import * as schema from '../../db/schema.js';
 import { sessions } from '../../db/schema.js';

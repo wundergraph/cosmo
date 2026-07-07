@@ -1,12 +1,12 @@
 import { Command } from 'commander';
 import { afterEach, beforeEach, describe, expect, test, vi, type MockInstance } from 'vitest';
-import { type PartialMessage } from '@bufbuild/protobuf';
-import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
+import { type MessageInitShape } from '@bufbuild/protobuf';
+import { createClient, createRouterTransport } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
-  DeleteClientResponse,
-  PreviewDeleteClientResponse,
+  DeleteClientResponseSchema,
+  PreviewDeleteClientResponseSchema,
+  PlatformService,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import inquirer from 'inquirer';
 import DeleteClientsCommand from '../src/commands/clients/commands/delete.js';
@@ -19,8 +19,8 @@ vi.mock('inquirer', () => ({
 }));
 
 function createMockTransport(
-  previewResponse: PartialMessage<PreviewDeleteClientResponse>,
-  deleteResponse: PartialMessage<DeleteClientResponse>,
+  previewResponse: MessageInitShape<typeof PreviewDeleteClientResponseSchema>,
+  deleteResponse: MessageInitShape<typeof DeleteClientResponseSchema>,
   onPreviewDeleteClient?: (req: any) => void,
   onDeleteClient?: (req: any) => void,
 ) {
@@ -39,8 +39,8 @@ function createMockTransport(
 }
 
 type RunDeleteOptions = {
-  previewResponse: PartialMessage<PreviewDeleteClientResponse>;
-  deleteResponse: PartialMessage<DeleteClientResponse>;
+  previewResponse: MessageInitShape<typeof PreviewDeleteClientResponseSchema>;
+  deleteResponse: MessageInitShape<typeof DeleteClientResponseSchema>;
   args?: string[];
   onPreviewDeleteClient?: (req: any) => void;
   onDeleteClient?: (req: any) => void;
@@ -54,7 +54,7 @@ async function runDelete({
   onDeleteClient,
 }: RunDeleteOptions): Promise<void> {
   const client: Client = {
-    platform: createPromiseClient(
+    platform: createClient(
       PlatformService,
       createMockTransport(previewResponse, deleteResponse, onPreviewDeleteClient, onDeleteClient),
     ),

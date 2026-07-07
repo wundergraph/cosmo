@@ -1,12 +1,14 @@
-import type { PartialMessage } from '@bufbuild/protobuf';
-import { RecomposeFeatureFlagResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { createPromiseClient, createRouterTransport, Transport } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import type { MessageInitShape } from '@bufbuild/protobuf';
+import {
+  RecomposeFeatureFlagResponseSchema,
+  PlatformService,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { createClient as createConnectClient, createRouterTransport, Transport } from '@connectrpc/connect';
 import { Command } from 'commander';
 import RecomposeCommand from '../../src/commands/feature-flag/commands/recompose.js';
 import { Client } from '../../src/core/client/client.js';
 
-export function createMockTransport(response: PartialMessage<RecomposeFeatureFlagResponse>): Transport {
+export function createMockTransport(response: MessageInitShape<typeof RecomposeFeatureFlagResponseSchema>): Transport {
   return createRouterTransport(({ service }): void => {
     service(PlatformService, {
       recomposeFeatureFlag: () => response,
@@ -14,14 +16,14 @@ export function createMockTransport(response: PartialMessage<RecomposeFeatureFla
   });
 }
 
-export function createClient(response: PartialMessage<RecomposeFeatureFlagResponse>): Client {
+export function createClient(response: MessageInitShape<typeof RecomposeFeatureFlagResponseSchema>): Client {
   return {
-    platform: createPromiseClient(PlatformService, createMockTransport(response)),
+    platform: createConnectClient(PlatformService, createMockTransport(response)),
   };
 }
 
 export async function runRecompose(
-  response: PartialMessage<RecomposeFeatureFlagResponse>,
+  response: MessageInitShape<typeof RecomposeFeatureFlagResponseSchema>,
   opts: {
     namespace?: string;
     failOnCompositionError?: boolean;

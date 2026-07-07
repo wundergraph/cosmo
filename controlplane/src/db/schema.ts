@@ -17,12 +17,12 @@ import {
   real,
 } from 'drizzle-orm/pg-core';
 import { AxiosHeaderValue } from 'axios';
-import type { PlainMessage } from '@bufbuild/protobuf';
 import type {
   CompositionError,
   CompositionWarning,
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { PlainMessage } from '../types/index.js';
 import { FeatureIds } from '../types/index.js';
 import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction } from './models.js';
 
@@ -389,11 +389,9 @@ export const federatedGraphsToFeatureFlagSchemaVersions = pgTable(
       .references(() => federatedGraphs.id, {
         onDelete: 'cascade',
       }),
-    baseCompositionSchemaVersionId: uuid('base_composition_schema_version_id')
-      .notNull()
-      .references(() => schemaVersion.id, {
-        onDelete: 'cascade',
-      }),
+    baseCompositionSchemaVersionId: uuid('base_composition_schema_version_id').references(() => schemaVersion.id, {
+      onDelete: 'cascade',
+    }),
     composedSchemaVersionId: uuid('composed_schema_version_id')
       .notNull()
       .references(() => schemaVersion.id, {
@@ -405,7 +403,12 @@ export const federatedGraphsToFeatureFlagSchemaVersions = pgTable(
   },
   (t) => {
     return {
-      pk: primaryKey({ columns: [t.federatedGraphId, t.baseCompositionSchemaVersionId, t.composedSchemaVersionId] }),
+      pk: primaryKey({ columns: [t.federatedGraphId, t.composedSchemaVersionId] }),
+      compositeIdx: index('fgffsv_composite_idx').on(
+        t.federatedGraphId,
+        t.baseCompositionSchemaVersionId,
+        t.composedSchemaVersionId,
+      ),
       federatedGraphIdIndex: index('fgffsv_federated_graph_id_idx').on(t.federatedGraphId),
       baseCompositionSchemaVersionIdIndex: index('fgffsv_base_composition_schema_version_id_idx').on(
         t.baseCompositionSchemaVersionId,
