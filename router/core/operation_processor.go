@@ -1618,11 +1618,10 @@ func buildNormalizationOptions(enableDefer bool, disallowInlineArguments config.
 	if disallowInlineArguments.Enabled() {
 		inlineArgumentsValidator = &astnormalization.InlineArgumentsValidator{
 			Options: astnormalization.InlineArgumentsValidationOptions{
-				Enforce:                    disallowInlineArguments.Enforcing(),
-				ErrorMessage:               disallowInlineArguments.ErrorMessage,
-				ErrorCode:                  disallowInlineArguments.ErrorCode,
-				StatusCode:                 disallowInlineArguments.EnforceHTTPStatusCode,
-				ReturnInResponseExtensions: disallowInlineArguments.ReturnInResponseExtensions,
+				Enforce:      disallowInlineArguments.Enforcing(),
+				ErrorMessage: disallowInlineArguments.ErrorMessage,
+				ErrorCode:    disallowInlineArguments.ErrorCode,
+				StatusCode:   disallowInlineArguments.EnforceHTTPStatusCode,
 			},
 		}
 		prevalidationRules = append(prevalidationRules, astnormalization.InlineArgumentsRule(inlineArgumentsValidator))

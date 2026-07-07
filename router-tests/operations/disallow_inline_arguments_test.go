@@ -42,12 +42,12 @@ func TestDisallowInlineArguments(t *testing.T) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: inlineArgumentQuery})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			// The location points at the offending inline argument in the operation.
-			require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","locations":[{"line":1,"column":30}],"extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED"}}]}`, res.Body)
+			// The rejection is a generic error: no argument name and no location.
+			require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED"}}]}`, res.Body)
 		})
 	})
 
-	t.Run("enforcing returns inline arguments in the error extensions when configured", func(t *testing.T) {
+	t.Run("enforcing stays a generic error even when return_in_response_extensions is set", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
@@ -63,9 +63,9 @@ func TestDisallowInlineArguments(t *testing.T) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: inlineArgumentQuery})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			// The offending inline arguments are attached to the rejection error under
-			// extensions.inlineArguments, alongside the error code.
-			require.JSONEq(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","locations":[{"line":1,"column":30}],"extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"count":1,"arguments":["employee.id"]}}}]}`, res.Body)
+			// return_in_response_extensions only affects non-enforcing mode; the
+			// enforce rejection stays generic — no argument name, no location.
+			require.JSONEq(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED"}}]}`, res.Body)
 		})
 	})
 
@@ -342,8 +342,8 @@ func TestDisallowInlineArgumentsPersistedOperations(t *testing.T) {
 			res, err := xEnv.MakeGraphQLRequest(persistedInlineArgRequest())
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			// The location points at the inline argument in the persisted operation body.
-			require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","locations":[{"line":1,"column":49}],"extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED"}}]}`, res.Body)
+			// The rejection is a generic error: no argument name and no location.
+			require.Equal(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED"}}]}`, res.Body)
 		})
 	})
 
