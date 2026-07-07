@@ -12,9 +12,15 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
+// CosmoAuthorizerOptions configures a CosmoAuthorizer.
 type CosmoAuthorizerOptions struct {
-	FieldConfigurations              []*nodev1.FieldConfiguration
-	RejectOperationIfUnauthorized    bool
+	// FieldConfigurations holds the per-field authorization rules from the engine config.
+	FieldConfigurations []*nodev1.FieldConfiguration
+	// RejectOperationIfUnauthorized rejects the whole operation when a field fails to authorize,
+	// instead of only filtering the unauthorized field out of the response.
+	RejectOperationIfUnauthorized bool
+	// EnablePreFetchFieldAuthorization authorizes protected fields in a single batch before any
+	// subgraph fetch runs, instead of filtering them out of the response afterwards.
 	EnablePreFetchFieldAuthorization bool
 }
 
@@ -26,24 +32,30 @@ func NewCosmoAuthorizer(opts *CosmoAuthorizerOptions) *CosmoAuthorizer {
 	}
 }
 
+// CosmoAuthorizer enforces field-level authorization (@authenticated and @requiresScopes) against
+// the scopes of the authenticated request. It implements resolve.Authorizer and, when pre-fetch
+// field authorization is enabled, resolve.BatchAuthorizer.
 type CosmoAuthorizer struct {
-	fieldConfigurations []*nodev1.FieldConfiguration
-	rejectUnauthorized  bool
-	// enablePreFetchFieldAuthorization enables pre-fetch field authorization: protected fields are
-	// authorized in a single batch call before any subgraph fetch executes, instead of being filtered
-	// out of the response after the fetch.
+	fieldConfigurations              []*nodev1.FieldConfiguration
+	rejectUnauthorized               bool
 	enablePreFetchFieldAuthorization bool
 }
 
+// IsPreFetchFieldAuthorizationEnabled reports whether the engine should authorize protected fields
+// up front in one batch call rather than filtering them out of the response after the fetch.
 func (a *CosmoAuthorizer) IsPreFetchFieldAuthorizationEnabled() bool {
 	return a.enablePreFetchFieldAuthorization
 }
 
+// HasResponseExtensionData reports whether any missing scopes were collected during resolution and
+// should be rendered into the response extensions.
 func (a *CosmoAuthorizer) HasResponseExtensionData(ctx *resolve.Context) bool {
 	extension := a.getAuthorizationExtension(ctx)
 	return extension != nil && len(extension.MissingScopes) > 0
 }
 
+// RenderResponseExtension writes the collected authorization extension (missing and actual scopes)
+// as JSON. It writes nothing when no extension context is attached to ctx.
 func (a *CosmoAuthorizer) RenderResponseExtension(ctx *resolve.Context, out io.Writer) error {
 	extension := a.getAuthorizationExtension(ctx)
 	if extension == nil {
@@ -57,6 +69,8 @@ func (a *CosmoAuthorizer) RenderResponseExtension(ctx *resolve.Context, out io.W
 	return err
 }
 
+// getAuth reads the authentication attached to the request context, returning whether the request
+// is authenticated and its scopes.
 func (a *CosmoAuthorizer) getAuth(ctx context.Context) (isAuthenticated bool, scopes []string) {
 	auth := authentication.FromContext(ctx)
 	if auth == nil {
@@ -65,6 +79,9 @@ func (a *CosmoAuthorizer) getAuth(ctx context.Context) (isAuthenticated bool, sc
 	return true, auth.Scopes()
 }
 
+// handleRejectUnauthorized turns a deny into a hard ErrUnauthorized when reject mode is on, so the
+// whole operation fails instead of only the unauthorized field being filtered out. A nil result
+// (authorized) passes through unchanged.
 func (a *CosmoAuthorizer) handleRejectUnauthorized(result *resolve.AuthorizationDeny) (*resolve.AuthorizationDeny, error) {
 	if result == nil {
 		return nil, nil
@@ -75,19 +92,25 @@ func (a *CosmoAuthorizer) handleRejectUnauthorized(result *resolve.Authorization
 	return result, nil
 }
 
+// AuthorizePreFetch authorizes a field before its subgraph fetch runs. A deny prevents the fetch,
+// which matters for mutations where filtering the response afterwards would not stop the write.
 func (a *CosmoAuthorizer) AuthorizePreFetch(ctx *resolve.Context, dataSourceID string, input json.RawMessage, coordinate resolve.GraphCoordinate) (result *resolve.AuthorizationDeny, err error) {
 	isAuthenticated, actual := a.getAuth(ctx.Context())
 	required := a.requiredScopesForField(coordinate)
 	return a.handleRejectUnauthorized(a.validateScopes(ctx, coordinate, required, isAuthenticated, actual))
 }
 
+// AuthorizeObjectField authorizes a field against the already-fetched response object. A deny filters
+// the field out of the response but cannot prevent the fetch.
 func (a *CosmoAuthorizer) AuthorizeObjectField(ctx *resolve.Context, dataSourceID string, object json.RawMessage, coordinate resolve.GraphCoordinate) (result *resolve.AuthorizationDeny, err error) {
 	isAuthenticated, actual := a.getAuth(ctx.Context())
 	required := a.requiredScopesForField(coordinate)
 	return a.handleRejectUnauthorized(a.validateScopes(ctx, coordinate, required, isAuthenticated, actual))
 }
 
-// AuthorizeFields implements [resolve.BatchAuthorizer].
+// AuthorizeFields authorizes every protected field coordinate of an operation in one call, before any
+// fetch runs. It backs pre-fetch field authorization and returns one decision per coordinate, in the
+// same order. It implements [resolve.BatchAuthorizer].
 func (a *CosmoAuthorizer) AuthorizeFields(ctx *resolve.Context, coordinates []resolve.GraphCoordinate) ([]resolve.AuthorizationDecision, error) {
 	decisions := make([]resolve.AuthorizationDecision, len(coordinates))
 	isAuthenticated, actual := a.getAuth(ctx.Context())
@@ -115,6 +138,10 @@ func (a *CosmoAuthorizer) AuthorizeFields(ctx *resolve.Context, coordinates []re
 	return decisions, nil
 }
 
+// validateScopes checks the actual scopes against a field's required scopes. requiredOrScopes is a
+// disjunction: the field is authorized if all scopes of any one entry are present (OR of ANDs). An
+// unauthenticated request is always denied; a field with no required scopes is allowed. Denials are
+// recorded via addMissingScopes.
 func (a *CosmoAuthorizer) validateScopes(ctx *resolve.Context, coordinate resolve.GraphCoordinate, requiredOrScopes []*nodev1.Scopes, isAuthenticated bool, actual []string) (result *resolve.AuthorizationDeny) {
 	if !isAuthenticated {
 		return &resolve.AuthorizationDeny{
@@ -139,6 +166,8 @@ WithNext:
 	}
 }
 
+// addMissingScopes records a denied field and the request's actual scopes on the authorization
+// extension context, deduplicating by coordinate. It is a no-op when no extension context is attached.
 func (a *CosmoAuthorizer) addMissingScopes(ctx *resolve.Context, coordinate resolve.GraphCoordinate, requiredOrScopes []*nodev1.Scopes, actual []string) {
 	extensionCtx := ctx.Context().Value(authorizationExtensionKey{})
 	if extensionCtx == nil {
@@ -163,6 +192,8 @@ func (a *CosmoAuthorizer) addMissingScopes(ctx *resolve.Context, coordinate reso
 	extension.mux.Unlock()
 }
 
+// getAuthorizationExtension returns the authorization extension accumulated on the context, or nil if
+// none was attached via WithAuthorizationExtension.
 func (a *CosmoAuthorizer) getAuthorizationExtension(ctx *resolve.Context) *AuthorizationExtension {
 	extensionCtx := ctx.Context().Value(authorizationExtensionKey{})
 	if extensionCtx == nil {
@@ -172,6 +203,8 @@ func (a *CosmoAuthorizer) getAuthorizationExtension(ctx *resolve.Context) *Autho
 	return &extension.extension
 }
 
+// authorizationExtensionCtx accumulates authorization results for a single request. The mutex guards
+// against concurrent writes from fetches that run in parallel.
 type authorizationExtensionCtx struct {
 	extension AuthorizationExtension
 	mux       sync.Mutex
@@ -179,16 +212,20 @@ type authorizationExtensionCtx struct {
 
 type authorizationExtensionKey struct{}
 
+// WithAuthorizationExtension attaches a fresh authorization accumulator to the context so denied
+// fields and scopes can be collected during resolution and later rendered into the response.
 func WithAuthorizationExtension(ctx *resolve.Context) *resolve.Context {
 	withAuthorization := context.WithValue(ctx.Context(), authorizationExtensionKey{}, &authorizationExtensionCtx{})
 	return ctx.WithContext(withAuthorization)
 }
 
+// AuthorizationExtension is the authorization payload rendered into the response extensions.
 type AuthorizationExtension struct {
 	MissingScopes []MissingScopesError `json:"missingScopes,omitempty"`
 	ActualScopes  []string             `json:"actualScopes"`
 }
 
+// MissingScopesError reports a field that was denied and the scopes it required (an OR of ANDs).
 type MissingScopesError struct {
 	Coordinate       resolve.GraphCoordinate `json:"coordinate"`
 	RequiredOrScopes [][]string              `json:"required"`
@@ -206,6 +243,7 @@ func (a *CosmoAuthorizer) missingScopesError(coordinate resolve.GraphCoordinate,
 	return out
 }
 
+// requiredAndScopes flattens the proto scopes into the [][]string OR-of-ANDs shape used in responses.
 func (a *CosmoAuthorizer) requiredAndScopes(requiredOrScopes []*nodev1.Scopes) [][]string {
 	var result [][]string
 	for i := range requiredOrScopes {
@@ -214,6 +252,8 @@ func (a *CosmoAuthorizer) requiredAndScopes(requiredOrScopes []*nodev1.Scopes) [
 	return result
 }
 
+// requiredScopesForField returns the required-or-scopes configured for a field coordinate, or nil when
+// the field has no authorization configuration.
 func (a *CosmoAuthorizer) requiredScopesForField(coordinate resolve.GraphCoordinate) []*nodev1.Scopes {
 	for i := range a.fieldConfigurations {
 		if a.fieldConfigurations[i].TypeName == coordinate.TypeName && a.fieldConfigurations[i].FieldName == coordinate.FieldName {
