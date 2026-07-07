@@ -216,3 +216,20 @@ new-gm-data-migration:
 		exit 1; \
 	fi
 	mkdir -p data_migrations/graphqlmetrics/$(shell date +%s)_$(name)
+
+GRAPHQL_GO_TOOLS := github.com/wundergraph/graphql-go-tools/v2
+
+# Usage: make pin-graphql-go-tools BRANCH=<branch-name>
+.PHONY: pin-graphql-go-tools
+pin-engine:
+	@if [ -z "$(BRANCH)" ]; then \
+		echo "Usage: make pin-graphql-go-tools BRANCH=<branch-name>"; \
+		exit 1; \
+	fi
+	cd router && go get $(GRAPHQL_GO_TOOLS)@$(BRANCH) && go mod tidy
+	cd router-tests && go get $(GRAPHQL_GO_TOOLS)@$(BRANCH) && go mod tidy
+
+.PHONY: update-engine
+update-engine:
+	cd router && go get $(GRAPHQL_GO_TOOLS)@latest && go mod tidy
+	cd router-tests && go get $(GRAPHQL_GO_TOOLS)@latest && go mod tidy
