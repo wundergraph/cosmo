@@ -795,18 +795,6 @@ func (r *Router) BaseURL() string {
 	return r.baseURL
 }
 
-// WaitForCacheWrites blocks until all pending asynchronous operation-cache writes
-// (normalization, validation, plan, etc.) of the active graph server have been
-// applied. Cache writes are buffered, so a request that populated a cache is not
-// guaranteed to be observed by subsequent requests until the buffers are flushed.
-// It is primarily useful in tests that need deterministic cache-hit assertions.
-func (r *Router) WaitForCacheWrites() {
-	if r.httpServer == nil {
-		return
-	}
-	r.httpServer.waitForCacheWrites()
-}
-
 // NewServer prepares a new server instance but does not start it. The method should only be used when you want to bootstrap
 // the server manually otherwise you can use Router.Start(). You're responsible for setting health checks status to ready with Server.HealthChecks().
 // The server can be shutdown with Router.Shutdown(). Use core.WithExecutionConfig to pass the initial config otherwise the Router will

@@ -3727,6 +3727,11 @@
               "type": "boolean",
               "default": false,
               "description": "Always skip the loader. This will return no data but only render response extensions, e.g. to expose the query plan."
+            },
+            "synchronous_cache_writes": {
+              "type": "boolean",
+              "default": false,
+              "description": "Wait for the asynchronous operation-cache writes of a request to be applied before resolving the response, so that subsequent requests deterministically hit the caches. Intended for testing."
             }
           }
         },

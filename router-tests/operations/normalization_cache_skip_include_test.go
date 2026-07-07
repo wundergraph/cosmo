@@ -64,6 +64,7 @@ func TestNormalizationCacheHitWithIncludeVariableAlsoUsedAsArgument(t *testing.T
 	testenv.Run(t, &testenv.Config{
 		ModifyEngineExecutionConfiguration: func(c *config.EngineExecutionConfiguration) {
 			c.Debug.EnableNormalizationCacheResponseHeader = true
+			c.Debug.SynchronousCacheWrites = true
 		},
 		Subgraphs: availabilityStub(),
 	}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -74,17 +75,10 @@ func TestNormalizationCacheHitWithIncludeVariableAlsoUsedAsArgument(t *testing.T
 			})
 		}
 
-		// First request populates the cache (miss path) and must succeed.
 		res, err := makeRequest()
 		require.NoError(t, err)
 		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
 		require.Equal(t, dualUseSkipIncludeExpected, res.Body)
-
-		// Flush the async ristretto write so the entry is visible, then repeat the
-		// identical request: it must be served from the cache with the same data.
-		// Before the fix, cache hits instead return:
-		// Variable "$flag" of required type "Boolean!" was not provided.
-		xEnv.WaitForCacheWrites()
 
 		res, err = makeRequest()
 		require.NoError(t, err)
@@ -107,6 +101,7 @@ func TestPersistedOperationCacheHitWithIncludeVariableAlsoUsedAsArgument(t *test
 	testenv.Run(t, &testenv.Config{
 		ModifyEngineExecutionConfiguration: func(c *config.EngineExecutionConfiguration) {
 			c.Debug.EnablePersistedOperationsCacheResponseHeader = true
+			c.Debug.SynchronousCacheWrites = true
 		},
 		ApqConfig: config.AutomaticPersistedQueriesConfig{
 			Enabled: true,
@@ -129,10 +124,6 @@ func TestPersistedOperationCacheHitWithIncludeVariableAlsoUsedAsArgument(t *test
 		})
 		require.NoError(t, err)
 		require.Equal(t, dualUseSkipIncludeExpected, res.Body)
-
-		// Flush the async write to the persisted operation normalization cache so
-		// the hash-only requests below deterministically hit it.
-		xEnv.WaitForCacheWrites()
 
 		// Repeated hash-only requests must keep succeeding with the variable intact.
 		for i := 0; i < 2; i++ {
@@ -170,6 +161,7 @@ func TestCacheWarmupWithIncludeVariableAlsoUsedAsArgument(t *testing.T) {
 		},
 		ModifyEngineExecutionConfiguration: func(c *config.EngineExecutionConfiguration) {
 			c.Debug.EnableNormalizationCacheResponseHeader = true
+			c.Debug.SynchronousCacheWrites = true
 		},
 		LogObservation: testenv.LogObservationConfig{
 			Enabled:  true,
@@ -199,8 +191,6 @@ func TestCacheWarmupWithIncludeVariableAlsoUsedAsArgument(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
 		require.Equal(t, dualUseSkipIncludeExpected, res.Body)
-
-		xEnv.WaitForCacheWrites()
 
 		res, err = makeRequest()
 		require.NoError(t, err)

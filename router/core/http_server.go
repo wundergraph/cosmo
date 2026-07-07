@@ -114,16 +114,6 @@ func newServer(opts *httpServerOptions) (*server, error) {
 	return n, nil
 }
 
-// waitForCacheWrites blocks until pending async operation-cache writes of the
-// current graph server have been applied.
-func (s *server) waitForCacheWrites() {
-	state := s.state.Load()
-	if state == nil || state.graphServer == nil {
-		return
-	}
-	state.graphServer.waitForCaches()
-}
-
 func (s *server) HealthChecks() health.Checker {
 	return s.healthcheck
 }
