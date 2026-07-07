@@ -100,11 +100,11 @@ func TestTraceInjectingRoundTripper(t *testing.T) {
 		_, _ = io.Copy(io.Discard, resp.Body)
 		_ = resp.Body.Close()
 
-		require.Positive(t, store.acquire, "connection acquire duration should be recorded")
-		require.Positive(t, store.dns, "DNS lookup duration should be recorded")
-		require.Positive(t, store.tcp, "TCP connect duration should be recorded")
-		require.Positive(t, store.tls, "TLS handshake duration should be recorded")
-		require.Positive(t, store.ttfb, "time to first byte should be recorded")
+		require.Equal(t, 1, store.acquire, "connection acquire duration should be recorded once")
+		require.Equal(t, 1, store.dns, "DNS lookup duration should be recorded once")
+		require.Equal(t, 1, store.tcp, "TCP connect duration should be recorded once")
+		require.Equal(t, 1, store.tls, "TLS handshake duration should be recorded once")
+		require.Equal(t, 1, store.ttfb, "time to first byte should be recorded once")
 	})
 
 	t.Run("records connection phase timings without racing concurrent httptrace callbacks", func(t *testing.T) {
