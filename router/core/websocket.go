@@ -981,7 +981,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	// When configured, also surface the inline arguments to the client under
 	// `extensions.inlineArguments`, matching the HTTP prehandler.
-	if h.operationProcessor.ReportInlineArgumentsInExtensions() {
+	if h.operationProcessor.parseKitOptions.disallowInlineArguments.ReturnInResponseExtensions {
 		opContext.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
 	}
 

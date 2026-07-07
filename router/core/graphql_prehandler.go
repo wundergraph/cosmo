@@ -892,7 +892,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	// When configured, also surface the inline arguments to the client under
 	// `extensions.inlineArguments`. The engine renders them from the resolve context.
-	if h.operationProcessor.ReportInlineArgumentsInExtensions() {
+	if h.operationProcessor.parseKitOptions.disallowInlineArguments.ReturnInResponseExtensions {
 		requestContext.operation.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
 	}
 

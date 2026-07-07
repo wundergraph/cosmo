@@ -595,43 +595,21 @@ type CostControl struct {
 	IgnoreImplementingTypeWeights bool `yaml:"ignore_implementing_type_weights,omitempty" envDefault:"false" env:"IGNORE_IMPLEMENTING_TYPE_WEIGHTS"`
 }
 
-// DisallowInlineArgumentsMode defines how the disallow-inline-arguments policy behaves.
 type DisallowInlineArgumentsMode string
 
 const (
-	// DisallowInlineArgumentsModeOff disables the policy entirely (default).
-	DisallowInlineArgumentsModeOff DisallowInlineArgumentsMode = "off"
-	// DisallowInlineArgumentsModeNonEnforcing detects inline arguments and records
-	// them (log/annotate), but still executes the operation.
+	DisallowInlineArgumentsModeOff          DisallowInlineArgumentsMode = "off"
 	DisallowInlineArgumentsModeNonEnforcing DisallowInlineArgumentsMode = "enabled-non-enforcing"
-	// DisallowInlineArgumentsModeEnforcing rejects operations that carry inline
-	// argument values instead of variables.
-	DisallowInlineArgumentsModeEnforcing DisallowInlineArgumentsMode = "enabled-enforcing"
+	DisallowInlineArgumentsModeEnforcing    DisallowInlineArgumentsMode = "enabled-enforcing"
 )
 
-// DisallowInlineArguments configures the policy that detects — and optionally
-// rejects — GraphQL operations carrying hardcoded inline argument values instead
-// of variables. Detection runs in the engine (graphql-go-tools) as a
-// normalization prevalidation rule; in non-enforcing mode the findings are cached
-// alongside the normalized operation so warnings survive normalization cache hits.
 type DisallowInlineArguments struct {
-	// Mode controls the policy: off | enabled-non-enforcing | enabled-enforcing.
-	Mode DisallowInlineArgumentsMode `yaml:"mode,omitempty" envDefault:"off" env:"MODE"`
-	// EnforceHTTPStatusCode is the HTTP status returned in enforce mode.
-	EnforceHTTPStatusCode int `yaml:"enforce_http_status_code,omitempty" envDefault:"400" env:"ENFORCE_HTTP_STATUS_CODE"`
-	// ErrorCode is the extensions.code emitted on rejection.
-	ErrorCode string `yaml:"error_code,omitempty" envDefault:"INLINE_ARGUMENT_VALUES_NOT_ALLOWED" env:"ERROR_CODE"`
-	// ErrorMessage is the human-readable error/hint message.
-	ErrorMessage string `yaml:"error_message,omitempty" envDefault:"Inline argument values are not allowed. Use variables instead." env:"ERROR_MESSAGE"`
-	// IncludePersistedOperations, when true, applies the policy to persisted
-	// operations as well. By default persisted operations are exempt.
-	IncludePersistedOperations bool `yaml:"include_persisted_operations,omitempty" envDefault:"false" env:"INCLUDE_PERSISTED_OPERATIONS"`
-	// ReturnInResponseExtensions, when true, reports the detected inline arguments
-	// back to the client under `inlineArguments` in the response extensions. In
-	// non-enforcing mode this is the top-level `extensions.inlineArguments` of the
-	// successful response; in enforcing mode it is attached to the rejection error
-	// under `errors[].extensions.inlineArguments`, alongside the error `code`.
-	ReturnInResponseExtensions bool `yaml:"return_in_response_extensions,omitempty" envDefault:"false" env:"RETURN_IN_RESPONSE_EXTENSIONS"`
+	Mode                       DisallowInlineArgumentsMode `yaml:"mode,omitempty" envDefault:"off" env:"MODE"`
+	EnforceHTTPStatusCode      int                         `yaml:"enforce_http_status_code,omitempty" envDefault:"400" env:"ENFORCE_HTTP_STATUS_CODE"`
+	ErrorCode                  string                      `yaml:"error_code,omitempty" envDefault:"INLINE_ARGUMENT_VALUES_NOT_ALLOWED" env:"ERROR_CODE"`
+	ErrorMessage               string                      `yaml:"error_message,omitempty" envDefault:"Inline argument values are not allowed. Use variables instead." env:"ERROR_MESSAGE"`
+	IncludePersistedOperations bool                        `yaml:"include_persisted_operations,omitempty" envDefault:"false" env:"INCLUDE_PERSISTED_OPERATIONS"`
+	ReturnInResponseExtensions bool                        `yaml:"return_in_response_extensions,omitempty" envDefault:"false" env:"RETURN_IN_RESPONSE_EXTENSIONS"`
 }
 
 // Enabled reports whether the policy is active in any mode.

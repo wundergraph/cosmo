@@ -1647,13 +1647,6 @@ func createOperationValidator(options *parseKitOptions) *astvalidation.Operation
 	return astvalidation.DefaultOperationValidator(opts...)
 }
 
-// ReportInlineArgumentsInExtensions reports whether detected inline arguments
-// should be returned to the client under `extensions.inlineArguments`. It is only
-// meaningful in the non-enforcing mode of the disallow-inline-arguments policy.
-func (p *OperationProcessor) ReportInlineArgumentsInExtensions() bool {
-	return p.parseKitOptions.disallowInlineArguments.ReturnInResponseExtensions
-}
-
 func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 	if opts.ParseKitPoolSize <= 0 {
 		opts.ParseKitPoolSize = 1
