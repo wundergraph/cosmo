@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.241.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.240.2...controlplane@0.241.0) (2026-07-06)
+
+### Bug Fixes
+
+* optimize clickhouse queries of traces page ([#3042](https://github.com/wundergraph/cosmo/issues/3042)) ([e242571](https://github.com/wundergraph/cosmo/commit/e242571394bdc9dbddab362c7031c68914b57c6b)) (@JivusAyrus)
+
+### Features
+
+* decouple feature flag composition when split config is enabled ([#3034](https://github.com/wundergraph/cosmo/issues/3034)) ([f704e34](https://github.com/wundergraph/cosmo/commit/f704e34224f3843d4900d1719070d702802dd6ef)) (@wilsonrivera)
+* **proposal:** add validation for new subgraph labels against federated graph matchers ([#3046](https://github.com/wundergraph/cosmo/issues/3046)) ([493cb0a](https://github.com/wundergraph/cosmo/commit/493cb0a1e58f530b69a615132a154136e466f81f)) (@JivusAyrus)
+* upgrade connect v1 to v2 ([#2705](https://github.com/wundergraph/cosmo/issues/2705)) ([c7203f4](https://github.com/wundergraph/cosmo/commit/c7203f47529f75675ca04e6ac4018efe55d4e498)) (@JivusAyrus)
+
 ## [0.240.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.240.1...controlplane@0.240.2) (2026-07-02)
 
 **Note:** Version bump only for package controlplane
