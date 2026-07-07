@@ -22,6 +22,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/profile"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 
+	_ "github.com/wundergraph/cosmo/router/cmd/custom-add-operation-name"
+
 	"go.uber.org/zap"
 )
 
