@@ -1,4 +1,5 @@
 import type { UUID } from 'node:crypto';
+import { create, toJsonString } from '@bufbuild/protobuf';
 import {
   CompositionOptions,
   FieldConfiguration,
@@ -9,11 +10,19 @@ import {
 } from '@wundergraph/composition';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema } from 'graphql';
+
 import {
+  FeatureFlagRouterExecutionConfigSchema,
+  FeatureFlagRouterExecutionConfigsSchema,
+  RouterConfigSchema,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
+import type {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
   RouterConfig,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
@@ -77,7 +86,7 @@ export type ContractBaseCompositionData = {
 };
 
 export function routerConfigToFeatureFlagExecutionConfig(routerConfig: RouterConfig): FeatureFlagRouterExecutionConfig {
-  return new FeatureFlagRouterExecutionConfig({
+  return create(FeatureFlagRouterExecutionConfigSchema, {
     engineConfig: routerConfig.engineConfig,
     subgraphs: routerConfig.subgraphs,
     version: routerConfig.version,
@@ -161,7 +170,7 @@ export class Composer {
     baseCompositionRouterExecutionConfig: RouterConfig;
   }) {
     if (featureFlagRouterExecutionConfigByFeatureFlagName.size === 0) {
-      return new RouterConfig({
+      return create(RouterConfigSchema, {
         ...baseCompositionRouterExecutionConfig,
       });
     }
@@ -176,12 +185,12 @@ export class Composer {
         configByFeatureFlagName[featureFlagName] = featureFlagRouterConfigs[featureFlagName];
       }
     } else {
-      baseCompositionRouterExecutionConfig.featureFlagConfigs = new FeatureFlagRouterExecutionConfigs({
+      baseCompositionRouterExecutionConfig.featureFlagConfigs = create(FeatureFlagRouterExecutionConfigsSchema, {
         configByFeatureFlagName: featureFlagRouterConfigs,
       });
     }
 
-    return new RouterConfig({
+    return create(RouterConfigSchema, {
       ...baseCompositionRouterExecutionConfig,
     });
   }
@@ -216,7 +225,7 @@ export class Composer {
   }): Promise<{
     errors: ComposeDeploymentError[];
   }> {
-    const routerConfigJsonStringBytes = Buffer.from(routerConfig.toJsonString(), 'utf8');
+    const routerConfigJsonStringBytes = Buffer.from(toJsonString(RouterConfigSchema, routerConfig), 'utf8');
     const errors: ComposeDeploymentError[] = [];
 
     let s3PathDraft: string;
@@ -443,6 +452,7 @@ export class Composer {
     federatedSchemaVersionId,
     routerExecutionConfig,
     featureFlagId,
+    splitConfigEnabled,
   }: {
     composedGraph: ComposedFederatedGraph;
     composedById: string;
@@ -450,6 +460,7 @@ export class Composer {
     federatedSchemaVersionId: UUID;
     routerExecutionConfig?: RouterConfig;
     featureFlagId: string;
+    splitConfigEnabled: boolean;
   }): Promise<CompositionDeployResult> {
     const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion({
       targetId: composedGraph.targetID,
@@ -466,6 +477,7 @@ export class Composer {
       schemaVersionId: federatedSchemaVersionId,
       isFeatureFlagComposition,
       featureFlagId,
+      splitConfigEnabled,
     });
 
     // If the composed schema is invalid, or it is a feature flag composition, we do not create a changelog

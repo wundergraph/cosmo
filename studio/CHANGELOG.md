@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.177.0](https://github.com/wundergraph/cosmo/compare/studio@0.176.1...studio@0.177.0) (2026-07-06)
+
+### Features
+
+* decouple feature flag composition when split config is enabled ([#3034](https://github.com/wundergraph/cosmo/issues/3034)) ([f704e34](https://github.com/wundergraph/cosmo/commit/f704e34224f3843d4900d1719070d702802dd6ef)) (@wilsonrivera)
+* upgrade connect v1 to v2 ([#2705](https://github.com/wundergraph/cosmo/issues/2705)) ([c7203f4](https://github.com/wundergraph/cosmo/commit/c7203f47529f75675ca04e6ac4018efe55d4e498)) (@JivusAyrus)
+
 ## [0.176.1](https://github.com/wundergraph/cosmo/compare/studio@0.176.0...studio@0.176.1) (2026-07-02)
 
 **Note:** Version bump only for package studio

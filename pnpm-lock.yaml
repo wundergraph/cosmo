@@ -7,20 +7,29 @@ settings:
 catalogs:
   default:
     '@bufbuild/protobuf':
-      specifier: ^1.9.0
-      version: 1.10.0
+      specifier: ^2.2.2
+      version: 2.12.0
+    '@bufbuild/protoc-gen-es':
+      specifier: ^2.2.2
+      version: 2.12.0
     '@connectrpc/connect':
-      specifier: 1.5.0
-      version: 1.5.0
+      specifier: ^2.0.0
+      version: 2.1.2
+    '@connectrpc/connect-fastify':
+      specifier: ^2.0.0
+      version: 2.1.2
     '@connectrpc/connect-node':
-      specifier: 1.5.0
-      version: 1.5.0
+      specifier: ^2.0.0
+      version: 2.1.2
     '@connectrpc/connect-query':
-      specifier: ^1.4.1
-      version: 1.4.1
+      specifier: ^2.0.0
+      version: 2.2.0
     '@connectrpc/connect-web':
-      specifier: 1.5.0
-      version: 1.5.0
+      specifier: ^2.0.0
+      version: 2.1.2
+    '@connectrpc/protoc-gen-connect-query':
+      specifier: ^2.0.0
+      version: 2.2.0
     '@graphql-tools/utils':
       specifier: ^11.0.0
       version: 11.0.0
@@ -166,8 +175,8 @@ importers:
         specifier: ^1.34.0
         version: 1.34.0
       '@bufbuild/protoc-gen-es':
-        specifier: ^1.10.0
-        version: 1.10.0(@bufbuild/protobuf@1.10.0)
+        specifier: 'catalog:'
+        version: 2.12.0(@bufbuild/protobuf@2.12.0)
       '@commitlint/cli':
         specifier: 19.8.0
         version: 19.8.0(@types/node@22.17.0)(typescript@5.6.2)
@@ -176,13 +185,10 @@ importers:
         version: 19.8.0
       '@connectrpc/connect-query':
         specifier: 'catalog:'
-        version: 1.4.1(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@connectrpc/protoc-gen-connect-es':
-        specifier: ^1.4.0
-        version: 1.4.0(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))
+        version: 2.2.0(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))(@tanstack/query-core@5.36.1)(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@connectrpc/protoc-gen-connect-query':
-        specifier: ^1.4.1
-        version: 1.4.1(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))
+        specifier: 'catalog:'
+        version: 2.2.0(@bufbuild/protoc-gen-es@2.12.0(@bufbuild/protobuf@2.12.0))
       '@lerna-lite/cli':
         specifier: 4.11.4
         version: 4.11.4(@lerna-lite/publish@4.11.4(@types/node@22.17.0)(babel-plugin-macros@3.1.0)(conventional-commits-filter@5.0.0))(@lerna-lite/version@4.11.4(@lerna-lite/publish@4.11.4(@types/node@22.17.0)(babel-plugin-macros@3.1.0)(conventional-commits-filter@5.0.0))(@types/node@22.17.0)(babel-plugin-macros@3.1.0)(conventional-commits-filter@5.0.0))(@types/node@22.17.0)(babel-plugin-macros@3.1.0)
@@ -298,15 +304,15 @@ importers:
     dependencies:
       '@bufbuild/protobuf':
         specifier: 'catalog:'
-        version: 1.10.0
+        version: 2.12.0
       '@connectrpc/connect':
         specifier: 'catalog:'
-        version: 1.5.0(@bufbuild/protobuf@1.10.0)
+        version: 2.1.2(@bufbuild/protobuf@2.12.0)
       '@connectrpc/connect-node':
         specifier: 'catalog:'
-        version: 1.5.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))
+        version: 2.1.2(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))
       '@graphql-tools/utils':
-        specifier: 'catalog:'
+        specifier: 11.0.0
         version: 11.0.0(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
       '@modelcontextprotocol/sdk':
         specifier: 1.26.0
@@ -549,10 +555,10 @@ importers:
     dependencies:
       '@bufbuild/protobuf':
         specifier: 'catalog:'
-        version: 1.10.0
+        version: 2.12.0
       '@connectrpc/connect-query':
         specifier: 'catalog:'
-        version: 1.4.1(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 2.2.0(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))(@tanstack/query-core@5.36.1)(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
     devDependencies:
       del-cli:
         specifier: 'catalog:'
@@ -569,15 +575,18 @@ importers:
       '@bufbuild/buf':
         specifier: ^1.32.2
         version: 1.32.2
+      '@bufbuild/protobuf':
+        specifier: 'catalog:'
+        version: 2.12.0
       '@connectrpc/connect':
         specifier: 'catalog:'
-        version: 1.5.0(@bufbuild/protobuf@1.10.0)
+        version: 2.1.2(@bufbuild/protobuf@2.12.0)
       '@connectrpc/connect-fastify':
-        specifier: 1.5.0
-        version: 1.5.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect-node@1.5.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0)))(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))(fastify@4.28.1)
+        specifier: 'catalog:'
+        version: 2.1.2(@bufbuild/protobuf@2.12.0)(@connectrpc/connect-node@2.1.2(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0)))(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))(fastify@4.28.1)
       '@connectrpc/connect-node':
         specifier: 'catalog:'
-        version: 1.5.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))
+        version: 2.1.2(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))
       '@fastify/cors':
         specifier: ^9.0.1
         version: 9.0.1
@@ -741,15 +750,9 @@ importers:
         specifier: ^3.22.4
         version: 3.22.4(zod@3.25.76)
     devDependencies:
-      '@bufbuild/protobuf':
-        specifier: 'catalog:'
-        version: 1.10.0
       '@bufbuild/protoc-gen-es':
-        specifier: ^1.9.0
-        version: 1.9.0(@bufbuild/protobuf@1.10.0)
-      '@connectrpc/protoc-gen-connect-es':
-        specifier: ^1.4.0
-        version: 1.4.0(@bufbuild/protoc-gen-es@1.9.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))
+        specifier: 'catalog:'
+        version: 2.12.0(@bufbuild/protobuf@2.12.0)
       '@spotlightjs/spotlight':
         specifier: ^4.10.0
         version: 4.11.3(hono-rate-limiter@0.4.2(hono@4.12.25))
@@ -1000,7 +1003,7 @@ importers:
     dependencies:
       '@bufbuild/protobuf':
         specifier: 'catalog:'
-        version: 1.10.0
+        version: 2.12.0
       '@wundergraph/composition':
         specifier: workspace:*
         version: link:../composition
@@ -1050,7 +1053,7 @@ importers:
     dependencies:
       '@bufbuild/protobuf':
         specifier: 'catalog:'
-        version: 1.10.0
+        version: 2.12.0
       '@graphql-tools/schema':
         specifier: ^8.5.1
         version: 8.5.1(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
@@ -1090,16 +1093,16 @@ importers:
     dependencies:
       '@bufbuild/protobuf':
         specifier: 'catalog:'
-        version: 1.10.0
+        version: 2.12.0
       '@connectrpc/connect':
         specifier: 'catalog:'
-        version: 1.5.0(@bufbuild/protobuf@1.10.0)
+        version: 2.1.2(@bufbuild/protobuf@2.12.0)
       '@connectrpc/connect-query':
         specifier: 'catalog:'
-        version: 1.4.1(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 2.2.0(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))(@tanstack/query-core@5.36.1)(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@connectrpc/connect-web':
         specifier: 'catalog:'
-        version: 1.5.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))
+        version: 2.1.2(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))
       '@headlessui/react':
         specifier: ^1.7.15
         version: 1.7.15(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -1936,37 +1939,21 @@ packages:
     engines: {node: '>=12'}
     hasBin: true
 
-  '@bufbuild/protobuf@1.10.0':
-    resolution: {integrity: sha512-QDdVFLoN93Zjg36NoQPZfsVH9tZew7wKDKyV5qRdj8ntT4wQCOradQjRaTdwMhWUYsgKsvCINKKm87FdEk96Ag==}
+  '@bufbuild/protobuf@2.12.0':
+    resolution: {integrity: sha512-B/XlCaFIP8LOwzo+bz5uFzATYokcwCKQcghqnlfwSmM5eX/qTkvDBnDPs+gXtX/RyjxJ4DRikECcPJbyALA8FA==}
 
-  '@bufbuild/protobuf@1.9.0':
-    resolution: {integrity: sha512-W7gp8Q/v1NlCZLsv8pQ3Y0uCu/SHgXOVFK+eUluUKWXmsb6VHkpNx0apdOWWcDbB9sJoKeP8uPrjmehJz6xETQ==}
-
-  '@bufbuild/protoc-gen-es@1.10.0':
-    resolution: {integrity: sha512-zBYBsVT/ul4uZb6F+kD7/k4sWNHVVbEPfJwKi0FDr+9VJo8MKIofI6pkr5ksBLr4fi/74r+e/75Xi/0clL5dXg==}
-    engines: {node: '>=14'}
+  '@bufbuild/protoc-gen-es@2.12.0':
+    resolution: {integrity: sha512-d9htF6jEkSwPbp9d/vSmZOBF7eeG18AvTMKmVg4I23afnrQOxL2w3WOXa9TaufMCyu24QakEUb4vux8apI5e7A==}
+    engines: {node: '>=20'}
     hasBin: true
     peerDependencies:
-      '@bufbuild/protobuf': 1.10.0
+      '@bufbuild/protobuf': 2.12.0
     peerDependenciesMeta:
       '@bufbuild/protobuf':
         optional: true
 
-  '@bufbuild/protoc-gen-es@1.9.0':
-    resolution: {integrity: sha512-LJy1nC3Jsfdhs9v48P7qF6YXIqh+usFhXSVzJDTmw0yKjxQ3CKBNISRtaMql/g9hb1MLRU6unHCcFfdz4HSO/Q==}
-    engines: {node: '>=14'}
-    hasBin: true
-    peerDependencies:
-      '@bufbuild/protobuf': 1.9.0
-    peerDependenciesMeta:
-      '@bufbuild/protobuf':
-        optional: true
-
-  '@bufbuild/protoplugin@1.10.0':
-    resolution: {integrity: sha512-u6NE4vL0lw1+EK4/PiE/SQB7fKO4LRJNTEScIXVOi2x88K/c8WKc/k0KyEaA0asVBMpwekJQZGnRyj04ZtN5Gg==}
-
-  '@bufbuild/protoplugin@1.9.0':
-    resolution: {integrity: sha512-/mxMiGs5h78RUHT7v4+mv0Wt0gyRf/SOS5PLzKEg2sclEAlFPbXfZ8HjlvxJpXZP/YpP3HvsW/mil3E69G0mXg==}
+  '@bufbuild/protoplugin@2.12.0':
+    resolution: {integrity: sha512-ORlDITp8AFUXzIhLRoMCG+ud+D3MPKWb5HQXBoskMMnjeyEjE1H1qLonVNPyOr8lkx3xSfYUo8a0dvOZJVAzow==}
 
   '@bundled-es-modules/cookie@2.0.0':
     resolution: {integrity: sha512-Or6YHg/kamKHpxULAdSqhGqnWFneIXu1NKvvfBBzKGwpVsYuFIQ5aBPHDnnoR3ghW1nvSkALd+EF9iMtY7Vjxw==}
@@ -2529,61 +2516,55 @@ packages:
     resolution: {integrity: sha512-/yCrWGCoA1SVKOks25EGadP9Pnj0oAIHGpl2wH2M2Y46dPM2ueb8wyCVOD7O3WCTkaJ0IkKvzhl1JY7+uCT2Dw==}
     engines: {node: '>=v18'}
 
-  '@connectrpc/connect-fastify@1.5.0':
-    resolution: {integrity: sha512-7VeJe7Luth0ypiO2U9Tn3vgYwPTNr1Ef3oYcxbHEBvZpTd2NLGUDn4hWLlmxZi+QoRZigubPbNen2VnBe5istA==}
-    engines: {node: '>=16.0.0'}
+  '@connectrpc/connect-fastify@2.1.2':
+    resolution: {integrity: sha512-4iva6KWxgx4dNTAshygXNUyXiKu9yRodFT4+H7HtzWTkx0KqaGhNqI30jxKoyKR+4lXZ+d6WZPArwLj71kH08Q==}
+    engines: {node: '>=20'}
     peerDependencies:
-      '@bufbuild/protobuf': ^1.10.0
-      '@connectrpc/connect': 1.5.0
-      '@connectrpc/connect-node': 1.5.0
-      fastify: ^4.22.1
+      '@bufbuild/protobuf': ^2.7.0
+      '@connectrpc/connect': 2.1.2
+      '@connectrpc/connect-node': 2.1.2
+      fastify: ^4.22.1 || ^5.1.0
 
-  '@connectrpc/connect-node@1.5.0':
-    resolution: {integrity: sha512-go27+V6c6/YOGMXUs7d1NbXnGpMJl5fKYfMtbBKDs9azZTg/tW9q5S0iw9upZs43bOPV8YnJAWmTW9n1Te9NAw==}
-    engines: {node: '>=16.0.0'}
+  '@connectrpc/connect-node@2.1.2':
+    resolution: {integrity: sha512-+i/aAOpsI8sIx1mbYp6d99zvxaUSF6t/jP9Ux9maAmjsZPgmIQ3JuIeYi0zJIP9zlCnBlJjkpPosshCgdRuThQ==}
+    engines: {node: '>=20'}
     peerDependencies:
-      '@bufbuild/protobuf': ^1.10.0
-      '@connectrpc/connect': 1.5.0
+      '@bufbuild/protobuf': ^2.7.0
+      '@connectrpc/connect': 2.1.2
 
-  '@connectrpc/connect-query@1.4.1':
-    resolution: {integrity: sha512-kRv0ka+kSBpnG/56H/vLbQEHkcaFkVb2tZ4fo5m6V3AxKMFvrl35i2nO7+9cmPjhzzbTbE8W/zJqYZkO4YE+FA==}
+  '@connectrpc/connect-query-core@2.2.0':
+    resolution: {integrity: sha512-t/CuxW/vP84y2iyS+PnbAnBwgOTYMzHXTSoBUKC1vIn706aNiZP40Y6mGJybglyH63RhAPcOdUgzG7DjzaAHCw==}
     peerDependencies:
-      '@bufbuild/protobuf': ^1.3.3
-      '@connectrpc/connect': ^1.1.2
-      '@tanstack/react-query': 5.x
+      '@bufbuild/protobuf': 2.x
+      '@connectrpc/connect': ^2.0.1
+      '@tanstack/query-core': '>=5.62.0'
+
+  '@connectrpc/connect-query@2.2.0':
+    resolution: {integrity: sha512-oQ+coXOwBmfl4/t6EOrTfzW0zdoGDe3kvUYqZHrbzORkRFd693Cz8PxuDBjRCjmBPhDRCQMxFhR1jn2+SbgEKQ==}
+    peerDependencies:
+      '@bufbuild/protobuf': 2.x
+      '@connectrpc/connect': ^2.0.1
+      '@tanstack/react-query': '>=5.62.0'
       react: 18.3.1
-      react-dom: ^18.3.1
+      react-dom: ^18 || ^19
 
-  '@connectrpc/connect-web@1.5.0':
-    resolution: {integrity: sha512-xjiiQ932Kibddaka18fGZ6yQL7xjXuLcYFYh/cU+q1WWEIrFPkZfViG/Ee6yrZbrlZkjcBuDibng+q7baTndfg==}
+  '@connectrpc/connect-web@2.1.2':
+    resolution: {integrity: sha512-1tfaK85MU+gJjwwmL31d2rzdf0XCYX99chZf63uG89SGBUd4XuZ4ZzhGo2u79TPXOE6nLIZQ2okrpyey42PYdg==}
     peerDependencies:
-      '@bufbuild/protobuf': ^1.10.0
-      '@connectrpc/connect': 1.5.0
+      '@bufbuild/protobuf': ^2.7.0
+      '@connectrpc/connect': 2.1.2
 
-  '@connectrpc/connect@1.5.0':
-    resolution: {integrity: sha512-1gGg0M6c2Y3lnr5itis9dNj9r8hbOIuBMqoGSbUy7L7Vjw4MAttjJzJfj9HCDgytGCJkGanYEYI6MQVDijdVQw==}
+  '@connectrpc/connect@2.1.2':
+    resolution: {integrity: sha512-MXkBijtcX09R10Eb6sFeIetc6w6746eio6xtfuyVOH7oQAacT1X0GzMIQFux6Qy8cq3W/T5qX5Bei8YbFtmRGA==}
     peerDependencies:
-      '@bufbuild/protobuf': ^1.10.0
+      '@bufbuild/protobuf': ^2.7.0
 
-  '@connectrpc/protoc-gen-connect-es@1.4.0':
-    resolution: {integrity: sha512-/7vQ8Q7mEBhV8qEVh/eifRQlQnf8EJ6weMwCD2DljVAQRlZYcW9SLxjYZhV1uM1ZZqQC7Cw2vvgXRg2XQswHBg==}
-    engines: {node: '>=16.0.0'}
+  '@connectrpc/protoc-gen-connect-query@2.2.0':
+    resolution: {integrity: sha512-MC+Yn3GjqfmdXnmzixylbnAF6viX5y30PTj9gBXTPwyvA5s9iarWV3FKdjT4IcfQYQIJv11e7LrJ2eFZ6vGAUA==}
+    engines: {node: '>=20'}
     hasBin: true
     peerDependencies:
-      '@bufbuild/protoc-gen-es': ^1.7.2
-      '@connectrpc/connect': 1.4.0
-    peerDependenciesMeta:
-      '@bufbuild/protoc-gen-es':
-        optional: true
-      '@connectrpc/connect':
-        optional: true
-
-  '@connectrpc/protoc-gen-connect-query@1.4.1':
-    resolution: {integrity: sha512-L/x+f1x+GWgfsGvRs2XZjdX044cchIAiNOSWQFavOrfHadZD8Kb8qFykHHDj7Cw+7CyQ7+SeW5UxtIkBB1WB3Q==}
-    engines: {node: '>=16'}
-    hasBin: true
-    peerDependencies:
-      '@bufbuild/protoc-gen-es': 1.x
+      '@bufbuild/protoc-gen-es': 2.x
     peerDependenciesMeta:
       '@bufbuild/protoc-gen-es':
         optional: true
@@ -3474,10 +3455,6 @@ packages:
 
   '@fastify/ajv-compiler@3.5.0':
     resolution: {integrity: sha512-ebbEtlI7dxXF5ziNdr05mOY8NnDiPB1XvAlLHctRt/Rc+C3LCOVW5imUVX+mhvUhnNzmPBHewUkOFgGlCxgdAA==}
-
-  '@fastify/busboy@2.1.1':
-    resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
-    engines: {node: '>=14'}
 
   '@fastify/cors@9.0.1':
     resolution: {integrity: sha512-YY9Ho3ovI+QHIL2hW+9X4XqQjXLjJqsU+sMV/xFsxZkE8p3GNnYVFpoOxF7SsP5ZL76gwvbo3V9L+FIekBGU4Q==}
@@ -7784,8 +7761,10 @@ packages:
     resolution: {integrity: sha512-07ny+LHRzQXepkGg6w0mFY41fVUNBrL2Roj/++7V1txKugfjm/Ci/qSND03r2RhlJhJYMcTn9AhhSSqQp0Ysyw==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
-  '@typescript/vfs@1.5.0':
-    resolution: {integrity: sha512-AJS307bPgbsZZ9ggCT3wwpg3VbTKMFNHfaY/uF0ahSkYYrPF2dSSKDNIDIQAHm9qJqbLvCsSJH7yN4Vs/CsMMg==}
+  '@typescript/vfs@1.6.4':
+    resolution: {integrity: sha512-PJFXFS4ZJKiJ9Qiuix6Dz/OwEIqHD7Dme1UwZhTK11vR+5dqW2ACbdndWQexBzCx+CPuMe5WBYQWCsFyGlQLlQ==}
+    peerDependencies:
+      typescript: '*'
 
   '@ungap/structured-clone@1.2.0':
     resolution: {integrity: sha512-zuVdFrMJiuCDQUMCzQaD6KL28MjnqqN8XnAqiEq9PNm/hCPTSGfrXCOfwj1ow4LFb/tNymJPwsNbVePc1xFqrQ==}
@@ -10226,7 +10205,7 @@ packages:
 
   glob@7.1.7:
     resolution: {integrity: sha512-OvD9ENzPLbegENnYP5UUfJIirTg4+XwMWGaQfQTY0JenxNvvIKP3U3/tAQSPIu/lHxXYSZmpXlUHeqAIdKzBLQ==}
-    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+    deprecated: Glob versions prior to v9 are no longer supported
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
@@ -10586,10 +10565,6 @@ packages:
   ignore-walk@8.0.0:
     resolution: {integrity: sha512-FCeMZT4NiRQGh+YkeKMtWrOmBgWjHjMJ26WQWrRQyoyzqevdaGSakUaJW5xQYmjLlUVk2qUnCjYVBax9EKKg8A==}
     engines: {node: ^20.17.0 || >=22.9.0}
-
-  ignore@5.2.4:
-    resolution: {integrity: sha512-MAb38BcSbH0eHNBxn7ql2NH/kX33OkB3lZ1BNdh7ENeRChHTYsTvWrMubiIAMNS2llXEEgZ1MUOBtXChP3kaFQ==}
-    engines: {node: '>= 4'}
 
   ignore@5.3.1:
     resolution: {integrity: sha512-5Fytz/IraMjqpwfd34ke28PTVMjZjJG2MPn5t7OE4eUCUNf8BAa7b5WUS9/Qvr6mwOQS7Mk6vdsMno5he+T8Xw==}
@@ -13454,9 +13429,6 @@ packages:
     resolution: {integrity: sha512-QUiRf1+u9wPTL/76GTYlKttDEBWV1ga9ZXW8BG6kfdeyyM8LGPix9gROyg9V2+P0xNyF3X2Go526xKFdMZrHSQ==}
     engines: {node: ^20.17.0 || >=22.9.0}
 
-  stable-hash@0.0.4:
-    resolution: {integrity: sha512-LjdcbuBeLcdETCrPn9i8AYAZ1eCtu4ECAWtP7UleOiZ9LzVxRzzUZEoZ8zB24nhkQnDWyET0I+3sWokSDS3E7g==}
-
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
 
@@ -13968,9 +13940,9 @@ packages:
     resolution: {integrity: sha512-3KS2b+kL7fsuk/eJZ7EQdnEmQoaho/r6KUef7hxvltNA5DR8NAUM+8wJMbJyZ4G9/7i3v5zPBIMN5aybAh2/Jg==}
     engines: {node: '>= 0.4'}
 
-  typescript@4.5.2:
-    resolution: {integrity: sha512-5BlMof9H1yGt0P8/WF+wPNw6GfctgGjXp5hkblpyT+8rkASSmkUKMXrxR0Xg8ThVCi/JnHQiKXeBaEwCeQwMFw==}
-    engines: {node: '>=4.2.0'}
+  typescript@5.4.5:
+    resolution: {integrity: sha512-vcI4UpRgg81oIRUFwR0WSIHKt11nJ7SAVlYNIu+QpqeyXP+gpQJy/Z4+F0aGxSE4MqwjyXvW/TzgkLAx2AGHwQ==}
+    engines: {node: '>=14.17'}
     hasBin: true
 
   typescript@5.6.2:
@@ -14010,10 +13982,6 @@ packages:
 
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
-
-  undici@5.28.4:
-    resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}
-    engines: {node: '>=14.0'}
 
   undici@6.24.0:
     resolution: {integrity: sha512-lVLNosgqo5EkGqh5XUDhGfsMSoO8K0BAN0TyJLvwNRSl4xWGZlCVYsAIpa/OpA3TvmnM01GWcoKmc3ZWo5wKKA==}
@@ -15523,39 +15491,21 @@ snapshots:
       '@bufbuild/buf-win32-arm64': 1.34.0
       '@bufbuild/buf-win32-x64': 1.34.0
 
-  '@bufbuild/protobuf@1.10.0': {}
+  '@bufbuild/protobuf@2.12.0': {}
 
-  '@bufbuild/protobuf@1.9.0': {}
-
-  '@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0)':
+  '@bufbuild/protoc-gen-es@2.12.0(@bufbuild/protobuf@2.12.0)':
     dependencies:
-      '@bufbuild/protoplugin': 1.10.0
+      '@bufbuild/protoplugin': 2.12.0
     optionalDependencies:
-      '@bufbuild/protobuf': 1.10.0
+      '@bufbuild/protobuf': 2.12.0
     transitivePeerDependencies:
       - supports-color
 
-  '@bufbuild/protoc-gen-es@1.9.0(@bufbuild/protobuf@1.10.0)':
+  '@bufbuild/protoplugin@2.12.0':
     dependencies:
-      '@bufbuild/protoplugin': 1.9.0
-    optionalDependencies:
-      '@bufbuild/protobuf': 1.10.0
-    transitivePeerDependencies:
-      - supports-color
-
-  '@bufbuild/protoplugin@1.10.0':
-    dependencies:
-      '@bufbuild/protobuf': 1.10.0
-      '@typescript/vfs': 1.5.0
-      typescript: 4.5.2
-    transitivePeerDependencies:
-      - supports-color
-
-  '@bufbuild/protoplugin@1.9.0':
-    dependencies:
-      '@bufbuild/protobuf': 1.9.0
-      '@typescript/vfs': 1.5.0
-      typescript: 4.5.2
+      '@bufbuild/protobuf': 2.12.0
+      '@typescript/vfs': 1.6.4(typescript@5.4.5)
+      typescript: 5.4.5
     transitivePeerDependencies:
       - supports-color
 
@@ -16401,63 +16351,50 @@ snapshots:
       '@types/conventional-commits-parser': 5.0.0
       chalk: 5.6.2
 
-  '@connectrpc/connect-fastify@1.5.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect-node@1.5.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0)))(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))(fastify@4.28.1)':
+  '@connectrpc/connect-fastify@2.1.2(@bufbuild/protobuf@2.12.0)(@connectrpc/connect-node@2.1.2(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0)))(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))(fastify@4.28.1)':
     dependencies:
-      '@bufbuild/protobuf': 1.10.0
-      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.10.0)
-      '@connectrpc/connect-node': 1.5.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))
+      '@bufbuild/protobuf': 2.12.0
+      '@connectrpc/connect': 2.1.2(@bufbuild/protobuf@2.12.0)
+      '@connectrpc/connect-node': 2.1.2(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))
       fastify: 4.28.1
 
-  '@connectrpc/connect-node@1.5.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))':
+  '@connectrpc/connect-node@2.1.2(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))':
     dependencies:
-      '@bufbuild/protobuf': 1.10.0
-      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.10.0)
-      undici: 5.28.4
+      '@bufbuild/protobuf': 2.12.0
+      '@connectrpc/connect': 2.1.2(@bufbuild/protobuf@2.12.0)
 
-  '@connectrpc/connect-query@1.4.1(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@connectrpc/connect-query-core@2.2.0(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))(@tanstack/query-core@5.36.1)':
     dependencies:
-      '@bufbuild/protobuf': 1.10.0
-      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.10.0)
+      '@bufbuild/protobuf': 2.12.0
+      '@connectrpc/connect': 2.1.2(@bufbuild/protobuf@2.12.0)
+      '@tanstack/query-core': 5.36.1
+
+  '@connectrpc/connect-query@2.2.0(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))(@tanstack/query-core@5.36.1)(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@bufbuild/protobuf': 2.12.0
+      '@connectrpc/connect': 2.1.2(@bufbuild/protobuf@2.12.0)
+      '@connectrpc/connect-query-core': 2.2.0(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))(@tanstack/query-core@5.36.1)
       '@tanstack/react-query': 5.37.1(react@18.3.1)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      stable-hash: 0.0.4
-
-  '@connectrpc/connect-web@1.5.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))':
-    dependencies:
-      '@bufbuild/protobuf': 1.10.0
-      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.10.0)
-
-  '@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0)':
-    dependencies:
-      '@bufbuild/protobuf': 1.10.0
-
-  '@connectrpc/protoc-gen-connect-es@1.4.0(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))':
-    dependencies:
-      '@bufbuild/protobuf': 1.10.0
-      '@bufbuild/protoplugin': 1.9.0
-    optionalDependencies:
-      '@bufbuild/protoc-gen-es': 1.10.0(@bufbuild/protobuf@1.10.0)
-      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.10.0)
     transitivePeerDependencies:
-      - supports-color
+      - '@tanstack/query-core'
 
-  '@connectrpc/protoc-gen-connect-es@1.4.0(@bufbuild/protoc-gen-es@1.9.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))':
+  '@connectrpc/connect-web@2.1.2(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0))':
     dependencies:
-      '@bufbuild/protobuf': 1.10.0
-      '@bufbuild/protoplugin': 1.9.0
-    optionalDependencies:
-      '@bufbuild/protoc-gen-es': 1.9.0(@bufbuild/protobuf@1.10.0)
-      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.10.0)
-    transitivePeerDependencies:
-      - supports-color
+      '@bufbuild/protobuf': 2.12.0
+      '@connectrpc/connect': 2.1.2(@bufbuild/protobuf@2.12.0)
 
-  '@connectrpc/protoc-gen-connect-query@1.4.1(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))':
+  '@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.0)':
     dependencies:
-      '@bufbuild/protobuf': 1.10.0
-      '@bufbuild/protoplugin': 1.9.0
+      '@bufbuild/protobuf': 2.12.0
+
+  '@connectrpc/protoc-gen-connect-query@2.2.0(@bufbuild/protoc-gen-es@2.12.0(@bufbuild/protobuf@2.12.0))':
+    dependencies:
+      '@bufbuild/protobuf': 2.12.0
+      '@bufbuild/protoplugin': 2.12.0
     optionalDependencies:
-      '@bufbuild/protoc-gen-es': 1.10.0(@bufbuild/protobuf@1.10.0)
+      '@bufbuild/protoc-gen-es': 2.12.0(@bufbuild/protobuf@2.12.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -17011,8 +16948,6 @@ snapshots:
       ajv: 8.18.0
       ajv-formats: 2.1.1(ajv@8.18.0)
       fast-uri: 3.1.2
-
-  '@fastify/busboy@2.1.1': {}
 
   '@fastify/cors@9.0.1':
     dependencies:
@@ -22346,9 +22281,10 @@ snapshots:
       '@typescript-eslint/types': 5.62.0
       eslint-visitor-keys: 3.4.3
 
-  '@typescript/vfs@1.5.0':
+  '@typescript/vfs@1.6.4(typescript@5.4.5)':
     dependencies:
       debug: 4.4.1
+      typescript: 5.4.5
     transitivePeerDependencies:
       - supports-color
 
@@ -22661,10 +22597,6 @@ snapshots:
     dependencies:
       mime-types: 3.0.1
       negotiator: 1.0.0
-
-  acorn-import-attributes@1.9.5(acorn@8.14.1):
-    dependencies:
-      acorn: 8.14.1
 
   acorn-import-attributes@1.9.5(acorn@8.15.0):
     dependencies:
@@ -25406,7 +25338,7 @@ snapshots:
       array-union: 2.1.0
       dir-glob: 3.0.1
       fast-glob: 3.3.1
-      ignore: 5.2.4
+      ignore: 5.3.1
       merge2: 1.4.1
       slash: 3.0.0
 
@@ -25804,8 +25736,6 @@ snapshots:
     dependencies:
       minimatch: 10.2.4
 
-  ignore@5.2.4: {}
-
   ignore@5.3.1: {}
 
   import-fresh@3.3.1:
@@ -25815,8 +25745,8 @@ snapshots:
 
   import-in-the-middle@1.13.1:
     dependencies:
-      acorn: 8.14.1
-      acorn-import-attributes: 1.9.5(acorn@8.14.1)
+      acorn: 8.16.0
+      acorn-import-attributes: 1.9.5(acorn@8.16.0)
       cjs-module-lexer: 1.4.3
       module-details-from-path: 1.0.3
 
@@ -27557,7 +27487,7 @@ snapshots:
 
   p-limit@4.0.0:
     dependencies:
-      yocto-queue: 1.1.1
+      yocto-queue: 1.2.2
 
   p-limit@6.1.0:
     dependencies:
@@ -29207,8 +29137,6 @@ snapshots:
     dependencies:
       minipass: 7.1.2
 
-  stable-hash@0.0.4: {}
-
   stackback@0.0.2: {}
 
   stacktrace-parser@0.1.11:
@@ -29733,7 +29661,7 @@ snapshots:
       possible-typed-array-names: 1.1.0
       reflect.getprototypeof: 1.0.10
 
-  typescript@4.5.2: {}
+  typescript@5.4.5: {}
 
   typescript@5.6.2: {}
 
@@ -29765,10 +29693,6 @@ snapshots:
   undici-types@5.26.5: {}
 
   undici-types@6.21.0: {}
-
-  undici@5.28.4:
-    dependencies:
-      '@fastify/busboy': 2.1.1
 
   undici@6.24.0: {}
 
@@ -29843,7 +29767,7 @@ snapshots:
 
   unplugin@1.0.1:
     dependencies:
-      acorn: 8.14.1
+      acorn: 8.16.0
       chokidar: 3.6.0
       webpack-sources: 3.2.3
       webpack-virtual-modules: 0.5.0
