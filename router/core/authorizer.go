@@ -13,20 +13,30 @@ import (
 )
 
 type CosmoAuthorizerOptions struct {
-	FieldConfigurations           []*nodev1.FieldConfiguration
-	RejectOperationIfUnauthorized bool
+	FieldConfigurations              []*nodev1.FieldConfiguration
+	RejectOperationIfUnauthorized    bool
+	EnablePreFetchFieldAuthorization bool
 }
 
 func NewCosmoAuthorizer(opts *CosmoAuthorizerOptions) *CosmoAuthorizer {
 	return &CosmoAuthorizer{
-		fieldConfigurations: opts.FieldConfigurations,
-		rejectUnauthorized:  opts.RejectOperationIfUnauthorized,
+		fieldConfigurations:              opts.FieldConfigurations,
+		rejectUnauthorized:               opts.RejectOperationIfUnauthorized,
+		enablePreFetchFieldAuthorization: opts.EnablePreFetchFieldAuthorization,
 	}
 }
 
 type CosmoAuthorizer struct {
 	fieldConfigurations []*nodev1.FieldConfiguration
 	rejectUnauthorized  bool
+	// enablePreFetchFieldAuthorization enables pre-fetch field authorization: protected fields are
+	// authorized in a single batch call before any subgraph fetch executes, instead of being filtered
+	// out of the response after the fetch.
+	enablePreFetchFieldAuthorization bool
+}
+
+func (a *CosmoAuthorizer) IsPreFetchFieldAuthorizationEnabled() bool {
+	return a.enablePreFetchFieldAuthorization
 }
 
 func (a *CosmoAuthorizer) HasResponseExtensionData(ctx *resolve.Context) bool {
@@ -75,6 +85,34 @@ func (a *CosmoAuthorizer) AuthorizeObjectField(ctx *resolve.Context, dataSourceI
 	isAuthenticated, actual := a.getAuth(ctx.Context())
 	required := a.requiredScopesForField(coordinate)
 	return a.handleRejectUnauthorized(a.validateScopes(ctx, coordinate, required, isAuthenticated, actual))
+}
+
+// AuthorizeFields implements [resolve.BatchAuthorizer].
+func (a *CosmoAuthorizer) AuthorizeFields(ctx *resolve.Context, coordinates []resolve.GraphCoordinate) ([]resolve.AuthorizationDecision, error) {
+	decisions := make([]resolve.AuthorizationDecision, len(coordinates))
+	isAuthenticated, actual := a.getAuth(ctx.Context())
+
+	for i, coordinate := range coordinates {
+		required := a.requiredScopesForField(coordinate)
+		deny, err := a.handleRejectUnauthorized(a.validateScopes(ctx, coordinate, required, isAuthenticated, actual))
+		if err != nil {
+			return nil, err
+		}
+
+		if deny != nil {
+			decisions[i] = resolve.AuthorizationDecision{
+				Allowed: false,
+				Reason:  deny.Reason,
+			}
+			continue
+		}
+
+		decisions[i] = resolve.AuthorizationDecision{
+			Allowed: true,
+		}
+	}
+
+	return decisions, nil
 }
 
 func (a *CosmoAuthorizer) validateScopes(ctx *resolve.Context, coordinate resolve.GraphCoordinate, requiredOrScopes []*nodev1.Scopes, isAuthenticated bool, actual []string) (result *resolve.AuthorizationDeny) {

@@ -2383,6 +2383,10 @@
         "reject_operation_if_unauthorized": {
           "type": "boolean",
           "description": "Reject the operation if the request is not authorized. If the value is true, the operation is rejected if the request is not authorized."
+        },
+        "enable_pre_fetch_field_authorization": {
+          "type": "boolean",
+          "description": "Authorize fields protected by an authorization rule in a single batch call before any subgraph fetch executes (scope-only, independent of the returned data), instead of filtering them out of the response after the fetch. This avoids fetching data that the client is not authorized to see."
         }
       }
     },
