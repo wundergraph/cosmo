@@ -58,16 +58,7 @@ engine:
     return_in_response_extensions: false
 ```
 
-| Option                          | Environment Variable                                            | Default                                                     | Description                                                                                                                                     |
-| ------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mode`                          | `ENGINE_DISALLOW_INLINE_ARGUMENTS_MODE`                        | `off`                                                       | `off`, `enabled-non-enforcing`, or `enabled-enforcing`. See [Modes](#modes).                                                                     |
-| `enforce_http_status_code`      | `ENGINE_DISALLOW_INLINE_ARGUMENTS_ENFORCE_HTTP_STATUS_CODE`    | `400`                                                       | HTTP status code returned when an operation is rejected in enforcing mode.                                                                       |
-| `error_code`                    | `ENGINE_DISALLOW_INLINE_ARGUMENTS_ERROR_CODE`                  | `INLINE_ARGUMENT_VALUES_NOT_ALLOWED`                        | The `extensions.code` set on the rejection error.                                                                                               |
-| `error_message`                 | `ENGINE_DISALLOW_INLINE_ARGUMENTS_ERROR_MESSAGE`              | `Inline argument values are not allowed. Use variables instead.` | The error message returned to the client on rejection.                                                                                          |
-| `include_persisted_operations`  | `ENGINE_DISALLOW_INLINE_ARGUMENTS_INCLUDE_PERSISTED_OPERATIONS` | `false`                                                     | When `true`, the policy also applies to persisted operations. Persisted operations are exempt by default. See [Persisted operations](#persisted-operations). |
-| `return_in_response_extensions` | `ENGINE_DISALLOW_INLINE_ARGUMENTS_RETURN_IN_RESPONSE_EXTENSIONS` | `false`                                                     | When `true`, detected inline arguments are returned to the client under `extensions.inlineArguments`. Applies only in non-enforcing mode. See [Response extensions](#response-extensions). |
-
-These options are also listed in the [router configuration reference](/router/configuration#disallow-inline-arguments).
+These options are also listed in more detail in the [router configuration reference](/router/configuration#disallow-inline-arguments).
 
 ## What counts as an inline argument
 
