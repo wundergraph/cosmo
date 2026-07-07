@@ -657,6 +657,8 @@ export interface GraphCompositionDTO {
   admissionError?: string;
   deploymentError?: string;
   routerCompatibilityVersion: string;
+  isFeatureFlagComposition: boolean;
+  featureFlagName?: string;
 }
 
 export interface FeatureFlagCompositionDTO {

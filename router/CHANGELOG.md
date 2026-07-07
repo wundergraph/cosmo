@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.329.2](https://github.com/wundergraph/cosmo/compare/router@0.329.1...router@0.329.2) (2026-07-07)
+
+### Bug Fixes
+
+* do not charge children of null-parents in actual costs ([#3051](https://github.com/wundergraph/cosmo/issues/3051)) ([d161722](https://github.com/wundergraph/cosmo/commit/d16172286d5ab1a5a941c8069e89590e9ecc9935)) (@ysmolski)
+
+## [0.329.1](https://github.com/wundergraph/cosmo/compare/router@0.329.0...router@0.329.1) (2026-07-06)
+
+### Bug Fixes
+
+* enforce max waiting on control plane also if response is slow ([#2656](https://github.com/wundergraph/cosmo/issues/2656)) ([f9789a3](https://github.com/wundergraph/cosmo/commit/f9789a384f311b8d39a9df134a61a30687d70c88)) (@alepane21)
+* **router:** fix pubsub goroutine leak ([#3047](https://github.com/wundergraph/cosmo/issues/3047)) ([3052621](https://github.com/wundergraph/cosmo/commit/3052621dcdfa69e614e43356807d17999d8d950d)) (@dkorittki)
+* **router:** validate operations before variable extraction (ENG-9820) ([#3041](https://github.com/wundergraph/cosmo/issues/3041)) ([3ed663b](https://github.com/wundergraph/cosmo/commit/3ed663b1515f4298d15956bfd0132cc68f898a0f)) (@jensneuse)
+
 # [0.329.0](https://github.com/wundergraph/cosmo/compare/router@0.328.0...router@0.329.0) (2026-07-03)
 
 ### Features
