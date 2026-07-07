@@ -167,6 +167,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resolveCtx.TracingOptions = reqCtx.operation.traceOptions
 	resolveCtx.InitialPayload = reqCtx.operation.initialPayload
 	resolveCtx.Extensions = reqCtx.operation.extensions
+	resolveCtx.InlineArguments = reqCtx.operation.inlineArguments
 	resolveCtx.ExecutionOptions = reqCtx.operation.executionOptions
 
 	if h.headerPropagation != nil {

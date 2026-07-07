@@ -890,6 +890,12 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// its logged on the warn option
 	logInlineArguments(requestContext.logger, operationKit.parsedOperation)
 
+	// When configured, also surface the inline arguments to the client under
+	// `extensions.inlineArguments`. The engine renders them from the resolve context.
+	if h.operationProcessor.ReportInlineArgumentsInExtensions() {
+		requestContext.operation.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
+	}
+
 	// Update file upload paths if they were used in the nested field of the extracted variables.
 	for mapping := range slices.Values(uploadsMapping) {
 		// If the NewUploadPath is empty, there was no change in the path:
@@ -1425,18 +1431,29 @@ func setExpressionContextClient(requestContext *requestContext) {
 // when there are no findings, so both the HTTP prehandler and the WebSocket
 // handler can call it unconditionally after a successful normalization.
 func logInlineArguments(logger *zap.Logger, operation *ParsedOperation) {
+	argumentNames := inlineArgumentQualifiedNames(operation)
+	if len(argumentNames) == 0 {
+		return
+	}
+	logger.Warn("Inline argument values found in operation; use variables instead",
+		zap.Int("count", len(argumentNames)),
+		zap.Strings("arguments", argumentNames),
+		zap.String("operation_name", operation.Request.OperationName),
+		zap.Uint64("operation_hash", operation.ID),
+	)
+}
+
+// inlineArgumentQualifiedNames returns the qualified names (e.g. "user.id",
+// "@skip.if") of every inline argument found in the operation, or nil when there
+// are none. Shared by the warning log and the response-extension reporting.
+func inlineArgumentQualifiedNames(operation *ParsedOperation) []string {
 	inlineArguments := operation.InlineArguments
 	if len(inlineArguments) == 0 {
-		return
+		return nil
 	}
 	argumentNames := make([]string, len(inlineArguments))
 	for i, arg := range inlineArguments {
 		argumentNames[i] = arg.QualifiedName()
 	}
-	logger.Warn("Inline argument values found in operation; use variables instead",
-		zap.Int("count", len(inlineArguments)),
-		zap.Strings("arguments", argumentNames),
-		zap.String("operation_name", operation.Request.OperationName),
-		zap.Uint64("operation_hash", operation.ID),
-	)
+	return argumentNames
 }

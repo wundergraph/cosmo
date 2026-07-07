@@ -3678,6 +3678,11 @@
               "type": "boolean",
               "default": false,
               "description": "When true, applies the policy to persisted operations as well. Persisted operations are exempt by default."
+            },
+            "return_in_response_extensions": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, reports detected inline arguments back to the client under extensions.inlineArguments of the GraphQL response. Applies only in non-enforcing mode."
             }
           }
         },

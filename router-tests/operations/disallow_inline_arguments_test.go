@@ -47,6 +47,28 @@ func TestDisallowInlineArguments(t *testing.T) {
 		})
 	})
 
+	t.Run("enforcing returns inline arguments in the error extensions when configured", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode:                       config.DisallowInlineArgumentsModeEnforcing,
+					EnforceHTTPStatusCode:      400,
+					ErrorCode:                  "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
+					ErrorMessage:               "Inline argument values are not allowed. Use variables instead.",
+					ReturnInResponseExtensions: true,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: inlineArgumentQuery})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			// The offending inline arguments are attached to the rejection error under
+			// extensions.inlineArguments, alongside the error code.
+			require.JSONEq(t, `{"errors":[{"message":"Inline argument values are not allowed. Use variables instead.","locations":[{"line":1,"column":30}],"extensions":{"code":"INLINE_ARGUMENT_VALUES_NOT_ALLOWED","inlineArguments":{"count":1,"arguments":["employee.id"]}}}]}`, res.Body)
+		})
+	})
+
 	t.Run("enforcing passes a compliant operation using variables", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
@@ -190,6 +212,75 @@ func TestDisallowInlineArguments(t *testing.T) {
 			assert.EqualValues(t, 1, fields["count"])
 			assert.Equal(t, []any{"employee.id"}, fields["arguments"])
 			assert.Equal(t, "GetEmployee", fields["operation_name"])
+		})
+	})
+
+	t.Run("non-enforcing returns inline arguments in response extensions when configured", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode:                       config.DisallowInlineArgumentsModeNonEnforcing,
+					ReturnInResponseExtensions: true,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Send the same inline-argument operation twice. The second request hits
+			// the normalization cache; the extension must still surface because the
+			// findings are restored from the cache entry (same as the warning log).
+			const wantBody = `{"data":{"employee":{"id":1}},"extensions":{"inlineArguments":{"count":1,"arguments":["employee.id"]}}}`
+			for i := 0; i < 2; i++ {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: inlineArgumentQuery})
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.JSONEq(t, wantBody, res.Body, "extension must surface on both cache-miss and cache-hit")
+			}
+
+			// A compliant operation must not carry the extension.
+			resOK := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     variableQuery,
+				Variables: []byte(`{"id":1}`),
+			})
+			require.Equal(t, `{"data":{"employee":{"id":1}}}`, resOK.Body)
+		})
+	})
+
+	t.Run("non-enforcing omits the extension when reporting is disabled", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode: config.DisallowInlineArgumentsModeNonEnforcing,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: inlineArgumentQuery})
+			require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+		})
+	})
+
+	t.Run("non-enforcing returns the extension over a WebSocket when configured", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
+				s.DisallowInlineArguments = config.DisallowInlineArguments{
+					Mode:                       config.DisallowInlineArgumentsModeNonEnforcing,
+					ReturnInResponseExtensions: true,
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"` + inlineArgumentQuery + `"}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.JSONEq(t, `{"data":{"employee":{"id":1}},"extensions":{"inlineArguments":{"count":1,"arguments":["employee.id"]}}}`, string(res.Payload))
 		})
 	})
 }

@@ -979,6 +979,12 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	// prehandler so subscriptions over WebSockets are not silently exempt.
 	logInlineArguments(h.logger, operationKit.parsedOperation)
 
+	// When configured, also surface the inline arguments to the client under
+	// `extensions.inlineArguments`, matching the HTTP prehandler.
+	if h.operationProcessor.ReportInlineArgumentsInExtensions() {
+		opContext.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
+	}
+
 	// Validate the operation against the schema BEFORE variable extraction, which would
 	// serialize inline literals into JSON variables and let invalid-type literals through.
 	// The error is surfaced later, during validation, so normalization timing stays accurate.
@@ -1121,6 +1127,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	resolveCtx.RenameTypeNames = h.graphqlHandler.executor.RenameTypeNames
 	resolveCtx.TracingOptions = operationCtx.traceOptions
 	resolveCtx.Extensions = operationCtx.extensions
+	resolveCtx.InlineArguments = operationCtx.inlineArguments
 	resolveCtx.ExecutionOptions = operationCtx.executionOptions
 
 	if operationCtx.initialPayload != nil {

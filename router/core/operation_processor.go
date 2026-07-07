@@ -1618,10 +1618,11 @@ func buildNormalizationOptions(enableDefer bool, disallowInlineArguments config.
 	if disallowInlineArguments.Enabled() {
 		inlineArgumentsValidator = &astnormalization.InlineArgumentsValidator{
 			Options: astnormalization.InlineArgumentsValidationOptions{
-				Enforce:      disallowInlineArguments.Enforcing(),
-				ErrorMessage: disallowInlineArguments.ErrorMessage,
-				ErrorCode:    disallowInlineArguments.ErrorCode,
-				StatusCode:   disallowInlineArguments.EnforceHTTPStatusCode,
+				Enforce:                    disallowInlineArguments.Enforcing(),
+				ErrorMessage:               disallowInlineArguments.ErrorMessage,
+				ErrorCode:                  disallowInlineArguments.ErrorCode,
+				StatusCode:                 disallowInlineArguments.EnforceHTTPStatusCode,
+				ReturnInResponseExtensions: disallowInlineArguments.ReturnInResponseExtensions,
 			},
 		}
 		prevalidationRules = append(prevalidationRules, astnormalization.InlineArgumentsRule(inlineArgumentsValidator))
@@ -1644,6 +1645,13 @@ func createOperationValidator(options *parseKitOptions) *astvalidation.Operation
 		opts = append(opts, astvalidation.WithRelaxFieldSelectionMergingNullability())
 	}
 	return astvalidation.DefaultOperationValidator(opts...)
+}
+
+// ReportInlineArgumentsInExtensions reports whether detected inline arguments
+// should be returned to the client under `extensions.inlineArguments`. It is only
+// meaningful in the non-enforcing mode of the disallow-inline-arguments policy.
+func (p *OperationProcessor) ReportInlineArgumentsInExtensions() bool {
+	return p.parseKitOptions.disallowInlineArguments.ReturnInResponseExtensions
 }
 
 func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {

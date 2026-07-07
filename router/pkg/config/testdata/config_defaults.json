@@ -504,7 +504,8 @@
       "EnforceHTTPStatusCode": 400,
       "ErrorCode": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
       "ErrorMessage": "Inline argument values are not allowed. Use variables instead.",
-      "IncludePersistedOperations": false
+      "IncludePersistedOperations": false,
+      "ReturnInResponseExtensions": false
     }
   },
   "WebSocket": {

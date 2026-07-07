@@ -626,6 +626,12 @@ type DisallowInlineArguments struct {
 	// IncludePersistedOperations, when true, applies the policy to persisted
 	// operations as well. By default persisted operations are exempt.
 	IncludePersistedOperations bool `yaml:"include_persisted_operations,omitempty" envDefault:"false" env:"INCLUDE_PERSISTED_OPERATIONS"`
+	// ReturnInResponseExtensions, when true, reports the detected inline arguments
+	// back to the client under `inlineArguments` in the response extensions. In
+	// non-enforcing mode this is the top-level `extensions.inlineArguments` of the
+	// successful response; in enforcing mode it is attached to the rejection error
+	// under `errors[].extensions.inlineArguments`, alongside the error `code`.
+	ReturnInResponseExtensions bool `yaml:"return_in_response_extensions,omitempty" envDefault:"false" env:"RETURN_IN_RESPONSE_EXTENSIONS"`
 }
 
 // Enabled reports whether the policy is active in any mode.
