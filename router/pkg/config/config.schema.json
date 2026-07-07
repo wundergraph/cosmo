@@ -3661,6 +3661,8 @@
             },
             "enforce_http_status_code": {
               "type": "integer",
+              "minimum": 100,
+              "maximum": 599,
               "default": 400,
               "description": "HTTP status code returned when an operation is rejected in enforce mode."
             },
