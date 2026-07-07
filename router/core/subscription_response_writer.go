@@ -195,6 +195,9 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 
 	if wgParams.UseMultipart || wgParams.UseSse {
 		ctx.ExecutionOptions.SendHeartbeat = true
+		// Flush the response head immediately so the client establishes the connection
+		// before the first message, instead of blocking until one is streamed.
+		flusher.Flush()
 	}
 
 	return ctx, flushWriter, true
