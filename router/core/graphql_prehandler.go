@@ -886,12 +886,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.operation.variablesNormalizationCacheHit = cached
 	requestContext.expressionContext.Request.Operation.VariablesNormalizationCacheHit = cached
 
-	// Because we will only reach this section if normalization errors did not occur
-	// its logged on the warn option
 	logInlineArguments(requestContext.logger, operationKit.parsedOperation)
-
-	// When configured, also surface the inline arguments to the client under
-	// `extensions.inlineArguments`. The engine renders them from the resolve context.
 	if h.operationProcessor.parseKitOptions.disallowInlineArguments.ReturnInResponseExtensions {
 		requestContext.operation.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
 	}

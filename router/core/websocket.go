@@ -975,16 +975,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	}
 	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
-	// Non-enforcing mode: warn about any inline argument values, matching the HTTP
-	// prehandler so subscriptions over WebSockets are not silently exempt.
-	logInlineArguments(h.logger, operationKit.parsedOperation)
-
-	// When configured, also surface the inline arguments to the client under
-	// `extensions.inlineArguments`, matching the HTTP prehandler.
-	if h.operationProcessor.parseKitOptions.disallowInlineArguments.ReturnInResponseExtensions {
-		opContext.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
-	}
-
 	// Validate the operation against the schema BEFORE variable extraction, which would
 	// serialize inline literals into JSON variables and let invalid-type literals through.
 	// The error is surfaced later, during validation, so normalization timing stays accurate.
@@ -996,6 +986,11 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		return nil, nil, err
 	}
 	opContext.variablesNormalizationCacheHit = cached
+
+	logInlineArguments(h.logger, operationKit.parsedOperation)
+	if h.operationProcessor.parseKitOptions.disallowInlineArguments.ReturnInResponseExtensions {
+		opContext.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
+	}
 
 	cached, err = operationKit.RemapVariables(h.disableVariablesRemapping)
 	if err != nil {
