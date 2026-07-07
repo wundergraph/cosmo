@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.329.2](https://github.com/wundergraph/cosmo/compare/router@0.329.1...router@0.329.2) (2026-07-07)
+
+### Bug Fixes
+
+* do not charge children of null-parents in actual costs ([#3051](https://github.com/wundergraph/cosmo/issues/3051)) ([d161722](https://github.com/wundergraph/cosmo/commit/d16172286d5ab1a5a941c8069e89590e9ecc9935)) (@ysmolski)
+
 ## [0.329.1](https://github.com/wundergraph/cosmo/compare/router@0.329.0...router@0.329.1) (2026-07-06)
 
 ### Bug Fixes
