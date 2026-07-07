@@ -1705,9 +1705,7 @@ func (p *OperationProcessor) freeKit(kit *parseKit) {
 	kit.doc.Reset()
 	kit.sha256Hash.Reset()
 	kit.normalizedOperation.Reset()
-	if kit.inlineArgumentsValidator != nil {
-		kit.inlineArgumentsValidator.ClearFindings()
-	}
+	kit.inlineArgumentsValidator.ClearFindings()
 	// because we're re-using the kit, and we're having a static number of kits based on the number of CPUs
 	// we're resetting the doc, parser, and buffer for the normalized operation if they grow too large (>1MB of query size)
 	if cap(kit.doc.Input.RawBytes) > 1024*1024 {
