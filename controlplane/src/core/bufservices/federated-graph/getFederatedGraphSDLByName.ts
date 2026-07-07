@@ -79,6 +79,7 @@ export function getFederatedGraphSDLByName(
 
       const ffSchemaVersion = await featureFlagRepo.getFeatureFlagSchemaVersionByBaseSchemaVersion({
         baseSchemaVersionId: schemaVersion.schemaVersionId,
+        federatedGraphId: federatedGraph.id,
         featureFlagId: featureFlag.id,
       });
       if (!ffSchemaVersion || !ffSchemaVersion.schema) {

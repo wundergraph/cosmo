@@ -696,6 +696,7 @@ export class FederatedGraphRepository {
     schemaVersionId,
     isFeatureFlagComposition,
     featureFlagId,
+    splitConfigEnabled,
   }: {
     targetId: string;
     schemaVersionId: string;
@@ -707,6 +708,7 @@ export class FederatedGraphRepository {
     composedById: string;
     isFeatureFlagComposition: boolean;
     featureFlagId: string;
+    splitConfigEnabled: boolean;
   }) {
     return this.db.transaction(async (tx) => {
       const compositionRepo = new GraphCompositionRepository(this.logger, tx);
@@ -759,7 +761,7 @@ export class FederatedGraphRepository {
         await tx.insert(federatedGraphsToFeatureFlagSchemaVersions).values({
           composedSchemaVersionId: schemaVersionId,
           federatedGraphId: federatedGraph.id,
-          baseCompositionSchemaVersionId: federatedGraph.composedSchemaVersionId!,
+          baseCompositionSchemaVersionId: splitConfigEnabled ? null : federatedGraph.composedSchemaVersionId!,
           featureFlagId,
         });
       } else {
@@ -780,6 +782,7 @@ export class FederatedGraphRepository {
         compositionWarningString,
         composedById,
         isFeatureFlagComposition,
+        featureFlagId,
         routerCompatibilityVersion: federatedGraph.routerCompatibilityVersion,
       });
 
