@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.24.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.24...@wundergraph/protographic@0.24.0) (2026-07-06)
+
+### Features
+
+* upgrade connect v1 to v2 ([#2705](https://github.com/wundergraph/cosmo/issues/2705)) ([c7203f4](https://github.com/wundergraph/cosmo/commit/c7203f47529f75675ca04e6ac4018efe55d4e498)) (@JivusAyrus)
+
 ## [0.23.24](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.23...@wundergraph/protographic@0.23.24) (2026-07-02)
 
 **Note:** Version bump only for package @wundergraph/protographic
