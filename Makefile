@@ -219,15 +219,15 @@ new-gm-data-migration:
 
 GRAPHQL_GO_TOOLS := github.com/wundergraph/graphql-go-tools/v2
 
-# Usage: make pin-graphql-go-tools BRANCH=<branch-name>
-.PHONY: pin-graphql-go-tools
+# Usage: make pin-engine COMMIT=<commit-sha>
+.PHONY: pin-engine
 pin-engine:
-	@if [ -z "$(BRANCH)" ]; then \
-		echo "Usage: make pin-graphql-go-tools BRANCH=<branch-name>"; \
+	@if [ -z "$(COMMIT)" ]; then \
+		echo "Usage: make pin-engine COMMIT=<commit-sha>"; \
 		exit 1; \
 	fi
-	cd router && go get $(GRAPHQL_GO_TOOLS)@$(BRANCH) && go mod tidy
-	cd router-tests && go get $(GRAPHQL_GO_TOOLS)@$(BRANCH) && go mod tidy
+	cd router && go get $(GRAPHQL_GO_TOOLS)@$(COMMIT) && go mod tidy
+	cd router-tests && go get $(GRAPHQL_GO_TOOLS)@$(COMMIT) && go mod tidy
 
 .PHONY: update-engine
 update-engine:
