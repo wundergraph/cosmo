@@ -1146,6 +1146,9 @@
     },
     "SubrequestHTTPError": {
       "Enabled": false
+    },
+    "SkipNullVariablesError": {
+      "Enabled": false
     }
   },
   "ClientHeader": {
