@@ -208,6 +208,7 @@ export interface CheckedSubgraphDTO {
   subgraphName: string;
   isDeleted: boolean;
   isNew: boolean;
+  isFeatureSubgraph: boolean;
   labels: Label[];
 }
 
@@ -258,6 +259,7 @@ export interface SchemaCheckDTO {
   linkedChecks: LinkedCheckDTO[];
   checkExtensionDeliveryId: string | undefined;
   checkExtensionErrorMessage: string | undefined;
+  hasFeatureSubgraphCheck: boolean;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
@@ -282,8 +284,8 @@ export interface SchemaCheckDetailsDTO {
     isBreaking: boolean;
     subgraphName?: string;
   }[];
-  compositionErrors: string[];
-  compositionWarnings: string[];
+  compositionErrors: PlainMessage<CompositionError>[];
+  compositionWarnings: PlainMessage<CompositionWarning>[];
   composedSchemaBreakingChanges: {
     id: string;
     message: string;
@@ -291,6 +293,7 @@ export interface SchemaCheckDetailsDTO {
     path?: string;
     isBreaking: boolean;
     federatedGraphName: string;
+    featureFlag: string;
   }[];
 }
 

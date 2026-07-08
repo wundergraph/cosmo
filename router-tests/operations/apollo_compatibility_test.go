@@ -297,6 +297,96 @@ func TestApolloRouterCompatibility(t *testing.T) {
 			}`, res.Body)
 		})
 	})
+
+	t.Run("null variable for non-nullable type returns error by default", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Employee($id: Int!) { employee(id: $id) { id } }`,
+				Variables: json.RawMessage(`{"id": null}`),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.JSONEq(t, `{
+				"errors": [
+					{
+						"message": "Variable \"$id\" got invalid value null; Expected non-nullable type \"Int!\" not to be null."
+					}
+				]
+			}`, res.Body)
+		})
+	})
+
+	t.Run("enable skip null variables error", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
+					SkipNullVariablesError: config.ApolloCompatibilityFlag{
+						Enabled: true,
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// The router skips its own null variable validation and forwards
+			// the request. The subgraph decides how to handle the null value.
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Employee($id: Int!) { employee(id: $id) { id } }`,
+				Variables: json.RawMessage(`{"id": null}`),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.JSONEq(t, `{
+				"errors": [
+					{
+						"message": "Failed to fetch from Subgraph 'employees'.",
+						"extensions": {
+							"errors": [
+								{
+									"message": "cannot be null",
+									"path": ["variable", "a"],
+									"extensions": {
+										"code": "GRAPHQL_VALIDATION_FAILED"
+									}
+								}
+							],
+							"statusCode": 422
+						}
+					}
+				],
+				"data": {
+					"employee": null
+				}
+			}`, res.Body)
+		})
+	})
+
+	t.Run("enable skip null variables error still returns error for missing variable", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
+					SkipNullVariablesError: config.ApolloCompatibilityFlag{
+						Enabled: true,
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Employee($id: Int!) { employee(id: $id) { id } }`,
+				Variables: json.RawMessage(`{}`),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.JSONEq(t, `{
+				"errors": [
+					{
+						"message": "Variable \"$id\" of required type \"Int!\" was not provided."
+					}
+				]
+			}`, res.Body)
+		})
+	})
 }
 
 func TestApolloGatewayCompatibility(t *testing.T) {

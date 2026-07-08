@@ -22,6 +22,9 @@ export type JsonCheckSchemaOutputDescriptor = {
   traffic?: {
     message: string;
   };
+  featureSubgraphCheck?: {
+    message: string;
+  };
   changes?: {
     breaking: SchemaChange[];
     nonBreaking: SchemaChange[];
@@ -93,6 +96,11 @@ export class JsonCheckSchemaOutputBuilder {
 
   setTraffic(message: string): this {
     this.data.traffic = { message };
+    return this;
+  }
+
+  setFeatureSubgraphCheck(message: string): this {
+    this.data.featureSubgraphCheck = { message };
     return this;
   }
 

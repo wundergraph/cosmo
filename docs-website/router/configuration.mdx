@@ -2530,6 +2530,14 @@ Extension code: "VALIDATION_INVALID_TYPE_VARIABLE"
 | -------------------------------------------------------------- | -------------------------- | ---------------------- | --------------------------------- | ------------- |
 | APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED | replace_invalid_var_errors | <Icon icon="square" /> | Replaces invalid variable errors. | false         |
 
+### Apollo Router Compatibility Skip Null Variables Error
+
+Skips the validation error raised when `null` is supplied for a variable of a non-nullable type, matching Apollo Router behavior. Variables that are missing entirely still produce an error.
+
+| Environment Variable                                          | YAML                      | Required               | Description                                                       | Default Value |
+| ------------------------------------------------------------- | ------------------------- | ---------------------- | ----------------------------------------------------------------- | ------------- |
+| APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_ENABLED | skip_null_variables_error | <Icon icon="square" /> | Skips the error when a null variable is supplied for a non-nullable type. | false         |
+
 ### Example YAML Configuration
 
 ```yaml
@@ -2537,6 +2545,8 @@ version: "1"
 
 apollo_router_compatibility_flags:
   replace_invalid_var_errors:
+    enabled: true
+  skip_null_variables_error:
     enabled: true
 ```
 
