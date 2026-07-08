@@ -29,3 +29,4 @@ go.work.sum
 
 # Claude Code
 .claude/worktrees/
+profile-proxy/profile-proxy
