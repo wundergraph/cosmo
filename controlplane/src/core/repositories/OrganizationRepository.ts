@@ -1,4 +1,3 @@
-import { PartialMessage, PlainMessage } from '@bufbuild/protobuf';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   Integration,
@@ -10,6 +9,16 @@ import { addDays } from 'date-fns';
 import { and, asc, count, desc, eq, gt, inArray, like, lt, not, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
+import {
+  PlainMessage,
+  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+  Feature,
+  FeatureIds,
+  OrganizationDTO,
+  OrganizationGroupDTO,
+  OrganizationMemberDTO,
+  WebhooksConfigDTO,
+} from '../../types/index.js';
 import { NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -26,19 +35,14 @@ import {
   slackSchemaUpdateEventConfigs,
   users,
 } from '../../db/schema.js';
-import {
-  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-  Feature,
-  FeatureIds,
-  OrganizationDTO,
-  OrganizationGroupDTO,
-  OrganizationMemberDTO,
-  WebhooksConfigDTO,
-} from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { delayForManualOrgDeletionInDays, delayForOrgAuditLogsDeletionInDays } from '../constants.js';
+import {
+  delayForManualOrgDeletionInDays,
+  delayForOrgAuditLogsDeletionInDays,
+  graphTokenFeatures,
+} from '../constants.js';
 import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { traced } from '../tracing.js';
@@ -764,7 +768,7 @@ export class OrganizationRepository {
         ),
       );
 
-    const meta: PartialMessage<EventMeta>[] = [];
+    const meta: PlainMessage<EventMeta>[] = [];
 
     const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
     const federatedGraphIds = [];
@@ -838,7 +842,7 @@ export class OrganizationRepository {
       },
     });
 
-    return meta as PlainMessage<EventMeta>[];
+    return meta;
   }
 
   public async getWebhookConfigById(id: string, organizationId: string): Promise<WebhooksConfigDTO | null> {
@@ -1189,7 +1193,7 @@ export class OrganizationRepository {
             continue;
           }
 
-          const config: PartialMessage<IntegrationConfig> = {
+          const config: any = {
             type: IntegrationType.SLACK,
             config: {
               case: 'slackIntegrationConfig',
@@ -1711,5 +1715,18 @@ export class OrganizationRepository {
         groupId: groups[0].groupId,
       }),
     };
+  }
+
+  async getOrganizationGraphTokenFeatures(organizationId: string): Promise<string[]> {
+    const features: string[] = [];
+
+    const orgFeatures = await this.getFeatures({ organizationId });
+    for (const feature of orgFeatures) {
+      if (feature.enabled && graphTokenFeatures.includes(feature.id)) {
+        features.push('split-config-loading');
+      }
+    }
+
+    return features;
   }
 }

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   CheckSubgraphSchemaResponse,
@@ -48,6 +47,7 @@ import {
   SubgraphDTO,
   SubgraphListFilterOptions,
   SubgraphMemberDTO,
+  PlainMessage,
   ComposeAndDeployResult,
   Feature,
 } from '../../types/index.js';
@@ -571,6 +571,7 @@ export class SubgraphRepository {
         const federatedGraphDTOs = await fedGraphRepo.bySubgraphLabels({
           labels: baseSubgraph[0].labels?.map?.((l) => splitLabel(l)) ?? [],
           namespaceId: data.namespaceId,
+          excludeContracts: true,
         });
 
         for (const federatedGraphDTO of federatedGraphDTOs) {
@@ -622,13 +623,10 @@ export class SubgraphRepository {
       const affectedGraphs = await fedGraphRepo.bySubgraphLabels({
         labels: subgraph.labels,
         namespaceId: data.namespaceId,
+        excludeContracts: true,
       });
 
       for (const graph of affectedGraphs) {
-        if (graph.contract) {
-          continue;
-        }
-
         // If the subgraph has changed, always trigger composition
         if (affectedFederatedGraphById.has(graph.id) && !subgraphChanged) {
           /** If the federated graph matches the old labels AND the new labels,

@@ -290,9 +290,13 @@ type MetricOptions struct {
 	PrometheusEngineStatsOptions          EngineStatOptions
 	PrometheusSchemaFieldUsage            PrometheusSchemaFieldUsage
 	EnableOTLPConnectionMetrics           bool
+	EnableOTLPNetworkMetrics              bool
+	EnableOTLPResolverMetrics             bool
 	EnableOTLPCircuitBreakerMetrics       bool
 	EnableOTLPStreamMetrics               bool
 	EnablePrometheusConnectionMetrics     bool
+	EnablePrometheusNetworkMetrics        bool
+	EnablePrometheusResolverMetrics       bool
 	EnablePrometheusCircuitBreakerMetrics bool
 	EnablePrometheusStreamMetrics         bool
 	LogExporter                           MetricsLogExporterOptions
@@ -1378,6 +1382,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 		EnableInboundRequestDeduplication: false,
 		EnableRequestTracing:              true,
 		EnableNormalizationCache:          true,
+		EnableDefer:                       true,
 		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
@@ -1635,6 +1640,8 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 			TestRegistry:    testConfig.PrometheusRegistry,
 			GraphqlCache:    testConfig.MetricOptions.EnablePrometheusRouterCache,
 			ConnectionStats: testConfig.MetricOptions.EnablePrometheusConnectionMetrics,
+			NetworkStats:    testConfig.MetricOptions.EnablePrometheusNetworkMetrics,
+			ResolverStats:   testConfig.MetricOptions.EnablePrometheusResolverMetrics,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
@@ -1665,6 +1672,8 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
 					Streams:         testConfig.MetricOptions.EnableOTLPStreamMetrics,
 					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
+					Network:         config.TelemetryCategory{Enabled: testConfig.MetricOptions.EnableOTLPNetworkMetrics},
+					Resolver:        config.TelemetryCategory{Enabled: testConfig.MetricOptions.EnableOTLPResolverMetrics},
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},
@@ -2421,10 +2430,21 @@ func (e *Environment) MakeGraphQLMultipartRequest(method string, body io.Reader)
 	return req
 }
 
+func (e *Environment) MakeGraphQLDeferRequest(method string, body io.Reader) *http.Request {
+	req, err := http.NewRequest(method, e.GraphQLRequestURL(), body)
+	require.NoError(e.t, err)
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "multipart/mixed")
+	req.Header.Set("Connection", "keep-alive")
+
+	return req
+}
+
 func (e *Environment) GraphQLWebSocketSubscriptionURL() string {
 	u, err := url.Parse(e.GraphQLRequestURL())
 	require.NoError(e.t, err)
-	u.Scheme = "ws"
+	u.Scheme = websocketScheme(u.Scheme)
 	return u.String()
 }
 
@@ -2433,8 +2453,31 @@ func (e *Environment) AbsintheSubscriptionURL() string {
 	require.NoError(e.t, err)
 	u, err := url.Parse(joined)
 	require.NoError(e.t, err)
-	u.Scheme = "ws"
+	u.Scheme = websocketScheme(u.Scheme)
 	return u.String()
+}
+
+// websocketScheme maps the router's HTTP scheme to the matching WebSocket
+// scheme so that a TLS-enabled router (https) is dialed over wss.
+func websocketScheme(httpScheme string) string {
+	if httpScheme == "https" {
+		return "wss"
+	}
+	return "ws"
+}
+
+// websocketTLSClientConfig returns a tls.Config trusting the router's test
+// certificate when TLS is enabled, or nil otherwise. It lets the WebSocket
+// dialers reach a wss endpoint using the self-signed testdata certs.
+func (e *Environment) websocketTLSClientConfig() *tls.Config {
+	if !e.cfg.TLSConfig.Server.Enabled {
+		return nil
+	}
+	caCert, err := os.ReadFile(e.cfg.TLSConfig.Server.CertFile)
+	require.NoError(e.t, err)
+	caCertPool := x509.NewCertPool()
+	require.True(e.t, caCertPool.AppendCertsFromPEM(caCert), "could not append ca cert to pool")
+	return &tls.Config{RootCAs: caCertPool}
 }
 
 func (e *Environment) GraphQLServeSentEventsURL() string {
@@ -2473,7 +2516,8 @@ const maxSocketRetries = 5
 
 func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header, query url.Values) (*websocket.Conn, *http.Response, error) {
 	dialer := websocket.Dialer{
-		Subprotocols: []string{"graphql-transport-ws"},
+		Subprotocols:    []string{"graphql-transport-ws"},
+		TLSClientConfig: e.websocketTLSClientConfig(),
 	}
 
 	waitBetweenRetriesInMs := rand.Intn(10)
@@ -2604,6 +2648,7 @@ func (e *Environment) ReadSSE(ctx context.Context, body io.ReadCloser, handler f
 func (e *Environment) AbsintheWebsocketDialWithRetry(header http.Header) (*websocket.Conn, *http.Response, error) {
 	dialer := websocket.Dialer{
 		// Subprotocols: []string{"absinthe"}, explicitly removed as this needs to be added by the absinthe handler
+		TLSClientConfig: e.websocketTLSClientConfig(),
 	}
 
 	waitBetweenRetriesInMs := rand.Intn(10)

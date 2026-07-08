@@ -711,6 +711,8 @@ This option may change or be removed in future versions as the OpenTelemetry SDK
 | METRICS_OTLP_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        | The metrics to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                        | []            |
 | METRICS_OTLP_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        | The metric labels to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                  | []            |
 | METRICS_OTLP_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false         |
+| METRICS_OTLP_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, and time-to-first-byte histograms.                                                  | false         |
+| METRICS_OTLP_RESOLVER_ENABLED      | resolver.enabled      | <Icon icon="square" />                        | Enable resolver metrics: resolver concurrency gauges and the resolver acquire duration histogram.                                                                           | false         |
 | METRICS_OTLP_CIRCUIT_BREAKER       | circuit_breaker       | <Icon icon="square" />                        | Ensure that circuit breaker metrics are enabled for OTEL.                                                                                                                  | false         |
 | METRICS_OTLP_STREAM                | streams               | <Icon icon="square" />                        | Enable Cosmo Streams metrics.                                                                                                                                              | false         |
 | METRICS_OTLP_EXEMPLAR_FILTER       | exemplar_filter       | <Icon icon="square" />                        | Controls which measurements are eligible to record exemplars. One of: `always_off`, `trace_based`, `always_on`. See [Exemplars](/router/metrics-and-monitoring/exemplars). | always_off    |
@@ -747,6 +749,13 @@ telemetry:
       enabled: true
       router_runtime: true
       graphql_cache: true
+      connection_stats: false
+      # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first byte)
+      network:
+        enabled: false
+      # Resolver concurrency gauges and resolver acquire duration histogram
+      resolver:
+        enabled: false
       exclude_metrics: []
       exclude_metric_labels: []
       streams: true
@@ -778,6 +787,8 @@ telemetry:
 | PROMETHEUS_LISTEN_ADDR           | listen_addr           | <Icon icon="square" />                        | The address to listen on for the prometheus metrics endpoint.                                                                                                              | "127.0.0.1:8088" |
 | PROMETHEUS_GRAPHQL_CACHE         | graphql_cache         | <Icon icon="square" />                        | Enable the collection of metrics for the GraphQL operation router caches.                                                                                                  | false            |
 | PROMETHEUS_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false            |
+| PROMETHEUS_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, and time-to-first-byte histograms.                                                  | false            |
+| PROMETHEUS_RESOLVER_ENABLED      | resolver.enabled      | <Icon icon="square" />                        | Enable resolver metrics: resolver concurrency gauges and the resolver acquire duration histogram.                                                                           | false            |
 | PROMETHEUS_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        |                                                                                                                                                                            |                  |
 | PROMETHEUS_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        |                                                                                                                                                                            |                  |
 | PROMETHEUS_EXCLUDE_SCOPE_INFO    | exclude_scope_info    | <Icon icon="square" />                        | Exclude scope info from Prometheus metrics.                                                                                                                                | false            |
@@ -799,6 +810,13 @@ telemetry:
       path: "/metrics"
       listen_addr: "127.0.0.1:8088"
       graphql_cache: true
+      connection_stats: false
+      # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first byte)
+      network:
+        enabled: false
+      # Resolver concurrency gauges and resolver acquire duration histogram
+      resolver:
+        enabled: false
       exclude_metrics: []
       exclude_metric_labels: []
       streams: true
@@ -1991,7 +2009,8 @@ Configure the GraphQL Execution Engine of the Router.
 | ENGINE_ENABLE_REQUIRE_FETCH_REASONS                           | enable_require_fetch_reasons                           | <Icon icon="square" /> | Enable the openfed__requireFetchReasons directive, and forces the adding of the "fetch_reasons" extension to upstream subgraph requests. This extension explains why each field was requested.                                                                                                                                              | false         |
 | ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS                      | validate_required_external_fields                      | <Icon icon="square" /> | Validate nullable external "@requires" dependencies. When a subgraph entity fetch returns a null value with an error for a field set specified in the "@requires" directive, any following fetch that depends on it should not receive such an entity.                                                                                      | false         |
 | ENGINE_SUBSCRIPTION_FETCH_TIMEOUT                             | subscription_fetch_timeout                             | <Icon icon="square" /> | The maximum time a subscription fetch can take before it is considered timed out.                                                                                                                                                                                                                                                           | 30s           |
-| ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY | relax_subgraph_operation_field_selection_merging_nullability | <Icon icon="square" /> | Relaxes nullability validation for [field selection merging](/router/relaxed-field-selection-merging-nullability) across union member types.                                                                                                                                                                                            | false         |
+| ENGINE_ENABLE_DEFER                                           | enable_defer                                           | <Icon icon="square" /> | Enables support for the `@defer` directive, allowing clients to defer parts of a query so that the initial response is returned faster and deferred fields are streamed incrementally.                                                                                                                                                      | false         |
+| ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY | relax_subgraph_operation_field_selection_merging_nullability | <Icon icon="square" /> | Relaxes nullability validation for [field selection merging](/router/relaxed-field-selection-merging-nullability) across union member types.                                                                                                                                                                                    | false         |
 
 <Warning>
   **Subject to change.** `enable_net_poll`, `websocket_server_poll_timeout`, and `websocket_server_conn_buffer_size` may be removed or changed in a future release without a standard deprecation cycle. Avoid depending on them.
@@ -2271,6 +2290,7 @@ The configuration for the security. The security is used to configure the securi
 |                                                   | complexity_calculation_cache             | <Icon icon="square" /> | Complexity Cache configuration                                                                                                     |               |
 |                                                   | complexity_limits                        | <Icon icon="square" /> | Complexity limits configuration                                                                                                    |               |
 |                                                   | complexity_limits.mode                   | <Icon icon="square" /> | `measure` calculates complexity without rejecting; `enforce` rejects operations exceeding limits.                                  | enforce       |
+| SECURITY_COMPLEXITY_IGNORE_INTROSPECTION          | complexity_limits.ignore_introspection   | <Icon icon="square" /> | When true, complexity validation is skipped for all introspection queries.                                                        | false         |
 |                                                   | parser_limits.approximate_depth_limit    | <Icon icon="square" /> | The approximate cumulative depth limit of a query, including fragments. Set to 0 to disable.                                       | 200           |
 |                                                   | parser_limits.total_fields_limit         | <Icon icon="square" /> | The total number of fields the parser will allow. Set to 0 to disable.                                                             | 3500          |
 | SECURITY_OPERATION_NAME_LENGTH_LIMIT              | operation_name_length_limit              | <Icon icon="square" /> | The maximum allowed length for the operation name. Set to 0 to disable.                                                            | 512           |
@@ -2296,6 +2316,7 @@ security:
     size: 1024
   complexity_limits:
     mode: enforce # 'measure' calculates complexity without rejecting; 'enforce' rejects operations exceeding limits
+    ignore_introspection: false # when true, complexity validation is skipped for all introspection queries
     depth: # the equivalent of `security.depth_limit` previously
       enabled: true
       limit: 7
