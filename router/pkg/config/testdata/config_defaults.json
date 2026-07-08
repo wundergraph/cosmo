@@ -459,7 +459,8 @@
       "EnableNormalizationCacheResponseHeader": false,
       "EnableCacheResponseHeaders": false,
       "AlwaysIncludeQueryPlan": false,
-      "AlwaysSkipLoader": false
+      "AlwaysSkipLoader": false,
+      "SynchronousCacheWrites": false
     },
     "EnableSingleFlight": true,
     "ForceEnableSingleFlight": false,
