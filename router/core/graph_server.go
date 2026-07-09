@@ -95,9 +95,6 @@ type (
 		baseOtelAttributes      []attribute.KeyValue
 		baseRouterConfigVersion string
 		mux                     *chi.Mux
-		// inFlightRequests is used to track the number of requests currently being processed
-		// does not include websocket (hijacked) connections.
-		inFlightRequests *atomic.Int64
 		// graphMuxList contains all graph muxes of this graph server.
 		// It's keyed by mux name (feature flag name or empty string for base graph).
 		graphMuxList            map[string]*graphMux
@@ -225,7 +222,6 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		playgroundHandler:       r.playgroundHandler,
 		traceDialer:             traceDialer,
 		baseRouterConfigVersion: response.Config.GetVersion(),
-		inFlightRequests:        &atomic.Int64{},
 		graphMuxList:            make(map[string]*graphMux, 1),
 		instanceData: InstanceData{
 			HostName:      r.hostName,
@@ -699,6 +695,13 @@ type graphMux struct {
 	mux       *chi.Mux
 	reused    atomic.Bool
 	finalized atomic.Bool
+
+	// inFlightRequests tracks the number of requests currently being processed
+	// by this mux. Does not include subscriptions or websocket (hijacked)
+	// connections. A reused mux keeps serving under the next graph server, so
+	// the count belongs to the mux and is only drained by the server that
+	// tears the mux down.
+	inFlightRequests atomic.Int64
 
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
 	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
@@ -1948,11 +1951,11 @@ func (s *graphServer) buildGraphMux(
 
 				// We don't want to count any type of subscriptions e.g. SSE as in-flight requests because they are long-lived
 				if requestContext != nil && requestContext.operation != nil && requestContext.operation.opType != OperationTypeSubscription {
-					s.inFlightRequests.Add(1)
+					gm.inFlightRequests.Add(1)
 
 					// Counting like this is safe because according to the go http.ServeHTTP documentation
 					// the requests is guaranteed to be finished when ServeHTTP returns
-					defer s.inFlightRequests.Add(-1)
+					defer gm.inFlightRequests.Add(-1)
 				}
 
 				handler.ServeHTTP(w, r)
@@ -2157,6 +2160,24 @@ func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymi
 	return startupConfig
 }
 
+// inFlightOwnedRequests sums the in-flight requests of the muxes this server
+// will actually shut down. Muxes flagged as reused are inherited by the next
+// server and keep serving new traffic, so their in-flight requests are not
+// this server's to wait for.
+func (s *graphServer) inFlightOwnedRequests() int64 {
+	s.graphMuxListLock.Lock()
+	defer s.graphMuxListLock.Unlock()
+
+	var n int64
+	for _, gm := range s.graphMuxList {
+		if gm.reused.Load() {
+			continue
+		}
+		n += gm.inFlightRequests.Load()
+	}
+	return n
+}
+
 // wait waits for all in-flight requests to finish. Similar to http.Server.Shutdown we wait in intervals + jitter
 // to make the shutdown process more efficient.
 func (s *graphServer) wait(ctx context.Context) error {
@@ -2166,7 +2187,7 @@ func (s *graphServer) wait(ctx context.Context) error {
 	defer timer.Stop()
 
 	for {
-		if s.inFlightRequests.Load() == 0 {
+		if s.inFlightOwnedRequests() == 0 {
 			return nil
 		}
 		select {
