@@ -174,42 +174,48 @@ export class WorkspaceService {
       return;
     }
 
+    const conditions: (SQL<unknown> | undefined)[] = [
+      eq(schema.targets.type, 'subgraph'),
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.subgraphs.isFeatureSubgraph, true),
+      inArray(
+        schema.targets.namespaceId,
+        namespaces.map((ns) => ns.id),
+      ),
+    ];
+
+    if (!SubgraphRepository.applyRbacConditionsToQuery(this.rbac, conditions)) {
+      return;
+    }
+
+    const featureSubgraphs = await this.db
+      .select({
+        id: schema.subgraphs.id,
+        targetId: schema.targets.id,
+        name: schema.targets.name,
+        namespaceId: schema.targets.namespaceId,
+        baseSubgraphId: schema.featureSubgraphsToBaseSubgraphs.baseSubgraphId,
+      })
+      .from(schema.targets)
+      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      .innerJoin(
+        schema.featureSubgraphsToBaseSubgraphs,
+        eq(schema.featureSubgraphsToBaseSubgraphs.featureSubgraphId, schema.subgraphs.id),
+      )
+      .where(and(...conditions))
+      .execute();
+
     for (const namespace of namespaces) {
-      const conditions: (SQL<unknown> | undefined)[] = [
-        eq(schema.targets.type, 'subgraph'),
-        eq(schema.targets.namespaceId, namespace.id),
-        eq(schema.targets.organizationId, this.organizationId),
-        eq(schema.subgraphs.isFeatureSubgraph, true),
-      ];
-
-      if (!SubgraphRepository.applyRbacConditionsToQuery(this.rbac, conditions)) {
-        continue;
-      }
-
-      const featureSubgraphsForNamespace = await this.db
-        .select({
-          id: schema.subgraphs.id,
-          targetId: schema.targets.id,
-          name: schema.targets.name,
-          baseSubgraphId: schema.featureSubgraphsToBaseSubgraphs.baseSubgraphId,
-        })
-        .from(schema.targets)
-        .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
-        .innerJoin(
-          schema.featureSubgraphsToBaseSubgraphs,
-          eq(schema.featureSubgraphsToBaseSubgraphs.featureSubgraphId, schema.subgraphs.id),
-        )
-        .where(and(...conditions))
-        .execute();
-
-      namespace.featureSubgraphs = featureSubgraphsForNamespace.map((fsg) =>
-        fromJson(WorkspaceSubgraphSchema, {
-          id: fsg.id,
-          targetId: fsg.targetId,
-          name: fsg.name,
-          baseSubgraphId: fsg.baseSubgraphId,
-        }),
-      );
+      namespace.featureSubgraphs = featureSubgraphs
+        .filter((fsg) => fsg.namespaceId === namespace.id)
+        .map((fsg) =>
+          fromJson(WorkspaceSubgraphSchema, {
+            id: fsg.id,
+            targetId: fsg.targetId,
+            name: fsg.name,
+            baseSubgraphId: fsg.baseSubgraphId,
+          }),
+        );
     }
   }
 }
