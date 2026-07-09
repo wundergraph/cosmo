@@ -23,6 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - uses: linear/linear-release-action@v0.14.5
