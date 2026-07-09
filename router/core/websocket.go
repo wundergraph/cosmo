@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -490,7 +491,7 @@ func (h *WebsocketHandler) addConnection(conn net.Conn, handler *WebSocketConnec
 		return fmt.Errorf("unable to get socket fd for conn: %d", handler.connectionID)
 	}
 	h.connections[fd] = handler
-	return h.netPoll.Add(conn)
+	return h.netPoll.Add(underlyingConn(conn))
 }
 
 func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketConnectionHandler, fd int, closeKind wsproto.CloseKind) {
@@ -505,7 +506,19 @@ func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketCon
 	handler.Close(true, closeKind)
 }
 
+// underlyingConn unwraps a *tls.Conn to the network connection it wraps. wss
+// connections are presented as *tls.Conn, which implements neither syscall.Conn
+// nor netpoll.ConnImpl, so its socket fd can only be resolved via the underlying
+// connection. Non-TLS connections are returned unchanged.
+func underlyingConn(conn net.Conn) net.Conn {
+	if tlsConn, ok := conn.(*tls.Conn); ok {
+		return tlsConn.NetConn()
+	}
+	return conn
+}
+
 func socketFd(conn net.Conn) int {
+	conn = underlyingConn(conn)
 	if con, ok := conn.(syscall.Conn); ok {
 		raw, err := con.SyscallConn()
 		if err != nil {

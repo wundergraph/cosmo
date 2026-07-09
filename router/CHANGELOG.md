@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.330.0](https://github.com/wundergraph/cosmo/compare/router@0.329.2...router@0.330.0) (2026-07-08)
+
+### Bug Fixes
+
+* router [@include](https://github.com/include) variable fails with "not provided" on repeated requests (ENG-9772) ([#3045](https://github.com/wundergraph/cosmo/issues/3045)) ([cce07cb](https://github.com/wundergraph/cosmo/commit/cce07cbeb97db495bc9c976983332b5f3114c67b)) (@gausie)
+* **router:** bump graphql-go-tools version to 2.9.2 ([#3057](https://github.com/wundergraph/cosmo/issues/3057)) ([8db553c](https://github.com/wundergraph/cosmo/commit/8db553c1d48a3eb215656c9b82062ecea4aad9a7)) (@endigma)
+* **router:** flush SSE/multipart response head before first message ([#3052](https://github.com/wundergraph/cosmo/issues/3052)) ([10e9731](https://github.com/wundergraph/cosmo/commit/10e9731fff16f3d63e13d336bd32dcf88753e3d1)) (@endigma)
+* **router:** guard subgraph connection-metrics trace against data race ([#3054](https://github.com/wundergraph/cosmo/issues/3054)) ([98edfc2](https://github.com/wundergraph/cosmo/commit/98edfc2746406b46b807fbdd1b1ba9077c3a9929)) (@endigma)
+* **router:** resolve socket fd for wss connections ([#3053](https://github.com/wundergraph/cosmo/issues/3053)) ([5570bf9](https://github.com/wundergraph/cosmo/commit/5570bf919fda0788e9c977b8d49ae57d891db924)) (@endigma)
+
+### Features
+
+* add flag SkipNullVariablesError ([#3024](https://github.com/wundergraph/cosmo/issues/3024)) ([647701f](https://github.com/wundergraph/cosmo/commit/647701fbc87c407a60e526a19c2ad4ba11c562c6)) (@alepane21)
+
 ## [0.329.2](https://github.com/wundergraph/cosmo/compare/router@0.329.1...router@0.329.2) (2026-07-07)
 
 ### Bug Fixes
