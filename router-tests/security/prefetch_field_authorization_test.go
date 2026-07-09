@@ -32,7 +32,15 @@ func TestPreFetchFieldAuthorization(t *testing.T) {
 		return accessController, authServer
 	}
 
-	t.Run("authorized request returns full data", func(t *testing.T) {
+	costControlMeasure := func(securityConfiguration *config.SecurityConfiguration) {
+		securityConfiguration.CostControl = &config.CostControl{
+			Enabled:       true,
+			Mode:          config.CostControlModeMeasure,
+			ExposeHeaders: true,
+		}
+	}
+
+	t.Run("authorized request returns full data and is charged full actual cost", func(t *testing.T) {
 		t.Parallel()
 
 		accessController, authServer := newAccessController(t)
@@ -44,6 +52,7 @@ func TestPreFetchFieldAuthorization(t *testing.T) {
 					EnablePreFetchFieldAuthorization: true,
 				}),
 			},
+			ModifySecurityConfiguration: costControlMeasure,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.Token(map[string]any{
 				"scope": "read:employee read:private",
@@ -60,6 +69,11 @@ func TestPreFetchFieldAuthorization(t *testing.T) {
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
+
+			// employees has @listSize(assumedSize: 50): estimated = 50 * employees(1).
+			// Actual charges the 10 delivered elements: 10 * employees(1).
+			require.Equal(t, "50", res.Header.Get(core.CostEstimatedHeader))
+			require.Equal(t, "10", res.Header.Get(core.CostActualHeader))
 		})
 	})
 
@@ -93,7 +107,7 @@ func TestPreFetchFieldAuthorization(t *testing.T) {
 		})
 	})
 
-	t.Run("partial scopes null the unauthorized field and report missing scopes", func(t *testing.T) {
+	t.Run("partial scopes null the unauthorized field and denied fields are not charged", func(t *testing.T) {
 		t.Parallel()
 
 		accessController, authServer := newAccessController(t)
@@ -105,6 +119,7 @@ func TestPreFetchFieldAuthorization(t *testing.T) {
 					EnablePreFetchFieldAuthorization: true,
 				}),
 			},
+			ModifySecurityConfiguration: costControlMeasure,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Employee.startDate is non-null (String!) and protected by @requiresScopes; the token lacks
 			// the required scopes, so startDate is nulled. Because a non-null field cannot hold null, the
@@ -124,6 +139,12 @@ func TestPreFetchFieldAuthorization(t *testing.T) {
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",1,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",2,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",3,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",4,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",5,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",6,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",7,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",8,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",9,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":["read:employee"]}}}`, string(data))
+
+			// Same query as the fully-authorized test above (estimated = 50), but the denied
+			// startDate nulls every list element, so no element is delivered and nothing is
+			// charged in the actual cost.
+			require.Equal(t, "50", res.Header.Get(core.CostEstimatedHeader))
+			require.Equal(t, "0", res.Header.Get(core.CostActualHeader))
 		})
 	})
 
