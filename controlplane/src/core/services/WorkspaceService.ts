@@ -179,7 +179,7 @@ export class WorkspaceService {
         eq(schema.targets.type, 'subgraph'),
         eq(schema.targets.namespaceId, namespace.id),
         eq(schema.targets.organizationId, this.organizationId),
-        eq(schema.subgraphs.isFeatureSubgraph, true)
+        eq(schema.subgraphs.isFeatureSubgraph, true),
       ];
 
       if (!SubgraphRepository.applyRbacConditionsToQuery(this.rbac, conditions)) {
@@ -202,12 +202,14 @@ export class WorkspaceService {
         .where(and(...conditions))
         .execute();
 
-      namespace.featureSubgraphs = featureSubgraphsForNamespace.map((fsg) => fromJson(WorkspaceSubgraphSchema, {
-        id: fsg.id,
-        targetId: fsg.targetId,
-        name: fsg.name,
-        baseSubgraphId: fsg.baseSubgraphId,
-      }));
+      namespace.featureSubgraphs = featureSubgraphsForNamespace.map((fsg) =>
+        fromJson(WorkspaceSubgraphSchema, {
+          id: fsg.id,
+          targetId: fsg.targetId,
+          name: fsg.name,
+          baseSubgraphId: fsg.baseSubgraphId,
+        }),
+      );
     }
   }
 }
