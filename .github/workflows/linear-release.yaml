@@ -1,0 +1,18 @@
+name: Linear Release
+run-name: Report ${{ github.event.release.tag_name }} to Linear
+
+on:
+  release:
+    types: [released]
+
+permissions:
+  contents: read
+
+jobs:
+  router:
+    if: ${{ startsWith(github.event.release.tag_name, 'router@') }}
+    uses: ./.github/workflows/linear-release-report.yaml
+    with:
+      include_paths: router/**
+    secrets:
+      access_key: ${{ secrets.LINEAR_ACCESS_KEY_ROUTER }}
