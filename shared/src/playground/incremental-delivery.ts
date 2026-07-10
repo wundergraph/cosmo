@@ -113,44 +113,61 @@ const clone = <T>(value: T): T => {
   return value;
 };
 
+const hasOwn = (value: object, key: PropertyKey) => Object.prototype.hasOwnProperty.call(value, key);
+
+const isMergeableRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value);
+
+const defineOwn = (target: object, key: PropertyKey, value: unknown) => {
+  Object.defineProperty(target, key, {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true,
+  });
+};
+
+const ownValue = (container: unknown, segment: IncrementalPathSegment): unknown => {
+  if (!container || typeof container !== 'object' || !hasOwn(container, segment)) {
+    return undefined;
+  }
+  return (container as Record<IncrementalPathSegment, unknown>)[segment];
+};
+
 const mergeObject = (target: Record<string, unknown>, source: Record<string, unknown>) => {
   for (const [key, value] of Object.entries(source)) {
-    const current = target[key];
-    if (
-      current &&
-      value &&
-      typeof current === 'object' &&
-      typeof value === 'object' &&
-      !Array.isArray(current) &&
-      !Array.isArray(value)
-    ) {
-      mergeObject(current as Record<string, unknown>, value as Record<string, unknown>);
+    const current = hasOwn(target, key) ? target[key] : undefined;
+    if (isMergeableRecord(current) && isMergeableRecord(value)) {
+      mergeObject(current, value);
     } else {
-      target[key] = clone(value);
+      defineOwn(target, key, clone(value));
     }
   }
 };
 
 const mergeDataAtPath = (assembled: IncrementalSnapshot, path: readonly IncrementalPathSegment[], data: unknown) => {
   if (path.length === 0) {
-    if (assembled.data && typeof assembled.data === 'object' && data && typeof data === 'object') {
-      mergeObject(assembled.data as Record<string, unknown>, data as Record<string, unknown>);
+    if (isMergeableRecord(assembled.data) && isMergeableRecord(data)) {
+      mergeObject(assembled.data, data);
     } else {
       assembled.data = clone(data);
     }
     return;
   }
 
-  let parent = assembled.data as Record<IncrementalPathSegment, unknown>;
+  let parent = assembled.data;
   for (const segment of path.slice(0, -1)) {
-    parent = parent[segment] as Record<IncrementalPathSegment, unknown>;
+    parent = ownValue(parent, segment);
+  }
+  if (!parent || typeof parent !== 'object') {
+    return;
   }
   const key = path.at(-1)!;
-  const current = parent[key];
-  if (current && typeof current === 'object' && data && typeof data === 'object') {
-    mergeObject(current as Record<string, unknown>, data as Record<string, unknown>);
+  const current = ownValue(parent, key);
+  if (isMergeableRecord(current) && isMergeableRecord(data)) {
+    mergeObject(current, data);
   } else {
-    parent[key] = clone(data);
+    defineOwn(parent, key, clone(data));
   }
 };
 
@@ -171,7 +188,7 @@ const insertItemsAtPath = (
   }
   let list = assembled.data;
   for (const segment of path.slice(0, -1)) {
-    list = (list as Record<IncrementalPathSegment, unknown>)[segment];
+    list = ownValue(list, segment);
   }
   if (Array.isArray(list)) {
     list.splice(index, 0, ...clone(items));

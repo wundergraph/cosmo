@@ -604,4 +604,57 @@ describe('observeIncrementalResult', () => {
 
     expect((await collect(result)).at(-1)).toEqual({ data: { values: ['a', 'b', 'c', 'd'] } });
   });
+
+  it('preserves a __proto__ alias without polluting Object.prototype', async () => {
+    const objectPrototype = Object.prototype as Record<string, unknown>;
+    delete objectPrototype.incrementalPollution;
+    try {
+      const result = observeIncrementalResult(
+        stream(
+          { data: { safe: true }, pending: [{ id: 'alias', path: [] }], hasNext: true },
+          {
+            incremental: [
+              {
+                id: 'alias',
+                data: JSON.parse('{"__proto__":{"incrementalPollution":"yes"}}'),
+              },
+            ],
+            completed: [{ id: 'alias' }],
+            hasNext: false,
+          },
+        ),
+        {},
+      );
+
+      const finalData = ((await collect(result)).at(-1) as { data: Record<string, unknown> }).data;
+      expect(objectPrototype.incrementalPollution).toBeUndefined();
+      expect(Object.prototype.hasOwnProperty.call(finalData, '__proto__')).toBe(true);
+      expect(Object.getOwnPropertyDescriptor(finalData, '__proto__')?.value).toEqual({ incrementalPollution: 'yes' });
+    } finally {
+      delete objectPrototype.incrementalPollution;
+    }
+  });
+
+  it('never traverses an inherited __proto__ path segment', async () => {
+    const objectPrototype = Object.prototype as Record<string, unknown>;
+    delete objectPrototype.pathPollution;
+    try {
+      const result = observeIncrementalResult(
+        stream(
+          { data: {}, pending: [{ id: 'invalid-path', path: ['__proto__'] }], hasNext: true },
+          {
+            incremental: [{ id: 'invalid-path', subPath: ['pathPollution'], data: 'yes' }],
+            completed: [{ id: 'invalid-path' }],
+            hasNext: false,
+          },
+        ),
+        {},
+      );
+
+      expect((await collect(result)).at(-1)).toEqual({ data: {} });
+      expect(objectPrototype.pathPollution).toBeUndefined();
+    } finally {
+      delete objectPrototype.pathPollution;
+    }
+  });
 });
