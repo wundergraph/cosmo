@@ -1,0 +1,1 @@
+mutation Repro($employeeID: Int!, $flag: Boolean!) { updateAvailability(employeeID: $employeeID, isAvailable: $flag) { id isAvailable @include(if: $flag) } }
