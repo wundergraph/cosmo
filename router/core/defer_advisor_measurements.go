@@ -30,11 +30,10 @@ type deferAdvisorFieldStats struct {
 }
 
 type deferAdvisorSuggestion struct {
-	Label                            string   `json:"label"`
-	Path                             string   `json:"path,omitempty"`
-	Subgraph                         string   `json:"subgraph"`
-	Fields                           []string `json:"fields"`
-	EstimatedInitialResponseSavingMs float64  `json:"estimatedInitialResponseSavingMs"`
+	Label    string   `json:"label"`
+	Path     string   `json:"path,omitempty"`
+	Subgraph string   `json:"subgraph"`
+	Fields   []string `json:"fields"`
 }
 
 type deferAdvisorValidationPart struct {
@@ -48,14 +47,13 @@ type deferAdvisorValidation struct {
 }
 
 type deferAdvisorResult struct {
-	Runs                                int                      `json:"runs"`
-	TotalDurationMs                     deferAdvisorStat         `json:"totalDurationMs"`
-	Fetches                             []deferAdvisorFetchStats `json:"fetches"`
-	Fields                              []deferAdvisorFieldStats `json:"fields"`
-	Suggestions                         []deferAdvisorSuggestion `json:"suggestions"`
-	EstimatedOptimizedInitialResponseMs float64                  `json:"estimatedOptimizedInitialResponseMs,omitempty"`
-	OptimizedQuery                      string                   `json:"optimizedQuery,omitempty"`
-	Validation                          *deferAdvisorValidation  `json:"validation,omitempty"`
+	Runs            int                      `json:"runs"`
+	TotalDurationMs deferAdvisorStat         `json:"totalDurationMs"`
+	Fetches         []deferAdvisorFetchStats `json:"fetches"`
+	Fields          []deferAdvisorFieldStats `json:"fields"`
+	Suggestions     []deferAdvisorSuggestion `json:"suggestions"`
+	OptimizedQuery  string                   `json:"optimizedQuery,omitempty"`
+	Validation      *deferAdvisorValidation  `json:"validation,omitempty"`
 }
 
 func statOf(values []float64) deferAdvisorStat {
@@ -128,12 +126,29 @@ func validateAdvisorMeasurements(runs int, totalsMs []float64, fetches []*adviso
 			return fmt.Errorf("advisor total sample %d must be finite and non-negative", i+1)
 		}
 	}
-
-	fieldOwner := make(map[advisorFieldKey]int)
+	byID := make(map[int]*advisorFetch, len(fetches))
 	for i, fetch := range fetches {
 		if fetch == nil {
 			return fmt.Errorf("advisor fetch %d is nil", i+1)
 		}
+		if _, exists := byID[fetch.fetchID]; exists {
+			return fmt.Errorf("advisor fetch model contains duplicate fetch id %d", fetch.fetchID)
+		}
+		byID[fetch.fetchID] = fetch
+	}
+	for _, fetch := range fetches {
+		for _, dependencyID := range fetch.dependsOn {
+			if _, exists := byID[dependencyID]; !exists {
+				return fmt.Errorf("advisor fetch %d (%s) depends on missing fetch %d", fetch.fetchID, fetch.subgraph, dependencyID)
+			}
+		}
+	}
+	if err := validateAdvisorFetchDAG(fetches, byID); err != nil {
+		return fmt.Errorf("advisor fetch model is invalid: %w", err)
+	}
+
+	fieldOwner := make(map[advisorFieldKey]int)
+	for _, fetch := range fetches {
 		if len(fetch.durationsMs) != runs {
 			return fmt.Errorf("fetch %d (%s) duration sample count %d does not match runs %d", fetch.fetchID, fetch.subgraph, len(fetch.durationsMs), runs)
 		}
