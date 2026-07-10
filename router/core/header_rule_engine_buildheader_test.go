@@ -53,6 +53,41 @@ func TestBuildRequestHeaderForSubgraph_GlobalRulesAndHashStable(t *testing.T) {
 	assert.Equal(t, "static", h1.Get("X-Static"))
 }
 
+func TestBuildRequestHeaderForSubgraphNeverPropagatesGraphRequestToken(t *testing.T) {
+	t.Parallel()
+
+	for _, rule := range []*config.RequestHeaderRule{
+		{Operation: "propagate", Named: "X-WG-Token"},
+		{Operation: "propagate", Matching: ".*"},
+		{Operation: "propagate", Named: "X-WG-Token", Rename: "X-Leaked"},
+		{Operation: "propagate", Matching: "^X-Wg-Token$", Rename: "X-Leaked"},
+	} {
+		propagation, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{Request: []*config.RequestHeaderRule{rule}},
+		}, nil)
+		require.NoError(t, err)
+
+		request := httptest.NewRequest(http.MethodPost, "http://router.example/graphql", nil)
+		request.Header.Set("X-WG-Token", "signed-graph-token")
+		request.Header.Set("X-Safe", "safe")
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   httptest.NewRecorder(),
+			request:          request,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+
+		header, _ := propagation.BuildRequestHeaderForSubgraph("subgraph", ctx)
+
+		assert.Empty(t, header.Get("X-WG-Token"))
+		assert.Empty(t, header.Get("X-Leaked"))
+		if rule.Matching == ".*" {
+			assert.Equal(t, "safe", header.Get("X-Safe"))
+		}
+	}
+}
+
 func TestBuildRequestHeaderForSubgraph_SubgraphSpecificRules(t *testing.T) {
 	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{

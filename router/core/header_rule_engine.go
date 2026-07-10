@@ -743,8 +743,9 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 	 */
 
 	if rule.Rename != "" && rule.Named != "" {
-		// Ignore the rule when the target header is in the ignored list
-		if isIgnoredHeader(rule.Rename) {
+		// Ignored input headers must not be smuggled under a different name,
+		// and ignored target names must never be created.
+		if isIgnoredHeader(rule.Named) || isIgnoredHeader(rule.Rename) {
 			return
 		}
 
@@ -800,7 +801,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 				 */
 				if rule.Rename != "" && rule.Named == "" {
 
-					if isIgnoredHeader(rule.Rename) {
+					if isIgnoredHeader(name) || isIgnoredHeader(rule.Rename) {
 						continue
 					}
 

@@ -1358,14 +1358,18 @@ func (h *PreHandler) parseExecutionAndTraceOptions(r *http.Request, clientInfo *
 }
 
 func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
-	authorized, err := (requestTracingAuthorizer{
-		enabled:           h.enableRequestTracing,
-		allowWithoutToken: h.developmentMode || h.forceUnauthenticatedRequestTracing,
-		publicKey:         h.routerPublicKey,
-	}).authorize(clientInfo.WGRequestToken)
-	if err != nil {
-		requestLogger.Debug(fmt.Sprintf("failed to parse request token: %s", err.Error()))
-		return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
+	authorized := h.enableRequestTracing && hasInternalRequestTracingAuthorization(r.Context())
+	if !authorized {
+		var err error
+		authorized, err = (requestTracingAuthorizer{
+			enabled:           h.enableRequestTracing,
+			allowWithoutToken: h.developmentMode || h.forceUnauthenticatedRequestTracing,
+			publicKey:         h.routerPublicKey,
+		}).authorize(clientInfo.WGRequestToken)
+		if err != nil {
+			requestLogger.Debug(fmt.Sprintf("failed to parse request token: %s", err.Error()))
+			return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
+		}
 	}
 	if authorized {
 		return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil

@@ -1,15 +1,18 @@
 package core
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestRequestTracingAuthorizer(t *testing.T) {
@@ -115,4 +118,25 @@ func signedRequestTracingTokenWithClaims(t *testing.T, key *ecdsa.PrivateKey, cl
 	signed, err := token.SignedString(key)
 	require.NoError(t, err)
 	return signed
+}
+
+func TestPreHandlerInternalRequestTracingAuthorization(t *testing.T) {
+	t.Parallel()
+
+	request := httptest.NewRequest("POST", "http://router.example/graphql", nil)
+	request.Header.Set(RequestTraceHeader, requestTraceOptionExcludeOutput)
+	request = request.WithContext(withInternalRequestTracingAuthorization(context.Background()))
+	handler := &PreHandler{enableRequestTracing: true}
+
+	executionOptions, traceOptions, err := handler.internalParseRequestOptions(request, &ClientInfo{}, zap.NewNop())
+
+	require.NoError(t, err)
+	assert.False(t, executionOptions.IncludeQueryPlanInResponse)
+	assert.True(t, traceOptions.Enable)
+	assert.True(t, traceOptions.ExcludeOutput)
+
+	disabled := &PreHandler{enableRequestTracing: false}
+	_, disabledTraceOptions, err := disabled.internalParseRequestOptions(request, &ClientInfo{}, zap.NewNop())
+	require.NoError(t, err)
+	assert.False(t, disabledTraceOptions.Enable)
 }

@@ -1,12 +1,24 @@
 package core
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
+
+type internalRequestTracingAuthorizationKey struct{}
+
+func withInternalRequestTracingAuthorization(ctx context.Context) context.Context {
+	return context.WithValue(ctx, internalRequestTracingAuthorizationKey{}, true)
+}
+
+func hasInternalRequestTracingAuthorization(ctx context.Context) bool {
+	authorized, _ := ctx.Value(internalRequestTracingAuthorizationKey{}).(bool)
+	return authorized
+}
 
 const (
 	// RequestTraceHeader is the header used to enable request tracing
