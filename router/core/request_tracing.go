@@ -1,8 +1,10 @@
 package core
 
 import (
+	"crypto/ecdsa"
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -21,6 +23,34 @@ const (
 	requestTraceOptionExcludeLoadStats              = "exclude_load_stats"
 	requestTraceOptionEnablePredictableDebugTimings = "enable_predictable_debug_timings"
 )
+
+// requestTracingAuthorizer is shared by ordinary ART/query-plan requests and
+// analysis features that rely on ART. Development and explicitly forced
+// unauthenticated modes bypass graph-token validation exactly as ART does.
+type requestTracingAuthorizer struct {
+	enabled           bool
+	allowWithoutToken bool
+	publicKey         *ecdsa.PublicKey
+}
+
+func (a requestTracingAuthorizer) authorize(requestToken string) (bool, error) {
+	if !a.enabled {
+		return false, nil
+	}
+	if a.allowWithoutToken {
+		return true, nil
+	}
+	if requestToken == "" || a.publicKey == nil {
+		return false, nil
+	}
+	_, err := jwt.Parse(requestToken, func(token *jwt.Token) (any, error) {
+		return a.publicKey, nil
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
 
 func (h *PreHandler) parseRequestTraceOptions(r *http.Request) (options resolve.TraceOptions) {
 	if !h.enableRequestTracing {

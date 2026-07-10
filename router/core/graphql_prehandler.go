@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/golang-jwt/jwt/v5"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -1359,24 +1358,17 @@ func (h *PreHandler) parseExecutionAndTraceOptions(r *http.Request, clientInfo *
 }
 
 func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
-	// Determine if we should enable request tracing / query plans at all
-	if h.enableRequestTracing {
-		// In dev mode we always allow to enable tracing / query plans.
-		// force_unauthenticated_request_tracing=true allows ART without dev_mode or a controlplane token.
-		if h.developmentMode || h.forceUnauthenticatedRequestTracing {
-			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
-		}
-		// If the client has a valid request token, and we have a public key from the controlplane
-		if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
-			_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
-				return h.routerPublicKey, nil
-			}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
-			if err != nil {
-				requestLogger.Debug(fmt.Sprintf("failed to parse request token: %s", err.Error()))
-				return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
-			}
-			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
-		}
+	authorized, err := (requestTracingAuthorizer{
+		enabled:           h.enableRequestTracing,
+		allowWithoutToken: h.developmentMode || h.forceUnauthenticatedRequestTracing,
+		publicKey:         h.routerPublicKey,
+	}).authorize(clientInfo.WGRequestToken)
+	if err != nil {
+		requestLogger.Debug(fmt.Sprintf("failed to parse request token: %s", err.Error()))
+		return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
+	}
+	if authorized {
+		return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 	}
 
 	// Disable tracing / query plans for all other cases
