@@ -244,6 +244,29 @@ func TestDeferAdvisorReplayExecutorReturnsAnInconclusiveBaselineOnGraphQLErrors(
 	assert.Equal(t, uint32(1), budget.used.Load())
 }
 
+func TestDeferAdvisorReplayExecutorAcceptsAnErrorsOnlyInconclusiveBaseline(t *testing.T) {
+	t.Parallel()
+
+	executor := newDeferAdvisorReplayExecutor(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"errors":[{"message":"request failed"}]}`))
+	}))
+	parent, budget := advisorPhaseRequest(t, 1)
+	fetches := advisorPhaseFetchModel(t)
+
+	result, err := executor.runBaseline(parent, []byte(`{"query":"query { products { slow } }"}`), 1, fetches)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, advisorBaselineInconclusiveGraphQLErrors, result.inconclusiveReason)
+	assert.Nil(t, result.lastResponse.data)
+	assert.JSONEq(t, `[{"message":"request failed"}]`, string(result.lastResponse.errors))
+	assert.Empty(t, result.totalsMs)
+	assert.Empty(t, fetches[0].durationsMs)
+	assert.Empty(t, fetches[1].durationsMs)
+	assert.Equal(t, uint32(1), budget.used.Load())
+}
+
 func TestDeferAdvisorReplayExecutorRejectsInvalidBaselineResponses(t *testing.T) {
 	t.Parallel()
 
@@ -370,6 +393,31 @@ func TestDeferAdvisorReplayExecutorDoesNotPartiallyCommitBaselineMeasurements(t 
 	assert.Equal(t, []float64{91}, fetches[0].durationsMs)
 	assert.Equal(t, []float64{92}, fetches[1].durationsMs)
 	assert.Equal(t, uint32(2), budget.used.Load())
+}
+
+func TestDeferAdvisorReplayExecutorDoesNotCommitBaselineWhenTheBudgetEndsMidPhase(t *testing.T) {
+	t.Parallel()
+
+	var calls int
+	executor := newDeferAdvisorReplayExecutor(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(advisorTraceResponseJSON(1_000_000, 5_000_000, `{"products":[]}`, "")))
+	}))
+	parent, budget := advisorPhaseRequest(t, 1)
+	fetches := advisorPhaseFetchModel(t)
+	fetches[0].durationsMs = []float64{91}
+	fetches[1].durationsMs = []float64{92}
+
+	result, err := executor.runBaseline(parent, []byte(`{"query":"query { products { slow } }"}`), 2, fetches)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "defer advisor baseline replay 2 of 2 failed: defer advisor replay budget exhausted after 1 loopbacks")
+	assert.Nil(t, result)
+	assert.Equal(t, []float64{91}, fetches[0].durationsMs)
+	assert.Equal(t, []float64{92}, fetches[1].durationsMs)
+	assert.Equal(t, 1, calls)
+	assert.Equal(t, uint32(1), budget.used.Load())
 }
 
 func TestDeferAdvisorReplayExecutorAttributesAOneIDListStream(t *testing.T) {
@@ -535,6 +583,27 @@ func TestDeferAdvisorReplayExecutorDoesNotPartiallyCommitMaxSplitMeasurements(t 
 	assert.Equal(t, map[string][]float64{"slow": {99}}, fetches[1].fieldLatenciesMs)
 	assert.Equal(t, 2, calls)
 	assert.Equal(t, uint32(2), budget.used.Load())
+}
+
+func TestDeferAdvisorReplayExecutorDoesNotCommitMaxSplitWhenTheBudgetEndsMidPhase(t *testing.T) {
+	t.Parallel()
+
+	var calls int
+	executor := newDeferAdvisorReplayExecutor(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		writeAdvisorMultipartSegments(t, w, advisorLabelsSegments("adv_1_fast", "adv_1_slow")...)
+	}))
+	parent, budget := advisorPhaseRequest(t, 1)
+	fetches := advisorPhaseFetchModel(t)
+	fetches[1].fieldLatenciesMs = map[string][]float64{"slow": {99}}
+
+	err := executor.runMaxSplit(parent, graphqlRequestBody{}, "query Split { products { slow fast } }", 2, fetches)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "defer advisor max-split replay 2 of 2 failed: defer advisor replay budget exhausted after 1 loopbacks")
+	assert.Equal(t, map[string][]float64{"slow": {99}}, fetches[1].fieldLatenciesMs)
+	assert.Equal(t, 1, calls)
+	assert.Equal(t, uint32(1), budget.used.Load())
 }
 
 func TestDeferAdvisorReplayExecutorRunsOptimizedStreamsSequentially(t *testing.T) {

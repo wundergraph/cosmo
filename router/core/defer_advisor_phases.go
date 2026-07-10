@@ -124,12 +124,6 @@ func (e deferAdvisorReplayExecutor) runBaseline(parent *http.Request, body []byt
 		if err := decodeAdvisorJSONReplay(phase, recorder, &envelope); err != nil {
 			return nil, err
 		}
-		if envelope.Data == nil {
-			return nil, fmt.Errorf("defer advisor %s returned no data value", phase)
-		}
-		if !advisorGraphQLDataValid(envelope.Data) {
-			return nil, fmt.Errorf("defer advisor %s data must be an object or null", phase)
-		}
 		hasErrors, err := advisorRawErrorsPresent(envelope.Errors)
 		if err != nil {
 			return nil, fmt.Errorf("defer advisor %s returned invalid errors: %w", phase, err)
@@ -138,6 +132,9 @@ func (e deferAdvisorReplayExecutor) runBaseline(parent *http.Request, body []byt
 			return nil, fmt.Errorf("defer advisor %s extensions must be a JSON object", phase)
 		}
 		if hasErrors {
+			if envelope.Data != nil && !advisorGraphQLDataValid(envelope.Data) {
+				return nil, fmt.Errorf("defer advisor %s data must be an object or null", phase)
+			}
 			return &advisorBaselinePhaseResult{
 				lastResponse: advisorReplayGraphQLResponse{
 					data:   slices.Clone(envelope.Data),
@@ -145,6 +142,12 @@ func (e deferAdvisorReplayExecutor) runBaseline(parent *http.Request, body []byt
 				},
 				inconclusiveReason: advisorBaselineInconclusiveGraphQLErrors,
 			}, nil
+		}
+		if envelope.Data == nil {
+			return nil, fmt.Errorf("defer advisor %s returned no data value", phase)
+		}
+		if !advisorGraphQLDataValid(envelope.Data) {
+			return nil, fmt.Errorf("defer advisor %s data must be an object or null", phase)
 		}
 		if envelope.Extensions == nil {
 			return nil, fmt.Errorf("defer advisor %s returned no extensions object", phase)
