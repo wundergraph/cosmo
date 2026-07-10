@@ -486,7 +486,7 @@ export class Composer {
       splitConfigEnabled,
     });
 
-    // If the composed schema is invalid, or it is a feature flag composition, we do not create a changelog
+    // If the composed schema is invalid, we do not create a changelog
     if (!routerExecutionConfig || !updatedFederatedGraph?.composedSchemaVersionId) {
       return {
         schemaVersionId: updatedFederatedGraph?.composedSchemaVersionId || '',
