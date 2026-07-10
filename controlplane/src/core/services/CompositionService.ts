@@ -439,6 +439,7 @@ export class CompositionService {
       new SubgraphRepository(this.logger, this.db, this.organizationId),
       new ContractRepository(this.logger, this.db, this.organizationId),
       new GraphCompositionRepository(this.logger, this.db),
+      new FeatureFlagRepository(this.logger, this.db, this.organizationId),
       this.chClient,
       this.webhookProxyUrl,
     );
@@ -1328,6 +1329,7 @@ export class CompositionService {
       new SubgraphRepository(this.logger, this.db, this.organizationId),
       new ContractRepository(this.logger, this.db, this.organizationId),
       new GraphCompositionRepository(this.logger, this.db),
+      new FeatureFlagRepository(this.logger, this.db, this.organizationId),
       this.chClient,
       this.webhookProxyUrl,
     );

@@ -2308,7 +2308,7 @@ export class SubgraphRepository {
     const schemaGraphPruningRepo = new SchemaGraphPruningRepository(this.db);
     const contractRepo = new ContractRepository(this.logger, this.db, this.organizationId);
     const graphCompostionRepo = new GraphCompositionRepository(this.logger, this.db);
-    const operationsRepo = new OperationsRepository(this.db, this.organizationId);
+    const featureFlagRepo = new FeatureFlagRepository(this.logger, this.db, this.organizationId);
 
     const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
 
@@ -2460,6 +2460,7 @@ export class SubgraphRepository {
       subgraphRepo,
       contractRepo,
       graphCompostionRepo,
+      featureFlagRepo,
       chClient,
       webhookProxyUrl,
     );

@@ -603,4 +603,133 @@ describe('getCompositionDetails', () => {
       ]);
     },
   );
+
+  test(
+    'that a feature flag composition changelog reflects the schema changes against the previous feature flag composition',
+    getDebugTestOptions(isDebugMode),
+    async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, enabledFeatures: ['split-config-loading'] });
+      testContext.onTestFinished(() => server.close());
+
+      const namespace = genID('namespace').toLowerCase();
+      const labels: Label[] = [];
+      const baseGraphName = genID('baseFederatedGraphName');
+      const ffName = genID('feature-flag');
+
+      await createNamespace(client, namespace);
+      await featureFlagIntegrationTestSetUp(
+        client,
+        [
+          { name: 'users', hasFeatureSubgraph: true },
+          { name: 'products-standalone', hasFeatureSubgraph: true },
+        ],
+        baseGraphName,
+        labels,
+        namespace,
+      );
+
+      await createFeatureFlag(client, ffName, labels, ['products-standalone-feature'], namespace, true);
+
+      // Update the feature subgraph with a genuinely new client-visible field, producing a feature flag composition
+      // whose supergraph differs from the previous (creation) one.
+      const updateSubgraphResp = await client.publishFederatedSubgraph({
+        name: 'products-standalone-feature',
+        namespace,
+        schema: `
+          type Product @key(fields: "upc sku") {
+            upc: Int!
+            sku: String!
+            details: String!
+            isPremium: Boolean! @tag(name: "exclude")
+            newField: String!
+            changelogTestField: String!
+          }
+
+          type Query {
+            products: [Product!]!
+          }
+        `,
+      });
+      expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+      const compositionsResp = await client.getCompositions({
+        fedGraphName: baseGraphName,
+        namespace,
+        startDate: formatISO(subDays(new Date(), 1)),
+        endDate: formatISO(addMinutes(new Date(), 1)),
+        excludeFeatureFlagCompositions: false,
+      });
+      expect(compositionsResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // The latest composition is the feature flag composition triggered by the feature subgraph update.
+      const latestFfComposition = compositionsResp.compositions[0];
+      expect(latestFfComposition.isFeatureFlagComposition).toBe(true);
+      expect(latestFfComposition.featureFlagName).toBe(ffName);
+
+      const detailsResp = await client.getCompositionDetails({
+        compositionId: latestFfComposition.id,
+        namespace,
+      });
+      expect(detailsResp.response?.code).toBe(EnumStatusCode.OK);
+      // The changelog is diffed against the PREVIOUS feature flag composition of the same flag (not the base graph),
+      // so the single added field (`changelogTestField`) must be reflected as exactly one addition and no deletions.
+      expect(detailsResp.changeCounts?.additions).toBe(1);
+      expect(detailsResp.changeCounts?.deletions).toBe(0);
+    },
+  );
+
+  test(
+    'that recomposing a feature flag without schema changes produces an empty changelog',
+    getDebugTestOptions(isDebugMode),
+    async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, enabledFeatures: ['split-config-loading'] });
+      testContext.onTestFinished(() => server.close());
+
+      const namespace = genID('namespace').toLowerCase();
+      const labels: Label[] = [];
+      const baseGraphName = genID('baseFederatedGraphName');
+      const ffName = genID('feature-flag');
+
+      await createNamespace(client, namespace);
+      await featureFlagIntegrationTestSetUp(
+        client,
+        [
+          { name: 'users', hasFeatureSubgraph: true },
+          { name: 'products-standalone', hasFeatureSubgraph: true },
+        ],
+        baseGraphName,
+        labels,
+        namespace,
+      );
+
+      await createFeatureFlag(client, ffName, labels, ['products-standalone-feature'], namespace, true);
+
+      // Recompose the feature flag without changing any schema; this forces a new feature flag composition.
+      const recomposeResp = await client.recomposeFeatureFlag({ name: ffName, namespace });
+      expect(recomposeResp.response?.code).toBe(EnumStatusCode.OK);
+
+      const compositionsResp = await client.getCompositions({
+        fedGraphName: baseGraphName,
+        namespace,
+        startDate: formatISO(subDays(new Date(), 1)),
+        endDate: formatISO(addMinutes(new Date(), 1)),
+        excludeFeatureFlagCompositions: false,
+      });
+      expect(compositionsResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // The latest composition is the recompose, whose supergraph is identical to the previous feature flag
+      // composition. A no-op recompose must not add anything to the changelog.
+      const recomposition = compositionsResp.compositions[0];
+      expect(recomposition.isFeatureFlagComposition).toBe(true);
+      expect(recomposition.featureFlagName).toBe(ffName);
+
+      const detailsResp = await client.getCompositionDetails({
+        compositionId: recomposition.id,
+        namespace,
+      });
+      expect(detailsResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(detailsResp.changeCounts?.additions ?? 0).toBe(0);
+      expect(detailsResp.changeCounts?.deletions ?? 0).toBe(0);
+    },
+  );
 });
