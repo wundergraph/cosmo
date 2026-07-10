@@ -102,7 +102,7 @@ jobs:
             cosmo-cloud
           permission-contents: write
 
-      - name: Trigger Deployment
+      - name: Trigger Deployment Repo Dispatch
         shell: bash
         run: |
           cat >body.json <<EOT
