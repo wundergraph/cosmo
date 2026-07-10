@@ -37,16 +37,21 @@ type deferAdvisorSuggestion struct {
 }
 
 type deferAdvisorValidationPart struct {
-	Label       string  `json:"label"`
-	ArrivedAtMs float64 `json:"arrivedAtMs"`
+	Label       string           `json:"label"`
+	ArrivedAtMs deferAdvisorStat `json:"arrivedAtMs"`
 }
 
 type deferAdvisorValidation struct {
-	InitialResponseMs float64                      `json:"initialResponseMs"`
-	DeferredParts     []deferAdvisorValidationPart `json:"deferredParts"`
+	Runs                    int                          `json:"runs"`
+	InitialResponseMs       deferAdvisorStat             `json:"initialResponseMs"`
+	TotalResponseMs         deferAdvisorStat             `json:"totalResponseMs"`
+	InitialResponseSavingMs deferAdvisorStat             `json:"initialResponseSavingMs"`
+	DeferredParts           []deferAdvisorValidationPart `json:"deferredParts"`
 }
 
 type deferAdvisorResult struct {
+	Outcome         deferAdvisorOutcome      `json:"outcome"`
+	Reason          string                   `json:"reason,omitempty"`
 	Runs            int                      `json:"runs"`
 	TotalDurationMs deferAdvisorStat         `json:"totalDurationMs"`
 	Fetches         []deferAdvisorFetchStats `json:"fetches"`
