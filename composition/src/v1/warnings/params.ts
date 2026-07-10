@@ -16,3 +16,10 @@ export type InvalidRepeatedComposedDirectiveWarningParams = {
   directiveName: DirectiveName;
   printedDirective: string;
 };
+
+export type ProvidesOnUnionWarningParams = {
+  fieldCoords: string;
+  fieldSet: string;
+  namedTypeName: TypeName;
+  subgraphName: SubgraphName;
+};

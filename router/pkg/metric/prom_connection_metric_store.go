@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -25,13 +26,13 @@ type promConnectionMetrics struct {
 	instrumentRegistrations []otelmetric.Registration
 }
 
-func newPromConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, stats *ConnectionPoolStats, attributes []attribute.KeyValue) (*promConnectionMetrics, error) {
+func newPromConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, stats *ConnectionPoolStats, attributes []attribute.KeyValue, enhancedConnectionStats bool) (*promConnectionMetrics, error) {
 	meter := meterProvider.Meter(
 		cosmoRouterConnectionPrometheusMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterConnectionPrometheusMeterVersion),
 	)
 
-	instruments, err := newConnectionInstruments(meter)
+	instruments, err := newConnectionInstruments(meter, enhancedConnectionStats)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create prometheus connection instruments: %w", err)
 	}
@@ -91,6 +92,30 @@ func (m *promConnectionMetrics) MeasureMaxConnections(ctx context.Context, count
 	m.instruments.maxConnections.Record(ctx, count, opts...)
 }
 
+func (m *promConnectionMetrics) MeasureDNSLookupDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if m.instruments.dnsLookupDuration != nil {
+		m.instruments.dnsLookupDuration.Record(ctx, duration, opts...)
+	}
+}
+
+func (m *promConnectionMetrics) MeasureTCPConnectDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if m.instruments.tcpConnectDuration != nil {
+		m.instruments.tcpConnectDuration.Record(ctx, duration, opts...)
+	}
+}
+
+func (m *promConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if m.instruments.tlsHandshakeDuration != nil {
+		m.instruments.tlsHandshakeDuration.Record(ctx, duration, opts...)
+	}
+}
+
+func (m *promConnectionMetrics) MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if m.instruments.timeToFirstByte != nil {
+		m.instruments.timeToFirstByte.Record(ctx, duration, opts...)
+	}
+}
+
 func (m *promConnectionMetrics) Flush(ctx context.Context) error {
 	return m.meterProvider.ForceFlush(ctx)
 }
@@ -100,7 +125,7 @@ func (h *promConnectionMetrics) Shutdown() error {
 
 	for _, reg := range h.instrumentRegistrations {
 		if regErr := reg.Unregister(); regErr != nil {
-			err = errors.Join(regErr)
+			err = errors.Join(err, regErr)
 		}
 	}
 

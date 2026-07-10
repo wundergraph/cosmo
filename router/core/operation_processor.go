@@ -772,6 +772,8 @@ type NormalizationCacheEntry struct {
 	normalizedRepresentation string
 	operationType            string
 	operationDefinitionRef   int
+
+	removedSkipIncludeVariableNames []string
 }
 
 type VariablesNormalizationCacheEntry struct {
@@ -823,10 +825,10 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 			o.parsedOperation.Type = entry.operationType
 			o.parsedOperation.NormalizationCacheHit = true
 
-			// Remove skip/include variables because they come directly from the user.
-			// They were removed during normalization, but we did not cache variables,
-			// thus we have to do it every time.
-			for _, varName := range skipIncludeVariableNames {
+			// Variables are not cached, so the skip/include variables that normalization
+			// removed have to be stripped from the request variables on every hit. Dual-use
+			// variables are still declared in the cached operation and must be kept.
+			for _, varName := range entry.removedSkipIncludeVariableNames {
 				o.parsedOperation.Request.Variables = jsonparser.Delete(o.parsedOperation.Request.Variables, varName)
 			}
 
@@ -877,11 +879,21 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 
 	if o.cache != nil && o.cache.normalizationCache != nil {
-		// Do not cache variables because, because we allow different values of variables
+		// A skip/include variable that is no longer declared in the normalized operation
+		// was removed by the normalizer, along with its value.
+		var removedSkipIncludeVariableNames []string
+		for _, varName := range skipIncludeVariableNames {
+			if !o.kit.doc.OperationDefinitionHasVariableDefinition(o.operationDefinitionRef, varName) {
+				removedSkipIncludeVariableNames = append(removedSkipIncludeVariableNames, varName)
+			}
+		}
+
+		// Do not cache variables because we allow different values of variables
 		// for the same normalized entry cache.
 		entry := NormalizationCacheEntry{
-			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
-			operationType:            o.parsedOperation.Type,
+			normalizedRepresentation:        o.parsedOperation.NormalizedRepresentation,
+			operationType:                   o.parsedOperation.Type,
+			removedSkipIncludeVariableNames: removedSkipIncludeVariableNames,
 		}
 		o.cache.normalizationCache.Set(cacheKey, entry, 1)
 	}
@@ -1288,51 +1300,82 @@ func (o *OperationKit) writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames
 	}
 }
 
-// Validate validates the operation variables.
-func (o *OperationKit) Validate(skipLoader bool, remapVariables map[string]string, apolloCompatibilityFlags *config.ApolloCompatibilityFlags) (cacheHit bool, err error) {
-	if !skipLoader {
-		// in case we're skipping the loader, it means that we won't execute the operation
-		// this means that we don't need to validate the variables as they are not used
-		// this is useful to return a query plan without having to provide variables
-		err = o.kit.variablesValidator.ValidateWithRemap(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables, remapVariables)
-		if err != nil {
-			var invalidVarErr *variablesvalidation.InvalidVariableError
-			if errors.As(err, &invalidVarErr) {
-				graphqlErr := &httpGraphqlError{
-					extensionCode: invalidVarErr.ExtensionCode,
-					message:       invalidVarErr.Error(),
-					statusCode:    http.StatusOK,
-				}
-				if apolloCompatibilityFlags != nil && apolloCompatibilityFlags.ReplaceValidationErrorStatus.Enabled {
-					graphqlErr.statusCode = http.StatusBadRequest
-				}
-				return false, graphqlErr
+// operationValidationCacheKey returns the cache key used for the operation
+// (schema) validation result. It is keyed on the pre-extraction normalized
+// representation, which is deterministic for a given operation and independent
+// of the concrete variable values, so the cached validity is safe to reuse.
+func (o *OperationKit) operationValidationCacheKey() uint64 {
+	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.NormalizedRepresentation)
+	sum := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
+	return sum
+}
+
+// ValidateOperation runs full schema validation of the operation against the
+// client schema.
+//
+// It MUST run on the pre-extraction document, i.e. after NormalizeOperation but
+// before NormalizeVariables. Variable extraction serializes inline argument
+// literals into JSON variables which erases their GraphQL type: an enum literal
+// such as `hello` becomes the JSON string "hello" and would then wrongly
+// satisfy a String argument. Validating before extraction lets the
+// ValuesOfCorrectType rule reject such literals.
+func (o *OperationKit) ValidateOperation() (cacheHit bool, err error) {
+	var cacheKey uint64
+	useCache := o.cache != nil && o.cache.validationCache != nil
+	if useCache {
+		cacheKey = o.operationValidationCacheKey()
+		valid, ok := o.cache.validationCache.Get(cacheKey)
+		if ok {
+			cacheHit = true
+			if valid {
+				return cacheHit, nil
 			}
-			return false, &httpGraphqlError{
-				message:    err.Error(),
-				statusCode: http.StatusOK,
-			}
-		}
-	}
-	if o.cache != nil && o.cache.validationCache != nil {
-		var valid bool
-		valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.InternalID)
-		if valid {
-			return
 		}
 	}
 	report := &operationreport.Report{}
 	o.kit.operationValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
-	if o.cache != nil && o.cache.validationCache != nil {
-		valid := !report.HasErrors()
-		o.cache.validationCache.Set(o.parsedOperation.InternalID, valid, 1)
+	if useCache {
+		o.cache.validationCache.Set(cacheKey, !report.HasErrors(), 1)
 	}
 	if report.HasErrors() {
 		return cacheHit, &reportError{
 			report: report,
 		}
 	}
-	return
+	return cacheHit, nil
+}
+
+// ValidateOperationVariables validates the operation variables. Schema validation
+// of the operation itself is performed separately by ValidateOperation, before
+// variable extraction.
+func (o *OperationKit) ValidateOperationVariables(skipLoader bool, remapVariables map[string]string, apolloCompatibilityFlags *config.ApolloCompatibilityFlags) error {
+	if skipLoader {
+		// in case we're skipping the loader, it means that we won't execute the operation
+		// this means that we don't need to validate the variables as they are not used
+		// this is useful to return a query plan without having to provide variables
+		return nil
+	}
+	err := o.kit.variablesValidator.ValidateWithRemap(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables, remapVariables)
+	if err != nil {
+		var invalidVarErr *variablesvalidation.InvalidVariableError
+		if errors.As(err, &invalidVarErr) {
+			graphqlErr := &httpGraphqlError{
+				extensionCode: invalidVarErr.ExtensionCode,
+				message:       invalidVarErr.Error(),
+				statusCode:    http.StatusOK,
+			}
+			if apolloCompatibilityFlags != nil && apolloCompatibilityFlags.ReplaceValidationErrorStatus.Enabled {
+				graphqlErr.statusCode = http.StatusBadRequest
+			}
+			return graphqlErr
+		}
+		return &httpGraphqlError{
+			message:    err.Error(),
+			statusCode: http.StatusOK,
+		}
+	}
+	return nil
 }
 
 // ValidateQueryComplexity validates that the query complexity is within the limits set in the configuration
@@ -1513,6 +1556,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			},
 			ApolloRouterCompatibilityFlags: apollocompatibility.ApolloRouterFlags{
 				ReplaceInvalidVarError: options.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled,
+				SkipNullVariablesError: options.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled,
 			},
 			DisableExposingVariablesContent: options.disableExposingVariablesContentOnValidationError,
 		}),

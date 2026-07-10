@@ -53,6 +53,7 @@ func TestDeferTestDataQueries(t *testing.T) {
 		groups = append(groups, k)
 	}
 	slices.Sort(groups)
+	require.Len(t, groups, 9)
 
 	for _, group := range groups {
 		t.Run(group, func(t *testing.T) {
@@ -101,8 +102,7 @@ func TestDeferTestDataQueries(t *testing.T) {
 						res, err := xEnv.RouterClient.Do(req)
 						require.NoError(t, err)
 						defer func() { require.NoError(t, res.Body.Close()) }()
-
-						assert.Equal(t, http.StatusOK, res.StatusCode)
+						require.Equal(t, http.StatusOK, res.StatusCode)
 
 						// defer could be fully discarded in case query has duplicate field which are not deffered
 						isMultipart := strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed")
@@ -110,42 +110,61 @@ func TestDeferTestDataQueries(t *testing.T) {
 						body, err := io.ReadAll(res.Body)
 						require.NoError(t, err)
 
-						skipRaw := func() bool {
-							skips := []string{
-								"extensive_parallel",
-								"parallel_defers",
-								"products_defer",
-								"multiple_fields_deferred",
-								// Two @defer on sibling root fields (employee + teammates)
-								// resolve in parallel, so the chunk order is non-deterministic.
-								// The single-defer *_08 variants are deterministic and keep
-								// their raw assertion; products_defer_08 is already covered by
-								// the "products_defer" prefix above.
-								"employee_defer_08_defer_nested_object",
+						skipQueryWithParallelDefers := func() bool {
+							skips := map[string]struct{}{
+								"employee_defer_03_multiple_fields_deferred":                 {},
+								"employee_defer_07_parallel_defers":                          {},
+								"employee_defer_08_defer_nested_object":                      {},
+								"employee_defer_10_extensive_parallel":                       {},
+								"employeeDetails_defer_03_multiple_fields_deferred":          {},
+								"employeeDetails_defer_07_parallel_defers":                   {},
+								"employeeDetails_defer_10_extensive_parallel":                {},
+								"employees_defer_03_multiple_fields_deferred":                {},
+								"employees_defer_07_parallel_defers":                         {},
+								"employees_defer_10_extensive_parallel":                      {},
+								"findEmployees_defer_03_multiple_fields_deferred":            {},
+								"findEmployees_defer_07_parallel_defers":                     {},
+								"findEmployees_defer_10_extensive_parallel":                  {},
+								"findEmployeesNoCriteria_defer_03_multiple_fields_deferred":  {},
+								"findEmployeesNoCriteria_defer_07_parallel_defers":           {},
+								"findEmployeesNoCriteria_defer_10_extensive_parallel":        {},
+								"full_defer_03_multiple_fields_deferred":                     {},
+								"full_defer_07_parallel_defers":                              {},
+								"full_defer_10_extensive_parallel":                           {},
+								"full_defer_11_fragment_around_and_inside":                   {},
+								"products_defer_01_single_defer":                             {},
+								"products_defer_02_single_defer_between_regular":             {},
+								"products_defer_03_multiple_fields_deferred":                 {},
+								"products_defer_04_all_fields_deferred":                      {},
+								"products_defer_05_nested_defer":                             {},
+								"products_defer_06_nested_defer_variation":                   {},
+								"products_defer_07_parallel_defers":                          {},
+								"products_defer_08_defer_nested_object":                      {},
+								"products_defer_09_duplicated_field_across_defer":            {},
+								"products_defer_10_extensive_parallel":                       {},
+								"products_defer_11_fragment_around_and_inside":               {},
+								"products_defer_12_fragment_body_defer":                      {},
+								"products_defer_13_fragment_spread_defer":                    {},
+								"requires_different_depth_defer_03_multiple_fields_deferred": {},
+								"requires_different_depth_defer_07_parallel_defers":          {},
+								"requires_different_depth_defer_10_extensive_parallel":       {},
+								"requires_mood_defer_03_multiple_fields_deferred":            {},
+								"requires_mood_defer_07_parallel_defers":                     {},
+								"requires_mood_defer_10_extensive_parallel":                  {},
 							}
 
-							for _, skip := range skips {
-								if strings.HasSuffix(name, skip) || strings.HasPrefix(name, skip) {
-									return true
-								}
+							if _, ok := skips[name]; ok {
+								return true
 							}
 
 							return false
 						}
 
-						// skip checking non deterministic order of payloads
-						if !skipRaw() {
-							updateRaw := false
-
+						// skip because the order of payloads is non-deterministic
+						if !skipQueryWithParallelDefers() {
 							t.Run("raw multipart body", func(t *testing.T) {
-
 								body := bytes.Replace(body, []byte("\r\n"), []byte("\n"), -1)
-
-								if !updateRaw {
-									gMultipart.Assert(t, name, body)
-								} else {
-									gMultipart.Update(t, name, body)
-								}
+								gMultipart.Assert(t, name, body)
 							})
 						}
 
@@ -160,14 +179,8 @@ func TestDeferTestDataQueries(t *testing.T) {
 							actual = normalizeWithKeysSort(t, body)
 						}
 
-						updateFull := false
-
 						t.Run("assert full response", func(t *testing.T) {
-							if !updateFull {
-								gFull.Assert(t, name+"_reconstructed", actual)
-							} else {
-								gFull.Update(t, name+"_reconstructed", actual)
-							}
+							gFull.Assert(t, name+"_reconstructed", actual)
 						})
 
 						t.Run("compare with response without defer", func(t *testing.T) {
@@ -175,7 +188,6 @@ func TestDeferTestDataQueries(t *testing.T) {
 							require.NoError(t, err)
 
 							expected = normalizeWithKeysSort(t, expected)
-							actual = normalizeWithKeysSort(t, actual)
 
 							// manually assert to never update the original when the update flag is specified
 							if diff := goldie.Diff(goldie.ClassicDiff, string(actual), string(expected)); diff != "" {
@@ -265,10 +277,7 @@ func normalizeWithKeysSort(tb testing.TB, data []byte) []byte {
 //
 // The merge target of an incremental item is pending[id].path + item.subPath.
 func reconstructDeferResponse(body []byte) ([]byte, error) {
-	parts, err := parseMultipartParts(body)
-	if err != nil {
-		return nil, err
-	}
+	parts := parseMultipartParts(body)
 	if len(parts) == 0 {
 		return nil, fmt.Errorf("no parts in multipart response")
 	}
@@ -386,7 +395,7 @@ func mergeAtPath(result, patch *astjson.Value, pathKeys []string) error {
 	for _, key := range pathKeys[:len(pathKeys)-1] {
 		next := current.Get(key)
 		if next == nil {
-			return nil
+			return fmt.Errorf("mergeAtPath: segment %q not found in %v", key, pathKeys)
 		}
 		current = next
 	}
@@ -423,7 +432,7 @@ func appendArrayValues(a, b *astjson.Value) *astjson.Value {
 
 // parseMultipartParts splits a multipart/mixed body on the --graphql boundary
 // and returns the raw JSON bytes of each part.
-func parseMultipartParts(body []byte) ([][]byte, error) {
+func parseMultipartParts(body []byte) [][]byte {
 	// Each part is delimited by the --graphql boundary. The first part has no
 	// leading CRLF (the body starts directly with the boundary), so we split on
 	// the boundary itself rather than "\r\n--graphql". Empty leading segments and
@@ -445,5 +454,5 @@ func parseMultipartParts(body []byte) ([][]byte, error) {
 		}
 		result = append(result, jsonBody)
 	}
-	return result, nil
+	return result
 }

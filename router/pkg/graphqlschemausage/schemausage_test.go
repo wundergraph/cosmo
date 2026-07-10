@@ -3,7 +3,6 @@ package graphqlschemausage
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -4091,9 +4090,6 @@ func TestNestedFieldArguments(t *testing.T) {
 		// ========================================
 
 		// Ensure users-subgraph arguments don't have products-subgraph
-		b, _ := json.MarshalIndent(argumentMap, "", "  ")
-		fmt.Println(string(b))
-
 		for key, arg := range argumentMap {
 			if arg.TypeName == "User" {
 				assert.NotContains(t, arg.SubgraphIDs, "products-subgraph",

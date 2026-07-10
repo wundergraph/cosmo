@@ -105,7 +105,7 @@ describe('Restore Organization', (ctx) => {
       deleteOrganizationQueue: queues.deleteOrganizationQueue,
     });
 
-    const restoreOrgResult = await client.restoreOrganization({ userID: mainUserContext.userId });
+    const restoreOrgResult = await client.restoreOrganization({});
     expect(restoreOrgResult.response?.code).toBe(EnumStatusCode.OK);
 
     const job = await queues.deleteOrganizationQueue.getJob({ organizationId: org!.id });

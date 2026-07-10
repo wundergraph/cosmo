@@ -78,6 +78,9 @@ type PreHandlerOptions struct {
 	ForceEnableInboundRequestDeduplication bool
 	HeaderPropagation                      *HeaderPropagation
 	SpanNameFormatter                      SpanNameFormatterFunc
+
+	// WaitForCacheWrites is set when Debug.SynchronousCacheWrites is enabled; it blocks until pending async operation-cache writes are applied.
+	WaitForCacheWrites func()
 }
 
 type PreHandler struct {
@@ -119,6 +122,7 @@ type PreHandler struct {
 	enableInboundRequestDeduplication      bool
 	forceEnableInboundRequestDeduplication bool
 	spanNameFormatter                      SpanNameFormatterFunc
+	waitForCacheWrites                     func()
 }
 
 type httpOperation struct {
@@ -188,6 +192,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
 		headerPropagation:                      opts.HeaderPropagation,
 		spanNameFormatter:                      spanNameFormatter,
+		waitForCacheWrites:                     opts.WaitForCacheWrites,
 	}
 }
 
@@ -449,6 +454,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
+		if h.waitForCacheWrites != nil {
+			h.waitForCacheWrites()
+		}
+
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
 
 		if traceOptions.Enable {
@@ -618,6 +627,13 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions
 	requestContext.operation.variablesHash = operationKit.parsedOperation.VariablesHash
 	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	// Expose the variables JSON to expressions as early as possible so it is available for access logs
+	// even if a later stage fails. It is only serialized when an expression references
+	// request.operation.variables, to avoid the (potentially large) serialization cost on every request.
+	// The value can contain sensitive data, so it should be logged with care.
+	if h.exprManager.VisitorManager.IsRequestOperationVariablesUsedInExpressions() {
+		requestContext.expressionContext.Request.Operation.Variables = string(operationKit.parsedOperation.Request.Variables)
+	}
 	if err != nil {
 		return &httpGraphqlError{
 			message:    fmt.Sprintf("error parsing variables: %s", err),
@@ -849,6 +865,13 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 	requestContext.expressionContext.Request.Operation.NormalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
+	// Validate the operation against the schema BEFORE variable extraction. Extraction
+	// serializes inline argument literals into JSON variables, which erases their GraphQL
+	// type (e.g. an enum literal `hello` becomes the string "hello" and would wrongly
+	// satisfy a String argument). The error is surfaced later, on the validation span, so
+	// that the normalization span reflects only normalization.
+	operationValidationCacheHit, operationValidationErr := operationKit.ValidateOperation()
+
 	/**
 	* Normalize the variables
 	 */
@@ -1057,7 +1080,14 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		}
 	}
 
-	validationCached, err := operationKit.Validate(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
+	// Schema validation (computed before variable extraction) takes precedence over
+	// variable validation, mirroring the GraphQL spec order (ValuesOfCorrectType before
+	// coerced variable values). Its error is surfaced here so it appears on the
+	// validation span rather than the normalization span.
+	err = operationValidationErr
+	if err == nil {
+		err = operationKit.ValidateOperationVariables(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
+	}
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
 
@@ -1075,7 +1105,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		return err
 	}
 
-	engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(validationCached))
+	engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(operationValidationCacheHit))
 	if requestContext.operation.executionOptions.SkipLoader {
 		// In case we're skipping the loader, which means that we won't execute the operation
 		// we skip the validation of variables as we're not using them
@@ -1265,21 +1295,18 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 	now := time.Now()
 
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+
+	wg.Go(func() {
 		if err := h.metrics.MetricStore().Flush(ctx); err != nil {
 			requestLogger.Error("Failed to flush OTEL metrics", zap.Error(err))
 		}
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		if err := h.tracerProvider.ForceFlush(ctx); err != nil {
 			requestLogger.Error("Failed to flush OTEL tracer", zap.Error(err))
 		}
-	}()
+	})
 
 	wg.Wait()
 

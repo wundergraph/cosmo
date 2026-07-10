@@ -25,7 +25,7 @@ import { docsBaseURL } from '@/lib/constants';
 const GroupsToolbar = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const queryKey = createConnectQueryKey(getOrganizationGroups);
+  const queryKey = createConnectQueryKey({ schema: getOrganizationGroups, cardinality: undefined });
 
   return (
     <Toolbar className="w-auto">

@@ -1,5 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import {
+import type {
   CreateProposalResponse,
   UpdateProposalResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';

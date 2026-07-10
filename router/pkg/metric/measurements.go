@@ -98,6 +98,18 @@ func createMeasures(meter otelmetric.Meter, opts MetricOpts) (*Measurements, err
 
 	h.histograms[OperationPlanningTime] = operationPlanningTime
 
+	if opts.ResolverStats {
+		resolverAcquireDuration, err := meter.Float64Histogram(
+			ResolverAcquireDurationHistogram,
+			ResolverAcquireDurationHistogramOptions...,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create resolver acquire duration measure: %w", err)
+		}
+
+		h.histograms[ResolverAcquireDurationHistogram] = resolverAcquireDuration
+	}
+
 	schemaFieldUsage, err := meter.Int64Counter(
 		SchemaFieldUsageCounter,
 		SchemaFieldUsageCounterOptions...,

@@ -22,6 +22,23 @@ A schema check allows you to validate if a proposed schema change will produce a
 </CardGroup>
 You can run schema checks with [`wgc subgraph check`](/cli/subgraph/check) in the CI and optionally with native [Github integration](/tutorial/pr-based-workflow-for-federation). After you have identified the possible effects of your changes you can publish them to your router with [`wgc subgraph publish`](/cli/subgraph/publish) .
 
+## Feature subgraphs and feature flags
+
+Schema checks run for [feature subgraphs](/concepts/feature-flags) as well as base subgraphs. Use the same command with the feature subgraph name:
+
+```bash
+npx wgc subgraph check <feature-subgraph-name> --schema <path-to-schema>
+```
+
+Checks are aware of [feature flag](/concepts/feature-flags) compositions:
+
+* **Feature subgraph check**: Cosmo composes each enabled feature flag that contains the feature subgraph, against the federated graphs those flags target, with the proposed schema substituted in. The base supergraph is not recomposed, because a feature subgraph change only affects the flag supergraphs it belongs to.
+* **Base subgraph check**: Cosmo composes the base supergraph and, in addition, every enabled feature flag the base participates in. This surfaces breaking changes in a flag supergraph that the base composition alone would not catch.
+
+Composition errors, composition warnings, and composed schema breaking changes are attributed to the composition that produced them.
+
+If a feature subgraph is not assigned to any enabled feature flag, the check reports an informational message and runs no composition. Lint and graph pruning still run against the proposed schema.
+
 ## Check overview
 
 This view lists all the checks performed, showing the timestamp of each check, the status (passed or failed), and whether the proposed schema was both composable and non-breaking. You can use the date picker to browse through the history.

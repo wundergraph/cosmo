@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -9,6 +8,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidNamespaceName } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function renameNamespace(
   opts: RouterOptions,
@@ -26,13 +26,13 @@ export function renameNamespace(
       throw new UnauthorizedError();
     }
 
-    const isValid = isValidNamespaceName(req.name);
-    if (!isValid) {
+    const isNewNameValid = isValidNamespaceName(req.newName);
+    if (!isNewNameValid) {
       return {
         response: {
           code: EnumStatusCode.ERR,
           details:
-            'The provided name is invalid. The name can contain letters and numbers separated by underscore or hyphens',
+            'The provided new name is invalid. The name can contain letters and numbers separated by underscore or hyphens',
         },
       };
     }
@@ -58,6 +58,16 @@ export function renameNamespace(
 
     if (!authContext.rbac.hasNamespaceWriteAccess(exists)) {
       throw new UnauthorizedError();
+    }
+
+    const nameTaken = await namespaceRepo.byName(req.newName);
+    if (nameTaken) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'The new namespace name is already taken',
+        },
+      };
     }
 
     await namespaceRepo.rename({

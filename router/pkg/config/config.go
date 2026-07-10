@@ -107,6 +107,10 @@ type CostStats struct {
 	ActualEnabled    bool `yaml:"actual_enabled" envDefault:"false" env:"ACTUAL_ENABLED"`
 }
 
+type TelemetryCategory struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+}
+
 type PrometheusSchemaFieldUsage struct {
 	Enabled             bool                               `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	IncludeOperationSha bool                               `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
@@ -148,6 +152,8 @@ type Prometheus struct {
 	ListenAddr          string                     `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
 	GraphqlCache        bool                       `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
 	ConnectionStats     bool                       `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
+	Network             TelemetryCategory          `yaml:"network" envPrefix:"PROMETHEUS_NETWORK_"`
+	Resolver            TelemetryCategory          `yaml:"resolver" envPrefix:"PROMETHEUS_RESOLVER_"`
 	Streams             bool                       `yaml:"streams" envDefault:"false" env:"PROMETHEUS_STREAM"`
 	EngineStats         EngineStats                `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
 	CostStats           CostStats                  `yaml:"cost_stats" envPrefix:"PROMETHEUS_COST_STATS_"`
@@ -164,6 +170,8 @@ type MetricsOTLP struct {
 	RouterRuntime       bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
 	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
 	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
+	Network             TelemetryCategory     `yaml:"network" envPrefix:"METRICS_OTLP_NETWORK_"`
+	Resolver            TelemetryCategory     `yaml:"resolver" envPrefix:"METRICS_OTLP_RESOLVER_"`
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
 	CostStats           CostStats             `yaml:"cost_stats" envPrefix:"METRICS_OTLP_COST_STATS_"`
 	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
@@ -429,6 +437,7 @@ type EngineDebugConfiguration struct {
 	EnableCacheResponseHeaders             bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_CACHE_RESPONSE_HEADERS" yaml:"enable_cache_response_headers"`
 	AlwaysIncludeQueryPlan                 bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_INCLUDE_QUERY_PLAN" yaml:"always_include_query_plan"`
 	AlwaysSkipLoader                       bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_SKIP_LOADER" yaml:"always_skip_loader"`
+	SynchronousCacheWrites                 bool `envDefault:"false" env:"ENGINE_DEBUG_SYNCHRONOUS_CACHE_WRITES" yaml:"synchronous_cache_writes"`
 }
 
 type EngineExecutionConfiguration struct {
@@ -470,7 +479,7 @@ type EngineExecutionConfiguration struct {
 	DisableVariablesRemapping                        bool          `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
 	EnableRequireFetchReasons                        bool          `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
 	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
-	EnableDefer                                      bool          `envDefault:"true" env:"ENGINE_ENABLE_DEFER" yaml:"enable_defer"`
+	EnableDefer                                      bool          `envDefault:"false" env:"ENGINE_ENABLE_DEFER" yaml:"enable_defer"`
 
 	// Server-side WebSocket handler options (router accepting client connections)
 	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`
@@ -657,6 +666,11 @@ type AuthorizationConfiguration struct {
 	RequireAuthentication bool `yaml:"require_authentication" envDefault:"false" env:"REQUIRE_AUTHENTICATION"`
 	// RejectOperationIfUnauthorized makes the router reject the whole GraphQL Operation if one field fails to authorize
 	RejectOperationIfUnauthorized bool `yaml:"reject_operation_if_unauthorized" envDefault:"false" env:"REJECT_OPERATION_IF_UNAUTHORIZED"`
+	// EnablePreFetchFieldAuthorization authorizes fields protected by an authorization rule in a single
+	// batch call before any subgraph fetch executes (scope-only, independent of the returned data),
+	// instead of filtering them out of the response after the fetch. This avoids fetching data that the
+	// client is not authorized to see.
+	EnablePreFetchFieldAuthorization bool `yaml:"enable_pre_fetch_field_authorization" envDefault:"false" env:"ENABLE_PRE_FETCH_FIELD_AUTHORIZATION"`
 }
 
 type RateLimitConfiguration struct {
@@ -1228,6 +1242,7 @@ type ApolloCompatibilityFlags struct {
 type ApolloRouterCompatibilityFlags struct {
 	ReplaceInvalidVarErrors ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
 	SubrequestHTTPError     ApolloCompatibilityFlag `yaml:"subrequest_http_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_"`
+	SkipNullVariablesError  ApolloCompatibilityFlag `yaml:"skip_null_variables_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_"`
 }
 
 type ApolloCompatibilityFlag struct {

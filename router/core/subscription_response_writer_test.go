@@ -1,10 +1,15 @@
 package core
 
 import (
-	"github.com/stretchr/testify/assert"
+	"context"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 func TestNegotiateSubscriptionParams(t *testing.T) {
@@ -120,4 +125,22 @@ func TestNegotiateSubscriptionParams(t *testing.T) {
 			assert.Equalf(t, tt.want, NegotiateSubscriptionParams(tt.args.r, false), "NegotiateSubscriptionParams(%v)", tt.args.r)
 		})
 	}
+}
+
+func TestGetSubscriptionResponseWriter(t *testing.T) {
+	// Headers set on a ResponseWriter are only sent to the client on the first
+	// Write/WriteHeader/Flush. An SSE subscription must flush the response head
+	// (200 + text/event-stream) as soon as it is established, otherwise clients
+	// block until the first message arrives instead of connecting immediately.
+	t.Run("flushes the SSE response head before any message is written", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+
+		_, _, ok := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, false)
+		require.True(t, ok)
+
+		assert.Equal(t, sseMimeType, recorder.Header().Get("Content-Type"))
+		assert.True(t, recorder.Flushed, "expected the SSE response head to be flushed before any message is written")
+	})
 }
