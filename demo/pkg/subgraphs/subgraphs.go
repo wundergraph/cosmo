@@ -28,12 +28,16 @@ import (
 
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/catalog"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/countries"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/deferdemo"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/pricing"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/reviews"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/test1"
 )
 
@@ -48,6 +52,9 @@ const (
 	CountriesDefaultDemoURL    = "http://localhost:4009/graphql"
 	ProductsFgDefaultDemoURL   = "http://localhost:4010/graphql"
 	ProjectsDefaultDemoURL     = "dns:///localhost:4011"
+	CatalogDefaultDemoURL      = "http://localhost:4012/graphql"
+	PricingDefaultDemoURL      = "http://localhost:4013/graphql"
+	ReviewsDefaultDemoURL      = "http://localhost:4014/graphql"
 )
 
 type Ports struct {
@@ -120,7 +127,6 @@ func (s *Subgraphs) ListenAndServe(ctx context.Context) error {
 func newServer(name string, enableDebug bool, port int, schema graphql.ExecutableSchema) *http.Server {
 	if port == 0 {
 		panic(fmt.Errorf("port for %s is 0", name))
-		return nil
 	}
 	srv := NewDemoServer(schema)
 	if enableDebug {
@@ -166,6 +172,7 @@ func subgraphHandler(schema graphql.ExecutableSchema) http.Handler {
 type SubgraphOptions struct {
 	NatsPubSubByProviderID map[string]natsPubsub.Adapter
 	GetPubSubName          func(string) string
+	DeferDemoLatencies     deferdemo.Latencies
 }
 
 func EmployeesHandler(opts *SubgraphOptions) http.Handler {
@@ -202,6 +209,25 @@ func MoodHandler(opts *SubgraphOptions) http.Handler {
 
 func CountriesHandler(opts *SubgraphOptions) http.Handler {
 	return subgraphHandler(countries.NewSchema(opts.NatsPubSubByProviderID))
+}
+
+func CatalogHandler(opts *SubgraphOptions) http.Handler {
+	return subgraphHandler(catalog.NewSchema(deferDemoLatencies(opts)))
+}
+
+func PricingHandler(opts *SubgraphOptions) http.Handler {
+	return subgraphHandler(pricing.NewSchema(deferDemoLatencies(opts)))
+}
+
+func ReviewsHandler(opts *SubgraphOptions) http.Handler {
+	return subgraphHandler(reviews.NewSchema(deferDemoLatencies(opts)))
+}
+
+func deferDemoLatencies(opts *SubgraphOptions) deferdemo.Latencies {
+	if opts == nil {
+		return deferdemo.Latencies{}
+	}
+	return opts.DeferDemoLatencies
 }
 
 func New(ctx context.Context, config *Config) (*Subgraphs, error) {

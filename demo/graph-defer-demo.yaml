@@ -1,0 +1,14 @@
+version: 1
+subgraphs:
+  - name: catalog
+    routing_url: http://localhost:4012/graphql
+    schema:
+      file: ./pkg/subgraphs/catalog/subgraph/schema.graphqls
+  - name: pricing
+    routing_url: http://localhost:4013/graphql
+    schema:
+      file: ./pkg/subgraphs/pricing/subgraph/schema.graphqls
+  - name: reviews
+    routing_url: http://localhost:4014/graphql
+    schema:
+      file: ./pkg/subgraphs/reviews/subgraph/schema.graphqls
