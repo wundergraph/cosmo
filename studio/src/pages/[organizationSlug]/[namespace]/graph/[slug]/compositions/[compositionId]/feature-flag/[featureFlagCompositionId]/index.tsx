@@ -72,7 +72,10 @@ const FeatureFlagCompositionDetailsPage: NextPageWithLayout = () => {
         >
           Compositions
         </Link>,
-        <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions/${id}`}>
+        <Link
+          key={0}
+          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(slug)}/compositions/${encodeURIComponent(id)}`}
+        >
           {id}
         </Link>,
         <Link
