@@ -1649,7 +1649,7 @@ export class FeatureFlagRepository {
     if (latest.length === 0) {
       return undefined;
     }
-    
+
     return latest[0];
   }
 
