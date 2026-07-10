@@ -139,6 +139,33 @@ describe('observeIncrementalResult', () => {
     });
   });
 
+  it('supports legacy top-level path and items payloads', async () => {
+    const result = observeIncrementalResult(
+      stream(
+        {
+          data: { viewer: { immediate: true }, values: ['a', 'd'] },
+          extensions: { preserved: true },
+          hasNext: true,
+        },
+        {
+          data: { deferred: true },
+          path: ['viewer'],
+          errors: [{ message: 'legacy', extensions: { code: 'LEGACY' } }],
+          extensions: { legacy: true },
+          hasNext: true,
+        },
+        { items: ['b', 'c'], path: ['values', 1], hasNext: false },
+      ),
+      {},
+    );
+
+    expect((await collect(result)).at(-1)).toEqual({
+      data: { viewer: { immediate: true, deferred: true }, values: ['a', 'b', 'c', 'd'] },
+      errors: [{ message: 'legacy', extensions: { code: 'LEGACY' } }],
+      extensions: { preserved: true, legacy: true },
+    });
+  });
+
   it('inserts streamed items at their path index, including empty and null items', async () => {
     const result = observeIncrementalResult(
       stream(

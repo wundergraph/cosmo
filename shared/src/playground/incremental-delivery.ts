@@ -31,6 +31,9 @@ export type IncrementalSnapshot = {
 };
 
 export type InitialIncrementalPayload = IncrementalSnapshot & {
+  path?: readonly IncrementalPathSegment[];
+  items?: readonly unknown[];
+  label?: string;
   pending?: readonly PendingEntry[];
   incremental?: readonly IncrementalEntry[];
   completed?: readonly CompletedEntry[];
@@ -217,7 +220,14 @@ const applyPayload = (state: AssemblyState, payload: InitialIncrementalPayload, 
   const pending = new Map(state.pending);
   const completed = new Set(state.completed);
 
-  if ('data' in payload) {
+  if (payload.path !== undefined) {
+    if ('items' in payload) {
+      insertItemsAtPath(assembled, payload.path, payload.items ?? []);
+    }
+    if ('data' in payload) {
+      mergeDataAtPath(assembled, payload.path, payload.data);
+    }
+  } else if ('data' in payload) {
     assembled.data = clone(payload.data);
   }
   appendErrors(assembled, payload.errors);
