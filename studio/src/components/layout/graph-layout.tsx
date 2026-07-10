@@ -62,7 +62,9 @@ const GraphLayoutSidebarNavigation = ({ organizationSlug, namespace, slug }: Gra
   const proposalsFeature = useFeature('proposals');
 
   const links: NavLink[] = useMemo(() => {
-    const basePath = `/${organizationSlug}/${namespace}/graph/${slug}`;
+    const basePath = `/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+      namespace,
+    )}/graph/${encodeURIComponent(slug)}`;
 
     const graphLinks = [
       {
@@ -216,7 +218,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
           description={data?.response?.details || 'Graph not found'}
           actions={
             <Button asChild>
-              <Link href={`/${organizationSlug}`}>Go home</Link>
+              <Link href={`/${encodeURIComponent(organizationSlug ?? '')}`}>Go home</Link>
             </Button>
           }
         />

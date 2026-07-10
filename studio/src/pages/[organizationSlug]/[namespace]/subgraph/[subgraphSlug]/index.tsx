@@ -145,7 +145,9 @@ const SubgraphOverviewPage = () => {
               <dt className="text-sm text-muted-foreground">Linked Subgraph</dt>
               <dd className="flex gap-x-2">
                 <Link
-                  href={`/${router.query.organizationSlug}/${linkedSubgraph.namespace}/subgraph/${linkedSubgraph.name}`}
+                  href={`/${encodeURIComponent(router.query.organizationSlug as string)}/${encodeURIComponent(
+                    linkedSubgraph.namespace,
+                  )}/subgraph/${encodeURIComponent(linkedSubgraph.name)}`}
                   className="flex items-center gap-1 hover:underline"
                 >
                   {`${linkedSubgraph.namespace}/${linkedSubgraph.name}`}

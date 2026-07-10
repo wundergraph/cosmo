@@ -33,7 +33,12 @@ const SchemaVersionChangelogPage: NextPageWithLayout = () => {
       title={id}
       subtitle=""
       breadcrumbs={[
-        <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/changelog`}>
+        <Link
+          key={0}
+          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+            namespace,
+          )}/graph/${encodeURIComponent(slug)}/changelog`}
+        >
           Changelog
         </Link>,
       ]}

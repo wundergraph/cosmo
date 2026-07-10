@@ -36,7 +36,12 @@ const FeatureFlagDetailsPage: NextPageWithLayout = () => {
         title={featureFlagSlug}
         subtitle="A quick glance of the details for this feature flag"
         breadcrumbs={[
-          <Link key={featureFlagSlug} href={`/${organizationSlug}/${namespace}/graph/${slug}/feature-flags`}>
+          <Link
+            key={featureFlagSlug}
+            href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(
+              slug,
+            )}/feature-flags`}
+          >
             Feature Flags
           </Link>,
         ]}
@@ -56,7 +61,12 @@ const FeatureFlagDetailsPage: NextPageWithLayout = () => {
       title={featureFlagSlug}
       subtitle="A quick glance of the details for this feature flag"
       breadcrumbs={[
-        <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/feature-flags`}>
+        <Link
+          key={0}
+          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(
+            slug,
+          )}/feature-flags`}
+        >
           Feature Flags
         </Link>,
       ]}

@@ -85,7 +85,11 @@ const ProposalsPage: NextPageWithLayout = () => {
         actions={
           <Button
             onClick={() => {
-              router.push(`/${user?.currentOrganization.slug}/policies?namespace=${router.query.namespace}#proposals`);
+              router.push(
+                `/${encodeURIComponent(user?.currentOrganization.slug ?? '')}/policies?namespace=${encodeURIComponent(
+                  router.query.namespace as string,
+                )}#proposals`,
+              );
             }}
           >
             Configure Proposals
@@ -174,7 +178,11 @@ const ProposalsPage: NextPageWithLayout = () => {
                     <TableCell>
                       {latestCheckId ? (
                         <Link
-                          href={`/${user?.currentOrganization.slug}/${namespace}/graph/${federatedGraphName}/checks/${latestCheckId}`}
+                          href={`/${encodeURIComponent(user?.currentOrganization.slug ?? '')}/${encodeURIComponent(
+                            namespace,
+                          )}/graph/${encodeURIComponent(federatedGraphName)}/checks/${encodeURIComponent(
+                            latestCheckId,
+                          )}`}
                           onClick={(e) => e.stopPropagation()}
                           className="flex items-center gap-2"
                         >

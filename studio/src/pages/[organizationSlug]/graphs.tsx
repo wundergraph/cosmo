@@ -51,7 +51,9 @@ const GraphToolbar = () => {
         </SelectContent>
       </Select>
       <Button asChild={isAdminOrDeveloper} disabled={!isAdminOrDeveloper}>
-        <Link href={`/${org?.slug}/new?namespace=${namespace}`}>Create</Link>
+        <Link href={`/${encodeURIComponent(org?.slug ?? '')}/new?namespace=${encodeURIComponent(namespace)}`}>
+          Create
+        </Link>
       </Button>
     </Toolbar>
   );

@@ -26,7 +26,9 @@ export const Changelog = ({ entries }: { entries: FederatedGraphChangelogOutput[
               <div className="flex flex-col items-end gap-y-1">
                 <time className="mt-2 text-sm font-bold leading-none">{formatDateTime(new Date(createdAt))}</time>
                 <Link
-                  href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions/${compositionId}`}
+                  href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                    namespace,
+                  )}/graph/${encodeURIComponent(slug)}/compositions/${encodeURIComponent(compositionId)}`}
                   className="flex items-center gap-x-1 text-sm text-primary hover:underline"
                 >
                   <PiCubeFocus className="h-4 w-4" />

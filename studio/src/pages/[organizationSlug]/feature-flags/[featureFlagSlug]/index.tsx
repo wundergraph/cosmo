@@ -62,7 +62,10 @@ const FeatureFlagBreadcrumb = () => {
 
   return (
     <div className="flex h-8 items-center justify-center">
-      <Link key={organizationSlug + namespace} href={`/${organizationSlug}/feature-flags?namespace=${namespace}`}>
+      <Link
+        key={organizationSlug + namespace}
+        href={`/${encodeURIComponent(organizationSlug ?? '')}/feature-flags?namespace=${encodeURIComponent(namespace)}`}
+      >
         Feature Flags
       </Link>
     </div>

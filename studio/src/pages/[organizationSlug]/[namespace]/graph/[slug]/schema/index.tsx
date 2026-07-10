@@ -1262,9 +1262,9 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     title = sentenceCase(selectedCategory);
     breadcrumbs.push(
       <Link
-        href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?schemaType=${
-          router.query.schemaType || 'client'
-        }`}
+        href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(
+          graphName,
+        )}/schema?schemaType=${encodeURIComponent((router.query.schemaType as string) || 'client')}`}
       >
         Schema
       </Link>,
@@ -1276,9 +1276,11 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     if (selectedCategory) {
       breadcrumbs.push(
         <Link
-          href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=${selectedCategory}&schemaType=${
-            router.query.schemaType || 'client'
-          }`}
+          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(
+            graphName,
+          )}/schema?category=${encodeURIComponent(selectedCategory)}&schemaType=${encodeURIComponent(
+            (router.query.schemaType as string) || 'client',
+          )}`}
         >
           {sentenceCase(selectedCategory)}
         </Link>,

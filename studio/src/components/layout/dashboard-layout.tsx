@@ -128,7 +128,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   );
 
   const links = useMemo(() => {
-    const basePath = `/${user?.currentOrganization.slug || organizationSlug}`;
+    const basePath = `/${encodeURIComponent(user?.currentOrganization.slug || organizationSlug)}`;
     const nsQueryString = `?namespace=${encodeURIComponent(namespace.name)}`;
 
     const navigation: Partial<NavLink>[] = [

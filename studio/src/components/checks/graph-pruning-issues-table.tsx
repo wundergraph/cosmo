@@ -102,9 +102,11 @@ export const GraphPruningIssuesTable = ({
                     <TooltipTrigger asChild>
                       <Button asChild variant="ghost" size="sm" className="table-action">
                         <Link
-                          href={`/${organizationSlug}/${namespace}/graph/${router.query.slug}/checks/${
-                            router.query.checkId
-                          }?tab=schema&${l.subgraphName ? `subgraph=${l.subgraphName}` : ''}${
+                          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                            namespace,
+                          )}/graph/${encodeURIComponent(router.query.slug as string)}/checks/${encodeURIComponent(
+                            router.query.checkId as string,
+                          )}?tab=schema&${l.subgraphName ? `subgraph=${encodeURIComponent(l.subgraphName)}` : ''}${
                             l.issueLocation?.line ? `#L${l.issueLocation?.line}` : ''
                           }`}
                         >

@@ -103,7 +103,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
         actions={
           <Button
             onClick={() => {
-              router.push(`/${user?.currentOrganization.slug}/billing`);
+              router.push(`/${encodeURIComponent(user?.currentOrganization.slug ?? '')}/billing`);
             }}
           >
             Upgrade
@@ -126,7 +126,11 @@ const CacheOperationsPage: NextPageWithLayout = () => {
         actions={
           <Button
             onClick={() => {
-              router.push(`/${user?.currentOrganization.slug}/cache-warmer?namespace=${namespace}`);
+              router.push(
+                `/${encodeURIComponent(user?.currentOrganization.slug ?? '')}/cache-warmer?namespace=${encodeURIComponent(
+                  namespace,
+                )}`,
+              );
             }}
           >
             Configure Cache Warmer

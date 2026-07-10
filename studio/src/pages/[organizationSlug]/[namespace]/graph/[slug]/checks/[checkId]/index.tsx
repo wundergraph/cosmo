@@ -249,7 +249,12 @@ const CheckOverviewPage: NextPageWithLayout = () => {
         actions={
           <div className="flex items-center space-x-2">
             <Button variant="outline">
-              <Link href={`/${organizationSlug}/${namespace}/graph/${slug}/checks`} className="flex items-center">
+              <Link
+                href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                  namespace,
+                )}/graph/${encodeURIComponent(slug)}/checks`}
+                className="flex items-center"
+              >
                 <ArrowLeftIcon className="mr-2 h-4 w-4" />
                 All checks
               </Link>
@@ -486,7 +491,9 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                 <dd>
                   <Link
                     key={id}
-                    href={`/${organizationSlug}/${namespace}/graph/${slug}/schema/sdl?subgraph=${subgraphName}`}
+                    href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                      namespace,
+                    )}/graph/${encodeURIComponent(slug)}/schema/sdl?subgraph=${encodeURIComponent(subgraphName)}`}
                   >
                     <div className="flex items-center gap-x-1">
                       <CubeIcon />
@@ -503,7 +510,9 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
               <dd className="whitespace-nowrap text-sm">
                 <Link
                   key={data.proposalId}
-                  href={`/${organizationSlug}/${namespace}/graph/${slug}/proposals/${data.proposalId}`}
+                  href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                    namespace,
+                  )}/graph/${encodeURIComponent(slug)}/proposals/${encodeURIComponent(data.proposalId)}`}
                 >
                   <div className="flex items-center gap-x-1">
                     <ClipboardIcon />
@@ -776,7 +785,9 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
               <dt className="mb-2 text-sm text-muted-foreground">GitHub Commit</dt>
               <dd className="flex items-center gap-x-2 text-sm">
                 <Link
-                  href={`https://github.com/${ghDetails.ownerSlug}/${ghDetails.repositorySlug}/commit/${ghDetails.commitSha}`}
+                  href={`https://github.com/${encodeURIComponent(ghDetails.ownerSlug)}/${encodeURIComponent(
+                    ghDetails.repositorySlug,
+                  )}/commit/${encodeURIComponent(ghDetails.commitSha)}`}
                   className="inline-flex items-center gap-2 text-xs"
                   aria-label="View on GitHub"
                   target="_blank"
@@ -1003,7 +1014,9 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                                   return null;
                                 }
 
-                                const path = `/${organizationSlug}/${namespace}/graph/${name}/checks/${id}`;
+                                const path = `/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                                  namespace,
+                                )}/graph/${encodeURIComponent(name)}/checks/${encodeURIComponent(id)}`;
                                 const compositionSkipped = data.check?.compositionSkipped;
                                 const breakingChangesSkipped = data.check?.breakingChangesSkipped;
                                 const clientTrafficCheckSkipped = data.check?.clientTrafficCheckSkipped;
@@ -1197,7 +1210,11 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                                     <div className="flex items-center justify-end gap-2">
                                       <Button asChild variant="ghost" size="sm" className="table-action">
                                         <Link
-                                          href={`/${organizationSlug}/${linkedCheck.namespace}/graph/${linkedCheck.affectedGraphNames[0]}/checks/${linkedCheck.id}`}
+                                          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                                            linkedCheck.namespace,
+                                          )}/graph/${encodeURIComponent(
+                                            linkedCheck.affectedGraphNames[0],
+                                          )}/checks/${encodeURIComponent(linkedCheck.id)}`}
                                         >
                                           View
                                         </Link>

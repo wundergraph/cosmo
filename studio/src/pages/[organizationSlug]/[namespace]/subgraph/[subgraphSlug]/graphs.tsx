@@ -92,7 +92,9 @@ export const FederatedGraphsTable = ({
         <TableBody>
           {graphs.map(
             ({ federatedGraph: { name, routingURL, lastUpdatedAt, labelMatchers, namespace }, isConnected }) => {
-              const path = `/${organizationSlug}/${namespace}/graph/${name}`;
+              const path = `/${encodeURIComponent(organizationSlug as string)}/${encodeURIComponent(
+                namespace,
+              )}/graph/${encodeURIComponent(name)}`;
               return (
                 <TableRow
                   key={name}

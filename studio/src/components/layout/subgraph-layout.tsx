@@ -52,7 +52,9 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
   }, [data]);
 
   const links: NavLink[] = useMemo(() => {
-    const basePath = `/${organizationSlug}/${namespace}/subgraph/${slug}`;
+    const basePath = `/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+      namespace,
+    )}/subgraph/${encodeURIComponent(slug)}`;
 
     return [
       {

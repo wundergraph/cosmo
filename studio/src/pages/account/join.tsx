@@ -50,9 +50,9 @@ const JoinInvitationsPage: NextPageWithLayout<{
     const queryParams = new URLSearchParams();
     queryParams.append('redirected-to-invited-org', 'true');
 
-    router.push(`/${slug}?${queryParams.toString()}`);
+    router.push(`/${encodeURIComponent(slug)}?${queryParams.toString()}`);
   };
-  const handleSkipButtonClick = () => router.push(`/${personalOrgSlug}`);
+  const handleSkipButtonClick = () => router.push(`/${encodeURIComponent(personalOrgSlug ?? '')}`);
 
   if (isLoading || !user) {
     return <Loader fullscreen />;

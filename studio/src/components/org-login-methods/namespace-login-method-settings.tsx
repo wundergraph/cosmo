@@ -235,7 +235,7 @@ export function NamespaceLoginMethodSettings({
           description="Connect at least one OIDC provider before you can restrict namespace access by login method."
           actions={
             <Button asChild>
-              <Link href={`/${organizationSlug}/settings`}>Connect an SSO app</Link>
+              <Link href={`/${encodeURIComponent(organizationSlug ?? '')}/settings`}>Connect an SSO app</Link>
             </Button>
           }
         />

@@ -282,7 +282,9 @@ export const SubgraphsTable = ({
           </TableHeader>
           <TableBody>
             {subgraphs.map(({ id, name, routingURL, lastUpdatedAt, labels, namespace, baseSubgraphName, type }) => {
-              const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
+              const path = `/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                namespace,
+              )}/subgraph/${encodeURIComponent(name)}`;
               let analyticsPath = `${path}/analytics`;
               if (router.asPath.split('/')[3] === 'graph') {
                 const query = [

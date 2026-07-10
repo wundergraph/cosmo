@@ -153,7 +153,10 @@ export function CheckExtensionsConfig({
           <>
             <>
               You must{' '}
-              <Link href={`/${organizationSlug}/policies?namespace=${namespace.name}`} className="text-primary">
+              <Link
+                href={`/${encodeURIComponent(organizationSlug ?? '')}/policies?namespace=${encodeURIComponent(namespace.name)}`}
+                className="text-primary"
+              >
                 enable the linter
               </Link>{' '}
               for the namespace to be able to receive lint warnings and errors.
@@ -171,7 +174,10 @@ export function CheckExtensionsConfig({
         ) : (
           <>
             You must{' '}
-            <Link href={`/${organizationSlug}/policies?namespace=${namespace.name}`} className="text-primary">
+            <Link
+              href={`/${encodeURIComponent(organizationSlug ?? '')}/policies?namespace=${encodeURIComponent(namespace.name)}`}
+              className="text-primary"
+            >
               enable the graph pruning linter
             </Link>{' '}
             for the namespace to be able to receive graph pruning warnings and errors.

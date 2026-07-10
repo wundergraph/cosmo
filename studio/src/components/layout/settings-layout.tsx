@@ -11,7 +11,7 @@ export const SettingsLayout = ({ children }: LayoutProps) => {
   const organizationSlug = router.query.organizationSlug as string;
 
   const links: NavLink[] = useMemo(() => {
-    const basePath = `/${organizationSlug}`;
+    const basePath = `/${encodeURIComponent(organizationSlug)}`;
 
     return [
       {

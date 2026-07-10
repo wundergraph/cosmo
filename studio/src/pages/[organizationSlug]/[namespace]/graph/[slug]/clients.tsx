@@ -373,7 +373,11 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
         <Accordion type="single" collapsible className="mt-4 w-full">
           {filteredOperations.map((op) => {
             const [base, _] = window.location.href.split('?');
-            const link = base + `?clientId=${clientId}&clientName=${clientName}&search=${op.id}`;
+            const link =
+              base +
+              `?clientId=${encodeURIComponent(clientId ?? '')}&clientName=${encodeURIComponent(
+                clientName ?? '',
+              )}&search=${encodeURIComponent(op.id)}`;
 
             const variables = extractVariablesFromGraphQL(op.contents, ast);
 

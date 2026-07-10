@@ -12,7 +12,7 @@ const NewGraphPage: NextPageWithLayout = () => {
   useEffect(() => {
     if (!user) return;
 
-    router.push(`/${user.currentOrganization.slug}/new`);
+    router.push(`/${encodeURIComponent(user.currentOrganization.slug)}/new`);
   }, [user, router]);
 
   return (

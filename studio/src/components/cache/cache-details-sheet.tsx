@@ -215,9 +215,11 @@ export const CacheOperationDetails = ({ operation }: { operation: CacheWarmerOpe
                 <TooltipTrigger asChild>
                   <Button variant="outline" size="icon" asChild>
                     <Link
-                      href={`/${user?.currentOrganization.slug}/${graphData?.graph?.namespace}/graph/${
-                        graphData?.graph?.name
-                      }/playground?operation=${encodeURIComponent(operationContent)}`}
+                      href={`/${encodeURIComponent(user?.currentOrganization.slug ?? '')}/${encodeURIComponent(
+                        graphData?.graph?.namespace ?? '',
+                      )}/graph/${encodeURIComponent(
+                        graphData?.graph?.name ?? '',
+                      )}/playground?operation=${encodeURIComponent(operationContent)}`}
                     >
                       <PlayIcon className="h-5" />
                     </Link>

@@ -474,7 +474,7 @@ const MembersToolbar = () => {
           )}
           {limitReached && (
             <Button variant="outline" asChild>
-              <Link href={`/${organizationSlug}/billing`}>View plans</Link>
+              <Link href={`/${encodeURIComponent(organizationSlug ?? '')}/billing`}>View plans</Link>
             </Button>
           )}
         </DialogContent>

@@ -115,7 +115,7 @@ const OrganizationForm = () => {
               stripe?.redirectToCheckout({ sessionId: d.stripeSessionId });
               return;
             }
-            router.replace(`/${data.slug}`);
+            router.replace(`/${encodeURIComponent(data.slug)}`);
             toast({
               title: 'Organization created',
               description: 'Your organization has been created.',

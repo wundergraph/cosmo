@@ -214,7 +214,7 @@ const IncreaseLimits = () => {
 
   return (
     <Button asChild variant="outline">
-      <Link href={`/${slug}/billing`}>Increase limits</Link>
+      <Link href={`/${encodeURIComponent(slug)}/billing`}>Increase limits</Link>
     </Button>
   );
 };

@@ -115,7 +115,11 @@ export const CreateGraphForm = ({ isMonograph = false }: { isMonograph?: boolean
           await queryClient.refetchQueries({
             queryKey: createConnectQueryKey({ schema: getWorkspace, cardinality: undefined }),
           });
-          router.replace(`/${user?.currentOrganization.slug}/${namespace}/graph/${data.name}`);
+          router.replace(
+            `/${encodeURIComponent(user?.currentOrganization.slug ?? '')}/${encodeURIComponent(
+              namespace,
+            )}/graph/${encodeURIComponent(data.name)}`,
+          );
         } else if (d.response?.details) {
           toast({ description: d.response.details, duration: 3000 });
         }

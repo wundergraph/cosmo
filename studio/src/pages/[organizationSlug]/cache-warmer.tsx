@@ -74,7 +74,7 @@ const CacheWarmerPage: NextPageWithLayout = () => {
         actions={
           <Button
             onClick={() => {
-              router.push(`/${user?.currentOrganization.slug}/billing`);
+              router.push(`/${encodeURIComponent(user?.currentOrganization.slug ?? '')}/billing`);
             }}
           >
             Upgrade

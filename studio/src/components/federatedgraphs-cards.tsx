@@ -334,7 +334,9 @@ const GraphCard = ({ graph, hasStaleMetrics }: { graph: FederatedGraph; hasStale
 
   return (
     <Link
-      href={`/${user?.currentOrganization?.slug}/${graph.namespace}/graph/${graph.name}`}
+      href={`/${encodeURIComponent(user?.currentOrganization?.slug ?? '')}/${encodeURIComponent(
+        graph.namespace,
+      )}/graph/${encodeURIComponent(graph.name)}`}
       className="project-list-item group"
     >
       <Card className="flex h-full flex-col py-4 transition-all group-hover:border-input-active">

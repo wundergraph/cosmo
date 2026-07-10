@@ -248,7 +248,11 @@ export const FieldUsage = ({ usageData }: { usageData: GetFieldUsageResponse }) 
                   return (
                     <Link
                       key={id}
-                      href={`/${organizationSlug}/${subgraph.namespace}/graph/${slug}/schema/sdl?subgraph=${subgraph.name}`}
+                      href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                        subgraph.namespace,
+                      )}/graph/${encodeURIComponent(slug as string)}/schema/sdl?subgraph=${encodeURIComponent(
+                        subgraph.name,
+                      )}`}
                       className="text-primary"
                     >
                       <div className="flex items-start gap-x-1">

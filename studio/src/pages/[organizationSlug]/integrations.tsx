@@ -486,7 +486,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
           <>
             <Button variant="default" size="default" asChild={isAdminOrDeveloper} disabled={!isAdminOrDeveloper}>
               <Link
-                href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${slackRedirectURL}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
+                href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${encodeURIComponent(slackRedirectURL)}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
               >
                 Integrate
               </Link>
@@ -516,7 +516,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
           <>
             <Button variant="default" size="default" asChild>
               <Link
-                href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${slackRedirectURL}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
+                href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${encodeURIComponent(slackRedirectURL)}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
               >
                 Integrate
               </Link>

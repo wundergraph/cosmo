@@ -80,7 +80,9 @@ const FeatureFlagOverview = ({
               This feature flag will be a part of compositions of this federated graph. Once the feature flag is
               composed successfully, you can query the feature flag in the{' '}
               <Link
-                href={`/${currentOrg?.slug}/${namespace}/graph/${slug}/playground`}
+                href={`/${encodeURIComponent(currentOrg?.slug ?? '')}/${encodeURIComponent(
+                  namespace,
+                )}/graph/${encodeURIComponent(slug)}/playground`}
                 className="text-sm text-primary"
               >
                 playground

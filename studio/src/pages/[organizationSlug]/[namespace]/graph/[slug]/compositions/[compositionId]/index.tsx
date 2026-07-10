@@ -313,7 +313,9 @@ export const CompositionDetails = ({
                 ) : (
                   <Link
                     key={id}
-                    href={`/${organizationSlug}/${namespace}/graph/${slug}/changelog/${schemaVersionId}`}
+                    href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                      namespace,
+                    )}/graph/${encodeURIComponent(slug)}/changelog/${encodeURIComponent(schemaVersionId)}`}
                     className="text-primary"
                   >
                     <div className="flex items-center gap-x-1">
@@ -613,7 +615,12 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
         title={id}
         subtitle="A quick glance of the details for this composition"
         breadcrumbs={[
-          <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions`}>
+          <Link
+            key={0}
+            href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+              namespace,
+            )}/graph/${encodeURIComponent(slug)}/compositions`}
+          >
             Compositions
           </Link>,
         ]}

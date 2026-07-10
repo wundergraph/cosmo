@@ -37,7 +37,12 @@ const FeatureFlagCompositionDetailsPage: NextPageWithLayout = () => {
         title={featureFlagCompositionId}
         subtitle="A quick glance of the details for this feature flag composition"
         breadcrumbs={[
-          <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions/${id}`}>
+          <Link
+            key={0}
+            href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+              namespace,
+            )}/graph/${encodeURIComponent(slug)}/compositions/${encodeURIComponent(id)}`}
+          >
             {id}
           </Link>,
         ]}
@@ -59,13 +64,23 @@ const FeatureFlagCompositionDetailsPage: NextPageWithLayout = () => {
       title={featureFlagCompositionId}
       subtitle="A quick glance of the details for this feature flag composition"
       breadcrumbs={[
-        <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions`}>
+        <Link
+          key={0}
+          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+            namespace,
+          )}/graph/${encodeURIComponent(slug)}/compositions`}
+        >
           Compositions
         </Link>,
         <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions/${id}`}>
           {id}
         </Link>,
-        <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions/${id}?tab=ffCompostions`}>
+        <Link
+          key={0}
+          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+            namespace,
+          )}/graph/${encodeURIComponent(slug)}/compositions/${encodeURIComponent(id)}?tab=ffCompostions`}
+        >
           Feature Flag Compositions
         </Link>,
       ]}
