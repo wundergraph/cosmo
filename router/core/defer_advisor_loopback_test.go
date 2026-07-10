@@ -220,3 +220,67 @@ func TestLoopbackRecorderEnforcesResponseBudgets(t *testing.T) {
 		assert.True(t, errors.Is(err, errLoopbackTooManySegments))
 	})
 }
+
+func TestLoopbackRecorderCancelsTheReplayWhenABudgetIsExceeded(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		limits loopbackRecorderLimits
+		run    func(*loopbackRecorder)
+		err    error
+	}{
+		{
+			name:   "bytes",
+			limits: loopbackRecorderLimits{maxBytes: 1, maxSegments: 2},
+			run: func(recorder *loopbackRecorder) {
+				_, _ = recorder.Write([]byte("too large"))
+			},
+			err: errLoopbackResponseTooLarge,
+		},
+		{
+			name:   "segments",
+			limits: loopbackRecorderLimits{maxBytes: 100, maxSegments: 1},
+			run: func(recorder *loopbackRecorder) {
+				_, _ = recorder.Write([]byte("first"))
+				recorder.Flush()
+				_, _ = recorder.Write([]byte("second"))
+				recorder.Flush()
+			},
+			err: errLoopbackTooManySegments,
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx, cancel := context.WithCancel(context.Background())
+			t.Cleanup(cancel)
+			recorder := newLoopbackRecorderWithLimitsAndCancel(time.Unix(1, 0), test.limits, cancel)
+
+			test.run(recorder)
+
+			assert.ErrorIs(t, recorder.err, test.err)
+			assert.ErrorIs(t, ctx.Err(), context.Canceled)
+		})
+	}
+}
+
+func TestLoopbackRecorderDoesNotCancelAValidReplay(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	recorder := newLoopbackRecorderWithLimitsAndCancel(
+		time.Unix(1, 0),
+		loopbackRecorderLimits{maxBytes: 100, maxSegments: 2},
+		cancel,
+	)
+	_, err := recorder.Write([]byte("valid"))
+	require.NoError(t, err)
+	recorder.Flush()
+
+	require.NoError(t, recorder.err)
+	assert.NoError(t, ctx.Err())
+}

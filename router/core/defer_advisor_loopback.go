@@ -38,6 +38,7 @@ type loopbackRecorder struct {
 	written     int64
 	limits      loopbackRecorderLimits
 	err         error
+	cancel      func()
 }
 
 type loopbackSegment struct {
@@ -53,11 +54,16 @@ func newLoopbackRecorder(start time.Time) *loopbackRecorder {
 }
 
 func newLoopbackRecorderWithLimits(start time.Time, limits loopbackRecorderLimits) *loopbackRecorder {
+	return newLoopbackRecorderWithLimitsAndCancel(start, limits, nil)
+}
+
+func newLoopbackRecorderWithLimitsAndCancel(start time.Time, limits loopbackRecorderLimits, cancel func()) *loopbackRecorder {
 	return &loopbackRecorder{
 		header: make(http.Header),
 		status: http.StatusOK,
 		start:  start,
 		limits: limits,
+		cancel: cancel,
 	}
 }
 
@@ -79,7 +85,7 @@ func (l *loopbackRecorder) Write(p []byte) (int, error) {
 		return 0, l.err
 	}
 	if int64(len(p)) > l.limits.maxBytes-l.written {
-		l.err = fmt.Errorf("%w (%d bytes)", errLoopbackResponseTooLarge, l.limits.maxBytes)
+		l.fail(fmt.Errorf("%w (%d bytes)", errLoopbackResponseTooLarge, l.limits.maxBytes))
 		return 0, l.err
 	}
 	l.written += int64(len(p))
@@ -94,7 +100,7 @@ func (l *loopbackRecorder) Flush() {
 		return
 	}
 	if len(l.segments) >= l.limits.maxSegments {
-		l.err = fmt.Errorf("%w (%d segments)", errLoopbackTooManySegments, l.limits.maxSegments)
+		l.fail(fmt.Errorf("%w (%d segments)", errLoopbackTooManySegments, l.limits.maxSegments))
 		return
 	}
 	// Transfer ownership of the backing array into the immutable segment. A
@@ -102,6 +108,16 @@ func (l *loopbackRecorder) Flush() {
 	body := l.buf.Bytes()
 	l.buf = bytes.Buffer{}
 	l.segments = append(l.segments, loopbackSegment{body: body, at: time.Since(l.start)})
+}
+
+func (l *loopbackRecorder) fail(err error) {
+	if l.err != nil {
+		return
+	}
+	l.err = err
+	if l.cancel != nil {
+		l.cancel()
+	}
 }
 
 // fullBody returns everything written, joining segments for flushed responses.
