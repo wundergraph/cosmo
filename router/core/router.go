@@ -347,6 +347,10 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		"x-wg-token",
 		"x-wg-skip-loader",
 		"x-wg-include-query-plan",
+		// Required for the defer advisor
+		"x-wg-defer-advisor",
+		"x-wg-defer-advisor-runs",
+		"x-wg-defer-advisor-skip-validation",
 		// Required for Trace Context propagation
 		"traceparent",
 		"tracestate",
