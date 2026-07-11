@@ -245,6 +245,7 @@
               "router/request-deduplication",
               "router/performance-debugging",
               "router/advanced-request-tracing-art",
+              "router/incremental-delivery",
               {
                 "group": "Query Plan",
                 "icon": "file-contract",
