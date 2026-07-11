@@ -28,7 +28,7 @@ require (
 	github.com/wundergraph/astjson v1.1.0
 	github.com/wundergraph/cosmo/demo v0.0.0-20260627132517-5752a9457cd3
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
-	github.com/wundergraph/cosmo/router v0.0.0-20260627132517-5752a9457cd3
+	github.com/wundergraph/cosmo/router v0.0.0-20260710155145-803a4bc06d92
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
 	github.com/wundergraph/cosmo/speedtrap v0.0.0-00010101000000-000000000000
 	github.com/wundergraph/graphql-go-tools/v2 v2.10.0
