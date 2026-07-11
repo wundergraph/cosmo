@@ -343,11 +343,16 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case *plan.DeferResponsePlan:
+		h.setDebugCacheHeaders(w, reqCtx.operation)
+		if resolveCtx.ExecutionOptions.SkipLoader {
+			h.resolveDeferPlanOnly(w, resolveCtx, reqCtx, p, graphqlExecutionSpan)
+			return
+		}
+
 		var (
 			writer resolve.DeferResponseWriter
 			ok     bool
 		)
-		h.setDebugCacheHeaders(w, reqCtx.operation)
 
 		defer propagateSubgraphErrors(resolveCtx)
 		resolveCtx, writer, ok = GetDeferResponseWriter(resolveCtx, r, w)
@@ -414,6 +419,60 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			logger:            reqCtx.logger,
 			headerPropagation: h.headerPropagation,
 		})
+	}
+}
+
+// resolveDeferPlanOnly renders a deferred operation through the ordinary JSON
+// response path. SkipLoader guarantees that no origin executes; replacing the
+// base fetch tree with the canonical composite exposes every primary/deferred
+// branch to query-plan and trace extensions without opening a multipart stream.
+func (h *GraphQLHandler) resolveDeferPlanOnly(
+	w http.ResponseWriter,
+	resolveCtx *resolve.Context,
+	reqCtx *requestContext,
+	p *plan.DeferResponsePlan,
+	graphqlExecutionSpan trace.Span,
+) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	response := *p.Response.Response
+	response.Fetches = p.Response.PlannedExecutionTree()
+	reqCtx.dataSourceNames = getSubgraphNames(response.DataSources)
+
+	if h.enableResponseHeaderPropagation {
+		resolveCtx = WithResponseHeaderPropagation(resolveCtx)
+	}
+	defer propagateSubgraphErrors(resolveCtx)
+	hpw := HeaderPropagationWriter(w, resolveCtx, true)
+	if pw, ok := hpw.(*headerPropagationWriter); ok {
+		if h.headerPropagation != nil {
+			pw.routerHeaderPropagation = h.headerPropagation
+			pw.reqCtx = reqCtx
+		}
+		if h.enableCostResponseHeaders && reqCtx.operation.costEstimatedSet {
+			pw.costHeaderSetter = func(typeStats map[string]resolve.TypeNameStats) {
+				pw.writer.Header().Set(CostEstimatedHeader, strconv.Itoa(reqCtx.operation.costEstimated))
+			}
+		}
+	}
+
+	info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, &response, hpw)
+	if err != nil {
+		trackFinalResponseError(resolveCtx.Context(), err)
+		h.WriteError(resolveCtx, err, &response, w)
+		return
+	}
+
+	graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
+	graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
+	reqCtx.expressionContext.Request.Operation.ResolverAcquireDuration = info.ResolveAcquireWaitTime
+	if h.metricStore != nil {
+		h.metricStore.MeasureResolverAcquireDuration(
+			resolveCtx.Context(),
+			info.ResolveAcquireWaitTime,
+			reqCtx.telemetry.metricSliceAttrs,
+			otelmetric.WithAttributes(reqCtx.telemetry.metricAttrs...),
+		)
 	}
 }
 

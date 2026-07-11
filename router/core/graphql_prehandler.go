@@ -1201,7 +1201,12 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		case *plan.SynchronousResponsePlan:
 			p.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
 		case *plan.DeferResponsePlan:
-			// TODO: handle ART
+			// PlannedExecutionTree copies the primary normalized query onto the
+			// composite root, so storing it on the primary tree keeps every later
+			// structured/text rendering complete without mutating cached wrappers.
+			if p.Response != nil && p.Response.Response != nil && p.Response.Response.Fetches != nil {
+				p.Response.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
+			}
 		}
 
 		if h.queryPlansLoggingEnabled {
@@ -1212,7 +1217,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 			case *plan.SubscriptionResponsePlan:
 				printedPlan = p.Response.Response.Fetches.QueryPlan().PrettyPrint()
 			case *plan.DeferResponsePlan:
-				// TODO: handle
+				printedPlan = p.Response.QueryPlanString()
 			}
 			if h.developmentMode {
 				h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
@@ -1226,7 +1231,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// (and @defer support is enabled). Such operations stream incremental
 	// payloads as multipart/mixed, so reject the request early if the client
 	// does not accept that content type
-	if _, ok := requestContext.operation.preparedPlan.preparedPlan.(*plan.DeferResponsePlan); ok {
+	if _, ok := requestContext.operation.preparedPlan.preparedPlan.(*plan.DeferResponsePlan); ok &&
+		!requestContext.operation.executionOptions.SkipLoader {
 		if !clientAcceptsMultipartMixed(req) {
 			return NewHttpGraphqlError(
 				"the router received a query with the @defer directive but the client does not accept "+
