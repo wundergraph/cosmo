@@ -393,8 +393,9 @@ func normalizeWithKeysSort(tb testing.TB, data []byte) []byte {
 }
 
 // reconstructDeferResponse parses a multipart/mixed defer body, merges all
-// incremental patches onto the initial data using astjson, and returns
-// the complete JSON response (without transport fields like hasNext/pending).
+// incremental patches onto the initial data using astjson, shallow-merges
+// top-level extension snapshots in wire order, and returns the complete JSON
+// response (without transport fields like hasNext/pending).
 //
 // Frame format (GraphQL incremental delivery):
 //
@@ -407,6 +408,32 @@ func reconstructDeferResponse(body []byte) ([]byte, error) {
 	parts := parseMultipartParts(body)
 	if len(parts) == 0 {
 		return nil, fmt.Errorf("no parts in multipart response")
+	}
+
+	// Top-level extensions are snapshots. Merge their root fields in wire order
+	// so a terminal authoritative trace/query plan replaces the initial value,
+	// while unrelated fields seen only in earlier frames remain available in the
+	// reconstructed response.
+	mergedExtensions := make(map[string]json.RawMessage)
+	extensionObjectSeen := false
+	for index, part := range parts {
+		var envelope struct {
+			Extensions json.RawMessage `json:"extensions"`
+		}
+		if err := json.Unmarshal(part, &envelope); err != nil {
+			return nil, fmt.Errorf("parse part %d extensions: %w", index, err)
+		}
+		if len(envelope.Extensions) == 0 || bytes.Equal(bytes.TrimSpace(envelope.Extensions), []byte("null")) {
+			continue
+		}
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(envelope.Extensions, &fields); err != nil {
+			return nil, fmt.Errorf("parse part %d extensions object: %w", index, err)
+		}
+		extensionObjectSeen = true
+		for key, value := range fields {
+			mergedExtensions[key] = value
+		}
 	}
 
 	var p astjson.Parser
@@ -489,6 +516,18 @@ func reconstructDeferResponse(body []byte) ([]byte, error) {
 		for _, item := range partVal.GetArray("completed") {
 			appendRootErrors(item.Get("errors"))
 		}
+	}
+
+	if extensionObjectSeen {
+		extensionsJSON, err := json.Marshal(mergedExtensions)
+		if err != nil {
+			return nil, fmt.Errorf("marshal merged extensions: %w", err)
+		}
+		extensions, err := astjson.ParseBytes(extensionsJSON)
+		if err != nil {
+			return nil, fmt.Errorf("parse merged extensions: %w", err)
+		}
+		result.Set(nil, "extensions", extensions)
 	}
 
 	// Remove transport-only fields.
