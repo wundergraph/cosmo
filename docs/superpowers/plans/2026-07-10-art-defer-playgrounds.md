@@ -32,7 +32,7 @@ The detailed checkbox lists below are retained as the original acceptance/design
 
 1. Push/open the upstream `graphql-go-tools` branch ending at `74918f8b8ad22ee2379cbb7a1439fab79feda38b`, or cut a release from it.
 2. Make `v2.10.1-0.20260711225056-74918f8b8ad2` resolvable, run `go mod tidy` in `router/` and `router-tests/`, and commit any resulting sums. The temporary local `replace` directives used for development have been removed from both modules.
-3. Re-run the full CI matrix in the publish environment. The current checkout's repository-wide shared/Studio lint and typecheck paths report the pre-existing generated `@bufbuild/protobuf`/Connect schema-export mismatch; the changed playground modules and their focused suites are green against that baseline.
+3. Re-run the full CI matrix in the publish environment. The current checkout's repository-wide shared/Studio lint and typecheck paths report the pre-existing generated `@bufbuild/protobuf`/Connect schema-export mismatch. Upstream's full resolve suite also has a pre-existing JSON object key-order assertion failure under local Go 1.25.3, reproduced on the untouched master clone. All changed-path, focused, race, and vet suites are green against those baselines.
 4. Verify the first multipart part through the production ingress/CDN. Local writer and real protocol tests prove router flushing, but only the deployed proxy path can rule out external buffering.
 
 ### Verification evidence
@@ -41,7 +41,7 @@ The latest scoped verification on the final sources produced:
 
 | Area | Result |
 | --- | --- |
-| `graphql-go-tools/v2` | `go test ./pkg/engine/resolve -count=1`, the same suite under `-race`, `go vet ./pkg/engine/resolve`, formatting, and repeated focused defer runs passed on the upstream branch. |
+| `graphql-go-tools/v2` | All defer/response-accumulator tests passed 20 times, the same focused suite passed under `-race`, and `go vet ./pkg/engine/resolve` passed. The full package run reaches the unrelated `TestInputTemplate_Render/...missing_value_for_context_variable` key-order assertion failure; the exact failure reproduces on the untouched master clone. |
 | Router core | Focused defer, advisor, plan-only, and multipart tests passed. |
 | Router protocol | Real-wire defer ART/reconstruction/fixture tests, race tests, and `go vet ./protocol` passed after the final engine fixes. They cover early flush, terminal ART, extensions, errors, pruning, and reconstruction. |
 | Shared adapter | 33 focused incremental-delivery/schema tests passed. The adapter had also passed its full 63-test suite earlier; the current all-package script stops in unrelated generated Connect-schema import lint before running tests. |
@@ -50,7 +50,7 @@ The latest scoped verification on the final sources produced:
 | Repository hygiene | `git diff --check` and `git diff --cached --check` passed; both local `go.mod` files are free of temporary `replace` directives. |
 | Independent review | Dedicated router, Studio, shared UI-contract, and upstream engine reviews found no remaining actionable correctness blocker. |
 
-The repository-wide generated Connect/protobuf mismatch and production-ingress buffering check are recorded as gates rather than silently classified as passing.
+The repository-wide generated Connect/protobuf mismatch, upstream master key-order assertion, and production-ingress buffering check are recorded as gates rather than silently classified as passing.
 
 ### Completed local commit split
 

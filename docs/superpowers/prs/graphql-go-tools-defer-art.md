@@ -41,15 +41,17 @@ No raw multipart response is buffered, and no metadata-only result is added.
 
 ## Verification
 
-Verified from `v2/` on the final branch:
+Verified from `v2/` on the final source tree:
 
 ```bash
-go test ./pkg/engine/resolve -count=1
-go test -race ./pkg/engine/resolve -count=1
+go test ./pkg/engine/resolve -run 'Test.*Defer|TestResponseExtensionAccumulator' -count=20
+go test -race ./pkg/engine/resolve -run 'Test.*Defer|TestResponseExtensionAccumulator' -count=1
 go vet ./pkg/engine/resolve
 ```
 
-Formatting and repeated focused defer runs also passed. Coverage includes composite/nested/parallel plans, request isolation, liveness pruning, live nested-root release, terminal success and error frames, deferred-only custom extensions, first/last-write conflicts, reserved keys, authorization/rate-limit/value-completion finalization, GC/arena behavior, stale trace suppression, and error-without-incremental-data.
+Coverage includes composite/nested/parallel plans, request isolation, liveness pruning, live nested-root release, terminal success and error frames, deferred-only custom extensions, first/last-write conflicts, reserved keys, authorization/rate-limit/value-completion finalization, GC/arena behavior, stale trace suppression, and error-without-incremental-data.
+
+Known upstream baseline: the unrestricted package run fails `TestInputTemplate_Render/JSONVariableRenderer/missing_value_for_context_variable_-_renders_segment_to_null` under local Go 1.25.3 because two semantically equivalent JSON objects have different key order. The same failure reproduces in the untouched master clone, so it is not introduced by this branch. CI should still run the unrestricted suite and use its supported toolchain before merge.
 
 ## Release/integration
 
