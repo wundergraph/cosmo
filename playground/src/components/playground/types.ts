@@ -16,13 +16,59 @@ export type TabsState = {
   activeTabIndex: number;
 };
 
-export type PlaygroundView = 'response' | 'request-trace' | 'query-plan';
+export type PlaygroundView = 'response' | 'request-trace' | 'query-plan' | 'defer-advisor';
+
+export type DeferAdvisorStat = {
+  avgMs: number;
+  minMs: number;
+  maxMs: number;
+};
+
+export type DeferAdvisorResult = {
+  outcome: 'recommended' | 'no_candidates' | 'no_gain' | 'regression' | 'inconclusive' | 'unvalidated';
+  reason?: string;
+  runs: number;
+  totalDurationMs: DeferAdvisorStat;
+  fetches: {
+    fetchId: number;
+    subgraph: string;
+    path?: string;
+    dependsOn?: number[];
+    durationMs: DeferAdvisorStat;
+    fields: string[];
+  }[];
+  fields: {
+    path: string;
+    subgraph: string;
+    latencyMs: DeferAdvisorStat;
+  }[];
+  suggestions: {
+    label: string;
+    path?: string;
+    subgraph: string;
+    fields: string[];
+  }[];
+  optimizedQuery?: string;
+  validation?: {
+    runs: number;
+    initialResponseMs: DeferAdvisorStat;
+    totalResponseMs: DeferAdvisorStat;
+    initialResponseSavingMs: DeferAdvisorStat;
+    deferredParts: {
+      label: string;
+      arrivedAtMs: DeferAdvisorStat;
+    }[];
+  };
+};
 
 type PlaygroundContextType = {
   graphId: string;
   tabsState: TabsState;
   status?: number;
   statusText?: string;
+  requestTiming?: import('./use-playground-execution').RequestTiming;
+  inlineAdvisorEnabled?: boolean;
+  setInlineAdvisorEnabled?: (enabled: boolean) => void;
   view: PlaygroundView;
   setView: (val: PlaygroundView) => void;
 };
@@ -50,6 +96,15 @@ export type LoadStatsEntry = {
 };
 
 export type LoadStats = LoadStatsEntry[];
+
+export type DeferExecutionStatus = 'planned' | 'running' | 'completed' | 'error' | 'skipped';
+
+export type DeferDescriptor = {
+  id: number;
+  label: string;
+  path: string[];
+  status?: DeferExecutionStatus;
+};
 
 export type ARTFetchNode = {
   id: string;
@@ -80,6 +135,9 @@ export type ARTFetchNode = {
   singleFlightSharedResponse: boolean;
   loadSkipped: boolean;
   loadStats?: LoadStats;
+  defer?: DeferDescriptor;
+  plannedOnly?: boolean;
+  executionTracePresent?: boolean;
 };
 
 export type Representation = {
@@ -102,6 +160,7 @@ export type QueryPlanFetchTypeNode = {
   kind: string;
   fetch?: QueryPlanFetchNode;
   children?: QueryPlanFetchTypeNode[];
+  defer?: Omit<DeferDescriptor, 'status'>;
 };
 
 export type QueryPlan = QueryPlanFetchTypeNode & {
