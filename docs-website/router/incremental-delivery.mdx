@@ -66,4 +66,3 @@ The GraphQL `extensions` name is used in three independent places:
 Every intermediary between the router and client must pass response chunks through without buffering. The router sends `X-Accel-Buffering: no`, but ingress, CDN, reverse-proxy, and compression settings can still delay delivery.
 
 Measure time to first result when the first complete MIME part can be decoded, not when the first TCP byte arrives. Test the production path as well as localhost when validating incremental latency.
-
