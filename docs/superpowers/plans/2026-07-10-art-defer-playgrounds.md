@@ -91,12 +91,11 @@ This gives ART complete information without sacrificing time to first result, ad
 
 ## Evaluation baseline
 
-- The worktree was synchronized before evaluation, as requested.
-- `origin/main` was fetched at `935b7925b88a2d8a76970b0989a5e2a0a111d2a1`.
-- The current branch now contains merge commit `ebd3f8315dbc5caf6f6e1931c56ae0922d0fb37d`, whose parents are the previous branch head and that `origin/main` commit.
-- All pre-existing staged, unstaged, and untracked ART/defer work was preserved across the merge.
+- The worktree was synchronized before evaluation and refreshed again after implementation, as requested.
+- The initial sync merged `origin/main` at `935b7925b88a2d8a76970b0989a5e2a0a111d2a1` in `ebd3f8315`. The final publish-readiness sync fetched `origin/main` at `803a4bc06d92757144eaa248591a57ac301c779f` and merged it without conflicts in `450ba6b3b`.
+- All pre-existing and newly implemented ART/defer work was preserved across both merges.
 - Router and router-tests now target `github.com/wundergraph/graphql-go-tools/v2 v2.10.1-0.20260711225056-74918f8b8ad2`; that pseudo-version deliberately remains unresolvable until the upstream branch is published.
-- Latest `graphql-go-tools` master was cloned to `/tmp` at `b0d54be40c3d6388503a395ead140ae46f0a4f58` (2026-07-09, release 2.10.0) before evaluation. The required engine fixes were absent, so they were implemented on the dedicated local branch `feat/defer-art-extensions` at `/Users/jens/.superset/worktrees/graphql-go-tools/defer-art-extensions` and mirrored in a writable temporary clone for validation. Both upstream working copies are clean; nothing was pushed.
+- `graphql-go-tools` was cloned to `/tmp` at the 2.10.0 release `b0d54be40c3d6388503a395ead140ae46f0a4f58`; the dedicated implementation branch also includes the latest master commit `c6e20f2742744887d0f95dd0665dbf1711827e7e`. A final fetch confirmed that master had not advanced. The required engine fixes were absent, so they were implemented on `feat/defer-art-extensions` at `/Users/jens/.superset/worktrees/graphql-go-tools/defer-art-extensions` and mirrored in the writable temporary clone for validation. Both upstream working copies are clean; nothing was pushed.
 - Latest GraphiQL was also inspected. GraphiQL 5.2.4 / `@graphiql/react` 0.37.7 understands the newer `pending`/`id`/`subPath` protocol, while Cosmo's installed GraphiQL 3.3.2 / React 0.22.4 only understands the older path-based form. A major GraphiQL upgrade would not by itself connect the merged response to ART, fix Studio's body consumption, fix scripts/analytics, or add the missing server trace.
 
 ## Pre-implementation gap analysis
