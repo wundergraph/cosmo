@@ -2,13 +2,10 @@ import { useApplyParams } from '@/components/analytics/use-apply-params';
 import { CodeViewer } from '@/components/code-viewer';
 import { getGraphLayout, GraphContext, GraphPageLayout } from '@/components/layout/graph-layout';
 import { PageHeader } from '@/components/layout/head';
-import {
-  attachPlaygroundAPI,
-  CustomScripts,
-  detachPlaygroundAPI,
-  PreFlightScript,
-} from '@/components/playground/custom-scripts';
+import { CustomScripts, PreFlightScript } from '@/components/playground/custom-scripts';
+import { createPlaygroundRequestKey } from '@/components/playground/playground-request-key';
 import { PlanView } from '@/components/playground/plan-view';
+import { buildQueryPlanBody, buildQueryPlanHeaders } from '@/components/playground/query-plan-request';
 import { SharePlaygroundModal } from '@/components/playground/share-playground-modal';
 import { TraceContext, TraceView } from '@/components/playground/trace-view';
 import { PlaygroundContext, PlaygroundView, QueryPlan, TabsState } from '@/components/playground/types';
@@ -40,17 +37,19 @@ import { useToast } from '@/components/ui/use-toast';
 import { SubmitHandler, useZodForm } from '@/hooks/use-form';
 import { useHydratePlaygroundStateFromUrl } from '@/hooks/use-hydrate-playground-state-from-url';
 import { useLocalStorage } from '@/hooks/use-local-storage';
+import { usePlaygroundExecution } from '@/components/playground/use-playground-execution';
 import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE, PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
 import { NextPageWithLayout } from '@/lib/page';
 import { parseSchema } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { explorerPlugin } from '@graphiql/plugin-explorer';
-import { createGraphiQLFetcher, createLocalStorage, type Storage as GraphiQLStorage } from '@graphiql/toolkit';
+import { createLocalStorage, type Storage as GraphiQLStorage } from '@graphiql/toolkit';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 import { Component2Icon, ExclamationTriangleIcon, MobileIcon } from '@radix-ui/react-icons';
 import { TooltipContent, TooltipTrigger } from '@radix-ui/react-tooltip';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { withDeferDirective } from '@wundergraph/cosmo-shared/playground/defer-schema';
 import {
   getClients,
   getFeatureFlagsInLatestCompositionByFederatedGraph,
@@ -67,15 +66,15 @@ import {
 import { sentenceCase } from 'change-case';
 import crypto from 'crypto';
 import { GraphiQL } from 'graphiql';
-import { GraphQLSchema, parse, validate } from 'graphql';
+import { getOperationAST, parse, validate } from 'graphql';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/router';
-import posthog from 'posthog-js';
-import { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { FiSave } from 'react-icons/fi';
-import { LuLayoutDashboard } from 'react-icons/lu';
+import { LuLayoutDashboard, LuTimer } from 'react-icons/lu';
+import { useInlineDeferAdvisor } from '@/components/playground/use-inline-defer-advisor';
 import { MdOutlineFeaturedPlayList } from 'react-icons/md';
 import { PiBracketsCurly, PiDevices, PiGraphLight } from 'react-icons/pi';
 import { TbDevicesCheck } from 'react-icons/tb';
@@ -118,212 +117,6 @@ class CosmoGraphiqlStorage implements GraphiQLStorage {
     return this.storage.length;
   }
 }
-
-const validateHeaders = (headers: Record<string, string>) => {
-  for (const headersKey in headers) {
-    if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
-      throw new TypeError(`Header name must be a valid HTTP token [${headersKey}]`);
-    }
-  }
-};
-
-const substituteHeadersFromEnv = (headers: Record<string, string>, graphId: string) => {
-  const env = JSON.parse(localStorage.getItem('playground:env') || '{}');
-  const graphEnv: Record<string, any> | undefined = env[graphId];
-
-  if (!graphEnv) {
-    return headers;
-  }
-
-  const storedHeaders: Record<string, any> = {};
-
-  Object.entries(graphEnv).forEach(([key, value]) => {
-    if (value === 'true' || value === 'false') {
-      storedHeaders[key] = value === 'true';
-    } else if (!isNaN(value as any) && value !== '') {
-      storedHeaders[key] = Number(value);
-    } else {
-      storedHeaders[key] = value;
-    }
-  });
-
-  for (const key in headers) {
-    let value = headers[key];
-    const placeholderRegex = /{\s*{\s*(\w+)\s*}\s*}/g;
-
-    if (typeof value !== 'string') {
-      continue;
-    }
-
-    value = value.replace(placeholderRegex, (match, p1) => {
-      if (storedHeaders[p1] !== undefined) {
-        return storedHeaders[p1];
-      } else {
-        console.warn(`No value found for placeholder: ${p1}`);
-        return match;
-      }
-    });
-
-    headers[key] = value;
-  }
-
-  return headers;
-};
-
-const executeScript = async (code: string | undefined, graphId: string) => {
-  if (!code) {
-    return;
-  }
-
-  try {
-    const asyncEval = new Function(`
-        return (async () => {
-          ${code}
-        })();
-      `);
-
-    await asyncEval();
-  } catch (error: any) {
-    console.error(error);
-  }
-};
-
-const retrieveScriptFromLocalStorage = (key: string) => {
-  const selectedScript = localStorage.getItem(key);
-  return JSON.parse(!selectedScript || selectedScript === 'undefined' ? '{}' : selectedScript);
-};
-
-const executePreScripts = async (graphId: string, requestBody: any) => {
-  attachPlaygroundAPI(graphId, requestBody);
-
-  const preflightScript = retrieveScriptFromLocalStorage('playground:pre-flight:selected');
-
-  const preFlightScriptEnabled = localStorage.getItem('playground:pre-flight:enabled');
-
-  const preOpScript = retrieveScriptFromLocalStorage('playground:pre-operation:selected');
-
-  if (!preFlightScriptEnabled || preFlightScriptEnabled === 'true') {
-    await executeScript(preflightScript.content, graphId);
-  }
-
-  if (preOpScript.enabled) {
-    await executeScript(preOpScript.content, graphId);
-  }
-
-  detachPlaygroundAPI();
-};
-
-const executePostScripts = async (graphId: string, requestBody: any, responseBody: any) => {
-  const selectedScript = localStorage.getItem('playground:post-operation:selected');
-
-  const script = JSON.parse(!selectedScript || selectedScript === 'undefined' ? '{}' : selectedScript);
-
-  if (script.enabled) {
-    attachPlaygroundAPI(graphId, requestBody, responseBody);
-    await executeScript(script.content, graphId);
-    detachPlaygroundAPI();
-  }
-};
-
-const graphiQLFetch = async (
-  onFetch: any,
-  graphRequestToken: string,
-  schema: GraphQLSchema | null,
-  clientValidationEnabled: boolean,
-  url: URL,
-  init: RequestInit,
-  graphId: string,
-  featureFlagName?: string,
-) => {
-  try {
-    let headers: Record<string, string> = {
-      ...(init.headers as Record<string, string>),
-    };
-
-    headers = substituteHeadersFromEnv(headers, graphId);
-
-    validateHeaders(headers);
-
-    let hasTraceHeader = false;
-
-    for (const headersKey in headers) {
-      if (headersKey.toLowerCase() === 'x-wg-trace') {
-        hasTraceHeader = headers[headersKey] === 'true';
-        break;
-      }
-    }
-
-    // add token if trace header is present
-    if (hasTraceHeader) {
-      headers['X-WG-Token'] = graphRequestToken;
-    }
-
-    if (featureFlagName) {
-      headers['X-Feature-Flag'] = featureFlagName;
-    }
-
-    if (schema && clientValidationEnabled) {
-      const query = JSON.parse(init.body as string)?.query;
-      const errors = validate(schema, parse(query));
-
-      if (errors.length > 0) {
-        const responseData = {
-          message: 'Client-side validation failed. The request was not sent to the Router.',
-          errors: errors.map((e) => ({
-            message: e.message,
-            path: e.path,
-            locations: e.locations,
-          })),
-        };
-
-        const response = new Response(JSON.stringify(responseData), {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        onFetch(await response.clone().json());
-        return response;
-      }
-    }
-
-    const requestBody = JSON.parse(init.body as string);
-
-    await executePreScripts(graphId, requestBody);
-
-    const response = await fetch(url, {
-      ...init,
-      headers,
-    });
-
-    const responseData = await response.clone().json();
-
-    await executePostScripts(graphId, requestBody, responseData);
-
-    posthog.capture('cosmo_studio_query_executed', {
-      query_success: response.ok && !responseData.errors,
-    });
-
-    onFetch(await response.clone().json(), response.status, response.statusText);
-    return response;
-  } catch (e: any) {
-    const customMessage =
-      'Failed to fetch from router due to network errors. Please check network activity in browser dev tools for more details.';
-
-    const resp = new Response(
-      JSON.stringify(e.message ? (e.message == 'Failed to fetch' ? customMessage : e.message) : customMessage),
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      },
-    );
-
-    onFetch(await resp.clone().json(), undefined, 'Network Error');
-
-    return resp;
-  }
-};
 
 const FormSchema = z.object({
   clientId: z.string().optional(),
@@ -653,6 +446,30 @@ const ToggleClientValidation = () => {
   );
 };
 
+const ToggleInlineAdvisor = () => {
+  const { inlineAdvisorEnabled, setInlineAdvisorEnabled } = useContext(TraceContext);
+
+  return (
+    <Tooltip delayDuration={100}>
+      <TooltipTrigger asChild>
+        <Button
+          onClick={() => setInlineAdvisorEnabled(!inlineAdvisorEnabled)}
+          variant="ghost"
+          size="icon"
+          className="graphiql-toolbar-button"
+        >
+          <LuTimer className={cn('graphiql-toolbar-icon', inlineAdvisorEnabled ? 'text-success' : 'opacity-40')} />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent className="rounded-md border bg-background px-2 py-1">
+        {inlineAdvisorEnabled
+          ? 'Inline defer advisor enabled: valid queries are measured and annotated with per-field latency and defer actions'
+          : 'Inline defer advisor disabled'}
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
 const ConfigSelect = () => {
   const router = useRouter();
 
@@ -732,6 +549,7 @@ const PlaygroundPortal = () => {
   const plannerDiv = document.getElementById('planner-visualization');
   const saveDiv = document.getElementById('save-button');
   const toggleClientValidation = document.getElementById('toggle-client-validation');
+  const toggleInlineAdvisor = document.getElementById('toggle-inline-advisor');
   const scriptsSection = document.getElementById('scripts-section');
   const preFlightScriptSection = document.getElementById('pre-flight-script-section');
   const shareButton = document.getElementById('share-button');
@@ -742,6 +560,7 @@ const PlaygroundPortal = () => {
     !plannerDiv ||
     !saveDiv ||
     !toggleClientValidation ||
+    !toggleInlineAdvisor ||
     !scriptsSection ||
     !shareButton ||
     !preFlightScriptSection
@@ -756,6 +575,7 @@ const PlaygroundPortal = () => {
       {createPortal(<TraceView />, artDiv)}
       {createPortal(<PersistOperation />, saveDiv)}
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
+      {createPortal(<ToggleInlineAdvisor />, toggleInlineAdvisor)}
       {createPortal(<CustomScripts />, scriptsSection)}
       {createPortal(<PreFlightScript />, preFlightScriptSection)}
       {createPortal(<SharePlaygroundModal />, shareButton)}
@@ -799,8 +619,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const isLoading = isLoadingGraphSchema || isLoadingSubgraphSchema;
 
   const schema = useMemo(() => {
-    return parseSchema(subgraphData?.sdl || data?.clientSchema)?.ast ?? null;
-  }, [data?.clientSchema, subgraphData?.sdl]);
+    const schemaSDL = type === 'subgraph' ? subgraphData?.sdl : data?.clientSchema;
+    const parsed = parseSchema(schemaSDL)?.ast ?? null;
+    return parsed && type !== 'subgraph' ? withDeferDirective(parsed) : parsed;
+  }, [data?.clientSchema, subgraphData?.sdl, type]);
 
   const [query, setQuery] = useState<string | undefined>(operation ? decodeURIComponent(operation) : undefined);
 
@@ -819,6 +641,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const [tempHeaders, setTempHeaders] = useState<any>();
 
   const graphId = graphContext?.graph?.id ?? 'unknown';
+  const graphRequestToken = graphContext?.graphRequestToken ?? '';
 
   const graphiqlStorage = useMemo(() => new CosmoGraphiqlStorage(graphId), [graphId]);
 
@@ -837,12 +660,14 @@ const PlaygroundPage: NextPageWithLayout = () => {
   }, [setStoredHeaders, tempHeaders]);
 
   const [headers, setHeaders] = useState(PLAYGROUND_DEFAULT_HEADERS_TEMPLATE);
-  const [response, setResponse] = useState<string>('');
 
   const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
   const [planError, setPlanError] = useState<string>('');
 
   const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
+  const [inlineAdvisorEnabled, setInlineAdvisorEnabled] = useLocalStorage('playground:inline-advisor:enabled', true);
+  const [playgroundEnvironment] = useLocalStorage<Record<string, Record<string, unknown>>>('playground:env', {});
+  const environmentRevision = JSON.stringify(playgroundEnvironment);
 
   const [isGraphiqlRendered, setIsGraphiqlRendered] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -970,6 +795,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
       toggleClientValidation.id = 'toggle-client-validation';
       toolbar.append(toggleClientValidation);
 
+      const toggleInlineAdvisor = document.createElement('div');
+      toggleInlineAdvisor.id = 'toggle-inline-advisor';
+      toolbar.append(toggleInlineAdvisor);
+
       const shareButton = document.createElement('div');
       shareButton.id = 'share-button';
       toolbar.append(shareButton);
@@ -1013,123 +842,158 @@ const PlaygroundPage: NextPageWithLayout = () => {
     };
   }, [graphContext?.graph?.routingURL, graphContext?.subgraphs, loadSchemaGraphId, type]);
 
-  const [status, setStatus] = useState<number>();
-  const [statusText, setStatusText] = useState<string>();
-
-  const fetcher = useMemo(() => {
-    const onFetch = (response: any, status?: number, statusText?: string) => {
-      setResponse(JSON.stringify(response));
-      setStatus(status);
-      setStatusText(statusText);
-    };
-
-    return createGraphiQLFetcher({
-      url: routingUrl,
-      subscriptionUrl: subscriptionUrl,
-      fetch: (...args) =>
-        graphiQLFetch(
-          onFetch,
-          graphContext?.graphRequestToken!,
-          schema,
-          clientValidationEnabled,
-          args[0] as URL,
-          args[1] as RequestInit,
-          graphContext?.graph?.id || '',
-          type === 'featureFlag'
-            ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
-            : undefined,
-        ),
-    });
-  }, [
-    routingUrl,
-    subscriptionUrl,
-    graphContext?.graphRequestToken,
-    graphContext?.graph?.id,
-    compositionFlagsData?.featureFlags,
-    schema,
+  const target = type === 'subgraph' ? 'subgraph' : type === 'featureFlag' ? 'featureFlag' : 'graph';
+  const featureFlagName =
+    target === 'featureFlag'
+      ? (compositionFlagsData?.featureFlags ?? []).find((flag) => flag.id === loadSchemaGraphId)?.name
+      : undefined;
+  const activeTab = tabsState.tabs[tabsState.activeTabIndex];
+  const activeQuery = activeTab?.query ?? query;
+  const activeHeaders = activeTab?.headers ?? headers;
+  const activeVariables = activeTab?.variables ?? updatedVariables;
+  const activeOperationName = activeTab?.operationName;
+  const activeResponse = activeTab?.response ?? '';
+  const activeRequestKey = createPlaygroundRequestKey(
+    activeTab,
+    {
+      headers,
+      query,
+      variables: updatedVariables,
+    },
+    {
+      featureFlagName,
+      loadSchemaGraphId,
+      routingUrl,
+      target,
+    },
+  );
+  const { execution, fetcher, status, statusText } = usePlaygroundExecution({
+    activeRequestKey,
     clientValidationEnabled,
-    type,
-    loadSchemaGraphId,
-  ]);
+    featureFlagName,
+    graphId,
+    graphRequestToken,
+    routingUrl,
+    schema,
+    subscriptionUrl,
+    target,
+  });
 
-  const [debouncedQuery] = useDebounce(query, 300);
-  const [debouncedHeaders] = useDebounce(headers, 300);
+  const [debouncedPlanQuery] = useDebounce(activeQuery, 300);
+  const [debouncedPlanHeaders] = useDebounce(activeHeaders, 300);
+  const [debouncedPlanVariables] = useDebounce(activeVariables, 300);
+  const planRequestGeneration = useRef(0);
+
+  // Inline defer advisor: the same annotator as the router-direct playground,
+  // measuring the query in the background and annotating fields with per-field
+  // latency and defer actions. No-op unless the router supports the advisor.
+  useInlineDeferAdvisor({
+    enabled: inlineAdvisorEnabled,
+    environmentRevision,
+    featureFlagName,
+    graphId,
+    graphRequestToken,
+    headers: activeHeaders,
+    operationName: activeOperationName,
+    query: activeQuery,
+    ready: isMounted,
+    schema,
+    target,
+    url: routingUrl,
+    variables: activeVariables,
+  });
 
   useEffect(() => {
-    const getPlan = async () => {
-      if (
-        !schema ||
-        !debouncedQuery ||
-        !routingUrl ||
-        !graphContext?.graphRequestToken ||
-        !graphContext?.graph?.id ||
-        view !== 'query-plan'
-      ) {
+    const generation = ++planRequestGeneration.current;
+    const abortController = new AbortController();
+    const isCurrent = () => generation === planRequestGeneration.current && !abortController.signal.aborted;
+    const clearPlan = (error = '') => {
+      if (!isCurrent()) {
         return;
       }
+      setPlan(undefined);
+      setPlanError(error);
+    };
 
+    if (
+      !schema ||
+      !debouncedPlanQuery ||
+      !routingUrl ||
+      !graphRequestToken ||
+      graphId === 'unknown' ||
+      target === 'subgraph' ||
+      view !== 'query-plan'
+    ) {
+      clearPlan();
+      return () => abortController.abort();
+    }
+
+    const getPlan = async () => {
       try {
-        const parsed = parse(debouncedQuery);
-
-        const errors = validate(schema, parsed);
-        if (errors.length > 0) {
-          setPlanError('Invalid query');
+        clearPlan();
+        const parsed = parse(debouncedPlanQuery);
+        if (!getOperationAST(parsed, activeOperationName ?? undefined)) {
+          clearPlan(activeOperationName ? `Unknown operation "${activeOperationName}"` : 'Select an operation');
           return;
         }
 
-        const existingHeaders = JSON.parse(debouncedHeaders || '{}');
-        delete existingHeaders['X-WG-TRACE'];
-        let requestHeaders: Record<string, string> = {
-          ...existingHeaders,
-          'X-WG-Token': graphContext.graphRequestToken,
-          'X-WG-Include-Query-Plan': 'true',
-          'X-WG-Skip-Loader': 'true',
-          'X-WG-DISABLE-TRACING': 'true',
-        };
-
-        requestHeaders = substituteHeadersFromEnv(requestHeaders, graphContext?.graph?.id);
-        validateHeaders(requestHeaders);
-
-        if (type === 'featureFlag') {
-          const featureFlag = (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId);
-          if (featureFlag) {
-            requestHeaders['X-Feature-Flag'] = featureFlag.name;
-          }
+        const errors = validate(schema, parsed);
+        if (errors.length > 0) {
+          clearPlan('Invalid query');
+          return;
         }
+
+        const requestHeaders = buildQueryPlanHeaders({
+          serializedHeaders: debouncedPlanHeaders,
+          graphId,
+          graphRequestToken,
+          featureFlagName,
+        });
+        const requestBody = buildQueryPlanBody({
+          query: debouncedPlanQuery,
+          operationName: activeOperationName,
+          serializedVariables: debouncedPlanVariables,
+        });
 
         const response = await fetch(routingUrl, {
           method: 'POST',
           headers: requestHeaders,
-          body: JSON.stringify({
-            query: debouncedQuery,
-          }),
+          body: JSON.stringify(requestBody),
+          signal: abortController.signal,
         });
 
         const data = await response.json();
+        if (!isCurrent()) {
+          return;
+        }
 
         if (!data?.extensions?.queryPlan) {
-          throw new Error('No query plan found');
+          throw new Error(data?.errors?.[0]?.message || 'No query plan found');
         }
 
         setPlanError('');
         setPlan(data.extensions.queryPlan);
       } catch (error: any) {
-        setPlan(undefined);
-        setPlanError(error.message || 'Network error');
+        if (error?.name !== 'AbortError' && isCurrent()) {
+          clearPlan(error.message || 'Network error');
+        }
       }
     };
 
-    getPlan();
+    void getPlan();
+    return () => abortController.abort();
   }, [
-    debouncedQuery,
-    debouncedHeaders,
-    compositionFlagsData?.featureFlags,
-    graphContext?.graphRequestToken,
-    graphContext?.graph?.id,
-    loadSchemaGraphId,
+    activeOperationName,
+    debouncedPlanHeaders,
+    debouncedPlanQuery,
+    debouncedPlanVariables,
+    environmentRevision,
+    featureFlagName,
+    graphId,
+    graphRequestToken,
     routingUrl,
     schema,
-    type,
+    target,
     view,
   ]);
 
@@ -1167,14 +1031,18 @@ const PlaygroundPage: NextPageWithLayout = () => {
     >
       <TraceContext.Provider
         value={{
-          query,
-          headers,
-          response,
+          query: activeQuery ?? undefined,
+          operationName: activeTab?.operationName,
+          headers: activeHeaders,
+          response: activeResponse,
           plan,
           planError,
           subgraphs: graphContext.subgraphs,
           clientValidationEnabled,
           setClientValidationEnabled,
+          inlineAdvisorEnabled,
+          setInlineAdvisorEnabled,
+          execution,
         }}
       >
         <div className="hidden h-full flex-1 pl-2.5 md:flex">
