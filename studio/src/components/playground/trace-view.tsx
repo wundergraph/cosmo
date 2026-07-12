@@ -246,6 +246,19 @@ const Trace = ({
       return fetchNode;
     };
 
+    // Grouping nodes (Sequence/Parallel/ParallelList) with a single child and no defer metadata
+    // add a level of nesting without conveying anything, so collapse them into their child.
+    const collapseTrivialGroup = (node: ARTFetchNode): ARTFetchNode => {
+      while (
+        ['Parallel', 'Sequence', 'ParallelList'].includes(node.type) &&
+        !node.defer &&
+        node.children.length === 1
+      ) {
+        node = node.children[0];
+      }
+      return node;
+    };
+
     const parseFetchNew = (fetch: any, parentId?: string, inheritedPlannedOnly = false): ARTFetchNode | undefined => {
       if (!fetch) return;
 
@@ -326,19 +339,29 @@ const Trace = ({
       traceNodeChildren(fetch).forEach((f: any) => {
         const node = parseFetchNew(f.fetch || f, fetchNode.id, plannedOnly);
         if (node) {
+          const collapsed = collapseTrivialGroup(node);
           if (fetchNode.type === 'ParallelList') {
-            node.dataSourceId = fetchNode.dataSourceId;
-            node.dataSourceName = fetchNode.dataSourceName;
+            collapsed.dataSourceId = fetchNode.dataSourceId;
+            collapsed.dataSourceName = fetchNode.dataSourceName;
           }
-          fetchNode.children.push(node);
+          fetchNode.children.push(collapsed);
         }
       });
 
+      return fetchNode;
+    };
+    const parseJsonNew = (json: any, parentId?: string) => {
+      return parseFetchNew(json.fetches?.fetch || json.fetches, parentId);
+    };
+
+    // Emit react-flow nodes/edges from the (already flattened) fetch tree, so the Tree view
+    // renders the same structure as the Waterfall view.
+    const emitFlowGraph = (node: ARTFetchNode) => {
       tempNodes.push({
-        id: fetchNode.id,
-        type: ['Parallel', 'Sequence', 'ParallelList'].includes(fetchNode.type) ? 'multi' : 'fetch',
+        id: node.id,
+        type: ['Parallel', 'Sequence', 'ParallelList'].includes(node.type) ? 'multi' : 'fetch',
         data: {
-          ...fetchNode,
+          ...node,
         },
         connectable: false,
         deletable: false,
@@ -348,11 +371,11 @@ const Trace = ({
         },
       });
 
-      fetchNode.children.forEach((childNode, index, children) => {
-        let parent = fetchNode;
-        if (fetchNode.type === 'Sequence') {
+      node.children.forEach((childNode, index, children) => {
+        let parent = node;
+        if (node.type === 'Sequence') {
           const prevChild = children[index - 1];
-          parent = prevChild || fetchNode;
+          parent = prevChild || node;
         }
 
         tempEdges.push({
@@ -365,12 +388,9 @@ const Trace = ({
             ...childNode,
           },
         });
-      });
 
-      return fetchNode;
-    };
-    const parseJsonNew = (json: any, parentId?: string) => {
-      return parseFetchNew(json.fetches?.fetch || json.fetches, parentId);
+        emitFlowGraph(childNode);
+      });
     };
 
     try {
@@ -421,6 +441,8 @@ const Trace = ({
       if (parsedResponse.extensions.trace.version) {
         traceTree = parseJsonNew(parsedResponse.extensions.trace, plan.id);
         if (traceTree) {
+          traceTree = collapseTrivialGroup(traceTree);
+          emitFlowGraph(traceTree);
           tempEdges.push({
             id: `edge-${traceTree.id}-${plan.id}`,
             source: plan.id,
