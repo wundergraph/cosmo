@@ -1,21 +1,13 @@
 import { TraceContext, TraceView } from '@/components/playground/trace-view';
 import { explorerPlugin } from '@graphiql/plugin-explorer';
-import { createGraphiQLFetcher } from '@graphiql/toolkit';
 import { GraphiQL } from 'graphiql';
-import {
-  GraphQLSchema,
-  Kind,
-  OperationTypeNode,
-  buildClientSchema,
-  getIntrospectionQuery,
-  parse,
-  validate,
-} from 'graphql';
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { GraphQLSchema, getIntrospectionQuery, getOperationAST, parse, validate } from 'graphql';
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
 import { TbDevicesCheck } from 'react-icons/tb';
+import { LuTimer, LuWand2 } from 'react-icons/lu';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -23,246 +15,126 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
+import { DeferAdvisorState, DeferAdvisorView } from './defer-advisor-view';
+import {
+  advanceInlineAdvisorGeneration,
+  clearInlineAnnotations,
+  inlineAdvisorIdentity,
+  isCurrentInlineAdvisorGeneration,
+  manualAdvisorContextIdentity,
+  renderInlineAnnotations,
+  showInlineNotice,
+  type InlineAdvisorGeneration,
+} from './defer-inline';
+import { applyDeferSuggestions, removeDeferredField } from './defer-advisor-rewrite';
+import { DeferAdvisorResult } from './types';
 import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView } from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
-import {
-  attachPlaygroundAPI,
-  CustomScripts,
-  detachPlaygroundAPI,
-  PreFlightScript,
-} from '@/components/playground/custom-scripts';
+import { CustomScripts, PreFlightScript } from '@/components/playground/custom-scripts';
 import { Badge } from '@/components/ui/badge';
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { getActiveTabExecution, usePlaygroundExecution } from './use-playground-execution';
+import {
+  type GraphiQLScripts,
+  buildDeferAdvisorHeaders,
+  buildPlaygroundSchema,
+  preparePlaygroundHeaders,
+  schemaForGraphiQLEditor,
+} from './playground-fetcher';
+import { buildQueryPlanBody, buildQueryPlanHeaders } from './query-plan-request';
+import {
+  classifyDeferAdvisorResponse,
+  DeferAdvisorRequestGuard,
+  prepareDeferAdvisorRequest,
+} from './defer-advisor-request';
 import 'graphiql/graphiql.css';
 import '@graphiql/plugin-explorer/dist/style.css';
 import '@/theme.css';
 
-const validateHeaders = (headers: Record<string, string>) => {
-  for (const headersKey in headers) {
-    if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
-      throw new TypeError(`Header name must be a valid HTTP token [${headersKey}]`);
-    }
+const formatTimingMs = (ms?: number) => {
+  if (ms === undefined) {
+    return '—';
   }
+  if (ms >= 1000) {
+    return `${(ms / 1000).toFixed(2)} s`;
+  }
+  return `${Math.round(ms)} ms`;
 };
 
-const substituteHeadersFromEnv = (headers: Record<string, string>, graphId: string) => {
-  const env = JSON.parse(localStorage.getItem('playground:env') || '{}');
-  const graphEnv: Record<string, any> | undefined = env[graphId];
+// RequestTimingStats shows TTFB next to the total duration of the last
+// request, with a micro-timeline of when the first byte landed within the
+// total. With @defer the green segment shrinks while the bar stays the same
+// length — TTFB improves, total latency doesn't.
+const RequestTimingStats = () => {
+  const { requestTiming: timing } = useContext(PlaygroundContext);
 
-  if (!graphEnv) {
-    return headers;
+  if (!timing || (timing.ttfbMs === undefined && !timing.inFlight)) {
+    return null;
   }
 
-  const storedHeaders: Record<string, any> = {};
+  const ratio = timing.ttfbMs !== undefined && timing.totalMs ? Math.min(1, timing.ttfbMs / timing.totalMs) : 1;
+  const fastFirst = timing.ttfbMs !== undefined && timing.totalMs !== undefined && timing.ttfbMs < timing.totalMs * 0.7;
+  const incomplete = timing.state === 'incomplete' || timing.state === 'cancelled' || timing.state === 'error';
 
-  Object.entries(graphEnv).forEach(([key, value]) => {
-    if (value === 'true' || value === 'false') {
-      storedHeaders[key] = value === 'true';
-    } else if (!isNaN(value as any) && value !== '') {
-      storedHeaders[key] = Number(value);
-    } else {
-      storedHeaders[key] = value;
-    }
-  });
-
-  for (const key in headers) {
-    let value = headers[key];
-    const placeholderRegex = /{\s*{\s*(\w+)\s*}\s*}/g;
-
-    if (typeof value !== 'string') {
-      continue;
-    }
-
-    value = value.replace(placeholderRegex, (match, p1) => {
-      if (storedHeaders[p1] !== undefined) {
-        return storedHeaders[p1];
-      } else {
-        console.warn(`No value found for placeholder: ${p1}`);
-        return match;
-      }
-    });
-
-    headers[key] = value;
-  }
-
-  return headers;
-};
-
-const executeScript = async (code: string | undefined, graphId: string) => {
-  if (!code) {
-    return;
-  }
-
-  try {
-    const asyncEval = new Function(`
-        return (async () => {
-          ${code}
-        })();
-      `);
-
-    await asyncEval();
-  } catch (error: any) {
-    console.error(error);
-  }
-};
-
-const retrieveScriptFromLocalStorage = (key: string) => {
-  const selectedScript = localStorage.getItem(key);
-  return JSON.parse(!selectedScript || selectedScript === 'undefined' ? '{}' : selectedScript);
-};
-
-const executePreScripts = async (graphId: string, requestBody: any) => {
-  attachPlaygroundAPI(graphId, requestBody);
-
-  const preflightScript = retrieveScriptFromLocalStorage('playground:pre-flight:selected');
-
-  const preFlightScriptEnabled = localStorage.getItem('playground:pre-flight:enabled');
-
-  const preOpScript = retrieveScriptFromLocalStorage('playground:pre-operation:selected');
-
-  if (!preFlightScriptEnabled || preFlightScriptEnabled === 'true') {
-    await executeScript(preflightScript.content, graphId);
-  }
-
-  if (preOpScript.enabled) {
-    await executeScript(preOpScript.content, graphId);
-  }
-
-  detachPlaygroundAPI();
-};
-
-const executePostScripts = async (graphId: string, requestBody: any, responseBody: any) => {
-  const selectedScript = localStorage.getItem('playground:post-operation:selected');
-  const script = JSON.parse(!selectedScript || selectedScript === 'undefined' ? '{}' : selectedScript);
-
-  if (script.enabled) {
-    attachPlaygroundAPI(graphId, requestBody, responseBody);
-    await executeScript(script.content, graphId);
-    detachPlaygroundAPI();
-  }
-};
-
-type GraphiQLScripts = {
-  transformHeaders?: (headers: Record<string, string>) => Record<string, string>;
-};
-
-const graphiQLFetch = async (
-  schema: GraphQLSchema | null,
-  clientValidationEnabled: boolean,
-  scripts: GraphiQLScripts | undefined,
-  onFetch: any,
-  url: URL,
-  init: RequestInit,
-) => {
-  try {
-    const initialHeaders = init.headers as Record<string, string>;
-    let headers: Record<string, string> = scripts?.transformHeaders
-      ? scripts.transformHeaders(initialHeaders)
-      : { ...initialHeaders };
-
-    headers = substituteHeadersFromEnv(headers, '0');
-
-    validateHeaders(headers);
-
-    if (schema && clientValidationEnabled) {
-      const query = JSON.parse(init.body as string)?.query as string;
-
-      const errors = validate(schema, parse(query));
-
-      if (errors.length > 0) {
-        const responseData = {
-          message: 'Client-side validation failed. The request was not sent to the Router.',
-          errors: errors.map((e) => ({
-            message: e.message,
-            path: e.path,
-            locations: e.locations,
-          })),
-        };
-
-        const response = new Response(JSON.stringify(responseData), {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        onFetch(await response.clone().json());
-        return response;
-      }
-    }
-
-    const requestBody = JSON.parse(init.body as string);
-
-    await executePreScripts('0', requestBody);
-
-    const response = await fetch(url, {
-      ...init,
-      headers,
-    });
-
-    const responseData = await response.clone().json();
-
-    await executePostScripts('0', requestBody, responseData);
-
-    onFetch(await response.clone().json(), response.status, response.statusText);
-    return response;
-  } catch (e: any) {
-    const customMessage =
-      'Failed to fetch from router due to network errors. Please check network activity in browser dev tools for more details.';
-
-    const resp = new Response(
-      JSON.stringify(e.message ? (e.message == 'Failed to fetch' ? customMessage : e.message) : customMessage),
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      },
-    );
-
-    onFetch(await resp.clone().json(), undefined, 'Network Error');
-
-    return resp;
-  }
+  return (
+    <Tooltip delayDuration={100}>
+      <TooltipTrigger asChild>
+        <div
+          className={cn('flex h-9 items-center gap-x-1.5 rounded-md border bg-background px-2.5 text-xs', {
+            'animate-pulse': timing.inFlight,
+            'border-destructive text-destructive': incomplete,
+          })}
+        >
+          <div className="flex h-1.5 w-14 overflow-hidden rounded-full bg-muted">
+            <div
+              className={cn('h-full rounded-full', fastFirst ? 'bg-success' : 'bg-muted-foreground/60')}
+              style={{ width: `${Math.max(6, ratio * 100)}%` }}
+            />
+            {/* deferred remainder, same color language as the advisor's delivery timeline */}
+            {fastFirst && !timing.inFlight && <div className="h-full flex-1 bg-sky-500/50" />}
+          </div>
+          <span className="text-muted-foreground">TTFB</span>
+          <span className={cn('font-medium tabular-nums', { 'text-success': fastFirst })}>
+            {formatTimingMs(timing.ttfbMs)}
+          </span>
+          <span className="text-muted-foreground/60">·</span>
+          <span className="text-muted-foreground">total</span>
+          <span className="font-medium tabular-nums">{timing.inFlight ? '…' : formatTimingMs(timing.totalMs)}</span>
+          {incomplete && <span className="font-medium">· {timing.state}</span>}
+        </div>
+      </TooltipTrigger>
+      <TooltipContent className="rounded-md border bg-background px-2 py-1 !text-foreground text-base">
+        {incomplete
+          ? timing.message ||
+            `The incremental response is ${timing.state}; the trace shown is the latest partial state.`
+          : 'TTFB (arrival of the initial response) vs. total duration of the last request. @defer cuts TTFB while the total stays the same — the Defer Advisor view suggests where to put it.'}
+      </TooltipContent>
+    </Tooltip>
+  );
 };
 
 const ResponseToolbar = () => {
   const { view, setView } = useContext(PlaygroundContext);
 
   const onValueChange = (val: PlaygroundView) => {
-    const response = document.getElementsByClassName('graphiql-response')[0] as HTMLDivElement;
+    const panels: Record<PlaygroundView, HTMLElement | null> = {
+      response: document.getElementsByClassName('graphiql-response')[0] as HTMLDivElement,
+      'request-trace': document.getElementById('art-visualization'),
+      'query-plan': document.getElementById('planner-visualization'),
+      'defer-advisor': document.getElementById('advisor-visualization'),
+    };
 
-    const art = document.getElementById('art-visualization') as HTMLDivElement;
-
-    const plan = document.getElementById('planner-visualization') as HTMLDivElement;
-
-    if (!response || !art || !plan) {
+    if (Object.values(panels).some((el) => !el)) {
       return;
     }
 
-    if (val === 'request-trace') {
-      response.classList.add('invisible');
-      response.classList.add('-z-50');
-      plan.classList.add('invisible');
-      plan.classList.add('-z-50');
-
-      art.classList.remove('invisible');
-      art.classList.remove('-z-50');
-    } else if (val === 'query-plan') {
-      response.classList.add('invisible');
-      response.classList.add('-z-50');
-      art.classList.add('invisible');
-      art.classList.add('-z-50');
-
-      plan.classList.remove('invisible');
-      plan.classList.remove('-z-50');
-    } else {
-      response.classList.remove('invisible');
-      response.classList.remove('-z-50');
-
-      art.classList.add('invisible');
-      art.classList.add('-z-50');
-      plan.classList.add('invisible');
-      plan.classList.add('-z-50');
+    for (const [key, el] of Object.entries(panels)) {
+      if (key === val) {
+        el!.classList.remove('invisible', '-z-50');
+      } else {
+        el!.classList.add('invisible', '-z-50');
+      }
     }
 
     setView(val);
@@ -273,6 +145,8 @@ const ResponseToolbar = () => {
       return <PiBracketsCurly className="h-4 w-4 flex-shrink-0" />;
     } else if (val === 'request-trace') {
       return <FaNetworkWired className="h-4 w-4 flex-shrink-0" />;
+    } else if (val === 'defer-advisor') {
+      return <LuWand2 className="h-4 w-4 flex-shrink-0" />;
     } else {
       return <LuLayoutDashboard className="h-4 w-4 flex-shrink-0" />;
     }
@@ -284,8 +158,9 @@ const ResponseToolbar = () => {
 
   return (
     <div className="flex items-center gap-x-2">
+      <RequestTimingStats />
       {(status || statusText) && (
-        <Badge className="h-8" variant={isSuccess ? 'success' : 'destructive'}>
+        <Badge className="h-9" variant={isSuccess ? 'success' : 'destructive'}>
           {!isSuccess && <ExclamationTriangleIcon className="mr-1 h-4 w-4" />}
           {status || statusText}
         </Badge>
@@ -316,6 +191,12 @@ const ResponseToolbar = () => {
             <div className="flex items-center gap-x-2">
               {getIcon('query-plan')}
               Query Plan
+            </div>
+          </SelectItem>
+          <SelectItem value="defer-advisor">
+            <div className="flex items-center gap-x-2">
+              {getIcon('defer-advisor')}
+              Defer Advisor
             </div>
           </SelectItem>
         </SelectContent>
@@ -350,10 +231,41 @@ const ToggleClientValidation = () => {
   );
 };
 
-const PlaygroundPortal = () => {
+const ToggleInlineAdvisor = () => {
+  const { inlineAdvisorEnabled, setInlineAdvisorEnabled } = useContext(PlaygroundContext);
+
+  return (
+    <Tooltip delayDuration={100}>
+      <TooltipTrigger asChild>
+        <Button
+          onClick={() => setInlineAdvisorEnabled?.(!inlineAdvisorEnabled)}
+          variant="ghost"
+          size="icon"
+          className="graphiql-toolbar-button"
+        >
+          <LuTimer className={cn('graphiql-toolbar-icon', inlineAdvisorEnabled ? 'text-success' : 'opacity-40')} />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent className="rounded-md border bg-background px-2 py-1 !text-foreground text-base">
+        {inlineAdvisorEnabled
+          ? 'Inline defer advisor enabled: valid queries are measured in the background and annotated with fetch boundaries, latency, and defer actions'
+          : 'Inline defer advisor disabled'}
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
+const PlaygroundPortal = ({
+  advisorState,
+  onAnalyzeAdvisor,
+}: {
+  advisorState: DeferAdvisorState;
+  onAnalyzeAdvisor: (runs: number) => void;
+}) => {
   const responseToolbar = document.getElementById('response-toolbar');
   const artDiv = document.getElementById('art-visualization');
   const plannerDiv = document.getElementById('planner-visualization');
+  const advisorDiv = document.getElementById('advisor-visualization');
   const toggleClientValidation = document.getElementById('toggle-client-validation');
   const logo = document.getElementById('graphiql-wg-logo');
   const scriptsSection = document.getElementById('scripts-section');
@@ -363,6 +275,7 @@ const PlaygroundPortal = () => {
     !responseToolbar ||
     !artDiv ||
     !plannerDiv ||
+    !advisorDiv ||
     !toggleClientValidation ||
     !logo ||
     !scriptsSection ||
@@ -376,7 +289,14 @@ const PlaygroundPortal = () => {
       {createPortal(<ResponseToolbar />, responseToolbar)}
       {createPortal(<PlanView />, plannerDiv)}
       {createPortal(<TraceView />, artDiv)}
-      {createPortal(<ToggleClientValidation />, toggleClientValidation)}
+      {createPortal(<DeferAdvisorView state={advisorState} onAnalyze={onAnalyzeAdvisor} />, advisorDiv)}
+      {createPortal(
+        <>
+          <ToggleClientValidation />
+          <ToggleInlineAdvisor />
+        </>,
+        toggleClientValidation,
+      )}
       {createPortal(<CustomScripts />, scriptsSection)}
       {createPortal(<PreFlightScript />, preFlightScriptSection)}
       {createPortal(
@@ -421,6 +341,39 @@ function constructGraphQLURL(location: string, graphqlURL: string, playgroundPat
   return baseURL + graphqlURL;
 }
 
+// readActiveTabRequest pulls the active GraphiQL tab's serialized variables and
+// operationName from persisted state so advisor runs profile the SAME operation
+// the user would execute. Without them, a variable-dependent query errors and a
+// multi-operation document profiles the wrong (or no) operation. Keeping the
+// original variables text lets request preparation surface malformed JSON.
+const readActiveTabRequest = (): { serializedVariables?: string; operationName?: string } => {
+  try {
+    const state = JSON.parse(localStorage.getItem('graphiql:tabState') || '{}');
+    const tab = state?.tabs?.[state.activeTabIndex];
+    if (!tab) {
+      return {};
+    }
+    return {
+      serializedVariables: typeof tab.variables === 'string' ? tab.variables : undefined,
+      operationName: tab.operationName || undefined,
+    };
+  } catch {
+    return {};
+  }
+};
+
+const prepareAdvisorHeaderSnapshot = (serializedHeaders: string, scripts?: GraphiQLScripts) => {
+  const parsed = JSON.parse(serializedHeaders || '{}');
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new TypeError('Headers must be a JSON object.');
+  }
+  const effective = preparePlaygroundHeaders(parsed, scripts);
+  const snapshot = JSON.stringify(
+    Object.fromEntries(Object.entries(effective).sort(([left], [right]) => left.localeCompare(right))),
+  );
+  return { effective, snapshot };
+};
+
 export const Playground = (input: {
   routingUrl?: string;
   hideLogo?: boolean;
@@ -439,6 +392,10 @@ export const Playground = (input: {
   const [schema, setSchema] = useState<GraphQLSchema | null>(null);
 
   const [query, setQuery] = useState<string | undefined>(undefined);
+  const [tabsState, setTabsState] = useState<TabsState>({
+    activeTabIndex: 0,
+    tabs: [],
+  });
 
   const [storedHeaders, setStoredHeaders] = useLocalStorage('graphiql:headers', '', {
     deserializer(value) {
@@ -468,12 +425,26 @@ export const Playground = (input: {
   "X-WG-TRACE" : "true"
 }`);
 
-  const [response, setResponse] = useState<string>('');
-
   const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
   const [planError, setPlanError] = useState<string>('');
 
   const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
+  const activeTabExecution = getActiveTabExecution(tabsState, { query, headers });
+  const { activateTab, fetcher, requestTiming, status, statusText } = usePlaygroundExecution({
+    url,
+    schema,
+    clientValidationEnabled,
+    activeTabId: activeTabExecution.id,
+    scripts: input.scripts,
+    fetch: input.fetch,
+  });
+  const onTabChange = useCallback(
+    (nextTabsState: TabsState) => {
+      activateTab(nextTabsState.tabs[nextTabsState.activeTabIndex]?.id);
+      setTabsState(nextTabsState);
+    },
+    [activateTab],
+  );
 
   useEffect(() => {
     const responseToolbar = document.getElementById('response-toolbar');
@@ -569,8 +540,13 @@ export const Playground = (input: {
         plannerWrapper.id = 'planner-visualization';
         plannerWrapper.className = 'flex flex-1 h-full w-full absolute invisible -z-50';
 
+        const advisorWrapper = document.createElement('div');
+        advisorWrapper.id = 'advisor-visualization';
+        advisorWrapper.className = 'flex flex-1 h-full w-full absolute invisible -z-50';
+
         responseSectionParent.append(artWrapper);
         responseSectionParent.append(plannerWrapper);
+        responseSectionParent.append(advisorWrapper);
       }
     }
 
@@ -597,90 +573,472 @@ export const Playground = (input: {
       method: 'POST',
       headers: JSON.parse(headers),
     });
-    setSchema(buildClientSchema((await res.json()).data));
+    setSchema(buildPlaygroundSchema((await res.json()).data));
   };
 
   useEffect(() => {
     getSchema();
   }, [headers]);
 
-  const [status, setStatus] = useState<number>();
-  const [statusText, setStatusText] = useState<string>();
-
-  const fetcher = useMemo(() => {
-    const onFetch = (response: any, status?: number, statusText?: string) => {
-      setResponse(JSON.stringify(response));
-      setStatus(status);
-      setStatusText(statusText);
-    };
-
-    return createGraphiQLFetcher({
-      url: url,
-      subscriptionUrl: url.replace('http', 'ws'),
-      fetch: (...args) =>
-        graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, args[0] as URL, args[1] as RequestInit),
-    });
-  }, [schema, clientValidationEnabled]);
-
   const [debouncedQuery] = useDebounce(query, 300);
   const [debouncedHeaders] = useDebounce(headers, 300);
+  const [playgroundEnvironment] = useLocalStorage<Record<string, Record<string, unknown>>>('playground:env', {});
+  const environmentRevision = JSON.stringify(playgroundEnvironment);
+  const [debouncedPlanQuery] = useDebounce(activeTabExecution.query, 300);
+  const [debouncedPlanHeaders] = useDebounce(activeTabExecution.headers, 300);
+  const [debouncedPlanVariables] = useDebounce(activeTabExecution.variables, 300);
+  const planRequestGeneration = useRef(0);
 
   useEffect(() => {
-    const getPlan = async () => {
-      if (!schema || !debouncedQuery || !url || view !== 'query-plan') {
+    const generation = ++planRequestGeneration.current;
+    const abortController = new AbortController();
+    const isCurrent = () => generation === planRequestGeneration.current && !abortController.signal.aborted;
+    const clearPlan = (error = '') => {
+      if (!isCurrent()) {
         return;
       }
+      setPlan(undefined);
+      setPlanError(error);
+    };
 
+    if (!schema || !debouncedPlanQuery || !url || view !== 'query-plan') {
+      clearPlan();
+      return () => abortController.abort();
+    }
+
+    const getPlan = async () => {
       try {
-        const parsed = parse(debouncedQuery);
-
-        const errors = validate(schema, parsed);
-        if (errors.length > 0) {
-          setPlanError('Invalid query');
+        clearPlan();
+        const parsed = parse(debouncedPlanQuery);
+        if (!getOperationAST(parsed, activeTabExecution.operationName ?? undefined)) {
+          clearPlan(
+            activeTabExecution.operationName
+              ? `Unknown operation "${activeTabExecution.operationName}"`
+              : 'Select an operation',
+          );
           return;
         }
 
-        const existingHeaders = JSON.parse(debouncedHeaders || '{}');
-        delete existingHeaders['X-WG-TRACE'];
-        let requestHeaders: Record<string, string> = {
-          ...existingHeaders,
-          'X-WG-Include-Query-Plan': 'true',
-          'X-WG-Skip-Loader': 'true',
-          'X-WG-DISABLE-TRACING': 'true',
-        };
+        const errors = validate(schema, parsed);
+        if (errors.length > 0) {
+          clearPlan('Invalid query');
+          return;
+        }
 
-        requestHeaders = substituteHeadersFromEnv(requestHeaders, '0');
-        validateHeaders(requestHeaders);
+        const requestHeaders = buildQueryPlanHeaders(debouncedPlanHeaders, input.scripts);
+        const requestBody = buildQueryPlanBody({
+          query: debouncedPlanQuery,
+          operationName: activeTabExecution.operationName,
+          serializedVariables: debouncedPlanVariables,
+        });
 
-        const response = await fetch(url, {
+        const response = await (input.fetch ?? fetch)(url, {
           method: 'POST',
           headers: requestHeaders,
-          body: JSON.stringify({
-            query: debouncedQuery,
-          }),
+          body: JSON.stringify(requestBody),
+          signal: abortController.signal,
         });
 
         const data = await response.json();
+        if (!isCurrent()) {
+          return;
+        }
 
         if (!data?.extensions?.queryPlan) {
-          throw new Error('No query plan found');
+          throw new Error(data?.errors?.[0]?.message || 'No query plan found');
         }
 
         setPlanError('');
         setPlan(data.extensions.queryPlan);
       } catch (error: any) {
-        setPlan(undefined);
-        setPlanError(error.message || 'Network error');
+        if (error?.name !== 'AbortError' && isCurrent()) {
+          clearPlan(error.message || 'Network error');
+        }
       }
     };
 
-    getPlan();
-  }, [debouncedQuery, debouncedHeaders, url, schema, view]);
+    void getPlan();
+    return () => abortController.abort();
+  }, [
+    activeTabExecution.operationName,
+    debouncedPlanHeaders,
+    debouncedPlanQuery,
+    debouncedPlanVariables,
+    environmentRevision,
+    input.fetch,
+    input.scripts,
+    schema,
+    url,
+    view,
+  ]);
 
-  const [tabsState, setTabsState] = useState<TabsState>({
-    activeTabIndex: 0,
-    tabs: [],
+  const [advisorState, setAdvisorState] = useState<DeferAdvisorState>({
+    loading: false,
+    error: '',
+    analyzedQuery: '',
   });
+
+  const [inlineAdvisorEnabled, setInlineAdvisorEnabled] = useLocalStorage('playground:inline-advisor:enabled', true);
+  const persistedActiveRequest = readActiveTabRequest();
+  const activeOperationName = activeTabExecution.id
+    ? activeTabExecution.operationName
+    : persistedActiveRequest.operationName;
+  const activeSerializedVariables = activeTabExecution.id
+    ? (activeTabExecution.variables ?? '')
+    : (persistedActiveRequest.serializedVariables ?? '');
+  const activeAdvisorHeaders = activeTabExecution.headers;
+  const activeAdvisorHeaderPreparation = useMemo(() => {
+    try {
+      return prepareAdvisorHeaderSnapshot(activeAdvisorHeaders, input.scripts);
+    } catch {
+      return {
+        effective: undefined,
+        snapshot: `invalid:${JSON.stringify([activeAdvisorHeaders, environmentRevision])}`,
+      };
+    }
+  }, [activeAdvisorHeaders, environmentRevision, input.scripts]);
+  const activeAdvisorHeaderSnapshot = activeAdvisorHeaderPreparation.snapshot;
+  const activeInlineQuery = activeTabExecution.query ?? query ?? '';
+  const activeInlineIdentity = inlineAdvisorIdentity({
+    tabId: activeTabExecution.id,
+    query: activeInlineQuery,
+    operationName: activeOperationName,
+    variables: activeSerializedVariables,
+    headers: activeAdvisorHeaderSnapshot,
+  });
+  const activeManualAdvisorContextIdentity = manualAdvisorContextIdentity({
+    tabId: activeTabExecution.id,
+    operationName: activeOperationName,
+    variables: activeSerializedVariables,
+    headers: activeAdvisorHeaderSnapshot,
+  });
+  const inlineGeneration = useRef<InlineAdvisorGeneration>({ identity: '', generation: 0 });
+  const inlineRequestGuard = useRef<DeferAdvisorRequestGuard | null>(null);
+  const manualRequestGuard = useRef<DeferAdvisorRequestGuard | null>(null);
+  if (!inlineRequestGuard.current) {
+    inlineRequestGuard.current = new DeferAdvisorRequestGuard();
+  }
+  if (!manualRequestGuard.current) {
+    manualRequestGuard.current = new DeferAdvisorRequestGuard();
+  }
+  const nextInlineGeneration = advanceInlineAdvisorGeneration(inlineGeneration.current, activeInlineIdentity);
+  const inlineResult = useRef<{ generation: InlineAdvisorGeneration; result: DeferAdvisorResult } | null>(null);
+  if (nextInlineGeneration !== inlineGeneration.current) {
+    inlineGeneration.current = nextInlineGeneration;
+    inlineResult.current = null;
+  }
+  const [inlineQuery] = useDebounce(activeInlineQuery, 1200);
+  const [inlineVariables] = useDebounce(activeSerializedVariables, 300);
+  const [inlineHeaders] = useDebounce(activeAdvisorHeaderSnapshot, 300);
+
+  useLayoutEffect(() => {
+    inlineRequestGuard.current?.invalidate();
+    clearInlineAnnotations();
+  }, [activeInlineIdentity]);
+
+  useEffect(() => {
+    setAdvisorState({ loading: false, error: '', analyzedQuery: '' });
+  }, [activeManualAdvisorContextIdentity]);
+
+  useEffect(() => {
+    manualRequestGuard.current?.invalidate();
+    setAdvisorState((state) => (state.loading ? { ...state, loading: false } : state));
+  }, [activeInlineIdentity]);
+
+  useEffect(
+    () => () => {
+      manualRequestGuard.current?.invalidate();
+    },
+    [],
+  );
+
+  // Inline defer advisor: while the editor holds a valid operation, measure it
+  // in the background (a single advisor run, repeated every 3s) and annotate
+  // the query with fetch boundaries, per-field latency, and defer/un-defer
+  // actions. The router strips existing @defer directives before profiling, so
+  // deferred operations keep their live measurements.
+  useEffect(() => {
+    const cm = (document.querySelector('.graphiql-query-editor .CodeMirror') as any)?.CodeMirror;
+    if (!cm) {
+      return;
+    }
+    if (!inlineAdvisorEnabled || !schema) {
+      clearInlineAnnotations();
+      return;
+    }
+
+    let disposed = false;
+    let inFlight: InlineAdvisorGeneration | undefined;
+    let permanentFailure = false;
+    const requestGuard = inlineRequestGuard.current!;
+    const tabId = activeTabExecution.id;
+    const operationName = activeOperationName;
+
+    const identityForQuery = (queryText: string) =>
+      inlineAdvisorIdentity({
+        tabId,
+        query: queryText,
+        operationName,
+        variables: inlineVariables,
+        headers: inlineHeaders,
+      });
+    const isCurrent = (generation: InlineAdvisorGeneration, queryText = cm.getValue()) =>
+      isCurrentInlineAdvisorGeneration(generation, inlineGeneration.current) &&
+      generation.identity === identityForQuery(queryText);
+
+    // Rewrites replace the editor content, which drops all editor marks; the
+    // last measurement is re-projected immediately so the pills never blink
+    // out, then the refresh loop replaces the numbers.
+    const rerender = () => {
+      const cached = inlineResult.current;
+      if (cached && isCurrent(cached.generation)) {
+        renderInlineAnnotations(cm, cm.getValue(), cached.result, callbacks, operationName);
+      }
+    };
+    const callbacks = {
+      onDefer: (parentPath: string, field: string, label: string) => {
+        try {
+          cm.setValue(
+            applyDeferSuggestions(cm.getValue(), [{ path: parentPath, fields: [field], label }], operationName),
+          );
+          rerender();
+        } catch {
+          // The field is gone from the operation; the next cycle refreshes.
+        }
+      },
+      onUndefer: (parentPath: string, field: string) => {
+        try {
+          cm.setValue(removeDeferredField(cm.getValue(), parentPath, field, operationName));
+          rerender();
+        } catch {
+          // The fragment is gone from the operation; the next cycle refreshes.
+        }
+      },
+      onApplyAll: (groups: { path: string; fields: string[]; label: string }[]) => {
+        try {
+          cm.setValue(applyDeferSuggestions(cm.getValue(), groups, operationName));
+          rerender();
+        } catch {
+          // The fields moved since the analysis; the next cycle refreshes.
+        }
+      },
+    };
+
+    const measure = async () => {
+      const generation = inlineGeneration.current;
+      if (disposed || permanentFailure || (inFlight && isCurrentInlineAdvisorGeneration(inFlight, generation))) {
+        return;
+      }
+      const current = cm.getValue();
+      if (!isCurrent(generation, current)) {
+        return;
+      }
+      const prepared = prepareDeferAdvisorRequest({
+        schema,
+        query: current,
+        operationName,
+        serializedVariables: inlineVariables,
+      });
+      if (!prepared.ok) {
+        showInlineNotice(cm, `defer advisor: ${prepared.message}`, false);
+        return;
+      }
+
+      let effectiveHeaders: Record<string, string>;
+      try {
+        const parsedHeaders = JSON.parse(inlineHeaders);
+        if (!parsedHeaders || typeof parsedHeaders !== 'object' || Array.isArray(parsedHeaders)) {
+          throw new TypeError();
+        }
+        effectiveHeaders = parsedHeaders;
+      } catch {
+        showInlineNotice(cm, 'defer advisor: Headers must be a valid JSON object.', false);
+        return;
+      }
+
+      inFlight = generation;
+      const request = requestGuard.start();
+      if (!inlineResult.current || !isCurrentInlineAdvisorGeneration(inlineResult.current.generation, generation)) {
+        showInlineNotice(cm, 'measuring query latency…', true);
+      }
+      try {
+        // Inline annotations do not show validation data; skipping that run
+        // gets the first stats on screen a full query-duration earlier.
+        const requestHeaders = buildDeferAdvisorHeaders(effectiveHeaders, {
+          runs: 1,
+          skipValidation: true,
+        });
+
+        // Use the embedder-provided fetch (Studio injects auth/proxy) when present.
+        const response = await (input.fetch ?? fetch)(url, {
+          method: 'POST',
+          headers: requestHeaders,
+          body: JSON.stringify(prepared.body),
+          signal: request.signal,
+        });
+        let data: unknown;
+        try {
+          data = await response.json();
+        } catch (error) {
+          if (response.status < 400) {
+            throw error;
+          }
+        }
+        const outcome = classifyDeferAdvisorResponse({
+          status: response.status,
+          statusText: response.statusText,
+          payload: data,
+        });
+        if (!request.isCurrent() || disposed || !isCurrent(generation)) {
+          return;
+        }
+        if (outcome.kind !== 'success') {
+          if (outcome.kind === 'permanent-error') {
+            permanentFailure = true;
+            showInlineNotice(cm, `defer advisor unavailable: ${outcome.message}`, false);
+          }
+          return;
+        }
+        const result = outcome.result as DeferAdvisorResult;
+        inlineResult.current = { generation, result };
+        renderInlineAnnotations(cm, cm.getValue(), result, callbacks, operationName);
+      } catch (error: any) {
+        // Network hiccup or the router rejected the advisor request; keep
+        // whatever annotations are on screen and retry on the next tick.
+        if (error?.name === 'AbortError' || !request.isCurrent() || disposed || !isCurrent(generation)) {
+          return;
+        }
+      } finally {
+        request.complete();
+        if (inFlight === generation) {
+          inFlight = undefined;
+        }
+      }
+    };
+
+    // Toggling on (or re-entering) paints the last result instantly; the
+    // measurement that follows replaces the numbers.
+    rerender();
+    measure();
+    const interval = setInterval(measure, 3000);
+    return () => {
+      disposed = true;
+      clearInterval(interval);
+      requestGuard.invalidate();
+    };
+  }, [
+    inlineQuery,
+    inlineVariables,
+    inlineHeaders,
+    activeTabExecution.id,
+    activeOperationName,
+    inlineAdvisorEnabled,
+    schema,
+    isMounted,
+    url,
+    input.fetch,
+  ]);
+
+  const runAdvisor = useCallback(
+    async (runs: number) => {
+      const guard = manualRequestGuard.current!;
+      guard.invalidate();
+      const generation = inlineGeneration.current;
+      const analyzedQuery = activeInlineQuery;
+      if (!schema) {
+        setAdvisorState({ loading: false, error: 'The schema is still loading.', analyzedQuery: '' });
+        return;
+      }
+      const prepared = prepareDeferAdvisorRequest({
+        schema,
+        query: analyzedQuery,
+        operationName: activeOperationName,
+        serializedVariables: activeSerializedVariables,
+      });
+      if (!prepared.ok) {
+        setAdvisorState({ loading: false, error: prepared.message, analyzedQuery: '' });
+        return;
+      }
+      if (!activeAdvisorHeaderPreparation.effective) {
+        setAdvisorState({
+          loading: false,
+          error: 'Headers must be a valid JSON object with valid HTTP header names.',
+          analyzedQuery: '',
+        });
+        return;
+      }
+
+      const request = guard.start();
+      setAdvisorState((state) => ({ ...state, loading: true, error: '' }));
+      try {
+        const requestHeaders = buildDeferAdvisorHeaders(activeAdvisorHeaderPreparation.effective, { runs });
+
+        const response = await (input.fetch ?? fetch)(url, {
+          method: 'POST',
+          headers: requestHeaders,
+          body: JSON.stringify(prepared.body),
+          signal: request.signal,
+        });
+
+        let data: unknown;
+        try {
+          data = await response.json();
+        } catch (error) {
+          if (response.status < 400) {
+            throw error;
+          }
+        }
+
+        if (!request.isCurrent() || !isCurrentInlineAdvisorGeneration(generation, inlineGeneration.current)) {
+          return;
+        }
+
+        const outcome = classifyDeferAdvisorResponse({
+          status: response.status,
+          statusText: response.statusText,
+          payload: data,
+        });
+        if (outcome.kind !== 'success') {
+          throw new Error(outcome.message);
+        }
+
+        setAdvisorState({
+          loading: false,
+          error: '',
+          result: outcome.result as DeferAdvisorResult,
+          analyzedQuery,
+          operationName: prepared.operationName,
+        });
+      } catch (error: any) {
+        if (
+          error?.name === 'AbortError' ||
+          !request.isCurrent() ||
+          !isCurrentInlineAdvisorGeneration(generation, inlineGeneration.current)
+        ) {
+          return;
+        }
+        setAdvisorState((state) => ({
+          ...state,
+          loading: false,
+          result: undefined,
+          error: error.message || 'Network error',
+        }));
+      } finally {
+        request.complete();
+      }
+    },
+    [
+      activeInlineQuery,
+      activeOperationName,
+      activeSerializedVariables,
+      activeAdvisorHeaders,
+      activeAdvisorHeaderPreparation,
+      activeAdvisorHeaderSnapshot,
+      schema,
+      url,
+      input.fetch,
+    ],
+  );
 
   return (
     <TooltipProvider>
@@ -690,15 +1048,20 @@ export const Playground = (input: {
           tabsState,
           status,
           statusText,
+          requestTiming,
+          inlineAdvisorEnabled,
+          setInlineAdvisorEnabled,
           view,
           setView,
         }}
       >
         <TraceContext.Provider
           value={{
-            query,
-            headers,
-            response,
+            query: activeTabExecution.query,
+            operationName: activeOperationName,
+            headers: activeTabExecution.headers,
+            response: activeTabExecution.response,
+            requestTiming,
             subgraphs: [],
             plan,
             planError,
@@ -711,12 +1074,13 @@ export const Playground = (input: {
             shouldPersistHeaders
             showPersistHeadersSettings={false}
             fetcher={fetcher}
+            schema={schemaForGraphiQLEditor(schema)}
             onEditQuery={setQuery}
             defaultHeaders={`{
   "X-WG-TRACE" : "true"
 }`}
             onEditHeaders={setHeaders}
-            onTabChange={setTabsState}
+            onTabChange={onTabChange}
             plugins={[
               explorerPlugin({
                 showAttribution: false,
@@ -724,7 +1088,7 @@ export const Playground = (input: {
             ]}
             forcedTheme={input.theme}
           />
-          {isMounted && <PlaygroundPortal />}
+          {isMounted && <PlaygroundPortal advisorState={advisorState} onAnalyzeAdvisor={runAdvisor} />}
         </TraceContext.Provider>
       </PlaygroundContext.Provider>
     </TooltipProvider>
