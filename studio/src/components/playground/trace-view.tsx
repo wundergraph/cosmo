@@ -1,23 +1,34 @@
 import { cn } from '@/lib/utils';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { Kind, OperationTypeNode, parse } from 'graphql';
+import { parse } from 'graphql';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { BiRename } from 'react-icons/bi';
 import { LuNetwork } from 'react-icons/lu';
 import { useMovable } from 'react-move-hook';
 import { Edge, Node, ReactFlowProvider } from 'reactflow';
 import { EmptyState } from '../empty-state';
+import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
 import { CLI } from '../ui/cli';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import { ARTCustomEdge, FetchFlow, ReactFlowARTFetchNode, ReactFlowARTMultiFetchNode } from './fetch-flow';
 import { FetchWaterfall } from './fetch-waterfall';
-import { ARTFetchNode, LoadStats, QueryPlan } from './types';
+import { getTraceDeliveryNotice } from './trace-delivery';
+import { getTraceHeader, isSelectedSubscription, traceHeaderIncludes } from './trace-metadata';
+import {
+  traceDurationNanoseconds,
+  traceNodeChildren,
+  traceNodeIsPlannedOnly,
+  tracePhaseEndNanoseconds,
+} from './trace-rendering';
+import { ARTFetchNode, LoadStats, PlaygroundExecutionState, QueryPlan } from './types';
+import { useActiveResponseHeaders } from './use-active-response-headers';
 
 const initialPaneWidth = 360;
 
 export const TraceContext = createContext<{
   query?: string;
+  operationName?: string | null;
   subgraphs: { id: string; name: string }[];
   headers: string;
   response: string;
@@ -25,8 +36,12 @@ export const TraceContext = createContext<{
   planError?: string;
   clientValidationEnabled: boolean;
   setClientValidationEnabled: (val: boolean) => void;
+  inlineAdvisorEnabled: boolean;
+  setInlineAdvisorEnabled: (val: boolean) => void;
+  execution: PlaygroundExecutionState;
 }>({
   query: undefined,
+  operationName: undefined,
   subgraphs: [],
   headers: '',
   response: '',
@@ -34,6 +49,9 @@ export const TraceContext = createContext<{
   planError: '',
   clientValidationEnabled: true,
   setClientValidationEnabled: () => {},
+  inlineAdvisorEnabled: true,
+  setInlineAdvisorEnabled: () => {},
+  execution: { phase: 'idle' },
 });
 
 const Trace = ({
@@ -99,7 +117,7 @@ const Trace = ({
     let gStartTimeNano = BigInt(Number.MAX_VALUE);
     let gEndTimeNano = BigInt(0);
 
-    let executeDurationSinceStart = 0;
+    let executeDurationSinceStart: number | undefined;
 
     const fetchMap = new Map<string, ARTFetchNode>();
 
@@ -228,15 +246,17 @@ const Trace = ({
       return fetchNode;
     };
 
-    const parseFetchNew = (fetch: any, parentId?: string): ARTFetchNode | undefined => {
+    const parseFetchNew = (fetch: any, parentId?: string, inheritedPlannedOnly = false): ARTFetchNode | undefined => {
       if (!fetch) return;
+
+      const plannedOnly = traceNodeIsPlannedOnly(fetch, inheritedPlannedOnly);
 
       const fetchNode: ARTFetchNode = {
         id: crypto.randomUUID(),
         parentId,
         type: fetch.kind,
         dataSourceId: fetch.source_id,
-        dataSourceName: subgraphs?.find((s) => s.id === fetch.source_id)?.name ?? 'subgraph',
+        dataSourceName: fetch.source_name || subgraphs?.find((s) => s.id === fetch.source_id)?.name || 'subgraph',
         input: fetch.trace?.input,
         rawInput: fetch.trace?.raw_input_data,
         output: fetch.trace?.output,
@@ -247,10 +267,18 @@ const Trace = ({
         singleFlightUsed: fetch.trace?.single_flight_used,
         singleFlightSharedResponse: fetch.trace?.single_flight_shared_response,
         loadSkipped: fetch.trace?.load_skipped,
+        defer: fetch.defer
+          ? {
+              ...fetch.defer,
+              path: [...(fetch.defer.path ?? [])],
+            }
+          : undefined,
+        plannedOnly,
+        executionTracePresent: !!fetch.trace,
         children: [],
       };
 
-      if (!executeDurationSinceStart && fetchNode.durationSinceStart) {
+      if (!plannedOnly && executeDurationSinceStart === undefined && fetchNode.durationSinceStart !== undefined) {
         executeDurationSinceStart = fetchNode.durationSinceStart;
       }
 
@@ -295,19 +323,16 @@ const Trace = ({
         }
       }
 
-      const childFetches = fetch.fetches || fetch.children;
-      if (childFetches) {
-        childFetches.forEach((f: any) => {
-          const node = parseFetchNew(f.fetch || f, fetchNode.id);
-          if (node) {
-            if (fetchNode.type === 'ParallelList') {
-              node.dataSourceId = fetchNode.dataSourceId;
-              node.dataSourceName = fetchNode.dataSourceName;
-            }
-            fetchNode.children.push(node);
+      traceNodeChildren(fetch).forEach((f: any) => {
+        const node = parseFetchNew(f.fetch || f, fetchNode.id, plannedOnly);
+        if (node) {
+          if (fetchNode.type === 'ParallelList') {
+            node.dataSourceId = fetchNode.dataSourceId;
+            node.dataSourceName = fetchNode.dataSourceName;
           }
-        });
-      }
+          fetchNode.children.push(node);
+        }
+      });
 
       tempNodes.push({
         id: fetchNode.id,
@@ -345,7 +370,7 @@ const Trace = ({
       return fetchNode;
     };
     const parseJsonNew = (json: any, parentId?: string) => {
-      return parseFetchNew(json.fetches, parentId);
+      return parseFetchNew(json.fetches?.fetch || json.fetches, parentId);
     };
 
     try {
@@ -355,6 +380,7 @@ const Trace = ({
       }
 
       gStartTimeNano = BigInt(parsedResponse.extensions.trace.info.trace_start_unix * 1e9);
+      gEndTimeNano = gStartTimeNano;
 
       const parseStats = parsedResponse.extensions.trace.info.parse_stats;
       const normalizeStats = parsedResponse.extensions.trace.info.normalize_stats;
@@ -388,6 +414,8 @@ const Trace = ({
         durationSinceStart: plannerStats.duration_since_start_nanoseconds,
         durationLoad: plannerStats.duration_nanoseconds,
       } as ARTFetchNode;
+
+      const phaseEnd = tracePhaseEndNanoseconds(plannerStats);
 
       let traceTree: ARTFetchNode | undefined;
       if (parsedResponse.extensions.trace.version) {
@@ -443,18 +471,24 @@ const Trace = ({
         },
       });
 
+      const traceDuration = Math.max(
+        phaseEnd,
+        traceDurationNanoseconds(parsedResponse.extensions.trace),
+        Number(gEndTimeNano - gStartTimeNano),
+      );
+      const executeStart = executeDurationSinceStart ?? phaseEnd;
       const execute = {
         id: 'execute',
         type: 'execute',
-        durationSinceStart: executeDurationSinceStart,
-        durationLoad: Number(gEndTimeNano - gStartTimeNano) - executeDurationSinceStart,
-        children: [traceTree],
+        durationSinceStart: executeStart,
+        durationLoad: Math.max(0, traceDuration - executeStart),
+        children: traceTree ? [traceTree] : [],
       } as ARTFetchNode;
 
       const root = {
         id: 'root',
         type: 'graphql',
-        durationLoad: Number(gEndTimeNano - gStartTimeNano),
+        durationLoad: traceDuration,
         children: [parse, normalize, validate, plan, execute],
       } as ARTFetchNode;
 
@@ -462,7 +496,7 @@ const Trace = ({
       setNodes(tempNodes);
       setEdges(tempEdges);
       setGlobalStartTime(gStartTimeNano);
-      setGlobalDuration(gEndTimeNano - gStartTimeNano);
+      setGlobalDuration(BigInt(Math.max(0, traceDuration)));
     } catch (e) {
       console.error(e);
       return;
@@ -480,23 +514,14 @@ const Trace = ({
   const edgeTypes = useMemo<any>(() => ({ fetch: ARTCustomEdge }), []);
 
   if (view === 'waterfall' && tree) {
-    try {
-      const wgTraceHeader = JSON.parse(headers)['X-WG-TRACE'];
-      if (
-        (typeof wgTraceHeader === 'string' || Array.isArray(wgTraceHeader)) &&
-        wgTraceHeader.includes('exclude_load_stats')
-      ) {
-        return (
-          <EmptyState
-            icon={<LuNetwork />}
-            title="Cannot show waterfall view"
-            description="Please omit exclude_load_stats from the header and retry"
-          />
-        );
-      }
-    } catch (e) {
-      console.error(e);
-      return null;
+    if (traceHeaderIncludes(headers, 'exclude_load_stats')) {
+      return (
+        <EmptyState
+          icon={<LuNetwork />}
+          title="Cannot show waterfall view"
+          description="Please omit exclude_load_stats from the header and retry"
+        />
+      );
     }
 
     return (
@@ -549,61 +574,45 @@ const Trace = ({
 };
 
 export const TraceView = () => {
-  const { query, response: activeResponse, subgraphs, headers: activeHeader } = useContext(TraceContext);
+  const {
+    query,
+    operationName,
+    response: activeResponse,
+    subgraphs,
+    headers: activeHeader,
+    execution,
+  } = useContext(TraceContext);
 
-  const [headers, setHeaders] = useState<string>();
-  const [response, setResponse] = useState<string>();
-
-  const [isNotIntrospection, setIsNotIntrospection] = useState(false);
-
-  useEffect(() => {
+  const headers = useActiveResponseHeaders(activeResponse, activeHeader);
+  const { hasTraceInResponse, isNotIntrospection } = useMemo(() => {
     try {
-      const res = JSON.parse(activeResponse);
-      if (!res.data || !res.data?.__schema) {
-        setResponse(activeResponse);
-        setIsNotIntrospection(true);
-      }
-    } catch {
-      return;
-    }
-  }, [activeResponse]);
-
-  useEffect(() => {
-    if (!activeResponse) return;
-    setHeaders(activeHeader);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeResponse]);
-
-  const { hasTraceHeader, hasTraceInResponse } = useMemo(() => {
-    try {
-      const parsedHeaders = JSON.parse(headers || '{}');
       const parsedResponse = JSON.parse(activeResponse || '{}');
 
       return {
-        hasTraceHeader: !!parsedHeaders['X-WG-TRACE'],
         hasTraceInResponse: !!parsedResponse?.extensions?.trace,
+        isNotIntrospection: !parsedResponse?.data?.__schema,
       };
     } catch {
-      return { hasTraceHeader: false, hasTraceInResponse: false };
+      return { hasTraceInResponse: false, isNotIntrospection: false };
     }
-  }, [headers, activeResponse]);
+  }, [activeResponse]);
+
+  const hasTraceHeader = getTraceHeader(activeHeader || '{}') !== undefined;
+  const hasTrace = hasTraceInResponse;
+  const deliveryNotice = getTraceDeliveryNotice({
+    phase: execution.phase,
+    hasTrace,
+    hasNext: execution.progress?.hasNext,
+    message: execution.message,
+  });
 
   const isSubscription = useMemo(() => {
     try {
-      const parsed = parse(query ?? '');
-
-      const isSubscription =
-        parsed.definitions[0]?.kind === Kind.OPERATION_DEFINITION &&
-        parsed.definitions[0].operation === OperationTypeNode.SUBSCRIPTION;
-
-      return isSubscription;
+      return isSelectedSubscription(parse(query ?? ''), operationName);
     } catch {
       return false;
     }
-  }, [query]);
-
-  const hasTrace = hasTraceHeader && hasTraceInResponse;
+  }, [operationName, query]);
 
   const [view, setView] = useState<'tree' | 'waterfall'>('tree');
 
@@ -613,6 +622,31 @@ export const TraceView = () => {
         icon={<ExclamationTriangleIcon />}
         title="Unsupported"
         description="Advanced Request Tracing is not supported for subscriptions"
+      />
+    );
+  }
+
+  if (activeResponse && !isNotIntrospection) {
+    return (
+      <EmptyState
+        icon={<LuNetwork />}
+        title="Execute a query"
+        description="Include the below header to view the trace"
+        actions={<CLI command={`"X-WG-TRACE" : "true"`} />}
+      />
+    );
+  }
+
+  if (!hasTrace && deliveryNotice?.kind === 'waiting' && hasTraceHeader) {
+    return <EmptyState icon={<LuNetwork />} title={deliveryNotice.title} description={deliveryNotice.description} />;
+  }
+
+  if (!hasTrace && deliveryNotice?.kind === 'incomplete' && hasTraceHeader) {
+    return (
+      <EmptyState
+        icon={<ExclamationTriangleIcon />}
+        title={deliveryNotice.title}
+        description={deliveryNotice.description}
       />
     );
   }
@@ -628,19 +662,19 @@ export const TraceView = () => {
     );
   }
 
-  if (!isNotIntrospection) {
-    return (
-      <EmptyState
-        icon={<LuNetwork />}
-        title="Execute a query"
-        description="Include the below header to view the trace"
-        actions={<CLI command={`"X-WG-TRACE" : "true"`} />}
-      />
-    );
-  }
-
   return (
     <div className="relative flex h-full w-full flex-1 flex-col font-sans">
+      {deliveryNotice && deliveryNotice.kind !== 'waiting' && (
+        <div className="absolute left-4 top-3 z-30 flex max-w-xl items-center gap-2 rounded-md border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
+          <Badge variant={deliveryNotice.kind === 'incomplete' ? 'destructive' : 'secondary'}>
+            {deliveryNotice.title}
+          </Badge>
+          <span className="text-xs text-muted-foreground">{deliveryNotice.description}</span>
+          {!!execution.progress?.partCount && (
+            <span className="text-xs text-muted-foreground">Part {execution.progress.partCount}</span>
+          )}
+        </div>
+      )}
       <Tabs defaultValue="tree" className="absolute bottom-3 right-4 z-30 w-max" onValueChange={(v: any) => setView(v)}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="tree">
@@ -657,7 +691,7 @@ export const TraceView = () => {
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      {response && headers && <Trace headers={headers} response={response} view={view} subgraphs={subgraphs} />}
+      {activeResponse && <Trace headers={headers} response={activeResponse} view={view} subgraphs={subgraphs} />}
     </div>
   );
 };

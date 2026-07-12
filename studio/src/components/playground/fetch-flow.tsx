@@ -31,7 +31,7 @@ import { Badge } from '../ui/badge';
 import { Button, buttonVariants } from '../ui/button';
 import { Separator } from '../ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { ARTFetchNode, QueryPlanFetchTypeNode } from './types';
+import { ARTFetchNode, DeferExecutionStatus, QueryPlanFetchTypeNode } from './types';
 import { ViewHeaders } from './view-headers';
 import { ViewInput } from './view-input';
 import { ViewLoadStats } from './view-load-stats';
@@ -122,12 +122,34 @@ export function ARTCustomEdge({
   );
 }
 
-export const ReactFlowARTMultiFetchNode = ({ data }: Node<Pick<ARTFetchNode, 'id' | 'type'>>) => {
+const deferStatusVariant = (status: DeferExecutionStatus) => {
+  switch (status) {
+    case 'completed':
+      return 'success' as const;
+    case 'error':
+      return 'destructive' as const;
+    case 'skipped':
+      return 'muted' as const;
+    default:
+      return 'secondary' as const;
+  }
+};
+
+const deferLabel = (defer: NonNullable<ARTFetchNode['defer']>) =>
+  defer.label ? `Defer · ${defer.label}` : `Defer #${defer.id}`;
+
+export const ReactFlowARTMultiFetchNode = ({ data }: Node<Pick<ARTFetchNode, 'id' | 'type' | 'defer'>>) => {
   return (
     <>
       <Handle type="target" position={Position.Left} isConnectable={false} />
-      <div className="flex flex-col rounded-full bg-primary/50 px-6 py-2 text-lg text-primary-foreground backdrop-blur-lg">
-        <p>{sentenceCase(data.type)}</p>
+      <div className="flex flex-col gap-1 rounded-full bg-primary/50 px-6 py-2 text-primary-foreground backdrop-blur-lg">
+        <div className="flex items-center gap-2">
+          <p className="text-lg">{data.defer ? deferLabel(data.defer) : sentenceCase(data.type)}</p>
+          {data.defer?.status && <Badge variant={deferStatusVariant(data.defer.status)}>{data.defer.status}</Badge>}
+        </div>
+        {data.defer && (
+          <p className="text-xs opacity-80">{data.defer.path.length ? data.defer.path.join('.') : 'response root'}</p>
+        )}
       </div>
       <Handle type="source" position={Position.Right} isConnectable={false} />
     </>
@@ -166,6 +188,10 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
         </div>
         <div className="flex flex-col gap-y-1 px-4 py-4 text-sm">
           <p>Fetch Type: {sentenceCase(data.type)}</p>
+          {data.plannedOnly && <Badge variant="muted">Not executed (defer skipped)</Badge>}
+          {!data.plannedOnly && data.executionTracePresent === false && (
+            <Badge variant="muted">Planned fetch (no execution data)</Badge>
+          )}
           {data.outputTrace && (
             <>
               <p>Method: {data.outputTrace?.request?.method}</p>
@@ -179,11 +205,15 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
               </TooltipProvider>
             </>
           )}
-          <p className="flex items-center gap-x-2">Single Flight: {getIcon(data.singleFlightUsed)}</p>
-          <p className="flex items-center gap-x-2">
-            Single Flight Shared Response: {getIcon(data.singleFlightSharedResponse)}
-          </p>
-          <p className="flex items-center gap-x-2">Load Skipped: {getIcon(data.loadSkipped)}</p>
+          {!data.plannedOnly && data.executionTracePresent !== false && (
+            <>
+              <p className="flex items-center gap-x-2">Single Flight: {getIcon(data.singleFlightUsed)}</p>
+              <p className="flex items-center gap-x-2">
+                Single Flight Shared Response: {getIcon(data.singleFlightSharedResponse)}
+              </p>
+              <p className="flex items-center gap-x-2">Load Skipped: {getIcon(data.loadSkipped)}</p>
+            </>
+          )}
         </div>
         {(data.outputTrace || data.input || data.rawInput || data.output) && <Separator className="mb-4" />}
         <div
@@ -209,6 +239,14 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
 };
 
 export const ReactFlowQueryPlanFetchNode = ({ data }: Node<QueryPlanFetchTypeNode>) => {
+  const title = data.defer
+    ? data.defer.label
+      ? `Defer · ${data.defer.label}`
+      : `Defer #${data.defer.id}`
+    : `${data.fetch?.kind || data.kind}${
+        ['Parallel', 'Sequence', 'ParallelList', 'Trigger'].includes(data.fetch?.kind || data.kind) ? '' : ' Fetch'
+      }${data.fetch?.subgraphName ? ` from ${data.fetch.subgraphName}` : ''}`;
+
   return (
     <>
       <Handle type="target" position={Position.Top} isConnectable={false} />
@@ -216,11 +254,12 @@ export const ReactFlowQueryPlanFetchNode = ({ data }: Node<QueryPlanFetchTypeNod
         <div className="absolute inset-0 -z-10 bg-secondary/30 backdrop-blur-lg" />
         <div className="flex items-start justify-between gap-x-4 border-b px-8 py-4">
           <p className="flex flex-col gap-y-2 text-sm font-medium subpixel-antialiased">
-            {data.fetch?.kind || data.kind}
-            {['Parallel', 'Sequence', 'ParallelList', 'Trigger'].includes(data.fetch?.kind || data.kind)
-              ? ''
-              : ' Fetch'}{' '}
-            {data.fetch?.subgraphName ? `from ${data.fetch.subgraphName}` : ''}
+            <span>{title}</span>
+            {data.defer && (
+              <span className="text-xs font-normal text-muted-foreground">
+                {data.defer.path.length ? data.defer.path.join('.') : 'response root'}
+              </span>
+            )}
           </p>
         </div>
         {data.fetch && (
