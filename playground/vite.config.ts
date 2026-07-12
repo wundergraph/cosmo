@@ -42,6 +42,14 @@ export default ({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
+        '@wundergraph/cosmo-shared/playground/incremental-delivery': path.resolve(
+          __dirname,
+          '../shared/src/playground/incremental-delivery.ts',
+        ),
+        '@wundergraph/cosmo-shared/playground/defer-schema': path.resolve(
+          __dirname,
+          '../shared/src/playground/defer-schema.ts',
+        ),
       },
     },
   });
