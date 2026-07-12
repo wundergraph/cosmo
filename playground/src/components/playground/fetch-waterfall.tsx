@@ -160,7 +160,7 @@ export const FetchWaterfall = ({
       >
         <div className="relative flex w-full flex-wrap">
           <div
-            className="ml-2 flex flex-shrink-0 items-start gap-x-1 border-r border-input py-1"
+            className="ml-2 flex min-w-0 flex-shrink-0 items-start gap-x-1 overflow-hidden border-r border-input py-1"
             style={{
               width: `${paneWidth - level * 32}px`,
             }}
@@ -195,8 +195,8 @@ export const FetchWaterfall = ({
               'ParallelList',
             ].includes(fetch.type) ? (
               <div className="flex min-w-0 -translate-y-px flex-col gap-1 px-2.5 py-2 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="min-w-0 truncate">
                     {fetch.defer
                       ? fetch.defer.label
                         ? `Defer · ${fetch.defer.label}`
@@ -204,7 +204,9 @@ export const FetchWaterfall = ({
                       : mapFetchType(fetch.type)}
                   </span>
                   {fetch.defer?.status && (
-                    <Badge variant={deferStatusVariant(fetch.defer.status)}>{fetch.defer.status}</Badge>
+                    <Badge className="shrink-0" variant={deferStatusVariant(fetch.defer.status)}>
+                      {fetch.defer.status}
+                    </Badge>
                   )}
                 </div>
                 {fetch.defer && (
