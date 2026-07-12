@@ -2,8 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn, nsToTime } from '@/lib/utils';
 import { ArrowsPointingInIcon } from '@heroicons/react/24/outline';
-import { CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
 import { sentenceCase } from 'change-case';
+import { LuClock, LuGitFork, LuListOrdered, LuNetwork, LuServer } from 'react-icons/lu';
 import dagre from 'dagre';
 import { useCallback, useEffect, useId } from 'react';
 import ReactFlow, {
@@ -28,7 +28,6 @@ import 'reactflow/dist/style.css';
 import { CodeViewer } from '../code-viewer';
 import { Badge } from '../ui/badge';
 import { Button, buttonVariants } from '../ui/button';
-import { Separator } from '../ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { ARTFetchNode, DeferExecutionStatus, QueryPlanFetchTypeNode } from './types';
 import { ViewHeaders } from './view-headers';
@@ -78,6 +77,17 @@ const getLayoutedElements = (
   return { nodes, edges };
 };
 
+// Map a fetch duration (nanoseconds) to a 0..1 weight on a log scale so that
+// ~1ms reads as light and ~1s reads as heavy. The ART graph's whole point is to
+// show where time goes, so slow hops get thicker, warmer edges.
+const durationToWeight = (durationNanoseconds?: number) => {
+  if (!durationNanoseconds || durationNanoseconds <= 0) {
+    return 0;
+  }
+  const ms = durationNanoseconds / 1e6;
+  return Math.max(0, Math.min(1, Math.log10(ms + 1) / 3));
+};
+
 export function ARTCustomEdge({
   sourceX,
   sourceY,
@@ -98,9 +108,23 @@ export function ARTCustomEdge({
     targetPosition,
   });
 
+  const weight = durationToWeight(data?.durationLoad);
+  const isSlow = weight >= 0.67;
+  const isMedium = weight >= 0.34 && weight < 0.67;
+
+  // Every edge stays clearly visible; latency only adds emphasis (thicker, and pink
+  // for the slowest hops). Do NOT use the inline `hsl(var(--x) / a)` alpha-slash form
+  // for the stroke — it is not honored as an inline SVG stroke and silently resolves
+  // to `none`, hiding the edge. Use solid theme colors only.
+  const edgeStyle = {
+    ...style,
+    strokeWidth: isSlow ? 4 : isMedium ? 2.75 : 1.5,
+    stroke: isSlow ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
+  };
+
   return (
     <>
-      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={edgeStyle} />
       {data?.durationLoad && Number.isInteger(data?.durationLoad) && (
         <EdgeLabelRenderer>
           <div
@@ -111,7 +135,16 @@ export function ARTCustomEdge({
             }}
             className="nodrag nopan"
           >
-            <div className="rounded-full bg-secondary px-3 py-1.5 text-xs text-secondary-foreground">
+            <div
+              className={cn(
+                'rounded-full px-3 py-1.5 text-xs font-medium tabular-nums',
+                isSlow
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : isMedium
+                    ? 'bg-primary/20 text-foreground'
+                    : 'bg-secondary text-secondary-foreground',
+              )}
+            >
               {nsToTime(BigInt(data.durationLoad))}
             </div>
           </div>
@@ -137,105 +170,153 @@ const deferStatusVariant = (status: DeferExecutionStatus) => {
 const deferLabel = (defer: NonNullable<ARTFetchNode['defer']>) =>
   defer.label ? `Defer · ${defer.label}` : `Defer #${defer.id}`;
 
+// Structural nodes describe how fetches are scheduled. They are scaffolding, not
+// content, so they stay quiet and carry an icon that names the scheduling shape.
+const structuralMeta = (type: string) => {
+  switch (type) {
+    case 'Sequence':
+      return { Icon: LuListOrdered, label: 'Sequence', hint: 'Steps run one after another' };
+    case 'Parallel':
+      return { Icon: LuGitFork, label: 'Parallel', hint: 'Branches run at the same time' };
+    case 'ParallelList':
+      return { Icon: LuGitFork, label: 'Parallel list', hint: 'List items resolved concurrently' };
+    default:
+      return { Icon: LuNetwork, label: sentenceCase(type), hint: '' };
+  }
+};
+
 export const ReactFlowARTMultiFetchNode = ({ data }: Node<Pick<ARTFetchNode, 'id' | 'type' | 'defer'>>) => {
+  if (data.defer) {
+    return (
+      <>
+        <Handle type="target" position={Position.Left} isConnectable={false} />
+        <div className="flex flex-col gap-1 rounded-2xl border border-primary/40 bg-primary/15 px-5 py-3 backdrop-blur-lg">
+          <div className="flex items-center gap-2">
+            <LuClock className="h-5 w-5 shrink-0 text-primary" />
+            <p className="text-base font-medium text-foreground">{deferLabel(data.defer)}</p>
+            {data.defer.status && (
+              <Badge variant={deferStatusVariant(data.defer.status)}>{data.defer.status}</Badge>
+            )}
+          </div>
+          <p className="pl-7 text-xs text-muted-foreground">
+            {data.defer.path.length ? data.defer.path.join('.') : 'response root'}
+          </p>
+        </div>
+        <Handle type="source" position={Position.Right} isConnectable={false} />
+      </>
+    );
+  }
+
+  const { Icon, label, hint } = structuralMeta(data.type);
+
   return (
     <>
       <Handle type="target" position={Position.Left} isConnectable={false} />
-      <div className="flex flex-col gap-1 rounded-full bg-primary/50 px-6 py-2 text-primary-foreground backdrop-blur-lg">
-        <div className="flex items-center gap-2">
-          <p className="text-lg">{data.defer ? deferLabel(data.defer) : sentenceCase(data.type)}</p>
-          {data.defer?.status && <Badge variant={deferStatusVariant(data.defer.status)}>{data.defer.status}</Badge>}
-        </div>
-        {data.defer && (
-          <p className="text-xs opacity-80">{data.defer.path.length ? data.defer.path.join('.') : 'response root'}</p>
-        )}
-      </div>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-4 py-2 text-base font-medium text-muted-foreground backdrop-blur-lg">
+              <Icon className="h-5 w-5 shrink-0" />
+              <span>{label}</span>
+            </div>
+          </TooltipTrigger>
+          {hint && <TooltipContent>{hint}</TooltipContent>}
+        </Tooltip>
+      </TooltipProvider>
       <Handle type="source" position={Position.Right} isConnectable={false} />
     </>
   );
 };
 
+const FlagChip = ({ active, label }: { active?: boolean; label: string }) => (
+  <span
+    className={cn(
+      'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[11px] font-medium',
+      active ? 'bg-primary/15 text-primary' : 'bg-muted/60 text-muted-foreground/70',
+    )}
+  >
+    <span className={cn('h-1.5 w-1.5 rounded-full', active ? 'bg-primary' : 'bg-muted-foreground/40')} />
+    {label}
+  </span>
+);
+
 export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
   const statusCode = data.outputTrace?.response?.statusCode;
   const isFailure = (statusCode ?? 0) >= 400;
-
-  const getIcon = (val: boolean) => {
-    if (val) {
-      return <CheckCircledIcon />;
-    } else {
-      return <CrossCircledIcon />;
-    }
-  };
+  const showFlags = !data.plannedOnly && data.executionTracePresent !== false;
 
   return (
-    <>
+    <TooltipProvider>
       <Handle type="target" position={Position.Left} isConnectable={false} />
       <div
-        className={cn('relative flex flex-col  rounded-md border py-4 text-secondary-foreground', {
+        className={cn('relative flex w-[340px] flex-col overflow-hidden rounded-xl border text-secondary-foreground', {
           '!border-destructive': isFailure,
         })}
       >
         <div className="absolute inset-0 -z-10 bg-secondary/30 backdrop-blur-lg" />
-        <div className="flex items-start justify-between gap-x-4 border-b px-4 pb-4">
-          <p className="flex flex-col gap-y-2 text-base subpixel-antialiased">
-            <span>
-              Fetch from <span className="font-medium">{data.dataSourceName}</span>
-            </span>
-            <span className="text-xs font-normal text-muted-foreground">{data.dataSourceId}</span>
-          </p>
-          {data.outputTrace && (
-            <Badge variant={isFailure ? 'destructive' : 'success'}>{data.outputTrace?.response?.statusCode}</Badge>
-          )}
-        </div>
-        <div className="flex flex-col gap-y-1 px-4 py-4 text-sm">
-          <p>Fetch Type: {sentenceCase(data.type)}</p>
-          {data.plannedOnly && <Badge variant="muted">Not executed (defer skipped)</Badge>}
-          {!data.plannedOnly && data.executionTracePresent === false && (
-            <Badge variant="muted">Planned fetch (no execution data)</Badge>
-          )}
-          {data.outputTrace && (
-            <>
-              <p>Method: {data.outputTrace?.request?.method}</p>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <p className="max-w-sm truncate text-left">URL: {data.outputTrace?.request?.url}</p>
-                  </TooltipTrigger>
-                  <TooltipContent>{data.outputTrace?.request?.url}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </>
-          )}
-          {!data.plannedOnly && data.executionTracePresent !== false && (
-            <>
-              <p className="flex items-center gap-x-2">Single Flight: {getIcon(data.singleFlightUsed)}</p>
-              <p className="flex items-center gap-x-2">
-                Single Flight Shared Response: {getIcon(data.singleFlightSharedResponse)}
+        <div className="flex items-start justify-between gap-x-3 border-b px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <LuServer className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium subpixel-antialiased">{data.dataSourceName}</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                {sentenceCase(data.type)} fetch
               </p>
-              <p className="flex items-center gap-x-2">Load Skipped: {getIcon(data.loadSkipped)}</p>
-            </>
-          )}
-        </div>
-        {(data.outputTrace || data.input || data.rawInput || data.output) && <Separator className="mb-4" />}
-        <div
-          className={cn('flex gap-2 px-4', {
-            'grid grid-cols-2': data.outputTrace && (data.input || data.rawInput) && data.output && data.loadStats,
-          })}
-        >
+            </div>
+          </div>
           {data.outputTrace && (
-            <ViewHeaders
-              requestHeaders={JSON.stringify(data.outputTrace.request.headers)}
-              responseHeaders={JSON.stringify(data.outputTrace.response.headers)}
-              asChild
-            />
+            <Badge variant={isFailure ? 'destructive' : 'success'}>{statusCode}</Badge>
           )}
-          {(data.input || data.rawInput) && <ViewInput input={data.input} rawInput={data.rawInput} asChild />}
-          {data.output && <ViewOutput output={data.output} asChild />}
-          {data.loadStats && <ViewLoadStats loadStats={data.loadStats} asChild />}
         </div>
+        <div className="flex flex-col gap-2 px-4 py-3 text-sm">
+          {data.plannedOnly && (
+            <Badge variant="muted" className="w-fit">
+              Not executed (defer skipped)
+            </Badge>
+          )}
+          {!data.plannedOnly && data.executionTracePresent === false && (
+            <Badge variant="muted" className="w-fit">
+              Planned fetch (no execution data)
+            </Badge>
+          )}
+          {data.outputTrace && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="rounded bg-muted px-1.5 py-0.5 font-medium text-foreground">
+                {data.outputTrace.request.method}
+              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="min-w-0 truncate font-mono">{data.outputTrace.request.url}</span>
+                </TooltipTrigger>
+                <TooltipContent>{data.outputTrace.request.url}</TooltipContent>
+              </Tooltip>
+            </div>
+          )}
+          {showFlags && (
+            <div className="flex flex-wrap gap-1.5">
+              <FlagChip active={data.singleFlightUsed} label="Single flight" />
+              <FlagChip active={data.singleFlightSharedResponse} label="Shared response" />
+              <FlagChip active={data.loadSkipped} label="Load skipped" />
+            </div>
+          )}
+        </div>
+        {(data.outputTrace || data.input || data.rawInput || data.output) && (
+          <div className="grid grid-cols-2 gap-2 border-t px-4 py-3">
+            {data.outputTrace && (
+              <ViewHeaders
+                requestHeaders={JSON.stringify(data.outputTrace.request.headers)}
+                responseHeaders={JSON.stringify(data.outputTrace.response.headers)}
+                asChild
+              />
+            )}
+            {(data.input || data.rawInput) && <ViewInput input={data.input} rawInput={data.rawInput} asChild />}
+            {data.output && <ViewOutput output={data.output} asChild />}
+            {data.loadStats && <ViewLoadStats loadStats={data.loadStats} asChild />}
+          </div>
+        )}
       </div>
       <Handle type="source" position={Position.Right} isConnectable={false} />
-    </>
+    </TooltipProvider>
   );
 };
 
