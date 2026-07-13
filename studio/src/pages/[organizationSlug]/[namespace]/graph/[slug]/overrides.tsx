@@ -60,7 +60,7 @@ const OverridesPage: NextPageWithLayout = () => {
       operationHash: hash,
     });
 
-    const linkBase = `/${encodeURIComponent(organizationSlug)}/${encodeURIComponent(namespace)}/graphs/${encodeURIComponent(
+    const linkBase = `/${encodeURIComponent(organizationSlug)}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(
       slug,
     )}/analytics`;
 
