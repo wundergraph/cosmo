@@ -40,8 +40,8 @@ The feature has three modes:
 | Mode                    | Behavior                                                                                                                        |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `off`                   | The feature is disabled. This is the default.                                                                                    |
-| `enabled-non-enforcing` | The router detects inline arguments and records them. The operation still executes. Use this to observe traffic before enforcing. |
-| `enabled-enforcing`     | The router rejects any operation that uses an inline argument value. No subgraph requests are made.                              |
+| `permissive` | The router detects inline arguments and records them. The operation still executes. Use this to observe traffic before enforcing. |
+| `strict`     | The router rejects any operation that uses an inline argument value. No subgraph requests are made.                              |
 
 ## Configuration
 
@@ -50,7 +50,7 @@ The feature is configured under `engine.validate_inline_arguments`:
 ```yaml
 engine:
   validate_inline_arguments:
-    mode: enabled-non-enforcing
+    mode: permissive
     enforce_http_status_code: 400
     error_code: INLINE_ARGUMENT_VALUES_NOT_ALLOWED
     error_message: "Inline argument values are not allowed. Use variables instead."
@@ -86,7 +86,7 @@ Findings are reported using a qualified name that identifies where the argument 
 
 ## Non-enforcing mode
 
-In `enabled-non-enforcing` mode the operation executes normally. The router surfaces the findings in two ways.
+In `permissive` mode the operation executes normally. The router surfaces the findings in two ways.
 
 ### Warning log
 
@@ -127,7 +127,7 @@ before a response is produced.
 
 ## Enforcing mode
 
-In `enabled-enforcing` mode the router rejects any operation that uses an inline argument value. The operation
+In `strict` mode the router rejects any operation that uses an inline argument value. The operation
 is rejected during normalization, so no subgraph requests are made.
 
 The rejection is generic. The router stops at the first inline argument and does not name the argument or
@@ -157,20 +157,20 @@ both non-enforcing and enforcing modes.
 
 ## Rollout
 
-Start in `enabled-non-enforcing` mode to understand your traffic without breaking clients.
+Start in `permissive` mode to understand your traffic without breaking clients.
 
 ```yaml
 engine:
   validate_inline_arguments:
-    mode: enabled-non-enforcing
+    mode: permissive
     return_in_response_extensions: true
 ```
 
 Use the warning logs and `extensions.inlineArguments` to find operations that still send inline values and
-migrate them to variables. Once the offending operations are gone, switch to `enabled-enforcing`.
+migrate them to variables. Once the offending operations are gone, switch to `strict`.
 
 ```yaml
 engine:
   validate_inline_arguments:
-    mode: enabled-enforcing
+    mode: strict
 ```
