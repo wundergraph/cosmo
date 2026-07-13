@@ -347,7 +347,8 @@
   },
   "Authorization": {
     "RequireAuthentication": false,
-    "RejectOperationIfUnauthorized": false
+    "RejectOperationIfUnauthorized": false,
+    "EnablePreFetchFieldAuthorization": false
   },
   "RateLimit": {
     "Enabled": false,
@@ -459,7 +460,8 @@
       "EnableNormalizationCacheResponseHeader": false,
       "EnableCacheResponseHeaders": false,
       "AlwaysIncludeQueryPlan": false,
-      "AlwaysSkipLoader": false
+      "AlwaysSkipLoader": false,
+      "SynchronousCacheWrites": false
     },
     "EnableSingleFlight": true,
     "ForceEnableSingleFlight": false,
@@ -670,6 +672,9 @@
       "Enabled": false
     },
     "SubrequestHTTPError": {
+      "Enabled": false
+    },
+    "SkipNullVariablesError": {
       "Enabled": false
     }
   },

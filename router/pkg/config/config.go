@@ -437,6 +437,7 @@ type EngineDebugConfiguration struct {
 	EnableCacheResponseHeaders             bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_CACHE_RESPONSE_HEADERS" yaml:"enable_cache_response_headers"`
 	AlwaysIncludeQueryPlan                 bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_INCLUDE_QUERY_PLAN" yaml:"always_include_query_plan"`
 	AlwaysSkipLoader                       bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_SKIP_LOADER" yaml:"always_skip_loader"`
+	SynchronousCacheWrites                 bool `envDefault:"false" env:"ENGINE_DEBUG_SYNCHRONOUS_CACHE_WRITES" yaml:"synchronous_cache_writes"`
 }
 
 type EngineExecutionConfiguration struct {
@@ -694,6 +695,11 @@ type AuthorizationConfiguration struct {
 	RequireAuthentication bool `yaml:"require_authentication" envDefault:"false" env:"REQUIRE_AUTHENTICATION"`
 	// RejectOperationIfUnauthorized makes the router reject the whole GraphQL Operation if one field fails to authorize
 	RejectOperationIfUnauthorized bool `yaml:"reject_operation_if_unauthorized" envDefault:"false" env:"REJECT_OPERATION_IF_UNAUTHORIZED"`
+	// EnablePreFetchFieldAuthorization authorizes fields protected by an authorization rule in a single
+	// batch call before any subgraph fetch executes (scope-only, independent of the returned data),
+	// instead of filtering them out of the response after the fetch. This avoids fetching data that the
+	// client is not authorized to see.
+	EnablePreFetchFieldAuthorization bool `yaml:"enable_pre_fetch_field_authorization" envDefault:"false" env:"ENABLE_PRE_FETCH_FIELD_AUTHORIZATION"`
 }
 
 type RateLimitConfiguration struct {
@@ -1265,6 +1271,7 @@ type ApolloCompatibilityFlags struct {
 type ApolloRouterCompatibilityFlags struct {
 	ReplaceInvalidVarErrors ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
 	SubrequestHTTPError     ApolloCompatibilityFlag `yaml:"subrequest_http_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_"`
+	SkipNullVariablesError  ApolloCompatibilityFlag `yaml:"skip_null_variables_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_"`
 }
 
 type ApolloCompatibilityFlag struct {

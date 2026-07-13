@@ -3,7 +3,7 @@ module github.com/wundergraph/cosmo/router-tests
 go 1.25.0
 
 require (
-	connectrpc.com/connect v1.19.1
+	connectrpc.com/connect v1.19.2
 	github.com/MicahParks/jwkset v0.11.0
 	github.com/buger/jsonparser v1.1.2
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
@@ -26,12 +26,12 @@ require (
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
 	github.com/wundergraph/astjson v1.1.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20260702154853-342c6353246f
+	github.com/wundergraph/cosmo/demo v0.0.0-20260627132517-5752a9457cd3
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
-	github.com/wundergraph/cosmo/router v0.0.0-20260702154853-342c6353246f
+	github.com/wundergraph/cosmo/router v0.0.0-20260710155145-803a4bc06d92
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
 	github.com/wundergraph/cosmo/speedtrap v0.0.0-00010101000000-000000000000
-	github.com/wundergraph/graphql-go-tools/v2 v2.9.2-0.20260713122741-0d395a0c6b97
+	github.com/wundergraph/graphql-go-tools/v2 v2.11.1-0.20260713124320-f3ead5a830fb
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/sdk v1.44.0
 	go.opentelemetry.io/otel/sdk/metric v1.44.0
@@ -207,5 +207,5 @@ replace (
 	github.com/wundergraph/cosmo/router => ../router
 	github.com/wundergraph/cosmo/router-plugin => ../router-plugin
 	github.com/wundergraph/cosmo/speedtrap => ../speedtrap
-//github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+// github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
 )

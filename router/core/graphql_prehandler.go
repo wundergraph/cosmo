@@ -78,6 +78,9 @@ type PreHandlerOptions struct {
 	ForceEnableInboundRequestDeduplication bool
 	HeaderPropagation                      *HeaderPropagation
 	SpanNameFormatter                      SpanNameFormatterFunc
+
+	// WaitForCacheWrites is set when Debug.SynchronousCacheWrites is enabled; it blocks until pending async operation-cache writes are applied.
+	WaitForCacheWrites func()
 }
 
 type PreHandler struct {
@@ -119,6 +122,7 @@ type PreHandler struct {
 	enableInboundRequestDeduplication      bool
 	forceEnableInboundRequestDeduplication bool
 	spanNameFormatter                      SpanNameFormatterFunc
+	waitForCacheWrites                     func()
 }
 
 type httpOperation struct {
@@ -188,6 +192,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
 		headerPropagation:                      opts.HeaderPropagation,
 		spanNameFormatter:                      spanNameFormatter,
+		waitForCacheWrites:                     opts.WaitForCacheWrites,
 	}
 }
 
@@ -447,6 +452,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
 			return
+		}
+
+		if h.waitForCacheWrites != nil {
+			h.waitForCacheWrites()
 		}
 
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
