@@ -497,7 +497,7 @@ type EngineExecutionConfiguration struct {
 
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool `envDefault:"false" env:"ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY" yaml:"relax_subgraph_operation_field_selection_merging_nullability"`
 
-	DisallowInlineArguments DisallowInlineArguments `yaml:"disallow_inline_arguments" envPrefix:"ENGINE_DISALLOW_INLINE_ARGUMENTS_"`
+	ValidateInlineArguments ValidateInlineArguments `yaml:"validate_inline_arguments" envPrefix:"ENGINE_VALIDATE_INLINE_ARGUMENTS_"`
 }
 
 type BlockOperationConfiguration struct {
@@ -595,16 +595,16 @@ type CostControl struct {
 	IgnoreImplementingTypeWeights bool `yaml:"ignore_implementing_type_weights,omitempty" envDefault:"false" env:"IGNORE_IMPLEMENTING_TYPE_WEIGHTS"`
 }
 
-type DisallowInlineArgumentsMode string
+type ValidateInlineArgumentsMode string
 
 const (
-	DisallowInlineArgumentsModeOff          DisallowInlineArgumentsMode = "off"
-	DisallowInlineArgumentsModeNonEnforcing DisallowInlineArgumentsMode = "enabled-non-enforcing"
-	DisallowInlineArgumentsModeEnforcing    DisallowInlineArgumentsMode = "enabled-enforcing"
+	ValidateInlineArgumentsModeOff          ValidateInlineArgumentsMode = "off"
+	ValidateInlineArgumentsModeNonEnforcing ValidateInlineArgumentsMode = "enabled-non-enforcing"
+	ValidateInlineArgumentsModeEnforcing    ValidateInlineArgumentsMode = "enabled-enforcing"
 )
 
-type DisallowInlineArguments struct {
-	Mode                       DisallowInlineArgumentsMode `yaml:"mode,omitempty" envDefault:"off" env:"MODE"`
+type ValidateInlineArguments struct {
+	Mode                       ValidateInlineArgumentsMode `yaml:"mode,omitempty" envDefault:"off" env:"MODE"`
 	EnforceHTTPStatusCode      int                         `yaml:"enforce_http_status_code,omitempty" envDefault:"400" env:"ENFORCE_HTTP_STATUS_CODE"`
 	ErrorCode                  string                      `yaml:"error_code,omitempty" envDefault:"INLINE_ARGUMENT_VALUES_NOT_ALLOWED" env:"ERROR_CODE"`
 	ErrorMessage               string                      `yaml:"error_message,omitempty" envDefault:"Inline argument values are not allowed. Use variables instead." env:"ERROR_MESSAGE"`
@@ -613,13 +613,13 @@ type DisallowInlineArguments struct {
 }
 
 // Enabled reports whether the policy is active in any mode.
-func (d DisallowInlineArguments) Enabled() bool {
-	return d.Mode == DisallowInlineArgumentsModeNonEnforcing || d.Mode == DisallowInlineArgumentsModeEnforcing
+func (d ValidateInlineArguments) Enabled() bool {
+	return d.Mode == ValidateInlineArgumentsModeNonEnforcing || d.Mode == ValidateInlineArgumentsModeEnforcing
 }
 
 // Enforcing reports whether the policy rejects offending operations.
-func (d DisallowInlineArguments) Enforcing() bool {
-	return d.Mode == DisallowInlineArgumentsModeEnforcing
+func (d ValidateInlineArguments) Enforcing() bool {
+	return d.Mode == ValidateInlineArgumentsModeEnforcing
 }
 
 type ComplexityLimit struct {

@@ -887,7 +887,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.expressionContext.Request.Operation.VariablesNormalizationCacheHit = cached
 
 	logInlineArguments(requestContext.logger, operationKit.parsedOperation)
-	if h.operationProcessor.parseKitOptions.disallowInlineArguments.ReturnInResponseExtensions {
+	if h.operationProcessor.parseKitOptions.validateInlineArguments.ReturnInResponseExtensions {
 		requestContext.operation.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
 	}
 
@@ -1422,7 +1422,7 @@ func setExpressionContextClient(requestContext *requestContext) {
 }
 
 // logInlineArguments emits a warning listing every inline argument value found in
-// the operation (non-enforcing mode of DisallowInlineArguments). It is a no-op
+// the operation (non-enforcing mode of ValidateInlineArguments). It is a no-op
 // when there are no findings, so both the HTTP prehandler and the WebSocket
 // handler can call it unconditionally after a successful normalization.
 func logInlineArguments(logger *zap.Logger, operation *ParsedOperation) {

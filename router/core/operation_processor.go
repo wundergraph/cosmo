@@ -134,7 +134,7 @@ type OperationProcessorOptions struct {
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
 	OperationNameLengthLimit                               int
 	EnableDefer                                            bool
-	DisallowInlineArguments                                config.DisallowInlineArguments
+	ValidateInlineArguments                                config.ValidateInlineArguments
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -749,7 +749,7 @@ func (o *OperationKit) collectInlineArguments() {
 	if v == nil || !v.HadInlineArguments() {
 		return
 	}
-	o.parsedOperation.InlineArguments = slices.Clone(v.Findings)
+	o.parsedOperation.InlineArguments = slices.Clone(v.InlineArguments)
 }
 
 // NormalizeOperation normalizes the operation. After normalization the normalized representation of the operation
@@ -1564,11 +1564,11 @@ type parseKitOptions struct {
 	disableExposingVariablesContentOnValidationError       bool
 	relaxSubgraphOperationFieldSelectionMergingNullability bool
 	enableDefer                                            bool
-	disallowInlineArguments                                config.DisallowInlineArguments
+	validateInlineArguments                                config.ValidateInlineArguments
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
-	normalizationOptions, inlineArgumentsValidator := buildNormalizationOptions(options.enableDefer, options.disallowInlineArguments)
+	normalizationOptions, inlineArgumentsValidator := buildNormalizationOptions(options.enableDefer, options.validateInlineArguments)
 
 	return &parseKit{
 		i:                   i,
@@ -1591,12 +1591,12 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			DisableExposingVariablesContent: options.disableExposingVariablesContentOnValidationError,
 		}),
 		inlineArgumentsValidator:        inlineArgumentsValidator,
-		inlineArgumentsIncludePersisted: options.disallowInlineArguments.IncludePersistedOperations,
+		inlineArgumentsIncludePersisted: options.validateInlineArguments.IncludePersistedOperations,
 		operationValidator:              createOperationValidator(options),
 	}
 }
 
-func buildNormalizationOptions(enableDefer bool, disallowInlineArguments config.DisallowInlineArguments) ([]astnormalization.Option, *astnormalization.InlineArgumentsValidator) {
+func buildNormalizationOptions(enableDefer bool, validateInlineArguments config.ValidateInlineArguments) ([]astnormalization.Option, *astnormalization.InlineArgumentsValidator) {
 	opts := []astnormalization.Option{
 		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 		astnormalization.WithInlineFragmentSpreads(),
@@ -1615,13 +1615,13 @@ func buildNormalizationOptions(enableDefer bool, disallowInlineArguments config.
 	}
 
 	var inlineArgumentsValidator *astnormalization.InlineArgumentsValidator
-	if disallowInlineArguments.Enabled() {
+	if validateInlineArguments.Enabled() {
 		inlineArgumentsValidator = &astnormalization.InlineArgumentsValidator{
 			Options: astnormalization.InlineArgumentsValidationOptions{
-				Enforce:      disallowInlineArguments.Enforcing(),
-				ErrorMessage: disallowInlineArguments.ErrorMessage,
-				ErrorCode:    disallowInlineArguments.ErrorCode,
-				StatusCode:   disallowInlineArguments.EnforceHTTPStatusCode,
+				Enforce:      validateInlineArguments.Enforcing(),
+				ErrorMessage: validateInlineArguments.ErrorMessage,
+				ErrorCode:    validateInlineArguments.ErrorCode,
+				StatusCode:   validateInlineArguments.EnforceHTTPStatusCode,
 			},
 		}
 		prevalidationRules = append(prevalidationRules, astnormalization.InlineArgumentsRule(inlineArgumentsValidator))
@@ -1667,7 +1667,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,
 			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
-			disallowInlineArguments:                                opts.DisallowInlineArguments,
+			validateInlineArguments:                                opts.ValidateInlineArguments,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {
@@ -1705,7 +1705,7 @@ func (p *OperationProcessor) freeKit(kit *parseKit) {
 	kit.doc.Reset()
 	kit.sha256Hash.Reset()
 	kit.normalizedOperation.Reset()
-	kit.inlineArgumentsValidator.ClearFindings()
+	kit.inlineArgumentsValidator.ClearInlineArguments()
 	// because we're re-using the kit, and we're having a static number of kits based on the number of CPUs
 	// we're resetting the doc, parser, and buffer for the normalized operation if they grow too large (>1MB of query size)
 	if cap(kit.doc.Input.RawBytes) > 1024*1024 {

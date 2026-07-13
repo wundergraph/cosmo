@@ -12,7 +12,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-func TestDisallowInlineArguments(t *testing.T) {
+func TestValidateInlineArguments(t *testing.T) {
 	t.Parallel()
 
 	const inlineArgumentQuery = `query GetEmployee { employee(id: 1) { id } }`
@@ -31,8 +31,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode:                  config.DisallowInlineArgumentsModeEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode:                  config.ValidateInlineArgumentsModeEnforcing,
 					EnforceHTTPStatusCode: 400,
 					ErrorCode:             "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
 					ErrorMessage:          "Inline argument values are not allowed. Use variables instead.",
@@ -51,8 +51,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode:                       config.DisallowInlineArgumentsModeEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode:                       config.ValidateInlineArgumentsModeEnforcing,
 					EnforceHTTPStatusCode:      400,
 					ErrorCode:                  "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
 					ErrorMessage:               "Inline argument values are not allowed. Use variables instead.",
@@ -73,8 +73,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode:                  config.DisallowInlineArgumentsModeEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode:                  config.ValidateInlineArgumentsModeEnforcing,
 					EnforceHTTPStatusCode: 400,
 					ErrorCode:             "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
 					ErrorMessage:          "Inline argument values are not allowed. Use variables instead.",
@@ -98,8 +98,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 				LogLevel: zapcore.WarnLevel,
 			},
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode:         config.DisallowInlineArgumentsModeNonEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode:         config.ValidateInlineArgumentsModeNonEnforcing,
 					ErrorCode:    "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
 					ErrorMessage: "Inline argument values are not allowed. Use variables instead.",
 				}
@@ -127,8 +127,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 				LogLevel: zapcore.WarnLevel,
 			},
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeNonEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode: config.ValidateInlineArgumentsModeNonEnforcing,
 				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -153,8 +153,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 				LogLevel: zapcore.WarnLevel,
 			},
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeNonEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode: config.ValidateInlineArgumentsModeNonEnforcing,
 				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -180,8 +180,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 				LogLevel: zapcore.WarnLevel,
 			},
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeNonEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode: config.ValidateInlineArgumentsModeNonEnforcing,
 				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -219,8 +219,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode:                       config.DisallowInlineArgumentsModeNonEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode:                       config.ValidateInlineArgumentsModeNonEnforcing,
 					ReturnInResponseExtensions: true,
 				}
 			},
@@ -248,8 +248,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeNonEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode: config.ValidateInlineArgumentsModeNonEnforcing,
 				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -262,8 +262,8 @@ func TestDisallowInlineArguments(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode:                       config.DisallowInlineArgumentsModeNonEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode:                       config.ValidateInlineArgumentsModeNonEnforcing,
 					ReturnInResponseExtensions: true,
 				}
 			},
@@ -285,11 +285,11 @@ func TestDisallowInlineArguments(t *testing.T) {
 	})
 }
 
-// TestDisallowInlineArgumentsPersistedOperations covers the persisted-operation
+// TestValidateInlineArgumentsPersistedOperations covers the persisted-operation
 // exemption. The persisted operation 4000...0000 ("MyQuery") contains a single
 // inline argument (employee(id: 1)); its `$yes` is a variable-definition default
 // (excluded) and its @include uses a variable (compliant).
-func TestDisallowInlineArgumentsPersistedOperations(t *testing.T) {
+func TestValidateInlineArgumentsPersistedOperations(t *testing.T) {
 	t.Parallel()
 
 	const persistedInlineArgHash = "4000000000000000000000000000000000000000000000000000000000000000"
@@ -310,8 +310,8 @@ func TestDisallowInlineArgumentsPersistedOperations(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode:                  config.DisallowInlineArgumentsModeEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode:                  config.ValidateInlineArgumentsModeEnforcing,
 					EnforceHTTPStatusCode: 400,
 					ErrorCode:             "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
 					ErrorMessage:          "Inline argument values are not allowed. Use variables instead.",
@@ -330,8 +330,8 @@ func TestDisallowInlineArgumentsPersistedOperations(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode:                       config.DisallowInlineArgumentsModeEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode:                       config.ValidateInlineArgumentsModeEnforcing,
 					EnforceHTTPStatusCode:      400,
 					ErrorCode:                  "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
 					ErrorMessage:               "Inline argument values are not allowed. Use variables instead.",
@@ -352,8 +352,8 @@ func TestDisallowInlineArgumentsPersistedOperations(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.WarnLevel},
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode: config.DisallowInlineArgumentsModeNonEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode: config.ValidateInlineArgumentsModeNonEnforcing,
 				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -371,8 +371,8 @@ func TestDisallowInlineArgumentsPersistedOperations(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.WarnLevel},
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
-				s.DisallowInlineArguments = config.DisallowInlineArguments{
-					Mode:                       config.DisallowInlineArgumentsModeNonEnforcing,
+				s.ValidateInlineArguments = config.ValidateInlineArguments{
+					Mode:                       config.ValidateInlineArgumentsModeNonEnforcing,
 					IncludePersistedOperations: true,
 				}
 			},

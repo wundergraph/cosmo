@@ -988,7 +988,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	opContext.variablesNormalizationCacheHit = cached
 
 	logInlineArguments(h.logger, operationKit.parsedOperation)
-	if h.operationProcessor.parseKitOptions.disallowInlineArguments.ReturnInResponseExtensions {
+	if h.operationProcessor.parseKitOptions.validateInlineArguments.ReturnInResponseExtensions {
 		opContext.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
 	}
 

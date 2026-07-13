@@ -1,5 +1,5 @@
 ---
-title: "Disallow Inline Arguments"
+title: "Validate Inline Arguments"
 description: "Detect, and optionally reject, operations that pass argument values inline instead of through variables."
 icon: shield-halved
 ---
@@ -30,7 +30,7 @@ distinct operation, which lowers plan cache hit rates. Literals can also embed s
 filter values) directly into query strings, where it ends up in logs and traces. Requiring variables keeps
 the operation shape stable and moves the values into the variables payload.
 
-`disallow_inline_arguments` detects these arguments during operation normalization. Depending on the mode,
+`validate_inline_arguments` detects these arguments during operation normalization. Depending on the mode,
 the router logs the findings, returns them to the client, or rejects the operation.
 
 ## Modes
@@ -45,11 +45,11 @@ The feature has three modes:
 
 ## Configuration
 
-The feature is configured under `engine.disallow_inline_arguments`:
+The feature is configured under `engine.validate_inline_arguments`:
 
 ```yaml
 engine:
-  disallow_inline_arguments:
+  validate_inline_arguments:
     mode: enabled-non-enforcing
     enforce_http_status_code: 400
     error_code: INLINE_ARGUMENT_VALUES_NOT_ALLOWED
@@ -58,7 +58,7 @@ engine:
     return_in_response_extensions: false
 ```
 
-These options are also listed in more detail in the [router configuration reference](/router/configuration#disallow-inline-arguments).
+These options are also listed in more detail in the [router configuration reference](/router/configuration#validate-inline-arguments).
 
 ## What counts as an inline argument
 
@@ -161,7 +161,7 @@ Start in `enabled-non-enforcing` mode to understand your traffic without breakin
 
 ```yaml
 engine:
-  disallow_inline_arguments:
+  validate_inline_arguments:
     mode: enabled-non-enforcing
     return_in_response_extensions: true
 ```
@@ -171,6 +171,6 @@ migrate them to variables. Once the offending operations are gone, switch to `en
 
 ```yaml
 engine:
-  disallow_inline_arguments:
+  validate_inline_arguments:
     mode: enabled-enforcing
 ```

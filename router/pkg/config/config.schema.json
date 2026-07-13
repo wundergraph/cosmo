@@ -3648,7 +3648,7 @@
       "description": "The configuration for the engine. The engine is used to execute the GraphQL queries, mutations and subscriptions. Only modify this if you know what you are doing.",
       "additionalProperties": false,
       "properties": {
-        "disallow_inline_arguments": {
+        "validate_inline_arguments": {
           "type": "object",
           "description": "Detects, and optionally rejects, operations that carry hardcoded inline argument values instead of variables.",
           "additionalProperties": false,

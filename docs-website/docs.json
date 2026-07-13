@@ -235,7 +235,7 @@
                   "router/security/config-validation-and-signing",
                   "router/security/hardening-guide",
                   "router/security/cost-control",
-                  "router/security/disallow-inline-arguments"
+                  "router/security/validate-inline-arguments"
                 ]
               },
               {
