@@ -246,7 +246,7 @@ export function providesOnUnionWarning({
 }: ProvidesOnUnionWarningParams): Warning {
   return new Warning({
     message:
-      `The field "${fieldCoords}" that returns union "${namedTypeName}" defines a "@provides" directive with the` +
+      `The field "${fieldCoords}" that returns Union "${namedTypeName}" defines a "@provides" directive with the` +
       ` following field set:\n "${fieldSet}"\n` +
       `The "@provides" directive defined on a field that returns a Union type is only supported by router version` +
       ` 0.326.3+. Please note that older router versions do not support this functionality.`,

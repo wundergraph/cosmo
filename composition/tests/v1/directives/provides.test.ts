@@ -1366,55 +1366,6 @@ describe('@provides directive tests', () => {
       ]);
     });
 
-    test('that an error is returned if a non-external field is provided through a Union type fragment', () => {
-      const subgraphA = createSubgraph(
-        'a',
-        `
-        type Query {
-          union: Union @provides(fields: "... on Entity { name }")
-        }
-        
-        type Entity @key(fields: "id") {
-          id: ID!
-          name: String! @shareable
-        }
-        
-        union Union = Entity
-      `,
-      );
-      const subgraphB = createSubgraph(
-        'b',
-        `
-        type Entity @key(fields: "id") {
-          id: ID!
-          name: String! @shareable
-        }
-        `,
-      );
-      const { errors, warnings } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(errors).toHaveLength(1);
-      expect(errors).toStrictEqual([
-        subgraphValidationError(subgraphA.name, [
-          nonExternalConditionalFieldError({
-            directiveCoords: 'Query.union',
-            fieldSet: `... on Entity { name }`,
-            directiveName: PROVIDES,
-            subgraphName: subgraphA.name,
-            targetCoords: 'Entity.name',
-          }),
-        ]),
-      ]);
-      expect(warnings).toHaveLength(1);
-      expect(warnings).toStrictEqual([
-        providesOnUnionWarning({
-          fieldCoords: 'Query.union',
-          fieldSet: '... on Entity { name }',
-          namedTypeName: UNION,
-          subgraphName: subgraphA.name,
-        }),
-      ]);
-    });
-
     test('that an error is returned if a Union fields et defines an unknown type fragment', () => {
       const subgraphA = createSubgraph(
         'a',
@@ -1813,8 +1764,74 @@ describe('@provides directive tests', () => {
         }
         `,
       );
-      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(warnings).toHaveLength(0);
+      const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const aConfig = subgraphConfigBySubgraphName.get(subgraphA.name)!;
+      expect(aConfig).toBeDefined();
+      const bConfig = subgraphConfigBySubgraphName.get(subgraphB.name)!;
+      expect(bConfig).toBeDefined();
+      expect(aConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['union']),
+              isRootNode: true,
+              provides: [
+                {
+                  fieldName: 'union',
+                  selectionSet: '... on Entity { name }',
+                },
+              ],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id']),
+              externalFieldNames: new Set<string>(['name']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+        ]),
+      );
+      expect(bConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+        ]),
+      );
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on Entity { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
     });
 
     test('that provides on a field that returns a Union is valid #2', () => {
@@ -1891,7 +1908,140 @@ describe('@provides directive tests', () => {
         [subgraphA, subgraphB, subgraphC],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(warnings).toHaveLength(0);
+      const aConfig = subgraphConfigBySubgraphName.get(subgraphA.name)!;
+      expect(aConfig).toBeDefined();
+      const bConfig = subgraphConfigBySubgraphName.get(subgraphB.name)!;
+      expect(bConfig).toBeDefined();
+      const cConfig = subgraphConfigBySubgraphName.get(subgraphC.name)!;
+      expect(cConfig).toBeDefined();
+      expect(aConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['media']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Book',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Book',
+            },
+          ],
+          [
+            'Movie',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Movie',
+            },
+          ],
+        ]),
+      );
+      expect(bConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['media']),
+              isRootNode: true,
+              provides: [
+                {
+                  fieldName: 'media',
+                  selectionSet: '... on Book { title }',
+                },
+              ],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Book',
+            {
+              fieldNames: new Set<string>(['id']),
+              externalFieldNames: new Set<string>(['title']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Book',
+            },
+          ],
+          [
+            'Movie',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Movie',
+            },
+          ],
+        ]),
+      );
+      expect(cConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Book',
+            {
+              fieldNames: new Set<string>(['id', 'title']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Book',
+            },
+          ],
+          [
+            'Movie',
+            {
+              fieldNames: new Set<string>(['id', 'title']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Movie',
+            },
+          ],
+        ]),
+      );
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.media',
+          fieldSet: '... on Book { title }',
+          namedTypeName: 'Media',
+          subgraphName: subgraphB.name,
+        }),
+      ]);
     });
 
     test('that an error is returned if a non-external field is provided through a Union type fragment', () => {
@@ -1932,7 +2082,15 @@ describe('@provides directive tests', () => {
           }),
         ]),
       ]);
-      expect(warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on Entity { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
     });
 
     test('that an error is returned if a Union fieldset defines an unknown type fragment', () => {
@@ -1975,7 +2133,15 @@ describe('@provides directive tests', () => {
           ]),
         ]),
       ]);
-      expect(warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on Unknown { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
     });
 
     test('that an error is returned if a Union fieldset defines a non-member type fragment', () => {
@@ -2024,7 +2190,15 @@ describe('@provides directive tests', () => {
           ]),
         ]),
       ]);
-      expect(warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on EntityB { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
     });
 
     test('that an error is returned if a Union fieldset defines a non-member type fragment (in the current subgraph)', () => {
@@ -2079,7 +2253,15 @@ describe('@provides directive tests', () => {
           ]),
         ]),
       ]);
-      expect(warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          fieldCoords: 'Query.union',
+          fieldSet: '... on EntityB { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
     });
 
     test('that an error is returned if a field is directly provided on an Interface', () => {
