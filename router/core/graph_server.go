@@ -1784,6 +1784,7 @@ func (s *graphServer) buildGraphMux(
 
 	if s.authorization != nil {
 		authorizerOptions.RejectOperationIfUnauthorized = s.authorization.RejectOperationIfUnauthorized
+		authorizerOptions.EnablePreFetchFieldAuthorization = s.authorization.EnablePreFetchFieldAuthorization
 	}
 
 	loaderHooks := NewEngineRequestHooks(

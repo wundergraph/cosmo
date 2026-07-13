@@ -696,7 +696,8 @@
   },
   "Authorization": {
     "RequireAuthentication": false,
-    "RejectOperationIfUnauthorized": false
+    "RejectOperationIfUnauthorized": false,
+    "EnablePreFetchFieldAuthorization": false
   },
   "RateLimit": {
     "Enabled": true,

@@ -1790,10 +1790,11 @@ authentication:
 
 ## Authorization
 
-| Environment Variable             | YAML                             | Required               | Description                                                                                                                                                                                                                          | Default Value |
-| -------------------------------- | -------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
-| REQUIRE_AUTHENTICATION           | require_authentication           | <Icon icon="square" /> | Set to true to disallow unauthenticated requests                                                                                                                                                                                     | false         |
-| REJECT_OPERATION_IF_UNAUTHORIZED | reject_operation_if_unauthorized | <Icon icon="square" /> | If enabled, the Router will return 401 with no response data when the evaluation of field-based permissions ([@authenticated](/federation/directives/authenticated)or [@requiresScopes](/federation/directives/requiresscopes)fails) | false         |
+| Environment Variable                 | YAML                                 | Required               | Description                                                                                                                                                                                                                          | Default Value |
+| ------------------------------------ | ------------------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| REQUIRE_AUTHENTICATION               | require_authentication               | <Icon icon="square" /> | Set to true to disallow unauthenticated requests                                                                                                                                                                                     | false         |
+| REJECT_OPERATION_IF_UNAUTHORIZED     | reject_operation_if_unauthorized     | <Icon icon="square" /> | If enabled, the Router will return 401 with no response data when the evaluation of field-based permissions ([@authenticated](/federation/directives/authenticated)or [@requiresScopes](/federation/directives/requiresscopes)fails) | false         |
+| ENABLE_PRE_FETCH_FIELD_AUTHORIZATION | enable_pre_fetch_field_authorization | <Icon icon="square" /> | If enabled, fields protected by [@authenticated](/federation/directives/authenticated) or [@requiresScopes](/federation/directives/requiresscopes) are authorized in a single batch before any subgraph fetch runs, instead of filtering them from the response after the fetch. This avoids fetching data the client is not authorized to see. | false         |
 
 ### Example YAML config:
 
@@ -1803,6 +1804,7 @@ version: "1"
 authorization:
   require_authentication: false
   reject_operation_if_unauthorized: false
+  enable_pre_fetch_field_authorization: false
 ```
 
 ## CDN
