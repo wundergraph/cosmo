@@ -100,8 +100,8 @@ export const FeatureFlagsTable = ({
           <TableBody>
             {featureFlags.map(({ name, labels, createdAt, updatedAt, createdBy, namespace, isEnabled }) => {
               const path = graph
-                ? `${router.asPath.split('?')[0]}/${name}`
-                : `/${organizationSlug}/feature-flags/${name}?namespace=${namespace}`;
+                ? `${router.asPath.split('?')[0]}/${encodeURIComponent(name)}`
+                : `/${encodeURIComponent(organizationSlug ?? '')}/feature-flags/${encodeURIComponent(name)}?namespace=${encodeURIComponent(namespace)}`;
 
               return (
                 <TableRow

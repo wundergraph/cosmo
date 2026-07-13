@@ -83,9 +83,9 @@ export const OperationContentModal = ({
                   <TooltipTrigger asChild>
                     <Button variant="secondary" size="icon-sm" asChild>
                       <Link
-                        href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
-                          data?.operationContent || '',
-                        )}`}
+                        href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(
+                          slug,
+                        )}/playground?operation=${encodeURIComponent(data?.operationContent || '')}`}
                       >
                         <PlayIcon />
                       </Link>

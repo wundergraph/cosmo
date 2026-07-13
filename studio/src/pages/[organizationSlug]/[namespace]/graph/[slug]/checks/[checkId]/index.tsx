@@ -275,7 +275,13 @@ const CheckOverviewPage: NextPageWithLayout = () => {
       title={id}
       subtitle="A quick glance of the details for this check run"
       breadcrumbs={[
-        <Link key="checks" href={checksRoute || `/${organizationSlug}/${namespace}/graph/${slug}/checks`}>
+        <Link
+          key="checks"
+          href={
+            checksRoute ||
+            `/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(slug)}/checks`
+          }
+        >
           Checks
         </Link>,
       ]}
@@ -1161,7 +1167,11 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                                   className="group cursor-pointer hover:bg-secondary/30"
                                   onClick={() =>
                                     router.push(
-                                      `/${organizationSlug}/${linkedCheck.namespace}/graph/${linkedCheck.affectedGraphNames[0]}/checks/${linkedCheck.id}`,
+                                      `/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                                        linkedCheck.namespace,
+                                      )}/graph/${encodeURIComponent(
+                                        linkedCheck.affectedGraphNames[0],
+                                      )}/checks/${encodeURIComponent(linkedCheck.id)}`,
                                     )
                                   }
                                 >

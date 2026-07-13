@@ -192,9 +192,9 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
                       <TooltipTrigger asChild>
                         <Button variant="outline" size="icon" className="relative" asChild>
                           <Link
-                            href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
-                              content || '',
-                            )}&variables=${encodeURIComponent(
+                            href={`/${encodeURIComponent(organizationSlug)}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(
+                              slug,
+                            )}/playground?operation=${encodeURIComponent(content || '')}&variables=${encodeURIComponent(
                               variables || JSON.stringify(extractVariablesFromGraphQL(content, ast)),
                             )}`}
                           >
@@ -210,9 +210,9 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
                       <TooltipTrigger asChild>
                         <Button variant="outline" size="icon" asChild>
                           <Link
-                            href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
-                              content || '',
-                            )}&variables=${encodeURIComponent(
+                            href={`/${encodeURIComponent(organizationSlug)}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(
+                              slug,
+                            )}/playground?operation=${encodeURIComponent(content || '')}&variables=${encodeURIComponent(
                               variables || JSON.stringify(extractVariablesFromGraphQL(content, ast)),
                             )}`}
                           >

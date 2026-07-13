@@ -11,7 +11,11 @@ const DashboardPage: NextPageWithLayout = () => {
     if (!organizationSlug) return;
     const url = new URL(window.location.origin + router.basePath + router.asPath);
     const params = new URLSearchParams(url.search);
-    router.replace(params.size !== 0 ? `/${organizationSlug}/graphs?${params}` : `/${organizationSlug}/graphs`);
+    router.replace(
+      params.size !== 0
+        ? `/${encodeURIComponent((organizationSlug as string) ?? '')}/graphs?${params}`
+        : `/${encodeURIComponent((organizationSlug as string) ?? '')}/graphs`,
+    );
   }, [router, organizationSlug]);
 
   return (

@@ -42,7 +42,7 @@ export const MigrationDialog = ({
     namespace: { name: namespace },
   } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
-  const graphsPath = organizationSlug ? `/${organizationSlug}/graphs` : '/graphs';
+  const graphsPath = organizationSlug ? `/${encodeURIComponent(organizationSlug)}/graphs` : '/graphs';
   const migrate = !!router.query.migrate;
 
   const migrateInputSchema = z.object({

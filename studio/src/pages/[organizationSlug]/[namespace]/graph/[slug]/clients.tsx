@@ -468,7 +468,9 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
                           <TooltipTrigger>
                             <Button variant="outline" size="icon" asChild>
                               <Link
-                                href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
+                                href={`/${encodeURIComponent(organizationSlug)}/${encodeURIComponent(
+                                  namespace,
+                                )}/graph/${encodeURIComponent(slug)}/playground?operation=${encodeURIComponent(
                                   op.contents || '',
                                 )}&variables=${encodeURIComponent(JSON.stringify(variables))}`}
                               >
@@ -574,7 +576,11 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
         isOpen={persistedOperationDeleteState.show}
         operationNames={persistedOperationDeleteState.names ?? []}
         operationHasTraffic={Boolean(persistedOperationDeleteState.hasTraffic)}
-        metricsLink={`/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${encodeURIComponent(createFilterState({ operationPersistedId: persistedOperationDeleteState.id ?? undefined }))}`}
+        metricsLink={`/${encodeURIComponent(organizationSlug)}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(
+          slug,
+        )}/analytics?filterState=${encodeURIComponent(
+          createFilterState({ operationPersistedId: persistedOperationDeleteState.id ?? undefined }),
+        )}`}
         onSubmitButtonClick={
           persistedOperationDeleteState.id && clientName
             ? () => {
@@ -712,10 +718,14 @@ const ClientsPage: NextPageWithLayout = () => {
     };
     filters.push(filter);
 
+    const linkBase = `/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+      namespace,
+    )}/graph/${encodeURIComponent(slug)}/analytics`;
+
     if (mode === 'metrics') {
-      return `/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${JSON.stringify(filters)}`;
+      return `${linkBase}?filterState=${encodeURIComponent(JSON.stringify(filters))}`;
     } else {
-      return `/${organizationSlug}/${namespace}/graph/${slug}/analytics/traces?filterState=${JSON.stringify(filters)}`;
+      return `${linkBase}/traces?filterState=${encodeURIComponent(JSON.stringify(filters))}`;
     }
   };
 

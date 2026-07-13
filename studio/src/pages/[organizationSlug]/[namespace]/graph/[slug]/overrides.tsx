@@ -60,11 +60,15 @@ const OverridesPage: NextPageWithLayout = () => {
       operationHash: hash,
     });
 
+    const linkBase = `/${encodeURIComponent(organizationSlug)}/${encodeURIComponent(namespace)}/graphs/${encodeURIComponent(
+      slug,
+    )}/analytics`;
+
     if (mode === 'metrics') {
-      return `/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${filterState}`;
+      return `${linkBase}?filterState=${encodeURIComponent(filterState)}`;
     }
 
-    return `/${organizationSlug}/${namespace}/graph/${slug}/analytics/traces?filterState=${filterState}`;
+    return `${linkBase}/traces?filterState=${encodeURIComponent(filterState)}`;
   };
 
   const { data, isLoading, error, refetch } = useQuery(

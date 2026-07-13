@@ -437,7 +437,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
 
   const organizationSlug = router.query.organizationSlug as string;
   const code = router.query.code as string;
-  const slackRedirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}/${organizationSlug}/integrations`;
+  const slackRedirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}/${encodeURIComponent(organizationSlug)}/integrations`;
   const [shouldCreate, setShouldCreate] = useState(false);
 
   const { data, isLoading, error, refetch } = useQuery(getOrganizationIntegrations);
