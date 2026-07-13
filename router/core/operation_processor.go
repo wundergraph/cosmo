@@ -173,7 +173,9 @@ type parseKit struct {
 	variablesValidator  *variablesvalidation.VariablesValidator
 	operationValidator  *astvalidation.OperationValidator
 
-	inlineArgumentsValidator        *astnormalization.InlineArgumentsValidator
+	// inlineArgumentsIncludePersisted controls whether persisted operations are
+	// subject to inline-argument detection. When false, persisted operations are
+	// exempted per run via astnormalization.RunOptions.SkipInlineArguments.
 	inlineArgumentsIncludePersisted bool
 }
 
@@ -728,28 +730,17 @@ func (o *OperationKit) Parse() error {
 	return nil
 }
 
-// prepareInlineArgumentsDetection sets whether inline-argument detection is
-// active for the upcoming normalization run, applying the persisted-operation
-// exemption. It is a no-op when the policy is off. The validator's findings are
-// cleared separately in freeKit; here we only decide, per request, whether the
-// walker should run.
-func (o *OperationKit) prepareInlineArgumentsDetection() {
-	if o.kit.inlineArgumentsValidator == nil {
-		return
+func (o *OperationKit) inlineArgumentsRunOptions() astnormalization.RunOptions {
+	return astnormalization.RunOptions{
+		SkipInlineArguments: o.parsedOperation.IsPersistedOperation && !o.kit.inlineArgumentsIncludePersisted,
 	}
-	o.kit.inlineArgumentsValidator.Disabled = o.parsedOperation.IsPersistedOperation && !o.kit.inlineArgumentsIncludePersisted
 }
 
-// collectInlineArguments copies the walker's findings onto the parsed operation
-// after a successful (cache-miss) normalization, so the prehandler can log them
-// and normalization can cache them. In enforce mode the operation is rejected
-// during normalization and this is never reached.
-func (o *OperationKit) collectInlineArguments() {
-	v := o.kit.inlineArgumentsValidator
-	if v == nil || !v.HadInlineArguments() {
+func (o *OperationKit) collectInlineArguments(result *astnormalization.NormalizationResult) {
+	if result == nil || len(result.InlineArguments) == 0 {
 		return
 	}
-	o.parsedOperation.InlineArguments = slices.Clone(v.InlineArguments)
+	o.parsedOperation.InlineArguments = slices.Clone(result.InlineArguments)
 }
 
 // NormalizeOperation normalizes the operation. After normalization the normalized representation of the operation
@@ -774,14 +765,13 @@ func (o *OperationKit) normalizePersistedOperation(clientName string, isApq bool
 
 	report := &operationreport.Report{}
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
-	o.prepareInlineArgumentsDetection()
-	o.kit.staticNormalizer.NormalizeNamedOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, staticOperationName, report)
+	inlineArgsResult := o.kit.staticNormalizer.NormalizeNamedOperationWithResult(o.kit.doc, o.operationProcessor.executor.ClientSchema, staticOperationName, report, o.inlineArgumentsRunOptions())
 	if report.HasErrors() {
 		return false, &reportError{
 			report: report,
 		}
 	}
-	o.collectInlineArguments()
+	o.collectInlineArguments(inlineArgsResult)
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
@@ -876,14 +866,13 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	// normalize the operation
 	report := &operationreport.Report{}
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
-	o.prepareInlineArgumentsDetection()
-	o.kit.staticNormalizer.NormalizeNamedOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, staticOperationName, report)
+	inlineArgsResult := o.kit.staticNormalizer.NormalizeNamedOperationWithResult(o.kit.doc, o.operationProcessor.executor.ClientSchema, staticOperationName, report, o.inlineArgumentsRunOptions())
 	if report.HasErrors() {
 		return false, &reportError{
 			report: report,
 		}
 	}
-	o.collectInlineArguments()
+	o.collectInlineArguments(inlineArgsResult)
 
 	// Normalization removed skip/include variables from the operation and variables. For example,
 	//
@@ -1568,7 +1557,7 @@ type parseKitOptions struct {
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
-	normalizationOptions, inlineArgumentsValidator := buildNormalizationOptions(options.enableDefer, options.validateInlineArguments)
+	normalizationOptions := buildNormalizationOptions(options.enableDefer, options.validateInlineArguments)
 
 	return &parseKit{
 		i:                   i,
@@ -1590,13 +1579,12 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			},
 			DisableExposingVariablesContent: options.disableExposingVariablesContentOnValidationError,
 		}),
-		inlineArgumentsValidator:        inlineArgumentsValidator,
 		inlineArgumentsIncludePersisted: options.validateInlineArguments.IncludePersistedOperations,
 		operationValidator:              createOperationValidator(options),
 	}
 }
 
-func buildNormalizationOptions(enableDefer bool, validateInlineArguments config.ValidateInlineArguments) ([]astnormalization.Option, *astnormalization.InlineArgumentsValidator) {
+func buildNormalizationOptions(enableDefer bool, validateInlineArguments config.ValidateInlineArguments) []astnormalization.Option {
 	opts := []astnormalization.Option{
 		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 		astnormalization.WithInlineFragmentSpreads(),
@@ -1614,23 +1602,20 @@ func buildNormalizationOptions(enableDefer bool, validateInlineArguments config.
 			astvalidation.StreamAppliedToListFieldsOnly())
 	}
 
-	var inlineArgumentsValidator *astnormalization.InlineArgumentsValidator
-	if validateInlineArguments.Enabled() {
-		inlineArgumentsValidator = &astnormalization.InlineArgumentsValidator{
-			Options: astnormalization.InlineArgumentsValidationOptions{
-				Enforce:      validateInlineArguments.Enforcing(),
-				ErrorMessage: validateInlineArguments.ErrorMessage,
-				ErrorCode:    validateInlineArguments.ErrorCode,
-				StatusCode:   validateInlineArguments.EnforceHTTPStatusCode,
-			},
-		}
-		prevalidationRules = append(prevalidationRules, astnormalization.InlineArgumentsRule(inlineArgumentsValidator))
-	}
-
 	if len(prevalidationRules) > 0 {
 		opts = append(opts, astnormalization.WithPrevalidationRules(prevalidationRules...))
 	}
-	return opts, inlineArgumentsValidator
+
+	if validateInlineArguments.Enabled() {
+		opts = append(opts, astnormalization.WithInlineArgumentsValidation(astnormalization.InlineArgumentsValidationOptions{
+			Enforce:      validateInlineArguments.Enforcing(),
+			ErrorMessage: validateInlineArguments.ErrorMessage,
+			ErrorCode:    validateInlineArguments.ErrorCode,
+			StatusCode:   validateInlineArguments.EnforceHTTPStatusCode,
+		}))
+	}
+
+	return opts
 }
 
 func createOperationValidator(options *parseKitOptions) *astvalidation.OperationValidator {
@@ -1705,7 +1690,6 @@ func (p *OperationProcessor) freeKit(kit *parseKit) {
 	kit.doc.Reset()
 	kit.sha256Hash.Reset()
 	kit.normalizedOperation.Reset()
-	kit.inlineArgumentsValidator.ClearInlineArguments()
 	// because we're re-using the kit, and we're having a static number of kits based on the number of CPUs
 	// we're resetting the doc, parser, and buffer for the normalized operation if they grow too large (>1MB of query size)
 	if cap(kit.doc.Input.RawBytes) > 1024*1024 {
