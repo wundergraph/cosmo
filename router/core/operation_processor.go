@@ -36,7 +36,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvisitor"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
@@ -1605,18 +1604,16 @@ func buildNormalizationOptions(enableDefer bool, validateInlineArguments config.
 		astnormalization.WithRemoveUnusedVariables(),
 	}
 
-	var prevalidationRules []func(walker *astvisitor.Walker)
 	if enableDefer {
-		opts = append(opts, astnormalization.WithEnableDefer())
-		prevalidationRules = append(prevalidationRules,
-			astvalidation.DeferStreamOnValidOperations(),
-			astvalidation.DeferStreamHaveUniqueLabels(),
-			astvalidation.DirectivesAreInValidLocations(),
-			astvalidation.StreamAppliedToListFieldsOnly())
-	}
-
-	if len(prevalidationRules) > 0 {
-		opts = append(opts, astnormalization.WithPrevalidationRules(prevalidationRules...))
+		opts = append(opts,
+			astnormalization.WithEnableDefer(),
+			astnormalization.WithPrevalidationRules(
+				astvalidation.DeferStreamOnValidOperations(),
+				astvalidation.DeferStreamHaveUniqueLabels(),
+				astvalidation.DirectivesAreInValidLocations(),
+				astvalidation.StreamAppliedToListFieldsOnly(),
+			),
+		)
 	}
 
 	if validateInlineArguments.Enabled() {
