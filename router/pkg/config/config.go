@@ -275,6 +275,25 @@ type GraphqlMetrics struct {
 	CollectorEndpoint string `yaml:"collector_endpoint" envDefault:"https://cosmo-metrics.wundergraph.com" env:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT"`
 }
 
+type Pyroscope struct {
+	Enabled              bool               `yaml:"enabled" envDefault:"false" env:"PYROSCOPE_ENABLED"`
+	ServerAddress        string             `yaml:"server_address" env:"PYROSCOPE_SERVER_ADDRESS"`
+	ApplicationName      string             `yaml:"application_name" envDefault:"wundergraph.cosmo.router" env:"PYROSCOPE_APPLICATION_NAME"`
+	BasicAuth            PyroscopeBasicAuth `yaml:"basic_auth"`
+	Headers              map[string]string  `yaml:"headers"`
+	Tags                 map[string]string  `yaml:"tags"`
+	UploadRate           time.Duration      `yaml:"upload_rate" envDefault:"15s" env:"PYROSCOPE_UPLOAD_RATE"`
+	ProfileTypes         []string           `yaml:"profile_types" env:"PYROSCOPE_PROFILE_TYPES"`
+	DisableGCRuns        bool               `yaml:"disable_gc_runs" envDefault:"false" env:"PYROSCOPE_DISABLE_GC_RUNS"`
+	MutexProfileFraction int                `yaml:"mutex_profile_fraction" envDefault:"5" env:"PYROSCOPE_MUTEX_PROFILE_FRACTION"`
+	BlockProfileRate     int                `yaml:"block_profile_rate" envDefault:"5" env:"PYROSCOPE_BLOCK_PROFILE_RATE"`
+}
+
+type PyroscopeBasicAuth struct {
+	Username string `yaml:"username,omitempty" env:"PYROSCOPE_BASIC_AUTH_USERNAME"`
+	Password string `yaml:"password,omitempty" env:"PYROSCOPE_BASIC_AUTH_PASSWORD"`
+}
+
 type BackoffJitterRetry struct {
 	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"RETRY_ENABLED"`
 	Algorithm   string        `yaml:"algorithm" envDefault:"backoff_jitter" env:"RETRY_ALGORITHM"`
@@ -1381,6 +1400,7 @@ type Config struct {
 	InstanceID     string                  `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
 	Graph          Graph                   `yaml:"graph,omitempty"`
 	Telemetry      Telemetry               `yaml:"telemetry,omitempty"`
+	Pyroscope      Pyroscope               `yaml:"pyroscope,omitempty"`
 	GraphqlMetrics GraphqlMetrics          `yaml:"graphql_metrics,omitempty"`
 	CORS           CORS                    `yaml:"cors,omitempty"`
 	Cluster        Cluster                 `yaml:"cluster,omitempty"`

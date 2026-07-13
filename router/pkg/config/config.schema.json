@@ -485,6 +485,104 @@
         }
       }
     },
+    "pyroscope": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for continuous profiling with Grafana Pyroscope. When enabled, the router continuously collects profiles and sends them to the configured Pyroscope server.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable continuous profiling. The default value is false. When enabled, a server address must be configured."
+        },
+        "server_address": {
+          "type": "string",
+          "format": "http-url",
+          "description": "The address of the Pyroscope server to which the profiles are sent, e.g. your own Pyroscope or Grafana Cloud instance. Required when profiling is enabled."
+        },
+        "application_name": {
+          "type": "string",
+          "default": "wundergraph.cosmo.router",
+          "description": "The application name under which the profiles are stored. The default value is 'wundergraph.cosmo.router'."
+        },
+        "basic_auth": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The basic authentication credentials for the Pyroscope server, e.g. for Grafana Cloud. Alternatively, use the headers option to authenticate with a bearer token.",
+          "properties": {
+            "username": {
+              "type": "string",
+              "description": "The username for basic authentication. For Grafana Cloud, this is the stack user ID."
+            },
+            "password": {
+              "type": "string",
+              "description": "The password for basic authentication. For Grafana Cloud, this is an access token with profile write permissions."
+            }
+          }
+        },
+        "headers": {
+          "type": "object",
+          "description": "The headers to send with each profile upload request. Use this to set custom authentication headers.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "tags": {
+          "type": "object",
+          "description": "The static tags to attach to all profiles. The router always attaches the hostname and the router version as tags.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "upload_rate": {
+          "type": "string",
+          "format": "go-duration",
+          "default": "15s",
+          "duration": {
+            "minimum": "1s"
+          },
+          "description": "The interval at which the profiles are uploaded to the Pyroscope server. The period is specified as a string with a number and a unit, e.g. 15s, 1m. The default value is 15s."
+        },
+        "profile_types": {
+          "type": "array",
+          "description": "The profile types to collect. If not specified, the default profile types of the pyroscope client are used: cpu, alloc_objects, alloc_space, inuse_objects, inuse_space.",
+          "default": ["cpu", "alloc_objects", "alloc_space", "inuse_objects", "inuse_space"],
+          "items": {
+            "type": "string",
+            "enum": [
+              "cpu",
+              "alloc_objects",
+              "alloc_space",
+              "inuse_objects",
+              "inuse_space",
+              "goroutines",
+              "mutex_count",
+              "mutex_duration",
+              "block_count",
+              "block_duration",
+              "goroutine_leak"
+            ]
+          }
+        },
+        "disable_gc_runs": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable the automatic runtime.GC runs between collecting the heap profiles. The Go runtime only updates the heap profile data during a garbage collection cycle, so the profiler triggers a GC run before each upload to get accurate memory profiles. Set this to true if the additional GC pauses are a concern, e.g. for routers with a very large heap or strict latency requirements, at the cost of less up-to-date memory profiles. The default value is false."
+        },
+        "mutex_profile_fraction": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 5,
+          "description": "The fraction of mutex contention events that are reported in the mutex profile. On average 1/n events are reported. Set to 0 to disable mutex profiling. The default value is 5."
+        },
+        "block_profile_rate": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 5,
+          "description": "The fraction of goroutine blocking events that are reported in the blocking profile. The profiler aims to sample an average of one blocking event per n nanoseconds spent blocked. Set to 0 to disable block profiling. The default value is 5."
+        }
+      }
+    },
     "dev_mode": {
       "type": "boolean",
       "default": false,

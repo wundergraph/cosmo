@@ -269,6 +269,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithDevelopmentMode(config.DevelopmentMode),
 		WithTracing(TraceConfigFromTelemetry(&config.Telemetry)),
 		WithMetrics(MetricConfigFromTelemetry(&config.Telemetry)),
+		WithPyroscope(config.Pyroscope),
 		WithTelemetryAttributes(config.Telemetry.Attributes),
 		WithTracingAttributes(config.Telemetry.Tracing.Attributes),
 		WithEngineExecutionConfig(config.EngineExecutionConfiguration),
