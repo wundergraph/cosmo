@@ -825,7 +825,6 @@ func TestGraphServerShutdown(t *testing.T) {
 		prev := &graphServer{
 			Config:            &Config{logger: zap.NewNop()},
 			graphServerCancel: cancel,
-			inFlightRequests:  &atomic.Int64{},
 			baseTransport:     &http.Transport{},
 			graphMuxList:      map[string]*graphMux{"": baseMux},
 		}
@@ -854,7 +853,6 @@ func TestGraphServerShutdown(t *testing.T) {
 		srv := &graphServer{
 			Config:            &Config{logger: zap.NewNop()},
 			graphServerCancel: cancel,
-			inFlightRequests:  &atomic.Int64{},
 			baseTransport:     &http.Transport{},
 			graphMuxList:      map[string]*graphMux{"": mux},
 		}
