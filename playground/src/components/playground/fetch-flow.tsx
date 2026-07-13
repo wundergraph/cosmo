@@ -194,9 +194,7 @@ export const ReactFlowARTMultiFetchNode = ({ data }: Node<Pick<ARTFetchNode, 'id
           <div className="flex items-center gap-2">
             <LuClock className="h-5 w-5 shrink-0 text-primary" />
             <p className="text-base font-medium text-foreground">{deferLabel(data.defer)}</p>
-            {data.defer.status && (
-              <Badge variant={deferStatusVariant(data.defer.status)}>{data.defer.status}</Badge>
-            )}
+            {data.defer.status && <Badge variant={deferStatusVariant(data.defer.status)}>{data.defer.status}</Badge>}
           </div>
           <p className="pl-7 text-xs text-muted-foreground">
             {data.defer.path.length ? data.defer.path.join('.') : 'response root'}
@@ -264,9 +262,7 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
               </p>
             </div>
           </div>
-          {data.outputTrace && (
-            <Badge variant={isFailure ? 'destructive' : 'success'}>{statusCode}</Badge>
-          )}
+          {data.outputTrace && <Badge variant={isFailure ? 'destructive' : 'success'}>{statusCode}</Badge>}
         </div>
         <div className="flex flex-col gap-2 px-4 py-3 text-sm">
           {data.plannedOnly && (
