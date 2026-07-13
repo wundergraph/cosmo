@@ -184,13 +184,36 @@ export const createPlaygroundHTTPFetch =
       const headers = preparePlaygroundHeaders(initialHeaders, scripts);
 
       const requestBody = JSON.parse(String(init?.body));
-      if (schema && clientValidationEnabled) {
-        const errors = validate(schema, parse(requestBody.query));
-        if (errors.length > 0) {
+      const validationQuery = typeof requestBody.query === 'string' ? requestBody.query : '';
+      // Persisted-query (APQ) requests omit `query` and rely on extensions.persistedQuery.
+      // Skip client-side validation so the router can resolve them instead of rejecting here.
+      if (schema && clientValidationEnabled && validationQuery.trim() !== '') {
+        let validationErrors: ReadonlyArray<{
+          message: string;
+          path?: readonly (string | number)[];
+          locations?: readonly unknown[];
+        }>;
+        try {
+          validationErrors = validate(schema, parse(validationQuery));
+        } catch (parseError) {
+          const graphQLError = parseError as {
+            message?: string;
+            locations?: readonly unknown[];
+            path?: readonly (string | number)[];
+          };
+          validationErrors = [
+            {
+              message: graphQLError.message ?? 'The operation could not be parsed.',
+              path: graphQLError.path,
+              locations: graphQLError.locations,
+            },
+          ];
+        }
+        if (validationErrors.length > 0) {
           const response = new Response(
             JSON.stringify({
               message: 'Client-side validation failed. The request was not sent to the Router.',
-              errors: errors.map((error) => ({
+              errors: validationErrors.map((error) => ({
                 message: error.message,
                 path: error.path,
                 locations: error.locations,

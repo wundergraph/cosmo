@@ -120,8 +120,14 @@ export const executePostScripts = async (graphId: string, requestBody: unknown, 
 };
 
 const validationResponse = (schema: GraphQLSchema, requestBody: Record<string, unknown>) => {
+  const query = typeof requestBody.query === 'string' ? requestBody.query : '';
+  // Persisted-query (APQ) requests omit `query` and rely on extensions.persistedQuery.
+  // Skip client-side validation so the router can resolve them instead of rejecting here.
+  if (query.trim() === '') {
+    return;
+  }
+
   try {
-    const query = typeof requestBody.query === 'string' ? requestBody.query : '';
     const errors = validate(schema, parse(query));
     if (errors.length === 0) {
       return;

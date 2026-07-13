@@ -37,7 +37,7 @@ You get the following information from ART
 
 All of this information can be quite useful to fully understand how the Router resolves a request and why it might be slow or behave unexpectedly.
 
-For a query using [`@defer`](/router/incremental-delivery), ART is progressive. The initial multipart result contains the primary trace so the playground can display it immediately. The result with `hasNext: false` contains the authoritative trace for the whole request, including deferred groups and request-specific `completed`, `error`, or `skipped` status. If a stream ends before that terminal result, the trace is incomplete.
+For a query using [`@defer`](/router/incremental-delivery), ART is progressive. The initial multipart result contains the primary trace so the playground can display it immediately. The result with `hasNext: false` contains the authoritative trace for the whole request. It also includes deferred groups and each request's `completed`, `error`, or `skipped` status. If a stream ends before that terminal result, the trace is incomplete.
 
 ## Configuration
 
