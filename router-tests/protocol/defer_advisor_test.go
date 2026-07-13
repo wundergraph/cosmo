@@ -123,7 +123,9 @@ type advisorView struct {
 	ValidationParts    []advisorPartView
 }
 
-func TestDeferAdvisor(t *testing.T) {
+// TestFlakyDeferAdvisor asserts timing-derived advisor milestones that can drift
+// under parallel CI load (CPU contention), so it runs in the retried TestFlaky pass.
+func TestFlakyDeferAdvisor(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{
