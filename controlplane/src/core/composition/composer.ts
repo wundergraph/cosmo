@@ -464,7 +464,7 @@ export class Composer {
     // graph's latest valid version, which would produce a meaningless base-vs-feature-flag diff). Computed before
     // addSchemaVersion inserts the new version, so it resolves to the chronologically prior feature-flag version.
     const prevValidFederatedSDL = isFeatureFlagComposition
-      ? await this.featureFlagRepo.getLatestFeatureFlagSchemaVersion({
+      ? await this.featureFlagRepo.getLatestValidFeatureFlagSchemaVersion({
           targetId: composedGraph.targetID,
           featureFlagId,
         })

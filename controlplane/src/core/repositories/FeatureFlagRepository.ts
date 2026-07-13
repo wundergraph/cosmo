@@ -1618,7 +1618,7 @@ export class FeatureFlagRepository {
     return ffSchemaVersion;
   }
 
-  public async getLatestFeatureFlagSchemaVersion(data: { targetId: string; featureFlagId: string }) {
+  public async getLatestValidFeatureFlagSchemaVersion(data: { targetId: string; featureFlagId: string }) {
     const latest = await this.db
       .select({
         schema: schemaVersion.schemaSDL,
