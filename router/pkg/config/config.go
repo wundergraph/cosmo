@@ -595,31 +595,31 @@ type CostControl struct {
 	IgnoreImplementingTypeWeights bool `yaml:"ignore_implementing_type_weights,omitempty" envDefault:"false" env:"IGNORE_IMPLEMENTING_TYPE_WEIGHTS"`
 }
 
-type ValidateInlineArgumentsMode string
+type EnforcementMode string
 
 const (
-	ValidateInlineArgumentsModeOff          ValidateInlineArgumentsMode = "off"
-	ValidateInlineArgumentsModeNonEnforcing ValidateInlineArgumentsMode = "enabled-non-enforcing"
-	ValidateInlineArgumentsModeEnforcing    ValidateInlineArgumentsMode = "enabled-enforcing"
+	EnforcementModeOff        EnforcementMode = "off"
+	EnforcementModePermissive EnforcementMode = "permissive"
+	EnforcementModeStrict     EnforcementMode = "strict"
 )
 
 type ValidateInlineArguments struct {
-	Mode                       ValidateInlineArgumentsMode `yaml:"mode,omitempty" envDefault:"off" env:"MODE"`
-	EnforceHTTPStatusCode      int                         `yaml:"enforce_http_status_code,omitempty" envDefault:"400" env:"ENFORCE_HTTP_STATUS_CODE"`
-	ErrorCode                  string                      `yaml:"error_code,omitempty" envDefault:"INLINE_ARGUMENT_VALUES_NOT_ALLOWED" env:"ERROR_CODE"`
-	ErrorMessage               string                      `yaml:"error_message,omitempty" envDefault:"Inline argument values are not allowed. Use variables instead." env:"ERROR_MESSAGE"`
-	IncludePersistedOperations bool                        `yaml:"include_persisted_operations,omitempty" envDefault:"false" env:"INCLUDE_PERSISTED_OPERATIONS"`
-	ReturnInResponseExtensions bool                        `yaml:"return_in_response_extensions,omitempty" envDefault:"false" env:"RETURN_IN_RESPONSE_EXTENSIONS"`
+	Mode                       EnforcementMode `yaml:"mode,omitempty" envDefault:"off" env:"MODE"`
+	EnforceHTTPStatusCode      int             `yaml:"enforce_http_status_code,omitempty" envDefault:"400" env:"ENFORCE_HTTP_STATUS_CODE"`
+	ErrorCode                  string          `yaml:"error_code,omitempty" envDefault:"INLINE_ARGUMENT_VALUES_NOT_ALLOWED" env:"ERROR_CODE"`
+	ErrorMessage               string          `yaml:"error_message,omitempty" envDefault:"Inline argument values are not allowed. Use variables instead." env:"ERROR_MESSAGE"`
+	IncludePersistedOperations bool            `yaml:"include_persisted_operations,omitempty" envDefault:"false" env:"INCLUDE_PERSISTED_OPERATIONS"`
+	ReturnInResponseExtensions bool            `yaml:"return_in_response_extensions,omitempty" envDefault:"false" env:"RETURN_IN_RESPONSE_EXTENSIONS"`
 }
 
 // Enabled reports whether the policy is active in any mode.
 func (d ValidateInlineArguments) Enabled() bool {
-	return d.Mode == ValidateInlineArgumentsModeNonEnforcing || d.Mode == ValidateInlineArgumentsModeEnforcing
+	return d.Mode == EnforcementModePermissive || d.Mode == EnforcementModeStrict
 }
 
 // Enforcing reports whether the policy rejects offending operations.
 func (d ValidateInlineArguments) Enforcing() bool {
-	return d.Mode == ValidateInlineArgumentsModeEnforcing
+	return d.Mode == EnforcementModeStrict
 }
 
 type ComplexityLimit struct {

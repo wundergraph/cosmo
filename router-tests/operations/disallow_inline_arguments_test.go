@@ -32,7 +32,7 @@ func TestValidateInlineArguments(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode:                  config.ValidateInlineArgumentsModeEnforcing,
+					Mode:                  config.EnforcementModeStrict,
 					EnforceHTTPStatusCode: 400,
 					ErrorCode:             "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
 					ErrorMessage:          "Inline argument values are not allowed. Use variables instead.",
@@ -52,7 +52,7 @@ func TestValidateInlineArguments(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode:                       config.ValidateInlineArgumentsModeEnforcing,
+					Mode:                       config.EnforcementModeStrict,
 					EnforceHTTPStatusCode:      400,
 					ErrorCode:                  "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
 					ErrorMessage:               "Inline argument values are not allowed. Use variables instead.",
@@ -74,7 +74,7 @@ func TestValidateInlineArguments(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode:                  config.ValidateInlineArgumentsModeEnforcing,
+					Mode:                  config.EnforcementModeStrict,
 					EnforceHTTPStatusCode: 400,
 					ErrorCode:             "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
 					ErrorMessage:          "Inline argument values are not allowed. Use variables instead.",
@@ -99,7 +99,7 @@ func TestValidateInlineArguments(t *testing.T) {
 			},
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode:         config.ValidateInlineArgumentsModeNonEnforcing,
+					Mode:         config.EnforcementModePermissive,
 					ErrorCode:    "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
 					ErrorMessage: "Inline argument values are not allowed. Use variables instead.",
 				}
@@ -128,7 +128,7 @@ func TestValidateInlineArguments(t *testing.T) {
 			},
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode: config.ValidateInlineArgumentsModeNonEnforcing,
+					Mode: config.EnforcementModePermissive,
 				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -154,7 +154,7 @@ func TestValidateInlineArguments(t *testing.T) {
 			},
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode: config.ValidateInlineArgumentsModeNonEnforcing,
+					Mode: config.EnforcementModePermissive,
 				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -181,7 +181,7 @@ func TestValidateInlineArguments(t *testing.T) {
 			},
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode: config.ValidateInlineArgumentsModeNonEnforcing,
+					Mode: config.EnforcementModePermissive,
 				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -220,7 +220,7 @@ func TestValidateInlineArguments(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode:                       config.ValidateInlineArgumentsModeNonEnforcing,
+					Mode:                       config.EnforcementModePermissive,
 					ReturnInResponseExtensions: true,
 				}
 			},
@@ -249,7 +249,7 @@ func TestValidateInlineArguments(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode: config.ValidateInlineArgumentsModeNonEnforcing,
+					Mode: config.EnforcementModePermissive,
 				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -263,7 +263,7 @@ func TestValidateInlineArguments(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode:                       config.ValidateInlineArgumentsModeNonEnforcing,
+					Mode:                       config.EnforcementModePermissive,
 					ReturnInResponseExtensions: true,
 				}
 			},
@@ -311,7 +311,7 @@ func TestValidateInlineArgumentsPersistedOperations(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode:                  config.ValidateInlineArgumentsModeEnforcing,
+					Mode:                  config.EnforcementModeStrict,
 					EnforceHTTPStatusCode: 400,
 					ErrorCode:             "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
 					ErrorMessage:          "Inline argument values are not allowed. Use variables instead.",
@@ -331,7 +331,7 @@ func TestValidateInlineArgumentsPersistedOperations(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode:                       config.ValidateInlineArgumentsModeEnforcing,
+					Mode:                       config.EnforcementModeStrict,
 					EnforceHTTPStatusCode:      400,
 					ErrorCode:                  "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
 					ErrorMessage:               "Inline argument values are not allowed. Use variables instead.",
@@ -353,7 +353,7 @@ func TestValidateInlineArgumentsPersistedOperations(t *testing.T) {
 			LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.WarnLevel},
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode: config.ValidateInlineArgumentsModeNonEnforcing,
+					Mode: config.EnforcementModePermissive,
 				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -372,7 +372,7 @@ func TestValidateInlineArgumentsPersistedOperations(t *testing.T) {
 			LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.WarnLevel},
 			ModifyEngineExecutionConfiguration: func(s *config.EngineExecutionConfiguration) {
 				s.ValidateInlineArguments = config.ValidateInlineArguments{
-					Mode:                       config.ValidateInlineArgumentsModeNonEnforcing,
+					Mode:                       config.EnforcementModePermissive,
 					IncludePersistedOperations: true,
 				}
 			},

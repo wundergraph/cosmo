@@ -3655,9 +3655,9 @@
           "properties": {
             "mode": {
               "type": "string",
-              "enum": ["off", "enabled-non-enforcing", "enabled-enforcing"],
+              "enum": ["off", "permissive", "strict"],
               "default": "off",
-              "description": "Controls the policy: 'off' disables it; 'enabled-non-enforcing' detects and records inline arguments but still executes the operation; 'enabled-enforcing' rejects operations that use inline argument values."
+              "description": "Controls the policy: 'off' disables it; 'permissive' detects and records inline arguments but still executes the operation; 'strict' rejects operations that use inline argument values."
             },
             "enforce_http_status_code": {
               "type": "integer",
