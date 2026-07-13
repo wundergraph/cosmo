@@ -4,6 +4,40 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.331.0](https://github.com/wundergraph/cosmo/compare/router@0.330.0...router@0.331.0) (2026-07-10)
+
+### Features
+
+* **router:** add pre-fetch field authorization ([#3056](https://github.com/wundergraph/cosmo/issues/3056)) ([1affda0](https://github.com/wundergraph/cosmo/commit/1affda048dec2c4cb92148b58f66661400dcf6f6)) (@Noroth)
+
+# [0.330.0](https://github.com/wundergraph/cosmo/compare/router@0.329.2...router@0.330.0) (2026-07-08)
+
+### Bug Fixes
+
+* router [@include](https://github.com/include) variable fails with "not provided" on repeated requests (ENG-9772) ([#3045](https://github.com/wundergraph/cosmo/issues/3045)) ([cce07cb](https://github.com/wundergraph/cosmo/commit/cce07cbeb97db495bc9c976983332b5f3114c67b)) (@gausie)
+* **router:** bump graphql-go-tools version to 2.9.2 ([#3057](https://github.com/wundergraph/cosmo/issues/3057)) ([8db553c](https://github.com/wundergraph/cosmo/commit/8db553c1d48a3eb215656c9b82062ecea4aad9a7)) (@endigma)
+* **router:** flush SSE/multipart response head before first message ([#3052](https://github.com/wundergraph/cosmo/issues/3052)) ([10e9731](https://github.com/wundergraph/cosmo/commit/10e9731fff16f3d63e13d336bd32dcf88753e3d1)) (@endigma)
+* **router:** guard subgraph connection-metrics trace against data race ([#3054](https://github.com/wundergraph/cosmo/issues/3054)) ([98edfc2](https://github.com/wundergraph/cosmo/commit/98edfc2746406b46b807fbdd1b1ba9077c3a9929)) (@endigma)
+* **router:** resolve socket fd for wss connections ([#3053](https://github.com/wundergraph/cosmo/issues/3053)) ([5570bf9](https://github.com/wundergraph/cosmo/commit/5570bf919fda0788e9c977b8d49ae57d891db924)) (@endigma)
+
+### Features
+
+* add flag SkipNullVariablesError ([#3024](https://github.com/wundergraph/cosmo/issues/3024)) ([647701f](https://github.com/wundergraph/cosmo/commit/647701fbc87c407a60e526a19c2ad4ba11c562c6)) (@alepane21)
+
+## [0.329.2](https://github.com/wundergraph/cosmo/compare/router@0.329.1...router@0.329.2) (2026-07-07)
+
+### Bug Fixes
+
+* do not charge children of null-parents in actual costs ([#3051](https://github.com/wundergraph/cosmo/issues/3051)) ([d161722](https://github.com/wundergraph/cosmo/commit/d16172286d5ab1a5a941c8069e89590e9ecc9935)) (@ysmolski)
+
+## [0.329.1](https://github.com/wundergraph/cosmo/compare/router@0.329.0...router@0.329.1) (2026-07-06)
+
+### Bug Fixes
+
+* enforce max waiting on control plane also if response is slow ([#2656](https://github.com/wundergraph/cosmo/issues/2656)) ([f9789a3](https://github.com/wundergraph/cosmo/commit/f9789a384f311b8d39a9df134a61a30687d70c88)) (@alepane21)
+* **router:** fix pubsub goroutine leak ([#3047](https://github.com/wundergraph/cosmo/issues/3047)) ([3052621](https://github.com/wundergraph/cosmo/commit/3052621dcdfa69e614e43356807d17999d8d950d)) (@dkorittki)
+* **router:** validate operations before variable extraction (ENG-9820) ([#3041](https://github.com/wundergraph/cosmo/issues/3041)) ([3ed663b](https://github.com/wundergraph/cosmo/commit/3ed663b1515f4298d15956bfd0132cc68f898a0f)) (@jensneuse)
+
 # [0.329.0](https://github.com/wundergraph/cosmo/compare/router@0.328.0...router@0.329.0) (2026-07-03)
 
 ### Features

@@ -6,6 +6,7 @@ import Table from 'cli-table3';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { resolve } from 'pathe';
 import { getBaseHeaders } from '../../../core/config.js';
+import { stripProtobufInternals } from '../../../utils.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 type OutputFile = {
@@ -56,7 +57,7 @@ export default (opts: BaseCommandOptions) => {
       return;
     }
     if (options.json) {
-      console.log(JSON.stringify(resp.featureFlags));
+      console.log(JSON.stringify(resp.featureFlags, stripProtobufInternals));
       return;
     }
 

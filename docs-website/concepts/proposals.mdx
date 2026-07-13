@@ -14,6 +14,10 @@ A proposal represents a collection of changes to a federated graph, which can in
 - Addition of new subgraphs
 - Removal of existing subgraphs
 
+<Note>
+  When adding a new subgraph, its labels must match the label matchers of the federated graph the proposal is for. A proposal with a new subgraph whose labels do not match is rejected, since the subgraph would not be part of that federated graph.
+</Note>
+
 ## Why Use Proposals?
 
 Proposals help teams:

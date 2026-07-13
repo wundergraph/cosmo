@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { buildASTSchema } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -7,7 +6,7 @@ import {
   CheckSubgraphSchemaResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { GraphQLSchema, parse } from 'graphql';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { PlainMessage, COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -96,27 +95,6 @@ export function checkSubgraphSchema(
     }
 
     const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
-    if (subgraph && subgraph.isFeatureSubgraph) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details:
-            `The subgraph "${req.subgraphName}" is a feature subgraph.` +
-            ` Feature subgraphs do not currently support check operations.`,
-        },
-        breakingChanges: [],
-        nonBreakingChanges: [],
-        composedSchemaBreakingChanges: [],
-        compositionErrors: [],
-        checkId: '',
-        checkedFederatedGraphs: [],
-        lintWarnings: [],
-        lintErrors: [],
-        graphPruneWarnings: [],
-        graphPruneErrors: [],
-        compositionWarnings: [],
-      };
-    }
 
     const webhookService = new OrganizationWebhookService(
       opts.db,
@@ -309,6 +287,7 @@ export function checkSubgraphSchema(
       checkId: schemaCheckID,
       operationUsageStats,
       proposalMatchMessage,
+      featureSubgraphCheckMessage,
       hasClientTraffic,
       checkedFederatedGraphs,
       isCheckExtensionSkipped,
@@ -372,6 +351,7 @@ export function checkSubgraphSchema(
         clientTrafficCheckSkipped: req.skipTrafficCheck,
         compositionWarnings,
         proposalMatchMessage,
+        featureSubgraphCheckMessage,
         counts,
       };
     }
@@ -401,6 +381,7 @@ export function checkSubgraphSchema(
           clientTrafficCheckSkipped: req.skipTrafficCheck,
           compositionWarnings,
           proposalMatchMessage,
+          featureSubgraphCheckMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
           counts,
@@ -433,6 +414,7 @@ export function checkSubgraphSchema(
           clientTrafficCheckSkipped: req.skipTrafficCheck,
           compositionWarnings,
           proposalMatchMessage,
+          featureSubgraphCheckMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
           counts,
@@ -500,6 +482,7 @@ export function checkSubgraphSchema(
           clientTrafficCheckSkipped: req.skipTrafficCheck,
           compositionWarnings,
           proposalMatchMessage,
+          featureSubgraphCheckMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
           counts,
@@ -548,6 +531,7 @@ export function checkSubgraphSchema(
       clientTrafficCheckSkipped: req.skipTrafficCheck,
       compositionWarnings,
       proposalMatchMessage,
+      featureSubgraphCheckMessage,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
       isCheckExtensionSkipped,

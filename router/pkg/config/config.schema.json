@@ -2383,6 +2383,10 @@
         "reject_operation_if_unauthorized": {
           "type": "boolean",
           "description": "Reject the operation if the request is not authorized. If the value is true, the operation is rejected if the request is not authorized."
+        },
+        "enable_pre_fetch_field_authorization": {
+          "type": "boolean",
+          "description": "Authorize fields protected by an authorization rule in a single batch call before any subgraph fetch executes (scope-only, independent of the returned data), instead of filtering them out of the response after the fetch. This avoids fetching data that the client is not authorized to see."
         }
       }
     },
@@ -3727,6 +3731,11 @@
               "type": "boolean",
               "default": false,
               "description": "Always skip the loader. This will return no data but only render response extensions, e.g. to expose the query plan."
+            },
+            "synchronous_cache_writes": {
+              "type": "boolean",
+              "default": false,
+              "description": "Wait for the asynchronous operation-cache writes of a request to be applied before resolving the response, so that subsequent requests deterministically hit the caches. Intended for testing."
             }
           }
         },
@@ -4200,6 +4209,17 @@
         "subrequest_http_error": {
           "type": "object",
           "description": "Prepends an additional error when subgraph HTTP response code is non-2XX, similar to Apollo Router.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "skip_null_variables_error": {
+          "type": "object",
+          "description": "Skips the error when a null variable is supplied, similar to Apollo Router.",
           "additionalProperties": false,
           "properties": {
             "enabled": {

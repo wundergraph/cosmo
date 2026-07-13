@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.129.0](https://github.com/wundergraph/cosmo/compare/wgc@0.128.0...wgc@0.129.0) (2026-07-08)
+
+### Features
+
+* add support for feature subgraph checks ([#3029](https://github.com/wundergraph/cosmo/issues/3029)) ([8aadbf0](https://github.com/wundergraph/cosmo/commit/8aadbf0995725f7ef27f93e118679d12571354d9)) (@JivusAyrus)
+
+# [0.128.0](https://github.com/wundergraph/cosmo/compare/wgc@0.127.1...wgc@0.128.0) (2026-07-06)
+
+### Features
+
+* upgrade connect v1 to v2 ([#2705](https://github.com/wundergraph/cosmo/issues/2705)) ([c7203f4](https://github.com/wundergraph/cosmo/commit/c7203f47529f75675ca04e6ac4018efe55d4e498)) (@JivusAyrus)
+
 ## [0.127.1](https://github.com/wundergraph/cosmo/compare/wgc@0.127.0...wgc@0.127.1) (2026-07-02)
 
 **Note:** Version bump only for package wgc

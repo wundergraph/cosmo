@@ -42,7 +42,7 @@ func TestRequestTracingSecurity(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Header: headers,
+				Header: headers.Clone(),
 				Query:  query,
 			})
 
@@ -75,7 +75,7 @@ func TestRequestTracingSecurity(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Header: headers,
+				Header: headers.Clone(),
 				Query:  query,
 			})
 

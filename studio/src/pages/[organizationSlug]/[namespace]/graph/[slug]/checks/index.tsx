@@ -32,6 +32,30 @@ import { cn } from '@/lib/utils';
 import { useFeature } from '@/hooks/use-feature';
 import { useWorkspace } from '@/hooks/use-workspace';
 
+const getCheckSubgraphDisplayName = ({
+  subgraphName,
+  checkedSubgraphs,
+  hasFeatureSubgraphCheck,
+}: {
+  subgraphName?: string;
+  checkedSubgraphs: { subgraphName: string }[];
+  hasFeatureSubgraphCheck: boolean;
+}): string => {
+  if (subgraphName) {
+    return subgraphName;
+  }
+
+  if (checkedSubgraphs.length > 1) {
+    return 'Multiple Subgraphs';
+  }
+
+  if (checkedSubgraphs.length > 0) {
+    return checkedSubgraphs[0].subgraphName;
+  }
+
+  return hasFeatureSubgraphCheck ? 'Feature Subgraph' : 'Subgraph';
+};
+
 const ChecksPage: NextPageWithLayout = () => {
   const router = useRouter();
   const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
@@ -150,6 +174,7 @@ const ChecksPage: NextPageWithLayout = () => {
                   linkedChecks,
                   checkExtensionDeliveryId,
                   checkExtensionErrorMessage,
+                  hasFeatureSubgraphCheck,
                 }) => {
                   const isLinkedTrafficCheckFailed = linkedChecks.some(
                     (linkedCheck) => linkedCheck.hasClientTraffic && !linkedCheck.isForcedSuccess,
@@ -201,12 +226,7 @@ const ChecksPage: NextPageWithLayout = () => {
                       </TableCell>
                       {graphContext.graph?.supportsFederation && (
                         <TableCell>
-                          {subgraphName ||
-                            (checkedSubgraphs.length > 1
-                              ? 'Multiple Subgraphs'
-                              : checkedSubgraphs.length > 0
-                                ? checkedSubgraphs[0].subgraphName
-                                : 'Subgraph')}
+                          {getCheckSubgraphDisplayName({ subgraphName, checkedSubgraphs, hasFeatureSubgraphCheck })}
                         </TableCell>
                       )}
                       <TableCell>

@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"net/http"
 	"net/http/httptrace"
+	"sync"
 	"time"
 
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
@@ -40,10 +41,29 @@ type phaseTimings struct {
 	FirstByte    time.Time
 }
 
-type ClientTrace struct {
+type clientTraceData struct {
 	ConnectionGet      *GetConnection
 	ConnectionAcquired *AcquiredConnection
 	phases             phaseTimings
+}
+
+type ClientTrace struct {
+	mu   sync.Mutex
+	data clientTraceData
+}
+
+// snapshot returns a copy of the collected timings under the lock.
+func (c *ClientTrace) snapshot() clientTraceData {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.data
+}
+
+// update applies mutator to the collected timings under the lock.
+func (c *ClientTrace) update(mutator func(d *clientTraceData)) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	mutator(&c.data)
 }
 
 type ClientTraceContextKey struct{}
@@ -100,49 +120,53 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 
 	trace := &httptrace.ClientTrace{
 		GetConn: func(hostPort string) {
-			eC.ConnectionGet = &GetConnection{
-				Time:     time.Now(),
-				HostPort: hostPort,
-			}
+			eC.update(func(d *clientTraceData) {
+				d.ConnectionGet = &GetConnection{
+					Time:     time.Now(),
+					HostPort: hostPort,
+				}
+			})
 		},
 		GotConn: func(info httptrace.GotConnInfo) {
-			eC.ConnectionAcquired = &AcquiredConnection{
-				Time:     time.Now(),
-				Reused:   info.Reused,
-				WasIdle:  info.WasIdle,
-				IdleTime: info.IdleTime,
-			}
+			eC.update(func(d *clientTraceData) {
+				d.ConnectionAcquired = &AcquiredConnection{
+					Time:     time.Now(),
+					Reused:   info.Reused,
+					WasIdle:  info.WasIdle,
+					IdleTime: info.IdleTime,
+				}
+			})
 		},
 		DNSStart: func(_ httptrace.DNSStartInfo) {
-			eC.phases.DNSStart = time.Now()
+			eC.update(func(d *clientTraceData) { d.phases.DNSStart = time.Now() })
 		},
 		DNSDone: func(_ httptrace.DNSDoneInfo) {
-			eC.phases.DNSDone = time.Now()
+			eC.update(func(d *clientTraceData) { d.phases.DNSDone = time.Now() })
 		},
 		ConnectStart: func(_, _ string) {
-			eC.phases.ConnectStart = time.Now()
+			eC.update(func(d *clientTraceData) { d.phases.ConnectStart = time.Now() })
 		},
 		ConnectDone: func(_, _ string, _ error) {
-			eC.phases.ConnectDone = time.Now()
+			eC.update(func(d *clientTraceData) { d.phases.ConnectDone = time.Now() })
 		},
 		TLSHandshakeStart: func() {
-			eC.phases.TLSStart = time.Now()
+			eC.update(func(d *clientTraceData) { d.phases.TLSStart = time.Now() })
 		},
 		TLSHandshakeDone: func(_ tls.ConnectionState, _ error) {
-			eC.phases.TLSDone = time.Now()
+			eC.update(func(d *clientTraceData) { d.phases.TLSDone = time.Now() })
 		},
 		WroteRequest: func(_ httptrace.WroteRequestInfo) {
-			eC.phases.WroteRequest = time.Now()
+			eC.update(func(d *clientTraceData) { d.phases.WroteRequest = time.Now() })
 		},
 		GotFirstResponseByte: func() {
-			eC.phases.FirstByte = time.Now()
+			eC.update(func(d *clientTraceData) { d.phases.FirstByte = time.Now() })
 		},
 	}
 	return trace
 }
 
 func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Context, req *http.Request) {
-	trace := GetClientTraceFromContext(ctx)
+	trace := GetClientTraceFromContext(ctx).snapshot()
 
 	var subgraph string
 	subgraphCtxVal := ctx.Value(rcontext.CurrentSubgraphContextKey{})

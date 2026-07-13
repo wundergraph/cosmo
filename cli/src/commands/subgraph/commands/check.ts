@@ -1,9 +1,11 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { create } from '@bufbuild/protobuf';
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { VCSContextSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { splitLabel } from '@wundergraph/cosmo-shared';
 import { config, getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
@@ -13,7 +15,9 @@ import { limitMaxValue } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
-  command.description('Checks for breaking changes and composition errors with all connected federated graphs.');
+  command.description(
+    'Checks for breaking changes and composition errors across all connected federated graphs, including feature flag compositions; also runs when the target is a feature subgraph.',
+  );
   command.argument('<name>', 'The name of the subgraph on which the check operation is to be performed.');
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option('--schema <path-to-schema>', 'The path of the new schema file.');
@@ -70,7 +74,7 @@ export default (opts: BaseCommandOptions) => {
     let vcsContext: VCSContext | undefined;
 
     if (config.checkAuthor || config.checkCommitSha || config.checkBranch) {
-      vcsContext = new VCSContext({
+      vcsContext = create(VCSContextSchema, {
         author: config.checkAuthor,
         commitSha: config.checkCommitSha,
         branch: config.checkBranch,

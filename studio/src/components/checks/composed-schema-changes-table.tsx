@@ -3,7 +3,6 @@ import { BarChartIcon, CheckIcon, Cross1Icon, GlobeIcon } from '@radix-ui/react-
 import { FederatedGraphSchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '../ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -24,6 +23,10 @@ export const ComposedSchemaChangesTable = ({
 }) => {
   const openUsage = useOpenUsage({ trafficCheckDays, createdAt });
 
+  // Only show the Feature Flag column when at least one change carries a feature-flag attribution.
+  // For the common case (base supergraph composition only), the column is hidden to keep the table compact.
+  const hasFeatureFlag = changes.some((c) => !!c.featureFlag);
+
   return (
     <TableWrapper>
       <Table>
@@ -31,6 +34,7 @@ export const ComposedSchemaChangesTable = ({
           <TableRow>
             <TableHead className="w-[200px]">Change</TableHead>
             <TableHead>Description</TableHead>
+            {hasFeatureFlag && <TableHead className="w-[180px]">Feature Flag</TableHead>}
             <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -43,6 +47,8 @@ export const ComposedSchemaChangesTable = ({
               isBreaking={c.isBreaking}
               path={c.path}
               federatedGraphName={c.federatedGraphName}
+              featureFlag={c.featureFlag}
+              showFeatureFlagColumn={hasFeatureFlag}
               openUsage={openUsage}
             />
           ))}
@@ -59,6 +65,8 @@ const Row = ({
   isBreaking,
   path,
   federatedGraphName,
+  featureFlag,
+  showFeatureFlagColumn,
   openUsage,
 }: {
   changeType: string;
@@ -66,6 +74,8 @@ const Row = ({
   isBreaking: boolean;
   path?: string;
   federatedGraphName: string;
+  featureFlag: string;
+  showFeatureFlagColumn: boolean;
   openUsage: (changeType: string, path?: string) => void;
 }) => {
   const router = useRouter();
@@ -75,7 +85,7 @@ const Row = ({
   const organizationSlug = useCurrentOrganization()?.slug;
 
   return (
-    <TableRow key={changeType + message + federatedGraphName} className="group">
+    <TableRow key={changeType + message + federatedGraphName + featureFlag} className="group">
       <TableCell className={cn(isBreaking ? 'text-destructive' : 'text-muted-foreground')}>
         <div className="flex items-center gap-2">
           {isBreaking ? <Cross1Icon /> : <CheckIcon />}
@@ -85,6 +95,15 @@ const Row = ({
         </div>
       </TableCell>
       <TableCell>{message}</TableCell>
+      {showFeatureFlagColumn && (
+        <TableCell>
+          {featureFlag ? (
+            <span title={`Feature flag: ${featureFlag}`}>{featureFlag}</span>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          )}
+        </TableCell>
+      )}
       <TableCell>
         <div className="flex items-center gap-x-2">
           <Tooltip delayDuration={100}>

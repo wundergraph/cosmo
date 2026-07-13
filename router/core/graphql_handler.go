@@ -179,6 +179,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.authorizer)
+		if h.authorizer.IsPreFetchFieldAuthorizationEnabled() {
+			resolveCtx.SetPreFetchFieldAuthorizer(h.authorizer)
+		}
 	}
 	if h.engineLoaderHooks != nil {
 		resolveCtx.SetEngineLoaderHooks(h.engineLoaderHooks)
