@@ -876,10 +876,12 @@ telemetry:
 
 ## GraphQL Metrics
 
-| Environment Variable               | YAML               | Required                                      | Description      | Default Value                         |
-| ---------------------------------- | ------------------ | --------------------------------------------- | ---------------- | ------------------------------------- |
-| GRAPHQL_METRICS_ENABLED            | enabled            | <Icon icon="square" />                        |                  | true                                  |
-| GRAPHQL_METRICS_COLLECTOR_ENDPOINT | collector_endpoint | <Icon icon="square-check" iconType="solid" /> | Default endpoint | https://cosmo-metrics.wundergraph.com |
+The router collects GraphQL schema usage metrics, which are the types, fields, and arguments each client operation uses, and sends them to the Cosmo GraphQL Metrics collector. This data powers [field-level analytics](/studio/analytics/schema-field-usage) and [breaking-change detection](/studio/schema-checks). Set `enabled` to `false` (or `GRAPHQL_METRICS_ENABLED=false`) to stop the router from collecting and sending this data.
+
+| Environment Variable               | YAML               | Required               | Description                                                                                                                           | Default Value                         |
+| ---------------------------------- | ------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| GRAPHQL_METRICS_ENABLED            | enabled            | <Icon icon="square" /> | Enable collection and export of GraphQL schema usage metrics (field-level usage) to the collector. Set to `false` to disable.         | true                                  |
+| GRAPHQL_METRICS_COLLECTOR_ENDPOINT | collector_endpoint | <Icon icon="square" /> | Endpoint of the GraphQL Metrics collector that receives schema usage data. Self-hosted deployments point this at their own collector. | https://cosmo-metrics.wundergraph.com |
 
 ### Example YAML config:
 
