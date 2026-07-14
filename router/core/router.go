@@ -1099,7 +1099,7 @@ func (r *Router) setupTelemetry(ctx context.Context) error {
 		if r.metricConfig.OpenTelemetry.Enabled {
 			mp, err := rmetric.NewOtlpMeterProvider(ctx, r.logger, r.metricConfig, r.instanceID)
 			if err != nil {
-				return fmt.Errorf("failed to start trace agent: %w", err)
+				return fmt.Errorf("failed to start OTLP metrics meter provider: %w", err)
 			}
 			r.otlpMeterProvider = mp
 		}
