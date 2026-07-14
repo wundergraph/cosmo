@@ -77,7 +77,12 @@ export function WorkspaceCommandWrapper({
         }
 
         // Apply the filter to the subgraphs, we need to find at least one to add the graph to the search results
-        fuse.setCollection(graph.subgraphs);
+        fuse.setCollection(
+          graph.subgraphs
+            .map((subgraph) => clonedWns.subgraphs.find((sg) => sg.targetId === subgraph)!)
+            .filter(Boolean),
+        );
+
         const matchingSubgraphs = fuse.search(filterValue);
         if (matchingSubgraphs.length === 0) {
           // Only add the graph to the list of results if we found at least one matching subgraph
@@ -88,7 +93,7 @@ export function WorkspaceCommandWrapper({
         const clonedGraph = clone(WorkspaceFederatedGraphSchema, graph);
         clonedGraph.subgraphs = matchingSubgraphs
           .sort((a, b) => (a.score ?? 0) - (b.score ?? 0))
-          .map((match) => match.item as WorkspaceSubgraph);
+          .map((match) => (match.item as WorkspaceSubgraph).targetId);
 
         clonedWns.graphs.push(clonedGraph);
       }

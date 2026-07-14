@@ -39,18 +39,21 @@ export function GraphCommandGroup({
           />
 
           {(isFiltering || activeSubgraphId) &&
-            subgraphs.map((subgraph, subgraphIndex) => (
-              <GraphCommandItem
-                key={`subgraph-${namespaceIndex}-${graphIndex}-${subgraphIndex}`}
-                name={subgraph.name}
-                namespace={namespace}
-                isActive={activeSubgraphId === subgraph.id}
-                value={`${namespace.name}.${graph.id}.${subgraph.id}`}
-                isSubgraph
-                className="pl-8"
-                setNamespace={setNamespace}
-              />
-            ))}
+            subgraphs
+              .map((subgraph) => namespace.subgraphs.find((sg) => sg.targetId === subgraph)!)
+              .filter(Boolean)
+              .map((subgraph, subgraphIndex) => (
+                <GraphCommandItem
+                  key={`subgraph-${namespaceIndex}-${graphIndex}-${subgraphIndex}`}
+                  name={subgraph.name}
+                  namespace={namespace}
+                  isActive={activeSubgraphId === subgraph.id}
+                  value={`${namespace.name}.${graph.id}.${subgraph.id}`}
+                  isSubgraph
+                  className="pl-8"
+                  setNamespace={setNamespace}
+                />
+              ))}
         </React.Fragment>
       ))}
     </CommandGroup>
