@@ -5,6 +5,33 @@
   "main": "./dist/index.js",
   "type": "module",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "playground/incremental-delivery": [
+        "./dist/playground/incremental-delivery.d.ts"
+      ],
+      "playground/defer-schema": [
+        "./dist/playground/defer-schema.d.ts"
+      ]
+    }
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./playground/incremental-delivery": {
+      "types": "./dist/playground/incremental-delivery.d.ts",
+      "import": "./dist/playground/incremental-delivery.js",
+      "default": "./dist/playground/incremental-delivery.js"
+    },
+    "./playground/defer-schema": {
+      "types": "./dist/playground/defer-schema.d.ts",
+      "import": "./dist/playground/defer-schema.js",
+      "default": "./dist/playground/defer-schema.js"
+    }
+  },
   "files": [
     "dist"
   ],

@@ -1,0 +1,68 @@
+---
+title: "Incremental Delivery with @defer"
+description: "Stream deferred query fields while preserving Advanced Request Tracing, query plans, and GraphQL extensions."
+icon: "forward-step"
+---
+
+Cosmo Router supports incremental query delivery with the executable GraphQL `@defer` directive. The router sends the initial data as soon as it is ready, then streams deferred fields in a `multipart/mixed` response.
+
+Enable the feature in the router:
+
+```yaml
+engine:
+  enable_defer: true
+```
+
+The client must accept the defer transport:
+
+```http
+Accept: multipart/mixed; deferSpec=20220824
+```
+
+If the selected operation has no live deferred work, for example because every `@defer(if:)` condition is false, the router may return one ordinary JSON response instead.
+
+## Streaming and response extensions
+
+The router does not wait for deferred fields before flushing the initial result. Debug and extension metadata follows a partial-then-authoritative contract:
+
+* The initial part can contain the metadata known after the primary execution.
+* The part with `hasNext: false` contains the authoritative, cumulative top-level `extensions` object for the whole request.
+* Top-level extension fields are shallow-merged. A terminal value replaces an earlier value with the same key.
+* The terminal metadata is carried on the existing last part; the router does not add a metadata-only part.
+
+This means a streaming client should retain earlier extension keys and shallow-merge the `extensions` object from every part. It should only treat the result as complete after receiving `hasNext: false`.
+
+### Advanced Request Tracing
+
+When [Advanced Request Tracing](/router/advanced-request-tracing-art) is requested, the initial part includes the primary execution trace so it can be displayed immediately. The terminal part replaces it with the complete trace, including deferred execution groups.
+
+The complete trace records each deferred group as `completed`, `error`, or `skipped`. A skipped group remains visible because it was planned, but has no load timing because it did not execute for that request.
+
+If the connection is canceled or interrupted before `hasNext: false`, the last trace is partial. Clients should label it incomplete rather than presenting it as the final execution trace.
+
+### Query plans
+
+A query plan is static and includes the primary and all planned deferred branches whenever it is emitted. Deferred boundaries include their label and response path.
+
+A plan-only request using both headers below does not execute subgraphs and does not stream:
+
+```http
+X-WG-Include-Query-Plan: true
+X-WG-Skip-Loader: true
+```
+
+It returns one JSON GraphQL response with `data: null` and the complete plan in `extensions.queryPlan`. The request does not need to accept `multipart/mixed` because there is no incremental execution.
+
+## The three extension locations
+
+The GraphQL `extensions` name is used in three independent places:
+
+1. Client request extensions are forwarded to every participating subgraph request, including requests made by deferred loaders. See [Forward Client Extensions](/router/proxy-capabilities/forward-client-extensions).
+2. Error extensions remain attached to their individual error in the initial `errors`, an `incremental` entry, or a `completed` entry.
+3. Top-level subgraph response extensions are merged across the whole request and become authoritative on the terminal part. The configured `first_write` or `last_write` policy spans both primary and deferred loader writes. See [Subgraph Extension Propagation](/router/subgraph-data-propagation/subgraph-extension-propagation).
+
+## Proxy requirements
+
+Every intermediary between the router and client must pass response chunks through without buffering. The router sends `X-Accel-Buffering: no`, but ingress, CDN, reverse-proxy, and compression settings can still delay delivery.
+
+Measure time to first result when the first complete MIME part can be decoded, not when the first TCP byte arrives. Test the production path as well as localhost when validating incremental latency.

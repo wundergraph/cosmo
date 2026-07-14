@@ -95,6 +95,8 @@ var (
 	ConfigWithPluginsJSONTemplate string
 	//go:embed testdata/configWithGRPC.json
 	ConfigWithGRPCJSONTemplate string
+	//go:embed testdata/configDeferDemo.json
+	ConfigDeferDemoJSONTemplate string
 
 	// routerTestsDir is the absolute path to the router-tests directory,
 	// derived from this source file's location. Used internally by testexec.go
@@ -380,6 +382,7 @@ type Config struct {
 	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
 	EnableGRPC                         bool
+	EnableDeferDemoSubgraphs           bool
 	IgnoreQueryParamsList              []string
 }
 
@@ -420,6 +423,9 @@ type SubgraphsConfig struct {
 	Mood             SubgraphConfig
 	Countries        SubgraphConfig
 	Projects         SubgraphConfig
+	Catalog          SubgraphConfig
+	Pricing          SubgraphConfig
+	Reviews          SubgraphConfig
 }
 
 type SubgraphConfig struct {
@@ -531,6 +537,9 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Availability: atomic.NewInt64(0),
 		Mood:         atomic.NewInt64(0),
 		Countries:    atomic.NewInt64(0),
+		Catalog:      atomic.NewInt64(0),
+		Pricing:      atomic.NewInt64(0),
+		Reviews:      atomic.NewInt64(0),
 	}
 
 	getPubSubName := GetPubSubNameFn(pubSubPrefix)
@@ -636,6 +645,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	moodServer := makeSubgraphTestServer(t, mood, cfg.Subgraphs.Mood.TLSConfig)
 	countriesServer := makeSubgraphTestServer(t, countries, cfg.Subgraphs.Countries.TLSConfig)
 	productFgServer := makeSubgraphTestServer(t, productsFg, cfg.Subgraphs.ProductsFg.TLSConfig)
+	deferDemo := startDeferDemoSubgraphs(t, cfg, counters)
 
 	var (
 		projectServer *grpc.Server
@@ -658,6 +668,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		subgraphs.ProductsFgDefaultDemoURL:   GqlURL(productFgServer),
 		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
+	mergeNonEmptyReplacements(replacements, deferDemo.replacements())
 
 	if cfg.RouterConfigJSONTemplate == "" {
 		cfg.RouterConfigJSONTemplate = ConfigJSONTemplate
@@ -799,6 +810,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.EnableGRPC && cfg.Subgraphs.Projects.CloseOnStart {
 		projectServer.Stop()
 	}
+	deferDemo.closeOnStart(cfg.Subgraphs)
 
 	if cfg.ShutdownDelay == 0 {
 		cfg.ShutdownDelay = 30 * time.Second
@@ -826,7 +838,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		logObserver:             logObserver,
 		getPubSubName:           getPubSubName,
 		metricReader:            cfg.MetricReader,
-		Servers: []*httptest.Server{
+		Servers: append([]*httptest.Server{
 			employeesServer,
 			familyServer,
 			hobbiesServer,
@@ -836,7 +848,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			moodServer,
 			countriesServer,
 			productFgServer,
-		},
+		}, deferDemo.servers()...),
 		GRPCServers: []*grpc.Server{
 			projectServer,
 		},
@@ -969,6 +981,9 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Availability: atomic.NewInt64(0),
 		Mood:         atomic.NewInt64(0),
 		Countries:    atomic.NewInt64(0),
+		Catalog:      atomic.NewInt64(0),
+		Pricing:      atomic.NewInt64(0),
+		Reviews:      atomic.NewInt64(0),
 	}
 
 	getPubSubName := GetPubSubNameFn(pubSubPrefix)
@@ -1074,6 +1089,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	moodServer := makeSubgraphTestServer(t, mood, cfg.Subgraphs.Mood.TLSConfig)
 	countriesServer := makeSubgraphTestServer(t, countries, cfg.Subgraphs.Countries.TLSConfig)
 	productFgServer := makeSubgraphTestServer(t, productsFg, cfg.Subgraphs.ProductsFg.TLSConfig)
+	deferDemo := startDeferDemoSubgraphs(t, cfg, counters)
 
 	var (
 		projectServer *grpc.Server
@@ -1096,6 +1112,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		subgraphs.ProductsFgDefaultDemoURL:   GqlURL(productFgServer),
 		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
+	mergeNonEmptyReplacements(replacements, deferDemo.replacements())
 
 	if cfg.RouterConfigJSONTemplate == "" {
 		cfg.RouterConfigJSONTemplate = ConfigJSONTemplate
@@ -1231,6 +1248,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.EnableGRPC && cfg.Subgraphs.Projects.CloseOnStart {
 		projectServer.Stop()
 	}
+	deferDemo.closeOnStart(cfg.Subgraphs)
 
 	if cfg.ShutdownDelay == 0 {
 		cfg.ShutdownDelay = 30 * time.Second
@@ -1257,7 +1275,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		logObserver:             logObserver,
 		getPubSubName:           getPubSubName,
 		metricReader:            cfg.MetricReader,
-		Servers: []*httptest.Server{
+		Servers: append([]*httptest.Server{
 			employeesServer,
 			familyServer,
 			hobbiesServer,
@@ -1267,7 +1285,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			moodServer,
 			countriesServer,
 			productFgServer,
-		},
+		}, deferDemo.servers()...),
 		GRPCServers: []*grpc.Server{
 			projectServer,
 		},
@@ -2062,6 +2080,9 @@ type SubgraphRequestCount struct {
 	Availability *atomic.Int64
 	Mood         *atomic.Int64
 	Countries    *atomic.Int64
+	Catalog      *atomic.Int64
+	Pricing      *atomic.Int64
+	Reviews      *atomic.Int64
 }
 
 type GraphQLRequest struct {

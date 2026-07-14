@@ -1910,6 +1910,15 @@ func (s *graphServer) buildGraphMux(
 		WaitForCacheWrites:                     waitForCacheWrites,
 	})
 
+	deferAdvisor := NewDeferAdvisor(DeferAdvisorOptions{
+		EnableRequestTracing:               s.engineExecutionConfiguration.EnableRequestTracing,
+		DevelopmentMode:                    s.developmentMode,
+		ForceUnauthenticatedRequestTracing: s.engineExecutionConfiguration.ForceUnauthenticatedRequestTracing,
+		RouterPublicKey:                    s.publicKey,
+		Logger:                             s.logger,
+	})
+	httpRouter.Use(deferAdvisor.Middleware)
+
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
 		wsMiddleware := NewWebsocketMiddleware(graphMuxCtx, WebsocketMiddlewareOptions{
 			OperationProcessor:        operationProcessor,
@@ -1970,6 +1979,10 @@ func (s *graphServer) buildGraphMux(
 	httpRouter.Post(s.graphqlPath, graphqlHandler.ServeHTTP)
 	// GraphQL over GET
 	httpRouter.Get(s.graphqlPath, graphqlHandler.ServeHTTP)
+
+	// The advisor replays requests through the full mux; the mux is complete once
+	// all routes are registered, and no request is served before Serve starts.
+	deferAdvisor.SetTarget(httpRouter)
 
 	gm.mux = httpRouter
 

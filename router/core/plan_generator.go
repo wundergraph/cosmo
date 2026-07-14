@@ -259,7 +259,7 @@ func (p *PlanWrapper) Marshal() ([]byte, error) {
 	case *plan.SubscriptionResponsePlan:
 		return json.Marshal(p.Response.Response.Fetches.QueryPlan())
 	case *plan.DeferResponsePlan:
-		return nil, errors.New("defer marshal unsupported yet")
+		return json.Marshal(p.Response.QueryPlan())
 	}
 
 	return nil, nil

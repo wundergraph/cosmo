@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/golang-jwt/jwt/v5"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -1202,7 +1201,12 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		case *plan.SynchronousResponsePlan:
 			p.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
 		case *plan.DeferResponsePlan:
-			// TODO: handle ART
+			// PlannedExecutionTree copies the primary normalized query onto the
+			// composite root, so storing it on the primary tree keeps every later
+			// structured/text rendering complete without mutating cached wrappers.
+			if p.Response != nil && p.Response.Response != nil && p.Response.Response.Fetches != nil {
+				p.Response.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
+			}
 		}
 
 		if h.queryPlansLoggingEnabled {
@@ -1213,7 +1217,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 			case *plan.SubscriptionResponsePlan:
 				printedPlan = p.Response.Response.Fetches.QueryPlan().PrettyPrint()
 			case *plan.DeferResponsePlan:
-				// TODO: handle
+				printedPlan = p.Response.QueryPlanString()
 			}
 			if h.developmentMode {
 				h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
@@ -1227,7 +1231,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// (and @defer support is enabled). Such operations stream incremental
 	// payloads as multipart/mixed, so reject the request early if the client
 	// does not accept that content type
-	if _, ok := requestContext.operation.preparedPlan.preparedPlan.(*plan.DeferResponsePlan); ok {
+	if _, ok := requestContext.operation.preparedPlan.preparedPlan.(*plan.DeferResponsePlan); ok &&
+		!requestContext.operation.executionOptions.SkipLoader {
 		if !clientAcceptsMultipartMixed(req) {
 			return NewHttpGraphqlError(
 				"the router received a query with the @defer directive but the client does not accept "+
@@ -1359,24 +1364,21 @@ func (h *PreHandler) parseExecutionAndTraceOptions(r *http.Request, clientInfo *
 }
 
 func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
-	// Determine if we should enable request tracing / query plans at all
-	if h.enableRequestTracing {
-		// In dev mode we always allow to enable tracing / query plans.
-		// force_unauthenticated_request_tracing=true allows ART without dev_mode or a controlplane token.
-		if h.developmentMode || h.forceUnauthenticatedRequestTracing {
-			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
+	authorized := h.enableRequestTracing && hasInternalRequestTracingAuthorization(r.Context())
+	if !authorized {
+		var err error
+		authorized, err = (requestTracingAuthorizer{
+			enabled:           h.enableRequestTracing,
+			allowWithoutToken: h.developmentMode || h.forceUnauthenticatedRequestTracing,
+			publicKey:         h.routerPublicKey,
+		}).authorize(clientInfo.WGRequestToken)
+		if err != nil {
+			requestLogger.Debug(fmt.Sprintf("failed to parse request token: %s", err.Error()))
+			return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
 		}
-		// If the client has a valid request token, and we have a public key from the controlplane
-		if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
-			_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
-				return h.routerPublicKey, nil
-			}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
-			if err != nil {
-				requestLogger.Debug(fmt.Sprintf("failed to parse request token: %s", err.Error()))
-				return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
-			}
-			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
-		}
+	}
+	if authorized {
+		return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 	}
 
 	// Disable tracing / query plans for all other cases

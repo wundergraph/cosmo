@@ -12,6 +12,8 @@ Include the header `X-WG-Include-Query-Plan` to receive the query plan in the ex
 
 `X-WG-Disable-Tracing` : This will ensure that requests for query plan are not traced in the router
 
+Plans for [`@defer` operations](/router/incremental-delivery) include the primary execution and every planned deferred branch. A request that combines `X-WG-Include-Query-Plan: true` with `X-WG-Skip-Loader: true` returns that complete plan in one JSON response with `data: null`; it does not execute subgraphs or require multipart response negotiation.
+
 <Frame caption="Cosmo Studio Playground showing the GraphQL query and its generated query plan">
   <img 
     src="/images/router/cosmo-studio-playground-query-plan.png"

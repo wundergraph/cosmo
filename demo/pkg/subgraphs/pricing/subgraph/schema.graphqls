@@ -1,0 +1,13 @@
+extend schema
+@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+
+type Product @key(fields: "id") {
+  id: ID!
+  price: Float!
+  priceHistory: [PricePoint!]!
+}
+
+type PricePoint {
+  date: String!
+  value: Float!
+}

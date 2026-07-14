@@ -36,4 +36,7 @@ var SkippedHeaders = map[string]struct{}{
 
 	// Additional headers that should not be forwarded
 	"Host": {},
+	// X-WG-Token is a control-plane graph request token used to authorize ART.
+	// It is never application identity and must never reach a subgraph.
+	"X-Wg-Token": {},
 }

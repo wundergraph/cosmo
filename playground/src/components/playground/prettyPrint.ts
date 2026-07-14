@@ -9,6 +9,7 @@ export class PlanPrinter {
 
   async print(plan: QueryPlan): Promise<string> {
     this.buf = [];
+    this.depth = 0;
     this.printText('QueryPlan {');
     if (plan.trigger) {
       this.depth++;
@@ -22,6 +23,18 @@ export class PlanPrinter {
 
   private async printPlanNode(plan: QueryPlanFetchTypeNode, increaseDepth: boolean) {
     if (increaseDepth) {
+      this.depth++;
+    }
+
+    if (plan.defer) {
+      const attributes: string[] = [];
+      if (plan.defer.label) {
+        attributes.push(`label: ${JSON.stringify(plan.defer.label)}`);
+      }
+      if (plan.defer.path.length) {
+        attributes.push(`path: ${JSON.stringify(plan.defer.path.join('.'))}`);
+      }
+      this.printText(`Defer${attributes.length ? `(${attributes.join(', ')})` : ''} {`);
       this.depth++;
     }
 
@@ -49,6 +62,11 @@ export class PlanPrinter {
         }
         this.printText('}');
         break;
+    }
+
+    if (plan.defer) {
+      this.depth--;
+      this.printText('}');
     }
 
     if (increaseDepth) {

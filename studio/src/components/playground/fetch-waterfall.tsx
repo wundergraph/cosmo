@@ -35,6 +35,19 @@ const mapFetchType = (type: string) => {
   }
 };
 
+const deferStatusVariant = (status: NonNullable<ARTFetchNode['defer']>['status']) => {
+  switch (status) {
+    case 'completed':
+      return 'success' as const;
+    case 'error':
+      return 'destructive' as const;
+    case 'skipped':
+      return 'muted' as const;
+    default:
+      return 'secondary' as const;
+  }
+};
+
 const Attribute = ({ name, value }: { name: string; value: any }) => {
   return (
     <TooltipProvider>
@@ -76,12 +89,15 @@ export const FetchWaterfall = ({
   const parentChildrenCount = parentFetch?.children ? parentFetch.children.length : 0;
 
   const isLoadSkipped = fetch.loadSkipped;
+  const plannedOnly = fetch.plannedOnly === true;
+  const hasTiming = fetch.durationSinceStart !== undefined || fetch.durationLoad !== undefined;
+  const durationDivisor = globalDuration > BigInt(0) ? globalDuration : BigInt(1);
 
   // Work with smaller units (picosecond) on numerator to circumvent bigint division
   const elapsedDurationPs = BigInt(fetch.durationSinceStart ?? 0) * bigintE3;
   const spanDurationPs = BigInt(fetch.durationLoad ?? 0) * bigintE3;
-  const visualOffsetPercentage = Number(((elapsedDurationPs / globalDuration) * bigintE2) / bigintE3);
-  const visualWidthPercentage = Number(((spanDurationPs / globalDuration) * bigintE2) / bigintE3);
+  const visualOffsetPercentage = Number(((elapsedDurationPs / durationDivisor) * bigintE2) / bigintE3);
+  const visualWidthPercentage = Number(((spanDurationPs / durationDivisor) * bigintE2) / bigintE3);
 
   const [isOpen, setIsOpen] = useState(() => level <= initialCollapsedSpanDepth);
 
@@ -144,7 +160,7 @@ export const FetchWaterfall = ({
       >
         <div className="relative flex w-full flex-wrap">
           <div
-            className="ml-2 flex flex-shrink-0 items-start gap-x-1 border-r border-input py-1"
+            className="ml-2 flex min-w-0 flex-shrink-0 items-start gap-x-1 overflow-hidden border-r border-input py-1"
             style={{
               width: `${paneWidth - level * 32}px`,
             }}
@@ -178,8 +194,26 @@ export const FetchWaterfall = ({
               'Sequence',
               'ParallelList',
             ].includes(fetch.type) ? (
-              <div className="-translate-y-px px-2.5 py-2 text-xs text-muted-foreground">
-                {mapFetchType(fetch.type)}
+              <div className="flex min-w-0 -translate-y-px flex-col gap-1 px-2.5 py-2 text-xs text-muted-foreground">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="min-w-0 truncate">
+                    {fetch.defer
+                      ? fetch.defer.label
+                        ? `Defer · ${fetch.defer.label}`
+                        : `Defer #${fetch.defer.id}`
+                      : mapFetchType(fetch.type)}
+                  </span>
+                  {fetch.defer?.status && (
+                    <Badge className="shrink-0" variant={deferStatusVariant(fetch.defer.status)}>
+                      {fetch.defer.status}
+                    </Badge>
+                  )}
+                </div>
+                {fetch.defer && (
+                  <span className="max-w-60 truncate opacity-80">
+                    {fetch.defer.path.length ? fetch.defer.path.join('.') : 'response root'}
+                  </span>
+                )}
               </div>
             ) : (
               <button
@@ -238,25 +272,36 @@ export const FetchWaterfall = ({
             ) && (
               <>
                 <div className="absolute h-px w-full bg-input" />
+                {hasTiming && !plannedOnly && (
+                  <div
+                    style={{
+                      minWidth: '2px',
+                      maxWidth: '500px !important',
+                      width: `${visualWidthPercentage}%`,
+                      left: `${visualOffsetPercentage}%`,
+                    }}
+                    className="z-8 absolute mx-2 h-3/5 max-h-6 rounded bg-primary"
+                  />
+                )}
                 <div
                   style={{
-                    minWidth: '2px',
-                    maxWidth: '500px !important',
-                    width: `${visualWidthPercentage}%`,
-                    left: `${visualOffsetPercentage}%`,
-                  }}
-                  className="z-8 absolute mx-2 h-3/5 max-h-6 rounded bg-primary"
-                />
-                <div
-                  style={{
-                    left: getDurationOffset(),
+                    left: hasTiming && !plannedOnly ? getDurationOffset() : '2%',
                   }}
                   className={cn('z-8 absolute bg-transparent text-xs', {
-                    'px-2': visualWidthPercentage < 8,
-                    '!text-white': visualWidthPercentage >= 8,
+                    'px-2': hasTiming && !plannedOnly && visualWidthPercentage < 8,
+                    '!text-white': hasTiming && !plannedOnly && visualWidthPercentage >= 8,
+                    'text-muted-foreground': plannedOnly || !hasTiming,
                   })}
                 >
-                  {isLoadSkipped ? 'Load Skipped' : nsToTime(BigInt(fetch.durationLoad ?? 0))}
+                  {plannedOnly
+                    ? 'Not executed (defer skipped)'
+                    : !hasTiming
+                      ? fetch.executionTracePresent === false
+                        ? 'Planned fetch (no execution data)'
+                        : 'No execution timing'
+                      : isLoadSkipped
+                        ? 'Load Skipped'
+                        : nsToTime(BigInt(fetch.durationLoad ?? 0))}
                 </div>
               </>
             )}
@@ -267,9 +312,13 @@ export const FetchWaterfall = ({
             {fetch.outputTrace && <Attribute name="method" value={fetch.outputTrace.request.method} />}
             {fetch.outputTrace && <Attribute name="endpoint" value={fetch.outputTrace.request.url} />}
 
-            <Attribute name="single flight used" value={`${fetch.singleFlightUsed}`} />
-            <Attribute name="single flight shared response" value={`${fetch.singleFlightSharedResponse}`} />
-            <Attribute name="load skipped" value={`${fetch.loadSkipped}`} />
+            {fetch.executionTracePresent !== false && !plannedOnly && (
+              <>
+                <Attribute name="single flight used" value={`${fetch.singleFlightUsed}`} />
+                <Attribute name="single flight shared response" value={`${fetch.singleFlightSharedResponse}`} />
+                <Attribute name="load skipped" value={`${fetch.loadSkipped}`} />
+              </>
+            )}
 
             <div className="col-span-full mt-4 flex w-full">
               <div className="z-50 flex w-max items-center gap-8">

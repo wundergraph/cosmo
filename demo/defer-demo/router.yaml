@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=../../router/pkg/config/config.schema.json
+
+version: "1"
+
+dev_mode: true
+listen_addr: localhost:3011
+execution_config:
+  file:
+    path: ./config.json
+
+engine:
+  enable_defer: true
+  enable_request_tracing: true

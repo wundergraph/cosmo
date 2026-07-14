@@ -72,6 +72,7 @@
     "@tiptap/starter-kit": "2.1.13",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
+    "@wundergraph/cosmo-shared": "workspace:*",
     "axios": "catalog:",
     "bowser": "^2.11.0",
     "canvas-confetti": "^1.6.0",

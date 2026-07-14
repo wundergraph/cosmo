@@ -236,6 +236,116 @@ func TestDeferRejectsNonMultipartAccept(t *testing.T) {
 		})
 	})
 
+	t.Run("plan-only defer stays synchronous with application/json", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{NoRetryClient: true}, func(t *testing.T, xEnv *testenv.Environment) {
+			payload, err := json.Marshal(map[string]any{"query": `query {
+				employees {
+					id
+					... @defer(label: "Availability") { isAvailable }
+				}
+			}`})
+			require.NoError(t, err)
+
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(payload))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "application/json")
+			req.Header.Set("X-WG-Include-Query-Plan", "true")
+			req.Header.Set("X-WG-Skip-Loader", "true")
+
+			res, err := xEnv.RouterClient.Do(req)
+			require.NoError(t, err)
+			defer func() { require.NoError(t, res.Body.Close()) }()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "application/json"),
+				"expected application/json, got %q", res.Header.Get("Content-Type"))
+
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			var result map[string]any
+			require.NoError(t, json.Unmarshal(body, &result))
+			require.Contains(t, result, "data")
+			require.Nil(t, result["data"])
+			require.NotContains(t, result, "hasNext")
+			extensions := result["extensions"].(map[string]any)
+			queryPlanObject := extensions["queryPlan"].(map[string]any)
+			require.NotEmpty(t, queryPlanObject["normalizedQuery"])
+			queryPlanFetches := collectDeferPlanFetches(queryPlanObject)
+			require.Len(t, queryPlanFetches, 2)
+			require.ElementsMatch(t, []string{"employees", "availability"}, []string{
+				queryPlanFetches[0]["subgraphName"].(string),
+				queryPlanFetches[1]["subgraphName"].(string),
+			})
+			queryPlan, err := json.Marshal(queryPlanObject)
+			require.NoError(t, err)
+			require.Contains(t, string(queryPlan), `"defer"`)
+			require.Contains(t, string(queryPlan), `"Availability"`)
+			require.Equal(t, int64(0), xEnv.SubgraphRequestCount.Global.Load())
+			require.Equal(t, int64(0), xEnv.SubgraphRequestCount.Employees.Load())
+			require.Equal(t, int64(0), xEnv.SubgraphRequestCount.Availability.Load())
+		})
+	})
+
+	t.Run("plan-only defer trace includes every planned branch without loads", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.EnableRequestTracing = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			payload, err := json.Marshal(map[string]any{"query": `query {
+				employees {
+					id
+					... @defer(label: "Availability") { isAvailable }
+				}
+			}`})
+			require.NoError(t, err)
+
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(payload))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "application/json")
+			req.Header.Set("X-WG-Include-Query-Plan", "true")
+			req.Header.Set("X-WG-Skip-Loader", "true")
+			req.Header.Set("X-WG-Trace", "true")
+
+			res, err := xEnv.RouterClient.Do(req)
+			require.NoError(t, err)
+			defer func() { require.NoError(t, res.Body.Close()) }()
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "application/json"))
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			var result map[string]any
+			require.NoError(t, json.Unmarshal(body, &result))
+			require.Nil(t, result["data"])
+			extensions := result["extensions"].(map[string]any)
+			traceObject := extensions["trace"].(map[string]any)
+			traceFetches := collectDeferPlanFetches(traceObject["fetches"])
+			require.Len(t, traceFetches, 2)
+			require.ElementsMatch(t, []string{"employees", "availability"}, []string{
+				traceFetches[0]["source_name"].(string),
+				traceFetches[1]["source_name"].(string),
+			})
+			for _, fetch := range traceFetches {
+				require.NotContains(t, fetch, "trace")
+				require.NotContains(t, fetch, "traces")
+			}
+			traceOutput, err := json.Marshal(traceObject)
+			require.NoError(t, err)
+			require.Contains(t, string(traceOutput), `"defer"`)
+			require.Contains(t, string(traceOutput), `"Availability"`)
+			require.NotContains(t, string(traceOutput), `"raw_input_data"`)
+			require.NotContains(t, string(traceOutput), `"duration_load_nanoseconds"`)
+			require.Equal(t, int64(0), xEnv.SubgraphRequestCount.Global.Load())
+			require.Equal(t, int64(0), xEnv.SubgraphRequestCount.Employees.Load())
+			require.Equal(t, int64(0), xEnv.SubgraphRequestCount.Availability.Load())
+		})
+	})
+
 	t.Run("accepts when Accept is multipart/mixed", func(t *testing.T) {
 		t.Parallel()
 
@@ -255,6 +365,23 @@ func TestDeferRejectsNonMultipartAccept(t *testing.T) {
 	})
 }
 
+func collectDeferPlanFetches(value any) []map[string]any {
+	node, ok := value.(map[string]any)
+	if !ok {
+		return nil
+	}
+	var fetches []map[string]any
+	if fetch, ok := node["fetch"].(map[string]any); ok {
+		fetches = append(fetches, fetch)
+	}
+	if children, ok := node["children"].([]any); ok {
+		for _, child := range children {
+			fetches = append(fetches, collectDeferPlanFetches(child)...)
+		}
+	}
+	return fetches
+}
+
 func normalizeWithKeysSort(tb testing.TB, data []byte) []byte {
 	var val map[string]interface{}
 	require.NoError(tb, json.Unmarshal(data, &val))
@@ -266,8 +393,9 @@ func normalizeWithKeysSort(tb testing.TB, data []byte) []byte {
 }
 
 // reconstructDeferResponse parses a multipart/mixed defer body, merges all
-// incremental patches onto the initial data using astjson, and returns
-// the complete JSON response (without transport fields like hasNext/pending).
+// incremental patches onto the initial data using astjson, shallow-merges
+// top-level extension snapshots in wire order, and returns the complete JSON
+// response (without transport fields like hasNext/pending).
 //
 // Frame format (GraphQL incremental delivery):
 //
@@ -280,6 +408,32 @@ func reconstructDeferResponse(body []byte) ([]byte, error) {
 	parts := parseMultipartParts(body)
 	if len(parts) == 0 {
 		return nil, fmt.Errorf("no parts in multipart response")
+	}
+
+	// Top-level extensions are snapshots. Merge their root fields in wire order
+	// so a terminal authoritative trace/query plan replaces the initial value,
+	// while unrelated fields seen only in earlier frames remain available in the
+	// reconstructed response.
+	mergedExtensions := make(map[string]json.RawMessage)
+	extensionObjectSeen := false
+	for index, part := range parts {
+		var envelope struct {
+			Extensions json.RawMessage `json:"extensions"`
+		}
+		if err := json.Unmarshal(part, &envelope); err != nil {
+			return nil, fmt.Errorf("parse part %d extensions: %w", index, err)
+		}
+		if len(envelope.Extensions) == 0 || bytes.Equal(bytes.TrimSpace(envelope.Extensions), []byte("null")) {
+			continue
+		}
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(envelope.Extensions, &fields); err != nil {
+			return nil, fmt.Errorf("parse part %d extensions object: %w", index, err)
+		}
+		extensionObjectSeen = true
+		for key, value := range fields {
+			mergedExtensions[key] = value
+		}
 	}
 
 	var p astjson.Parser
@@ -362,6 +516,18 @@ func reconstructDeferResponse(body []byte) ([]byte, error) {
 		for _, item := range partVal.GetArray("completed") {
 			appendRootErrors(item.Get("errors"))
 		}
+	}
+
+	if extensionObjectSeen {
+		extensionsJSON, err := json.Marshal(mergedExtensions)
+		if err != nil {
+			return nil, fmt.Errorf("marshal merged extensions: %w", err)
+		}
+		extensions, err := astjson.ParseBytes(extensionsJSON)
+		if err != nil {
+			return nil, fmt.Errorf("parse merged extensions: %w", err)
+		}
+		result.Set(nil, "extensions", extensions)
 	}
 
 	// Remove transport-only fields.

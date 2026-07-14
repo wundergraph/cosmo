@@ -1,4 +1,5 @@
 import { SHARE_OPTIONS } from '@/lib/constants';
+import type { IncrementalProgress } from '@wundergraph/cosmo-shared/playground/incremental-delivery';
 import { createContext } from 'react';
 import { z } from 'zod';
 
@@ -19,6 +20,14 @@ export type TabsState = {
 };
 
 export type PlaygroundView = 'response' | 'request-trace' | 'query-plan';
+
+export type PlaygroundExecutionPhase = 'idle' | 'streaming' | 'complete' | 'incomplete' | 'cancelled' | 'error';
+
+export type PlaygroundExecutionState = {
+  phase: PlaygroundExecutionPhase;
+  progress?: IncrementalProgress;
+  message?: string;
+};
 
 type PlaygroundContextType = {
   graphId: string;
@@ -49,6 +58,15 @@ export type LoadStatsEntry = {
 
 export type LoadStats = LoadStatsEntry[];
 
+export type DeferExecutionStatus = 'planned' | 'running' | 'completed' | 'error' | 'skipped';
+
+export type DeferDescriptor = {
+  id: number;
+  label: string;
+  path: string[];
+  status?: DeferExecutionStatus;
+};
+
 export type ARTFetchNode = {
   id: string;
   parentId?: string;
@@ -78,6 +96,9 @@ export type ARTFetchNode = {
   singleFlightSharedResponse: boolean;
   loadSkipped: boolean;
   loadStats?: LoadStats;
+  defer?: DeferDescriptor;
+  plannedOnly?: boolean;
+  executionTracePresent?: boolean;
 };
 
 export type Representation = {
@@ -100,6 +121,7 @@ export type QueryPlanFetchTypeNode = {
   kind: string;
   fetch?: QueryPlanFetchNode;
   children?: QueryPlanFetchTypeNode[];
+  defer?: Omit<DeferDescriptor, 'status'>;
 };
 
 export type QueryPlan = QueryPlanFetchTypeNode & {

@@ -80,6 +80,8 @@ Client response:
 
 `traceId` came from `employees`. `rateLimit` came from `employees` because `first_write` keeps the first write. `debug` was dropped because it is not in the allow list. With `algorithm: last_write`, `rateLimit` would instead resolve to `{ "remaining": 50 }` from `products`.
 
+For an [incremental `@defer` response](/router/incremental-delivery), the merge spans primary and deferred subgraph fetches. The initial part can contain values collected during primary execution; the part with `hasNext: false` contains the authoritative cumulative result. `first_write` and `last_write` use the request's actual merge order across all loader phases, and clients should shallow-merge each part's top-level `extensions` object.
+
 <Note>
   Subgraph response extensions are merged independently for each client request. State from earlier requests does not leak into later ones.
 </Note>

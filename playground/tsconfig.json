@@ -23,7 +23,9 @@
     "typeRoots": ["./dist/index.d.ts", "node_modules/@types"],
 
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@wundergraph/cosmo-shared/playground/incremental-delivery": ["../shared/src/playground/incremental-delivery.ts"],
+      "@wundergraph/cosmo-shared/playground/defer-schema": ["../shared/src/playground/defer-schema.ts"]
     }
   },
   "include": ["src", "./index.ts"],

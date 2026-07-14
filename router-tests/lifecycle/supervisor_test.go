@@ -19,6 +19,7 @@ func TestRouterSupervisor(t *testing.T) {
 
 	xEnv, err := testenv.CreateTestSupervisorEnv(t, &testenv.Config{})
 	require.NoError(t, err)
+	require.Len(t, xEnv.Servers, 9)
 
 	stopped := make(chan struct{})
 	go func() {
@@ -42,4 +43,11 @@ func TestRouterSupervisor(t *testing.T) {
 	xEnv.Shutdown()
 
 	<-stopped
+
+	deferDemoEnv, err := testenv.CreateTestSupervisorEnv(t, &testenv.Config{
+		EnableDeferDemoSubgraphs: true,
+	})
+	require.NoError(t, err)
+	require.Len(t, deferDemoEnv.Servers, 12)
+	deferDemoEnv.Shutdown()
 }
