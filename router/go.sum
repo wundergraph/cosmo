@@ -335,6 +335,8 @@ github.com/wundergraph/go-arena v1.3.0 h1:n0ng5a1vbd8YGq1u3rMr0vPU5f6AZ1BXIiUhL1
 github.com/wundergraph/go-arena v1.3.0/go.mod h1:ROOysEHWJjLQ8FSfNxZCziagb7Qw2nXY3/vgKRh7eWw=
 github.com/wundergraph/graphql-go-tools/v2 v2.11.1-0.20260714072506-137aad698919 h1:n4XHpD8iYm5rgwc+HqoZji/C/k0xcnGK5q0fdHcYAg0=
 github.com/wundergraph/graphql-go-tools/v2 v2.11.1-0.20260714072506-137aad698919/go.mod h1:zREIKLmpjfNcGSubndaW/913r0Y8XbbYOXQeZFkwHdo=
+github.com/wundergraph/graphql-go-tools/v2 v2.11.1-0.20260714110236-2d907401dbf4 h1:QnG2uOnoB11FxVtcv+/C3P/aF7UmuOiqGjr9ROjHAxE=
+github.com/wundergraph/graphql-go-tools/v2 v2.11.1-0.20260714110236-2d907401dbf4/go.mod h1:zREIKLmpjfNcGSubndaW/913r0Y8XbbYOXQeZFkwHdo=
 github.com/yosida95/uritemplate/v3 v3.0.2 h1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=
 github.com/yosida95/uritemplate/v3 v3.0.2/go.mod h1:ILOh0sOhIJR3+L/8afwt/kE++YT040gmv5BQTMR2HP4=
 github.com/yuin/gopher-lua v1.1.1 h1:kYKnWBjvbNP4XLT3+bPEwAXJx262OhaHDWDVOPjL46M=
