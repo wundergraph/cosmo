@@ -1149,6 +1149,9 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	if h.graphqlHandler.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.graphqlHandler.authorizer)
+		if h.graphqlHandler.authorizer.IsPreFetchFieldAuthorizationEnabled() {
+			resolveCtx.SetPreFetchFieldAuthorizer(h.graphqlHandler.authorizer)
+		}
 	}
 	resolveCtx = h.graphqlHandler.configureRateLimiting(resolveCtx)
 

@@ -3,6 +3,7 @@ import { QUOTATION_JOIN } from '../../utils/string-constants';
 import {
   type InvalidRepeatedComposedDirectiveWarningParams,
   type ProvidesOnUnionWarningParams,
+  type ProvidesWithInterfaceFieldSelectionWarningParams,
   type SingleFederatedInputFieldOneOfWarningParams,
   type SingleSubgraphInputFieldOneOfWarningParams,
 } from './params';
@@ -239,16 +240,36 @@ export function invalidRepeatedComposedDirectiveWarning({
 }
 
 export function providesOnUnionWarning({
-  fieldCoords,
+  directiveCoords,
   fieldSet,
   namedTypeName,
   subgraphName,
 }: ProvidesOnUnionWarningParams): Warning {
   return new Warning({
     message:
-      `The field "${fieldCoords}" that returns union "${namedTypeName}" defines a "@provides" directive with the` +
+      `The field "${directiveCoords}" that returns Union "${namedTypeName}" defines a "@provides" directive with the` +
       ` following field set:\n "${fieldSet}"\n` +
       `The "@provides" directive defined on a field that returns a Union type is only supported by router version` +
+      ` 0.326.3+. Please note that older router versions do not support this functionality.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function providesWithInterfaceFieldSelectionWarning({
+  directiveCoords,
+  fieldCoords,
+  fieldSet,
+  selection,
+  subgraphName,
+}: ProvidesWithInterfaceFieldSelectionWarningParams): Warning {
+  return new Warning({
+    message:
+      `The field "${directiveCoords}" defines a "@provides" directive with the` +
+      ` following field set:\n "${fieldSet}"\n` +
+      `A "@provides" directive field set with a direct Interface field selection, in this case "${selection}"` +
+      ` corresponding to "${fieldCoords}", is only supported by router version` +
       ` 0.326.3+. Please note that older router versions do not support this functionality.`,
     subgraph: {
       name: subgraphName,
