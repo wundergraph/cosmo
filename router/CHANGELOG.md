@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.331.1](https://github.com/wundergraph/cosmo/compare/router@0.331.0...router@0.331.1) (2026-07-14)
+
+### Bug Fixes
+
+* **router:** drain only in-flight requests of muxes the graph server tears down ([#3064](https://github.com/wundergraph/cosmo/issues/3064)) ([076b5b3](https://github.com/wundergraph/cosmo/commit/076b5b361a786e434afd1b0951fa4c068e18dbb0)) (@endigma)
+
 # [0.331.0](https://github.com/wundergraph/cosmo/compare/router@0.330.0...router@0.331.0) (2026-07-10)
 
 ### Features

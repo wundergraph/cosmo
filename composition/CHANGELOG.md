@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.63.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.63.0...@wundergraph/composition@0.63.1) (2026-07-14)
+
+### Bug Fixes
+
+* **composition:** change how interface field selections are validated… ([#3027](https://github.com/wundergraph/cosmo/issues/3027)) ([0b32412](https://github.com/wundergraph/cosmo/commit/0b324123adc6007136b74b528be29b6bc0f913ca)) (@Aenimus)
+
 # [0.63.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.62.2...@wundergraph/composition@0.63.0) (2026-07-02)
 
 ### Features

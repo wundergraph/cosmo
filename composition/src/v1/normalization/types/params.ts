@@ -22,6 +22,8 @@ export type HandleNonExternalConditionalFieldParams = {
   directiveCoords: string;
   directiveName: DirectiveName;
   fieldSet: string;
+  parentData: CompositeOutputData;
+  selection: string;
 };
 
 export type BatchNormalizeParams = {
@@ -54,4 +56,12 @@ export type GetFieldSetParentParams = {
   isProvides: boolean;
   parentData: CompositeOutputData;
   parentTypeName: TypeName;
+};
+
+export type IsAnyImplementationFieldExternalParams = {
+  fieldCoordsPath: Array<string>;
+  fieldPath: Array<FieldName>;
+  fieldName: FieldName;
+  interfaceTypeName: TypeName;
+  isProvides: boolean;
 };
