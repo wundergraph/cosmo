@@ -421,11 +421,14 @@ export class SubgraphRepository {
     }
 
     // TODO: avoid downloading the schema use hash instead
-    if (data.schemaSDL && (subgraph.type === 'grpc_plugin' || data.schemaSDL !== subgraph.schemaSDL.trimEnd())) {
+    if (
+      data.schemaSDL &&
+      (subgraph.type === 'grpc_plugin' || data.schemaSDL.trimEnd() !== subgraph.schemaSDL.trimEnd())
+    ) {
       subgraphChanged = true;
       const updatedSubgraph = await subgraphRepo.addSchemaVersion({
         targetId: subgraph.targetId,
-        subgraphSchema: data.schemaSDL,
+        subgraphSchema: data.schemaSDL.trimEnd(),
         isV2Graph: data.isV2Graph,
         proto: data.proto,
       });
