@@ -1178,7 +1178,7 @@ const Scim = () => {
             <Badge variant="outline">Enterprise feature</Badge>
           </CardTitle>
           <CardDescription>
-            Enabling SCIM allows the admin to provision and unprovision the users from the Identity prodviders.{' '}
+            Enabling SCIM allows the admin to provision and unprovision the users from the identity providers.{' '}
             <Link href={docsBaseURL + '/studio/scim'} className="text-sm text-primary" target="_blank" rel="noreferrer">
               Learn more
             </Link>
