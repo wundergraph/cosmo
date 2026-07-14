@@ -1067,14 +1067,7 @@ describe('Feature flag aware subgraph checks', () => {
 
     const largeSdl = buildLargeSdl(1500);
 
-    await createAndPublishSubgraph(
-      client,
-      baseSubgraphName,
-      'default',
-      largeSdl,
-      [label],
-      DEFAULT_SUBGRAPH_URL_ONE,
-    );
+    await createAndPublishSubgraph(client, baseSubgraphName, 'default', largeSdl, [label], DEFAULT_SUBGRAPH_URL_ONE);
     await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], DEFAULT_ROUTER_URL);
 
     // Non-breaking change on the same large schema (adds one more field).
@@ -1103,14 +1096,7 @@ describe('Feature flag aware subgraph checks', () => {
 
     const largeSdl = buildLargeSdl(1500);
 
-    await createAndPublishSubgraph(
-      client,
-      baseSubgraphName,
-      'default',
-      largeSdl,
-      [label],
-      DEFAULT_SUBGRAPH_URL_ONE,
-    );
+    await createAndPublishSubgraph(client, baseSubgraphName, 'default', largeSdl, [label], DEFAULT_SUBGRAPH_URL_ONE);
     await createThenPublishFeatureSubgraph(
       client,
       featureSubgraphName,
