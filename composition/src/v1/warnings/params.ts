@@ -18,8 +18,16 @@ export type InvalidRepeatedComposedDirectiveWarningParams = {
 };
 
 export type ProvidesOnUnionWarningParams = {
-  fieldCoords: string;
+  directiveCoords: string;
   fieldSet: string;
   namedTypeName: TypeName;
+  subgraphName: SubgraphName;
+};
+
+export type ProvidesWithInterfaceFieldSelectionWarningParams = {
+  directiveCoords: string;
+  fieldCoords: string;
+  fieldSet: string;
+  selection: string;
   subgraphName: SubgraphName;
 };

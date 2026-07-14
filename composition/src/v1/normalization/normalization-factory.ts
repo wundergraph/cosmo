@@ -71,6 +71,7 @@ import {
 import {
   configureDescriptionNoDescriptionError,
   costOnInterfaceFieldErrorMessage,
+  directlyProvidedInterfaceFieldError,
   duplicateArgumentsError,
   duplicateDirectiveArgumentDefinitionsErrorMessage,
   duplicateDirectiveDefinitionArgumentErrorMessage,
@@ -204,6 +205,7 @@ import {
   invalidExternalFieldWarning,
   nonExternalConditionalFieldWarning,
   providesOnUnionWarning,
+  providesWithInterfaceFieldSelectionWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
 } from '../warnings/warnings';
@@ -237,6 +239,7 @@ import {
   isFieldData,
   isInputNodeKind,
   isInputObjectDefinitionData,
+  isInterfaceDefinitionData,
   isInterfaceNode,
   isNodeExternalOrShareable,
   isOutputNodeKind,
@@ -409,6 +412,7 @@ import {
   type GetFieldSetParentParams,
   type HandleFieldInheritableDirectivesParams,
   type HandleNonExternalConditionalFieldParams,
+  type IsAnyImplementationFieldExternalParams,
   type NormalizationFactoryParams,
   type NormalizeSubgraphFromStringParams,
   type NormalizeSubgraphParams,
@@ -1821,7 +1825,7 @@ export class NormalizationFactory {
       if (isUnionDefinitionData(namedTypeData)) {
         this.warnings.push(
           providesOnUnionWarning({
-            fieldCoords,
+            directiveCoords: fieldCoords,
             fieldSet,
             namedTypeName: fieldNamedTypeName,
             subgraphName: this.subgraphName,
@@ -1850,7 +1854,22 @@ export class NormalizationFactory {
     directiveCoords,
     directiveName,
     fieldSet,
+    parentData,
+    selection,
   }: HandleNonExternalConditionalFieldParams): void {
+    if (isInterfaceDefinitionData(parentData)) {
+      this.errors.push(
+        directlyProvidedInterfaceFieldError({
+          directiveCoords,
+          directiveName,
+          fieldSet,
+          selection,
+          subgraphName: this.subgraphName,
+          targetCoords: currentFieldCoords,
+        }),
+      );
+      return;
+    }
     if (this.isSubgraphVersionTwo) {
       this.errors.push(
         nonExternalConditionalFieldError({
@@ -1875,6 +1894,57 @@ export class NormalizationFactory {
         directiveName,
       ),
     );
+  }
+
+  // Returns true if at least one implementation field is @external
+  handleConditionalImplementationField({
+    fieldCoordsPath,
+    fieldName,
+    fieldPath,
+    interfaceTypeName,
+    isProvides,
+  }: IsAnyImplementationFieldExternalParams): boolean {
+    const implementationTypeNames = this.concreteTypeNamesByAbstractTypeName.get(interfaceTypeName);
+    if (!implementationTypeNames) {
+      return false;
+    }
+
+    let hasExternalField = false;
+    for (const typeName of implementationTypeNames) {
+      const data = this.parentDefinitionDataByTypeName.get(typeName);
+      if (!isObjectDefinitionData(data)) {
+        continue;
+      }
+
+      const fieldData = data.fieldDataByName.get(fieldName);
+      if (!fieldData?.directivesByName.has(EXTERNAL)) {
+        continue;
+      }
+
+      const externalData = fieldData.externalFieldDataBySubgraphName.get(this.subgraphName);
+      if (!externalData || externalData.isUnconditionallyProvided) {
+        continue;
+      }
+
+      if (!isProvides) {
+        return true;
+      }
+
+      getValueOrDefault(
+        this.conditionalFieldDataByCoords,
+        `${typeName}.${fieldName}`,
+        newConditionalFieldData,
+      ).providedBy.push(
+        newFieldSetConditionData({
+          fieldCoordinatesPath: [...fieldCoordsPath],
+          fieldPath: [...fieldPath],
+        }),
+      );
+
+      hasExternalField = true;
+    }
+
+    return hasExternalField;
   }
 
   validateConditionalFieldSet(
@@ -1934,17 +2004,31 @@ export class NormalizationFactory {
           fieldCoordsPath.push(currentFieldCoords);
           fieldPath.push(fieldName);
           lastFieldName = fieldName;
+          const isInterfaceParent = isInterfaceDefinitionData(parentData);
           if (fieldName === TYPENAME) {
             if (isProvides) {
               errorMessages.push(typeNameAlreadyProvidedErrorMessage(currentFieldCoords, nf.subgraphName));
               return BREAK;
             }
             if (externalAncestors.size < 1) {
+              if (isProvides && isInterfaceParent) {
+                nf.warnings.push(
+                  providesWithInterfaceFieldSelectionWarning({
+                    directiveCoords,
+                    fieldCoords: currentFieldCoords,
+                    fieldSet,
+                    selection: fieldPath.length < 2 ? fieldName : `${fieldPath.at(-2)} { ${fieldName} }`,
+                    subgraphName: nf.subgraphName,
+                  }),
+                );
+              }
               nf.#handleNonExternalConditionalField({
                 currentFieldCoords,
                 directiveCoords,
                 directiveName,
                 fieldSet,
+                parentData,
+                selection: fieldPath.length < 2 ? fieldName : `${fieldPath.at(-2)} { ${fieldName} }`,
               });
             }
             return;
@@ -1979,13 +2063,46 @@ export class NormalizationFactory {
             namedTypeData?.kind === Kind.ENUM_TYPE_DEFINITION
           ) {
             if (externalAncestors.size < 1 && !isDefinedExternal) {
+              if (isProvides && isInterfaceParent) {
+                nf.warnings.push(
+                  providesWithInterfaceFieldSelectionWarning({
+                    directiveCoords,
+                    fieldCoords: currentFieldCoords,
+                    fieldSet,
+                    selection: fieldPath.length < 2 ? fieldName : `${fieldPath.at(-2)} { ${fieldName} }`,
+                    subgraphName: nf.subgraphName,
+                  }),
+                );
+              }
               nf.#handleNonExternalConditionalField({
                 currentFieldCoords,
                 directiveCoords,
                 directiveName,
                 fieldSet,
+                parentData,
+                selection: fieldPath.length < 2 ? fieldName : `${fieldPath.at(-2)} { ${fieldName} }`,
               });
               return;
+            }
+            if (isInterfaceParent) {
+              if (isProvides) {
+                nf.warnings.push(
+                  providesWithInterfaceFieldSelectionWarning({
+                    directiveCoords,
+                    fieldCoords: currentFieldCoords,
+                    fieldSet,
+                    selection: fieldPath.length < 2 ? fieldName : `${fieldPath.at(-2)} { ${fieldName} }`,
+                    subgraphName: nf.subgraphName,
+                  }),
+                );
+              }
+              nf.handleConditionalImplementationField({
+                fieldCoordsPath,
+                fieldName,
+                fieldPath,
+                interfaceTypeName: parentData.name,
+                isProvides,
+              });
             }
             if (externalAncestors.size < 1 && isUnconditionallyProvided) {
               // V2 subgraphs return an error when an external key field on an entity extension is provided.
@@ -2040,15 +2157,41 @@ export class NormalizationFactory {
             }
             externalAncestors.add(currentFieldCoords);
           }
-          if (
-            namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION ||
-            namedTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION ||
-            namedTypeData.kind === Kind.UNION_TYPE_DEFINITION
-          ) {
-            shouldDefineSelectionSet = true;
-            parentDatas.push(namedTypeData);
+          if (!isValidProvidesParentData(namedTypeData)) {
             return;
           }
+
+          shouldDefineSelectionSet = true;
+          parentDatas.push(namedTypeData);
+          if (!isInterfaceParent) {
+            return;
+          }
+
+          if (isProvides) {
+            nf.warnings.push(
+              providesWithInterfaceFieldSelectionWarning({
+                directiveCoords,
+                fieldCoords: currentFieldCoords,
+                fieldSet,
+                selection: fieldPath.length < 2 ? fieldName : `${fieldPath.at(-2)} { ${fieldName} }`,
+                subgraphName: nf.subgraphName,
+              }),
+            );
+          }
+          if (
+            !nf.handleConditionalImplementationField({
+              fieldCoordsPath,
+              fieldName,
+              fieldPath,
+              interfaceTypeName: parentData.name,
+              isProvides,
+            }) ||
+            externalAncestors.size > 0
+          ) {
+            return;
+          }
+          hasConditionalField = true;
+          externalAncestors.add(currentFieldCoords);
         },
         leave() {
           externalAncestors.delete(fieldCoordsPath.pop() || '');
@@ -2320,6 +2463,7 @@ export class NormalizationFactory {
     if (data.implementedInterfaceTypeNames.size < 1) {
       return;
     }
+
     const isParentInaccessible = data.directivesByName.has(INACCESSIBLE);
     const implementationErrorsMap = new Map<string, ImplementationErrors>();
     const invalidImplementationTypeStringByTypeName = new Map<string, string>();
