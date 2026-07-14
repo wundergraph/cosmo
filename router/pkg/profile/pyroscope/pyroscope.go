@@ -30,7 +30,7 @@ func NewProfiler(logger *zap.Logger, config *config.Pyroscope) (*Profiler, error
 		ServerAddress:     config.ServerAddress,
 		Logger:            logger.Sugar(),
 		Tags:              config.Tags,
-		ProfileTypes:      profileTypesToPyroscopeProfileTypes(config.ProfileTypes),
+		ProfileTypes:      profileTypesToPyroscopeProfileTypes(logger, config.ProfileTypes),
 		DisableGCRuns:     config.DisableGCRuns,
 		BasicAuthUser:     config.BasicAuth.Username,
 		BasicAuthPassword: config.BasicAuth.Password,
@@ -48,38 +48,40 @@ func NewProfiler(logger *zap.Logger, config *config.Pyroscope) (*Profiler, error
 
 }
 
-func profileTypesToPyroscopeProfileTypes(profileTypes []string) []pyroscope.ProfileType {
+var validProfileTypes = map[pyroscope.ProfileType]struct{}{
+	pyroscope.ProfileCPU:           {},
+	pyroscope.ProfileAllocObjects:  {},
+	pyroscope.ProfileInuseObjects:  {},
+	pyroscope.ProfileAllocSpace:    {},
+	pyroscope.ProfileInuseSpace:    {},
+	pyroscope.ProfileGoroutines:    {},
+	pyroscope.ProfileMutexCount:    {},
+	pyroscope.ProfileMutexDuration: {},
+	pyroscope.ProfileBlockCount:    {},
+	pyroscope.ProfileBlockDuration: {},
+	pyroscope.ProfileGoroutineLeak: {},
+}
+
+func profileTypesToPyroscopeProfileTypes(logger *zap.Logger, profileTypes []string) []pyroscope.ProfileType {
 	if len(profileTypes) == 0 {
 		return pyroscope.DefaultProfileTypes
 	}
 
 	result := make([]pyroscope.ProfileType, 0, len(profileTypes))
 	for _, profileType := range profileTypes {
-		switch profileType {
-		case "cpu":
-			result = append(result, pyroscope.ProfileCPU)
-		case "alloc_objects":
-			result = append(result, pyroscope.ProfileAllocObjects)
-		case "inuse_objects":
-			result = append(result, pyroscope.ProfileInuseObjects)
-		case "alloc_space":
-			result = append(result, pyroscope.ProfileAllocSpace)
-		case "inuse_space":
-			result = append(result, pyroscope.ProfileInuseSpace)
-		case "goroutines":
-			result = append(result, pyroscope.ProfileGoroutines)
-		case "mutex_count":
-			result = append(result, pyroscope.ProfileMutexCount)
-		case "mutex_duration":
-			result = append(result, pyroscope.ProfileMutexDuration)
-		case "block_count":
-			result = append(result, pyroscope.ProfileBlockCount)
-		case "block_duration":
-			result = append(result, pyroscope.ProfileBlockDuration)
-		case "goroutine_leak":
-			result = append(result, pyroscope.ProfileGoroutineLeak)
+		pt := pyroscope.ProfileType(profileType)
+		if _, ok := validProfileTypes[pt]; !ok {
+			logger.Warn("ignoring unrecognized pyroscope profile type", zap.String("profile_type", profileType))
+			continue
 		}
+		result = append(result, pt)
 	}
+
+	if len(result) == 0 {
+		logger.Warn("no recognized pyroscope profile types configured, falling back to defaults")
+		return pyroscope.DefaultProfileTypes
+	}
+
 	return result
 }
 
