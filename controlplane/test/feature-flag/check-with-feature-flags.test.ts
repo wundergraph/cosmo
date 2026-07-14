@@ -55,6 +55,19 @@ const FS_USERS_SDL = `
   }
 `;
 
+// Builds a subgraph SDL with `fieldCount` scalar fields. Large field counts produce a long GraphQL
+// AST token linked-list, which previously overflowed the stack when the parsed AST was structured-cloned
+// across the composition worker boundary ("Maximum call stack size exceeded"). ~1000 fields is already
+// past the overflow threshold; we use more to stay comfortably clear of it.
+const buildLargeSdl = (fieldCount: number) => {
+  let sdl = 'type Query {\n  user(id: ID!): User\n  users: [User!]!\n}\n\ntype User @key(fields: "id") {\n  id: ID!\n';
+  for (let i = 0; i < fieldCount; i++) {
+    sdl += `  field${i}: String\n`;
+  }
+  sdl += '}\n';
+  return sdl;
+};
+
 // Valid non-breaking change for the FS (adds a field).
 const FS_USERS_SDL_VALID_UPDATE = `
   type Query {
@@ -1041,6 +1054,71 @@ describe('Feature flag aware subgraph checks', () => {
       delete: true,
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp.compositionErrors).toHaveLength(0);
+  });
+
+  test('base subgraph check on a large schema does not overflow the composition worker', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    const label = genUniqueLabel();
+    const baseSubgraphName = genID('base');
+    const fedGraphName = genID('fedgraph');
+
+    const largeSdl = buildLargeSdl(1500);
+
+    await createAndPublishSubgraph(client, baseSubgraphName, 'default', largeSdl, [label], DEFAULT_SUBGRAPH_URL_ONE);
+    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Non-breaking change on the same large schema (adds one more field).
+    const largeSdlUpdate = buildLargeSdl(1501);
+
+    const checkResp = await client.checkSubgraphSchema({
+      subgraphName: baseSubgraphName,
+      namespace: 'default',
+      schema: Uint8Array.from(Buffer.from(largeSdlUpdate)),
+    });
+
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    // Before the fix this contained "Maximum call stack size exceeded".
+    expect(checkResp.compositionErrors).toHaveLength(0);
+  });
+
+  test('feature subgraph check on a large schema does not overflow the composition worker', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    const label = genUniqueLabel();
+    const baseSubgraphName = genID('base');
+    const featureSubgraphName = genID('fs');
+    const fedGraphName = genID('fedgraph');
+    const featureFlagName = genID('flag').toLowerCase();
+
+    const largeSdl = buildLargeSdl(1500);
+
+    await createAndPublishSubgraph(client, baseSubgraphName, 'default', largeSdl, [label], DEFAULT_SUBGRAPH_URL_ONE);
+    await createThenPublishFeatureSubgraph(
+      client,
+      featureSubgraphName,
+      baseSubgraphName,
+      'default',
+      largeSdl,
+      [label],
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], DEFAULT_ROUTER_URL);
+    await createFeatureFlag(client, featureFlagName, [label], [featureSubgraphName], 'default', true);
+
+    const largeSdlUpdate = buildLargeSdl(1501);
+
+    const checkResp = await client.checkSubgraphSchema({
+      subgraphName: featureSubgraphName,
+      namespace: 'default',
+      schema: Uint8Array.from(Buffer.from(largeSdlUpdate)),
+    });
+
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    // Before the fix this contained "Maximum call stack size exceeded".
     expect(checkResp.compositionErrors).toHaveLength(0);
   });
 });
