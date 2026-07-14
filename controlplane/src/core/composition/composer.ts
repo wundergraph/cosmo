@@ -665,7 +665,12 @@ export class Composer {
 
         const { results } = await composeGraphsInWorker({
           federatedGraph: graph,
-          subgraphsToCompose,
+          subgraphsToCompose: subgraphsToCompose.map((entry) => ({
+            subgraphs: entry.subgraphs,
+            isFeatureFlagComposition: entry.isFeatureFlagComposition,
+            featureFlagName: entry.featureFlagName,
+            featureFlagId: entry.featureFlagId,
+          })),
           tagOptionsByContractName,
           compositionOptions,
           skipRouterConfig: true,
