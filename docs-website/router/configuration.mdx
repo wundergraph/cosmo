@@ -876,10 +876,12 @@ telemetry:
 
 ## GraphQL Metrics
 
-| Environment Variable               | YAML               | Required                                      | Description      | Default Value                         |
-| ---------------------------------- | ------------------ | --------------------------------------------- | ---------------- | ------------------------------------- |
-| GRAPHQL_METRICS_ENABLED            | enabled            | <Icon icon="square" />                        |                  | true                                  |
-| GRAPHQL_METRICS_COLLECTOR_ENDPOINT | collector_endpoint | <Icon icon="square-check" iconType="solid" /> | Default endpoint | https://cosmo-metrics.wundergraph.com |
+The router collects GraphQL schema usage metrics, which are the types, fields, and arguments each client operation uses, and sends them to the Cosmo GraphQL Metrics collector. This data powers [field-level analytics](/studio/analytics/schema-field-usage) and [breaking-change detection](/studio/schema-checks). Set `enabled` to `false` (or `GRAPHQL_METRICS_ENABLED=false`) to stop the router from collecting and sending this data.
+
+| Environment Variable               | YAML               | Required               | Description                                                                                                                           | Default Value                         |
+| ---------------------------------- | ------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| GRAPHQL_METRICS_ENABLED            | enabled            | <Icon icon="square" /> | Enable collection and export of GraphQL schema usage metrics (field-level usage) to the collector. Set to `false` to disable.         | true                                  |
+| GRAPHQL_METRICS_COLLECTOR_ENDPOINT | collector_endpoint | <Icon icon="square" /> | Endpoint of the GraphQL Metrics collector that receives schema usage data. Self-hosted deployments point this at their own collector. | https://cosmo-metrics.wundergraph.com |
 
 ### Example YAML config:
 
@@ -2098,6 +2100,35 @@ engine:
     enable_normalization_cache_response_header: false
     always_include_query_plan: false
     always_skip_loader: false
+```
+
+### Validate Inline Arguments
+
+The configuration for [Validate Inline Arguments](/router/security/validate-inline-arguments). Detects, and
+optionally rejects, operations that pass argument values inline instead of through variables.
+
+| Environment Variable                                            | YAML                            | Required               | Description                                                                                                                                     | Default Value                                              |
+|-----------------------------------------------------------------|---------------------------------|------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_MODE                          | mode                            | <Icon icon="square" /> | `off` disables the feature; `permissive` detects and records inline arguments while still executing; `strict` rejects operations that use inline argument values. | off                                                       |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_ENFORCE_HTTP_STATUS_CODE       | enforce_http_status_code        | <Icon icon="square" /> | HTTP status code returned when an operation is rejected in enforcing mode.                                                                      | 400                                                       |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_ERROR_CODE                     | error_code                      | <Icon icon="square" /> | The `extensions.code` set on the rejection error.                                                                                              | INLINE_ARGUMENT_VALUES_NOT_ALLOWED                        |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_ERROR_MESSAGE                  | error_message                   | <Icon icon="square" /> | The error message returned to the client on rejection.                                                                                         | Inline argument values are not allowed. Use variables instead. |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_INCLUDE_PERSISTED_OPERATIONS   | include_persisted_operations    | <Icon icon="square" /> | When true, the policy also applies to persisted operations. Persisted operations are exempt by default.                                        | false                                                     |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_RETURN_IN_RESPONSE_EXTENSIONS  | return_in_response_extensions   | <Icon icon="square" /> | When true, detected inline arguments are returned to the client under `extensions.inlineArguments`. Applies only in non-enforcing mode.        | false                                                     |
+
+#### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+engine:
+  validate_inline_arguments:
+    mode: permissive
+    enforce_http_status_code: 400
+    error_code: INLINE_ARGUMENT_VALUES_NOT_ALLOWED
+    error_message: "Inline argument values are not allowed. Use variables instead."
+    include_persisted_operations: false
+    return_in_response_extensions: false
 ```
 
 ## Rate Limiting

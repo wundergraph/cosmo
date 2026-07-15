@@ -952,7 +952,15 @@
     "WebSocketClientPingTimeout": 30000000000,
     "WebSocketClientAckTimeout": 30000000000,
     "ValidateRequiredExternalFields": false,
-    "RelaxSubgraphOperationFieldSelectionMergingNullability": false
+    "RelaxSubgraphOperationFieldSelectionMergingNullability": false,
+    "ValidateInlineArguments": {
+      "Mode": "off",
+      "EnforceHTTPStatusCode": 400,
+      "ErrorCode": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
+      "ErrorMessage": "Inline argument values are not allowed. Use variables instead.",
+      "IncludePersistedOperations": false,
+      "ReturnInResponseExtensions": false
+    }
   },
   "WebSocket": {
     "Enabled": true,
