@@ -61,6 +61,9 @@ func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag st
 	defer r.mux.Unlock()
 	for _, employee := range r.EmployeesData {
 		if id == employee.ID {
+			// Persist the tag so subsequent reads observe the change (the
+			// query resolver reads from this same slice).
+			employee.Tag = tag
 			details := &model.Details{}
 			if employee.Details != nil {
 				details.Forename = employee.Details.Forename

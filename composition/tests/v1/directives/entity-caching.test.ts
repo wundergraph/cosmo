@@ -1305,6 +1305,61 @@ describe('Entity caching directive tests', () => {
         ),
       );
     });
+
+    // Regression: prior tests only assert federation succeeds and the supergraph
+    // SDL composes. They do not assert that the cache configurations survive
+    // into the per-subgraph ConfigurationData that the router-config serializer
+    // reads. The router blob we inspected for a real rollout was empty of
+    // entityCacheConfigurations and rootFieldCacheConfigurations even though
+    // the proposal SDL carried both directives, so the pipeline drops them
+    // somewhere between normalization and the FederationSuccess output.
+    test('config: @openfed__queryCache survives federation into subgraphConfigBySubgraphName', () => {
+      const cachingSubgraph = subgraph(`
+        type Query {
+          product(id: ID!): Product @openfed__queryCache(maxAge: 30)
+        }
+        type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+          id: ID!
+          name: String!
+        }
+      `);
+      const result = federateSubgraphsSuccess([cachingSubgraph], version);
+      const subgraphConfig = result.subgraphConfigBySubgraphName.get('subgraph-a');
+      expect(subgraphConfig).toBeDefined();
+      const queryConfig = subgraphConfig!.configurationDataByTypeName.get(QUERY as TypeName);
+      expect(queryConfig).toBeDefined();
+      expect(queryConfig!.rootFieldCacheConfigurations).toBeDefined();
+      expect(queryConfig!.rootFieldCacheConfigurations).toHaveLength(1);
+      expect(queryConfig!.rootFieldCacheConfigurations![0]).toMatchObject({
+        fieldName: 'product',
+        maxAgeSeconds: 30,
+      } satisfies Partial<RootFieldCacheConfig>);
+    });
+
+    test('config: @openfed__entityCache survives federation into subgraphConfigBySubgraphName', () => {
+      const cachingSubgraph = subgraph(`
+        type Query {
+          product(id: ID!): Product
+        }
+        type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+          id: ID!
+          name: String!
+        }
+      `);
+      const result = federateSubgraphsSuccess([cachingSubgraph], version);
+      const subgraphConfig = result.subgraphConfigBySubgraphName.get('subgraph-a');
+      expect(subgraphConfig).toBeDefined();
+      const productConfig = subgraphConfig!.configurationDataByTypeName.get(
+        'Product' as TypeName,
+      );
+      expect(productConfig).toBeDefined();
+      expect(productConfig!.entityCacheConfigurations).toBeDefined();
+      expect(productConfig!.entityCacheConfigurations).toHaveLength(1);
+      expect(productConfig!.entityCacheConfigurations![0]).toMatchObject({
+        typeName: 'Product',
+        maxAgeSeconds: 60,
+      } satisfies Partial<EntityCacheConfig>);
+    });
   });
 
   // ─── edge cases ───────────────────────────────────────────────────────────────
