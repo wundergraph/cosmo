@@ -6,7 +6,7 @@ import { OidcRepository } from '../repositories/OidcRepository.js';
 import { NamespaceLoginMethodRepository } from '../repositories/NamespaceLoginMethodRepository.js';
 import { OrganizationLoginMethodRepository } from '../repositories/OrganizationLoginMethodRepository.js';
 import { traced } from '../tracing.js';
-import type { LoginMethod } from '../../types/index.js';
+import type { LoginMethod, OrganizationDTO } from '../../types/index.js';
 import { buildAuthState } from '../util.js';
 import type { RBACEvaluator } from './RBACEvaluator.js';
 
@@ -38,23 +38,43 @@ export default class AccessTokenAuthenticator {
     const userInfoData = await this.authUtils.getUserInfo(accessToken);
 
     const orgSlug = organizationSlug || userInfoData.groups?.[0]?.split('/')?.[1];
-    if (!orgSlug) {
-      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Cannot determine organization slug');
-    }
+    let organization: Omit<OrganizationDTO, 'rbac'> | null = null;
+    let shouldCheckForUserMembership = true;
+    if (orgSlug) {
+      // The authenticated user is part of at least one group in Keycloak
+      organization = await this.orgRepo.bySlug(orgSlug);
+    } else {
+      /**
+       * The authenticated user is not part of any group in Keycloak, instead of failing, we'll check whether the
+       * user owns any organization and assume the first organization they created as the organization we are using.
+       */
+      const memberships = await this.orgRepo.memberships({ userId: userInfoData.sub });
+      const ownedOrganizations = memberships.filter((org) => org.creatorUserId === userInfoData.sub);
+      if (ownedOrganizations.length === 0) {
+        // The authenticated user doesn't own any organization, fallback to erroring
+        throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Cannot determine organization slug');
+      }
 
-    const organization = await this.orgRepo.bySlug(orgSlug);
+      shouldCheckForUserMembership = false;
+      organization = ownedOrganizations[0];
+    }
 
     if (!organization || !organization?.id) {
       throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Organization does not exist');
     }
 
-    const isMember = await this.orgRepo.isMemberOf({
-      userId: userInfoData.sub,
-      organizationId: organization.id,
-    });
+    if (shouldCheckForUserMembership) {
+      const isMember = await this.orgRepo.isMemberOf({
+        userId: userInfoData.sub,
+        organizationId: organization.id,
+      });
 
-    if (!isMember) {
-      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'User is not a member of the organization');
+      if (!isMember) {
+        throw new AuthenticationError(
+          EnumStatusCode.ERROR_NOT_AUTHENTICATED,
+          'User is not a member of the organization',
+        );
+      }
     }
 
     const organizationDeactivated = !!organization.deactivation;

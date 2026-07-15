@@ -301,6 +301,7 @@ export class OrganizationRepository {
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
       .leftJoin(billingSubscriptions, eq(organizations.id, billingSubscriptions.organizationId))
       .where(and(eq(users.id, input.userId), eq(organizationsMembers.active, true)))
+      .orderBy(asc(organizations.createdAt))
       .execute();
 
     return Promise.all(
