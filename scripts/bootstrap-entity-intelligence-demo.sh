@@ -30,6 +30,13 @@ make infra-up
 pnpm -r run --filter '!studio' build
 make build-plugins
 
+# Must exist before migrate/seed: controlplane's own scripts (db-migrate.ts
+# etc.) read DB_URL and friends straight out of controlplane/.env.
+echo "==> .env files (controlplane, graphqlmetrics, router)"
+[ -f controlplane/.env ] || cp controlplane/.env.example controlplane/.env
+[ -f graphqlmetrics/.env ] || cp graphqlmetrics/.env.example graphqlmetrics/.env
+[ -f router/.env ] || cp router/.env.example router/.env
+
 echo "==> Waiting for postgres..."
 for i in $(seq 1 60); do
   nc -z 127.0.0.1 5432 && break
@@ -53,10 +60,23 @@ make migrate
 echo "==> Database seed (default local dev org/user)"
 make seed
 
-echo "==> .env files (controlplane, graphqlmetrics)"
-[ -f controlplane/.env ] || cp controlplane/.env.example controlplane/.env
-[ -f graphqlmetrics/.env ] || cp graphqlmetrics/.env.example graphqlmetrics/.env
-[ -f router/.env ] || cp router/.env.example router/.env
+# Provisioning the demo graph below needs the platform API, i.e. a live
+# control plane — which the `ei-demo` Makefile target doesn't start until
+# after this script returns. Start it here if it isn't already running,
+# and leave it running: the Makefile target checks for that and skips
+# starting a second one.
+echo "==> Control plane (needed to provision the demo graph)"
+if nc -z 127.0.0.1 3001 2>/dev/null; then
+  echo "Already running."
+else
+  echo "Starting control plane in the background..."
+  (cd controlplane && pnpm dev > /tmp/cosmo-controlplane-bootstrap.log 2>&1 &)
+  for i in $(seq 1 60); do
+    nc -z 127.0.0.1 3001 && break
+    sleep 0.5
+  done
+  nc -z 127.0.0.1 3001 || { echo "control plane did not start, see /tmp/cosmo-controlplane-bootstrap.log" >&2; exit 1; }
+fi
 
 echo "==> Demo federated graph + subgraphs"
 . ./scripts/configurations/local.sh

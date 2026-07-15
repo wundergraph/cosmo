@@ -233,10 +233,15 @@ ei-demo:
 		sleep $(DEMO_STARTUP_SLEEP); \
 	done; \
 	nc -z 127.0.0.1 8123 || { echo "ClickHouse did not start" >&2; exit 1; }
-	@echo "Starting control plane, graphqlmetrics, and demo subgraphs..."
+	@echo "Starting control plane (if not already running), graphqlmetrics, and demo subgraphs..."
 	@set -e; \
 	set -m; \
-	(cd controlplane && pnpm dev) & cp_pid=$$!; \
+	cp_pid=""; \
+	if nc -z 127.0.0.1 3001 2>/dev/null; then \
+		echo "Control plane already running (started during bootstrap)."; \
+	else \
+		(cd controlplane && pnpm dev) & cp_pid=$$!; \
+	fi; \
 	(cd graphqlmetrics && make dev) & gqm_pid=$$!; \
 	(cd demo && go run cmd/all/main.go) & sub_pid=$$!; \
 	trap 'kill -TERM -$$cp_pid -$$gqm_pid -$$sub_pid 2>/dev/null; kill $$cp_pid $$gqm_pid $$sub_pid 2>/dev/null; true' EXIT INT TERM HUP; \
