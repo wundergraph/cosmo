@@ -36,6 +36,7 @@ echo "==> .env files (controlplane, graphqlmetrics, router)"
 [ -f controlplane/.env ] || cp controlplane/.env.example controlplane/.env
 [ -f graphqlmetrics/.env ] || cp graphqlmetrics/.env.example graphqlmetrics/.env
 [ -f router/.env ] || cp router/.env.example router/.env
+[ -f cli/.env ] || cp cli/.env.example cli/.env
 
 echo "==> Waiting for postgres..."
 for i in $(seq 1 60); do
@@ -70,7 +71,8 @@ if nc -z 127.0.0.1 3001 2>/dev/null; then
   echo "Already running."
 else
   echo "Starting control plane in the background..."
-  (cd controlplane && pnpm dev > /tmp/cosmo-controlplane-bootstrap.log 2>&1 &)
+  NODE_BIN="$(./scripts/ei-demo-node-path.sh)" || exit 1
+  (cd controlplane && PATH="$NODE_BIN:$PATH" pnpm dev > /tmp/cosmo-controlplane-bootstrap.log 2>&1 &)
   for i in $(seq 1 60); do
     nc -z 127.0.0.1 3001 && break
     sleep 0.5

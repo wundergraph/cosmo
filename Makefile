@@ -240,7 +240,8 @@ ei-demo:
 	if nc -z 127.0.0.1 3001 2>/dev/null; then \
 		echo "Control plane already running (started during bootstrap)."; \
 	else \
-		(cd controlplane && pnpm dev) & cp_pid=$$!; \
+		NODE_BIN="$$(./scripts/ei-demo-node-path.sh)" || exit 1; \
+		(cd controlplane && PATH="$$NODE_BIN:$$PATH" pnpm dev) & cp_pid=$$!; \
 	fi; \
 	(cd graphqlmetrics && make dev) & gqm_pid=$$!; \
 	(cd demo && go run cmd/all/main.go) & sub_pid=$$!; \
