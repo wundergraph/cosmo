@@ -3652,6 +3652,46 @@
       "description": "The configuration for the engine. The engine is used to execute the GraphQL queries, mutations and subscriptions. Only modify this if you know what you are doing.",
       "additionalProperties": false,
       "properties": {
+        "validate_inline_arguments": {
+          "type": "object",
+          "description": "Detects, and optionally rejects, operations that carry hardcoded inline argument values instead of variables.",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["off", "permissive", "strict"],
+              "default": "off",
+              "description": "Controls the policy: 'off' disables it; 'permissive' detects and records inline arguments but still executes the operation; 'strict' rejects operations that use inline argument values."
+            },
+            "enforce_http_status_code": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 599,
+              "default": 400,
+              "description": "HTTP status code returned when an operation is rejected in enforce mode."
+            },
+            "error_code": {
+              "type": "string",
+              "default": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
+              "description": "The extensions.code emitted on rejection."
+            },
+            "error_message": {
+              "type": "string",
+              "default": "Inline argument values are not allowed. Use variables instead.",
+              "description": "The human-readable error/hint message surfaced to the client."
+            },
+            "include_persisted_operations": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, applies the policy to persisted operations as well. Persisted operations are exempt by default."
+            },
+            "return_in_response_extensions": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, reports detected inline arguments back to the client under extensions.inlineArguments of the GraphQL response. Applies only in non-enforcing mode."
+            }
+          }
+        },
         "debug": {
           "type": "object",
           "description": "The debug configuration. The debug configuration is used to enable the debug mode for the engine.",

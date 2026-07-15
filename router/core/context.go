@@ -631,6 +631,7 @@ type operationContext struct {
 	planCacheHit     bool
 	initialPayload   []byte
 	extensions       []byte
+	inlineArguments  []string
 	persistedID      string
 	// Hash on the original operation
 	sha256Hash string

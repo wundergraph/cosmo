@@ -2102,6 +2102,35 @@ engine:
     always_skip_loader: false
 ```
 
+### Validate Inline Arguments
+
+The configuration for [Validate Inline Arguments](/router/security/validate-inline-arguments). Detects, and
+optionally rejects, operations that pass argument values inline instead of through variables.
+
+| Environment Variable                                            | YAML                            | Required               | Description                                                                                                                                     | Default Value                                              |
+|-----------------------------------------------------------------|---------------------------------|------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_MODE                          | mode                            | <Icon icon="square" /> | `off` disables the feature; `permissive` detects and records inline arguments while still executing; `strict` rejects operations that use inline argument values. | off                                                       |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_ENFORCE_HTTP_STATUS_CODE       | enforce_http_status_code        | <Icon icon="square" /> | HTTP status code returned when an operation is rejected in enforcing mode.                                                                      | 400                                                       |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_ERROR_CODE                     | error_code                      | <Icon icon="square" /> | The `extensions.code` set on the rejection error.                                                                                              | INLINE_ARGUMENT_VALUES_NOT_ALLOWED                        |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_ERROR_MESSAGE                  | error_message                   | <Icon icon="square" /> | The error message returned to the client on rejection.                                                                                         | Inline argument values are not allowed. Use variables instead. |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_INCLUDE_PERSISTED_OPERATIONS   | include_persisted_operations    | <Icon icon="square" /> | When true, the policy also applies to persisted operations. Persisted operations are exempt by default.                                        | false                                                     |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_RETURN_IN_RESPONSE_EXTENSIONS  | return_in_response_extensions   | <Icon icon="square" /> | When true, detected inline arguments are returned to the client under `extensions.inlineArguments`. Applies only in non-enforcing mode.        | false                                                     |
+
+#### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+engine:
+  validate_inline_arguments:
+    mode: permissive
+    enforce_http_status_code: 400
+    error_code: INLINE_ARGUMENT_VALUES_NOT_ALLOWED
+    error_message: "Inline argument values are not allowed. Use variables instead."
+    include_persisted_operations: false
+    return_in_response_extensions: false
+```
+
 ## Rate Limiting
 
 Configures a rate limiter on the outgoing subgraphs requests. When enabled, a rate of 10 req/s with a burst of 10 requests is configured.
