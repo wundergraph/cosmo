@@ -10,8 +10,10 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/iancoleman/strcase"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -120,6 +122,8 @@ type GraphQLSchemaServer struct {
 	serverBaseURL             string
 	resourceDocumentation     string
 	authMiddleware            *MCPAuthMiddleware
+	collections               map[string]*collection
+	collectionsMu             sync.RWMutex
 }
 
 type graphqlRequest struct {
@@ -279,20 +283,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 	}
 
 	// Create the MCP server with all options
-	mcpServer := mcp.NewServer(
-		&mcp.Implementation{
-			Name:    "wundergraph-cosmo-" + strcase.ToKebab(options.GraphName),
-			Version: "0.0.1",
-		},
-		&mcp.ServerOptions{
-			PageSize: 100,
-			// Override default capabilities to disable the "logging" capability
-			// that the SDK advertises by default (for historical reasons).
-			// We don't implement logging/setLevel, so advertising it causes
-			// clients like MCP Inspector to call it and fail.
-			Capabilities: &mcp.ServerCapabilities{},
-		},
-	)
+	mcpServer := newMCPServer(options.GraphName)
 
 	retryClient := retryablehttp.NewClient()
 	retryClient.Logger = nil
@@ -319,9 +310,29 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		serverBaseURL:             options.ServerBaseURL,
 		resourceDocumentation:     options.ResourceDocumentation,
 		authMiddleware:            authMiddleware,
+		collections:               make(map[string]*collection),
 	}
 
 	return gs, nil
+}
+
+// newMCPServer constructs an MCP server with the implementation metadata and
+// options shared by the default endpoint and collections.
+func newMCPServer(name string) *mcp.Server {
+	return mcp.NewServer(
+		&mcp.Implementation{
+			Name:    "wundergraph-cosmo-" + strcase.ToKebab(name),
+			Version: "0.0.1",
+		},
+		&mcp.ServerOptions{
+			PageSize: 100,
+			// Override default capabilities to disable the "logging" capability
+			// that the SDK advertises by default (for historical reasons).
+			// We don't implement logging/setLevel, so advertising it causes
+			// clients like MCP Inspector to call it and fail.
+			Capabilities: &mcp.ServerCapabilities{},
+		},
+	)
 }
 
 // SetHTTPClient allows setting a custom HTTP client (useful for testing)
@@ -436,45 +447,7 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Create MCP streamable HTTP handler
-	// The getServer function returns our MCP server instance for each request
-	// Disable the SDK's built-in cross-origin protection (Sec-Fetch-Site check)
-	// because the router already applies its own CORS middleware around the handler.
-	cop := http.NewCrossOriginProtection()
-	cop.AddInsecureBypassPattern("/{path...}")
-
-	streamableHTTPHandler := mcp.NewStreamableHTTPHandler(
-		func(req *http.Request) *mcp.Server {
-			return s.server
-		},
-		&mcp.StreamableHTTPOptions{
-			Stateless:             s.stateless,
-			CrossOriginProtection: cop,
-		},
-	)
-
-	middleware := cors.New(s.corsConfig)
-
-	mux := http.NewServeMux()
-
-	// OAuth 2.0 Protected Resource Metadata (RFC 9728) — public discovery endpoint
-	if s.oauthConfig != nil && s.oauthConfig.Enabled && s.oauthConfig.AuthorizationServerURL != "" {
-		mux.Handle("/.well-known/oauth-protected-resource/mcp", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
-	}
-
-	// Inject request headers into context so tool handlers can forward them
-	// to the GraphQL engine via headersFromContext.
-	mcpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r = r.WithContext(requestHeadersFromRequest(r.Context(), r))
-		streamableHTTPHandler.ServeHTTP(w, r)
-	})
-	if s.authMiddleware != nil {
-		mux.Handle("/mcp", middleware(s.authMiddleware.HTTPMiddleware(mcpHandler)))
-	} else {
-		mux.Handle("/mcp", middleware(mcpHandler))
-	}
-
-	httpServer.Handler = mux
+	httpServer.Handler = s.buildHandler()
 
 	logger := []zap.Field{
 		zap.String("listen_addr", s.listenAddr),
@@ -498,6 +471,61 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 	}()
 
 	return httpServer, nil
+}
+
+// buildHandler constructs the HTTP handler serving the MCP endpoint, the
+// per-collection endpoints, and, when OAuth is enabled, the protected
+// resource metadata endpoint.
+func (s *GraphQLSchemaServer) buildHandler() http.Handler {
+	// Create MCP streamable HTTP handler
+	// The getServer function returns the MCP server instance for each request:
+	// the collection's server when the request was routed through the
+	// collection middleware, the default server otherwise.
+	// Disable the SDK's built-in cross-origin protection (Sec-Fetch-Site check)
+	// because the router already applies its own CORS middleware around the handler.
+	cop := http.NewCrossOriginProtection()
+	cop.AddInsecureBypassPattern("/{path...}")
+
+	streamableHTTPHandler := mcp.NewStreamableHTTPHandler(
+		func(req *http.Request) *mcp.Server {
+			if c, ok := collectionFromContext(req.Context()); ok {
+				return c.server
+			}
+			return s.server
+		},
+		&mcp.StreamableHTTPOptions{
+			Stateless:             s.stateless,
+			CrossOriginProtection: cop,
+		},
+	)
+
+	middleware := cors.New(s.corsConfig)
+
+	httpRouter := chi.NewRouter()
+
+	// OAuth 2.0 Protected Resource Metadata (RFC 9728) — public discovery endpoint
+	if s.oauthConfig != nil && s.oauthConfig.Enabled && s.oauthConfig.AuthorizationServerURL != "" {
+		httpRouter.Handle("/.well-known/oauth-protected-resource/mcp", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
+	}
+
+	// Inject request headers into context so tool handlers can forward them
+	// to the GraphQL engine via headersFromContext.
+	mcpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r = r.WithContext(requestHeadersFromRequest(r.Context(), r))
+		streamableHTTPHandler.ServeHTTP(w, r)
+	})
+
+	wrap := func(h http.Handler) http.Handler {
+		if s.authMiddleware != nil {
+			h = s.authMiddleware.HTTPMiddleware(h)
+		}
+		return middleware(h)
+	}
+
+	httpRouter.Handle("/mcp", wrap(mcpHandler))
+	httpRouter.Handle("/mcp/{collection}", wrap(s.collectionMiddleware(mcpHandler)))
+
+	return httpRouter
 }
 
 // Start loads operations and starts the server
@@ -545,6 +573,8 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 	if err := s.registerTools(); err != nil {
 		return fmt.Errorf("failed to register tools: %w", err)
 	}
+
+	s.reloadCollections()
 
 	return nil
 }
@@ -640,6 +670,53 @@ func (s *GraphQLSchemaServer) registerTools() error {
 	operations := s.operationsManager.GetFilteredOperations()
 
 	graphqlOperationNames := make([]string, 0, len(operations))
+	for _, op := range operations {
+		graphqlOperationNames = append(graphqlOperationNames, op.Name)
+	}
+
+	registered, toolScopes := s.registerOperationTools(s.server, operations, s.registeredTools)
+	s.registeredTools = append(s.registeredTools, registered...)
+
+	// Update auth middleware with per-tool scopes (thread-safe)
+	if s.authMiddleware != nil {
+		s.authMiddleware.SetToolScopes(toolScopes)
+	}
+
+	getOperationInfoTool := &mcp.Tool{
+		Name:        "get_operation_info",
+		Description: "Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"operationName": map[string]any{
+					"type":        "string",
+					"description": "The exact name of the GraphQL operation to retrieve information for.",
+					"enum":        graphqlOperationNames,
+				},
+			},
+			"required": []string{"operationName"},
+		},
+		Annotations: &mcp.ToolAnnotations{
+			Title:        "Get GraphQL Operation Info",
+			ReadOnlyHint: true,
+		},
+	}
+
+	s.server.AddTool(getOperationInfoTool, s.handleGraphQLOperationInfo())
+
+	s.registeredTools = append(s.registeredTools, "get_operation_info")
+
+	return nil
+}
+
+// registerOperationTools registers the execute-operation tool for each of the
+// given operations on the target MCP server. alreadyRegistered contains tool
+// names already taken on the target server, used for collision detection when
+// omitToolNamePrefix is enabled. It returns the names of the tools it
+// registered and the per-tool scope requirements of operations that declare
+// any.
+func (s *GraphQLSchemaServer) registerOperationTools(target *mcp.Server, operations []schemaloader.Operation, alreadyRegistered []string) ([]string, map[string][][]string) {
+	var registered []string
 
 	// Build per-tool scope map for the auth middleware
 	toolScopes := make(map[string][][]string)
@@ -647,8 +724,6 @@ func (s *GraphQLSchemaServer) registerTools() error {
 	for _, op := range operations {
 		var compiledSchema *jsonschema.Schema
 		var err error
-
-		graphqlOperationNames = append(graphqlOperationNames, op.Name)
 
 		if len(op.JSONSchema) > 0 {
 			// Validate the JSON schema before compiling it
@@ -690,7 +765,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		toolName := operationToolName
 		if !s.omitToolNamePrefix {
 			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
-		} else if slices.Contains(s.registeredTools, operationToolName) || slices.Contains(reservedToolNames, operationToolName) {
+		} else if slices.Contains(alreadyRegistered, operationToolName) || slices.Contains(registered, operationToolName) || slices.Contains(reservedToolNames, operationToolName) {
 			s.logger.Error("Skipping operation due to tool name collision",
 				zap.String("operation", op.Name),
 				zap.String("conflicting_tool", operationToolName),
@@ -723,9 +798,9 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			},
 		}
 
-		s.server.AddTool(tool, s.handleOperation(handler))
+		target.AddTool(tool, s.handleOperation(handler))
 
-		s.registeredTools = append(s.registeredTools, toolName)
+		registered = append(registered, toolName)
 
 		// Record per-tool scope requirements for auth middleware enforcement
 		if len(op.RequiredScopes) > 0 {
@@ -733,36 +808,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		}
 	}
 
-	// Update auth middleware with per-tool scopes (thread-safe)
-	if s.authMiddleware != nil {
-		s.authMiddleware.SetToolScopes(toolScopes)
-	}
-
-	getOperationInfoTool := &mcp.Tool{
-		Name:        "get_operation_info",
-		Description: "Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application.",
-		InputSchema: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"operationName": map[string]any{
-					"type":        "string",
-					"description": "The exact name of the GraphQL operation to retrieve information for.",
-					"enum":        graphqlOperationNames,
-				},
-			},
-			"required": []string{"operationName"},
-		},
-		Annotations: &mcp.ToolAnnotations{
-			Title:        "Get GraphQL Operation Info",
-			ReadOnlyHint: true,
-		},
-	}
-
-	s.server.AddTool(getOperationInfoTool, s.handleGraphQLOperationInfo())
-
-	s.registeredTools = append(s.registeredTools, "get_operation_info")
-
-	return nil
+	return registered, toolScopes
 }
 
 // handleOperation handles a specific operation
