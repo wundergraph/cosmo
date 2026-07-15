@@ -35,6 +35,7 @@ func (rt *writeLoopRoundTripper) RoundTrip(req *http.Request) (*http.Response, e
 	ct.GotConn(httptrace.GotConnInfo{})
 
 	rt.wg.Go(func() {
+		ct.WroteHeaderField("Content-Type", []string{"application/json"})
 		ct.WroteRequest(httptrace.WroteRequestInfo{})
 		ct.GotFirstResponseByte()
 	})
@@ -67,7 +68,7 @@ func (rt *hookFiringRoundTripper) RoundTrip(req *http.Request) (*http.Response, 
 // recordingConnectionMetricStore counts how many times each measurement is
 // recorded and keeps the last recorded value in milliseconds.
 type recordingConnectionMetricStore struct {
-	acquire, dns, tcp, tls, ttfb int
+	acquire, dns, tcp, tls, reqFirstByte, ttfb int
 
 	dnsMs, tcpMs float64
 }
@@ -85,6 +86,9 @@ func (s *recordingConnectionMetricStore) MeasureTCPConnectDuration(_ context.Con
 }
 func (s *recordingConnectionMetricStore) MeasureTLSHandshakeDuration(_ context.Context, _ float64, _ ...attribute.KeyValue) {
 	s.tls++
+}
+func (s *recordingConnectionMetricStore) MeasureTimeToFirstRequestByte(_ context.Context, _ float64, _ ...attribute.KeyValue) {
+	s.reqFirstByte++
 }
 func (s *recordingConnectionMetricStore) MeasureTimeToFirstByte(_ context.Context, _ float64, _ ...attribute.KeyValue) {
 	s.ttfb++
@@ -164,6 +168,7 @@ func TestTraceInjectingRoundTripper(t *testing.T) {
 		require.Equal(t, 1, store.dns, "DNS lookup duration should be recorded once")
 		require.Equal(t, 1, store.tcp, "TCP connect duration should be recorded once")
 		require.Equal(t, 1, store.tls, "TLS handshake duration should be recorded once")
+		require.Equal(t, 1, store.reqFirstByte, "time to first request byte should be recorded once")
 		require.Equal(t, 1, store.ttfb, "time to first byte should be recorded once")
 	})
 
@@ -205,6 +210,8 @@ func TestTraceInjectingRoundTripper(t *testing.T) {
 			time.Sleep(time.Millisecond)
 			ct.TLSHandshakeDone(tls.ConnectionState{}, nil)
 			ct.GotConn(httptrace.GotConnInfo{})
+			ct.WroteHeaderField("Content-Type", []string{"application/json"})
+			time.Sleep(time.Millisecond)
 			ct.WroteRequest(httptrace.WroteRequestInfo{})
 			time.Sleep(time.Millisecond)
 			ct.GotFirstResponseByte()
@@ -214,6 +221,7 @@ func TestTraceInjectingRoundTripper(t *testing.T) {
 		require.Greater(t, results.DNSLookupDuration, time.Duration(0))
 		require.Greater(t, results.TCPConnectDuration, time.Duration(0))
 		require.Greater(t, results.TLSHandshakeDuration, time.Duration(0))
+		require.Greater(t, results.TimeToFirstRequestByte, time.Duration(0))
 		require.Greater(t, results.TimeToFirstByte, time.Duration(0))
 
 		require.Zero(t, exprCtx.Subgraph.Request.ClientTrace, "the request-scoped expression context must stay untouched when a per-fetch container is present")
@@ -222,6 +230,7 @@ func TestTraceInjectingRoundTripper(t *testing.T) {
 		require.Equal(t, 1, store.dns)
 		require.Equal(t, 1, store.tcp)
 		require.Equal(t, 1, store.tls)
+		require.Equal(t, 1, store.reqFirstByte)
 		require.Equal(t, 1, store.ttfb)
 	})
 
@@ -334,6 +343,63 @@ func TestTraceInjectingRoundTripper(t *testing.T) {
 		require.Equal(t, 1, store.tcp)
 		require.Greater(t, store.tcpMs, 36.0, "3ms + 33ms")
 		require.Greater(t, results.TCPConnectDuration, 36*time.Millisecond)
+	})
+
+	t.Run("measures up to the first request byte, ignoring later header fields", func(t *testing.T) {
+		// WroteHeaderField fires once per header field; only the first call
+		// marks the first request byte. The duration spans from the connection
+		// request (attempt start, not connection acquired) to that first field
+		// and must not grow with later fields.
+		results, _, store := roundTripThroughHooks(t, true, func(ct *httptrace.ClientTrace) {
+			ct.GetConn("subgraph.local:443")
+			time.Sleep(10 * time.Millisecond)
+			ct.GotConn(httptrace.GotConnInfo{})
+			time.Sleep(10 * time.Millisecond)
+			ct.WroteHeaderField("Host", []string{"subgraph.local"})
+			time.Sleep(20 * time.Millisecond)
+			ct.WroteHeaderField("Content-Type", []string{"application/json"})
+			ct.WroteRequest(httptrace.WroteRequestInfo{})
+		})
+
+		require.Equal(t, 1, store.reqFirstByte)
+		require.GreaterOrEqual(t, results.TimeToFirstRequestByte, 19*time.Millisecond, "must span from the connection request, including the acquisition, to the first header field")
+		require.Less(t, results.TimeToFirstRequestByte, 39*time.Millisecond, "must not span later header fields")
+	})
+
+	t.Run("ignores header bytes written without a connection request", func(t *testing.T) {
+		// Without GetConn there is no attempt start to measure from (and no
+		// server attributes); nothing must be recorded and nothing may panic.
+		results, _, store := roundTripThroughHooks(t, true, func(ct *httptrace.ClientTrace) {
+			ct.WroteHeaderField("Host", []string{"subgraph.local"})
+			ct.WroteRequest(httptrace.WroteRequestInfo{})
+		})
+
+		require.Equal(t, 0, store.reqFirstByte)
+		require.Zero(t, results.TimeToFirstRequestByte)
+	})
+
+	t.Run("keeps the first attempt's measurement when the transport retries inside one RoundTrip", func(t *testing.T) {
+		// A reused keep-alive connection that turns out dead makes net/http
+		// retry on a new connection within the same RoundTrip, reusing the
+		// same trace. The first request byte was written by the first attempt:
+		// its measurement is kept, and the duration must never be recomputed
+		// against the redial's connection request.
+		results, _, store := roundTripThroughHooks(t, true, func(ct *httptrace.ClientTrace) {
+			ct.GetConn("subgraph.local:443")
+			ct.GotConn(httptrace.GotConnInfo{Reused: true})
+			time.Sleep(5 * time.Millisecond)
+			ct.WroteHeaderField("Host", []string{"subgraph.local"})
+			// Attempt 1 dies; the transport acquires a new connection.
+			time.Sleep(30 * time.Millisecond)
+			ct.GetConn("subgraph.local:443")
+			ct.GotConn(httptrace.GotConnInfo{})
+			ct.WroteHeaderField("Host", []string{"subgraph.local"})
+			ct.WroteRequest(httptrace.WroteRequestInfo{})
+		})
+
+		require.Equal(t, 1, store.reqFirstByte)
+		require.GreaterOrEqual(t, results.TimeToFirstRequestByte, 4*time.Millisecond, "the first attempt's measurement is kept")
+		require.Less(t, results.TimeToFirstRequestByte, 30*time.Millisecond, "must never span the dead attempt and the redial")
 	})
 
 	t.Run("does record failed TLS handshakes and failed connects", func(t *testing.T) {

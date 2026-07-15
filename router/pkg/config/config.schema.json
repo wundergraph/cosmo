@@ -1398,7 +1398,7 @@
                     "enabled": {
                       "type": "boolean",
                       "default": false,
-                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, and time-to-first-byte histograms. The default value is false."
+                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms. The default value is false."
                     }
                   }
                 },
@@ -1584,7 +1584,7 @@
                     "enabled": {
                       "type": "boolean",
                       "default": false,
-                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, and time-to-first-byte histograms. The default value is false."
+                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms. The default value is false."
                     }
                   }
                 },

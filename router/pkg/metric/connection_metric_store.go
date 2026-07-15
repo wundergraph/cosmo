@@ -21,6 +21,7 @@ type ConnectionMetricProvider interface {
 	MeasureDNSLookupDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTCPConnectDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
+	MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	Shutdown() error
 }
@@ -31,6 +32,7 @@ type ConnectionMetricStore interface {
 	MeasureDNSLookupDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTCPConnectDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
+	MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	Shutdown(ctx context.Context) error
 }
@@ -111,6 +113,12 @@ func (c *ConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, dur
 	opts := c.recordOpts(attrs)
 	c.otlpConnectionMetrics.MeasureTLSHandshakeDuration(ctx, duration, opts)
 	c.promConnectionMetrics.MeasureTLSHandshakeDuration(ctx, duration, opts)
+}
+
+func (c *ConnectionMetrics) MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+	opts := c.recordOpts(attrs)
+	c.otlpConnectionMetrics.MeasureTimeToFirstRequestByte(ctx, duration, opts)
+	c.promConnectionMetrics.MeasureTimeToFirstRequestByte(ctx, duration, opts)
 }
 
 func (c *ConnectionMetrics) MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {

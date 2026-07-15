@@ -30,10 +30,11 @@ type GetConnection struct {
 // phaseDurations captures the durations of the httptrace phases observed
 // during a single HTTP attempt
 type phaseDurations struct {
-	DNSLookup       time.Duration
-	TCPConnect      time.Duration
-	TLSHandshake    time.Duration
-	TimeToFirstByte time.Duration
+	DNSLookup              time.Duration
+	TCPConnect             time.Duration
+	TLSHandshake           time.Duration
+	TimeToFirstRequestByte time.Duration
+	TimeToFirstByte        time.Duration
 }
 
 type ClientTrace struct {
@@ -43,6 +44,7 @@ type ClientTrace struct {
 	dnsStart           time.Time
 	connectStart       map[string]time.Time
 	tlsStart           time.Time
+	wroteFirstByte     time.Time
 	wroteRequest       time.Time
 
 	durations phaseDurations
@@ -115,6 +117,18 @@ func (c *ClientTrace) HttpClientTrace() *httptrace.ClientTrace {
 				c.durations.TLSHandshake = now.Sub(c.tlsStart)
 			}
 		},
+		WroteHeaderField: func(_ string, _ []string) {
+			c.mu.Lock()
+			defer c.mu.Unlock()
+			// Only the first header field marks the first request byte written
+			if !c.wroteFirstByte.IsZero() {
+				return
+			}
+			c.wroteFirstByte = time.Now()
+			if c.ConnectionGet != nil && c.wroteFirstByte.After(c.ConnectionGet.Time) {
+				c.durations.TimeToFirstRequestByte = c.wroteFirstByte.Sub(c.ConnectionGet.Time)
+			}
+		},
 		WroteRequest: func(_ httptrace.WroteRequestInfo) {
 			c.mu.Lock()
 			defer c.mu.Unlock()
@@ -129,6 +143,16 @@ func (c *ClientTrace) HttpClientTrace() *httptrace.ClientTrace {
 			}
 		},
 	}
+}
+
+// snapshot returns a consistent view of the observed state. The transport's
+// write loop can still fire callbacks concurrently with (and after) RoundTrip
+// returning, so readers must not access the fields directly. Phases that
+// complete after the snapshot are not recorded.
+func (c *ClientTrace) snapshot() (*GetConnection, *AcquiredConnection, phaseDurations) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.ConnectionGet, c.ConnectionAcquired, c.durations
 }
 
 func NewClientTrace() *ClientTrace {
@@ -211,16 +235,24 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		return
 	}
 
-	serverAttributes := rotel.GetServerAttributes(trace.ConnectionGet.HostPort)
-	reused := trace.ConnectionAcquired != nil && trace.ConnectionAcquired.Reused
+	connectionGet, connectionAcquired, durations := trace.snapshot()
+
+	// The transport can fail before it ever asks the pool for a connection,
+	// in which case no phase was observed and there is nothing to record.
+	if connectionGet == nil {
+		return
+	}
+
+	serverAttributes := rotel.GetServerAttributes(connectionGet.HostPort)
+	reused := connectionAcquired != nil && connectionAcquired.Reused
 	serverAttributes = append(
 		serverAttributes,
 		rotel.WgClientReusedConnection.Bool(reused),
 		rotel.WgSubgraphName.String(subgraph),
 	)
 
-	if trace.ConnectionAcquired != nil {
-		if duration := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time); duration >= 0 {
+	if connectionAcquired != nil {
+		if duration := connectionAcquired.Time.Sub(connectionGet.Time); duration >= 0 {
 			results.ConnectionAcquireDuration = duration
 			t.connectionMetricStore.MeasureConnectionAcquireDuration(
 				ctx,
@@ -230,7 +262,7 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		}
 	}
 
-	if dur := trace.durations.DNSLookup; dur > 0 {
+	if dur := durations.DNSLookup; dur > 0 {
 		results.DNSLookupDuration = dur
 		t.connectionMetricStore.MeasureDNSLookupDuration(
 			ctx,
@@ -238,7 +270,7 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 			serverAttributes...,
 		)
 	}
-	if dur := trace.durations.TCPConnect; dur > 0 {
+	if dur := durations.TCPConnect; dur > 0 {
 		results.TCPConnectDuration = dur
 		t.connectionMetricStore.MeasureTCPConnectDuration(
 			ctx,
@@ -246,7 +278,7 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 			serverAttributes...,
 		)
 	}
-	if dur := trace.durations.TLSHandshake; dur > 0 {
+	if dur := durations.TLSHandshake; dur > 0 {
 		results.TLSHandshakeDuration = dur
 		t.connectionMetricStore.MeasureTLSHandshakeDuration(
 			ctx,
@@ -255,7 +287,16 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		)
 	}
 
-	if dur := trace.durations.TimeToFirstByte; dur > 0 {
+	if dur := durations.TimeToFirstRequestByte; dur > 0 {
+		results.TimeToFirstRequestByte = dur
+		t.connectionMetricStore.MeasureTimeToFirstRequestByte(
+			ctx,
+			msFromDuration(dur),
+			serverAttributes...,
+		)
+	}
+
+	if dur := durations.TimeToFirstByte; dur > 0 {
 		results.TimeToFirstByte = dur
 		t.connectionMetricStore.MeasureTimeToFirstByte(
 			ctx,
