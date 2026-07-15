@@ -81,6 +81,43 @@ describe('Publish subgraph tests', () => {
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
   });
 
+  test('that newlines do not cause extra compositions', async () => {
+    const { client, server } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
+
+    const subgraphName = genID('subgraph');
+
+    await createSubgraph(client, subgraphName, 'http://localhost:4001');
+    let publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      schema: subgraphSDL,
+    });
+
+    expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(publishFederatedSubgraphResp.hasChanged).toBe(true);
+
+    // Multiple newlines should not cause extra composition
+    publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      schema: subgraphSDL + '\r\n\r\n\r\n\n\n\n',
+    });
+
+    expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(publishFederatedSubgraphResp.hasChanged).toBe(false);
+
+    // Trimmed should not cause extra composition
+    publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      schema: subgraphSDL.trimEnd(),
+    });
+
+    expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(publishFederatedSubgraphResp.hasChanged).toBe(false);
+  });
+
   test.each(['organization-admin', 'organization-developer', 'subgraph-admin', 'subgraph-publisher'])(
     '%s should be able to publish to existing regular subgraph',
     async (role) => {

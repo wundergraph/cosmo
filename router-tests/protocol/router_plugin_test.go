@@ -62,12 +62,12 @@ func TestRouterPlugin(t *testing.T) {
 			response1 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { project(id: 1) { id } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'projects'.","extensions":{"errors":[{"message":"gRPC datasource needs to be enabled to be used","extensions":{"code":"Internal"}}]}}],"data":{"project":null}}`, response1.Body)
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'projects'.","extensions":{"errors":[{"message":"gRPC / connect datasource needs to be enabled to be used","extensions":{"code":"Internal"}}]}}],"data":{"project":null}}`, response1.Body)
 
 			response2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { course(id: 1) { id } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'courses'.","extensions":{"errors":[{"message":"gRPC datasource needs to be enabled to be used","extensions":{"code":"Internal"}}]}}],"data":{"course":null}}`, response2.Body)
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'courses'.","extensions":{"errors":[{"message":"gRPC / connect datasource needs to be enabled to be used","extensions":{"code":"Internal"}}]}}],"data":{"course":null}}`, response2.Body)
 		})
 	})
 

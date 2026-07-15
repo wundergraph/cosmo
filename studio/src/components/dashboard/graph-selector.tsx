@@ -33,9 +33,9 @@ export function GraphSelector({ activeGraph, activeSubgraph }: GraphSelectorProp
         }}
       >
         <PopoverTrigger asChild>
-          <Button variant="ghost" className="h-auto gap-x-4 px-3 py-1.5 transition-colors duration-150">
+          <Button variant="ghost" className="h-auto px-3 py-1.5 transition-colors duration-150">
             <span>{activeGraph?.name ?? activeSubgraph?.name}</span>
-            <CaretSortIcon className="h-4 w-4 flex-shrink-0 opacity-50" />
+            <CaretSortIcon className="ml-1 h-4 w-4 flex-shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
 
