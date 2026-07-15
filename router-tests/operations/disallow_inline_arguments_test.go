@@ -114,7 +114,7 @@ func TestValidateInlineArguments(t *testing.T) {
 			fields := warnings[0].ContextMap()
 			assert.EqualValues(t, 1, fields["count"])
 			// Enclosing field context comes from the walker.
-			assert.Equal(t, []any{"employee.id"}, fields["arguments"])
+			assert.Equal(t, []any{"query.employee#id"}, fields["arguments"])
 			assert.Equal(t, "GetEmployee", fields["operation_name"])
 		})
 	})
@@ -210,7 +210,7 @@ func TestValidateInlineArguments(t *testing.T) {
 			require.Len(t, warnings, 1)
 			fields := warnings[0].ContextMap()
 			assert.EqualValues(t, 1, fields["count"])
-			assert.Equal(t, []any{"employee.id"}, fields["arguments"])
+			assert.Equal(t, []any{"query.employee#id"}, fields["arguments"])
 			assert.Equal(t, "GetEmployee", fields["operation_name"])
 		})
 	})
@@ -228,7 +228,7 @@ func TestValidateInlineArguments(t *testing.T) {
 			// Send the same inline-argument operation twice. The second request hits
 			// the normalization cache; the extension must still surface because the
 			// findings are restored from the cache entry (same as the warning log).
-			const wantBody = `{"data":{"employee":{"id":1}},"extensions":{"inlineArguments":{"count":1,"arguments":["employee.id"]}}}`
+			const wantBody = `{"data":{"employee":{"id":1}},"extensions":{"inlineArguments":{"count":1,"arguments":["query.employee#id"]}}}`
 			for i := 0; i < 2; i++ {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: inlineArgumentQuery})
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
@@ -280,7 +280,7 @@ func TestValidateInlineArguments(t *testing.T) {
 			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "next", res.Type)
-			require.JSONEq(t, `{"data":{"employee":{"id":1}},"extensions":{"inlineArguments":{"count":1,"arguments":["employee.id"]}}}`, string(res.Payload))
+			require.JSONEq(t, `{"data":{"employee":{"id":1}},"extensions":{"inlineArguments":{"count":1,"arguments":["query.employee#id"]}}}`, string(res.Payload))
 		})
 	})
 }
@@ -385,7 +385,7 @@ func TestValidateInlineArgumentsPersistedOperations(t *testing.T) {
 			require.Len(t, warnings, 1)
 			fields := warnings[0].ContextMap()
 			assert.EqualValues(t, 1, fields["count"])
-			assert.Equal(t, []any{"employee.id"}, fields["arguments"])
+			assert.Equal(t, []any{"query.employee#id"}, fields["arguments"])
 		})
 	})
 }
