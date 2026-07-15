@@ -214,7 +214,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		RequestTimeout: 30 * time.Second,
 		ExposeSchema:   true,
 		Stateless:      true,
-		MountPath:      "/mcp",
+		MountPath:      defaultMountPath,
 	}
 
 	// Apply all option functions
@@ -223,6 +223,9 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 	}
 
 	mountPath := normalizeMountPath(options.MountPath)
+	if mountPath == "" {
+		return nil, fmt.Errorf("invalid MCP mount path %q: must not be empty or the root path", options.MountPath)
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -270,7 +273,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		// Build resource metadata URL for WWW-Authenticate header
 		resourceMetadataURL := ""
 		if options.ServerBaseURL != "" {
-			resourceMetadataURL = options.ServerBaseURL + wellKnownProtectedResourcePath(mountPath)
+			resourceMetadataURL = protectedResourceMetadataURL(options.ServerBaseURL, mountPath)
 		}
 
 		authMiddleware, err = NewMCPAuthMiddleware(tokenDecoder, resourceMetadataURL, options.OAuthConfig.Scopes, options.OAuthConfig.ScopeChallengeIncludeTokenScopes)
@@ -433,35 +436,34 @@ func WithResourceDocumentation(url string) func(*Options) {
 	}
 }
 
-// WithMountPath sets the HTTP path the MCP endpoint is mounted at (default "/mcp").
-// The path is normalized to have a leading slash and no trailing slash.
+// WithMountPath sets the HTTP path the MCP endpoint is mounted at
 func WithMountPath(path string) func(*Options) {
 	return func(o *Options) {
 		o.MountPath = path
 	}
 }
 
+const defaultMountPath = "/mcp"
+
 // normalizeMountPath ensures a mount path has a leading slash and no trailing
-// slash. Empty or root paths fall back to the default "/mcp": mounting at the
-// root is not meaningful for the mux and would break the RFC 9728 well-known
-// path derivation.
+// slash. It returns "" for empty or root paths, which the constructor rejects.
 func normalizeMountPath(p string) string {
 	p = strings.TrimSpace(p)
 	if !strings.HasPrefix(p, "/") {
 		p = "/" + p
 	}
-	p = strings.TrimRight(p, "/")
-	if p == "" {
-		return "/mcp"
-	}
-	return p
+	return strings.TrimRight(p, "/")
 }
 
 // wellKnownProtectedResourcePath returns the OAuth 2.0 Protected Resource
-// Metadata path (RFC 9728) for the given mount path, inserting the well-known
-// segment before the resource path.
+// Metadata path (RFC 9728) for the given mount path
 func wellKnownProtectedResourcePath(mountPath string) string {
 	return "/.well-known/oauth-protected-resource" + mountPath
+}
+
+// protectedResourceMetadataURL returns the absolute URL of the OAuth 2.0 Protected Resource Metadata endpoint
+func protectedResourceMetadataURL(baseURL, mountPath string) string {
+	return strings.TrimRight(baseURL, "/") + wellKnownProtectedResourcePath(mountPath)
 }
 
 // Serve starts the server with the configured options and returns the HTTP server.
@@ -500,9 +502,8 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 	return httpServer, nil
 }
 
-// buildHandler constructs the HTTP handler serving the MCP endpoint at the
-// configured mount path and, when OAuth is enabled, the RFC 9728 protected
-// resource metadata endpoint derived from it.
+// buildHandler constructs the HTTP handler serving the MCP endpoint and, when
+// OAuth is enabled, the protected resource metadata endpoint
 func (s *GraphQLSchemaServer) buildHandler() http.Handler {
 	// Create MCP streamable HTTP handler
 	// The getServer function returns our MCP server instance for each request
@@ -1169,7 +1170,7 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 // GetResourceMetadataURL returns the URL for the OAuth 2.0 Protected Resource Metadata endpoint
 func (s *GraphQLSchemaServer) GetResourceMetadataURL() string {
 	if s.serverBaseURL != "" {
-		return s.serverBaseURL + wellKnownProtectedResourcePath(s.mountPath)
+		return protectedResourceMetadataURL(s.serverBaseURL, s.mountPath)
 	}
 	return ""
 }

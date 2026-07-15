@@ -24,14 +24,26 @@ func TestNormalizeMountPath(t *testing.T) {
 		{"/custom/path", "/custom/path"},
 		{"/custom/path/", "/custom/path"},
 		{"custom/path", "/custom/path"},
-		{"", "/mcp"},
-		{"  ", "/mcp"},
-		{"/", "/mcp"},
-		{"//", "/mcp"},
+		{"", ""},
+		{"  ", ""},
+		{"/", ""},
+		{"//", ""},
 	}
 
 	for _, tt := range tests {
 		assert.Equal(t, tt.want, normalizeMountPath(tt.input), "input: %q", tt.input)
+	}
+}
+
+func TestInvalidMountPathRejected(t *testing.T) {
+	for _, path := range []string{"", "/", "  "} {
+		_, err := NewGraphQLSchemaServer(
+			t.Context(),
+			"http://localhost:4000/graphql",
+			WithLogger(zap.NewNop()),
+			WithMountPath(path),
+		)
+		assert.ErrorContains(t, err, "invalid MCP mount path", "path: %q", path)
 	}
 }
 
