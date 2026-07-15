@@ -1227,9 +1227,7 @@ describe('Feature flag aware subgraph checks', () => {
       namespace: 'default',
     });
     expect(summary.response?.code).toBe(EnumStatusCode.OK);
-    expect(new Set(summary.composedSchemaBreakingChanges.map((c) => c.featureFlag))).toEqual(
-      new Set(['', flag3Name]),
-    );
+    expect(new Set(summary.composedSchemaBreakingChanges.map((c) => c.featureFlag))).toEqual(new Set(['', flag3Name]));
   });
 
   test('base subgraph check on a large schema does not overflow the composition worker', async (testContext) => {
