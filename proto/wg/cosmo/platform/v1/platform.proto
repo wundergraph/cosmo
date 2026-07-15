@@ -2844,6 +2844,7 @@ message WorkspaceNamespace {
   string id = 1;
   string name = 2;
   repeated WorkspaceFederatedGraph graphs = 3;
+  repeated WorkspaceSubgraph featureSubgraphs = 4;
 }
 
 message WorkspaceFederatedGraph {
@@ -2858,6 +2859,7 @@ message WorkspaceSubgraph {
   string id = 1;
   string targetId = 2;
   string name = 3;
+  optional string baseSubgraphId = 4;
 }
 
 message GetWorkspaceRequest {}

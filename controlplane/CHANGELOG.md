@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.242.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.242.2...controlplane@0.242.3) (2026-07-14)
+
+### Bug Fixes
+
+* avoid extra compositions due trailing newline ([#3084](https://github.com/wundergraph/cosmo/issues/3084)) ([3c15243](https://github.com/wundergraph/cosmo/commit/3c152431af88e9c67d78460d6f5f92f9c19818c0)) (@wilsonrivera)
+
+## [0.242.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.242.1...controlplane@0.242.2) (2026-07-14)
+
+### Bug Fixes
+
+* active subgraph not shown on the subgraph details page ([#3063](https://github.com/wundergraph/cosmo/issues/3063)) ([96663cc](https://github.com/wundergraph/cosmo/commit/96663ccf9ec6ed817e3c7f80d0a3cae01f9b9592)) (@wilsonrivera)
+* prevent stack overflow in schema checks by not sending parsed ASTs to the composition worker ([#3079](https://github.com/wundergraph/cosmo/issues/3079)) ([6288994](https://github.com/wundergraph/cosmo/commit/6288994f6f862433e4ae102249996c31bd0b44ed)) (@JivusAyrus)
+
 ## [0.242.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.242.0...controlplane@0.242.1) (2026-07-14)
 
 **Note:** Version bump only for package controlplane

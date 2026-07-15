@@ -1000,6 +1000,11 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	}
 	opContext.variablesNormalizationCacheHit = cached
 
+	logInlineArguments(h.logger, operationKit.parsedOperation)
+	if h.operationProcessor.parseKitOptions.validateInlineArguments.ReturnInResponseExtensions {
+		opContext.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
+	}
+
 	cached, err = operationKit.RemapVariables(h.disableVariablesRemapping)
 	if err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
@@ -1130,6 +1135,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	resolveCtx.RenameTypeNames = h.graphqlHandler.executor.RenameTypeNames
 	resolveCtx.TracingOptions = operationCtx.traceOptions
 	resolveCtx.Extensions = operationCtx.extensions
+	resolveCtx.InlineArguments = operationCtx.inlineArguments
 	resolveCtx.ExecutionOptions = operationCtx.executionOptions
 
 	if operationCtx.initialPayload != nil {
