@@ -235,10 +235,11 @@ ei-demo:
 	nc -z 127.0.0.1 8123 || { echo "ClickHouse did not start" >&2; exit 1; }
 	@echo "Starting control plane, graphqlmetrics, and demo subgraphs..."
 	@set -e; \
+	set -m; \
 	(cd controlplane && pnpm dev) & cp_pid=$$!; \
 	(cd graphqlmetrics && make dev) & gqm_pid=$$!; \
 	(cd demo && go run cmd/all/main.go) & sub_pid=$$!; \
-	trap 'kill $$cp_pid $$gqm_pid $$sub_pid 2>/dev/null || true' EXIT INT TERM HUP; \
+	trap 'kill -TERM -$$cp_pid -$$gqm_pid -$$sub_pid 2>/dev/null; kill $$cp_pid $$gqm_pid $$sub_pid 2>/dev/null; true' EXIT INT TERM HUP; \
 	for p in 3001 4005 4001 4002 4003 4004 4007 4008; do \
 		for i in $$(seq 1 $(DEMO_STARTUP_ATTEMPTS)); do \
 			nc -z 127.0.0.1 $$p && break; \

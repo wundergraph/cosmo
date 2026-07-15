@@ -21,7 +21,11 @@ GGT_BRANCH="milinda/entity-intelligence"
 GGT_REPO="https://github.com/wundergraph/graphql-go-tools.git"
 
 echo "==> graphql-go-tools sibling checkout"
-if [ -d "$GGT_DIR" ]; then
+if [ -d "$GGT_DIR" ] && [ ! -d "$GGT_DIR/.git" ]; then
+  echo "ERROR: $GGT_DIR exists but isn't a git repository." >&2
+  echo "       Remove it or point GGT_DIR elsewhere, then re-run." >&2
+  exit 1
+elif [ -d "$GGT_DIR" ]; then
   current_branch="$(git -C "$GGT_DIR" branch --show-current)"
   if [ "$current_branch" != "$GGT_BRANCH" ]; then
     echo "WARNING: $GGT_DIR exists but is on '$current_branch', not '$GGT_BRANCH'."
@@ -47,7 +51,14 @@ else
 fi
 
 echo "==> router/demo.config.yaml entity caching block"
-if grep -q '^entity_caching:' router/demo.config.yaml; then
+# Checks all three required pieces, not just the top-level key: this file
+# has already drifted once by hand (a block was added, reverted, then
+# re-added slightly differently — see git log on this file), so a bare
+# `entity_caching:` presence check could be fooled by a prior partial or
+# differently-shaped edit into thinking the real block is already there.
+if grep -q '^entity_caching:' router/demo.config.yaml \
+  && grep -q 'events_export:' router/demo.config.yaml \
+  && grep -q '^feature_flag_rollouts:' router/demo.config.yaml; then
   echo "Already present."
 else
   cat >> router/demo.config.yaml <<'EOF'
