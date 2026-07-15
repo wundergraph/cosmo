@@ -3,13 +3,19 @@ set -e
 
 # Full "clean clone -> working Entity Intelligence demo" bootstrap.
 #
-# Reuses cosmo's own `dev-setup` target (prerequisites, pnpm install,
-# codegen, build, docker infra) as the base, since it's the project's own
-# tested bootstrap path, rather than guessing at a smaller subset. Layers
-# on everything dev-setup doesn't cover: DB migrate + seed, the demo
-# federated graph + subgraphs + schema publish, a router auth token
-# written into router/.env, and (via setup-entity-intelligence-demo.sh)
-# the Entity-Intelligence-specific router config.
+# Mirrors cosmo's own `dev-setup` target (prerequisites, pnpm install,
+# build, docker infra), minus `pnpm generate` / `make generate-go`: those
+# regenerate protobuf/connect code from .proto files, which is only
+# needed when a .proto file actually changed — the generated output is
+# already committed (verified: connect/src/**/*_pb.ts and the .pb.go
+# files are tracked in git), and running codegen anyway crashed on a
+# genuinely clean machine (Node 25's experimental global `localStorage`
+# breaks @typescript/vfs, a transitive codegen dependency — confirmed
+# via an actual fresh-clone run, not a guess). Layers on top of that:
+# DB migrate + seed, the demo federated graph + subgraphs + schema
+# publish, a router auth token written into router/.env, and (via
+# setup-entity-intelligence-demo.sh) the Entity-Intelligence-specific
+# router config.
 #
 # Every step checks current state first and skips if already done, so
 # this is safe to run repeatedly, including on a machine that's partway
@@ -17,8 +23,12 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-echo "==> make dev-setup (prerequisites, install, codegen, build, docker infra)"
-make dev-setup
+echo "==> Prerequisites, install, build, docker infra (skipping codegen, see header)"
+make prerequisites
+pnpm install
+make infra-up
+pnpm -r run --filter '!studio' build
+make build-plugins
 
 echo "==> Waiting for postgres..."
 for i in $(seq 1 60); do
