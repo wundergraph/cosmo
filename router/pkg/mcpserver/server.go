@@ -93,6 +93,8 @@ type Options struct {
 	ServerBaseURL string
 	// ResourceDocumentation is a URL to a human-readable page describing this resource
 	ResourceDocumentation string
+	// MountPath is the HTTP path the MCP endpoint is mounted at
+	MountPath string
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -120,6 +122,7 @@ type GraphQLSchemaServer struct {
 	serverBaseURL             string
 	resourceDocumentation     string
 	authMiddleware            *MCPAuthMiddleware
+	mountPath                 string
 }
 
 type graphqlRequest struct {
@@ -211,12 +214,15 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		RequestTimeout: 30 * time.Second,
 		ExposeSchema:   true,
 		Stateless:      true,
+		MountPath:      "/mcp",
 	}
 
 	// Apply all option functions
 	for _, opt := range opts {
 		opt(options)
 	}
+
+	mountPath := normalizeMountPath(options.MountPath)
 
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -264,7 +270,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		// Build resource metadata URL for WWW-Authenticate header
 		resourceMetadataURL := ""
 		if options.ServerBaseURL != "" {
-			resourceMetadataURL = fmt.Sprintf("%s/.well-known/oauth-protected-resource/mcp", options.ServerBaseURL)
+			resourceMetadataURL = options.ServerBaseURL + wellKnownProtectedResourcePath(mountPath)
 		}
 
 		authMiddleware, err = NewMCPAuthMiddleware(tokenDecoder, resourceMetadataURL, options.OAuthConfig.Scopes, options.OAuthConfig.ScopeChallengeIncludeTokenScopes)
@@ -319,6 +325,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		serverBaseURL:             options.ServerBaseURL,
 		resourceDocumentation:     options.ResourceDocumentation,
 		authMiddleware:            authMiddleware,
+		mountPath:                 mountPath,
 	}
 
 	return gs, nil
@@ -426,6 +433,37 @@ func WithResourceDocumentation(url string) func(*Options) {
 	}
 }
 
+// WithMountPath sets the HTTP path the MCP endpoint is mounted at (default "/mcp").
+// The path is normalized to have a leading slash and no trailing slash.
+func WithMountPath(path string) func(*Options) {
+	return func(o *Options) {
+		o.MountPath = path
+	}
+}
+
+// normalizeMountPath ensures a mount path has a leading slash and no trailing
+// slash. Empty or root paths fall back to the default "/mcp": mounting at the
+// root is not meaningful for the mux and would break the RFC 9728 well-known
+// path derivation.
+func normalizeMountPath(p string) string {
+	p = strings.TrimSpace(p)
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	p = strings.TrimRight(p, "/")
+	if p == "" {
+		return "/mcp"
+	}
+	return p
+}
+
+// wellKnownProtectedResourcePath returns the OAuth 2.0 Protected Resource
+// Metadata path (RFC 9728) for the given mount path, inserting the well-known
+// segment before the resource path.
+func wellKnownProtectedResourcePath(mountPath string) string {
+	return "/.well-known/oauth-protected-resource" + mountPath
+}
+
 // Serve starts the server with the configured options and returns the HTTP server.
 func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 	// Create custom HTTP server
@@ -436,6 +474,36 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	httpServer.Handler = s.buildHandler()
+
+	logger := []zap.Field{
+		zap.String("listen_addr", s.listenAddr),
+		zap.String("path", s.mountPath),
+		zap.String("operations_dir", s.operationsDir),
+		zap.String("graph_name", s.graphName),
+		zap.Bool("exclude_mutations", s.excludeMutations),
+		zap.Bool("enable_arbitrary_operations", s.enableArbitraryOperations),
+		zap.Bool("expose_schema", s.exposeSchema),
+	}
+
+	s.logger.Info("MCP server started", logger...)
+
+	go func() {
+		defer s.logger.Info("MCP server stopped")
+
+		err := httpServer.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			s.logger.Error("failed to start HTTP server", zap.Error(err))
+		}
+	}()
+
+	return httpServer, nil
+}
+
+// buildHandler constructs the HTTP handler serving the MCP endpoint at the
+// configured mount path and, when OAuth is enabled, the RFC 9728 protected
+// resource metadata endpoint derived from it.
+func (s *GraphQLSchemaServer) buildHandler() http.Handler {
 	// Create MCP streamable HTTP handler
 	// The getServer function returns our MCP server instance for each request
 	// Disable the SDK's built-in cross-origin protection (Sec-Fetch-Site check)
@@ -459,7 +527,7 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 
 	// OAuth 2.0 Protected Resource Metadata (RFC 9728) — public discovery endpoint
 	if s.oauthConfig != nil && s.oauthConfig.Enabled && s.oauthConfig.AuthorizationServerURL != "" {
-		mux.Handle("/.well-known/oauth-protected-resource/mcp", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
+		mux.Handle(wellKnownProtectedResourcePath(s.mountPath), middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
 	}
 
 	// Inject request headers into context so tool handlers can forward them
@@ -469,35 +537,12 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 		streamableHTTPHandler.ServeHTTP(w, r)
 	})
 	if s.authMiddleware != nil {
-		mux.Handle("/mcp", middleware(s.authMiddleware.HTTPMiddleware(mcpHandler)))
+		mux.Handle(s.mountPath, middleware(s.authMiddleware.HTTPMiddleware(mcpHandler)))
 	} else {
-		mux.Handle("/mcp", middleware(mcpHandler))
+		mux.Handle(s.mountPath, middleware(mcpHandler))
 	}
 
-	httpServer.Handler = mux
-
-	logger := []zap.Field{
-		zap.String("listen_addr", s.listenAddr),
-		zap.String("path", "/mcp"),
-		zap.String("operations_dir", s.operationsDir),
-		zap.String("graph_name", s.graphName),
-		zap.Bool("exclude_mutations", s.excludeMutations),
-		zap.Bool("enable_arbitrary_operations", s.enableArbitraryOperations),
-		zap.Bool("expose_schema", s.exposeSchema),
-	}
-
-	s.logger.Info("MCP server started", logger...)
-
-	go func() {
-		defer s.logger.Info("MCP server stopped")
-
-		err := httpServer.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			s.logger.Error("failed to start HTTP server", zap.Error(err))
-		}
-	}()
-
-	return httpServer, nil
+	return mux
 }
 
 // Start loads operations and starts the server
@@ -1098,7 +1143,7 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 		scopes = []string{} // Ensure non-nil for JSON encoding
 	}
 
-	mcpResourceURL := strings.TrimRight(resourceURL, "/") + "/mcp"
+	mcpResourceURL := strings.TrimRight(resourceURL, "/") + s.mountPath
 
 	metadata := ProtectedResourceMetadata{
 		Resource:               mcpResourceURL,
@@ -1124,7 +1169,7 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 // GetResourceMetadataURL returns the URL for the OAuth 2.0 Protected Resource Metadata endpoint
 func (s *GraphQLSchemaServer) GetResourceMetadataURL() string {
 	if s.serverBaseURL != "" {
-		return fmt.Sprintf("%s/.well-known/oauth-protected-resource/mcp", s.serverBaseURL)
+		return s.serverBaseURL + wellKnownProtectedResourcePath(s.mountPath)
 	}
 	return ""
 }
