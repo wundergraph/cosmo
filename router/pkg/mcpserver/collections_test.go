@@ -112,6 +112,28 @@ func TestCollections_RegisterAfterReload(t *testing.T) {
 	assert.ElementsMatch(t, []string{"find_employee"}, listToolNames(t, ts.URL+"/mcp/a"))
 }
 
+func TestCollections_NonCanonicalPaths(t *testing.T) {
+	srv := newCollectionTestServer(t)
+
+	require.NoError(t, srv.RegisterCollection("a", []string{"FindEmployee"}))
+
+	reloadTestServer(t, srv)
+
+	ts := httptest.NewServer(srv.buildHandler())
+	defer ts.Close()
+
+	// Non-canonical paths are cleaned before routing (as the previous
+	// http.ServeMux did via redirect), so clients that naively join base URLs
+	// with a doubled slash keep working.
+	assert.ElementsMatch(t, []string{"find_employee"}, listToolNames(t, ts.URL+"/mcp//a"))
+	assert.ElementsMatch(t, []string{
+		"get_schema",
+		"find_employee",
+		"list_employees",
+		"get_operation_info",
+	}, listToolNames(t, ts.URL+"//mcp"))
+}
+
 func TestCollections_UnknownSlugNotFound(t *testing.T) {
 	srv := newCollectionTestServer(t)
 

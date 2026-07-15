@@ -110,7 +110,7 @@ func (s *GraphQLSchemaServer) reloadCollection(slug string, c *collection) {
 		}
 	}
 
-	registered, _ := s.registerOperationTools(c.server, selected, nil)
+	registered, _ := s.registerOperationTools(c.server, selected)
 	c.registeredTools = registered
 }
 

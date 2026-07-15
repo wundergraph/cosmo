@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/iancoleman/strcase"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -503,6 +504,9 @@ func (s *GraphQLSchemaServer) buildHandler() http.Handler {
 
 	httpRouter := chi.NewRouter()
 
+	// Canonicalize request paths
+	httpRouter.Use(chimiddleware.CleanPath)
+
 	// OAuth 2.0 Protected Resource Metadata (RFC 9728) — public discovery endpoint
 	if s.oauthConfig != nil && s.oauthConfig.Enabled && s.oauthConfig.AuthorizationServerURL != "" {
 		httpRouter.Handle("/.well-known/oauth-protected-resource/mcp", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
@@ -674,7 +678,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		graphqlOperationNames = append(graphqlOperationNames, op.Name)
 	}
 
-	registered, toolScopes := s.registerOperationTools(s.server, operations, s.registeredTools)
+	registered, toolScopes := s.registerOperationTools(s.server, operations)
 	s.registeredTools = append(s.registeredTools, registered...)
 
 	// Update auth middleware with per-tool scopes (thread-safe)
@@ -710,12 +714,10 @@ func (s *GraphQLSchemaServer) registerTools() error {
 }
 
 // registerOperationTools registers the execute-operation tool for each of the
-// given operations on the target MCP server. alreadyRegistered contains tool
-// names already taken on the target server, used for collision detection when
-// omitToolNamePrefix is enabled. It returns the names of the tools it
-// registered and the per-tool scope requirements of operations that declare
-// any.
-func (s *GraphQLSchemaServer) registerOperationTools(target *mcp.Server, operations []schemaloader.Operation, alreadyRegistered []string) ([]string, map[string][][]string) {
+// given operations on the target MCP server. It returns the names of the
+// tools it registered and the per-tool scope requirements of operations that
+// declare any.
+func (s *GraphQLSchemaServer) registerOperationTools(target *mcp.Server, operations []schemaloader.Operation) ([]string, map[string][][]string) {
 	var registered []string
 
 	// Build per-tool scope map for the auth middleware
@@ -765,7 +767,7 @@ func (s *GraphQLSchemaServer) registerOperationTools(target *mcp.Server, operati
 		toolName := operationToolName
 		if !s.omitToolNamePrefix {
 			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
-		} else if slices.Contains(alreadyRegistered, operationToolName) || slices.Contains(registered, operationToolName) || slices.Contains(reservedToolNames, operationToolName) {
+		} else if slices.Contains(registered, operationToolName) || slices.Contains(reservedToolNames, operationToolName) {
 			s.logger.Error("Skipping operation due to tool name collision",
 				zap.String("operation", op.Name),
 				zap.String("conflicting_tool", operationToolName),
