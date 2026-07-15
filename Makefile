@@ -211,6 +211,45 @@ demo:
 	done; \
 	cd router && go run cmd/router/main.go --config ../demo/router-cache.yaml
 
+# Entity Intelligence demo: unlike `demo` (a static execution_config, no
+# control plane, memory-only cache), this boots the full stack EI needs —
+# control plane, graphqlmetrics (the events_export target), the demo
+# subgraphs, and the router with entity_caching / feature_flag_rollouts
+# enabled via router/demo.config.yaml (router/Makefile's own `dev` target
+# already points there through router/.env's CONFIG_PATH, no --config flag
+# needed). Works from a clean clone: bootstrap-entity-intelligence-demo.sh
+# runs dev-setup, migrates/seeds the DB, publishes the demo graph and
+# subgraphs, and mints a router token if any of that hasn't happened yet —
+# every step in it checks state first, so re-running here costs nothing
+# once it's already done.
+ei-demo:
+	@echo "Bootstrapping (idempotent — skips anything already done)..."
+	./scripts/bootstrap-entity-intelligence-demo.sh
+	@echo "Starting docker infra (postgres, clickhouse, redis, nats, keycloak)..."
+	$(MAKE) infra-up
+	@echo "Waiting for ClickHouse..."
+	@for i in $$(seq 1 $(DEMO_STARTUP_ATTEMPTS)); do \
+		nc -z 127.0.0.1 8123 && break; \
+		sleep $(DEMO_STARTUP_SLEEP); \
+	done; \
+	nc -z 127.0.0.1 8123 || { echo "ClickHouse did not start" >&2; exit 1; }
+	@echo "Starting control plane, graphqlmetrics, and demo subgraphs..."
+	@set -e; \
+	(cd controlplane && pnpm dev) & cp_pid=$$!; \
+	(cd graphqlmetrics && make dev) & gqm_pid=$$!; \
+	(cd demo && go run cmd/all/main.go) & sub_pid=$$!; \
+	trap 'kill $$cp_pid $$gqm_pid $$sub_pid 2>/dev/null || true' EXIT INT TERM HUP; \
+	for p in 3001 4005 4001 4002 4003 4004 4007 4008; do \
+		for i in $$(seq 1 $(DEMO_STARTUP_ATTEMPTS)); do \
+			nc -z 127.0.0.1 $$p && break; \
+			sleep $(DEMO_STARTUP_SLEEP); \
+		done; \
+		nc -z 127.0.0.1 $$p || { echo "port $$p did not start (control plane / graphqlmetrics / a subgraph)" >&2; exit 1; }; \
+	done; \
+	echo "Starting router (entity caching + feature flag rollouts enabled)..."; \
+	echo "Playground will be at http://localhost:3002/"; \
+	cd router && go run cmd/router/main.go
+
 benchmark-cache-demo:
 	pnpm dlx tsx benchmark/scripts/run_suite.ts --all \
 		$(if $(VUS),--vus $(VUS),) \
