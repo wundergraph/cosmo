@@ -17,21 +17,18 @@ import (
 var collectionSlugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
 // collection is a named subset of operation-execution tools served by its own
-// MCP server at /mcp/{slug}.
+// MCP server at /mcp/{slug}. It holds the desired set of operation names and
+// the currently registered tools, which are replaced on reload.
 type collection struct {
-	server *mcp.Server
-	// operationNames is the desired set of operations for this collection.
-	operationNames map[string]struct{}
-	// registeredTools tracks the tools currently registered on the server so
-	// they can be removed on reload.
+	server          *mcp.Server
+	operationNames  map[string]struct{}
 	registeredTools []string
 }
 
 // collectionKey is a context key for the collection resolved from the request path.
 type collectionKey struct{}
 
-// collectionFromContext returns the collection resolved by the collection
-// middleware, if the request was routed through one.
+// collectionFromContext returns the collection resolved by the collection middleware.
 func collectionFromContext(ctx context.Context) (*collection, bool) {
 	c, ok := ctx.Value(collectionKey{}).(*collection)
 	return c, ok
@@ -39,7 +36,7 @@ func collectionFromContext(ctx context.Context) (*collection, bool) {
 
 // RegisterCollection registers a named collection of operations served at
 // /mcp/{slug}. The collection's MCP server exposes only the operation-execution
-// tools for the given operation names; the built-in tools (get_schema,
+// tools for the given operation names. The built-in tools (get_schema,
 // execute_graphql, get_operation_info) remain available on /mcp only.
 // Operation names that are not loaded are skipped with a warning and picked up
 // on the next Reload, since collections may be registered before operations
@@ -83,8 +80,7 @@ func (s *GraphQLSchemaServer) reloadCollections() {
 }
 
 // reloadCollection rebuilds a single collection's tools. It is a no-op until
-// operations have been loaded via Reload, which then rebuilds every
-// collection. Callers must hold collectionsMu.
+// operations have been loaded. Callers must hold collectionsMu.
 func (s *GraphQLSchemaServer) reloadCollection(slug string, c *collection) {
 	if s.operationsManager == nil {
 		return
