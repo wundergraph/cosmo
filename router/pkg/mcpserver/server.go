@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/iancoleman/strcase"
@@ -123,6 +124,7 @@ type GraphQLSchemaServer struct {
 	resourceDocumentation     string
 	authMiddleware            *MCPAuthMiddleware
 	mountPath                 string
+	resourceMetadataURL       string
 }
 
 type graphqlRequest struct {
@@ -222,9 +224,16 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		opt(options)
 	}
 
-	mountPath := normalizeMountPath(options.MountPath)
-	if mountPath == "" {
-		return nil, fmt.Errorf("invalid MCP mount path %q: must not be empty or the root path", options.MountPath)
+	mountPath, err := parseMountPath(options.MountPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Compute once so the WWW-Authenticate header and GetResourceMetadataURL
+	// can never diverge.
+	resourceMetadataURL := ""
+	if options.ServerBaseURL != "" {
+		resourceMetadataURL = joinBaseURL(options.ServerBaseURL, wellKnownProtectedResourcePath(mountPath))
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -268,12 +277,6 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		if err != nil {
 			cancel() // Clean up the context if initialization fails
 			return nil, fmt.Errorf("failed to create token decoder: %w", err)
-		}
-
-		// Build resource metadata URL for WWW-Authenticate header
-		resourceMetadataURL := ""
-		if options.ServerBaseURL != "" {
-			resourceMetadataURL = protectedResourceMetadataURL(options.ServerBaseURL, mountPath)
 		}
 
 		authMiddleware, err = NewMCPAuthMiddleware(tokenDecoder, resourceMetadataURL, options.OAuthConfig.Scopes, options.OAuthConfig.ScopeChallengeIncludeTokenScopes)
@@ -329,6 +332,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		resourceDocumentation:     options.ResourceDocumentation,
 		authMiddleware:            authMiddleware,
 		mountPath:                 mountPath,
+		resourceMetadataURL:       resourceMetadataURL,
 	}
 
 	return gs, nil
@@ -445,14 +449,29 @@ func WithMountPath(path string) func(*Options) {
 
 const defaultMountPath = "/mcp"
 
-// normalizeMountPath ensures a mount path has a leading slash and no trailing
-// slash. It returns "" for empty or root paths, which the constructor rejects.
-func normalizeMountPath(p string) string {
-	p = strings.TrimSpace(p)
-	if !strings.HasPrefix(p, "/") {
-		p = "/" + p
+// parseMountPath normalizes a mount path to a leading slash and no trailing
+// slash, and rejects paths the mux cannot serve as a literal route: empty or
+// root paths, empty interior segments (the mux path-cleans requests, so the
+// route would never match), ServeMux pattern metacharacters '{' and '}'
+// (wildcard match or registration panic), and whitespace (invalid in a URL).
+func parseMountPath(p string) (string, error) {
+	normalized := strings.TrimSpace(p)
+	if !strings.HasPrefix(normalized, "/") {
+		normalized = "/" + normalized
 	}
-	return strings.TrimRight(p, "/")
+	normalized = strings.TrimRight(normalized, "/")
+	if normalized == "" {
+		return "", fmt.Errorf("invalid MCP mount path %q: must not be empty or the root path", p)
+	}
+	for _, segment := range strings.Split(normalized[1:], "/") {
+		if segment == "" {
+			return "", fmt.Errorf("invalid MCP mount path %q: must not contain empty path segments", p)
+		}
+		if strings.ContainsAny(segment, "{}") || strings.ContainsFunc(segment, unicode.IsSpace) {
+			return "", fmt.Errorf("invalid MCP mount path %q: must not contain '{', '}' or whitespace", p)
+		}
+	}
+	return normalized, nil
 }
 
 // wellKnownProtectedResourcePath returns the OAuth 2.0 Protected Resource
@@ -461,9 +480,10 @@ func wellKnownProtectedResourcePath(mountPath string) string {
 	return "/.well-known/oauth-protected-resource" + mountPath
 }
 
-// protectedResourceMetadataURL returns the absolute URL of the OAuth 2.0 Protected Resource Metadata endpoint
-func protectedResourceMetadataURL(baseURL, mountPath string) string {
-	return strings.TrimRight(baseURL, "/") + wellKnownProtectedResourcePath(mountPath)
+// joinBaseURL joins a base URL and an absolute path, tolerating a trailing
+// slash on the base
+func joinBaseURL(baseURL, path string) string {
+	return strings.TrimRight(baseURL, "/") + path
 }
 
 // Serve starts the server with the configured options and returns the HTTP server.
@@ -1144,7 +1164,7 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 		scopes = []string{} // Ensure non-nil for JSON encoding
 	}
 
-	mcpResourceURL := strings.TrimRight(resourceURL, "/") + s.mountPath
+	mcpResourceURL := joinBaseURL(resourceURL, s.mountPath)
 
 	metadata := ProtectedResourceMetadata{
 		Resource:               mcpResourceURL,
@@ -1169,8 +1189,5 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 
 // GetResourceMetadataURL returns the URL for the OAuth 2.0 Protected Resource Metadata endpoint
 func (s *GraphQLSchemaServer) GetResourceMetadataURL() string {
-	if s.serverBaseURL != "" {
-		return protectedResourceMetadataURL(s.serverBaseURL, s.mountPath)
-	}
-	return ""
+	return s.resourceMetadataURL
 }

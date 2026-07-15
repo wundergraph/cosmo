@@ -15,8 +15,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 )
 
-func TestNormalizeMountPath(t *testing.T) {
-	tests := []struct {
+func TestParseMountPath(t *testing.T) {
+	valid := []struct {
 		input string
 		want  string
 	}{
@@ -24,19 +24,31 @@ func TestNormalizeMountPath(t *testing.T) {
 		{"/custom/path", "/custom/path"},
 		{"/custom/path/", "/custom/path"},
 		{"custom/path", "/custom/path"},
-		{"", ""},
-		{"  ", ""},
-		{"/", ""},
-		{"//", ""},
+	}
+	for _, tt := range valid {
+		got, err := parseMountPath(tt.input)
+		require.NoError(t, err, "input: %q", tt.input)
+		assert.Equal(t, tt.want, got, "input: %q", tt.input)
 	}
 
-	for _, tt := range tests {
-		assert.Equal(t, tt.want, normalizeMountPath(tt.input), "input: %q", tt.input)
+	invalid := []string{
+		"",
+		"  ",
+		"/",
+		"//",
+		"/custom//path",
+		"/mcp/{tenant}",
+		"/mcp/{",
+		"/custom path",
+	}
+	for _, input := range invalid {
+		_, err := parseMountPath(input)
+		assert.ErrorContains(t, err, "invalid MCP mount path", "input: %q", input)
 	}
 }
 
 func TestInvalidMountPathRejected(t *testing.T) {
-	for _, path := range []string{"", "/", "  "} {
+	for _, path := range []string{"/", "/mcp/{tenant}", "/custom//path"} {
 		_, err := NewGraphQLSchemaServer(
 			t.Context(),
 			"http://localhost:4000/graphql",
