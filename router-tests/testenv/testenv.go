@@ -865,7 +865,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	if cfg.MCP.Enabled {
 		// Create MCP client connecting to the MCP server
-		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
+		mcpAddr := mcpServerURL(cfg.MCP)
 
 		// Add authentication headers if token is provided
 		var clientOpts []transport.StreamableHTTPCOption
@@ -1301,7 +1301,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	if cfg.MCP.Enabled {
 		// Create MCP client connecting to the MCP server
-		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
+		mcpAddr := mcpServerURL(cfg.MCP)
 
 		// Add authentication headers if token is provided
 		var clientOpts []transport.StreamableHTTPCOption
@@ -1961,9 +1961,19 @@ func (e *Environment) Observer() *observer.ObservedLogs {
 // GetMCPServerAddr returns the MCP server address for testing
 func (e *Environment) GetMCPServerAddr() string {
 	if e.cfg.MCP.Enabled {
-		return fmt.Sprintf("http://%s/mcp", e.cfg.MCP.Server.ListenAddr)
+		return mcpServerURL(e.cfg.MCP)
 	}
 	return ""
+}
+
+// mcpServerURL returns the MCP endpoint URL for the configured listen address
+// and mount path (default "/mcp")
+func mcpServerURL(cfg config.MCPConfiguration) string {
+	mountPath := cfg.Server.MountPath
+	if mountPath == "" {
+		mountPath = "/mcp"
+	}
+	return fmt.Sprintf("http://%s%s", cfg.Server.ListenAddr, mountPath)
 }
 
 // Shutdown closes all resources associated with the test environment. Can be called multiple times but will only

@@ -1170,6 +1170,10 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpserver.WithStateless(r.mcp.Session.Stateless),
 	}
 
+	if r.mcp.Server.MountPath != "" {
+		mcpOpts = append(mcpOpts, mcpserver.WithMountPath(r.mcp.Server.MountPath))
+	}
+
 	if r.corsOptions != nil {
 		mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
 	}

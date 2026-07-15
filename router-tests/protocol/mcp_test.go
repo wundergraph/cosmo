@@ -494,6 +494,41 @@ Important Notes:
 		})
 	})
 
+	t.Run("Custom Mount Path", func(t *testing.T) {
+		t.Run("Serves MCP at the configured path and not at the default path", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				MCP: config.MCPConfiguration{
+					Enabled: true,
+					Server: config.MCPServer{
+						MountPath: "/collections/default/mcp",
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// The testenv MCP client connects via the configured mount path,
+				// so a successful tool listing proves the endpoint is served there.
+				resp, err := xEnv.MCPClient.ListTools(xEnv.Context, mcp.ListToolsRequest{})
+				require.NoError(t, err)
+				require.NotEmpty(t, resp.Tools)
+
+				mcpAddr := xEnv.GetMCPServerAddr()
+				require.True(t, strings.HasSuffix(mcpAddr, "/collections/default/mcp"))
+
+				// The default path must not be served when a custom mount path is set.
+				defaultAddr := strings.TrimSuffix(mcpAddr, "/collections/default/mcp") + "/mcp"
+				req, err := http.NewRequest(http.MethodPost, defaultAddr, strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`))
+				require.NoError(t, err)
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Accept", "application/json, text/event-stream")
+
+				httpResp, err := xEnv.RouterClient.Do(req)
+				require.NoError(t, err)
+				defer httpResp.Body.Close() //nolint:errcheck
+
+				assert.Equal(t, http.StatusNotFound, httpResp.StatusCode)
+			})
+		})
+	})
+
 	t.Run("CORS", func(t *testing.T) {
 		t.Run("Preflight OPTIONS request returns correct CORS headers", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{

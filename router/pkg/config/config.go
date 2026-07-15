@@ -1346,6 +1346,9 @@ type MCPStorageConfig struct {
 type MCPServer struct {
 	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5025" env:"MCP_SERVER_LISTEN_ADDR"`
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
+	// MountPath is the HTTP path the MCP endpoint is mounted at. Not exposed
+	// in user-facing config yet; settable programmatically only.
+	MountPath string `yaml:"-"`
 }
 
 type ConnectRPCConfiguration struct {
