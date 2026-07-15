@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.178.2](https://github.com/wundergraph/cosmo/compare/studio@0.178.1...studio@0.178.2) (2026-07-14)
+
+### Bug Fixes
+
+* active subgraph not shown on the subgraph details page ([#3063](https://github.com/wundergraph/cosmo/issues/3063)) ([96663cc](https://github.com/wundergraph/cosmo/commit/96663ccf9ec6ed817e3c7f80d0a3cae01f9b9592)) (@wilsonrivera)
+* **studio:** fix typo in SCIM setting description ([#3080](https://github.com/wundergraph/cosmo/issues/3080)) ([6d7aec2](https://github.com/wundergraph/cosmo/commit/6d7aec20cd2e03e27f3f899e1f77d220757493aa)) (@gausie)
+
 ## [0.178.1](https://github.com/wundergraph/cosmo/compare/studio@0.178.0...studio@0.178.1) (2026-07-14)
 
 **Note:** Version bump only for package studio
