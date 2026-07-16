@@ -276,22 +276,22 @@ type GraphqlMetrics struct {
 }
 
 type Pyroscope struct {
-	Enabled              bool               `yaml:"enabled" envDefault:"false" env:"PYROSCOPE_ENABLED"`
-	ServerAddress        string             `yaml:"server_address" env:"PYROSCOPE_SERVER_ADDRESS"`
-	ApplicationName      string             `yaml:"application_name" envDefault:"wundergraph.cosmo.router" env:"PYROSCOPE_APPLICATION_NAME"`
-	BasicAuth            PyroscopeBasicAuth `yaml:"basic_auth"`
-	Headers              map[string]string  `yaml:"headers"`
-	Tags                 map[string]string  `yaml:"tags"`
-	UploadRate           time.Duration      `yaml:"upload_rate" envDefault:"15s" env:"PYROSCOPE_UPLOAD_RATE"`
-	ProfileTypes         []string           `yaml:"profile_types" env:"PYROSCOPE_PROFILE_TYPES"`
-	DisableGCRuns        bool               `yaml:"disable_gc_runs" envDefault:"false" env:"PYROSCOPE_DISABLE_GC_RUNS"`
-	MutexProfileFraction int                `yaml:"mutex_profile_fraction" envDefault:"5" env:"PYROSCOPE_MUTEX_PROFILE_FRACTION"`
-	BlockProfileRate     int                `yaml:"block_profile_rate" envDefault:"5" env:"PYROSCOPE_BLOCK_PROFILE_RATE"`
+	Enabled              bool               `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	ServerAddress        string             `yaml:"server_address" env:"SERVER_ADDRESS"`
+	ApplicationName      string             `yaml:"application_name" envDefault:"wundergraph.cosmo.router" env:"APPLICATION_NAME"`
+	BasicAuth            PyroscopeBasicAuth `yaml:"basic_auth" envPrefix:"BASIC_AUTH_"`
+	Headers              map[string]string  `yaml:"headers" env:"HEADERS"`
+	Tags                 map[string]string  `yaml:"tags" env:"TAGS"`
+	UploadRate           time.Duration      `yaml:"upload_rate" envDefault:"15s" env:"UPLOAD_RATE"`
+	ProfileTypes         []string           `yaml:"profile_types" env:"PROFILE_TYPES"`
+	DisableGCRuns        bool               `yaml:"disable_gc_runs" envDefault:"false" env:"DISABLE_GC_RUNS"`
+	MutexProfileFraction int                `yaml:"mutex_profile_fraction" envDefault:"5" env:"MUTEX_PROFILE_FRACTION"`
+	BlockProfileRate     int                `yaml:"block_profile_rate" envDefault:"5" env:"BLOCK_PROFILE_RATE"`
 }
 
 type PyroscopeBasicAuth struct {
-	Username string `yaml:"username,omitempty" env:"PYROSCOPE_BASIC_AUTH_USERNAME"`
-	Password string `yaml:"password,omitempty" env:"PYROSCOPE_BASIC_AUTH_PASSWORD"`
+	Username string `yaml:"username,omitempty" env:"USERNAME"`
+	Password string `yaml:"password,omitempty" env:"PASSWORD"`
 }
 
 type BackoffJitterRetry struct {
@@ -1434,7 +1434,7 @@ type Config struct {
 	InstanceID     string                  `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
 	Graph          Graph                   `yaml:"graph,omitempty"`
 	Telemetry      Telemetry               `yaml:"telemetry,omitempty"`
-	Pyroscope      Pyroscope               `yaml:"pyroscope,omitempty"`
+	Pyroscope      Pyroscope               `yaml:"pyroscope,omitempty" envPrefix:"PYROSCOPE_"`
 	GraphqlMetrics GraphqlMetrics          `yaml:"graphql_metrics,omitempty"`
 	CORS           CORS                    `yaml:"cors,omitempty"`
 	Cluster        Cluster                 `yaml:"cluster,omitempty"`
