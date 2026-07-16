@@ -77,11 +77,7 @@ export function WorkspaceCommandWrapper({
         }
 
         // Apply the filter to the subgraphs, we need to find at least one to add the graph to the search results
-        fuse.setCollection(
-          graph.subgraphTargetIds
-            .map((subgraph) => clonedWns.subgraphs.find((sg) => sg.targetId === subgraph)!)
-            .filter(Boolean),
-        );
+        fuse.setCollection(clonedWns.subgraphs.filter((sg) => graph.subgraphTargetIds.includes(sg.targetId)));
 
         const matchingSubgraphs = fuse.search(filterValue);
         if (matchingSubgraphs.length === 0) {

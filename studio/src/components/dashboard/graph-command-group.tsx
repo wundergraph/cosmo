@@ -39,9 +39,8 @@ export function GraphCommandGroup({
           />
 
           {(isFiltering || activeSubgraphId) &&
-            subgraphTargetIds
-              .map((subgraph) => namespace.subgraphs.find((sg) => sg.targetId === subgraph)!)
-              .filter(Boolean)
+            namespace.subgraphs
+              .filter((sg) => subgraphTargetIds.includes(sg.targetId))
               .map((subgraph, subgraphIndex) => (
                 <GraphCommandItem
                   key={`subgraph-${namespaceIndex}-${graphIndex}-${subgraphIndex}`}
