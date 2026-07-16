@@ -2852,7 +2852,7 @@ message WorkspaceFederatedGraph {
   string targetId = 2;
   string name = 3;
   bool isContract = 4;
-  repeated string subgraphs = 5;
+  repeated string subgraphTargetIds = 5;
 }
 
 message WorkspaceSubgraph {

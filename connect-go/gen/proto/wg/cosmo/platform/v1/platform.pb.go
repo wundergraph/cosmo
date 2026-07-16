@@ -25798,14 +25798,14 @@ func (x *WorkspaceNamespace) GetSubgraphs() []*WorkspaceSubgraph {
 }
 
 type WorkspaceFederatedGraph struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	TargetId      string                 `protobuf:"bytes,2,opt,name=targetId,proto3" json:"targetId,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	IsContract    bool                   `protobuf:"varint,4,opt,name=isContract,proto3" json:"isContract,omitempty"`
-	Subgraphs     []string               `protobuf:"bytes,5,rep,name=subgraphs,proto3" json:"subgraphs,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TargetId          string                 `protobuf:"bytes,2,opt,name=targetId,proto3" json:"targetId,omitempty"`
+	Name              string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	IsContract        bool                   `protobuf:"varint,4,opt,name=isContract,proto3" json:"isContract,omitempty"`
+	SubgraphTargetIds []string               `protobuf:"bytes,5,rep,name=subgraphTargetIds,proto3" json:"subgraphTargetIds,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *WorkspaceFederatedGraph) Reset() {
@@ -25866,9 +25866,9 @@ func (x *WorkspaceFederatedGraph) GetIsContract() bool {
 	return false
 }
 
-func (x *WorkspaceFederatedGraph) GetSubgraphs() []string {
+func (x *WorkspaceFederatedGraph) GetSubgraphTargetIds() []string {
 	if x != nil {
-		return x.Subgraphs
+		return x.SubgraphTargetIds
 	}
 	return nil
 }
@@ -35869,15 +35869,15 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12E\n" +
 	"\x06graphs\x18\x03 \x03(\v2-.wg.cosmo.platform.v1.WorkspaceFederatedGraphR\x06graphs\x12E\n" +
-	"\tsubgraphs\x18\x04 \x03(\v2'.wg.cosmo.platform.v1.WorkspaceSubgraphR\tsubgraphs\"\x97\x01\n" +
+	"\tsubgraphs\x18\x04 \x03(\v2'.wg.cosmo.platform.v1.WorkspaceSubgraphR\tsubgraphs\"\xa7\x01\n" +
 	"\x17WorkspaceFederatedGraph\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\btargetId\x18\x02 \x01(\tR\btargetId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1e\n" +
 	"\n" +
 	"isContract\x18\x04 \x01(\bR\n" +
-	"isContract\x12\x1c\n" +
-	"\tsubgraphs\x18\x05 \x03(\tR\tsubgraphs\"\xc1\x01\n" +
+	"isContract\x12,\n" +
+	"\x11subgraphTargetIds\x18\x05 \x03(\tR\x11subgraphTargetIds\"\xc1\x01\n" +
 	"\x11WorkspaceSubgraph\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\btargetId\x18\x02 \x01(\tR\btargetId\x12\x12\n" +

@@ -200,7 +200,7 @@ export class WorkspaceService {
           continue;
         }
 
-        graph.subgraphs = subgraphs
+        graph.subgraphTargetIds = subgraphs
           .map((sg) => ns.subgraphs.find((nssg) => nssg.targetId === sg.targetId)!)
           .filter(Boolean)
           .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }))
