@@ -24,7 +24,7 @@ The router now emits a per-subscription GraphQL error and terminates that subscr
 
 **Action for clients:** if your client detected upstream subgraph failures by observing a WebSocket close with code `1001`, inspect the GraphQL error `code` extension instead. Reconnect logic that previously operated at the whole-connection level may need to move to individual subscriptions.
 
-See [Subgraph Error Propagation - Upstream WebSocket errors during subscriptions](/router/subgraph-error-propagation#upstream-websocket-errors-during-subscriptions) for the new behavior and example payloads.
+See [Subgraph Error Propagation - Upstream WebSocket errors during subscriptions](/router/subgraph-data-propagation/subgraph-error-propagation#upstream-websocket-errors-during-subscriptions) for the new behavior and example payloads.
 
 ## `complete` is no longer sent after `error` on `graphql-transport-ws`
 

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -9,6 +8,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getFeatureFlags(
   opts: RouterOptions,
@@ -45,9 +45,10 @@ export function getFeatureFlags(
       offset: req.offset,
       namespaceId,
       query: req.query,
+      rbac: authContext.rbac,
     });
 
-    const totalCount = await featureFlagRepo.getFeatureFlagsCount({ namespaceId });
+    const totalCount = await featureFlagRepo.getFeatureFlagsCount({ namespaceId, rbac: authContext.rbac });
 
     return {
       response: {

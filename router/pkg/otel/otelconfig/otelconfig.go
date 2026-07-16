@@ -6,8 +6,8 @@ type Exporter string
 type ExporterTemporality string
 
 const (
-	ExporterOLTPHTTP Exporter = "http"
-	ExporterOLTPGRPC Exporter = "grpc"
+	ExporterOTLPHTTP Exporter = "http"
+	ExporterOTLPGRPC Exporter = "grpc"
 
 	CloudDefaultTelemetryEndpoint = "https://cosmo-otel.wundergraph.com"
 	DefaultMetricsPath            = "/v1/metrics"

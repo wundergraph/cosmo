@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -23,6 +22,7 @@ import {
   isValidGraphName,
 } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function createMonograph(
   opts: RouterOptions,

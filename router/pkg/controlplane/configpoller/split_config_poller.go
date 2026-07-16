@@ -128,6 +128,7 @@ func (p *splitConfigPoller) fetchAndAssembleAll(ctx context.Context, activeGraph
 		if hasIgnoredFeatureFlags {
 			if _, ok := p.configRules.IgnoredFeatureFlags[name]; ok {
 				p.logger.Info("Feature flag is ignored, skipping", zap.String("feature_flag", name))
+				delete(activeGraphs, name)
 				continue
 			}
 		}
@@ -136,6 +137,7 @@ func (p *splitConfigPoller) fetchAndAssembleAll(ctx context.Context, activeGraph
 		if err != nil {
 			if p.shouldIgnoreMissingFeatureFlag(err) {
 				p.logger.Warn("Feature flag config not found, skipping", zap.String("feature_flag", name))
+				delete(activeGraphs, name)
 				continue
 			}
 			return nil, fmt.Errorf("failed to fetch config for feature flag %q: %w", name, err)
@@ -177,6 +179,11 @@ func (p *splitConfigPoller) GetRouterConfig(ctx context.Context) (*routerconfig.
 		return nil, err
 	}
 
+	hashes := make(map[string]routerconfig.HashInfo, len(activeGraphs))
+	for ffName, hash := range activeGraphs {
+		hashes[ffName] = routerconfig.HashInfo{NewHash: hash}
+	}
+
 	p.knownHashes = activeGraphs
 	p.currentConfig = config
 	p.latestVersion = computeCompositeVersion(activeGraphs)
@@ -184,6 +191,7 @@ func (p *splitConfigPoller) GetRouterConfig(ctx context.Context) (*routerconfig.
 	response := &routerconfig.Response{
 		Config:  config,
 		Changes: nil, // purposefully nil to tell callers to rebuild everything since this is the initial fetch
+		Hashes:  hashes,
 	}
 
 	return response, nil
@@ -214,23 +222,34 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			return
 		}
 
+		newVersion := computeCompositeVersion(mapperGraphs)
+		if newVersion == p.latestVersion {
+			p.logger.Debug("No changes detected in engine config, keeping existing config")
+			return
+		}
+
 		// Determine what changed, was added, or was removed.
 		changes := routerconfig.Changes{
 			AddedConfigs:   make(map[string]struct{}),
 			RemovedConfigs: make(map[string]struct{}),
 			ChangedConfigs: make(map[string]struct{}),
 		}
+		hashes := make(map[string]routerconfig.HashInfo, len(mapperGraphs))
 
 		for name, hash := range mapperGraphs {
 			if oldHash, exists := p.knownHashes[name]; !exists {
 				changes.AddedConfigs[name] = struct{}{}
+				hashes[name] = routerconfig.HashInfo{NewHash: hash}
 			} else if oldHash != hash {
 				changes.ChangedConfigs[name] = struct{}{}
+				hashes[name] = routerconfig.HashInfo{NewHash: hash, OldHash: oldHash}
 			}
 		}
-		for name := range p.knownHashes {
-			if _, exists := mapperGraphs[name]; !exists {
+		for name, oldHash := range p.knownHashes {
+			if newHash, exists := mapperGraphs[name]; !exists {
 				changes.RemovedConfigs[name] = struct{}{}
+			} else if oldHash == newHash {
+				hashes[name] = routerconfig.HashInfo{OldHash: oldHash, NewHash: newHash}
 			}
 		}
 
@@ -252,6 +271,19 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 					delete(mapperGraphs, name)
 					delete(changes.ChangedConfigs, name)
 					delete(changes.AddedConfigs, name)
+
+					hashInfo := hashes[name]
+					if hashInfo.OldHash == "" {
+						// config is new and was never applied by the router but fetch from CDN failed.
+						// We don't want such cases in the hash list.
+						delete(hashes, name)
+					} else {
+						// config has changed but fetch from CDN failed.
+						// Keep it in hash list but set newHash to oldHash because that's
+						// the hash the router will keep using.
+						hashInfo.NewHash = hashInfo.OldHash
+						hashes[name] = hashInfo
+					}
 
 					continue
 				}
@@ -296,7 +328,9 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			}
 		}
 
-		newVersion := computeCompositeVersion(mapperGraphs)
+		// Edge case where the fetch loop removes missing feature flags
+		// from mapperGraphs, which could make the version match again
+		newVersion = computeCompositeVersion(mapperGraphs)
 		if newVersion == p.latestVersion {
 			p.logger.Debug("No changes detected in engine config, keeping existing config")
 			return
@@ -305,6 +339,7 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 		response := &routerconfig.Response{
 			Config:  patched,
 			Changes: &changes,
+			Hashes:  hashes,
 		}
 
 		handlerStart := time.Now()

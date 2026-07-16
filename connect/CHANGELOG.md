@@ -4,6 +4,109 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.155.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.155.0...@wundergraph/cosmo-connect@0.155.1) (2026-07-14)
+
+### Bug Fixes
+
+* active subgraph not shown on the subgraph details page ([#3063](https://github.com/wundergraph/cosmo/issues/3063)) ([96663cc](https://github.com/wundergraph/cosmo/commit/96663ccf9ec6ed817e3c7f80d0a3cae01f9b9592)) (@wilsonrivera)
+
+# [0.155.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.154.0...@wundergraph/cosmo-connect@0.155.0) (2026-07-08)
+
+### Features
+
+* add support for feature subgraph checks ([#3029](https://github.com/wundergraph/cosmo/issues/3029)) ([8aadbf0](https://github.com/wundergraph/cosmo/commit/8aadbf0995725f7ef27f93e118679d12571354d9)) (@JivusAyrus)
+
+# [0.154.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.153.3...@wundergraph/cosmo-connect@0.154.0) (2026-07-06)
+
+### Features
+
+* decouple feature flag composition when split config is enabled ([#3034](https://github.com/wundergraph/cosmo/issues/3034)) ([f704e34](https://github.com/wundergraph/cosmo/commit/f704e34224f3843d4900d1719070d702802dd6ef)) (@wilsonrivera)
+* upgrade connect v1 to v2 ([#2705](https://github.com/wundergraph/cosmo/issues/2705)) ([c7203f4](https://github.com/wundergraph/cosmo/commit/c7203f47529f75675ca04e6ac4018efe55d4e498)) (@JivusAyrus)
+
+## [0.153.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.153.1...@wundergraph/cosmo-connect@0.153.3) (2026-06-26)
+
+### Bug Fixes
+
+* patch bump published npm packages ([#3021](https://github.com/wundergraph/cosmo/issues/3021)) ([f144989](https://github.com/wundergraph/cosmo/commit/f144989f69d58983fea7f74077c1a393395b1a4c)) (@gmas)
+
+## [0.153.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.153.0...@wundergraph/cosmo-connect@0.153.1) (2026-06-23)
+
+### Bug Fixes
+
+* pagination in proposals page ([#2989](https://github.com/wundergraph/cosmo/issues/2989)) ([a45b33c](https://github.com/wundergraph/cosmo/commit/a45b33c03577f615873639c72f6ad310ba71856b)) (@JivusAyrus)
+
+# [0.153.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.152.0...@wundergraph/cosmo-connect@0.153.0) (2026-06-23)
+
+### Bug Fixes
+
+* proto changes for entity cache ([#2996](https://github.com/wundergraph/cosmo/issues/2996)) ([3db24b0](https://github.com/wundergraph/cosmo/commit/3db24b010905daddfa840abba07faaf416dd892d)) (@SkArchon)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cachePopulate directive (3/5) ([#2984](https://github.com/wundergraph/cosmo/issues/2984)) ([a8cc2af](https://github.com/wundergraph/cosmo/commit/a8cc2afa7767c35b71ac4ebd18e2a9e1cc381a66)) (@SkArchon)
+
+# [0.152.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.151.0...@wundergraph/cosmo-connect@0.152.0) (2026-06-22)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cacheInvalidate directive (2/5) ([#2983](https://github.com/wundergraph/cosmo/issues/2983)) ([19bbbe5](https://github.com/wundergraph/cosmo/commit/19bbbe5659011ef4536fe43edbb1ae313bda91e3)) (@SkArchon)
+* **composition:** [@openfed](https://github.com/openfed)__entityCache directive (1/5) ([#2980](https://github.com/wundergraph/cosmo/issues/2980)) ([2075164](https://github.com/wundergraph/cosmo/commit/2075164f18ee0cf953effdef2a031c59b3e8d112)) (@SkArchon)
+
+# [0.151.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.150.0...@wundergraph/cosmo-connect@0.151.0) (2026-06-16)
+
+### Features
+
+* controlpanel move to a accept first strategy for batch ([#2963](https://github.com/wundergraph/cosmo/issues/2963)) ([f54ef2a](https://github.com/wundergraph/cosmo/commit/f54ef2a4de3f218810eb2f800ad4e1c8c864496e)) (@wilsonrivera)
+
+# [0.150.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.149.0...@wundergraph/cosmo-connect@0.150.0) (2026-06-12)
+
+### Features
+
+* delete & list clients using wgc ([#2795](https://github.com/wundergraph/cosmo/issues/2795)) ([9aef4ca](https://github.com/wundergraph/cosmo/commit/9aef4cad767748accc70a5fa87f3d8f7c5062ea6)) (@comatory)
+
+# [0.149.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.148.0...@wundergraph/cosmo-connect@0.149.0) (2026-06-08)
+
+### Features
+
+* implement early stop for feature flag updates with no changes ([#2932](https://github.com/wundergraph/cosmo/issues/2932)) ([ccbcb76](https://github.com/wundergraph/cosmo/commit/ccbcb76839c0c5f37af19fddd0b7c872332fb275)) (@JivusAyrus)
+
+# [0.148.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.147.0...@wundergraph/cosmo-connect@0.148.0) (2026-06-06)
+
+### Features
+
+* **cli:** add subgraph batch-publish command ([#2899](https://github.com/wundergraph/cosmo/issues/2899)) ([9361a30](https://github.com/wundergraph/cosmo/commit/9361a3073dc207ae9bfb5b9661108c09b42028c8)) (@thisisnithin)
+
+# [0.147.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.146.0...@wundergraph/cosmo-connect@0.147.0) (2026-06-01)
+
+### Features
+
+* add functionality to restrict the login methods of an organization ([#2896](https://github.com/wundergraph/cosmo/issues/2896)) ([2c2cb71](https://github.com/wundergraph/cosmo/commit/2c2cb717f485666aa0bc94297d7c94469e0ce894)) (@JivusAyrus)
+
+# [0.146.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.145.0...@wundergraph/cosmo-connect@0.146.0) (2026-05-29)
+
+### Features
+
+* add options to restrict certain namespaces to certain login methods ([#2876](https://github.com/wundergraph/cosmo/issues/2876)) ([42b307b](https://github.com/wundergraph/cosmo/commit/42b307b1b5ec9d91d9fb4dad90ecae5e364ac189)) (@JivusAyrus)
+
+# [0.145.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.144.0...@wundergraph/cosmo-connect@0.145.0) (2026-05-27)
+
+### Features
+
+* declutter step 1 in the onboarding + new empty state ([#2888](https://github.com/wundergraph/cosmo/issues/2888)) ([89635b7](https://github.com/wundergraph/cosmo/commit/89635b75e4cb6ff893d6c4fbbe2b541cfc0dfa12)) (@comatory)
+
+# [0.144.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.143.0...@wundergraph/cosmo-connect@0.144.0) (2026-05-27)
+
+### Features
+
+* **dx:** add .gitattributes to collapse generated files in GitHub PRs ([#2891](https://github.com/wundergraph/cosmo/issues/2891)) ([b96296a](https://github.com/wundergraph/cosmo/commit/b96296acc66763fb59f9879573658350079fc19c)) (@comatory)
+* studio handles analytics downtime gracefully ([#2878](https://github.com/wundergraph/cosmo/issues/2878)) ([716b786](https://github.com/wundergraph/cosmo/commit/716b786bd55008292015ec8950182aa61e98cb16)) (@comatory)
+
+# [0.143.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.142.1...@wundergraph/cosmo-connect@0.143.0) (2026-05-12)
+
+### Features
+
+* add feature flag recomposition support ([#2853](https://github.com/wundergraph/cosmo/issues/2853)) ([3f125a2](https://github.com/wundergraph/cosmo/commit/3f125a2effce36a1a2040f219bc1aa5a872aab93)) (@wilsonrivera)
+
 ## [0.142.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.142.0...@wundergraph/cosmo-connect@0.142.1) (2026-05-01)
 
 **Note:** Version bump only for package @wundergraph/cosmo-connect

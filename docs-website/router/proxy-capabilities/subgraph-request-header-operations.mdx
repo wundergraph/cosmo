@@ -47,6 +47,13 @@ headers:
         name: "X-User-ID"
         expression: "request.auth.isAuthenticated ? request.auth.claims.sub : ''"
 
+      # Source the value from a file (re-read on the configured interval)
+      - op: "set"
+        name: "X-Service-Token"
+        from_file:
+          path: "/etc/secrets/service-token"
+          refresh_interval: "1m"
+
   subgraphs:
     products: # Will only affect the Subgraph named "products"
       request:
@@ -82,8 +89,16 @@ Currently, we support the following header rules:
   * `name` - The name of the header to set
 
   * `value` - The static value to set for the header
-  
+
   * `expression` - A [template expression](/router/configuration/template-expressions) that evaluates to the value of the header. For example: `request.auth.isAuthenticated ? request.auth.claims.sub : ''` will set the header to the user's ID if they are authenticated, otherwise an empty string.
+
+  * `from_file` - Source the header value from a file's contents. The file is loaded into memory at startup and re-read on the configured polling interval, so request-time reads never touch disk. Available on request rules only.
+
+    * `path` - Absolute path to the file whose contents become the header value.
+
+    * `refresh_interval` - Determines how often the file is checked for changes and re-read into memory. The minimum value is `100ms`. Defaults to `1m`.
+
+    Use this for mounted secrets that rotate on disk (Kubernetes Secrets, Vault Agent sidecars, externally rotated API keys) without restarting the router.
 
 <Note>
   Go canonicalizes headers by default e.g. `x-my-header` to `X-My-Header.` Write your rule accordingly or use `(?i)``^X-Test-.*` flags to make your regex case insensitive.

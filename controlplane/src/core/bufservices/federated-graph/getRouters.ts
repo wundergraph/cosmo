@@ -1,9 +1,8 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetRoutersRequest, GetRoutersResponse, Router } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { validate as validateUUID } from 'uuid';
-import { GraphCompositionDTO } from '../../../types/index.js';
+import { GraphCompositionDTO, PlainMessage } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
 import { RouterMetricsRepository } from '../../repositories/analytics/RouterMetricsRepository.js';
@@ -55,7 +54,7 @@ export function getRouters(
     const routers: PlainMessage<Router>[] = [];
 
     const routerRepo = new RouterMetricsRepository(opts.chClient);
-    const routersDTOs = await routerRepo.getActiveRouters({
+    const { routers: routersDTOs, ok } = await routerRepo.getActiveRouters({
       federatedGraphId: federatedGraph.id,
       organizationId: authContext.organizationId,
     });
@@ -99,7 +98,7 @@ export function getRouters(
 
     return {
       response: {
-        code: EnumStatusCode.OK,
+        code: ok ? EnumStatusCode.OK : EnumStatusCode.WARN_PARTIAL_DATA,
       },
       routers,
     };

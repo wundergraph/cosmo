@@ -238,10 +238,12 @@ func TestNatsEvents(t *testing.T) {
 					core.WithSubscriptionHeartbeatInterval(heartbeatInterval),
 				},
 				EnableNats: true,
-				TLSConfig: &core.TlsConfig{
-					Enabled:  true,
-					CertFile: "../testdata/tls/cert.pem",
-					KeyFile:  "../testdata/tls/key.pem",
+				TLSConfig: config.TLSConfiguration{
+					Server: config.TLSServerConfiguration{
+						Enabled:  true,
+						CertFile: "../testdata/tls/cert.pem",
+						KeyFile:  "../testdata/tls/key.pem",
+					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
@@ -287,7 +289,7 @@ func TestNatsEvents(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:               true,
-				TLSConfig:                nil, // Force Http/1
+				TLSConfig:                config.TLSConfiguration{}, // empty to force HTTP/1
 				RouterOptions: []core.Option{
 					core.WithSubscriptionHeartbeatInterval(heartbeatInterval),
 				},
@@ -1096,6 +1098,10 @@ func TestNatsEvents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		env.WaitForSubscriptionCount(1, EventWaitTimeout)
+		// Make sure to wait for the trigger count because we might already have the
+		// subscription count incremented before the trigger was actually created.
+		// In that case we wouldn't yet have a durable consumer on the NATS server.
+		env.WaitForTriggerCount(1, EventWaitTimeout)
 
 		// Verify the durable consumer was created on the stream
 		stream, err := js.Stream(env.Context, streamName)
@@ -1153,6 +1159,10 @@ func TestNatsEvents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		env.WaitForSubscriptionCount(1, EventWaitTimeout)
+		// Make sure to wait for the trigger count because we might already have the
+		// subscription count incremented before the trigger was actually created.
+		// In that case we wouldn't yet have a durable consumer on the NATS server.
+		env.WaitForTriggerCount(1, EventWaitTimeout)
 
 		// Verify the durable consumer was created on the stream
 		stream, err := js.Stream(env.Context, streamName)
@@ -1597,12 +1607,18 @@ func TestNatsEvents(t *testing.T) {
 					Key:    "provider_id",
 					String: "my-nats",
 				})
-				return myNatsLogs.FilterMessage("NATS connection established").Len() == 4 &&
-					myNatsLogs.FilterMessage("NATS disconnected").Len() == 1 &&
-					myNatsLogs.FilterMessage("NATS connection closed").Len() == 1 &&
-					defaultLogs.FilterMessage("NATS connection established").Len() == 4 &&
-					defaultLogs.FilterMessage("NATS disconnected").Len() == 1 &&
-					defaultLogs.FilterMessage("NATS connection closed").Len() == 1
+
+				// Verify the connection lifecycle via router logs that for the "default" and "my-nats" pubsub provider.
+				// 4 nats connections opened (base + ff mux get their own * 2 graph mux generations).
+				// 2 get closed (old mux generation shuts down).
+				myNatsProviderLogsComplete := myNatsLogs.FilterMessage("NATS connection established").Len() == 4 &&
+					myNatsLogs.FilterMessage("NATS disconnected").Len() == 2 &&
+					myNatsLogs.FilterMessage("NATS connection closed").Len() == 2
+				defaultProviderLogsComplete := defaultLogs.FilterMessage("NATS connection established").Len() == 4 &&
+					defaultLogs.FilterMessage("NATS disconnected").Len() == 2 &&
+					defaultLogs.FilterMessage("NATS connection closed").Len() == 2
+
+				return myNatsProviderLogsComplete && defaultProviderLogsComplete
 			}, EventWaitTimeout, time.Second)
 
 			// Then wait for subscriptions to be started again

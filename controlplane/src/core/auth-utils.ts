@@ -593,6 +593,17 @@ export default class AuthUtils {
     // Otherwise, insert a new session. Because we use an Idp like keycloak,
     // we can assume that the user will have only one session per client at a time.
     const { accessToken, refreshToken, idToken } = sessionData;
+
+    let idpAlias: string | null = null;
+    try {
+      const claims = decodeJWT<{ identity_provider?: string }>(idToken);
+      if (typeof claims.identity_provider === 'string' && claims.identity_provider.length > 0) {
+        idpAlias = claims.identity_provider;
+      }
+    } catch {
+      // unsigned/malformed id_token — treat as password login
+    }
+
     const insertedSessions = await db
       .insert(sessions)
       .values({
@@ -600,6 +611,7 @@ export default class AuthUtils {
         idToken,
         accessToken,
         refreshToken,
+        idpAlias,
         expiresAt: sessionExpiresDate,
       })
       .onConflictDoUpdate({
@@ -609,6 +621,7 @@ export default class AuthUtils {
           idToken,
           accessToken,
           refreshToken,
+          idpAlias,
           expiresAt: sessionExpiresDate,
           updatedAt: new Date(),
         },

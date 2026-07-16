@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.42.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.42.0...aws-lambda-router@0.42.1) (2026-06-23)
+
+**Note:** Version bump only for package aws-lambda-router
+
+# [0.42.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.41.0...aws-lambda-router@0.42.0) (2026-06-15)
+
+### Features
+
+* **router:** support exemplar filter configuration ([#2921](https://github.com/wundergraph/cosmo/issues/2921)) ([78877ee](https://github.com/wundergraph/cosmo/commit/78877ee0b24a01820431eb49f146af61b5c22f46)) (@Noroth)
+
+# [0.41.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.40.2...aws-lambda-router@0.41.0) (2026-05-20)
+
+### Features
+
+* upgrade otel dependencies with backward compatible semconv attributes ([#2714](https://github.com/wundergraph/cosmo/issues/2714)) ([3d90c6c](https://github.com/wundergraph/cosmo/commit/3d90c6c4a2fb2d3f0f0544e6cf7437671e838b6d)) (@Noroth)
+
 ## [0.40.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.40.1...aws-lambda-router@0.40.2) (2026-03-31)
 
 ### Bug Fixes

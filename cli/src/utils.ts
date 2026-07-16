@@ -1,5 +1,6 @@
 /* eslint-disable import/named */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { access } from 'node:fs/promises';
 import {
   CompositionOptions,
   federateSubgraphs,
@@ -191,6 +192,18 @@ export function composeSubgraphs(subgraphs: Subgraph[], options?: CompositionOpt
 }
 
 export type ConfigData = Partial<KeycloakToken & { organizationSlug: string; lastUpdateCheck: number }>;
+
+/**
+ * Asynchronously checks whether a file (or directory) exists at the given path.
+ */
+export const fileExists = async (filePath: string): Promise<boolean> => {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 export const readConfigFile = (): ConfigData => {
   if (!existsSync(configFile)) {
@@ -443,6 +456,23 @@ const gradientStops: [number, number, number][] = [
   [80, 120, 255], // blue
   [180, 100, 255], // purple
 ];
+
+/**
+ * JSON.stringify replacer that strips protobuf-es v2 internal fields
+ * (`$typeName`, `$unknown`) from message objects, so CLI `--json` output stays a
+ * clean, user-facing shape. It runs for every nested object too, so nested
+ * messages are handled as well.
+ */
+export function stripProtobufInternals(_key: string, value: unknown): unknown {
+  if (value != null && typeof value === 'object' && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    if ('$typeName' in record || '$unknown' in record) {
+      const { $typeName, $unknown, ...rest } = record;
+      return rest;
+    }
+  }
+  return value;
+}
 
 function interpolateColor(t: number): [number, number, number] {
   const segment = t * (gradientStops.length - 1);

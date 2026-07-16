@@ -11,6 +11,6 @@
     "module": "NodeNext",
     "noEmit": true
   },
-  "include": ["test/**/*"],
+  "include": ["test/**/*", "src/redlock.d.ts"],
   "exclude": ["node_modules"]
 }

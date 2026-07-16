@@ -1,4 +1,3 @@
-import { PartialMessage, PlainMessage } from '@bufbuild/protobuf';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   Integration,
@@ -10,6 +9,16 @@ import { addDays } from 'date-fns';
 import { and, asc, count, desc, eq, gt, inArray, like, lt, not, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
+import {
+  PlainMessage,
+  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+  Feature,
+  FeatureIds,
+  OrganizationDTO,
+  OrganizationGroupDTO,
+  OrganizationMemberDTO,
+  WebhooksConfigDTO,
+} from '../../types/index.js';
 import { NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -22,22 +31,18 @@ import {
   organizationsMembers,
   organizationWebhooks,
   slackIntegrationConfigs,
+  slackProposalStateUpdate,
   slackSchemaUpdateEventConfigs,
   users,
 } from '../../db/schema.js';
-import {
-  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-  Feature,
-  FeatureIds,
-  OrganizationDTO,
-  OrganizationGroupDTO,
-  OrganizationMemberDTO,
-  WebhooksConfigDTO,
-} from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { delayForManualOrgDeletionInDays, delayForOrgAuditLogsDeletionInDays } from '../constants.js';
+import {
+  delayForManualOrgDeletionInDays,
+  delayForOrgAuditLogsDeletionInDays,
+  graphTokenFeatures,
+} from '../constants.js';
 import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { traced } from '../tracing.js';
@@ -299,51 +304,53 @@ export class OrganizationRepository {
       .execute();
 
     return Promise.all(
-      userOrganizations.map(async (org) => {
-        const plan = org.billing?.plan || this.defaultBillingPlanId;
-        const groups = await this.getOrganizationMemberGroups({
-          userID: input.userId,
-          organizationID: org.id,
-        });
+      userOrganizations
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .map(async (org) => {
+          const plan = org.billing?.plan || this.defaultBillingPlanId;
+          const groups = await this.getOrganizationMemberGroups({
+            userID: input.userId,
+            organizationID: org.id,
+          });
 
-        const features = await this.getFeatures({ organizationId: org.id, plan });
-        return {
-          id: org.id,
-          name: org.name,
-          slug: org.slug,
-          creatorUserId: org.creatorUserId || undefined,
-          createdAt: org.createdAt.toISOString(),
-          rbac: new RBACEvaluator(groups, input.userId),
-          groups,
-          features,
-          billing: plan
-            ? {
-                plan,
-              }
-            : undefined,
-          subscription: org.subscription
-            ? {
-                status: org.subscription.status,
-                trialEnd: org.subscription.trialEnd?.toISOString(),
-                cancelAtPeriodEnd: org.subscription.cancelAtPeriodEnd,
-                currentPeriodEnd: org.subscription.currentPeriodEnd?.toISOString(),
-              }
-            : undefined,
-          deactivation: org.isDeactivated
-            ? {
-                reason: org.deactivationReason || undefined,
-                initiatedAt: org.deactivatedAt?.toISOString() ?? '',
-              }
-            : undefined,
-          deletion: org.queuedForDeletionAt
-            ? {
-                queuedAt: org.queuedForDeletionAt?.toISOString() ?? '',
-                queuedBy: org.queuedForDeletionBy || undefined,
-              }
-            : undefined,
-          kcGroupId: org.kcGroupId || undefined,
-        };
-      }),
+          const features = await this.getFeatures({ organizationId: org.id, plan });
+          return {
+            id: org.id,
+            name: org.name,
+            slug: org.slug,
+            creatorUserId: org.creatorUserId || undefined,
+            createdAt: org.createdAt.toISOString(),
+            rbac: new RBACEvaluator(groups, input.userId),
+            groups,
+            features,
+            billing: plan
+              ? {
+                  plan,
+                }
+              : undefined,
+            subscription: org.subscription
+              ? {
+                  status: org.subscription.status,
+                  trialEnd: org.subscription.trialEnd?.toISOString(),
+                  cancelAtPeriodEnd: org.subscription.cancelAtPeriodEnd,
+                  currentPeriodEnd: org.subscription.currentPeriodEnd?.toISOString(),
+                }
+              : undefined,
+            deactivation: org.isDeactivated
+              ? {
+                  reason: org.deactivationReason || undefined,
+                  initiatedAt: org.deactivatedAt?.toISOString() ?? '',
+                }
+              : undefined,
+            deletion: org.queuedForDeletionAt
+              ? {
+                  queuedAt: org.queuedForDeletionAt?.toISOString() ?? '',
+                  queuedBy: org.queuedForDeletionBy || undefined,
+                }
+              : undefined,
+            kcGroupId: org.kcGroupId || undefined,
+          };
+        }),
     );
   }
 
@@ -763,7 +770,7 @@ export class OrganizationRepository {
         ),
       );
 
-    const meta: PartialMessage<EventMeta>[] = [];
+    const meta: PlainMessage<EventMeta>[] = [];
 
     const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
     const federatedGraphIds = [];
@@ -837,7 +844,7 @@ export class OrganizationRepository {
       },
     });
 
-    return meta as PlainMessage<EventMeta>[];
+    return meta;
   }
 
   public async getWebhookConfigById(id: string, organizationId: string): Promise<WebhooksConfigDTO | null> {
@@ -960,33 +967,32 @@ export class OrganizationRepository {
     return result[0];
   }
 
-  public queueOrganizationDeletion(input: {
+  public async queueOrganizationDeletion(input: {
     organizationId: string;
     queuedBy?: string;
     deleteOrganizationQueue: DeleteOrganizationQueue;
+    deleteDelayInDays?: number;
   }) {
-    return this.db.transaction(async (tx) => {
-      const now = new Date();
-      await tx
-        .update(schema.organizations)
-        .set({
-          queuedForDeletionAt: now,
-          queuedForDeletionBy: input.queuedBy,
-        })
-        .where(eq(schema.organizations.id, input.organizationId));
+    const now = new Date();
+    await this.db
+      .update(schema.organizations)
+      .set({
+        queuedForDeletionAt: now,
+        queuedForDeletionBy: input.queuedBy,
+      })
+      .where(eq(schema.organizations.id, input.organizationId));
 
-      const deleteAt = addDays(now, delayForManualOrgDeletionInDays);
-      const delay = Number(deleteAt) - Number(now);
+    const deleteAt = addDays(now, input.deleteDelayInDays || delayForManualOrgDeletionInDays);
+    const delay = Number(deleteAt) - Number(now);
 
-      return await input.deleteOrganizationQueue.addJob(
-        {
-          organizationId: input.organizationId,
-        },
-        {
-          delay,
-        },
-      );
-    });
+    return await input.deleteOrganizationQueue.addJob(
+      {
+        organizationId: input.organizationId,
+      },
+      {
+        delay,
+      },
+    );
   }
 
   public restoreOrganization(input: { organizationId: string; deleteOrganizationQueue: DeleteOrganizationQueue }) {
@@ -1119,12 +1125,25 @@ export class OrganizationRepository {
               case 'federatedGraphSchemaUpdated':
               case 'monographSchemaUpdated': {
                 const ids = eventMeta.meta.value.graphIds;
-
                 if (ids.length === 0) {
                   continue;
                 }
 
                 await tx.insert(slackSchemaUpdateEventConfigs).values(
+                  ids.map((id) => ({
+                    slackIntegrationConfigId: slackIntegrationConfig[0].id,
+                    federatedGraphId: id,
+                  })),
+                );
+                break;
+              }
+              case 'proposalStateUpdated': {
+                const ids = eventMeta.meta.value.graphIds;
+                if (ids.length === 0) {
+                  continue;
+                }
+
+                await tx.insert(slackProposalStateUpdate).values(
                   ids.map((id) => ({
                     slackIntegrationConfigId: slackIntegrationConfig[0].id,
                     federatedGraphId: id,
@@ -1142,64 +1161,16 @@ export class OrganizationRepository {
     });
   }
 
-  public async getIntegrationByName(organizationId: string, integrationName: string): Promise<Integration | undefined> {
+  public async integrationExists(organizationId: string, integrationName: string): Promise<boolean> {
     const res = await this.db.query.organizationIntegrations.findFirst({
+      columns: { id: true },
       where: and(
         eq(organizationIntegrations.organizationId, organizationId),
         eq(organizationIntegrations.name, integrationName),
       ),
     });
 
-    if (!res) {
-      return undefined;
-    }
-
-    switch (res.type) {
-      case integrationTypeEnum.enumValues[0]: {
-        const slackIntegrationConfig = await this.db.query.slackIntegrationConfigs.findFirst({
-          where: eq(slackIntegrationConfigs.integrationId, res.id),
-          with: {
-            slackSchemaUpdateEventConfigs: true,
-          },
-        });
-
-        if (!slackIntegrationConfig) {
-          return undefined;
-        }
-
-        const config: PartialMessage<IntegrationConfig> = {
-          type: IntegrationType.SLACK,
-          config: {
-            case: 'slackIntegrationConfig',
-            value: {
-              endpoint: slackIntegrationConfig.endpoint,
-            },
-          },
-        };
-
-        return {
-          id: res.id,
-          name: res.name,
-          type: res.type,
-          events: res.events || [],
-          integrationConfig: config,
-          eventsMeta: [
-            {
-              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-              meta: {
-                case: 'federatedGraphSchemaUpdated',
-                value: {
-                  graphIds: slackIntegrationConfig.slackSchemaUpdateEventConfigs.map((i) => i.federatedGraphId),
-                },
-              },
-            },
-          ],
-        } as Integration;
-      }
-      default: {
-        throw new Error(`The type of the integration ${res.type} doesnt exist`);
-      }
-    }
+    return !!res?.id;
   }
 
   public async getIntegrations(organizationId: string): Promise<Integration[]> {
@@ -1217,13 +1188,14 @@ export class OrganizationRepository {
             where: eq(slackIntegrationConfigs.integrationId, r.id),
             with: {
               slackSchemaUpdateEventConfigs: true,
+              slackProposalStateUpdate: true,
             },
           });
           if (!slackIntegrationConfig) {
             continue;
           }
 
-          const config: PartialMessage<IntegrationConfig> = {
+          const config: any = {
             type: IntegrationType.SLACK,
             config: {
               case: 'slackIntegrationConfig',
@@ -1234,12 +1206,11 @@ export class OrganizationRepository {
           };
 
           const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
-          const federatedGraphIds = [];
-          const monographIds = [];
+          const federatedGraphIds: string[] = [];
+          const monographIds: string[] = [];
 
           for (const graphId of slackIntegrationConfig.slackSchemaUpdateEventConfigs.map((i) => i.federatedGraphId)) {
             const graph = await fedGraphRepo.byId(graphId);
-
             if (!graph) {
               continue;
             }
@@ -1273,6 +1244,15 @@ export class OrganizationRepository {
                   case: 'monographSchemaUpdated',
                   value: {
                     graphIds: monographIds,
+                  },
+                },
+              },
+              {
+                eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+                meta: {
+                  case: 'proposalStateUpdated',
+                  value: {
+                    graphIds: slackIntegrationConfig.slackProposalStateUpdate.map((spsu) => spsu.federatedGraphId),
                   },
                 },
               },
@@ -1328,11 +1308,17 @@ export class OrganizationRepository {
             .execute();
 
           const graphIds: string[] = [];
+          const proposalGraphIds: string[] = [];
           for (const eventMeta of input.eventsMeta) {
             switch (eventMeta.meta.case) {
               case 'federatedGraphSchemaUpdated':
               case 'monographSchemaUpdated': {
                 graphIds.push(...eventMeta.meta.value.graphIds);
+                break;
+              }
+              case 'proposalStateUpdated': {
+                proposalGraphIds.push(...eventMeta.meta.value.graphIds);
+                break;
               }
             }
           }
@@ -1343,7 +1329,18 @@ export class OrganizationRepository {
               and(
                 eq(slackSchemaUpdateEventConfigs.slackIntegrationConfigId, slackIntegrationConfig[0].id),
                 graphIds.length > 0
-                  ? not(inArray(schema.slackSchemaUpdateEventConfigs.federatedGraphId, graphIds))
+                  ? not(inArray(slackSchemaUpdateEventConfigs.federatedGraphId, graphIds))
+                  : undefined,
+              ),
+            );
+
+          await tx
+            .delete(slackProposalStateUpdate)
+            .where(
+              and(
+                eq(slackProposalStateUpdate.slackIntegrationConfigId, slackIntegrationConfig[0].id),
+                proposalGraphIds.length > 0
+                  ? not(inArray(slackProposalStateUpdate.federatedGraphId, proposalGraphIds))
                   : undefined,
               ),
             );
@@ -1368,6 +1365,24 @@ export class OrganizationRepository {
                   .onConflictDoNothing()
                   .execute();
 
+                break;
+              }
+              case 'proposalStateUpdated': {
+                const ids = eventMeta.meta.value.graphIds;
+                if (ids.length === 0) {
+                  break;
+                }
+
+                await tx
+                  .insert(slackProposalStateUpdate)
+                  .values(
+                    ids.map((id) => ({
+                      slackIntegrationConfigId: slackIntegrationConfig[0].id,
+                      federatedGraphId: id,
+                    })),
+                  )
+                  .onConflictDoNothing()
+                  .execute();
                 break;
               }
             }
@@ -1406,6 +1421,7 @@ export class OrganizationRepository {
       'feature-flags': 0,
       'field-pruning-grace-period': 0,
       plugins: 0,
+      'persisted-operations': 3000,
       users: 25,
       requests: 30,
       // Boolean features
@@ -1421,6 +1437,7 @@ export class OrganizationRepository {
       'subgraph-check-extensions': false,
       support: false,
       'split-config-loading': false,
+      'login-method-restrictions': false,
     };
 
     for (const feature of features) {
@@ -1700,5 +1717,18 @@ export class OrganizationRepository {
         groupId: groups[0].groupId,
       }),
     };
+  }
+
+  async getOrganizationGraphTokenFeatures(organizationId: string): Promise<string[]> {
+    const features: string[] = [];
+
+    const orgFeatures = await this.getFeatures({ organizationId });
+    for (const feature of orgFeatures) {
+      if (feature.enabled && graphTokenFeatures.includes(feature.id)) {
+        features.push('split-config-loading');
+      }
+    }
+
+    return features;
   }
 }

@@ -399,7 +399,8 @@ const RoutersPage: NextPageWithLayout = () => {
     return <Loader fullscreen />;
   }
 
-  if (!data || error || data.response?.code !== EnumStatusCode.OK)
+  const hasStaleMetrics = data?.response?.code === EnumStatusCode.WARN_PARTIAL_DATA;
+  if (!data || error || (data.response?.code !== EnumStatusCode.OK && !hasStaleMetrics))
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
@@ -409,7 +410,7 @@ const RoutersPage: NextPageWithLayout = () => {
       />
     );
 
-  if (data?.routers?.length === 0) {
+  if (data?.routers?.length === 0 && !hasStaleMetrics) {
     return (
       <EmptyState
         icon={<CommandLineIcon />}
@@ -637,7 +638,16 @@ const RoutersPage: NextPageWithLayout = () => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={columns.length} className="h-24 text-center">
-                      <Loader />
+                      {hasStaleMetrics ? (
+                        <EmptyState
+                          icon={<ExclamationTriangleIcon />}
+                          title="Missing data"
+                          description={data?.response?.details || 'Analytics are not available at this moment'}
+                          actions={<Button onClick={() => refetch()}>Retry</Button>}
+                        />
+                      ) : (
+                        <Loader />
+                      )}
                     </TableCell>
                   </TableRow>
                 )}

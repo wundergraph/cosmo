@@ -958,7 +958,7 @@ func TestSingleFlight(t *testing.T) {
 			}
 		})
 	})
-	t.Run("response header set rule with singleflight followers", func(t *testing.T) {
+	t.Run("response header set rule with singleflight followers is internal only", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -985,8 +985,8 @@ func TestSingleFlight(t *testing.T) {
 			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employee(id: 1) { id } }`, 5)
 			for i, res := range responses {
 				require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
-				require.Equal(t, "test-value", res.Response.Header.Get("X-Custom-Header"),
-					"response %d missing X-Custom-Header", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Custom-Header"),
+					"response %d: set response headers should not be forwarded to the client", i)
 			}
 		})
 	})
@@ -1028,7 +1028,7 @@ func TestSingleFlight(t *testing.T) {
 			}
 		})
 	})
-	t.Run("multiple response set rules with singleflight followers", func(t *testing.T) {
+	t.Run("multiple response set rules with singleflight followers are internal only", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -1057,23 +1057,23 @@ func TestSingleFlight(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Verify single request works
+			// Verify single request works — set headers are internal only
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id } }`,
 			})
-			require.Equal(t, "value-a", res.Response.Header.Get("X-Header-A"), "single request should have X-Header-A")
-			require.Equal(t, "value-b", res.Response.Header.Get("X-Header-B"), "single request should have X-Header-B")
+			require.Equal(t, "", res.Response.Header.Get("X-Header-A"), "set response headers should not be forwarded to the client")
+			require.Equal(t, "", res.Response.Header.Get("X-Header-B"), "set response headers should not be forwarded to the client")
 
 			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employee(id: 1) { id } }`, 5)
 			for i, res := range responses {
-				require.Equal(t, "value-a", res.Response.Header.Get("X-Header-A"),
-					"response %d missing X-Header-A", i)
-				require.Equal(t, "value-b", res.Response.Header.Get("X-Header-B"),
-					"response %d missing X-Header-B", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Header-A"),
+					"response %d: set response headers should not be forwarded to the client", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Header-B"),
+					"response %d: set response headers should not be forwarded to the client", i)
 			}
 		})
 	})
-	t.Run("multi-subgraph response header propagation with singleflight", func(t *testing.T) {
+	t.Run("multi-subgraph response set with singleflight is internal only", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -1103,12 +1103,12 @@ func TestSingleFlight(t *testing.T) {
 			responses := runConcurrentSingleflightRequests(t, xEnv, query, 5)
 			for i, res := range responses {
 				require.Contains(t, res.Body, `"employee"`)
-				require.Equal(t, "multi-subgraph-value", res.Response.Header.Get("X-Custom-Header"),
-					"response %d missing X-Custom-Header from multi-subgraph query", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Custom-Header"),
+					"response %d: set response headers should not be forwarded to the client", i)
 			}
 		})
 	})
-	t.Run("subgraph-specific response header rule with singleflight", func(t *testing.T) {
+	t.Run("subgraph-specific response set rule with singleflight is internal only", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -1138,12 +1138,12 @@ func TestSingleFlight(t *testing.T) {
 			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employees { id } }`, 5)
 			for i, res := range responses {
 				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
-				require.Equal(t, "employees-value", res.Response.Header.Get("X-Subgraph-Header"),
-					"response %d missing subgraph-specific X-Subgraph-Header", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Subgraph-Header"),
+					"response %d: set response headers should not be forwarded to the client", i)
 			}
 		})
 	})
-	t.Run("mixed global and subgraph-specific response header rules with singleflight", func(t *testing.T) {
+	t.Run("mixed global and subgraph-specific response set rules with singleflight are internal only", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -1193,12 +1193,12 @@ func TestSingleFlight(t *testing.T) {
 			responses := runConcurrentSingleflightRequests(t, xEnv, query, 5)
 			for i, res := range responses {
 				require.Contains(t, res.Body, `"employee"`)
-				require.Equal(t, "global-value", res.Response.Header.Get("X-Global-Header"),
-					"response %d missing global X-Global-Header", i)
-				require.Equal(t, "employees-value", res.Response.Header.Get("X-Employees-Header"),
-					"response %d missing subgraph-specific X-Employees-Header", i)
-				require.Equal(t, "family-value", res.Response.Header.Get("X-Family-Header"),
-					"response %d missing subgraph-specific X-Family-Header", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Global-Header"),
+					"response %d: set response headers should not be forwarded to the client", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Employees-Header"),
+					"response %d: set response headers should not be forwarded to the client", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Family-Header"),
+					"response %d: set response headers should not be forwarded to the client", i)
 			}
 		})
 	})

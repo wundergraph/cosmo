@@ -1,12 +1,12 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetFieldUsageRequest, GetFieldUsageResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { DateRange } from '../../../types/index.js';
+import { PlainMessage, DateRange } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { UsageRepository } from '../../repositories/analytics/UsageRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function getFieldUsage(
@@ -57,6 +57,10 @@ export function getFieldUsage(
         clients: [],
         requestSeries: [],
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
     }
 
     let dr: DateRange | undefined;

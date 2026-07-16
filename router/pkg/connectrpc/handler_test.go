@@ -176,3 +176,117 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		}`, string(result))
 	})
 }
+
+// TestConvertGraphQLResponseToProtoJSON covers the response direction (GraphQL -> proto),
+// the inverse of convertProtoJSONToGraphQLVariables. The GraphQL subgraph emits bare enum
+// values (e.g. "HAPPY"), but the proto descriptor only knows the prefixed value names
+// (e.g. "MOOD_HAPPY"). Without re-adding the prefix, the Vanguard transcoder cannot map the
+// value and silently drops the enum field on the binary wire / falls back to *_UNSPECIFIED on
+// the JSON wire. Regression test for https://github.com/wundergraph/cosmo/issues/2924.
+func TestConvertGraphQLResponseToProtoJSON(t *testing.T) {
+	t.Parallel()
+
+	t.Run("re-adds proto enum prefix to response enum value", func(t *testing.T) {
+		t.Parallel()
+
+		handler := setupHandlerWithSchema(t)
+
+		// GetEmployeeResponse has fields { string name; Mood mood; } where Mood.MOOD_HAPPY = 1.
+		// The subgraph returns the bare GraphQL enum name "HAPPY".
+		graphqlJSON := []byte(`{"name": "John", "mood": "HAPPY"}`)
+		result, err := handler.convertGraphQLResponseToProtoJSON("test.EmployeeService", "GetEmployee", graphqlJSON)
+		require.NoError(t, err)
+
+		// The enum must be rewritten to the proto-prefixed value name so proto3-JSON parsing
+		// (done by the Vanguard transcoder) maps it to the correct integer instead of dropping it.
+		assert.JSONEq(t, `{
+			"name": "John",
+			"mood": "MOOD_HAPPY"
+		}`, string(result))
+	})
+
+	t.Run("maps null enum to the proto zero value (_UNSPECIFIED)", func(t *testing.T) {
+		t.Parallel()
+
+		handler := setupHandlerWithSchema(t)
+
+		// A nullable GraphQL enum that resolved to null must become the proto zero value,
+		// the inverse of the request path stripping *_UNSPECIFIED to "".
+		graphqlJSON := []byte(`{"name": "John", "mood": null}`)
+		result, err := handler.convertGraphQLResponseToProtoJSON("test.EmployeeService", "GetEmployee", graphqlJSON)
+		require.NoError(t, err)
+
+		assert.JSONEq(t, `{
+			"name": "John",
+			"mood": "MOOD_UNSPECIFIED"
+		}`, string(result))
+	})
+
+	t.Run("re-adds prefix to repeated enum values", func(t *testing.T) {
+		t.Parallel()
+
+		handler := setupHandlerWithSchema(t)
+
+		// GetDocumentResponse.moods is `repeated Mood`.
+		graphqlJSON := []byte(`{"name": "doc", "moods": ["HAPPY", "SAD"]}`)
+		result, err := handler.convertGraphQLResponseToProtoJSON("test.EmployeeService", "GetDocument", graphqlJSON)
+		require.NoError(t, err)
+
+		assert.JSONEq(t, `{
+			"name": "doc",
+			"moods": ["MOOD_HAPPY", "MOOD_SAD"]
+		}`, string(result))
+	})
+
+	t.Run("re-adds prefix to enum nested in a message", func(t *testing.T) {
+		t.Parallel()
+
+		handler := setupHandlerWithSchema(t)
+
+		// GetDocumentResponse.document is a nested Document message holding a DocumentStatus enum.
+		graphqlJSON := []byte(`{"document": {"title": "spec", "status": "archived"}}`)
+		result, err := handler.convertGraphQLResponseToProtoJSON("test.EmployeeService", "GetDocument", graphqlJSON)
+		require.NoError(t, err)
+
+		assert.JSONEq(t, `{
+			"document": {
+				"title": "spec",
+				"status": "DOCUMENT_STATUS_archived"
+			}
+		}`, string(result))
+	})
+
+	t.Run("preserves original case of the enum value segment", func(t *testing.T) {
+		t.Parallel()
+
+		handler := setupHandlerWithSchema(t)
+
+		// protographic keeps the value's original case: DOCUMENT_STATUS_active, NOT
+		// DOCUMENT_STATUS_ACTIVE. The descriptor-driven match must round-trip "active" exactly.
+		graphqlJSON := []byte(`{"document": {"status": "active"}}`)
+		result, err := handler.convertGraphQLResponseToProtoJSON("test.EmployeeService", "GetDocument", graphqlJSON)
+		require.NoError(t, err)
+
+		assert.JSONEq(t, `{
+			"document": {
+				"status": "DOCUMENT_STATUS_active"
+			}
+		}`, string(result))
+	})
+
+	t.Run("returns unknown enum value unchanged so the transcoder surfaces the error", func(t *testing.T) {
+		t.Parallel()
+
+		handler := setupHandlerWithSchema(t)
+
+		// A value with no matching proto enum is left as-is; the downstream proto3-JSON parse
+		// then rejects it rather than this layer silently substituting a wrong value.
+		graphqlJSON := []byte(`{"mood": "ECSTATIC"}`)
+		result, err := handler.convertGraphQLResponseToProtoJSON("test.EmployeeService", "GetEmployee", graphqlJSON)
+		require.NoError(t, err)
+
+		assert.JSONEq(t, `{
+			"mood": "ECSTATIC"
+		}`, string(result))
+	})
+}

@@ -26,3 +26,6 @@ go.work.sum
 
 # Serena
 .serena/
+
+# Claude Code
+.claude/worktrees/

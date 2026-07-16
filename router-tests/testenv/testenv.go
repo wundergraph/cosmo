@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"mime/multipart"
 	"net"
@@ -53,6 +52,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
@@ -173,6 +173,7 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	}
 	b.StartTimer()
 	f(b, env)
+	b.StopTimer()
 	if cfg.AssertCacheMetrics != nil {
 		assertCacheMetrics(b, env, cfg.AssertCacheMetrics.BaseGraphAssertions, "")
 
@@ -180,6 +181,7 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 			assertCacheMetrics(b, env, v, ff)
 		}
 	}
+	b.StartTimer()
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -288,14 +290,20 @@ type MetricOptions struct {
 	PrometheusEngineStatsOptions          EngineStatOptions
 	PrometheusSchemaFieldUsage            PrometheusSchemaFieldUsage
 	EnableOTLPConnectionMetrics           bool
+	EnableOTLPNetworkMetrics              bool
+	EnableOTLPResolverMetrics             bool
 	EnableOTLPCircuitBreakerMetrics       bool
 	EnableOTLPStreamMetrics               bool
 	EnablePrometheusConnectionMetrics     bool
+	EnablePrometheusNetworkMetrics        bool
+	EnablePrometheusResolverMetrics       bool
 	EnablePrometheusCircuitBreakerMetrics bool
 	EnablePrometheusStreamMetrics         bool
 	LogExporter                           MetricsLogExporterOptions
 	OTLPCostStats                         config.CostStats
 	PrometheusCostStats                   config.CostStats
+	OTLPExemplarFilter                    config.ExemplarFilter
+	PrometheusExemplarFilter              config.ExemplarFilter
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -322,13 +330,14 @@ type Config struct {
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
 	ModifySubgraphErrorPropagation     func(subgraphErrorPropagation *config.SubgraphErrorPropagationConfiguration)
+	ModifySubgraphExtensionPropagation func(subgraphExtensionPropagation *config.SubgraphExtensionPropagationConfiguration)
 	ModifyWebsocketConfiguration       func(websocketConfiguration *config.WebSocketConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
 	DemoMode                           bool
 	KafkaSeeds                         []string
 	DisableWebSockets                  bool
 	DisableParentBasedSampler          bool
-	TLSConfig                          *core.TlsConfig
+	TLSConfig                          config.TLSConfiguration
 	TraceExporter                      trace.SpanExporter
 	TracingSanitizeUTF8                *config.SanitizeUTF8Config
 	IPAnonymization                    *core.IPAnonymizationConfig
@@ -422,6 +431,10 @@ type SubgraphConfig struct {
 	// TLSConfig enables TLS on this subgraph server. When set, the subgraph uses StartTLS()
 	// instead of Start(). This is useful for testing mTLS between the router and subgraphs.
 	TLSConfig *tls.Config
+
+	// GRPCTLSConfig enables TLS on the gRPC subgraph server. When set, the gRPC server
+	// uses TLS credentials instead of plain connections.
+	GRPCTLSConfig *tls.Config
 }
 
 type LogObservationConfig struct {
@@ -630,7 +643,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor, cfg.Subgraphs.Projects.GRPCTLSConfig)
 	}
 
 	replacements := map[string]string{
@@ -706,7 +719,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			return &config.Config{}, nil
 		},
 		RouterFactory: func(ctx context.Context, res *core.RouterResources) (*core.Router, error) {
-			rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
+			rr, err := configureRouter(ctx, listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 			if err != nil {
 				cancel(err)
 				return nil, err
@@ -716,20 +729,15 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		},
 	})
 
-	if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
-
-		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
+	if cfg.TLSConfig.Server.Enabled {
+		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.CertFile, cfg.TLSConfig.Server.KeyFile)
 		require.NoError(t, err)
 
-		caCert, err := os.ReadFile(cfg.TLSConfig.CertFile)
-		if err != nil {
-			log.Fatal(err)
-		}
+		caCert, err := os.ReadFile(cfg.TLSConfig.Server.CertFile)
+		require.NoError(t, err)
 
 		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
-			t.Fatalf("could not append ca cert to pool")
-		}
+		require.True(t, caCertPool.AppendCertsFromPEM(caCert), "could not append ca cert to pool")
 
 		// Retain the default transport settings
 		httpClient := cleanhttp.DefaultPooledClient()
@@ -1073,7 +1081,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor, cfg.Subgraphs.Projects.GRPCTLSConfig)
 	}
 
 	replacements := map[string]string{
@@ -1141,26 +1149,21 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
-	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
+	rr, err := configureRouter(ctx, listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 	if err != nil {
 		cancel(err)
 		return nil, err
 	}
 
-	if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
-
-		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
+	if cfg.TLSConfig.Server.Enabled {
+		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.CertFile, cfg.TLSConfig.Server.KeyFile)
 		require.NoError(t, err)
 
-		caCert, err := os.ReadFile(cfg.TLSConfig.CertFile)
-		if err != nil {
-			log.Fatal(err)
-		}
+		caCert, err := os.ReadFile(cfg.TLSConfig.Server.CertFile)
+		require.NoError(t, err)
 
 		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
-			t.Fatalf("could not append ca cert to pool")
-		}
+		require.True(t, caCertPool.AppendCertsFromPEM(caCert), "could not append ca cert to pool")
 
 		// Retain the default transport settings
 		httpClient := cleanhttp.DefaultPooledClient()
@@ -1337,7 +1340,7 @@ func GenerateVersionedJwtToken() (string, error) {
 	return jwtToken.SignedString([]byte("hunter2"))
 }
 
-func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
+func configureRouter(ctx context.Context, listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{},
 		CDN: config.CDNConfiguration{
@@ -1379,6 +1382,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		EnableInboundRequestDeduplication: false,
 		EnableRequestTracing:              true,
 		EnableNormalizationCache:          true,
+		EnableDefer:                       true,
 		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
@@ -1410,6 +1414,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	if testConfig.ModifySubgraphErrorPropagation != nil {
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
+	}
+
+	if testConfig.ModifySubgraphExtensionPropagation != nil {
+		testConfig.ModifySubgraphExtensionPropagation(&cfg.SubgraphExtensionPropagation)
 	}
 
 	var natsEventSources []config.NatsEventSource
@@ -1491,6 +1499,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			OmitExtensions:        testConfig.BatchingConfig.OmitExtensions,
 		}),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
+		core.WithSubgraphExtensionPropagation(cfg.SubgraphExtensionPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),
@@ -1543,7 +1552,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			return nil, fmt.Errorf("RegistryURL must be a host-only OCI registry address (no http:// or https:// scheme), got %q", testConfig.Plugins.RegistryURL)
 		}
 		pluginsCfg.Registry = config.PluginRegistryConfiguration{
-			URL: testConfig.Plugins.RegistryURL,
+			URL:      testConfig.Plugins.RegistryURL,
+			Insecure: true,
 		}
 	}
 	routerOpts = append(routerOpts, core.WithPlugins(pluginsCfg))
@@ -1624,11 +1634,14 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 		prometheusConfig = rmetric.PrometheusConfig{
 			Enabled:         true,
+			ExemplarFilter:  rmetric.ExemplarFilter(testConfig.MetricOptions.PrometheusExemplarFilter),
 			ListenAddr:      fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
 			Path:            "/metrics",
 			TestRegistry:    testConfig.PrometheusRegistry,
 			GraphqlCache:    testConfig.MetricOptions.EnablePrometheusRouterCache,
 			ConnectionStats: testConfig.MetricOptions.EnablePrometheusConnectionMetrics,
+			NetworkStats:    testConfig.MetricOptions.EnablePrometheusNetworkMetrics,
+			ResolverStats:   testConfig.MetricOptions.EnablePrometheusResolverMetrics,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
@@ -1654,10 +1667,13 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				},
 				OTLP: config.MetricsOTLP{
 					Enabled:         true,
+					ExemplarFilter:  testConfig.MetricOptions.OTLPExemplarFilter,
 					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
 					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
 					Streams:         testConfig.MetricOptions.EnableOTLPStreamMetrics,
 					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
+					Network:         config.TelemetryCategory{Enabled: testConfig.MetricOptions.EnableOTLPNetworkMetrics},
+					Resolver:        config.TelemetryCategory{Enabled: testConfig.MetricOptions.EnableOTLPResolverMetrics},
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},
@@ -1737,7 +1753,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(wsConfig))
 		routerOpts = append(routerOpts, core.WithClientHeader(testConfig.ClientHeader))
 	}
-	return core.NewRouter(routerOpts...)
+	return core.NewRouter(ctx, routerOpts...)
 }
 
 func testTokenClaims() jwt.MapClaims {
@@ -1770,7 +1786,7 @@ func makeSubgraphTestServer(_ testing.TB, handler http.Handler, tlsConfig *tls.C
 	return s
 }
 
-func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any, interceptor grpc.UnaryServerInterceptor) (*grpc.Server, string) {
+func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any, interceptor grpc.UnaryServerInterceptor, tlsConfig *tls.Config) (*grpc.Server, string) {
 	t.Helper()
 
 	// We could use freeport here, but it is easy to use ephemeral port and get the endpoint
@@ -1784,6 +1800,9 @@ func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any, interce
 	var opts []grpc.ServerOption
 	if interceptor != nil {
 		opts = append(opts, grpc.ChainUnaryInterceptor(interceptor))
+	}
+	if tlsConfig != nil {
+		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)))
 	}
 
 	s := grpc.NewServer(opts...)
@@ -2411,10 +2430,21 @@ func (e *Environment) MakeGraphQLMultipartRequest(method string, body io.Reader)
 	return req
 }
 
+func (e *Environment) MakeGraphQLDeferRequest(method string, body io.Reader) *http.Request {
+	req, err := http.NewRequest(method, e.GraphQLRequestURL(), body)
+	require.NoError(e.t, err)
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "multipart/mixed")
+	req.Header.Set("Connection", "keep-alive")
+
+	return req
+}
+
 func (e *Environment) GraphQLWebSocketSubscriptionURL() string {
 	u, err := url.Parse(e.GraphQLRequestURL())
 	require.NoError(e.t, err)
-	u.Scheme = "ws"
+	u.Scheme = websocketScheme(u.Scheme)
 	return u.String()
 }
 
@@ -2423,8 +2453,31 @@ func (e *Environment) AbsintheSubscriptionURL() string {
 	require.NoError(e.t, err)
 	u, err := url.Parse(joined)
 	require.NoError(e.t, err)
-	u.Scheme = "ws"
+	u.Scheme = websocketScheme(u.Scheme)
 	return u.String()
+}
+
+// websocketScheme maps the router's HTTP scheme to the matching WebSocket
+// scheme so that a TLS-enabled router (https) is dialed over wss.
+func websocketScheme(httpScheme string) string {
+	if httpScheme == "https" {
+		return "wss"
+	}
+	return "ws"
+}
+
+// websocketTLSClientConfig returns a tls.Config trusting the router's test
+// certificate when TLS is enabled, or nil otherwise. It lets the WebSocket
+// dialers reach a wss endpoint using the self-signed testdata certs.
+func (e *Environment) websocketTLSClientConfig() *tls.Config {
+	if !e.cfg.TLSConfig.Server.Enabled {
+		return nil
+	}
+	caCert, err := os.ReadFile(e.cfg.TLSConfig.Server.CertFile)
+	require.NoError(e.t, err)
+	caCertPool := x509.NewCertPool()
+	require.True(e.t, caCertPool.AppendCertsFromPEM(caCert), "could not append ca cert to pool")
+	return &tls.Config{RootCAs: caCertPool}
 }
 
 func (e *Environment) GraphQLServeSentEventsURL() string {
@@ -2441,8 +2494,9 @@ type WebSocketMessage struct {
 }
 
 type GraphQLResponse struct {
-	Data   json.RawMessage `json:"data,omitempty"`
-	Errors []GraphQLError  `json:"errors,omitempty"`
+	Data       json.RawMessage `json:"data,omitempty"`
+	Errors     []GraphQLError  `json:"errors,omitempty"`
+	Extensions json.RawMessage `json:"extensions,omitempty"`
 }
 
 type GraphQLErrorExtensions struct {
@@ -2462,7 +2516,8 @@ const maxSocketRetries = 5
 
 func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header, query url.Values) (*websocket.Conn, *http.Response, error) {
 	dialer := websocket.Dialer{
-		Subprotocols: []string{"graphql-transport-ws"},
+		Subprotocols:    []string{"graphql-transport-ws"},
+		TLSClientConfig: e.websocketTLSClientConfig(),
 	}
 
 	waitBetweenRetriesInMs := rand.Intn(10)
@@ -2593,6 +2648,7 @@ func (e *Environment) ReadSSE(ctx context.Context, body io.ReadCloser, handler f
 func (e *Environment) AbsintheWebsocketDialWithRetry(header http.Header) (*websocket.Conn, *http.Response, error) {
 	dialer := websocket.Dialer{
 		// Subprotocols: []string{"absinthe"}, explicitly removed as this needs to be added by the absinthe handler
+		TLSClientConfig: e.websocketTLSClientConfig(),
 	}
 
 	waitBetweenRetriesInMs := rand.Intn(10)
@@ -2906,6 +2962,15 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 		}
 		e.t.Fatalf("timed out waiting for trigger count, got %d, want at least %d", got, desiredCount)
 	}
+}
+
+// RequireTriggerCount asserts that the current trigger count equals desiredCount exactly.
+// Call this after WaitForSubscriptionCount has confirmed all subscriptions are active;
+// trigger creation is synchronous with subscription registration so no additional waiting is needed.
+func (e *Environment) RequireTriggerCount(desiredCount uint64) {
+	e.t.Helper()
+	report := e.syncReporter().GetReport()
+	require.Equal(e.t, desiredCount, report.Triggers, "expected exactly %d triggers, got %d", desiredCount, report.Triggers)
 }
 
 // NATSPublishUntilMinMessagesSent publishes a NATS message repeatedly until the

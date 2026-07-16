@@ -7,6 +7,7 @@
  * classes, and custom Error/Warning instances are reconstructed outside the
  * worker when needed.
  */
+import type { JsonValue } from '@bufbuild/protobuf';
 import type {
   CompositionOptions,
   FieldConfiguration,
@@ -44,7 +45,7 @@ export interface SerializedComposedGraphArtifact {
   shouldIncludeClientSchema: boolean;
   fieldConfigurations: FieldConfiguration[];
   subgraphs: SerializedComposedSubgraph[];
-  routerExecutionConfigJson?: ReturnType<RouterConfig['toJson']>;
+  routerExecutionConfigJson?: JsonValue;
 }
 
 export interface SerializedContractCompositionArtifact {
@@ -65,6 +66,10 @@ export interface ComposeGraphsTaskInput {
   tagOptionsByContractName: SerializedContractTagOptions[];
   compositionOptions?: CompositionOptions;
   skipRouterConfig?: boolean;
+  trace?: {
+    sentryTrace: string | undefined;
+    baggage: string | undefined;
+  };
 }
 
 export interface ComposeGraphsTaskResultItem {

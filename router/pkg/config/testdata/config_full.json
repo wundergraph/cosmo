@@ -62,6 +62,12 @@
         "RouterRuntime": true,
         "GraphqlCache": true,
         "ConnectionStats": true,
+        "Network": {
+          "Enabled": true
+        },
+        "Resolver": {
+          "Enabled": true
+        },
         "EngineStats": {
           "Subscriptions": true
         },
@@ -90,7 +96,8 @@
             "server\\.uptime"
           ],
           "IncludeMetrics": null
-        }
+        },
+        "ExemplarFilter": "trace_based"
       },
       "Prometheus": {
         "Enabled": true,
@@ -98,6 +105,12 @@
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": true,
         "ConnectionStats": true,
+        "Network": {
+          "Enabled": true
+        },
+        "Resolver": {
+          "Enabled": true
+        },
         "Streams": false,
         "EngineStats": {
           "Subscriptions": true
@@ -119,10 +132,43 @@
             "Interval": 2000000000,
             "ExportTimeout": 10000000000
           }
-        }
+        },
+        "ExemplarFilter": "trace_based"
       },
       "CardinalityLimit": 2000
     }
+  },
+  "Pyroscope": {
+    "Enabled": true,
+    "ServerAddress": "https://profiles-prod-001.grafana.net",
+    "ApplicationName": "cosmo-router",
+    "BasicAuth": {
+      "Username": "123456",
+      "Password": "my-access-token"
+    },
+    "Headers": {
+      "X-Custom-Header": "value"
+    },
+    "Tags": {
+      "env": "prod"
+    },
+    "UploadRate": 15000000000,
+    "ProfileTypes": [
+      "cpu",
+      "alloc_objects",
+      "alloc_space",
+      "inuse_objects",
+      "inuse_space",
+      "goroutines",
+      "mutex_count",
+      "mutex_duration",
+      "block_count",
+      "block_duration",
+      "goroutine_leak"
+    ],
+    "DisableGCRuns": false,
+    "MutexProfileFraction": 5,
+    "BlockProfileRate": 5
   },
   "GraphqlMetrics": {
     "Enabled": true,
@@ -178,6 +224,24 @@
           "KeyFile": "/path/to/products-client.key",
           "CaFile": "/path/to/products-ca.crt",
           "InsecureSkipCaVerification": false
+        }
+      }
+    },
+    "ClientGRPC": {
+      "All": {
+        "CertFile": "/path/to/grpc-client.crt",
+        "KeyFile": "/path/to/grpc-client.key",
+        "CaFile": "/path/to/grpc-ca.crt",
+        "InsecureSkipCaVerification": false,
+        "Enabled": true
+      },
+      "Subgraphs": {
+        "my-grpc-subgraph": {
+          "CertFile": "/path/to/my-grpc-subgraph-client.crt",
+          "KeyFile": "/path/to/my-grpc-subgraph-client.key",
+          "CaFile": "/path/to/my-grpc-subgraph-ca.crt",
+          "InsecureSkipCaVerification": false,
+          "Enabled": true
         }
       }
     }
@@ -257,7 +321,8 @@
           "Name": "",
           "Value": "",
           "Expression": "",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
         },
         {
           "Operation": "propagate",
@@ -269,7 +334,8 @@
           "Name": "",
           "Value": "",
           "Expression": "",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
         },
         {
           "Operation": "propagate",
@@ -281,7 +347,8 @@
           "Name": "",
           "Value": "",
           "Expression": "",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
         },
         {
           "Operation": "set",
@@ -293,7 +360,8 @@
           "Name": "X-API-Key",
           "Value": "some-secret",
           "Expression": "",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
         },
         {
           "Operation": "set",
@@ -310,7 +378,8 @@
             "ContextField": "operation_name",
             "ResponseHeader": "",
             "Expression": ""
-          }
+          },
+          "FromFile": null
         },
         {
           "Operation": "set",
@@ -322,7 +391,24 @@
           "Name": "x-expression-header",
           "Value": "",
           "Expression": "request.header.Get('X-Operation-Name')",
-          "ValueFrom": null
+          "ValueFrom": null,
+          "FromFile": null
+        },
+        {
+          "Operation": "set",
+          "Matching": "",
+          "NegateMatch": false,
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "x-from-file-header",
+          "Value": "",
+          "Expression": "",
+          "ValueFrom": null,
+          "FromFile": {
+            "Path": "/etc/secrets/api-key",
+            "RefreshInterval": 60000000000
+          }
         }
       ],
       "Response": [
@@ -352,7 +438,8 @@
             "Name": "",
             "Value": "",
             "Expression": "",
-            "ValueFrom": null
+            "ValueFrom": null,
+            "FromFile": null
           }
         ],
         "Response": [
@@ -641,7 +728,8 @@
   },
   "Authorization": {
     "RequireAuthentication": false,
-    "RejectOperationIfUnauthorized": false
+    "RejectOperationIfUnauthorized": false,
+    "EnablePreFetchFieldAuthorization": false
   },
   "RateLimit": {
     "Enabled": true,
@@ -757,6 +845,7 @@
     },
     "Workers": 8,
     "ItemsPerSecond": 50,
+    "ItemDelay": 0,
     "Timeout": 30000000000,
     "InMemoryFallback": true
   },
@@ -827,7 +916,8 @@
       "Mode": "enforce",
       "MaxEstimatedLimit": 1000,
       "EstimatedListSize": 10,
-      "ExposeHeaders": false
+      "ExposeHeaders": false,
+      "IgnoreImplementingTypeWeights": false
     },
     "DepthLimit": null,
     "ParserLimits": {
@@ -854,13 +944,15 @@
       "EnableNormalizationCacheResponseHeader": false,
       "EnableCacheResponseHeaders": false,
       "AlwaysIncludeQueryPlan": false,
-      "AlwaysSkipLoader": false
+      "AlwaysSkipLoader": false,
+      "SynchronousCacheWrites": false
     },
     "EnableSingleFlight": true,
     "ForceEnableSingleFlight": false,
     "EnableInboundRequestDeduplication": true,
     "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
+    "ForceUnauthenticatedRequestTracing": false,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 32,
     "EnableNetPoll": true,
@@ -881,6 +973,7 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "EnableDefer": false,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,
@@ -891,7 +984,15 @@
     "WebSocketClientPingTimeout": 30000000000,
     "WebSocketClientAckTimeout": 30000000000,
     "ValidateRequiredExternalFields": false,
-    "RelaxSubgraphOperationFieldSelectionMergingNullability": false
+    "RelaxSubgraphOperationFieldSelectionMergingNullability": false,
+    "ValidateInlineArguments": {
+      "Mode": "off",
+      "EnforceHTTPStatusCode": 400,
+      "ErrorCode": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
+      "ErrorMessage": "Inline argument values are not allowed. Use variables instead.",
+      "IncludePersistedOperations": false,
+      "ReturnInResponseExtensions": false
+    }
   },
   "WebSocket": {
     "Enabled": true,
@@ -949,6 +1050,14 @@
     ],
     "AllowedFields": null
   },
+  "SubgraphExtensionPropagation": {
+    "Enabled": true,
+    "AllowedExtensionFields": [
+      "rateLimit",
+      "auth"
+    ],
+    "Algorithm": "last_write"
+  },
   "StorageProviders": {
     "S3": [
       {
@@ -993,6 +1102,13 @@
       "Enabled": false,
       "ProviderID": "",
       "ObjectPath": ""
+    },
+    "Manifest": {
+      "Path": "",
+      "SkipMissingFeatureFlags": false,
+      "IgnoredFeatureFlags": null,
+      "Watch": false,
+      "WatchInterval": 1000000000
     }
   },
   "SplitConfigPoller": {
@@ -1072,6 +1188,9 @@
     },
     "SubrequestHTTPError": {
       "Enabled": false
+    },
+    "SkipNullVariablesError": {
+      "Enabled": false
     }
   },
   "ClientHeader": {
@@ -1082,7 +1201,8 @@
     "Enabled": true,
     "Path": "some/path/to/plugins",
     "Registry": {
-      "URL": "cosmo-registry.wundergraph.com"
+      "URL": "cosmo-registry.wundergraph.com",
+      "Insecure": false
     }
   },
   "WatchConfig": {

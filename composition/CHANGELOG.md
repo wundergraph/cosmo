@@ -4,6 +4,67 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.63.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.63.0...@wundergraph/composition@0.63.1) (2026-07-14)
+
+### Bug Fixes
+
+* **composition:** change how interface field selections are validated… ([#3027](https://github.com/wundergraph/cosmo/issues/3027)) ([0b32412](https://github.com/wundergraph/cosmo/commit/0b324123adc6007136b74b528be29b6bc0f913ca)) (@Aenimus)
+
+# [0.63.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.62.2...@wundergraph/composition@0.63.0) (2026-07-02)
+
+### Features
+
+* **composition:** support [@provides](https://github.com/provides) on fields returning a Union type ([#3026](https://github.com/wundergraph/cosmo/issues/3026)) ([8fd5a7c](https://github.com/wundergraph/cosmo/commit/8fd5a7c3dba68178ad2704d84e7ec6d9e1ae35c4)) (@Aenimus)
+
+## [0.62.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.62.0...@wundergraph/composition@0.62.2) (2026-06-26)
+
+### Bug Fixes
+
+* patch bump published npm packages ([#3021](https://github.com/wundergraph/cosmo/issues/3021)) ([f144989](https://github.com/wundergraph/cosmo/commit/f144989f69d58983fea7f74077c1a393395b1a4c)) (@gmas)
+
+# [0.62.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.61.0...@wundergraph/composition@0.62.0) (2026-06-25)
+
+### Features
+
+* **composition:** support in/exclude contract tags simultaneously ([#3016](https://github.com/wundergraph/cosmo/issues/3016)) ([c132b32](https://github.com/wundergraph/cosmo/commit/c132b32192db217ca058b5f50f1b8c56613af63e)) (@Aenimus)
+
+# [0.61.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.60.0...@wundergraph/composition@0.61.0) (2026-06-23)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cachePopulate directive (3/5) ([#2984](https://github.com/wundergraph/cosmo/issues/2984)) ([a8cc2af](https://github.com/wundergraph/cosmo/commit/a8cc2afa7767c35b71ac4ebd18e2a9e1cc381a66)) (@SkArchon)
+
+# [0.60.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.59.2...@wundergraph/composition@0.60.0) (2026-06-22)
+
+### Features
+
+* **composition:** [@openfed](https://github.com/openfed)__cacheInvalidate directive (2/5) ([#2983](https://github.com/wundergraph/cosmo/issues/2983)) ([19bbbe5](https://github.com/wundergraph/cosmo/commit/19bbbe5659011ef4536fe43edbb1ae313bda91e3)) (@SkArchon)
+* **composition:** [@openfed](https://github.com/openfed)__entityCache directive (1/5) ([#2980](https://github.com/wundergraph/cosmo/issues/2980)) ([2075164](https://github.com/wundergraph/cosmo/commit/2075164f18ee0cf953effdef2a031c59b3e8d112)) (@SkArchon)
+
+## [0.59.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.59.1...@wundergraph/composition@0.59.2) (2026-06-19)
+
+### Bug Fixes
+
+* **composition:** composed directive versions should not override dir… ([#2992](https://github.com/wundergraph/cosmo/issues/2992)) ([6cb341b](https://github.com/wundergraph/cosmo/commit/6cb341bd2bb5f687fa462627b4e5cb623a73b89a)) (@Aenimus)
+
+## [0.59.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.59.0...@wundergraph/composition@0.59.1) (2026-06-18)
+
+### Bug Fixes
+
+* **composition:** propagate composed directives regardless of subgrap… ([#2981](https://github.com/wundergraph/cosmo/issues/2981)) ([04f5d0a](https://github.com/wundergraph/cosmo/commit/04f5d0a51013e1bee181ae5fc07b5e92dd78ce36)) (@Aenimus)
+
+# [0.59.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.58.4...@wundergraph/composition@0.59.0) (2026-05-18)
+
+### Features
+
+* support dot-path in slicingArguments ([#2801](https://github.com/wundergraph/cosmo/issues/2801)) ([aec1738](https://github.com/wundergraph/cosmo/commit/aec1738c071e028893239b6c4f9bf492cf175f36)) (@ysmolski)
+
+## [0.58.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.58.3...@wundergraph/composition@0.58.4) (2026-05-14)
+
+### Bug Fixes
+
+* **composition:** apply subscription filters on union and interface return types ([#2797](https://github.com/wundergraph/cosmo/issues/2797)) ([4c91d4f](https://github.com/wundergraph/cosmo/commit/4c91d4fd7420b19b2e9aa0dd382ba7e1c95b85a3)) (@jensneuse)
+
 ## [0.58.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.58.2...@wundergraph/composition@0.58.3) (2026-05-07)
 
 **Note:** Version bump only for package @wundergraph/composition

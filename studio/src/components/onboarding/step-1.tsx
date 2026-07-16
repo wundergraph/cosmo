@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { usePostHog } from 'posthog-js/react';
 import { OnboardingContainer } from './onboarding-container';
@@ -8,32 +8,65 @@ import { createOnboarding } from '@wundergraph/cosmo-connect/dist/platform/v1/pl
 import { useRouter } from 'next/router';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { useToast } from '../ui/use-toast';
-import { SubmitHandler, useZodForm } from '@/hooks/use-form';
 import { captureOnboardingEvent } from '@/lib/track';
-import { Controller } from 'react-hook-form';
-import { z } from 'zod';
-import { Form } from '../ui/form';
-import { Checkbox } from '../ui/checkbox';
 import { TrafficAnimation } from './traffic-animation';
+import { useAnimate } from 'framer-motion';
+import { useResolvedTheme } from '@/hooks/use-resolved-theme';
 
-const onboardingSchema = z.object({
-  channels: z.object({
-    slack: z.boolean(),
-    email: z.boolean(),
-  }),
-});
+type PulseState = { key: string | null; tick: number };
 
-type OnboardingFormValues = z.infer<typeof onboardingSchema>;
+function WhyListItem({
+  title,
+  text,
+  itemKey,
+  pulse,
+}: {
+  title: string;
+  text: string;
+  itemKey: string;
+  pulse: PulseState;
+}) {
+  const [scope, animate] = useAnimate();
 
-const WhyListItem = ({ title, text }: { title: string; text: string }) => (
-  <li className="flex gap-2">
-    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-muted-foreground/60" />
-    <div className="flex flex-col">
-      <span className="text-sm font-medium">{title}</span>
-      <span className="text-sm text-muted-foreground">{text}</span>
-    </div>
-  </li>
-);
+  const colors = useMemo(() => {
+    if (typeof document === 'undefined') {
+      return { primary: '', mutedFg: '', fg: '' };
+    }
+
+    const cs = getComputedStyle(document.documentElement);
+    return {
+      primary: `hsl(${cs.getPropertyValue('--primary').trim()})`,
+      mutedFg: `hsl(${cs.getPropertyValue('--muted-foreground').trim()} / 0.6)`,
+      fg: `hsl(${cs.getPropertyValue('--foreground').trim()})`,
+    };
+  }, []);
+
+  useEffect(() => {
+    if (pulse.key !== itemKey || pulse.tick === 0) return;
+
+    animate(
+      '[data-pulse-dot]',
+      {
+        scale: [1.8, 1],
+        backgroundColor: [colors.primary, colors.mutedFg],
+      },
+      { duration: 0.9, ease: 'easeOut' },
+    );
+    animate('[data-pulse-title]', { color: [colors.primary, colors.fg] }, { duration: 0.9, ease: 'easeOut' });
+  }, [pulse.tick, pulse.key, itemKey, colors, animate]);
+
+  return (
+    <li ref={scope} className="flex gap-2">
+      <span data-pulse-dot className="mt-2 size-1.5 shrink-0 rounded-full bg-muted-foreground/60" />
+      <div className="flex flex-col">
+        <span data-pulse-title className="text-sm font-medium">
+          {title}
+        </span>
+        <span className="text-sm text-muted-foreground">{text}</span>
+      </div>
+    </li>
+  );
+}
 
 const normalizeReferrer = (referrer: string | string[]): string => {
   if (Array.isArray(referrer)) {
@@ -47,20 +80,14 @@ export const Step1 = () => {
   const router = useRouter();
   const posthog = usePostHog();
   const { toast } = useToast();
-  const { setStep, setSkipped, setOnboarding, onboarding, initialized, setInitialized } = useOnboarding();
+  const { setStep, setSkipped, setOnboarding, initialized, setInitialized } = useOnboarding();
+  const [pulse, setPulse] = useState<PulseState>({ key: null, tick: 0 });
   // Referrer can be `wgc` when onboarding is opened via `wgc demo` command
   const referrer = normalizeReferrer(router.query.referrer || document?.referrer);
 
-  const form = useZodForm<OnboardingFormValues>({
-    mode: 'onChange',
-    schema: onboardingSchema,
-    defaultValues: {
-      channels: {
-        slack: onboarding?.slack ?? true,
-        email: onboarding?.email ?? false,
-      },
-    },
-  });
+  function handleLabelClick(key: string) {
+    setPulse((p) => ({ key, tick: p.tick + 1 }));
+  }
 
   const { mutate, isPending } = useMutation(createOnboarding, {
     onSuccess: (d) => {
@@ -81,20 +108,14 @@ export const Step1 = () => {
         return;
       }
 
-      const formValues = form.getValues();
       setOnboarding({
         federatedGraphsCount: d.federatedGraphsCount,
         finishedAt: d.finishedAt ? new Date(d.finishedAt) : undefined,
-        slack: formValues.channels.slack,
-        email: formValues.channels.email,
       });
       captureOnboardingEvent(posthog, {
         name: 'onboarding_step_completed',
         options: {
           step_name: 'welcome',
-          channel: (Object.keys(formValues.channels) as Array<keyof typeof formValues.channels>).filter(
-            (key) => formValues.channels[key],
-          ),
         },
       });
       router.push('/onboarding/2');
@@ -115,10 +136,6 @@ export const Step1 = () => {
       });
     },
   });
-
-  const onSubmit: SubmitHandler<OnboardingFormValues> = (data) => {
-    mutate(data.channels);
-  };
 
   useEffect(() => {
     setStep(1);
@@ -144,73 +161,60 @@ export const Step1 = () => {
       <div className="flex w-full flex-col gap-8 text-left">
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            In ~<span className="font-medium text-foreground">3 minutes</span> you will have a federated GraphQL graph
-            running locally and serving live traffic into Cosmo Cloud platform.
+            In ~<span className="font-medium text-foreground">3 minutes</span> you&apos;ll have Cosmo GraphQL federation
+            up and running.
           </p>
         </div>
 
-        <TrafficAnimation />
+        <TrafficAnimation onLabelClick={handleLabelClick} />
 
         <div className="space-y-3">
-          <p className="text-sm font-semibold">What you will do</p>
+          <p className="text-sm font-semibold">What you&apos;ll get:</p>
           <ul className="flex flex-col gap-3">
             <WhyListItem
-              title="Create your first graph"
+              itemKey="composed-graph"
+              title="Composed federated graph"
               text="See how the products and reviews subgraphs compose into one supergraph, giving your client a single endpoint to resolve the data it needs."
+              pulse={pulse}
             />
             <WhyListItem
-              title="Run your services"
+              itemKey="router"
+              title="Connected Cosmo router"
               text="Run the same router stack you would run in production, locally."
+              pulse={pulse}
             />
-            <WhyListItem title="Send a query" text="Watch real request metrics flow through the router." />
+            <WhyListItem
+              itemKey="live-metrics"
+              title="Live metrics"
+              text="Watch real request metrics flow through the router."
+              pulse={pulse}
+            />
           </ul>
         </div>
+      </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="w-full" aria-busy={isPending}>
-            <div className="rounded-md border border-dashed p-4">
-              <p className="text-sm font-medium">If you get stuck, how can we reach you?</p>
-              <div className="mt-3 flex flex-col gap-3">
-                <Controller
-                  control={form.control}
-                  name="channels.slack"
-                  render={({ field }) => (
-                    <label className="flex items-start gap-3">
-                      <Checkbox
-                        checked={field.value}
-                        disabled={isPending}
-                        onCheckedChange={(checked) => field.onChange(checked === true)}
-                      />
-                      <div className="flex flex-col gap-y-1">
-                        <span className="text-sm font-medium leading-none">Slack</span>
-                        <span className="text-[0.8rem] text-muted-foreground">
-                          We automatically create a Slack channel for you.
-                        </span>
-                      </div>
-                    </label>
-                  )}
-                />
-                <Controller
-                  control={form.control}
-                  name="channels.email"
-                  render={({ field }) => (
-                    <label className="flex items-start gap-3">
-                      <Checkbox
-                        checked={field.value}
-                        disabled={isPending}
-                        onCheckedChange={(checked) => field.onChange(checked === true)}
-                      />
-                      <div className="flex flex-col gap-y-1">
-                        <span className="text-sm font-medium leading-none">Email</span>
-                        <span className="text-[0.8rem] text-muted-foreground">Receive updates via email.</span>
-                      </div>
-                    </label>
-                  )}
-                />
-              </div>
-            </div>
-          </form>
-        </Form>
+      <div className="mt-2 self-start pl-4">
+        <p className="text-xs text-muted-foreground">
+          <em>Note:</em>&nbsp;
+          <a
+            href="https://nodejs.org/en/download/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-primary hover:underline"
+          >
+            NodeJS LTS
+          </a>{' '}
+          and{' '}
+          <a
+            href="https://docs.docker.com/get-started/get-docker/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-primary hover:underline"
+          >
+            Docker
+          </a>{' '}
+          are required in the next step.
+        </p>
       </div>
 
       <OnboardingNavigation
@@ -223,9 +227,11 @@ export const Step1 = () => {
           });
           setSkipped();
         }}
-        forwardLabel="Start the tour"
+        className="pt-4"
+        forwardLabel="Start"
+        jiggleForward={pulse.tick}
         forward={{
-          onClick: form.handleSubmit(onSubmit),
+          onClick: () => mutate({}),
           isLoading: isPending,
         }}
       />

@@ -1,11 +1,13 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { fromJson } from '@bufbuild/protobuf';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import {
   WorkspaceNamespace,
-  WorkspaceFederatedGraph,
-  WorkspaceSubgraph,
+  WorkspaceNamespaceSchema,
+  WorkspaceFederatedGraphSchema,
+  WorkspaceSubgraphSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, eq, inArray, SQL } from 'drizzle-orm';
+import { PlainMessage } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
 import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
@@ -34,7 +36,7 @@ export class WorkspaceService {
     // Step 2 - Initialize the response model and sort the namespaces alphabetically
     const result = namespaces
       .map((ns) =>
-        WorkspaceNamespace.fromJson({
+        fromJson(WorkspaceNamespaceSchema, {
           id: ns.id,
           name: ns.name,
           graphs: [],
@@ -42,14 +44,17 @@ export class WorkspaceService {
       )
       .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
-    // Step 2 - Retrieve all the federated graphs the actor has access to, based on the namespaces
+    // Step 3 - Retrieve all the federated graphs the actor has access to, based on the namespaces
     const federatedGraphs = await this.fetchFederatedGraphs(result);
     if (federatedGraphs === 0) {
       return result;
     }
 
-    // Step 3 - Retrieve all the subgraphs the actor has access to, based on the federated graphs
+    // Step 4 - Retrieve all the subgraphs the actor has access to, based on the federated graphs
     await this.fetchSubgraphsForFederatedGraphs(result);
+
+    // Step 5 - Retrieve all the feature subgraphs the actor has access to, based on the namespaces
+    await this.fetchFeatureSubgraphs(result);
 
     return result;
   }
@@ -102,7 +107,7 @@ export class WorkspaceService {
       numberOfFetchedGraphs += namespaceGraphs.length;
       namespace.graphs = namespaceGraphs
         .map((graph) =>
-          WorkspaceFederatedGraph.fromJson({
+          fromJson(WorkspaceFederatedGraphSchema, {
             id: graph.id,
             targetId: graph.targetId,
             name: graph.name,
@@ -120,6 +125,7 @@ export class WorkspaceService {
     const conditions: (SQL<unknown> | undefined)[] = [
       eq(schema.targets.organizationId, this.organizationId),
       eq(schema.targets.type, 'subgraph'),
+      eq(schema.subgraphs.isFeatureSubgraph, false),
       inArray(
         schema.subgraphsToFederatedGraph.federatedGraphId,
         namespaces.flatMap((ns) => ns.graphs.map((graph) => graph.id)),
@@ -130,12 +136,13 @@ export class WorkspaceService {
       return;
     }
 
-    const a = await this.db
+    const targetSubgraphs = await this.db
       .selectDistinct({
         id: schema.subgraphs.id,
         targetId: schema.targets.id,
         federatedGraphId: schema.subgraphsToFederatedGraph.federatedGraphId,
         name: schema.targets.name,
+        isFeatureSubgraph: schema.subgraphs.isFeatureSubgraph,
       })
       .from(schema.targets)
       .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
@@ -145,20 +152,70 @@ export class WorkspaceService {
 
     const federatedGraphs = namespaces.flatMap((ns) => ns.graphs);
     for (const graph of federatedGraphs) {
-      const subgraphs = a.filter((sg) => sg.federatedGraphId === graph.id);
+      const subgraphs = targetSubgraphs.filter((sg) => sg.federatedGraphId === graph.id);
       if (subgraphs.length === 0) {
         continue;
       }
 
       graph.subgraphs = subgraphs
         .map((sg) =>
-          WorkspaceSubgraph.fromJson({
+          fromJson(WorkspaceSubgraphSchema, {
             id: sg.id,
             targetId: sg.targetId,
             name: sg.name,
           }),
         )
         .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+    }
+  }
+
+  private async fetchFeatureSubgraphs(namespaces: PlainMessage<WorkspaceNamespace>[]): Promise<void> {
+    if (namespaces.length === 0) {
+      return;
+    }
+
+    const conditions: (SQL<unknown> | undefined)[] = [
+      eq(schema.targets.type, 'subgraph'),
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.subgraphs.isFeatureSubgraph, true),
+      inArray(
+        schema.targets.namespaceId,
+        namespaces.map((ns) => ns.id),
+      ),
+    ];
+
+    if (!SubgraphRepository.applyRbacConditionsToQuery(this.rbac, conditions)) {
+      return;
+    }
+
+    const featureSubgraphs = await this.db
+      .select({
+        id: schema.subgraphs.id,
+        targetId: schema.targets.id,
+        name: schema.targets.name,
+        namespaceId: schema.targets.namespaceId,
+        baseSubgraphId: schema.featureSubgraphsToBaseSubgraphs.baseSubgraphId,
+      })
+      .from(schema.targets)
+      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      .innerJoin(
+        schema.featureSubgraphsToBaseSubgraphs,
+        eq(schema.featureSubgraphsToBaseSubgraphs.featureSubgraphId, schema.subgraphs.id),
+      )
+      .where(and(...conditions))
+      .execute();
+
+    for (const namespace of namespaces) {
+      namespace.featureSubgraphs = featureSubgraphs
+        .filter((fsg) => fsg.namespaceId === namespace.id)
+        .map((fsg) =>
+          fromJson(WorkspaceSubgraphSchema, {
+            id: fsg.id,
+            targetId: fsg.targetId,
+            name: fsg.name,
+            baseSubgraphId: fsg.baseSubgraphId,
+          }),
+        );
     }
   }
 }

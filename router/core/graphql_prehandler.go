@@ -25,6 +25,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
+
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/pkg/art"
@@ -56,6 +57,7 @@ type PreHandlerOptions struct {
 	FileUploadEnabled                      bool
 	TraceExportVariables                   bool
 	DevelopmentMode                        bool
+	ForceUnauthenticatedRequestTracing     bool
 	EnableRequestTracing                   bool
 	AlwaysIncludeQueryPlan                 bool
 	AlwaysSkipLoader                       bool
@@ -76,6 +78,9 @@ type PreHandlerOptions struct {
 	ForceEnableInboundRequestDeduplication bool
 	HeaderPropagation                      *HeaderPropagation
 	SpanNameFormatter                      SpanNameFormatterFunc
+
+	// WaitForCacheWrites is set when Debug.SynchronousCacheWrites is enabled; it blocks until pending async operation-cache writes are applied.
+	WaitForCacheWrites func()
 }
 
 type PreHandler struct {
@@ -88,6 +93,7 @@ type PreHandler struct {
 	operationBlocker                       *OperationBlocker
 	headerPropagation                      *HeaderPropagation
 	developmentMode                        bool
+	forceUnauthenticatedRequestTracing     bool
 	alwaysIncludeQueryPlan                 bool
 	alwaysSkipLoader                       bool
 	queryPlansEnabled                      bool // queryPlansEnabled is a flag to enable query plans output in the extensions
@@ -116,6 +122,7 @@ type PreHandler struct {
 	enableInboundRequestDeduplication      bool
 	forceEnableInboundRequestDeduplication bool
 	spanNameFormatter                      SpanNameFormatterFunc
+	waitForCacheWrites                     func()
 }
 
 type httpOperation struct {
@@ -144,19 +151,20 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		spanNameFormatter = DefaultSpanNameFormatter
 	}
 	return &PreHandler{
-		log:                         opts.Logger,
-		executor:                    opts.Executor,
-		metrics:                     opts.Metrics,
-		operationProcessor:          opts.OperationProcessor,
-		planner:                     opts.Planner,
-		accessController:            opts.AccessController,
-		operationBlocker:            opts.OperationBlocker,
-		routerPublicKey:             opts.RouterPublicKey,
-		developmentMode:             opts.DevelopmentMode,
-		enableRequestTracing:        opts.EnableRequestTracing,
-		flushTelemetryAfterResponse: opts.FlushTelemetryAfterResponse,
-		tracerProvider:              opts.TracerProvider,
-		traceExportVariables:        opts.TraceExportVariables,
+		log:                                opts.Logger,
+		executor:                           opts.Executor,
+		metrics:                            opts.Metrics,
+		operationProcessor:                 opts.OperationProcessor,
+		planner:                            opts.Planner,
+		accessController:                   opts.AccessController,
+		operationBlocker:                   opts.OperationBlocker,
+		routerPublicKey:                    opts.RouterPublicKey,
+		developmentMode:                    opts.DevelopmentMode,
+		enableRequestTracing:               opts.EnableRequestTracing,
+		forceUnauthenticatedRequestTracing: opts.ForceUnauthenticatedRequestTracing,
+		flushTelemetryAfterResponse:        opts.FlushTelemetryAfterResponse,
+		tracerProvider:                     opts.TracerProvider,
+		traceExportVariables:               opts.TraceExportVariables,
 		tracer: opts.TracerProvider.Tracer(
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
@@ -184,6 +192,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
 		headerPropagation:                      opts.HeaderPropagation,
 		spanNameFormatter:                      spanNameFormatter,
+		waitForCacheWrites:                     opts.WaitForCacheWrites,
 	}
 }
 
@@ -445,6 +454,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
+		if h.waitForCacheWrites != nil {
+			h.waitForCacheWrites()
+		}
+
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
 
 		if traceOptions.Enable {
@@ -614,6 +627,13 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions
 	requestContext.operation.variablesHash = operationKit.parsedOperation.VariablesHash
 	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	// Expose the variables JSON to expressions as early as possible so it is available for access logs
+	// even if a later stage fails. It is only serialized when an expression references
+	// request.operation.variables, to avoid the (potentially large) serialization cost on every request.
+	// The value can contain sensitive data, so it should be logged with care.
+	if h.exprManager.VisitorManager.IsRequestOperationVariablesUsedInExpressions() {
+		requestContext.expressionContext.Request.Operation.Variables = string(operationKit.parsedOperation.Request.Variables)
+	}
 	if err != nil {
 		return &httpGraphqlError{
 			message:    fmt.Sprintf("error parsing variables: %s", err),
@@ -845,6 +865,13 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 	requestContext.expressionContext.Request.Operation.NormalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
+	// Validate the operation against the schema BEFORE variable extraction. Extraction
+	// serializes inline argument literals into JSON variables, which erases their GraphQL
+	// type (e.g. an enum literal `hello` becomes the string "hello" and would wrongly
+	// satisfy a String argument). The error is surfaced later, on the validation span, so
+	// that the normalization span reflects only normalization.
+	operationValidationCacheHit, operationValidationErr := operationKit.ValidateOperation()
+
 	/**
 	* Normalize the variables
 	 */
@@ -867,6 +894,11 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	engineNormalizeSpan.SetAttributes(otel.WgVariablesNormalizationCacheHit.Bool(cached))
 	requestContext.operation.variablesNormalizationCacheHit = cached
 	requestContext.expressionContext.Request.Operation.VariablesNormalizationCacheHit = cached
+
+	logInlineArguments(requestContext.logger, operationKit.parsedOperation)
+	if h.operationProcessor.parseKitOptions.validateInlineArguments.ReturnInResponseExtensions {
+		requestContext.operation.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
+	}
 
 	// Update file upload paths if they were used in the nested field of the extracted variables.
 	for mapping := range slices.Values(uploadsMapping) {
@@ -1053,7 +1085,14 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		}
 	}
 
-	validationCached, err := operationKit.Validate(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
+	// Schema validation (computed before variable extraction) takes precedence over
+	// variable validation, mirroring the GraphQL spec order (ValuesOfCorrectType before
+	// coerced variable values). Its error is surfaced here so it appears on the
+	// validation span rather than the normalization span.
+	err = operationValidationErr
+	if err == nil {
+		err = operationKit.ValidateOperationVariables(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
+	}
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
 
@@ -1071,7 +1110,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		return err
 	}
 
-	engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(validationCached))
+	engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(operationValidationCacheHit))
 	if requestContext.operation.executionOptions.SkipLoader {
 		// In case we're skipping the loader, which means that we won't execute the operation
 		// we skip the validation of variables as we're not using them
@@ -1167,6 +1206,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
 		case *plan.SynchronousResponsePlan:
 			p.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
+		case *plan.DeferResponsePlan:
+			// TODO: handle ART
 		}
 
 		if h.queryPlansLoggingEnabled {
@@ -1176,12 +1217,30 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 				printedPlan = p.Response.Fetches.QueryPlan().PrettyPrint()
 			case *plan.SubscriptionResponsePlan:
 				printedPlan = p.Response.Response.Fetches.QueryPlan().PrettyPrint()
+			case *plan.DeferResponsePlan:
+				// TODO: handle
 			}
 			if h.developmentMode {
 				h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
 			} else {
 				h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
 			}
+		}
+	}
+
+	// A DeferResponsePlan is only produced when the operation contains @defer
+	// (and @defer support is enabled). Such operations stream incremental
+	// payloads as multipart/mixed, so reject the request early if the client
+	// does not accept that content type
+	if _, ok := requestContext.operation.preparedPlan.preparedPlan.(*plan.DeferResponsePlan); ok {
+		if !clientAcceptsMultipartMixed(req) {
+			return NewHttpGraphqlError(
+				"the router received a query with the @defer directive but the client does not accept "+
+					"multipart/mixed HTTP responses. To enable @defer support, add the HTTP header "+
+					"'Accept: multipart/mixed'",
+				ExtCodeErrDeferMultipartNotAccepted,
+				http.StatusOK,
+			)
 		}
 	}
 
@@ -1241,21 +1300,18 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 	now := time.Now()
 
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+
+	wg.Go(func() {
 		if err := h.metrics.MetricStore().Flush(ctx); err != nil {
 			requestLogger.Error("Failed to flush OTEL metrics", zap.Error(err))
 		}
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		if err := h.tracerProvider.ForceFlush(ctx); err != nil {
 			requestLogger.Error("Failed to flush OTEL tracer", zap.Error(err))
 		}
-	}()
+	})
 
 	wg.Wait()
 
@@ -1310,8 +1366,9 @@ func (h *PreHandler) parseExecutionAndTraceOptions(r *http.Request, clientInfo *
 func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
 	// Determine if we should enable request tracing / query plans at all
 	if h.enableRequestTracing {
-		// In dev mode we always allow to enable tracing / query plans
-		if h.developmentMode {
+		// In dev mode we always allow to enable tracing / query plans.
+		// force_unauthenticated_request_tracing=true allows ART without dev_mode or a controlplane token.
+		if h.developmentMode || h.forceUnauthenticatedRequestTracing {
 			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 		}
 		// If the client has a valid request token, and we have a public key from the controlplane
@@ -1371,4 +1428,36 @@ func setExpressionContextClient(requestContext *requestContext) {
 		requestContext.expressionContext.Request.Client.Name = clientName
 		requestContext.expressionContext.Request.Client.Version = clientVersion
 	}
+}
+
+// logInlineArguments emits a warning listing every inline argument value found in
+// the operation (non-enforcing mode of ValidateInlineArguments). It is a no-op
+// when there are no findings, so both the HTTP prehandler and the WebSocket
+// handler can call it unconditionally after a successful normalization.
+func logInlineArguments(logger *zap.Logger, operation *ParsedOperation) {
+	argumentNames := inlineArgumentQualifiedNames(operation)
+	if len(argumentNames) == 0 {
+		return
+	}
+	logger.Warn("Inline argument values found in operation; use variables instead",
+		zap.Int("count", len(argumentNames)),
+		zap.Strings("arguments", argumentNames),
+		zap.String("operation_name", operation.Request.OperationName),
+		zap.Uint64("operation_hash", operation.ID),
+	)
+}
+
+// inlineArgumentQualifiedNames returns the qualified names (e.g. "user.id",
+// "@skip.if") of every inline argument found in the operation, or nil when there
+// are none. Shared by the warning log and the response-extension reporting.
+func inlineArgumentQualifiedNames(operation *ParsedOperation) []string {
+	inlineArguments := operation.InlineArguments
+	if len(inlineArguments) == 0 {
+		return nil
+	}
+	argumentNames := make([]string, len(inlineArguments))
+	for i, arg := range inlineArguments {
+		argumentNames[i] = arg.QualifiedName()
+	}
+	return argumentNames
 }

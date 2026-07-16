@@ -74,7 +74,10 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
 
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data?.response?.code !== EnumStatusCode.OK)
+  if (
+    error ||
+    (data?.response?.code !== EnumStatusCode.OK && data?.response?.code !== EnumStatusCode.WARN_PARTIAL_DATA)
+  )
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
@@ -94,7 +97,13 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
     }
   });
 
-  return <FederatedGraphsCards graphs={graphs} refetch={refetch} />;
+  return (
+    <FederatedGraphsCards
+      graphs={graphs}
+      refetch={refetch}
+      hasStaleMetrics={data?.response?.code === EnumStatusCode.WARN_PARTIAL_DATA}
+    />
+  );
 };
 
 GraphsDashboardPage.getLayout = (page) => {

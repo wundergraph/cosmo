@@ -240,12 +240,13 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 }
 
 type RouterEngineConfiguration struct {
-	Execution                config.EngineExecutionConfiguration
-	Headers                  *config.HeaderRules
-	Events                   config.EventsConfiguration
-	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
-	StreamMetricStore        rmetric.StreamMetricStore
-	CostControl              *config.CostControl
+	Execution                    config.EngineExecutionConfiguration
+	Headers                      *config.HeaderRules
+	Events                       config.EventsConfiguration
+	SubgraphErrorPropagation     config.SubgraphErrorPropagationConfiguration
+	SubgraphExtensionPropagation config.SubgraphExtensionPropagationConfiguration
+	StreamMetricStore            rmetric.StreamMetricStore
+	CostControl                  *config.CostControl
 }
 
 func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {
@@ -527,6 +528,11 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		onReceiveEventsFns[i] = NewPubSubOnReceiveEventsHook(fn)
 	}
 
+	subscriptionOnCreateFns := make([]pubsub_datasource.SubscriptionOnCreateFn, len(l.subscriptionHooks.onCreate.handlers))
+	for i, fn := range l.subscriptionHooks.onCreate.handlers {
+		subscriptionOnCreateFns[i] = NewPubSubSubscriptionOnCreateHook(fn)
+	}
+
 	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
 		l.ctx,
 		routerEngineConfig.Events,
@@ -546,6 +552,9 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				Handlers:              onReceiveEventsFns,
 				MaxConcurrentHandlers: l.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers,
 				Timeout:               l.subscriptionHooks.onReceiveEvents.timeout,
+			},
+			SubscriptionOnCreate: pubsub_datasource.SubscriptionOnCreateHooks{
+				Handlers: subscriptionOnCreateFns,
 			},
 		},
 	)

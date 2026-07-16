@@ -12,6 +12,7 @@ import {
   type InvalidArgumentValueErrorParams,
   type InvalidCustomDirectiveErrorParams,
   type InvalidDirectiveLocationErrorParams,
+  type InvalidEntityReturnTypeErrorParams,
   type InvalidLinkDirectiveImportObjectErrorParams,
   type InvalidNamedTypeErrorParams,
   type InvalidRepeatedDirectiveErrorParams,
@@ -21,6 +22,7 @@ import {
   type OneOfRequiredFieldsErrorParams,
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   type SemanticNonNullLevelsNonNullErrorParams,
+  type DirectlyProvidedInterfaceFieldErrorParams,
 } from './types/params';
 import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
 import {
@@ -35,6 +37,7 @@ import {
   LITERAL_NEW_LINE,
   LITERAL_PERIOD,
   NOT_UPPER,
+  OBJECT,
   OR_UPPER,
   QUOTATION_JOIN,
   SUBSCRIPTION_FIELD_CONDITION,
@@ -770,14 +773,32 @@ export function duplicateFieldInFieldSetErrorMessage(fieldSet: string, fieldPath
   );
 }
 
-export function incompatibleTypeWithProvidesErrorMessage({
+export function incompatibleTypeWithProvidesError({
   fieldCoords,
   responseType,
   subgraphName,
-}: IncompatibleTypeWithProvidesErrorMessageParams): string {
-  return (
+}: IncompatibleTypeWithProvidesErrorMessageParams): Error {
+  return new Error(
     ` A "@provides" directive is declared on field "${fieldCoords}" in subgraph "${subgraphName}".\n` +
-    ` However, the response type "${responseType}" is not an Object nor Interface.`
+      ` However, the response type "${responseType}" is not an Object, Interface, nor Union.`,
+  );
+}
+
+export function directlyProvidedInterfaceFieldError({
+  directiveCoords,
+  directiveName,
+  fieldSet,
+  selection,
+  subgraphName,
+  targetCoords,
+}: DirectlyProvidedInterfaceFieldErrorParams): Error {
+  return new Error(
+    `The field "${directiveCoords}" in subgraph "${subgraphName}" defines a "@${directiveName}"` +
+      ` directive with the following field set:\n "${fieldSet}".` +
+      `\n"${selection}" is a direct Interface selection, corresponding to field "${targetCoords}".` +
+      `\nHowever, no selection ancestors are declared "@external", and Interface fields themselves cannot be` +
+      ` declared "@external".\nConsequently, without a type fragment specifying the underlying type, it is` +
+      ` uncertain which fields are actually provided on this path.`,
   );
 }
 
@@ -827,8 +848,7 @@ export function invalidInlineFragmentTypeErrorMessage(
     ` This is because an inline fragment with the type condition "${typeConditionName}" is defined on the` +
     ` selection set corresponding to the ` +
     getSelectionSetLocation(fieldCoordinatesPath, selectionSetTypeName, true) +
-    ` However, "${selectionSetTypeName}" is not an abstract (Interface or Union) type.\n` +
-    ` Consequently, the only valid type condition at this selection set would be "${selectionSetTypeName}".`
+    ` However, "${selectionSetTypeName}" is not an abstract (Interface or Union) type and is therefore incompatible.`
   );
 }
 
@@ -876,16 +896,72 @@ export function invalidInlineFragmentTypeConditionErrorMessage(
   typeConditionName: string,
   parentTypeString: string,
   selectionSetTypeName: string,
+  typeConditionTypeString: string,
 ): string {
   const message =
     ` The following field set is invalid:\n  "${fieldSet}"\n` +
     ` This is because an inline fragment with the type condition "${typeConditionName}" is defined on the` +
     ` selection set corresponding to the ` +
     getSelectionSetLocationWithTypeString(fieldCoordinatesPath, selectionSetTypeName, parentTypeString);
-  if (parentTypeString === INTERFACE) {
-    return message + ` However, "${typeConditionName}" does not implement "${selectionSetTypeName}"`;
+  switch (parentTypeString) {
+    case INTERFACE: {
+      switch (typeConditionTypeString) {
+        case INTERFACE: {
+          return (
+            message +
+            ` However, Interfaces "${typeConditionName}" and "${selectionSetTypeName}" are neither an` +
+            ` implementation of the other.`
+          );
+        }
+        case OBJECT: {
+          return (
+            message + ` However, Object "${typeConditionName}" does not implement Interface "${selectionSetTypeName}".`
+          );
+        }
+        case UNION: {
+          return (
+            message +
+            ` However, no members of Union "${typeConditionName}" implement Interface "${selectionSetTypeName}".`
+          );
+        }
+      }
+      break;
+    }
+    case OBJECT: {
+      switch (typeConditionTypeString) {
+        case INTERFACE: {
+          return (
+            message + ` However, Object "${selectionSetTypeName}" does not implement Interface "${typeConditionName}".`
+          );
+        }
+        case UNION: {
+          return (
+            message + ` However, Object "${selectionSetTypeName}" is not a member of Union "${typeConditionName}".`
+          );
+        }
+      }
+      break;
+    }
+    case UNION: {
+      switch (typeConditionTypeString) {
+        case INTERFACE: {
+          return message + ` However, no members of Union "${selectionSetTypeName}" implement "${typeConditionName}".`;
+        }
+        case OBJECT: {
+          return (
+            message + ` However, Object "${typeConditionName}" is not a member of Union "${selectionSetTypeName}".`
+          );
+        }
+        case UNION: {
+          return (
+            message + ` However, Unions "${typeConditionName}" and "${selectionSetTypeName}" share no mutual members.`
+          );
+        }
+      }
+      break;
+    }
   }
-  return message + ` However, "${typeConditionName}" is not a member of "${selectionSetTypeName}".`;
+  return message;
 }
 
 export function invalidSelectionOnUnionErrorMessage(
@@ -1277,25 +1353,63 @@ export function invalidSubscriptionFilterLocationError(path: string): Error {
   );
 }
 
-export function invalidSubscriptionFilterDirectiveError(fieldPath: string, errorMessages: string[]): Error {
+export function invalidSubscriptionFilterDirectiveError(fieldPath: string, errors: Error[]): Error {
   return new Error(
     `The "@${SUBSCRIPTION_FILTER}" directive defined on path "${fieldPath}" is invalid for the` +
       ` following reason` +
-      (errorMessages.length > 1 ? 's' : '') +
+      (errors.length > 1 ? 's' : '') +
       `:\n` +
-      errorMessages.join(`\n`),
+      errors.join(`\n`),
   );
 }
 
-export function subscriptionFilterNamedTypeErrorMessage(namedTypeName: string): string {
-  return ` Unknown type "${namedTypeName}".`;
+export function subscriptionFilterNamedTypeError(namedTypeName: string): Error {
+  return new Error(`Unknown type "${namedTypeName}".`);
 }
 
-export function subscriptionFilterConditionDepthExceededErrorMessage(inputPath: string): string {
-  return (
-    ` The input path "${inputPath}" exceeds the maximum depth of ${MAX_SUBSCRIPTION_FILTER_DEPTH}` +
-    ` for any one filter condition.\n` +
-    ` If you require a larger maximum depth, please contact support.`
+export function subscriptionFilterUnionMemberInvalidError(
+  unionTypeName: string,
+  memberTypeName: string,
+  detail: string,
+): Error {
+  return new Error(
+    `The "@openfed__subscriptionFilter" condition is invalid for union member "${memberTypeName}" of union "${unionTypeName}":\n` +
+      detail,
+  );
+}
+
+export function subscriptionFilterInterfaceImplementationInvalidError(
+  interfaceTypeName: string,
+  implementerTypeName: string,
+  detail: string,
+): Error {
+  return new Error(
+    `The "@openfed__subscriptionFilter" condition is invalid for concrete type "${implementerTypeName}" implementing interface "${interfaceTypeName}":\n` +
+      detail,
+  );
+}
+
+export function subscriptionFilterNoAccessibleConcreteTypesError(
+  abstractTypeName: string,
+  abstractKind: string,
+): Error {
+  return new Error(
+    `The ${abstractKind} "${abstractTypeName}" has no accessible concrete types against which the "@openfed__subscriptionFilter" condition can be validated.`,
+  );
+}
+
+export function subscriptionFilterUnsupportedNamedTypeKindError(namedTypeName: string, kind: string): Error {
+  return new Error(
+    `The named type "${namedTypeName}" of kind "${kind}" is not supported by the "@${SUBSCRIPTION_FILTER}" directive.` +
+      `Only object, union, and interface return types are supported.`,
+  );
+}
+
+export function subscriptionFilterConditionDepthExceededError(inputPath: string): Error {
+  return new Error(
+    `The input path "${inputPath}" exceeds the maximum depth of ${MAX_SUBSCRIPTION_FILTER_DEPTH}` +
+      ` for any one filter condition.\n` +
+      ` If you require a larger maximum depth, please contact support.`,
   );
 }
 
@@ -1303,31 +1417,27 @@ const subscriptionFilterConditionFieldsString =
   ` Each "${SUBSCRIPTION_FILTER_CONDITION}" input object must define exactly one of the following` +
   ` input value fields: "${AND_UPPER}", "${IN_UPPER}", "${NOT_UPPER}", or "${OR_UPPER}".\n`;
 
-export function subscriptionFilterConditionInvalidInputFieldNumberErrorMessage(
-  inputPath: string,
-  fieldNumber: number,
-): string {
-  return subscriptionFilterConditionFieldsString + ` However, input path "${inputPath}" defines ${fieldNumber} fields.`;
-}
-
-export function subscriptionFilterConditionInvalidInputFieldErrorMessage(
-  inputPath: string,
-  invalidFieldName: string,
-): string {
-  return (
-    subscriptionFilterConditionFieldsString +
-    ` However, input path "${inputPath}" defines the invalid input value field "${invalidFieldName}".`
+export function subscriptionFilterConditionInvalidInputFieldNumberError(inputPath: string, fieldNumber: number): Error {
+  return new Error(
+    subscriptionFilterConditionFieldsString + ` However, input path "${inputPath}" defines ${fieldNumber} fields.`,
   );
 }
 
-export function subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
+export function subscriptionFilterConditionInvalidInputFieldError(inputPath: string, invalidFieldName: string): Error {
+  return new Error(
+    subscriptionFilterConditionFieldsString +
+      ` However, input path "${inputPath}" defines the invalid input value field "${invalidFieldName}".`,
+  );
+}
+
+export function subscriptionFilterConditionInvalidInputFieldTypeError(
   inputPath: string,
   expectedTypeString: string,
   actualTypeString: string,
-): string {
-  return (
+): Error {
+  return new Error(
     ` Expected the value of input path "${inputPath}" to be type "${expectedTypeString}"` +
-    ` but received type "${actualTypeString}"`
+      ` but received type "${actualTypeString}"`,
   );
 }
 
@@ -1338,26 +1448,23 @@ const subscriptionFilterConditionArrayString =
 export function subscriptionFilterArrayConditionInvalidItemTypeErrorMessage(
   inputPath: string,
   invalidIndices: number[],
-): string {
+): Error {
   const isPlural = invalidIndices.length > 1;
-  return (
+  return new Error(
     subscriptionFilterConditionArrayString +
-    ` However, the following ` +
-    (isPlural ? `indices` : 'index') +
-    ` defined on input path "${inputPath}" ` +
-    (isPlural ? `are` : `is`) +
-    ` not type "object": ` +
-    invalidIndices.join(`, `)
+      ` However, the following ` +
+      (isPlural ? `indices` : 'index') +
+      ` defined on input path "${inputPath}" ` +
+      (isPlural ? `are` : `is`) +
+      ` not type "object": ` +
+      invalidIndices.join(`, `),
   );
 }
 
-export function subscriptionFilterArrayConditionInvalidLengthErrorMessage(
-  inputPath: string,
-  actualLength: number,
-): string {
-  return (
+export function subscriptionFilterArrayConditionInvalidLengthError(inputPath: string, actualLength: number): Error {
+  return new Error(
     subscriptionFilterConditionArrayString +
-    ` However, the list defined on input path "${inputPath}" has a length of ${actualLength}.`
+      ` However, the list defined on input path "${inputPath}" has a length of ${actualLength}.`,
   );
 }
 
@@ -1372,13 +1479,13 @@ export function invalidInputFieldTypeErrorMessage(
   );
 }
 
-export function subscriptionFieldConditionInvalidInputFieldErrorMessage(
+export function subscriptionFieldConditionInvalidInputFieldError(
   inputPath: string,
   missingFieldNames: string[],
   duplicatedFieldNames: string[],
   invalidFieldNames: string[],
   fieldErrorMessages: string[],
-): string {
+): Error {
   let message =
     ` Each "${SUBSCRIPTION_FIELD_CONDITION}" input object must only define the following two` +
     ` input value fields: "${FIELD_PATH}" and "${VALUES}".\n However, input path "${inputPath}" is invalid because:`;
@@ -1409,7 +1516,7 @@ export function subscriptionFieldConditionInvalidInputFieldErrorMessage(
   if (fieldErrorMessages.length > 0) {
     message += `\n ` + fieldErrorMessages.join(`\n `);
   }
-  return message;
+  return new Error(message);
 }
 
 const subscriptionFieldConditionValuesString =
@@ -1781,19 +1888,54 @@ export function oneOfRequiredFieldsError({ requiredFieldNames, typeName }: OneOf
 
 export function listSizeInvalidSlicingArgumentErrorMessage(
   directiveCoords: DirectiveArgumentCoords,
-  argumentName: ArgumentName,
+  path: ArgumentName,
 ): string {
-  return ` The "slicingArguments" value "${argumentName}" on "${directiveCoords}" does not reference a defined argument on this field.`;
+  return ` The "slicingArguments" value "${path}" on "${directiveCoords}" does not reference a defined argument on this field.`;
 }
 
 export function listSizeSlicingArgumentNotIntErrorMessage(
   directiveCoords: DirectiveArgumentCoords,
-  argumentName: ArgumentName,
+  path: ArgumentName,
   actualType: TypeName,
 ): string {
   return (
-    ` The "slicingArguments" value "${argumentName}" on "${directiveCoords}" references an argument of type` +
+    ` The "slicingArguments" value "${path}" on "${directiveCoords}" references an argument of type` +
     ` "${actualType}", but slicing arguments must be of type "Int" or "Int!".`
+  );
+}
+
+export function listSizeSlicingArgumentMalformedPathErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  path: string,
+): string {
+  return (
+    ` The "slicingArguments" value "${path}" on "${directiveCoords}" is not a valid path.` +
+    ` A path must be a non-empty argument name, optionally followed by ".<inputField>" segments,` +
+    ` with no empty segments and no leading or trailing dots.`
+  );
+}
+
+export function listSizeSlicingArgumentSegmentNotFoundErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  path: string,
+  segment: string,
+  parentTypeName: TypeName,
+): string {
+  return (
+    ` The "slicingArguments" path "${path}" on "${directiveCoords}" references "${segment}",` +
+    ` which is not a defined field on Input Object type "${parentTypeName}".`
+  );
+}
+
+export function listSizeSlicingArgumentSegmentNotInputObjectErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  path: string,
+  segment: string,
+  typeName: TypeName,
+): string {
+  return (
+    ` The "slicingArguments" path "${path}" on "${directiveCoords}" references "${segment}",` +
+    ` whose type "${typeName}" is not an Input Object.`
   );
 }
 
@@ -1983,4 +2125,43 @@ export function nonEqualComposeDirectiveMajorVersionError(directiveName: Directi
 
 export function unknownSubgraphNameError(subgraphName: SubgraphName): Error {
   return new Error(`Internal Error: Expected subgraph "${subgraphName}" to be a valid record.`);
+}
+
+export function entityCacheWithoutKeyErrorMessage(typeName: TypeName): string {
+  return `Object "${typeName}" does not define a "@key" directive.`;
+}
+
+export function maxAgeNotPositiveIntegerErrorMessage(value: number | string | null): string {
+  return `The argument "maxAge" must be provided a positive integer; received "${value}".`;
+}
+
+export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(value: number): string {
+  return `The argument "negativeCacheTTL" must be provided zero or a positive integer; received "${value}".`;
+}
+
+export function invalidMutationOrSubscriptionFieldCoordsErrorMessage(fieldCoords: string): string {
+  return `Field coordinates "${fieldCoords}" are not a Mutation or Subscription root field.`;
+}
+
+export function invalidEntityReturnTypeErrorMessage({
+  fieldCoords,
+  returnTypeName,
+}: InvalidEntityReturnTypeErrorParams): string {
+  return `Field coordinates "${fieldCoords}" return non-entity type "${returnTypeName}".`;
+}
+
+export function invalidMutuallyExclusiveCacheDirectivesError(fieldCoords: string): Error {
+  return new Error(
+    `Field coordinates "${fieldCoords}" define both mutually exclusive directives "@openfed__cacheInvalidate"` +
+      ` and "@openfed__cachePopulate".`,
+  );
+}
+
+export function intersectingExcludeAndIncludeContractTagsError(tagNames: Array<string>): Error {
+  return new Error(
+    `Cannot create contract because the following tag${tagNames.length > 1 ? 's are' : ' is'}` +
+      ` provided to both the include and exclude tag sets (which must be mutually exclusive): "` +
+      tagNames.join(QUOTATION_JOIN) +
+      `".`,
+  );
 }

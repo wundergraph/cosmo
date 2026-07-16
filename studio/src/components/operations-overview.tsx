@@ -1,3 +1,5 @@
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { UpdateIcon } from '@radix-ui/react-icons';
 import useWindowSize from '@/hooks/use-window-size';
 import { useChartData } from '@/lib/insights-helpers';
 import { formatMetric, formatPercentMetric } from '@/lib/format-metric';
@@ -10,7 +12,9 @@ import { Separator } from './ui/separator';
 import { useRouter } from 'next/router';
 import { constructAnalyticsTableQueryState } from './analytics/constructAnalyticsTableQueryState';
 import { ChartTooltip } from './analytics/charts';
+import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAnalyticsQueryState, useDateRangeQueryState } from '@/components/analytics/useAnalyticsQueryState';
 
 const valueFormatter = (number: number) => `${formatMetric(number)}`;
@@ -18,9 +22,13 @@ const valueFormatter = (number: number) => `${formatMetric(number)}`;
 export const RequestChart = ({
   requestSeries,
   isLoading,
+  isFetching,
+  hasStaleMetrics,
 }: {
   requestSeries: RequestSeriesItem[];
   isLoading: boolean;
+  isFetching: boolean;
+  hasStaleMetrics: boolean;
 }) => {
   const { range, dateRange } = useAnalyticsQueryState();
   const categorized = useMemo(() => {
@@ -65,6 +73,21 @@ export const RequestChart = ({
           <span className="font-semibold leading-none tracking-tight">Requests</span>
           <Separator orientation="vertical" className="h-4" />
           <span className="text-xs text-muted-foreground">Incoming Router requests</span>
+          {hasStaleMetrics && !isFetching && (
+            <Tooltip delayDuration={100}>
+              <TooltipTrigger asChild>
+                <span
+                  tabIndex={0}
+                  role="img"
+                  aria-label="Analytics are not available at this moment"
+                  className="inline-flex"
+                >
+                  <ExclamationTriangleIcon width={12} height={12} aria-hidden />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Analytics are not available at this moment</TooltipContent>
+            </Tooltip>
+          )}
         </h2>
         <div className="flex items-center gap-x-2 text-sm md:ml-auto">
           <div className="h-3 w-3 rounded-full bg-sky-500" />
@@ -125,7 +148,17 @@ export const RequestChart = ({
   );
 };
 
-export const MostRequested = ({ data, isLoading }: { data: OperationRequestCount[]; isLoading: boolean }) => {
+export const MostRequested = ({
+  data,
+  isLoading,
+  isFetching,
+  hasStaleMetrics,
+}: {
+  data: OperationRequestCount[];
+  isLoading: boolean;
+  isFetching: boolean;
+  hasStaleMetrics: boolean;
+}) => {
   const { asPath } = useRouter();
   const dr = useDateRangeQueryState();
 
@@ -160,6 +193,21 @@ export const MostRequested = ({ data, isLoading }: { data: OperationRequestCount
         <span className="font-semibold leading-none tracking-tight">Top 10 Operations</span>
         <Separator orientation="vertical" className="h-4" />
         <span className="text-xs text-muted-foreground">Most requested operations</span>
+        {hasStaleMetrics && !isFetching && (
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <span
+                tabIndex={0}
+                role="img"
+                aria-label="Analytics are not available at this moment"
+                className="inline-flex"
+              >
+                <ExclamationTriangleIcon width={12} height={12} aria-hidden />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Analytics are not available at this moment</TooltipContent>
+          </Tooltip>
+        )}
       </h2>
       <BarList
         rowClassName="bg-purple-400/20"

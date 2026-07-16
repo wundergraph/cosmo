@@ -7,6 +7,7 @@ import logSymbols from 'log-symbols';
 import { resolve } from 'pathe';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../core/config.js';
+import { stripProtobufInternals } from '../../../../utils.js';
 
 type OutputFile = {
   name: string;
@@ -45,9 +46,13 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    if (resp.response?.code !== EnumStatusCode.OK) {
+    if (resp.response?.code !== EnumStatusCode.OK && resp.response?.code !== EnumStatusCode.WARN_PARTIAL_DATA) {
       console.log(pc.red(resp.response?.details));
       program.error(pc.red('Could not fetch the federated graphs.'));
+    }
+
+    if (resp.response?.code === EnumStatusCode.WARN_PARTIAL_DATA) {
+      console.log(pc.yellow('⚠️ Metrics data not available.'));
     }
 
     const filteredGraphs = [];
@@ -79,7 +84,7 @@ export default (opts: BaseCommandOptions) => {
             contract: g.contract,
           }) satisfies OutputFile[number],
       );
-      await writeFile(resolve(options.out), JSON.stringify(output));
+      await writeFile(resolve(options.out), JSON.stringify(output, stripProtobufInternals));
       return;
     }
 
@@ -88,7 +93,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.raw || options.json) {
-      console.log(JSON.stringify(filteredGraphs));
+      console.log(JSON.stringify(filteredGraphs, stripProtobufInternals));
       return;
     }
 

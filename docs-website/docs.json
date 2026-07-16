@@ -192,6 +192,7 @@
                 "pages": [
                   "router/metrics-and-monitoring",
                   "router/metrics-and-monitoring/span-error-status",
+                  "router/metrics-and-monitoring/exemplars",
                   "router/metrics-and-monitoring/prometheus-metric-reference",
                   "router/metrics-and-monitoring/grafana"
                 ]
@@ -233,7 +234,8 @@
                   "router/security/tls",
                   "router/security/config-validation-and-signing",
                   "router/security/hardening-guide",
-                  "router/security/cost-control"
+                  "router/security/cost-control",
+                  "router/security/validate-inline-arguments"
                 ]
               },
               {
@@ -269,6 +271,7 @@
                     "icon": "cubes",
                     "pages": [
                       "router/cosmo-streams/custom-modules",
+                      "router/cosmo-streams/custom-modules/subscription-on-create",
                       "router/cosmo-streams/custom-modules/subscription-on-start",
                       "router/cosmo-streams/custom-modules/on-receive-event",
                       "router/cosmo-streams/custom-modules/on-publish-event"
@@ -279,7 +282,14 @@
               "router/compliance-and-data-management",
               "router/query-batching",
               "router/feature-flags",
-              "router/subgraph-error-propagation",
+              {
+                "group": "Subgraph data propagation",
+                "icon": "share-from-square",
+                "pages": [
+                  "router/subgraph-data-propagation/subgraph-error-propagation",
+                  "router/subgraph-data-propagation/subgraph-extension-propagation"
+                ]
+              },
               "router/relaxed-field-selection-merging-nullability",
               "router/file-upload",
               "router/access-logs",
@@ -368,6 +378,8 @@
                   "studio/sso/microsoft-entra"
                 ]
               },
+              "studio/namespace-login-methods",
+              "studio/organization-login-methods",
               {
                 "group": "SCIM",
                 "icon": "file-user",
@@ -489,6 +501,7 @@
                   "cli/subgraph",
                   "cli/subgraph/create",
                   "cli/subgraph/publish",
+                  "cli/subgraph/batch-publish",
                   "cli/subgraph/list",
                   "cli/subgraph/check",
                   "cli/subgraph/update",
@@ -614,6 +627,11 @@
                 "group": "Operations",
                 "icon": "get-pocket",
                 "pages": ["cli/operations", "cli/operations/push"]
+              },
+              {
+                "group": "Clients",
+                "icon": "laptop-mobile",
+                "pages": ["cli/clients", "cli/clients/list", "cli/clients/delete"]
               },
               {
                 "group": "Schema Contracts",
@@ -788,6 +806,10 @@
     {
       "source": "/router/proxy-capabilities/response-header-operations",
       "destination": "/router/proxy-capabilities/subgraph-response-header-operations"
+    },
+    {
+      "source": "/router/subgraph-error-propagation",
+      "destination": "/router/subgraph-data-propagation/subgraph-error-propagation"
     }
   ]
 }

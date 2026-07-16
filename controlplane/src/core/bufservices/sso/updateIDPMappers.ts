@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -11,6 +10,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import OidcProvider from '../../services/OidcProvider.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function updateIDPMappers(
   opts: RouterOptions,
@@ -43,7 +43,10 @@ export function updateIDPMappers(
 
     await opts.keycloakClient.authenticateClient();
 
-    const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+    const provider = await oidcRepo.getOidcProviderById({
+      id: req.id,
+      organizationId: authContext.organizationId,
+    });
     if (!provider) {
       return {
         response: {

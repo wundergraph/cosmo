@@ -777,6 +777,10 @@ func TestCircuitBreaker(t *testing.T) {
 							Value: testutils.ToPtr("cosmo.router.prometheus"),
 						},
 						{
+							Name:  testutils.ToPtr("otel_scope_schema_url"),
+							Value: testutils.ToPtr(""),
+						},
+						{
 							Name:  testutils.ToPtr("otel_scope_version"),
 							Value: testutils.ToPtr("0.0.1"),
 						},
@@ -938,6 +942,10 @@ func TestCircuitBreaker(t *testing.T) {
 						{
 							Name:  testutils.ToPtr("otel_scope_name"),
 							Value: testutils.ToPtr("cosmo.router.prometheus"),
+						},
+						{
+							Name:  testutils.ToPtr("otel_scope_schema_url"),
+							Value: testutils.ToPtr(""),
 						},
 						{
 							Name:  testutils.ToPtr("otel_scope_version"),
@@ -1172,6 +1180,7 @@ func TestCircuitBreaker(t *testing.T) {
 
 						expectedOpened := []*io_prometheus_client.LabelPair{
 							{Name: testutils.ToPtr("otel_scope_name"), Value: testutils.ToPtr("cosmo.router.prometheus")},
+							{Name: testutils.ToPtr("otel_scope_schema_url"), Value: testutils.ToPtr("")},
 							{Name: testutils.ToPtr("otel_scope_version"), Value: testutils.ToPtr("0.0.1")},
 							{Name: testutils.ToPtr("wg_federated_graph_id"), Value: testutils.ToPtr("graph")},
 							{Name: testutils.ToPtr("wg_router_cluster_name"), Value: testutils.ToPtr("")},
@@ -1204,6 +1213,7 @@ func TestCircuitBreaker(t *testing.T) {
 						require.Equal(t, float64(ShortCircuitClosed), *closedDataPoint.Gauge.Value)
 						expectedClosed := []*io_prometheus_client.LabelPair{
 							{Name: testutils.ToPtr("otel_scope_name"), Value: testutils.ToPtr("cosmo.router.prometheus")},
+							{Name: testutils.ToPtr("otel_scope_schema_url"), Value: testutils.ToPtr("")},
 							{Name: testutils.ToPtr("otel_scope_version"), Value: testutils.ToPtr("0.0.1")},
 							{Name: testutils.ToPtr("wg_federated_graph_id"), Value: testutils.ToPtr("graph")},
 							{Name: testutils.ToPtr("wg_router_cluster_name"), Value: testutils.ToPtr("")},

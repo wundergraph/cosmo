@@ -1,9 +1,8 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { CreateContractRequest, CreateContractResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, PlainMessage } from '../../../types/index.js';
 import { PublicError, UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
@@ -61,14 +60,6 @@ export function createContract(
 
       if (req.admissionWebhookUrl && !isValidUrl(req.admissionWebhookUrl)) {
         throw new PublicError(EnumStatusCode.ERR, `Admission Webhook URL is not a valid URL`);
-      }
-
-      if (req.includeTags.length > 0 && req.excludeTags.length > 0) {
-        throw new PublicError(
-          EnumStatusCode.ERR,
-          `The "exclude" and "include" options for tags are currently mutually exclusive.` +
-            ` Both options have been provided, but one of the options must be empty or unset.`,
-        );
       }
 
       req.excludeTags = [...new Set(req.excludeTags)];

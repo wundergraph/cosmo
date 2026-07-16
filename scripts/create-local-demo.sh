@@ -13,6 +13,7 @@ pnpm wgc subgraph create hobbies --namespace default --label team=B --routing-ur
 pnpm wgc subgraph create products --namespace default --label team=B --routing-url http://localhost:4004/graphql
 pnpm wgc subgraph create availability --namespace default --label team=A --routing-url http://localhost:4007/graphql
 pnpm wgc subgraph create mood --namespace default --label team=B --routing-url http://localhost:4008/graphql
+pnpm wgc subgraph create employee-events --namespace default --label team=B --routing-url http://localhost:4009/graphql
 pnpm wgc subgraph create employeeupdated --event-driven-graph --namespace default --label team=B
 
 ./scripts/update-demo.sh

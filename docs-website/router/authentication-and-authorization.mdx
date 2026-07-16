@@ -142,6 +142,21 @@ This causes requests without authorization information to produce a `401 Unautho
 
 Authentication information is also available to custom modules. See [Access Authenticated Information](/router/custom-modules#access-authentication-information).
 
+### Pre-fetch field authorization
+
+By default, fields protected by [@authenticated](/federation/directives/authenticated) or [@requiresScopes](/federation/directives/requiresscopes) are authorized after the subgraph fetch and filtered out of the response. This means the router may fetch data the client is not authorized to see, only to remove it afterwards.
+
+With pre-fetch field authorization enabled, the router authorizes all protected fields of an operation in a single batch before any subgraph fetch runs. Since the decisions are scope-based and independent of the returned data, the router can skip fetches for fields the client is not allowed to access instead of fetching and then filtering them.
+
+<CodeGroup>
+  ```yaml config.yaml
+  authorization:
+    enable_pre_fetch_field_authorization: true
+  ```
+</CodeGroup>
+
+The authorization outcome is the same as the default behavior. Unauthorized fields are still nulled (or the operation is rejected when `reject_operation_if_unauthorized` is set), and the `missingScopes` response extension is unchanged.
+
 ### Forwarding authentication headers
 
 By default, the router won't forward authentication headers to subgraphs, but if desired this can be configured using [Proxy capabilities](/router/proxy-capabilities).

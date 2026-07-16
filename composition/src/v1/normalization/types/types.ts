@@ -1,5 +1,4 @@
 import {
-  type CompositeOutputData,
   type FieldData,
   type InputObjectDefinitionData,
   type InputValueData,
@@ -7,9 +6,11 @@ import {
   type SchemaData,
 } from '../../../schema-building/types/types';
 import {
+  type BooleanValueNode,
   type ConstDirectiveNode,
   type DocumentNode,
   type InputValueDefinitionNode,
+  type IntValueNode,
   type Kind,
   type Location,
   type NameNode,
@@ -30,6 +31,15 @@ import {
   type DirectiveArgumentData,
   type DirectiveDefinitionData,
 } from '../../../directive-definition-data/types/types';
+import {
+  type INCLUDE_HEADERS,
+  type MAX_AGE,
+  type NEGATIVE_CACHE_TTL,
+  type OPENFED_CACHE_POPULATE,
+  type OPENFED_ENTITY_CACHE,
+  type PARTIAL_CACHE_LOAD,
+  type SHADOW_MODE,
+} from '../../../utils/string-constants';
 
 export type KeyFieldSetData = {
   documentNode: DocumentNode;
@@ -46,11 +56,6 @@ export type FieldSetData = {
 export type ConditionalFieldSetValidationResult = {
   errorMessages: Array<string>;
   configuration?: RequiredFieldConfiguration;
-};
-
-export type FieldSetParentResult = {
-  errorString?: string;
-  fieldSetParentData?: CompositeOutputData;
 };
 
 export type ExtractDirectiveArgumentDataResult = {
@@ -134,6 +139,76 @@ export type ComposeDirectiveArgumentNode = {
   readonly kind: Kind.ARGUMENT;
   readonly name: NameNode;
   readonly value: StringValueNode;
+  readonly loc?: Location;
+};
+
+export type EntityCacheDirectiveNode = {
+  readonly arguments:
+    | readonly [MaxAgeArgumentNode]
+    | readonly [
+        MaxAgeArgumentNode,
+        NegativeCacheTtlArgumentNode?,
+        IncludeHeadersArgumentNode?,
+        PartialCacheLoadArgumentNode?,
+        ShadowModeArgumentNode?,
+      ];
+  readonly kind: Kind.DIRECTIVE;
+  readonly name: NameNode & { readonly value: typeof OPENFED_ENTITY_CACHE };
+  readonly loc?: Location;
+};
+
+export type EntityCacheOptionalArgumentNodes =
+  | NegativeCacheTtlArgumentNode
+  | IncludeHeadersArgumentNode
+  | PartialCacheLoadArgumentNode
+  | ShadowModeArgumentNode;
+
+export type MaxAgeArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode & { readonly value: typeof MAX_AGE };
+  readonly value: IntValueNode;
+  readonly loc?: Location;
+};
+
+export type NegativeCacheTtlArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode & { readonly value: typeof NEGATIVE_CACHE_TTL };
+  readonly value: IntValueNode;
+  readonly loc?: Location;
+};
+
+export type IncludeHeadersArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode & { readonly value: typeof INCLUDE_HEADERS };
+  readonly value: BooleanValueNode;
+  readonly loc?: Location;
+};
+
+export type PartialCacheLoadArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode & { readonly value: typeof PARTIAL_CACHE_LOAD };
+  readonly value: BooleanValueNode;
+  readonly loc?: Location;
+};
+
+export type ShadowModeArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode & { readonly value: typeof SHADOW_MODE };
+  readonly value: BooleanValueNode;
+  readonly loc?: Location;
+};
+
+export type CachePopulateDirectiveNode = {
+  readonly arguments: ReadonlyArray<CachePopulateArgumentNode>;
+  readonly kind: Kind.DIRECTIVE;
+  readonly name: NameNode & { readonly value: typeof OPENFED_CACHE_POPULATE };
+  readonly loc?: Location;
+};
+
+export type CachePopulateArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode & { readonly value: typeof MAX_AGE };
+  readonly value: IntValueNode;
   readonly loc?: Location;
 };
 

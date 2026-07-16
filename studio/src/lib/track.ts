@@ -10,6 +10,18 @@ declare global {
   }
 }
 
+interface TrackingIdentity {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  plan?: string;
+}
+
 const resetTracking = () => {
   if (typeof window === 'undefined') {
     return;
@@ -29,18 +41,14 @@ const setupReo = (email: string) => {
 const setupPosthog = ({
   email,
   id,
+  firstName,
+  lastName,
+  fullName,
   organizationId,
   organizationName,
   organizationSlug,
   plan,
-}: {
-  id: string;
-  email: string;
-  organizationId: string;
-  organizationName: string;
-  organizationSlug: string;
-  plan?: string;
-}) => {
+}: TrackingIdentity) => {
   // We allow PostHog tracking for any environment, if the key is provided
   // Identify with PostHog
   let distinctId = posthog.get_distinct_id();
@@ -60,9 +68,15 @@ const setupPosthog = ({
       plan: plan,
     });
   } else {
-    posthog.identify(email, {
-      id,
-    });
+    const personProperties: Record<string, string> = { id, email };
+    const trimmedFirst = firstName?.trim();
+    const trimmedLast = lastName?.trim();
+    if (trimmedFirst) personProperties.first_name = trimmedFirst;
+    if (trimmedLast) personProperties.last_name = trimmedLast;
+    const computedFull = [trimmedFirst, trimmedLast].filter(Boolean).join(' ');
+    const resolvedFull = fullName?.trim() || computedFull;
+    if (resolvedFull) personProperties.name = resolvedFull;
+    posthog.identify(email, personProperties);
     posthog.group('cosmo_organization', organizationId, {
       id: organizationId,
       slug: organizationSlug,
@@ -73,38 +87,19 @@ const setupPosthog = ({
   posthog.reloadFeatureFlags();
 };
 
-const identify = ({
-  email,
-  id,
-  organizationId,
-  organizationName,
-  organizationSlug,
-  plan,
-}: {
-  id: string;
-  email: string;
-  organizationId: string;
-  organizationName: string;
-  organizationSlug: string;
-  plan?: string;
-}) => {
+const identify = (params: TrackingIdentity) => {
   if (typeof window === 'undefined') {
     return;
   }
 
-  if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-    setupPosthog({
-      email,
-      id,
-      organizationId,
-      organizationName,
-      organizationSlug,
-      plan,
-    });
+  // Only attach identity/PII after the user has opted in. Rejected/default
+  // opt-out users are tracked anonymously (cookieless), so no PII is sent.
+  if (process.env.NEXT_PUBLIC_POSTHOG_KEY && posthog.has_opted_in_capturing()) {
+    setupPosthog(params);
   }
 
   if (process.env.NODE_ENV === 'production') {
-    setupReo(email);
+    setupReo(params.email);
   }
 };
 
@@ -130,14 +125,7 @@ type OnboardingTrackEvent =
   | {
       name: 'onboarding_step_completed';
       options: {
-        step_name: Exclude<OnboardingStepId, 'onboarding_users_invited_opt' | 'welcome'>;
-      };
-    }
-  | {
-      name: 'onboarding_step_completed';
-      options: {
-        step_name: 'welcome';
-        channel: string[];
+        step_name: Exclude<OnboardingStepId, 'onboarding_users_invited_opt'>;
       };
     }
   | {

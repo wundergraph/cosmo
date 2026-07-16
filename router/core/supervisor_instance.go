@@ -159,17 +159,8 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		options = append(options, WithSelfRegistration(selfRegister))
 	}
 
-	executionConfigPath := cfg.ExecutionConfig.File.Path
-	if executionConfigPath == "" {
-		executionConfigPath = cfg.RouterConfigPath
-	}
-
-	if executionConfigPath != "" {
-		options = append(options, WithExecutionConfig(&ExecutionConfig{
-			Watch:         cfg.ExecutionConfig.File.Watch,
-			WatchInterval: cfg.ExecutionConfig.File.WatchInterval,
-			Path:          executionConfigPath,
-		}))
+	if opt := optionFromExecutionConfig(&cfg.ExecutionConfig, cfg.RouterConfigPath); opt != nil {
+		options = append(options, opt)
 	} else {
 		options = append(options, WithConfigPollerConfig(&RouterConfigPollerConfig{
 			GraphSignKey:      cfg.Graph.SignKey,
@@ -180,7 +171,37 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		}))
 	}
 
-	return NewRouter(options...)
+	return NewRouter(ctx, options...)
+}
+
+// optionFromExecutionConfig returns an Option that configures the router with the execution config.
+// It checks for both the static execution config and the manifest execution config
+// and returns the appropriate Option.
+func optionFromExecutionConfig(cfg *config.ExecutionConfig, routerConfigPath string) Option {
+	executionConfigPath := cfg.File.Path
+	if executionConfigPath == "" {
+		executionConfigPath = routerConfigPath
+	}
+
+	if executionConfigPath != "" {
+		return WithExecutionConfig(&ExecutionConfig{
+			Watch:         cfg.File.Watch,
+			WatchInterval: cfg.File.WatchInterval,
+			Path:          executionConfigPath,
+		})
+	}
+
+	if cfg.Manifest.Path != "" {
+		return WithManifestConfig(&ManifestConfig{
+			Path:                    cfg.Manifest.Path,
+			SkipMissingFeatureFlags: cfg.Manifest.SkipMissingFeatureFlags,
+			IgnoredFeatureFlags:     cfg.Manifest.IgnoredFeatureFlags,
+			Watch:                   cfg.Manifest.Watch,
+			WatchInterval:           cfg.Manifest.WatchInterval,
+		})
+	}
+
+	return nil
 }
 
 func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersistentState *ReloadPersistentState) []Option {
@@ -244,18 +265,11 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 			AllowHeaders:     config.CORS.AllowHeaders,
 			MaxAge:           config.CORS.MaxAge,
 		}),
-		WithTLSConfig(&TlsConfig{
-			Enabled:  config.TLS.Server.Enabled,
-			CertFile: config.TLS.Server.CertFile,
-			KeyFile:  config.TLS.Server.KeyFile,
-			ClientAuth: &TlsClientAuthConfig{
-				CertFile: config.TLS.Server.ClientAuth.CertFile,
-				Required: config.TLS.Server.ClientAuth.Required,
-			},
-		}),
+		WithTLSConfig(config.TLS),
 		WithDevelopmentMode(config.DevelopmentMode),
 		WithTracing(TraceConfigFromTelemetry(&config.Telemetry)),
 		WithMetrics(MetricConfigFromTelemetry(&config.Telemetry)),
+		WithPyroscope(config.Pyroscope),
 		WithTelemetryAttributes(config.Telemetry.Attributes),
 		WithTracingAttributes(config.Telemetry.Tracing.Attributes),
 		WithEngineExecutionConfig(config.EngineExecutionConfiguration),
@@ -264,6 +278,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithAuthorizationConfig(&config.Authorization),
 		WithWebSocketConfiguration(&config.WebSocket),
 		WithSubgraphErrorPropagation(config.SubgraphErrorPropagation),
+		WithSubgraphExtensionPropagation(config.SubgraphExtensionPropagation),
 		WithLocalhostFallbackInsideDocker(config.LocalhostFallbackInsideDocker),
 		WithCDN(config.CDN),
 		WithEvents(config.Events),
@@ -276,7 +291,6 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithDemoMode(config.DemoMode),
 		WithStreamsHandlerConfiguration(config.Events.Handlers),
 		WithReloadPersistentState(reloadPersistentState),
-		WithSubgraphTLSConfiguration(config.TLS.Client),
 	}
 
 	return options

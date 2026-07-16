@@ -111,12 +111,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 			)
 		}
 
-		p.closeWg.Add(1)
-
-		go func() {
-
-			defer p.closeWg.Done()
-
+		p.closeWg.Go(func() {
 			for {
 				select {
 				case <-p.ctx.Done():
@@ -134,6 +129,21 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 					}
 
 					for msg := range msgBatch.Messages() {
+						// The durable consumer is shared across every subscription to these subjects
+						// and outlives any single subscription. A FetchNoWait batch can therefore still
+						// be in flight when this subscription is cancelled (e.g. the client sent
+						// "complete" and immediately re-subscribed). If we delivered and acked here we
+						// would advance the durable's ack floor for a message no live subscriber
+						// received, silently losing it for the next subscriber. Instead, leave the
+						// message pending via Nak so it is redelivered to whichever subscription
+						// consumes the durable next.
+						if ctx.Err() != nil || p.ctx.Err() != nil {
+							if nakErr := msg.Nak(); nakErr != nil {
+								log.Debug("negative-acknowledging message after subscription cancellation", zap.String("message_subject", msg.Subject()), zap.Error(nakErr))
+							}
+							continue
+						}
+
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
 						p.streamMetricStore.Consume(p.ctx, metric.StreamsEvent{
@@ -158,9 +168,8 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 						}
 					}
 				}
-
 			}
-		}()
+		})
 
 		return nil
 	}
@@ -176,11 +185,14 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 		subscriptions[i] = subscription
 	}
 
-	p.closeWg.Add(1)
+	// Flush ensures the SUB commands are delivered to the NATS server before returning,
+	// so that publishers can immediately target these subjects without missing messages.
+	if err := p.client.Flush(); err != nil {
+		log.Error("flushing NATS connection after subscribe", zap.Error(err))
+		return datasource.NewError("failed to flush NATS connection", err)
+	}
 
-	go func() {
-		defer p.closeWg.Done()
-
+	p.closeWg.Go(func() {
 		for {
 			select {
 			case msg := <-msgChan:
@@ -219,7 +231,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 				return
 			}
 		}
-	}()
+	})
 
 	return nil
 }

@@ -1,0 +1,19 @@
+type EmployeeUpdated @key(fields: "id tag") {
+    id: Int!
+    tag: String!
+}
+
+type EmployeeDeleted @key(fields: "id tag") {
+    id: Int!
+    tag: String!
+}
+
+type EmployeeChanged @key(fields: "id tag") {
+    id: Int!
+    tag: String!
+}
+
+type EmployeeRemoved @key(fields: "id tag") {
+    id: Int!
+    tag: String!
+}

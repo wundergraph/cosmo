@@ -31,7 +31,7 @@ func TestHeaderPropagationConcurrentMapWrites(t *testing.T) {
 
 	const expectedResponse = `{"data":{"employees":[{"id":1,"isAvailable":false,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]},{"id":2,"isAvailable":false,"hobbies":[{},{"name":"Counter Strike"},{}]},{"id":3,"isAvailable":false,"hobbies":[{},{},{},{}]},{"id":4,"isAvailable":false,"hobbies":[{},{},{}]},{"id":5,"isAvailable":false,"hobbies":[{},{},{}]},{"id":7,"isAvailable":false,"hobbies":[{"name":"Chess"},{}]},{"id":8,"isAvailable":false,"hobbies":[{},{"name":"Miscellaneous"},{}]},{"id":10,"isAvailable":false,"hobbies":[{},{},{},{},{},{}]},{"id":11,"isAvailable":false,"hobbies":[{}]},{"id":12,"isAvailable":false,"hobbies":[{},{},{"name":"Miscellaneous"},{}]}]}}`
 
-	t.Run("response set rule with parallel subgraph fetches", func(t *testing.T) {
+	t.Run("response set rule with parallel subgraph fetches is internal only", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(config.HeaderRules{
@@ -53,7 +53,7 @@ func TestHeaderPropagationConcurrentMapWrites(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
 			require.Equal(t, expectedResponse, res.Body)
 
-			require.Equal(t, "test-value", res.Response.Header.Get("X-Custom-Header"), "single request failed")
+			require.Equal(t, "", res.Response.Header.Get("X-Custom-Header"), "set response headers should not be forwarded to the client")
 		})
 	})
 
@@ -92,7 +92,7 @@ func TestHeaderPropagationConcurrentMapWrites(t *testing.T) {
 		})
 	})
 
-	t.Run("multiple response set rules with parallel subgraph fetches", func(t *testing.T) {
+	t.Run("multiple response set rules with parallel subgraph fetches are internal only", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(config.HeaderRules{
@@ -119,8 +119,8 @@ func TestHeaderPropagationConcurrentMapWrites(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
 			require.Equal(t, expectedResponse, res.Body)
 
-			require.Equal(t, "value-a", res.Response.Header.Get("X-Header-A"), "single request failed")
-			require.Equal(t, "value-b", res.Response.Header.Get("X-Header-B"), "single request failed")
+			require.Empty(t, res.Response.Header.Get("X-Header-A"), "set response headers should not be forwarded to the client")
+			require.Empty(t, res.Response.Header.Get("X-Header-B"), "set response headers should not be forwarded to the client")
 		})
 	})
 }

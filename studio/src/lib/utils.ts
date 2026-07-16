@@ -1,10 +1,25 @@
-import { LintConfig } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { LintConfig, SocialLoginProvider } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { lintCategories } from './constants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+// Display label for a social login provider (e.g. GOOGLE → "Google").
+export function socialProviderLabel(provider?: SocialLoginProvider): string {
+  switch (provider) {
+    case SocialLoginProvider.GOOGLE: {
+      return 'Google';
+    }
+    case SocialLoginProvider.GITHUB: {
+      return 'GitHub';
+    }
+    default: {
+      return 'social login';
+    }
+  }
 }
 
 export function clamp(value: number, min: number, max: number): number {

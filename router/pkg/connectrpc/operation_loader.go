@@ -55,6 +55,20 @@ func LoadOperationsForService(serviceName string, operationFiles []string, logge
 			continue
 		}
 
+		// If the operation carries September-2025-spec executable descriptions,
+		// re-print without them so the string forwarded to upstream GraphQL
+		// servers stays valid for servers that don't yet support the new spec.
+		if schemaloader.HasExecutableDescriptions(&opDoc) {
+			stripped, err := schemaloader.PrintOperationWithoutDescriptions(&opDoc)
+			if err != nil {
+				logger.Warn("failed to render operation without descriptions",
+					zap.String("file", filePath),
+					zap.Error(err))
+				continue
+			}
+			operationString = stripped
+		}
+
 		// Validate exactly one operation per file
 		operationCount := len(opDoc.OperationDefinitions)
 		if operationCount != 1 {

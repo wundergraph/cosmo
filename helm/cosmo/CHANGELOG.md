@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.19.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.18.0...helm-cosmo@0.19.0) (2026-06-04)
+
+
+### Features
+
+* **helm:** add unhealthy pod eviction policy support to pdb ([#2907](https://github.com/wundergraph/cosmo/issues/2907)) ([39a83f2](https://github.com/wundergraph/cosmo/commit/39a83f2d2053b5a93af99244d584392c7fae65e6))
+
+## [0.18.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.17.0...helm-cosmo@0.18.0) (2026-05-11)
+
+
+### Features
+
+* **controlplane:** add support for failover s3 bucket in helm chart ([#2803](https://github.com/wundergraph/cosmo/issues/2803)) ([9780ce7](https://github.com/wundergraph/cosmo/commit/9780ce7b2b883de434bf846018bf28459ac27ea3))
+* **helm:** update minio to latest available version ([#2783](https://github.com/wundergraph/cosmo/issues/2783)) ([f5e7716](https://github.com/wundergraph/cosmo/commit/f5e77160cf2841a7dc27624d23abed77b718a099))
+
 ## [0.17.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.16.0...helm-cosmo@0.17.0) (2026-04-21)
 
 

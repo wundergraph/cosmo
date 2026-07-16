@@ -1228,11 +1228,24 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                       <Alert variant="destructive">
                         <AlertTitle>Composition Errors</AlertTitle>
                         <AlertDescription>
-                          <pre className="whitespace-pre-wrap">
-                            {data.compositionErrors.length > 0
-                              ? data.compositionErrors.join('\n').split('Error: ').join('\n')
-                              : 'No composition errors'}
-                          </pre>
+                          <div className="mt-2 space-y-4">
+                            {data.compositionErrors.map((entry, idx) => (
+                              <div key={idx} className="space-y-1.5">
+                                <div className="flex flex-wrap items-center gap-x-1.5">
+                                  {entry.federatedGraphName && (
+                                    <span className="font-medium">{entry.federatedGraphName}</span>
+                                  )}
+                                  {entry.featureFlag && (
+                                    <>
+                                      <span className="text-muted-foreground">/</span>
+                                      <span className="font-medium">{entry.featureFlag}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <pre className="whitespace-pre-wrap">{entry.message.replace(/^Error:\s*/g, '')}</pre>
+                              </div>
+                            ))}
+                          </div>
                         </AlertDescription>
                       </Alert>
                     ) : null}
@@ -1241,11 +1254,26 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                       <Alert variant="warn">
                         <AlertTitle>Composition Warnings</AlertTitle>
                         <AlertDescription>
-                          <pre className="whitespace-pre-wrap">
-                            {data.compositionWarnings.length > 0
-                              ? data.compositionWarnings.join('\n').split('Warning: ').join('\n')
-                              : 'No composition wanings'}
-                          </pre>
+                          <div className="mt-2 space-y-4">
+                            {data.compositionWarnings.map((entry, idx) => (
+                              <div key={idx} className="space-y-1.5">
+                                <div className="flex flex-wrap items-center gap-x-1.5 text-sm">
+                                  {entry.federatedGraphName && (
+                                    <span className="font-medium">{entry.federatedGraphName}</span>
+                                  )}
+                                  {entry.featureFlag && (
+                                    <>
+                                      <span className="text-muted-foreground">/</span>
+                                      <span className="font-medium">{entry.featureFlag}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <pre className="whitespace-pre-wrap text-sm">
+                                  {entry.message.replace(/^Warning:\s*/g, '')}
+                                </pre>
+                              </div>
+                            ))}
+                          </div>
                         </AlertDescription>
                       </Alert>
                     ) : null}

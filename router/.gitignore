@@ -9,3 +9,4 @@ __debug_bin*
 
 # Router plugins
 /plugins
+__schemas/manifest/

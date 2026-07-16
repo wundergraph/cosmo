@@ -68,15 +68,17 @@ The above *matcher* translates to logically to `(team=A || team=B) && region=us-
 
 #### Subgraphs example:
 
-Assuming we have the following subgraphs with exact one label:
+Assuming we have the following subgraphs:
 
-1\. Products `--labels team=A`
+1\. Products `--label team=A region=us-east-1`
 
-2\. Hobbies `--labels team=D`
+2\. Employees `--label team=B region=us-east-1`
 
-3\. Users `--labels region=us-east-1`
+3\. Hobbies `--label team=A`
 
-Based on the two examples above this setup will create a federated graph consisting of subgraphs *Products* and *Users*.
+4\. Users `--label region=us-east-1`
+
+Based on the matcher above, this setup will create a federated graph consisting of subgraphs *Products* and *Employees*. *Hobbies* is excluded because it has no `region` label, and *Users* is excluded because it has no `team` label.
 
 ## Validate composition
 

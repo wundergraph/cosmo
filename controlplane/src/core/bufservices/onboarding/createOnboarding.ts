@@ -1,10 +1,10 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   CreateOnboardingRequest,
   CreateOnboardingResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { PlainMessage } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OnboardingRepository } from '../../repositories/OnboardingRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -32,8 +32,6 @@ export function createOnboarding(
           details: 'Only the organization creator can create onboarding.',
         },
         federatedGraphsCount: 0,
-        slack: false,
-        email: false,
       };
     }
 
@@ -43,8 +41,6 @@ export function createOnboarding(
     const [onboarding, federatedGraphsCount] = await Promise.all([
       onboardingRepo.createOrUpdate({
         userId: authContext.userId,
-        slack: req.slack,
-        email: req.email,
       }),
       fedGraphRepo.count(),
     ]);
@@ -55,8 +51,6 @@ export function createOnboarding(
       },
       finishedAt: onboarding.finishedAt?.toISOString(),
       federatedGraphsCount,
-      slack: onboarding.slack,
-      email: onboarding.email,
     };
   });
 }

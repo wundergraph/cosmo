@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/expr"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
@@ -158,7 +159,14 @@ func processExpressionAttributes(
 	for _, exprField := range exprAttributes {
 		result, err := expr.ResolveAnyExpression(exprField.Expr, *overrideExprContext)
 		if err != nil {
-			logger.Error("unable to process expression for access logs", zap.String("fieldKey", exprField.Key), zap.Error(err))
+			// Expression resolution failures at request time are almost always driven by
+			// request/response data (e.g. an absent or non-numeric header passed to
+			// date/float), not by a broken configuration: invalid expressions are
+			// rejected at startup during compilation. Log at debug to avoid flooding the access
+			// log on the hot path, and fall back to the configured default so the field still
+			// behaves as documented (the field is skipped when no default is set).
+			logger.Debug("unable to process expression for access logs", zap.String("fieldKey", exprField.Key), zap.Error(err))
+			resFields = append(resFields, NewExpressionLogField("", exprField.Key, exprField.Default))
 			continue
 		}
 		resFields = append(resFields, NewExpressionLogField(result, exprField.Key, exprField.Default))
@@ -210,7 +218,7 @@ func getCustomDynamicAttributeValue(
 	attribute *config.CustomDynamicAttribute,
 	reqContext *requestContext,
 	err any,
-) interface{} {
+) any {
 	if attribute == nil || attribute.ContextField == "" {
 		return ""
 	}

@@ -3,7 +3,9 @@ package core
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,7 +16,7 @@ import (
 )
 
 func TestBuildRequestHeaderForSubgraph_GlobalRulesAndHashStable(t *testing.T) {
-	ht, err := NewHeaderPropagation(&config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},
@@ -22,7 +24,7 @@ func TestBuildRequestHeaderForSubgraph_GlobalRulesAndHashStable(t *testing.T) {
 				{Operation: "set", Name: "X-Static", Value: "static"},
 			},
 		},
-	})
+	}, nil)
 	require.NoError(t, err)
 	require.NotNil(t, ht)
 
@@ -52,7 +54,7 @@ func TestBuildRequestHeaderForSubgraph_GlobalRulesAndHashStable(t *testing.T) {
 }
 
 func TestBuildRequestHeaderForSubgraph_SubgraphSpecificRules(t *testing.T) {
-	ht, err := NewHeaderPropagation(&config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-Global"},
@@ -66,7 +68,7 @@ func TestBuildRequestHeaderForSubgraph_SubgraphSpecificRules(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, nil)
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()
@@ -110,7 +112,7 @@ func BenchmarkHashHeaderStable(b *testing.B) {
 
 func BenchmarkBuildRequestHeaderForSubgraph(b *testing.B) {
 	// Build rules that propagate and set a few headers
-	ht, err := NewHeaderPropagation(&config.HeaderRules{
+	ht, err := NewHeaderPropagation(b.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},
@@ -118,7 +120,7 @@ func BenchmarkBuildRequestHeaderForSubgraph(b *testing.B) {
 				{Operation: "set", Name: "X-Static", Value: "static"},
 			},
 		},
-	})
+	}, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -146,14 +148,14 @@ func BenchmarkBuildRequestHeaderForSubgraph(b *testing.B) {
 
 func TestSubgraphHeadersBuilder_PrePopulatesAndClones_SyncPlan(t *testing.T) {
 	// Header rules to propagate X-A and set X-Static
-	ht, err := NewHeaderPropagation(&config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},
 				{Operation: "set", Name: "X-Static", Value: "static"},
 			},
 		},
-	})
+	}, nil)
 	require.NoError(t, err)
 
 	// Prepare client request
@@ -206,13 +208,13 @@ func TestSubgraphHeadersBuilder_PrePopulatesAndClones_SyncPlan(t *testing.T) {
 }
 
 func TestSubgraphHeadersBuilder_IgnoresClientHeaderChangesAfterPrepopulate(t *testing.T) {
-	ht, err := NewHeaderPropagation(&config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},
 			},
 		},
-	})
+	}, nil)
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()
@@ -250,14 +252,14 @@ func TestSubgraphHeadersBuilder_IgnoresClientHeaderChangesAfterPrepopulate(t *te
 // and the actual usage in the codebase.
 
 func TestSubgraphHeadersBuilder_SubscriptionPlan_IncludesTriggerAndResponse(t *testing.T) {
-	ht, err := NewHeaderPropagation(&config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},
 				{Operation: "set", Name: "X-Static", Value: "static"},
 			},
 		},
-	})
+	}, nil)
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()
@@ -323,14 +325,14 @@ func TestSubgraphHeadersBuilder_SubscriptionPlan_IncludesTriggerAndResponse(t *t
 }
 
 func TestSubgraphHeadersBuilder_MissingPrePopulatedCache(t *testing.T) {
-	ht, err := NewHeaderPropagation(&config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},
 				{Operation: "set", Name: "X-Static", Value: "static"},
 			},
 		},
-	})
+	}, nil)
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()
@@ -380,15 +382,290 @@ func TestSubgraphHeadersBuilder_MissingPrePopulatedCache(t *testing.T) {
 	assert.Equal(t, hash1, hash1Again, "hash should be stable for pre-populated subgraph")
 }
 
+func TestBuildRequestHeaderForSubgraph_FromFile(t *testing.T) {
+	t.Parallel()
+
+	t.Run("global rule sets header from file contents", func(t *testing.T) {
+		t.Parallel()
+
+		path := writeHeaderSourceFile(t, "secret-token")
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{Operation: "set", Name: "X-Auth", FromFile: &config.FileHeaderSource{Path: path, RefreshInterval: time.Second}},
+				},
+			},
+		}, nil)
+		require.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+		clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+		require.NoError(t, err)
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+
+		h, hash := ht.BuildRequestHeaderForSubgraph("", ctx)
+		assert.Equal(t, "secret-token", h.Get("X-Auth"))
+		require.NotZero(t, hash)
+	})
+
+	t.Run("two rules with different files set their respective headers", func(t *testing.T) {
+		t.Parallel()
+
+		pathA := writeHeaderSourceFile(t, "value-a")
+		pathB := writeHeaderSourceFile(t, "value-b")
+
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{Operation: "set", Name: "X-A", FromFile: &config.FileHeaderSource{Path: pathA, RefreshInterval: time.Second}},
+					{Operation: "set", Name: "X-B", FromFile: &config.FileHeaderSource{Path: pathB, RefreshInterval: time.Second}},
+				},
+			},
+		}, nil)
+		require.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+		clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+		require.NoError(t, err)
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+
+		h, _ := ht.BuildRequestHeaderForSubgraph("", ctx)
+		assert.Equal(t, "value-a", h.Get("X-A"))
+		assert.Equal(t, "value-b", h.Get("X-B"))
+	})
+
+	t.Run("subgraph-scoped rule sets header only on matching subgraph", func(t *testing.T) {
+		t.Parallel()
+
+		path := writeHeaderSourceFile(t, "sg1-secret")
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			Subgraphs: map[string]*config.GlobalHeaderRule{
+				"sg-1": {
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Auth", FromFile: &config.FileHeaderSource{Path: path, RefreshInterval: time.Second}},
+					},
+				},
+			},
+		}, nil)
+		require.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+		clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+		require.NoError(t, err)
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+
+		matched, _ := ht.BuildRequestHeaderForSubgraph("sg-1", ctx)
+		assert.Equal(t, "sg1-secret", matched.Get("X-Auth"))
+
+		other, _ := ht.BuildRequestHeaderForSubgraph("sg-2", ctx)
+		assert.Equal(t, "", other.Get("X-Auth"), "subgraph-scoped rule must not apply to other subgraphs")
+	})
+
+	t.Run("subgraph FromFile rule overrides All rule on the same header name", func(t *testing.T) {
+		t.Parallel()
+
+		// Same header name, two source files: All -> default, sg-1 -> override.
+		// Expected: sg-1 receives the override value; other subgraphs fall back to the All value.
+		allPath := writeHeaderSourceFile(t, "default-token")
+		sg1Path := writeHeaderSourceFile(t, "sg1-token")
+
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{Operation: "set", Name: "X-Auth", FromFile: &config.FileHeaderSource{Path: allPath, RefreshInterval: time.Second}},
+				},
+			},
+			Subgraphs: map[string]*config.GlobalHeaderRule{
+				"sg-1": {
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Auth", FromFile: &config.FileHeaderSource{Path: sg1Path, RefreshInterval: time.Second}},
+					},
+				},
+			},
+		}, nil)
+		require.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+		clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+		require.NoError(t, err)
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+
+		// sg-1 has an override rule — must win against the All rule.
+		matched, hashMatched := ht.BuildRequestHeaderForSubgraph("sg-1", ctx)
+		assert.Equal(t, "sg1-token", matched.Get("X-Auth"))
+		require.NotZero(t, hashMatched)
+
+		// sg-2 has no override — falls back to the All rule's file contents.
+		other, hashOther := ht.BuildRequestHeaderForSubgraph("sg-2", ctx)
+		assert.Equal(t, "default-token", other.Get("X-Auth"))
+		require.NotZero(t, hashOther)
+
+		// Two different header values => two different stable hashes.
+		assert.NotEqual(t, hashMatched, hashOther, "override and fallback should yield distinct subgraph header hashes")
+	})
+
+	t.Run("All and subgraph FromFile rules with different header names coexist", func(t *testing.T) {
+		t.Parallel()
+
+		// Different header names: both rules apply for the targeted subgraph,
+		// only the All rule applies for unrelated subgraphs.
+		allPath := writeHeaderSourceFile(t, "global-value")
+		sg1Path := writeHeaderSourceFile(t, "sg1-value")
+
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{Operation: "set", Name: "X-Global", FromFile: &config.FileHeaderSource{Path: allPath, RefreshInterval: time.Second}},
+				},
+			},
+			Subgraphs: map[string]*config.GlobalHeaderRule{
+				"sg-1": {
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Sg", FromFile: &config.FileHeaderSource{Path: sg1Path, RefreshInterval: time.Second}},
+					},
+				},
+			},
+		}, nil)
+		require.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+		clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+		require.NoError(t, err)
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+
+		matched, _ := ht.BuildRequestHeaderForSubgraph("sg-1", ctx)
+		assert.Equal(t, "global-value", matched.Get("X-Global"))
+		assert.Equal(t, "sg1-value", matched.Get("X-Sg"))
+
+		other, _ := ht.BuildRequestHeaderForSubgraph("sg-2", ctx)
+		assert.Equal(t, "global-value", other.Get("X-Global"))
+		assert.Equal(t, "", other.Get("X-Sg"), "subgraph-scoped rule must not leak to other subgraphs")
+	})
+
+	t.Run("header value refreshes after the source file is modified", func(t *testing.T) {
+		t.Parallel()
+
+		// Real-time integration test: confirms that the engine's file-watcher
+		// reloads the in-memory buffer and that subsequent BuildRequestHeaderForSubgraph
+		// calls observe the updated value. The watcher's deterministic ticking is
+		// already covered by pkg/watcher tests; here we just verify the engine
+		// wires the refresh through to the header path.
+		path := writeHeaderSourceFile(t, "initial-token")
+
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{Operation: "set", Name: "X-Auth", FromFile: &config.FileHeaderSource{Path: path, RefreshInterval: 50 * time.Millisecond}},
+				},
+			},
+		}, nil)
+		require.NoError(t, err)
+
+		// The watcher goroutine captures its baseline mtime once it actually
+		// runs (after `go` scheduling). If we rewrite the file before that
+		// baseline is captured, the baseline is taken from the rewritten file
+		// and the watcher never sees a change. One refresh interval is enough
+		// to guarantee the goroutine reached its pre-loop stat.
+		time.Sleep(100 * time.Millisecond)
+
+		rr := httptest.NewRecorder()
+		clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+		require.NoError(t, err)
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+
+		// Initial value comes from the file's first contents.
+		h, _ := ht.BuildRequestHeaderForSubgraph("", ctx)
+		require.Equal(t, "initial-token", h.Get("X-Auth"))
+
+		// Rewrite the same path with new contents. The watcher requires two
+		// stable ticks (one to detect the mtime change, one to confirm) before
+		// firing the reload callback — at 50ms interval that's ~100-150ms.
+		require.NoError(t, os.WriteFile(path, []byte("rotated-token"), 0o600))
+
+		require.Eventually(t, func() bool {
+			h, _ := ht.BuildRequestHeaderForSubgraph("", ctx)
+			return h.Get("X-Auth") == "rotated-token"
+		}, 5*time.Second, 50*time.Millisecond, "expected header to reflect the rewritten file contents")
+	})
+
+	t.Run("header value preserves raw file contents including trailing newline", func(t *testing.T) {
+		t.Parallel()
+
+		// Regression guard: the apply path reads buffer.String() with no trimming,
+		// so callers must be aware that secret files with trailing newlines will
+		// carry that newline into the outbound header. If trimming is later added,
+		// this test should be updated accordingly.
+		path := writeHeaderSourceFile(t, "token-with-newline\n")
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{Operation: "set", Name: "X-Auth", FromFile: &config.FileHeaderSource{Path: path, RefreshInterval: time.Second}},
+				},
+			},
+		}, nil)
+		require.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+		clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+		require.NoError(t, err)
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+
+		h, _ := ht.BuildRequestHeaderForSubgraph("", ctx)
+		assert.Equal(t, "token-with-newline\n", h.Get("X-Auth"))
+	})
+}
+
 func TestSubgraphHeadersBuilder_ConcurrentAccessSameSubgraph(t *testing.T) {
-	ht, err := NewHeaderPropagation(&config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},
 				{Operation: "set", Name: "X-Static", Value: "static"},
 			},
 		},
-	})
+	}, nil)
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()

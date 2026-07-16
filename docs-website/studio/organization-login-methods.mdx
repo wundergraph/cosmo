@@ -1,0 +1,69 @@
+---
+title: "Organization Login Methods"
+description: "Restrict which login methods can be used to access your organization."
+icon: "lock-keyhole"
+---
+
+Organization login methods control which login methods can be used to access the organization. A user who authenticates with a method the organization does not allow is denied access to that organization. The restriction is per organization, so a user denied from one organization can still access another that allows their method.
+
+<Note>
+  Login method restrictions are an Enterprise plan feature.
+</Note>
+
+## Login methods
+
+An organization can allow any combination of the following:
+
+- **Password**: email and password login.
+- **Google**: Google social login.
+- **GitHub**: GitHub social login.
+- **SSO apps**: each OIDC provider you have connected. Every connected app is a separate login method, so you can allow one app and not another. See [SSO](/studio/sso) for how to connect providers.
+
+## How it works
+
+With no restriction configured, all methods are allowed. This is the default, so existing organizations are unaffected until you configure a restriction.
+
+Once you configure a restriction, only the listed methods can access the organization. Every other method is denied.
+
+<Note>
+  API keys are never restricted. Use API keys for CI and automation. The restriction is based on how a user authenticated, not their role, so it applies to all members including organization admins.
+</Note>
+
+## Guardrails
+
+- Clearing all selected methods removes the restriction. The organization returns to allowing every method.
+- When you save a restriction, the change is rejected if your current login method is not in the new allow-list. Sign in with the method you intend to enforce before tightening the restriction.
+- The studio shows a warning before a change reduces access. This happens when you add a restriction to an organization that had none, or when you remove a method that members are currently using. Members who relied on a removed method lose access on their next request.
+
+For example, to enforce SSO-only access, sign in through the SSO app first, then configure the organization to allow only that app.
+
+## Configure
+
+<Info>
+  Only organization admins can view and change organization login methods.
+</Info>
+
+<Steps>
+  <Step>
+    Connect the SSO providers and enable the social logins you intend to use. See [SSO](/studio/sso).
+  </Step>
+  <Step>
+    Go to **Login Methods** and use the **Organization** section.
+  </Step>
+  <Step>
+    Select the allowed login methods. Leave the selection empty to allow all methods.
+  </Step>
+  <Step>
+    Save. The restriction applies on each user's next request.
+  </Step>
+</Steps>
+
+## Relationship to namespace login methods
+
+The organization allow-list is the superset of any [namespace-level configuration](/studio/namespace-login-methods). Namespace login methods can only reference methods the organization allows.
+
+- If the organization allows a single method, namespace-level gating has no additional effect and the **Namespaces** section is disabled.
+- When you tighten the organization restriction, namespaces that referenced a now-removed method have it stripped from their mapping.
+- A namespace left with no methods after a tightening becomes open to all remaining allowed methods.
+
+The studio asks you to confirm before applying a change that affects namespace mappings.

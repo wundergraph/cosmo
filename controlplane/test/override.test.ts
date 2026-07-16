@@ -125,7 +125,7 @@ describe('Overrides', (ctx) => {
       namespace: graphRes.graph?.namespace,
       operationHash: 'hash1',
       operationName: 'op1',
-      changes: checkResp.breakingChanges,
+      changes: checkResp.breakingChanges.map((c) => ({ changeType: c.changeType, path: c.path })),
     });
     expect(createOverrideRes.response?.code).toBe(EnumStatusCode.OK);
 
@@ -161,7 +161,7 @@ describe('Overrides', (ctx) => {
       graphName: graphRes.graph?.name,
       namespace: graphRes.graph?.namespace,
       operationHash: 'hash1',
-      changes: checkResp.breakingChanges,
+      changes: checkResp.breakingChanges.map((c) => ({ changeType: c.changeType, path: c.path })),
     });
     expect(removeOverrideRes.response?.code).toBe(EnumStatusCode.OK);
 

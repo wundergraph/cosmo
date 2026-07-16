@@ -157,27 +157,23 @@ export const Step2 = () => {
   return (
     <OnboardingContainer>
       <div className="mt-4 flex w-full flex-col gap-6 text-left">
-        <div className="flex gap-3">
-          <span className="-mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-            1
-          </span>
-          <p className="text-sm text-muted-foreground">
-            Install the{' '}
-            <a
-              target="_blank"
-              rel="noreferrer"
-              href="https://cosmo-docs.wundergraph.com/cli/intro"
-              className="text-primary"
-            >
-              wgc CLI
-            </a>{' '}
-            if you haven&apos;t already. Ensure Docker is installed as well.
-          </p>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          The next steps use the{' '}
+          <a
+            target="_blank"
+            rel="noreferrer"
+            href="https://cosmo-docs.wundergraph.com/cli/intro"
+            className="text-primary"
+          >
+            wgc CLI
+          </a>{' '}
+          (via <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">npx</code>) and require Docker to be
+          installed and running.
+        </p>
 
         <div className="flex gap-3">
           <span className="-mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-            2
+            1
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <p className="text-sm text-muted-foreground">Make sure you&apos;re logged in.</p>
@@ -187,7 +183,7 @@ export const Step2 = () => {
 
         <div className="flex gap-3">
           <span className="-mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-            3
+            2
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <p className="text-sm text-muted-foreground">Create a demo federated graph with sample subgraphs.</p>

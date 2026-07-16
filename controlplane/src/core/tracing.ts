@@ -39,6 +39,6 @@ export function traced<T extends new (...args: any[]) => any>(target: T): T {
  * Wraps a function call with a Sentry span.
  * Use for ad-hoc tracing of service calls, auth, etc.
  */
-export function withSpan<T>(name: string, fn: () => Promise<T> | T): Promise<T> {
-  return Sentry.startSpan({ name }, () => fn()) as Promise<T>;
+export function withSpan<T>(name: string, fn: () => Promise<T> | T): Promise<T> | T {
+  return Sentry.startSpan({ name }, fn);
 }
