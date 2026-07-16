@@ -40,6 +40,7 @@ export class WorkspaceService {
           id: ns.id,
           name: ns.name,
           graphs: [],
+          subgraphs: [],
         }),
       )
       .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
@@ -158,7 +159,7 @@ export class WorkspaceService {
             targetId: graph.targetId,
             name: graph.name,
             isContract: !!graph.contractId,
-            subgraphs: [],
+            subgraphTargetIds: [],
           }),
         )
         .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
