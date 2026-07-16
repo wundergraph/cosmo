@@ -1,0 +1,46 @@
+{
+  "data": {
+    "_entities": [
+      {
+        "__typename": "Employee",
+        "isAvailable": false
+      },
+      {
+        "__typename": "Employee",
+        "isAvailable": false
+      },
+      {
+        "__typename": "Employee",
+        "isAvailable": false
+      },
+      {
+        "__typename": "Employee",
+        "isAvailable": false
+      },
+      {
+        "__typename": "Employee",
+        "isAvailable": false
+      },
+      {
+        "__typename": "Employee",
+        "isAvailable": false
+      },
+      {
+        "__typename": "Employee",
+        "isAvailable": false
+      },
+      {
+        "__typename": "Employee",
+        "isAvailable": false
+      },
+      {
+        "__typename": "Employee",
+        "isAvailable": false
+      },
+      {
+        "__typename": "Employee",
+        "isAvailable": false
+      }
+    ]
+  }
+}
