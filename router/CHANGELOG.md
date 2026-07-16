@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.332.0](https://github.com/wundergraph/cosmo/compare/router@0.331.1...router@0.332.0) (2026-07-15)
+
+### Features
+
+* **router:** router force use of variables and not inline values ([#3055](https://github.com/wundergraph/cosmo/issues/3055)) ([85f893c](https://github.com/wundergraph/cosmo/commit/85f893c62b6c132c4cf48842aeba3d85a73d270a)) (@SkArchon)
+
 ## [0.331.1](https://github.com/wundergraph/cosmo/compare/router@0.331.0...router@0.331.1) (2026-07-14)
 
 ### Bug Fixes
