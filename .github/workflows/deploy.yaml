@@ -23,18 +23,37 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # lerna publishes a separate GitHub release per package, so this workflow
+    # fires once per released package. Only controlplane and studio are deployed,
+    # so ignore every other package's release. Manual dispatch always runs.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.release.tag_name, 'controlplane@') ||
+      startsWith(github.event.release.tag_name, 'studio@')
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
+      # On a release event, deploy only the package that was just released (its
+      # version comes from the release tag, e.g. "controlplane@0.243.0"). On a
+      # manual dispatch there is no tag, so deploy the current version of both.
+      # Unset versions stay empty and the cosmo-cloud receiver skips them.
       - name: Read versions
         id: versions
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          CP_VERSION=$(node -p "require('./controlplane/package.json').version")
-          STUDIO_VERSION=$(node -p "require('./studio/package.json').version")
-          echo "controlplane=${CP_VERSION}" >> $GITHUB_OUTPUT
-          echo "studio=${STUDIO_VERSION}" >> $GITHUB_OUTPUT
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "controlplane=$(node -p "require('./controlplane/package.json').version")" >> "$GITHUB_OUTPUT"
+            echo "studio=$(node -p "require('./studio/package.json').version")" >> "$GITHUB_OUTPUT"
+          else
+            case "$RELEASE_TAG" in
+              controlplane@*) echo "controlplane=${RELEASE_TAG#controlplane@}" >> "$GITHUB_OUTPUT" ;;
+              studio@*)       echo "studio=${RELEASE_TAG#studio@}" >> "$GITHUB_OUTPUT" ;;
+            esac
+          fi
 
       - name: Authenticate
         id: app-token
