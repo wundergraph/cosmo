@@ -893,6 +893,49 @@ graphql_metrics:
   collector_endpoint: "https://cosmo-metrics.wundergraph.com"
 ```
 
+## Pyroscope (Continuous Profiling)
+
+Continuously profile the router with [Grafana Pyroscope](https://grafana.com/oss/pyroscope/). When enabled, the router periodically collects profiles (CPU, memory, and more) and uploads them to a Pyroscope server, so you can analyze the router's performance over time in Grafana. This works against a self-hosted Pyroscope instance or [Grafana Cloud Profiles](https://grafana.com/products/cloud/profiles/). See the [Profiling guide](/router/profiling#continuous-profiling-with-grafana-pyroscope) for a walkthrough.
+
+| Environment Variable             | YAML                    | Required                                    | Description                                                                                                                                                                                                                                    | Default Value                                              |
+| -------------------------------- | ----------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| PYROSCOPE_ENABLED                | enabled                 | <Icon icon="square" />                      | Enable continuous profiling. When enabled, `server_address` must be set.                                                                                                                                                                       | false                                                      |
+| PYROSCOPE_SERVER_ADDRESS         | server_address          | <Icon icon="square-check" iconType="solid" /> (when enabled) | Address of the Pyroscope server the profiles are sent to, e.g. your own Pyroscope or a Grafana Cloud instance.                                                                                                                                  |                                                            |
+| PYROSCOPE_APPLICATION_NAME       | application_name        | <Icon icon="square" />                      | Application name the profiles are stored under.                                                                                                                                                                                                | wundergraph.cosmo.router                                   |
+| PYROSCOPE_BASIC_AUTH_USERNAME    | basic_auth.username     | <Icon icon="square" />                      | Username for basic authentication. For Grafana Cloud, this is the stack user ID.                                                                                                                                                               |                                                            |
+| PYROSCOPE_BASIC_AUTH_PASSWORD    | basic_auth.password     | <Icon icon="square" />                      | Password for basic authentication. For Grafana Cloud, this is an access token with profile write permissions.                                                                                                                                  |                                                            |
+| PYROSCOPE_HEADERS                | headers                 | <Icon icon="square" />                      | Map of headers to send with each profile upload request, e.g. to authenticate with a bearer token instead of basic auth. As an environment variable, use the format `key1:value1,key2:value2`.                                                  |                                                            |
+| PYROSCOPE_TAGS                   | tags                    | <Icon icon="square" />                      | Map of static tags attached to all profiles. The router always attaches the hostname and router version as tags. As an environment variable, use the format `key1:value1,key2:value2`.                                                          |                                                            |
+| PYROSCOPE_UPLOAD_RATE            | upload_rate             | <Icon icon="square" />                      | Interval at which profiles are uploaded to the Pyroscope server (e.g. `15s`, `1m`).                                                                                                                                                            | 15s                                                        |
+| PYROSCOPE_PROFILE_TYPES          | profile_types           | <Icon icon="square" />                      | Profile types to collect. Valid values: `cpu`, `alloc_objects`, `alloc_space`, `inuse_objects`, `inuse_space`, `goroutines`, `mutex_count`, `mutex_duration`, `block_count`, `block_duration`, `goroutine_leak`. Unrecognized values are ignored. | cpu, alloc_objects, alloc_space, inuse_objects, inuse_space |
+| PYROSCOPE_DISABLE_GC_RUNS        | disable_gc_runs         | <Icon icon="square" />                      | Disable the automatic `runtime.GC` run before each heap profile upload. Enabling this avoids extra GC pauses on large-heap or latency-sensitive routers, at the cost of less accurate memory profiles.                                          | false                                                      |
+| PYROSCOPE_MUTEX_PROFILE_FRACTION | mutex_profile_fraction  | <Icon icon="square" />                      | Fraction of mutex contention events reported in the mutex profile; on average 1/n events are reported. Set to `0` to disable mutex profiling.                                                                                                   | 5                                                          |
+| PYROSCOPE_BLOCK_PROFILE_RATE     | block_profile_rate      | <Icon icon="square" />                      | Fraction of goroutine blocking events reported in the block profile; on average 1/n events are reported. Set to `0` to disable block profiling.                                                                                                 | 5                                                          |
+
+### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+pyroscope:
+  enabled: true
+  server_address: "http://localhost:4040"
+  application_name: "wundergraph.cosmo.router"
+  # Optional: authenticate against Grafana Cloud
+  basic_auth:
+    username: "<stack-user-id>"
+    password: "<access-token>"
+  tags:
+    env: "production"
+  upload_rate: 15s
+  profile_types:
+    - cpu
+    - alloc_objects
+    - alloc_space
+    - inuse_objects
+    - inuse_space
+```
+
 ## CORS
 
 | Environment Variable   | YAML              | Required               | Description                                                                                                                                  | Default Value                        |
