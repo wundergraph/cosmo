@@ -138,6 +138,38 @@
       "CardinalityLimit": 2000
     }
   },
+  "Pyroscope": {
+    "Enabled": true,
+    "ServerAddress": "https://profiles-prod-001.grafana.net",
+    "ApplicationName": "cosmo-router",
+    "BasicAuth": {
+      "Username": "123456",
+      "Password": "my-access-token"
+    },
+    "Headers": {
+      "X-Custom-Header": "value"
+    },
+    "Tags": {
+      "env": "prod"
+    },
+    "UploadRate": 15000000000,
+    "ProfileTypes": [
+      "cpu",
+      "alloc_objects",
+      "alloc_space",
+      "inuse_objects",
+      "inuse_space",
+      "goroutines",
+      "mutex_count",
+      "mutex_duration",
+      "block_count",
+      "block_duration",
+      "goroutine_leak"
+    ],
+    "DisableGCRuns": false,
+    "MutexProfileFraction": 5,
+    "BlockProfileRate": 5
+  },
   "GraphqlMetrics": {
     "Enabled": true,
     "CollectorEndpoint": "https://cosmo-metrics.wundergraph.com"

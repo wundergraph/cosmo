@@ -105,6 +105,22 @@
       "CardinalityLimit": 2000
     }
   },
+  "Pyroscope": {
+    "Enabled": false,
+    "ServerAddress": "",
+    "ApplicationName": "wundergraph.cosmo.router",
+    "BasicAuth": {
+      "Username": "",
+      "Password": ""
+    },
+    "Headers": null,
+    "Tags": null,
+    "UploadRate": 15000000000,
+    "ProfileTypes": null,
+    "DisableGCRuns": false,
+    "MutexProfileFraction": 5,
+    "BlockProfileRate": 5
+  },
   "GraphqlMetrics": {
     "Enabled": true,
     "CollectorEndpoint": "https://cosmo-metrics.wundergraph.com"

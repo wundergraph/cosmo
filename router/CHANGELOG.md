@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.333.0](https://github.com/wundergraph/cosmo/compare/router@0.332.0...router@0.333.0) (2026-07-16)
+
+### Features
+
+* improve network metrics data ([#3082](https://github.com/wundergraph/cosmo/issues/3082)) ([88c188e](https://github.com/wundergraph/cosmo/commit/88c188eec9dfb8c91fd10e82988227a312b53f44)) (@alepane21)
+* **router:** add router pyroscope support ([#3075](https://github.com/wundergraph/cosmo/issues/3075)) ([5d034d3](https://github.com/wundergraph/cosmo/commit/5d034d38f676907bddca00a5bdb3fe112ba7986f)) (@Noroth)
+
 # [0.332.0](https://github.com/wundergraph/cosmo/compare/router@0.331.1...router@0.332.0) (2026-07-15)
 
 ### Features
