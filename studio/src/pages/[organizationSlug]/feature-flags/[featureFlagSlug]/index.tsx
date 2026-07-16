@@ -13,6 +13,7 @@ import { FeatureFlagDetails } from '@/components/feature-flag-details';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { NamespaceSelector } from '@/components/dashboard/namespace-selector';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 const FeatureFlagDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -64,7 +65,7 @@ const FeatureFlagBreadcrumb = () => {
     <div className="flex h-8 items-center justify-center">
       <Link
         key={organizationSlug + namespace}
-        href={`/${encodeURIComponent(organizationSlug ?? '')}/feature-flags?namespace=${encodeURIComponent(namespace)}`}
+        href={buildUrl('/:organizationSlug/feature-flags', { organizationSlug, namespace })}
       >
         Feature Flags
       </Link>

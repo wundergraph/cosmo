@@ -46,6 +46,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useContext, useState } from 'react';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { buildUrl } from '@/lib/build-url';
 
 export const ProposalDetails = ({
   proposal,
@@ -497,11 +498,12 @@ export const ProposalDetails = ({
                                 checkExtensionErrorMessage,
                               );
 
-                              const path = `/${encodeURIComponent(
-                                user?.currentOrganization.slug ?? '',
-                              )}/${encodeURIComponent(graphData?.graph?.namespace ?? '')}/graph/${encodeURIComponent(
-                                graphData?.graph?.name ?? '',
-                              )}/checks/${encodeURIComponent(id)}`;
+                              const path = buildUrl('/:organizationSlug/:namespace/graph/:name/checks/:id', {
+                                organizationSlug: user?.currentOrganization.slug,
+                                namespace: graphData?.graph?.namespace,
+                                name: graphData?.graph?.name,
+                                id,
+                              });
 
                               return (
                                 <TableRow
@@ -704,9 +706,11 @@ const ProposalDetailsPage: NextPageWithLayout = () => {
       breadcrumbs={[
         <Link
           key={0}
-          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
-            namespace ?? '',
-          )}/graph/${encodeURIComponent(slug ?? '')}/proposals`}
+          href={buildUrl('/:organizationSlug/:namespace/graph/:slug/proposals', {
+            organizationSlug,
+            namespace,
+            slug,
+          })}
         >
           Proposals
         </Link>,

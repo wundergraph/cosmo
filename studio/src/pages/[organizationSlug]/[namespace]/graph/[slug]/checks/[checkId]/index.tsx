@@ -81,6 +81,7 @@ import { SiLintcode } from 'react-icons/si';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { MdOutlineExtension } from 'react-icons/md';
+import { buildUrl } from '@/lib/build-url';
 
 const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
   return (
@@ -237,6 +238,11 @@ const CheckOverviewPage: NextPageWithLayout = () => {
   const [checksRoute] = useSessionStorage<string | undefined>('checks.route', undefined);
 
   let content: React.ReactNode;
+  const checksLink = buildUrl('/:organizationSlug/:namespace/graph/:slug/checks', {
+    organizationSlug,
+    namespace,
+    slug,
+  });
 
   if (isLoading) {
     content = <Loader fullscreen />;
@@ -249,12 +255,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
         actions={
           <div className="flex items-center space-x-2">
             <Button variant="outline">
-              <Link
-                href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
-                  namespace,
-                )}/graph/${encodeURIComponent(slug)}/checks`}
-                className="flex items-center"
-              >
+              <Link href={checksLink} className="flex items-center">
                 <ArrowLeftIcon className="mr-2 h-4 w-4" />
                 All checks
               </Link>
@@ -275,13 +276,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
       title={id}
       subtitle="A quick glance of the details for this check run"
       breadcrumbs={[
-        <Link
-          key="checks"
-          href={
-            checksRoute ||
-            `/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(slug)}/checks`
-          }
-        >
+        <Link key="checks" href={checksRoute || checksLink}>
           Checks
         </Link>,
       ]}
@@ -497,9 +492,12 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                 <dd>
                   <Link
                     key={id}
-                    href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                    href={buildUrl('/:organizationSlug/:namespace/graph/:slug/schema/sdl', {
+                      organizationSlug,
                       namespace,
-                    )}/graph/${encodeURIComponent(slug)}/schema/sdl?subgraph=${encodeURIComponent(subgraphName)}`}
+                      slug,
+                      subgraphName,
+                    })}
                   >
                     <div className="flex items-center gap-x-1">
                       <CubeIcon />
@@ -516,9 +514,12 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
               <dd className="whitespace-nowrap text-sm">
                 <Link
                   key={data.proposalId}
-                  href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                  href={buildUrl('/:organizationSlug/:namespace/graph/:slug/proposals/:proposalId', {
+                    organizationSlug,
                     namespace,
-                  )}/graph/${encodeURIComponent(slug)}/proposals/${encodeURIComponent(data.proposalId)}`}
+                    slug,
+                    proposalId: data.proposalId,
+                  })}
                 >
                   <div className="flex items-center gap-x-1">
                     <ClipboardIcon />
@@ -1020,9 +1021,13 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                                   return null;
                                 }
 
-                                const path = `/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                                const path = buildUrl('/:organizationSlug/:namespace/graph/:name/checks/:id', {
+                                  organizationSlug,
                                   namespace,
-                                )}/graph/${encodeURIComponent(name)}/checks/${encodeURIComponent(id)}`;
+                                  name,
+                                  id,
+                                });
+
                                 const compositionSkipped = data.check?.compositionSkipped;
                                 const breakingChangesSkipped = data.check?.breakingChangesSkipped;
                                 const clientTrafficCheckSkipped = data.check?.clientTrafficCheckSkipped;
@@ -1167,11 +1172,12 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                                   className="group cursor-pointer hover:bg-secondary/30"
                                   onClick={() =>
                                     router.push(
-                                      `/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
-                                        linkedCheck.namespace,
-                                      )}/graph/${encodeURIComponent(
-                                        linkedCheck.affectedGraphNames[0],
-                                      )}/checks/${encodeURIComponent(linkedCheck.id)}`,
+                                      buildUrl('/:organizationSlug/:namespace/graph/:name/checks/:checkId', {
+                                        organizationSlug,
+                                        namespace: linkedCheck.namespace,
+                                        name: linkedCheck.affectedGraphNames[0],
+                                        checkId: linkedCheck.id,
+                                      }),
                                     )
                                   }
                                 >
@@ -1220,11 +1226,12 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                                     <div className="flex items-center justify-end gap-2">
                                       <Button asChild variant="ghost" size="sm" className="table-action">
                                         <Link
-                                          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
-                                            linkedCheck.namespace,
-                                          )}/graph/${encodeURIComponent(
-                                            linkedCheck.affectedGraphNames[0],
-                                          )}/checks/${encodeURIComponent(linkedCheck.id)}`}
+                                          href={buildUrl('/:organizationSlug/:namespace/graph/:name/checks/:checkId', {
+                                            organizationSlug,
+                                            namespace: linkedCheck.namespace,
+                                            name: linkedCheck.affectedGraphNames[0],
+                                            checkId: linkedCheck.id,
+                                          })}
                                         >
                                           View
                                         </Link>

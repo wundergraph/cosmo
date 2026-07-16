@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 const SchemaVersionChangelogPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -35,9 +36,11 @@ const SchemaVersionChangelogPage: NextPageWithLayout = () => {
       breadcrumbs={[
         <Link
           key={0}
-          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+          href={buildUrl('/:organizationSlug/:namespace/graph/:slug/changelog', {
+            organizationSlug,
             namespace,
-          )}/graph/${encodeURIComponent(slug)}/changelog`}
+            slug,
+          })}
         >
           Changelog
         </Link>,

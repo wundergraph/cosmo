@@ -49,6 +49,7 @@ import { PiGitBranch } from 'react-icons/pi';
 import { RxComponentInstance } from 'react-icons/rx';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 export const FeatureFlagCompositionsTable = ({ ffCompositions }: { ffCompositions: FeatureFlagComposition[] }) => {
   const router = useRouter();
@@ -313,9 +314,12 @@ export const CompositionDetails = ({
                 ) : (
                   <Link
                     key={id}
-                    href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+                    href={buildUrl('/:organizationSlug/:namespace/graph/:slug/changelog/:schemaVersionId', {
+                      organizationSlug,
                       namespace,
-                    )}/graph/${encodeURIComponent(slug)}/changelog/${encodeURIComponent(schemaVersionId)}`}
+                      slug,
+                      schemaVersionId,
+                    })}
                     className="text-primary"
                   >
                     <div className="flex items-center gap-x-1">
@@ -617,9 +621,11 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
         breadcrumbs={[
           <Link
             key={0}
-            href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+            href={buildUrl('/:organizationSlug/:namespace/graph/:slug/compositions', {
+              organizationSlug,
               namespace,
-            )}/graph/${encodeURIComponent(slug)}/compositions`}
+              slug,
+            })}
           >
             Compositions
           </Link>,
@@ -645,7 +651,11 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
       breadcrumbs={[
         <Link
           key={0}
-          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(slug)}/compositions`}
+          href={buildUrl('/:organizationSlug/:namespace/graph/:slug/compositions', {
+            organizationSlug,
+            namespace,
+            slug,
+          })}
         >
           Compositions
         </Link>,

@@ -91,6 +91,7 @@ import { PiGraphLight } from 'react-icons/pi';
 import { Line, LineChart, ResponsiveContainer } from 'recharts';
 import { useDebounce } from 'use-debounce';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { buildUrl } from '@/lib/build-url';
 
 const fallback = buildASTSchema(parse(`type Query { dummy: String! }`));
 
@@ -1262,9 +1263,12 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     title = sentenceCase(selectedCategory);
     breadcrumbs.push(
       <Link
-        href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(
+        href={buildUrl('/:organizationSlug/:namespace/graph/:graphName/schema', {
+          organizationSlug,
+          namespace,
           graphName,
-        )}/schema?schemaType=${encodeURIComponent((router.query.schemaType as string) || 'client')}`}
+          schemaType: (router.query.schemaType as string) || 'client',
+        })}
       >
         Schema
       </Link>,
@@ -1276,11 +1280,13 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     if (selectedCategory) {
       breadcrumbs.push(
         <Link
-          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(
+          href={buildUrl('/:organizationSlug/:namespace/graph/:graphName/schema', {
+            organizationSlug,
+            namespace,
             graphName,
-          )}/schema?category=${encodeURIComponent(selectedCategory)}&schemaType=${encodeURIComponent(
-            (router.query.schemaType as string) || 'client',
-          )}`}
+            category: selectedCategory,
+            schemaType: (router.query.schemaType as string) || 'client',
+          })}
         >
           {sentenceCase(selectedCategory)}
         </Link>,

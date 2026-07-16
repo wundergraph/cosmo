@@ -19,6 +19,7 @@ import { clsx } from 'clsx';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { useWorkspace } from '@/hooks/use-workspace';
 import Link from 'next/link';
+import { buildUrl } from '@/lib/build-url';
 
 export type SubgraphCheckExtensionsConfig = Omit<
   ConfigureSubgraphCheckExtensionsRequest,
@@ -154,7 +155,7 @@ export function CheckExtensionsConfig({
             <>
               You must{' '}
               <Link
-                href={`/${encodeURIComponent(organizationSlug ?? '')}/policies?namespace=${encodeURIComponent(namespace.name)}`}
+                href={buildUrl('/:organizationSlug/policies', { organizationSlug, namespace: namespace.name })}
                 className="text-primary"
               >
                 enable the linter
@@ -175,7 +176,7 @@ export function CheckExtensionsConfig({
           <>
             You must{' '}
             <Link
-              href={`/${encodeURIComponent(organizationSlug ?? '')}/policies?namespace=${encodeURIComponent(namespace.name)}`}
+              href={buildUrl('/:organizationSlug/policies', { organizationSlug, namespace: namespace.name })}
               className="text-primary"
             >
               enable the graph pruning linter

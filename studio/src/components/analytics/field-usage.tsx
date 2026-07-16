@@ -29,6 +29,7 @@ import { useAnalyticsQueryState } from './useAnalyticsQueryState';
 import { useFeatureLimit } from '@/hooks/use-feature-limit';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 export const FieldUsage = ({ usageData }: { usageData: GetFieldUsageResponse }) => {
   const router = useRouter();
@@ -248,11 +249,12 @@ export const FieldUsage = ({ usageData }: { usageData: GetFieldUsageResponse }) 
                   return (
                     <Link
                       key={id}
-                      href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
-                        subgraph.namespace,
-                      )}/graph/${encodeURIComponent(slug as string)}/schema/sdl?subgraph=${encodeURIComponent(
-                        subgraph.name,
-                      )}`}
+                      href={buildUrl('/:organizationSlug/:namespace/graph/:slug/schema/sdl', {
+                        organizationSlug,
+                        namespace: subgraph.namespace,
+                        slug: slug as string,
+                        subgraph: subgraph.name,
+                      })}
                       className="text-primary"
                     >
                       <div className="flex items-start gap-x-1">

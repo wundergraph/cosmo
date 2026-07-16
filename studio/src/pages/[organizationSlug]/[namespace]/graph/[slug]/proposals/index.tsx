@@ -27,6 +27,7 @@ import { formatDistanceToNow, formatISO } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { buildUrl } from '@/lib/build-url';
 
 const ProposalsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -86,9 +87,10 @@ const ProposalsPage: NextPageWithLayout = () => {
           <Button
             onClick={() => {
               router.push(
-                `/${encodeURIComponent(user?.currentOrganization.slug ?? '')}/policies?namespace=${encodeURIComponent(
-                  router.query.namespace as string,
-                )}#proposals`,
+                `${buildUrl('/:organizationSlug/policies', {
+                  organizationSlug: user?.currentOrganization.slug,
+                  namespace: router.query.namespace as string,
+                })}#proposals`,
               );
             }}
           >
@@ -178,11 +180,15 @@ const ProposalsPage: NextPageWithLayout = () => {
                     <TableCell>
                       {latestCheckId ? (
                         <Link
-                          href={`/${encodeURIComponent(user?.currentOrganization.slug ?? '')}/${encodeURIComponent(
-                            namespace,
-                          )}/graph/${encodeURIComponent(federatedGraphName)}/checks/${encodeURIComponent(
-                            latestCheckId,
-                          )}`}
+                          href={buildUrl(
+                            '/:organizationSlug/:namespace/graph/:federatedGraphName/checks/:latestCheckId',
+                            {
+                              organizationSlug: user?.currentOrganization.slug,
+                              namespace,
+                              federatedGraphName,
+                              latestCheckId,
+                            },
+                          )}
                           onClick={(e) => e.stopPropagation()}
                           className="flex items-center gap-2"
                         >

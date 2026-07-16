@@ -18,6 +18,7 @@ import { NavLink, SideNav } from './sidenav';
 import { WorkspaceSelector } from '@/components/dashboard/workspace-selector';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse['graph'];
@@ -52,9 +53,11 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
   }, [data]);
 
   const links: NavLink[] = useMemo(() => {
-    const basePath = `/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+    const basePath = buildUrl('/:organizationSlug/:namespace/subgraph/:slug', {
+      organizationSlug,
       namespace,
-    )}/subgraph/${encodeURIComponent(slug)}`;
+      slug,
+    });
 
     return [
       {

@@ -28,6 +28,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useQueryClient } from '@tanstack/react-query';
+import { buildUrl } from '@/lib/build-url';
 
 export const CreateGraphForm = ({ isMonograph = false }: { isMonograph?: boolean }) => {
   const router = useRouter();
@@ -116,9 +117,11 @@ export const CreateGraphForm = ({ isMonograph = false }: { isMonograph?: boolean
             queryKey: createConnectQueryKey({ schema: getWorkspace, cardinality: undefined }),
           });
           router.replace(
-            `/${encodeURIComponent(user?.currentOrganization.slug ?? '')}/${encodeURIComponent(
+            buildUrl('/:organization/:namespace/graph/:graphName', {
+              organization: user?.currentOrganization.slug,
               namespace,
-            )}/graph/${encodeURIComponent(data.name)}`,
+              graphName: data.name,
+            }),
           );
         } else if (d.response?.details) {
           toast({ description: d.response.details, duration: 3000 });

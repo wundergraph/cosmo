@@ -12,6 +12,7 @@ import { getCompositionDetails } from '@wundergraph/cosmo-connect/dist/platform/
 import { useQuery } from '@connectrpc/connect-query';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 const FeatureFlagCompositionDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -39,9 +40,12 @@ const FeatureFlagCompositionDetailsPage: NextPageWithLayout = () => {
         breadcrumbs={[
           <Link
             key={0}
-            href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+            href={buildUrl('/:organizationSlug/:namespace/graph/:slug/compositions/:id', {
+              organizationSlug,
               namespace,
-            )}/graph/${encodeURIComponent(slug)}/compositions/${encodeURIComponent(id)}`}
+              slug,
+              id,
+            })}
           >
             {id}
           </Link>,
@@ -66,23 +70,34 @@ const FeatureFlagCompositionDetailsPage: NextPageWithLayout = () => {
       breadcrumbs={[
         <Link
           key={0}
-          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+          href={buildUrl('/:organizationSlug/:namespace/graph/:slug/compositions', {
+            organizationSlug,
             namespace,
-          )}/graph/${encodeURIComponent(slug)}/compositions`}
+            slug,
+          })}
         >
           Compositions
         </Link>,
         <Link
           key={0}
-          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(namespace)}/graph/${encodeURIComponent(slug)}/compositions/${encodeURIComponent(id)}`}
+          href={buildUrl('/:organizationSlug/:namespace/graph/:slug/compositions/:id', {
+            organizationSlug,
+            namespace,
+            slug,
+            id,
+          })}
         >
           {id}
         </Link>,
         <Link
           key={0}
-          href={`/${encodeURIComponent(organizationSlug ?? '')}/${encodeURIComponent(
+          href={buildUrl('/:organizationSlug/:namespace/graph/:slug/compositions/:id', {
+            organizationSlug,
             namespace,
-          )}/graph/${encodeURIComponent(slug)}/compositions/${encodeURIComponent(id)}?tab=ffCompostions`}
+            slug,
+            id,
+            tab: 'ffCompostions',
+          })}
         >
           Feature Flag Compositions
         </Link>,
