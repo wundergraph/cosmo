@@ -25,6 +25,9 @@ func (h *noopConnectionMetricProvider) MeasureTCPConnectDuration(ctx context.Con
 func (h *noopConnectionMetricProvider) MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
 }
 
+func (h *noopConnectionMetricProvider) MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+}
+
 func (h *noopConnectionMetricProvider) MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
 }
 
@@ -45,6 +48,8 @@ func (h *NoopConnectionMetricStore) MeasureDNSLookupDuration(ctx context.Context
 func (h *NoopConnectionMetricStore) MeasureTCPConnectDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
 }
 func (h *NoopConnectionMetricStore) MeasureTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+}
+func (h *NoopConnectionMetricStore) MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
 }
 func (h *NoopConnectionMetricStore) MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
 }

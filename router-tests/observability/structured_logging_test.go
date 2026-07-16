@@ -3610,6 +3610,38 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
+		t.Run("verify timeToFirstRequestByte value is attached", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "time_to_first_request_byte",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.clientTrace.timeToFirstRequestByte",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				requestContextMap := requestLogAll[0].ContextMap()
+
+				timeToFirstRequestByte, ok := requestContextMap["time_to_first_request_byte"].(time.Duration)
+				require.True(t, ok)
+
+				require.Greater(t, int(timeToFirstRequestByte), 0)
+			})
+		})
+
 		t.Run("verify connAcquireDuration value is attached for multiple subgraph calls", func(t *testing.T) {
 			t.Parallel()
 

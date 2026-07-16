@@ -209,12 +209,15 @@ subgraph.request.error != nil ? subgraph.response.body.raw : ''
 
 #### ClientTrace Properties
 
+Client trace values describe the individual subgraph fetch that is being logged or measured. They are populated in subgraph-scoped expressions such as subgraph access log fields and telemetry attribute expressions. In router-level access logs they are always zero.
+
 - `subgraph.request.clientTrace.fetchDuration` (time.Duration): The duration it took for the router to call the subgraph via HTTP and get a response or error. In case of retries, this value contains the combined duration for all retries. Note: gRPC calls are not supported at the moment.
-- `subgraph.request.clientTrace.connAcquireDuration` (time.Duration): The duration it took to acquire the connection to the subgraph. This includes the dial time if a connection was not reused. If a connection was not successfully acquired, it will be 0. In case of retries, only the last duration is recorded.
-- `subgraph.request.clientTrace.dnsLookupDuration` (time.Duration): The duration of the DNS lookup for the subgraph request. It is 0 when a cached or reused connection skips the lookup. In case of retries, only the last duration is recorded.
-- `subgraph.request.clientTrace.tcpConnectDuration` (time.Duration): The duration of the TCP connect (dial) for the subgraph request. It is 0 when an existing connection is reused. In case of retries, only the last duration is recorded.
-- `subgraph.request.clientTrace.tlsHandshakeDuration` (time.Duration): The duration of the TLS handshake for the subgraph request. It is 0 when an existing connection is reused or the subgraph is reached over plaintext. In case of retries, only the last duration is recorded.
-- `subgraph.request.clientTrace.timeToFirstByte` (time.Duration): The duration from completing the request write to receiving the first response byte from the subgraph. In case of retries, only the last duration is recorded.
+- `subgraph.request.clientTrace.connAcquireDuration` (time.Duration): The duration it took to acquire the connection to the subgraph. This includes the dial time if a connection was not reused. If a connection was not successfully acquired, it will be 0. In case of retries, only the last attempt is recorded.
+- `subgraph.request.clientTrace.dnsLookupDuration` (time.Duration): The duration of the DNS lookup for the subgraph request. It is 0 when a reused connection skips the lookup. In case of retries, the value of the last attempt that performed a lookup is recorded.
+- `subgraph.request.clientTrace.tcpConnectDuration` (time.Duration): The duration of the TCP connect (dial) for the subgraph request. It is 0 when an existing connection is reused. In case of retries, the value of the last attempt that dialed is recorded.
+- `subgraph.request.clientTrace.tlsHandshakeDuration` (time.Duration): The duration of the TLS handshake for the subgraph request. It is 0 when an existing connection is reused or the subgraph is reached over plaintext. In case of retries, the value of the last attempt that performed a handshake is recorded.
+- `subgraph.request.clientTrace.timeToFirstRequestByte` (time.Duration): The duration from the start of the HTTP attempt to writing the first request byte to the subgraph. It includes acquiring the connection. In case of retries, the value of the last attempt that wrote a request byte is recorded.
+- `subgraph.request.clientTrace.timeToFirstByte` (time.Duration): The duration from completing the request write to receiving the first response byte from the subgraph. In case of retries, only the last attempt is recorded.
 
 This object is available in template expressions and can be accessed using the `subgraph` identifier. For example, you can access the subgraph name using `subgraph.name` or check for errors using `subgraph.request.error`.
 
