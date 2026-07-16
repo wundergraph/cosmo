@@ -999,7 +999,7 @@ export const schemaCheckFederatedGraphChanges = pgTable(
       .references(() => schemaCheckChangeAction.id, {
         onDelete: 'cascade',
       }),
-    featureFlagId: uuid('feature_flag_id').references(() => featureFlags.id, { onDelete: 'set null' }),
+    featureFlagId: uuid('feature_flag_id').references(() => featureFlags.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => {
@@ -1176,7 +1176,7 @@ export const schemaCheckComposition = pgTable(
       .references(() => targets.id, {
         onDelete: 'cascade',
       }),
-    featureFlagId: uuid('feature_flag_id').references(() => featureFlags.id, { onDelete: 'set null' }),
+    featureFlagId: uuid('feature_flag_id').references(() => featureFlags.id, { onDelete: 'cascade' }),
     compositionErrors: text('composition_errors'),
     compositionWarnings: text('composition_warnings'),
     composedSchemaSDL: text('composed_schema_sdl'),

@@ -1057,6 +1057,179 @@ describe('Feature flag aware subgraph checks', () => {
     expect(checkResp.compositionErrors).toHaveLength(0);
   });
 
+  test('deleting a feature flag after a check that recorded flag-attributed compositions succeeds', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    const label = genUniqueLabel();
+    const baseSubgraphName = genID('base');
+    const nameOwnerName = genID('nameowner');
+    const featureSubgraphName = genID('fs');
+    const fedGraphName = genID('fedgraph');
+    const featureFlagName = genID('flag').toLowerCase();
+
+    await createAndPublishSubgraph(client, baseSubgraphName, 'default', CB_BASE_SDL, [label], DEFAULT_SUBGRAPH_URL_ONE);
+    await createAndPublishSubgraph(
+      client,
+      nameOwnerName,
+      'default',
+      CB_NAME_OWNER_SDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+    await createThenPublishFeatureSubgraph(
+      client,
+      featureSubgraphName,
+      baseSubgraphName,
+      'default',
+      CB_BASE_SDL,
+      [label],
+      'http://localhost:4003/graphql',
+    );
+
+    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], DEFAULT_ROUTER_URL);
+    await createFeatureFlag(client, featureFlagName, [label], [featureSubgraphName], 'default', true);
+
+    // Check the FS adding a nullable `name`. This records a flag-attributed composition row (scc) AND a
+    // flag-attributed composed breaking change (scfgc) — both referencing the feature flag.
+    const checkResp = await client.checkSubgraphSchema({
+      subgraphName: featureSubgraphName,
+      namespace: 'default',
+      schema: Uint8Array.from(Buffer.from(CB_ADD_NULLABLE_NAME_SDL)),
+    });
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp.composedSchemaBreakingChanges.length).toBe(1);
+    expect(checkResp.composedSchemaBreakingChanges[0].featureFlag).toBe(featureFlagName);
+
+    // Deleting the flag must cascade-delete the check-composition and composed-change rows that
+    // reference it. Under the old `onDelete: 'set null'`, nulling feature_flag_id collided with the
+    // base row on the `NULLS NOT DISTINCT` unique constraints and the delete failed.
+    const deleteResp = await client.deleteFeatureFlag({ name: featureFlagName, namespace: 'default' });
+    expect(deleteResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // The check itself survives; only the deleted flag's attributed rows are gone.
+    const summary = await client.getCheckSummary({
+      checkId: checkResp.checkId,
+      graphName: fedGraphName,
+      namespace: 'default',
+    });
+    expect(summary.response?.code).toBe(EnumStatusCode.OK);
+    expect(summary.composedSchemaBreakingChanges.some((c) => c.featureFlag === featureFlagName)).toBe(false);
+  });
+
+  test('check runs all feature-flag compositions; deleting 2 of 3 flags cascades cleanly', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    const label = genUniqueLabel();
+    const baseSubgraphName = genID('base');
+    const nameOwnerName = genID('nameowner');
+    const otherSubgraphName = genID('other');
+    const fs1Name = genID('fs1');
+    const fs2Name = genID('fs2');
+    const fs3Name = genID('fs3');
+    const fedGraphName = genID('fedgraph');
+    const flag1Name = genID('flag1').toLowerCase();
+    const flag2Name = genID('flag2').toLowerCase();
+    const flag3Name = genID('flag3').toLowerCase();
+
+    // name owner contributes required `User.name`; base owns `email`; `other` (shared, not overridden by
+    // any flag) owns `tag` and is present in every composition.
+    await createAndPublishSubgraph(client, baseSubgraphName, 'default', CB_BASE_SDL, [label], DEFAULT_SUBGRAPH_URL_ONE);
+    await createAndPublishSubgraph(
+      client,
+      nameOwnerName,
+      'default',
+      CB_NAME_OWNER_SDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+    await createAndPublishSubgraph(
+      client,
+      otherSubgraphName,
+      'default',
+      CB_OTHER_SDL,
+      [label],
+      'http://localhost:4005/graphql',
+    );
+
+    // Three feature subgraphs, each overriding the base (each mirrors it — `email` only).
+    await createThenPublishFeatureSubgraph(
+      client,
+      fs1Name,
+      baseSubgraphName,
+      'default',
+      CB_BASE_SDL,
+      [label],
+      'http://localhost:4003/graphql',
+    );
+    await createThenPublishFeatureSubgraph(
+      client,
+      fs2Name,
+      baseSubgraphName,
+      'default',
+      CB_BASE_SDL,
+      [label],
+      'http://localhost:4004/graphql',
+    );
+    await createThenPublishFeatureSubgraph(
+      client,
+      fs3Name,
+      baseSubgraphName,
+      'default',
+      CB_BASE_SDL,
+      [label],
+      'http://localhost:4006/graphql',
+    );
+
+    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // One enabled flag per feature subgraph.
+    await createFeatureFlag(client, flag1Name, [label], [fs1Name], 'default', true);
+    await createFeatureFlag(client, flag2Name, [label], [fs2Name], 'default', true);
+    await createFeatureFlag(client, flag3Name, [label], [fs3Name], 'default', true);
+
+    // Check `other` (present in every composition) adding a nullable `name`. It merges with the name
+    // owner's `String!` to flip the composed `User.name` in the base AND all three flag compositions →
+    // one composed breaking change per (base + each flag). This proves the check ran ALL flag
+    // compositions and recorded a row attributed to each flag.
+    const checkResp = await client.checkSubgraphSchema({
+      subgraphName: otherSubgraphName,
+      namespace: 'default',
+      schema: Uint8Array.from(Buffer.from(CB_OTHER_ADD_NAME_SDL)),
+    });
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp.compositionErrors).toHaveLength(0);
+    // base + flag1 + flag2 + flag3 = 4 composed breaking changes, all on User.name.
+    expect(checkResp.composedSchemaBreakingChanges.length).toBe(4);
+    expect(checkResp.composedSchemaBreakingChanges.every((c) => c.path === 'User.name')).toBe(true);
+    expect(new Set(checkResp.composedSchemaBreakingChanges.map((c) => c.featureFlag))).toEqual(
+      new Set(['', flag1Name, flag2Name, flag3Name]),
+    );
+
+    // Delete two of the three flags — each must cascade-delete its attributed scc/scfgc rows without
+    // colliding on the `NULLS NOT DISTINCT` unique constraints.
+    const deleteResp1 = await client.deleteFeatureFlag({ name: flag1Name, namespace: 'default' });
+    expect(deleteResp1.response?.code).toBe(EnumStatusCode.OK);
+    const deleteResp2 = await client.deleteFeatureFlag({ name: flag2Name, namespace: 'default' });
+    expect(deleteResp2.response?.code).toBe(EnumStatusCode.OK);
+
+    // The surviving flag is untouched; the deleted ones are gone.
+    const flag3Resp = await client.getFeatureFlagByName({ name: flag3Name, namespace: 'default' });
+    expect(flag3Resp.response?.code).toBe(EnumStatusCode.OK);
+    const flag1Resp = await client.getFeatureFlagByName({ name: flag1Name, namespace: 'default' });
+    expect(flag1Resp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+
+    // The check survives; only the surviving flag's (and base's) composed changes remain.
+    const summary = await client.getCheckSummary({
+      checkId: checkResp.checkId,
+      graphName: fedGraphName,
+      namespace: 'default',
+    });
+    expect(summary.response?.code).toBe(EnumStatusCode.OK);
+    expect(new Set(summary.composedSchemaBreakingChanges.map((c) => c.featureFlag))).toEqual(new Set(['', flag3Name]));
+  });
+
   test('base subgraph check on a large schema does not overflow the composition worker', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
