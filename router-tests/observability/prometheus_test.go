@@ -5337,17 +5337,13 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
 
-			// TTFB fires on every HTTP request. TCP connect fires on first
-			// connection to the test subgraph. DNS/TLS phases are skipped here
-			// because subgraphs are HTTP and listen on 127.0.0.1 (no name
-			// resolution, no TLS handshake) — Prometheus only emits histogram
-			// families that have recorded at least one observation, so we don't
-			// assert presence of dns_lookup or tls_handshake here. The
-			// instruments are still created; manual verification with a real
-			// remote HTTPS subgraph would surface them.
 			ttfb := findMetricFamilyByName(mf, "router_http_client_time_to_first_byte")
 			require.NotNil(t, ttfb)
 			require.NotEmpty(t, ttfb.GetMetric())
+
+			firstRequestByte := findMetricFamilyByName(mf, "router_http_client_time_to_first_request_byte")
+			require.NotNil(t, firstRequestByte)
+			require.NotEmpty(t, firstRequestByte.GetMetric())
 
 			tcpConnect := findMetricFamilyByName(mf, "router_http_client_tcp_connect_duration")
 			require.NotNil(t, tcpConnect)

@@ -275,6 +275,25 @@ type GraphqlMetrics struct {
 	CollectorEndpoint string `yaml:"collector_endpoint" envDefault:"https://cosmo-metrics.wundergraph.com" env:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT"`
 }
 
+type Pyroscope struct {
+	Enabled              bool               `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	ServerAddress        string             `yaml:"server_address" env:"SERVER_ADDRESS"`
+	ApplicationName      string             `yaml:"application_name" envDefault:"wundergraph.cosmo.router" env:"APPLICATION_NAME"`
+	BasicAuth            PyroscopeBasicAuth `yaml:"basic_auth" envPrefix:"BASIC_AUTH_"`
+	Headers              map[string]string  `yaml:"headers" env:"HEADERS"`
+	Tags                 map[string]string  `yaml:"tags" env:"TAGS"`
+	UploadRate           time.Duration      `yaml:"upload_rate" envDefault:"15s" env:"UPLOAD_RATE"`
+	ProfileTypes         []string           `yaml:"profile_types" env:"PROFILE_TYPES"`
+	DisableGCRuns        bool               `yaml:"disable_gc_runs" envDefault:"false" env:"DISABLE_GC_RUNS"`
+	MutexProfileFraction int                `yaml:"mutex_profile_fraction" envDefault:"5" env:"MUTEX_PROFILE_FRACTION"`
+	BlockProfileRate     int                `yaml:"block_profile_rate" envDefault:"5" env:"BLOCK_PROFILE_RATE"`
+}
+
+type PyroscopeBasicAuth struct {
+	Username string `yaml:"username,omitempty" env:"USERNAME"`
+	Password string `yaml:"password,omitempty" env:"PASSWORD"`
+}
+
 type BackoffJitterRetry struct {
 	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"RETRY_ENABLED"`
 	Algorithm   string        `yaml:"algorithm" envDefault:"backoff_jitter" env:"RETRY_ALGORITHM"`
@@ -497,6 +516,8 @@ type EngineExecutionConfiguration struct {
 	ValidateRequiredExternalFields bool `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
 
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool `envDefault:"false" env:"ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY" yaml:"relax_subgraph_operation_field_selection_merging_nullability"`
+
+	ValidateInlineArguments ValidateInlineArguments `yaml:"validate_inline_arguments" envPrefix:"ENGINE_VALIDATE_INLINE_ARGUMENTS_"`
 }
 
 type BlockOperationConfiguration struct {
@@ -592,6 +613,33 @@ type CostControl struct {
 	// implementing types on abstract (interface/union) fields that have no weight of
 	// their own. Emulates Apollo's cost behavior.
 	IgnoreImplementingTypeWeights bool `yaml:"ignore_implementing_type_weights,omitempty" envDefault:"false" env:"IGNORE_IMPLEMENTING_TYPE_WEIGHTS"`
+}
+
+type EnforcementMode string
+
+const (
+	EnforcementModeOff        EnforcementMode = "off"
+	EnforcementModePermissive EnforcementMode = "permissive"
+	EnforcementModeStrict     EnforcementMode = "strict"
+)
+
+type ValidateInlineArguments struct {
+	Mode                       EnforcementMode `yaml:"mode,omitempty" envDefault:"off" env:"MODE"`
+	EnforceHTTPStatusCode      int             `yaml:"enforce_http_status_code,omitempty" envDefault:"400" env:"ENFORCE_HTTP_STATUS_CODE"`
+	ErrorCode                  string          `yaml:"error_code,omitempty" envDefault:"INLINE_ARGUMENT_VALUES_NOT_ALLOWED" env:"ERROR_CODE"`
+	ErrorMessage               string          `yaml:"error_message,omitempty" envDefault:"Inline argument values are not allowed. Use variables instead." env:"ERROR_MESSAGE"`
+	IncludePersistedOperations bool            `yaml:"include_persisted_operations,omitempty" envDefault:"false" env:"INCLUDE_PERSISTED_OPERATIONS"`
+	ReturnInResponseExtensions bool            `yaml:"return_in_response_extensions,omitempty" envDefault:"false" env:"RETURN_IN_RESPONSE_EXTENSIONS"`
+}
+
+// Enabled reports whether the policy is active in any mode.
+func (d ValidateInlineArguments) Enabled() bool {
+	return d.Mode == EnforcementModePermissive || d.Mode == EnforcementModeStrict
+}
+
+// Enforcing reports whether the policy rejects offending operations.
+func (d ValidateInlineArguments) Enforcing() bool {
+	return d.Mode == EnforcementModeStrict
 }
 
 type ComplexityLimit struct {
@@ -1386,6 +1434,7 @@ type Config struct {
 	InstanceID     string                  `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
 	Graph          Graph                   `yaml:"graph,omitempty"`
 	Telemetry      Telemetry               `yaml:"telemetry,omitempty"`
+	Pyroscope      Pyroscope               `yaml:"pyroscope,omitempty" envPrefix:"PYROSCOPE_"`
 	GraphqlMetrics GraphqlMetrics          `yaml:"graphql_metrics,omitempty"`
 	CORS           CORS                    `yaml:"cors,omitempty"`
 	Cluster        Cluster                 `yaml:"cluster,omitempty"`
