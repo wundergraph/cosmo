@@ -26,13 +26,6 @@ type BuildUrlParams<Template extends string> = Template extends `${infer Path}?$
 
 const ALLOWED_TYPES = new Set(['string', 'number', 'boolean']);
 
-export function buildUrl(template: string): string;
-export function buildUrl<Template extends string>(template: Template, params: BuildUrlParams<Template>): string;
-export function buildUrl<
-  Template extends string,
-  ExtraParams extends Record<string, Primitive> = Record<string, Primitive>,
->(template: Template, params: Simplify<BuildUrlParams<Template> & ExtraParams>): string;
-
 /**
  * Receives a template string and builds an URL based on the provided parameters, ignoring any
  * empty values and adding any remaining to the search parameters of the URL.
@@ -111,7 +104,7 @@ export function buildUrl<
       continue;
     }
 
-    url.searchParams.set(key, typeof value === 'string' ? value : value.toString());
+    url.searchParams.set(key, value.toString());
   }
 
   return url.toString();
