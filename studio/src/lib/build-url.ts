@@ -50,6 +50,7 @@ export function buildUrl<
     typeof window === 'undefined' ? process.env.NEXT_PUBLIC_COSMO_STUDIO_URL : window.location.origin,
   );
 
+  const hasTrailingSlash = url.pathname.endsWith('/');
   const templateSegments = url.pathname.split('/');
   for (const segment of templateSegments) {
     if (!segment) {
@@ -83,6 +84,10 @@ export function buildUrl<
 
   // Update the path and search parameters of the URL to the with the corresponding values
   url.pathname = finalPathSegments.length === 0 ? '/' : finalPathSegments.join('/');
+  if (hasTrailingSlash) {
+    url.pathname += '/';
+  }
+
   for (const [key, value] of parametersMap.entries().toArray()) {
     if (!isValueAllowed(value)) {
       continue;

@@ -35,3 +35,51 @@ test('that segments with missing parameters are skipped', () => {
 
   expect(url).toBe('http://localhost:3000/default');
 });
+
+test('that trailing slash is kept', () => {
+  const url = buildUrl('/:slug/checks/', { slug: 'test' });
+
+  expect(url).toBe('http://localhost:3000/test/checks/');
+});
+
+test('that parameters with empty, null and undefined are not added to the final url', () => {
+  const url = buildUrl('/:a/:b/:c/:d/:e/test', {
+    a: 'default',
+    b: 0,
+    c: '',
+    d: null,
+    e: undefined,
+  });
+
+  expect(url).toBe('http://localhost:3000/default/0/test');
+});
+
+test('that query parameters are not removed', () => {
+  const url = buildUrl('/:slug?tag=test', {
+    slug: 'default',
+    filter: null,
+    range: '1..22',
+  });
+
+  expect(url).toBe('http://localhost:3000/default?tag=test&range=1..22');
+});
+
+test('that query parameters are overwriten', () => {
+  const url = buildUrl('/:slug?tag=test', {
+    slug: 'default',
+    tag: 'test',
+    range: '1..22',
+  });
+
+  expect(url).toBe('http://localhost:3000/default?tag=test&range=1..22');
+});
+
+test('that query parameters are added in the same order as they appear', () => {
+  const url = buildUrl('/test', {
+    a: 'a',
+    c: 'c',
+    b: 'b',
+  });
+
+  expect(url).toBe('http://localhost:3000/test?a=a&c=c&b=b');
+});
