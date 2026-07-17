@@ -12,17 +12,19 @@ type QueryParams<Query extends string> = Query extends `${infer Param}=${string}
     ? { [K in Param]?: Primitive }
     : {};
 
-type PathParams<Path extends string> = Path extends `${string}:${infer Param}/${infer Rest}`
-  ? { [K in Param | keyof PathParams<Rest>]: Primitive }
-  : Path extends `${string}:${infer Param}`
+type PathParams<Path extends string> = Path extends `/:${infer Param}/${infer Rest}`
+  ? { [K in Param | keyof PathParams<`/${Rest}`>]: Primitive }
+  : Path extends `/:${infer Param}`
     ? { [K in Param]: Primitive }
-    : {};
+    : Path extends `:${infer Param}`
+      ? { [K in Param]: Primitive }
+      : {};
 
 type BuildUrlParams<Template extends string> = Template extends `${infer Path}?${infer Query}`
   ? Simplify<PathParams<Path> & Omit<QueryParams<Query>, keyof PathParams<Path>>>
   : PathParams<Template>;
 
-const allowedTypes = ['string', 'number', 'boolean'];
+const ALLOWED_TYPES = new Set(['string', 'number', 'boolean']);
 
 export function buildUrl(template: string): string;
 export function buildUrl<Template extends string>(template: Template, params: BuildUrlParams<Template>): string;
@@ -36,7 +38,22 @@ export function buildUrl<
  * empty values and adding any remaining to the search parameters of the URL.
  *
  * @param template The template string to render
- * @param params The parameters to substitute when rendering the template
+ * @param params The parameters to substitute when rendering the template, unused params become query params
+ * @example
+ * // returns 'http.../test/default/graph/graph'
+ * buildUrl('/:orgSlug/:namespace/graph/:slug', { orgSlug: 'test', namespace: 'default', slug: 'graph', })
+ * @example
+ * // returns 'http.../test?filter=no&range=1..2'
+ * buildUrl('/:orgSlug/:namespace/graph/:slug?filter=yes', {
+ *   orgSlug: 'test',
+ *   namespace: 'default',
+ *   slug: 'graph',
+ *   filter: 'no',
+ *   range: '1..2',
+ * })
+ * @example
+ * // returns 'http.../test?filter=yes&range=1..2'
+ * buildUrl('/:orgSlug?filter=yes', { orgSlug: 'test', range: '1..2' }
  */
 export function buildUrl<
   Template extends string = string,
@@ -53,7 +70,7 @@ export function buildUrl<
   const hasTrailingSlash = url.pathname.endsWith('/');
   const templateSegments = url.pathname.split('/');
   for (const segment of templateSegments) {
-    if (!segment) {
+    if (segment.length === 0) {
       // Ignore empty segments
       continue;
     }
@@ -82,23 +99,24 @@ export function buildUrl<
     }
   }
 
-  // Update the path and search parameters of the URL to the with the corresponding values
+  // Update the `pathname` for the URL by joining the segments
   url.pathname = finalPathSegments.length === 0 ? '/' : finalPathSegments.join('/');
   if (hasTrailingSlash) {
     url.pathname += '/';
   }
 
+  // If we got additional parameters, add/overwrite them to the query parameters preserving already existing ones
   for (const [key, value] of parametersMap.entries().toArray()) {
     if (!isValueAllowed(value)) {
       continue;
     }
 
-    url.searchParams.set(key, encodeURIComponent(value));
+    url.searchParams.set(key, typeof value === 'string' ? value : value.toString());
   }
 
   return url.toString();
 }
 
 function isValueAllowed(value: unknown): value is string | number | boolean {
-  return value !== undefined && value !== null && value !== '' && allowedTypes.includes(typeof value);
+  return value !== undefined && value !== null && value !== '' && ALLOWED_TYPES.has(typeof value);
 }

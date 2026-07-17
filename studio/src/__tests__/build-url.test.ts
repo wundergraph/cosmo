@@ -2,6 +2,11 @@ import { buildUrl } from '../lib/build-url';
 
 import { expect, test } from 'vitest';
 
+test('that absolute template is rendered correctly', () => {
+  const url = buildUrl('https://example.com/:slug', { slug: 'test' });
+  expect(url).toBe('https://example.com/test');
+});
+
 test('that a template without parameters is rendered correctly', () => {
   expect(buildUrl('/test')).toBe('http://localhost:3000/test');
 });
@@ -28,7 +33,7 @@ test('that all segments are encoded correctly', () => {
 });
 
 test('that segments with missing parameters are skipped', () => {
-  // @ts-ignore: TypeScript errors as is missing a required parameter
+  // @ts-ignore: TypeScript errors as is missing a required parameter (slug and name in this case)
   const url = buildUrl('/:slug/:namespace/:name', {
     namespace: 'default',
   });
@@ -82,4 +87,9 @@ test('that query parameters are added in the same order as they appear', () => {
   });
 
   expect(url).toBe('http://localhost:3000/test?a=a&c=c&b=b');
+});
+
+test('that query parameters are encoded', () => {
+  const url = buildUrl('/test', { filter: 'graph test/path' });
+  expect(url).toBe('http://localhost:3000/test?filter=graph+test%2Fpath');
 });
