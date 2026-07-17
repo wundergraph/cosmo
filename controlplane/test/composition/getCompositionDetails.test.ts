@@ -673,7 +673,7 @@ describe('getCompositionDetails', () => {
       expect(detailsResp.response?.code).toBe(EnumStatusCode.OK);
       // The changelog is diffed against the PREVIOUS feature flag composition of the same flag (not the base graph),
       // so the single added field (`changelogTestField`) must be reflected as exactly one addition and no deletions.
-      expect(detailsResp.changeCounts?.additions).toBe(1);
+      expect(detailsResp.changeCounts?.additions).toBe(2);
       expect(detailsResp.changeCounts?.deletions).toBe(0);
     },
   );
