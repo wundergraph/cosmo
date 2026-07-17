@@ -1,7 +1,5 @@
 -- migrate:up
 
--- 
-
 CREATE TABLE IF NOT EXISTS traces_detail_by_time (
    TraceId String CODEC (ZSTD(3)),
    SpanId String CODEC (ZSTD(3)),
