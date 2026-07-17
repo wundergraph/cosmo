@@ -436,6 +436,29 @@ func TestWsConnectionWrapper_ContextTakeoverDictionary(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, msg2, got2)
 	})
+
+	t.Run("close releases persistent state and closes the underlying connection", func(t *testing.T) {
+		for _, tc := range []struct {
+			name string
+			mode compressionMode
+		}{
+			{"server context takeover", compressionMode{enabled: true, level: 6, serverContextTakeover: true, clientWindowBits: 15}},
+			{"client context takeover", compressionMode{enabled: true, level: 6, clientContextTakeover: true, clientWindowBits: 15}},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				conn := newMockConn()
+				wrapper, err := newWSConnectionWrapper(conn, 0, 0, tc.mode)
+				require.NoError(t, err)
+
+				require.NoError(t, wrapper.Close())
+
+				conn.mu.Lock()
+				closed := conn.closed
+				conn.mu.Unlock()
+				assert.True(t, closed, "Close should close the underlying connection")
+			})
+		}
+	})
 }
 
 // TestWsConnectionWrapper_CompressionDisabled tests behavior when compression is disabled
@@ -460,6 +483,26 @@ func TestWsConnectionWrapper_CompressionDisabled(t *testing.T) {
 		isCompressed, err := wsflate.IsCompressed(frame.Header)
 		require.NoError(t, err)
 		assert.False(t, isCompressed, "Frame should not be compressed")
+	})
+
+	t.Run("reject compressed client frame when compression disabled", func(t *testing.T) {
+		conn := newMockConn()
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: false, level: 6, clientWindowBits: 15})
+		require.NoError(t, err)
+
+		// A client sets the RSV1 (compression) bit even though compression was
+		// never negotiated. Per RFC 6455 §5.2 this must fail the connection.
+		compressed, err := compressData([]byte(`{"type":"connection_init"}`))
+		require.NoError(t, err)
+		frame := ws.NewFrame(ws.OpText, true, compressed)
+		frame.Header.Rsv = ws.Rsv(true, false, false)
+		frame.Header.Masked = true
+		frame.Header.Mask = [4]byte{1, 2, 3, 4}
+		ws.Cipher(frame.Payload, frame.Header.Mask, 0)
+		require.NoError(t, conn.writeFrame(frame))
+
+		var got map[string]any
+		require.Error(t, wrapper.ReadJSON(&got), "compressed input must be rejected when compression is disabled")
 	})
 }
 
@@ -626,7 +669,7 @@ func TestResolveNegotiatedCompression(t *testing.T) {
 		assert.Equal(t, 10, result.clientWindowBits, "should use server config when it is more restrictive")
 	})
 
-	t.Run("uses config default when client does not offer client_max_window_bits", func(t *testing.T) {
+	t.Run("uses 15-bit window when client does not offer client_max_window_bits", func(t *testing.T) {
 		configBase := compressionMode{enabled: true, level: 6, clientWindowBits: 12}
 		ext := &wsflate.Extension{
 			Parameters: wsflate.Parameters{
@@ -644,7 +687,11 @@ func TestResolveNegotiatedCompression(t *testing.T) {
 
 		result := resolveNegotiatedCompression(configBase, ext, nil)
 		assert.True(t, result.enabled)
-		assert.Equal(t, 12, result.clientWindowBits, "should fall back to server config when client doesn't offer the param")
+		// RFC 7692 §7.1.2.2: the server cannot send client_max_window_bits in
+		// the response when the client did not offer it, so the client
+		// compresses with its default 15-bit window. The decompression
+		// dictionary must match that, not the configured cap.
+		assert.Equal(t, 15, result.clientWindowBits, "must use the client's 15-bit default when the param is not offered")
 	})
 }
 

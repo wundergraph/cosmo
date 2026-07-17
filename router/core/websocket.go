@@ -647,6 +647,17 @@ func (h *WebsocketHandler) configureCompressionNegotiation(upgrader *ws.HTTPUpgr
 			return accept, nil
 		}
 
+		// Go's flate always compresses with a 15-bit (32 KB) window. If the
+		// client offers a smaller server_max_window_bits we cannot honor it,
+		// and RFC 7692 §7.1.2.1 forbids responding with a larger value than
+		// offered, so decline compression for this connection. ext.Reset()
+		// clears the accepted flag so resolveNegotiatedCompression also treats
+		// the connection as uncompressed.
+		if params.ServerMaxWindowBits.Defined() && params.ServerMaxWindowBits < 15 {
+			ext.Reset()
+			return httphead.Option{}, nil
+		}
+
 		response := wsflate.Parameters{
 			// Mirror no_context_takeover only when explicitly requested by the client.
 			ServerNoContextTakeover: params.ServerNoContextTakeover,
@@ -689,12 +700,19 @@ func resolveNegotiatedCompression(base compressionMode, ext *wsflate.Extension, 
 			level:   base.level,
 		}
 	}
-	// Derive the effective client window bits from the negotiation.
-	// If the client offered client_max_window_bits, use min(offer, config);
-	// otherwise fall back to the configured default.
-	clientWindowBits := base.clientWindowBits
-	if params.ClientMaxWindowBits.Defined() && params.ClientMaxWindowBits > 1 {
-		if int(params.ClientMaxWindowBits) < clientWindowBits {
+	// Derive the effective client window bits from the negotiation. When the
+	// client omits client_max_window_bits, RFC 7692 §7.1.2.2 forbids the
+	// server from sending it in the response, so the client compresses with
+	// its default 15-bit window. The decompression dictionary must match that,
+	// independent of the configured client-window cap (which can only take
+	// effect when the client offers the parameter).
+	clientWindowBits := 15
+	if params.ClientMaxWindowBits.Defined() {
+		// The client offered the parameter, so the server advertised
+		// min(offer, config) (or the configured value when the offer carried
+		// no value). Mirror that here so the dictionary size matches.
+		clientWindowBits = base.clientWindowBits
+		if params.ClientMaxWindowBits > 1 && int(params.ClientMaxWindowBits) < clientWindowBits {
 			clientWindowBits = int(params.ClientMaxWindowBits)
 		}
 	}
@@ -777,7 +795,9 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	protocol, err := wsproto.NewProtocol(subProtocol, conn)
 	if err != nil {
 		requestLogger.Error("Create websocket protocol", zap.Error(err))
-		_ = c.Close()
+		// conn owns the persistent flate state; close it so those resources
+		// are released along with the underlying connection.
+		_ = conn.Close()
 		return
 	}
 
@@ -787,7 +807,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	executionOptions, traceOptions, err := h.preHandler.parseExecutionAndTraceOptions(r, clientInfo, requestLogger)
 	if err != nil {
 		requestLogger.Error("Parse request options", zap.Error(err))
-		_ = c.Close()
+		_ = conn.Close()
 		return
 	}
 

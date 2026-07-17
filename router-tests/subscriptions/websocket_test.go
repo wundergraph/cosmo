@@ -2909,12 +2909,18 @@ func TestWebSockets(t *testing.T) {
 				cfg.Compression.ClientMaxWindowBits = 9
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// gorilla's Dialer with EnableCompression sends client_max_window_bits (no value),
-			// so the server responds with its configured value of 9.
+			// gorilla's Dialer enables compression but does not offer
+			// client_max_window_bits, so per RFC 7692 §7.1.2.2 the server must
+			// not send it back and the client compresses with its default
+			// 15-bit window — even though the server is configured with a 9-bit
+			// cap. This verifies the server sizes its decompression dictionary
+			// to the client's actual window (15) rather than the configured cap,
+			// which would otherwise corrupt messages using far back-references.
 			conn, resp := xEnv.InitGraphQLWebSocketConnectionWithCompression(nil, nil, nil)
 
 			extensions := resp.Header.Get("Sec-WebSocket-Extensions")
 			require.Contains(t, extensions, "permessage-deflate", "Expected compression to be negotiated")
+			require.NotContains(t, extensions, "client_max_window_bits", "server must not send client_max_window_bits when the client did not offer it")
 
 			// Run a query to verify data round-trips correctly with the smaller window.
 			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
