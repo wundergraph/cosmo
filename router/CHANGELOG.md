@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.333.1](https://github.com/wundergraph/cosmo/compare/router@0.333.0...router@0.333.1) (2026-07-17)
+
+### Bug Fixes
+
+* fix losing response field refs due to skipped refs ([#3077](https://github.com/wundergraph/cosmo/issues/3077)) ([7cf923c](https://github.com/wundergraph/cosmo/commit/7cf923cb7a00624029b926666d332892bcd70871)) (@devsergiy)
+* improve abstract field validation ([#3092](https://github.com/wundergraph/cosmo/issues/3092)) ([423b4f8](https://github.com/wundergraph/cosmo/commit/423b4f8f909475fedc3a9b46b5c1be9fe365e95f)) (@endigma)
+
 # [0.333.0](https://github.com/wundergraph/cosmo/compare/router@0.332.0...router@0.333.0) (2026-07-16)
 
 ### Features
