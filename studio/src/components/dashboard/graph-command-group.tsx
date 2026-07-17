@@ -27,7 +27,7 @@ export function GraphCommandGroup({
 }: GraphCommandGroupProps) {
   return (
     <CommandGroup key={`heading-${namespaceIndex}`} heading={namespace.name}>
-      {namespace.graphs.map(({ subgraphs, ...graph }, graphIndex) => (
+      {namespace.graphs.map(({ subgraphTargetIds, ...graph }, graphIndex) => (
         <React.Fragment key={`graph-${namespaceIndex}-${graphIndex}`}>
           <GraphCommandItem
             namespace={namespace}
@@ -39,18 +39,20 @@ export function GraphCommandGroup({
           />
 
           {(isFiltering || activeSubgraphId) &&
-            subgraphs.map((subgraph, subgraphIndex) => (
-              <GraphCommandItem
-                key={`subgraph-${namespaceIndex}-${graphIndex}-${subgraphIndex}`}
-                name={subgraph.name}
-                namespace={namespace}
-                isActive={activeSubgraphId === subgraph.id}
-                value={`${namespace.name}.${graph.id}.${subgraph.id}`}
-                isSubgraph
-                className="pl-8"
-                setNamespace={setNamespace}
-              />
-            ))}
+            namespace.subgraphs
+              .filter((sg) => subgraphTargetIds.includes(sg.targetId))
+              .map((subgraph, subgraphIndex) => (
+                <GraphCommandItem
+                  key={`subgraph-${namespaceIndex}-${graphIndex}-${subgraphIndex}`}
+                  name={subgraph.name}
+                  namespace={namespace}
+                  isActive={activeSubgraphId === subgraph.id}
+                  value={`${namespace.name}.${graph.id}.${subgraph.id}`}
+                  isSubgraph
+                  className="pl-8"
+                  setNamespace={setNamespace}
+                />
+              ))}
         </React.Fragment>
       ))}
     </CommandGroup>

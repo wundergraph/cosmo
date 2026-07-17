@@ -25,30 +25,27 @@ export function WorkspaceSelector({ children, truncateNamespace = true }: Worksp
     const currentSlug = (router.query.slug as string)?.toLowerCase();
     const currentSubgraphSlug = (router.query.subgraphSlug as string)?.toLowerCase();
 
-    const nsGraphs = namespace.graphs;
-    const nsSubgraphs = nsGraphs.flatMap((graph) => graph.subgraphs);
-
     const activeGraph =
-      routeSegment === 'graph' ? nsGraphs.find((graph) => graph.name.toLowerCase() === currentSlug) : undefined;
+      routeSegment === 'graph' ? namespace.graphs.find((graph) => graph.name.toLowerCase() === currentSlug) : undefined;
 
     // Try to find the currently active subgraph by id
     let baseSubgraph: WorkspaceSubgraph | undefined;
     let activeSubgraph = !!subgraphContext?.subgraph?.id
-      ? nsSubgraphs.find((subgraph) => subgraph.id === subgraphContext?.subgraph?.id)
+      ? namespace.subgraphs.find((subgraph) => subgraph.id === subgraphContext?.subgraph?.id)
       : undefined;
 
     if (!activeGraph && !activeSubgraph && routeSegment === 'subgraph' && !!currentSubgraphSlug) {
       // We couldn't find the subgraph, try to find it on the feature subgraphs
-      activeSubgraph = namespace.featureSubgraphs.find((fsg) => fsg.name.toLowerCase() === currentSubgraphSlug);
+      activeSubgraph = namespace.subgraphs.find((fsg) => fsg.name.toLowerCase() === currentSubgraphSlug);
       if (activeSubgraph?.baseSubgraphId) {
-        // Find the base base subgraph by id
-        baseSubgraph = nsSubgraphs.find((subgraph) => subgraph.id === activeSubgraph?.baseSubgraphId);
+        // Find the base subgraph by id
+        baseSubgraph = namespace.subgraphs.find((subgraph) => subgraph.id === activeSubgraph?.baseSubgraphId);
       }
     }
 
     return [activeGraph, activeSubgraph, baseSubgraph];
   }, [
-    namespace.featureSubgraphs,
+    namespace.subgraphs,
     namespace.graphs,
     router.asPath,
     router.query.slug,
