@@ -2,11 +2,13 @@ package core
 
 import (
 	"bytes"
+	stdflate "compress/flate"
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"regexp"
@@ -17,9 +19,12 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/gobwas/httphead"
 	"github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsflate"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/gorilla/websocket"
+	kpflate "github.com/klauspost/compress/flate"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 	"github.com/wundergraph/astjson"
@@ -45,6 +50,77 @@ import (
 var errClientTerminatedConnection = &wsproto.CloseError{
 	Err:  errors.New("client terminated connection"),
 	Kind: wsproto.CloseKindNormal,
+}
+
+type compressionMode struct {
+	enabled               bool
+	level                 int
+	serverContextTakeover bool
+	clientContextTakeover bool
+	// clientWindowBits is the negotiated LZ77 window size (8-15) used by the
+	// client for compression. The decompression dictionary is sized as
+	// 1 << clientWindowBits. Default is 15 (32 KB, the DEFLATE maximum).
+	clientWindowBits int
+}
+
+// flateReadTail is the DEFLATE stream tail appended before decompression, per
+// RFC 7692: the 4-byte sync flush marker stripped by the sender plus an empty
+// stored block, which avoids premature EOF on some streams.
+var flateReadTail = []byte{
+	0x00, 0x00, 0xff, 0xff, // sync flush marker
+	0x01, 0x00, 0x00, 0xff, 0xff, // empty stored block
+}
+
+// Two DEFLATE implementations are used deliberately:
+//
+//   - klauspost/compress/flate (kpflate) for the pooled no-context-takeover
+//     writer and for all decompression. Its writer is 6-12x faster than the
+//     standard library, and inflate has no behavioral differences.
+//   - compress/flate (stdflate) for the persistent context-takeover
+//     compressor only. kpflate's fast encoders (levels <= 6) skip history
+//     matching for small inputs, so consecutive small messages would not
+//     reference the shared sliding window - forfeiting the compression-ratio
+//     benefit that justifies keeping per-connection compressor state.
+//
+// Pools below serve the no-context-takeover compression paths. Without
+// context takeover every message is an independent DEFLATE stream, so
+// writers and readers hold no state between messages and can be shared
+// across connections once reset. This matters because flate writers carry
+// large internal hash tables that make per-message construction
+// prohibitively expensive.
+//
+// These pools must never be used for the context-takeover paths: those
+// compressors and decompressors are per-connection state precisely because
+// of the shared sliding-window dictionary.
+//
+// Writers keep their compression level across Reset, so each level gets its
+// own pool. The index covers the full flate range from HuffmanOnly (-2) to
+// BestCompression (9).
+var flateWriterPools [kpflate.BestCompression - kpflate.HuffmanOnly + 1]sync.Pool
+
+// pooledFlateWriter returns a flate writer for the given level together with
+// the pool it must be returned to after a successful write. Callers must drop
+// the writer (not Put it back) if any write or flush fails, since its state
+// is undefined after an error.
+func pooledFlateWriter(level int) (*kpflate.Writer, *sync.Pool, error) {
+	if level < kpflate.HuffmanOnly || level > kpflate.BestCompression {
+		return nil, nil, fmt.Errorf("invalid flate compression level: %d", level)
+	}
+	pool := &flateWriterPools[level-kpflate.HuffmanOnly]
+	if fw, ok := pool.Get().(*kpflate.Writer); ok {
+		return fw, pool, nil
+	}
+	fw, err := kpflate.NewWriter(nil, level)
+	if err != nil {
+		return nil, nil, err
+	}
+	return fw, pool, nil
+}
+
+var flateReaderPool = sync.Pool{
+	New: func() any {
+		return kpflate.NewReader(bytes.NewReader(nil))
+	},
 }
 
 type WebsocketMiddlewareOptions struct {
@@ -90,6 +166,17 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		clientHeader:              opts.ClientHeader,
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
 		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
+	}
+	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.Compression.Enabled {
+		handler.compression.enabled = true
+		handler.compression.level = opts.WebSocketConfiguration.Compression.Level
+		if handler.compression.level < 1 || handler.compression.level > 9 {
+			handler.compression.level = kpflate.DefaultCompression
+		}
+		handler.compression.clientWindowBits = opts.WebSocketConfiguration.Compression.ClientMaxWindowBits
+		if handler.compression.clientWindowBits < 8 || handler.compression.clientWindowBits > 15 {
+			handler.compression.clientWindowBits = 15
+		}
 	}
 	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
 		handler.absintheHandlerEnabled = true
@@ -160,30 +247,213 @@ type wsConnectionWrapper struct {
 	mu           sync.Mutex
 	readTimeout  time.Duration
 	writeTimeout time.Duration
+
+	// Compression and takeover mode negotiated for this connection.
+	compression compressionMode
+
+	// Persistent compression state (only used with context takeover)
+	compressBuf *bytes.Buffer
+	compressor  *stdflate.Writer
+
+	// Persistent decompression state (only used with context takeover)
+	decompressor   io.ReadCloser
+	decompressDict []byte
 }
 
-func newWSConnectionWrapper(conn net.Conn, readTimeout, writeTimeout time.Duration) *wsConnectionWrapper {
-	return &wsConnectionWrapper{
+func newWSConnectionWrapper(conn net.Conn, readTimeout, writeTimeout time.Duration, compression compressionMode) (*wsConnectionWrapper, error) {
+	w := &wsConnectionWrapper{
 		conn:         conn,
 		readTimeout:  readTimeout,
 		writeTimeout: writeTimeout,
+		compression:  compression,
 	}
-}
 
-func (c *wsConnectionWrapper) ReadJSON(v any) error {
-	if c.readTimeout > 0 {
-		err := c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
+	// Initialize persistent compression state only if context takeover is enabled
+	if compression.enabled && compression.serverContextTakeover {
+		w.compressBuf = new(bytes.Buffer)
+		var err error
+		// stdflate: see the package-level note on the two DEFLATE
+		// implementations. kpflate would not reference the shared window for
+		// small messages at levels <= 6, defeating context takeover.
+		w.compressor, err = stdflate.NewWriter(w.compressBuf, compression.level)
 		if err != nil {
-			return err
+			return nil, fmt.Errorf("failed to create flate compressor: %w", err)
 		}
 	}
 
-	text, err := wsutil.ReadClientText(c.conn)
+	if compression.enabled && compression.clientContextTakeover {
+		w.decompressor = kpflate.NewReader(bytes.NewReader(nil))
+		w.decompressDict = make([]byte, 0, 1<<compression.clientWindowBits)
+	}
+
+	return w, nil
+}
+
+func (c *wsConnectionWrapper) ReadJSON(v any) error {
+	if err := c.setReadDeadline(); err != nil {
+		return err
+	}
+
+	text, err := c.readJSONPayload()
 	if err != nil {
 		return err
 	}
 
 	return json.Unmarshal(text, v)
+}
+
+func (c *wsConnectionWrapper) setReadDeadline() error {
+	if c.readTimeout <= 0 {
+		return nil
+	}
+	return c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
+}
+
+func (c *wsConnectionWrapper) readJSONPayload() ([]byte, error) {
+	if !c.compression.enabled {
+		return wsutil.ReadClientText(c.conn)
+	}
+
+	payload, _, isCompressed, err := c.readDataFrames()
+	if err != nil {
+		return nil, err
+	}
+
+	if !isCompressed {
+		return payload, nil
+	}
+
+	return c.decompressPayload(payload)
+}
+
+func (c *wsConnectionWrapper) readDataFrames() ([]byte, ws.OpCode, bool, error) {
+	// Read frames directly and handle compression, buffering fragmented messages.
+	controlHandler := wsutil.ControlFrameHandler(c.conn, ws.StateServerSide)
+	var (
+		frame        ws.Frame
+		payload      []byte
+		isCompressed bool
+		op           ws.OpCode
+		started      bool
+		err          error
+	)
+
+	for {
+		frame, err = ws.ReadFrame(c.conn)
+		if err != nil {
+			return nil, 0, false, err
+		}
+
+		// RFC 6455 §5.1: all client-to-server frames MUST be masked.
+		if !frame.Header.Masked {
+			return nil, 0, false, fmt.Errorf("received unmasked frame (opcode %v)", frame.Header.OpCode)
+		}
+		ws.Cipher(frame.Payload, frame.Header.Mask, 0)
+
+		if frame.Header.OpCode.IsControl() {
+			if err := controlHandler(frame.Header, bytes.NewReader(frame.Payload)); err != nil {
+				return nil, 0, false, err
+			}
+			continue
+		}
+
+		if !started {
+			// First data frame must be text or binary.
+			if frame.Header.OpCode != ws.OpText && frame.Header.OpCode != ws.OpBinary {
+				continue
+			}
+			op = frame.Header.OpCode
+			started = true
+			// Per RFC 7692, the RSV1 compression bit is only set on the first frame.
+			isCompressed, err = wsflate.IsCompressed(frame.Header)
+			if err != nil {
+				return nil, 0, false, err
+			}
+		} else if frame.Header.OpCode != ws.OpContinuation {
+			// After the first frame, we expect continuation frames until FIN.
+			return nil, 0, false, fmt.Errorf("unexpected opcode %v while waiting for continuation", frame.Header.OpCode)
+		}
+
+		// Buffer the payload from this frame.
+		payload = append(payload, frame.Payload...)
+
+		// Check if this is the final frame.
+		if frame.Header.Fin {
+			return payload, op, isCompressed, nil
+		}
+	}
+}
+
+func (c *wsConnectionWrapper) decompressPayload(payload []byte) ([]byte, error) {
+	if c.compression.clientContextTakeover {
+		// Use persistent decompressor with dictionary for context takeover.
+		return c.decompressWithContextTakeover(payload)
+	}
+	return decompressNoContextTakeover(payload)
+}
+
+// decompressNoContextTakeover decompresses a self-contained message using a
+// pooled flate reader. Resetting with an empty dictionary guarantees no state
+// crosses messages or connections.
+func decompressNoContextTakeover(payload []byte) ([]byte, error) {
+	fr := flateReaderPool.Get().(io.ReadCloser)
+	resetter, ok := fr.(kpflate.Resetter)
+	if !ok {
+		return nil, errors.New("flate reader does not implement flate.Resetter")
+	}
+	if err := resetter.Reset(io.MultiReader(bytes.NewReader(payload), bytes.NewReader(flateReadTail)), nil); err != nil {
+		return nil, err
+	}
+
+	var decompressed bytes.Buffer
+	if _, err := io.Copy(&decompressed, fr); err != nil {
+		// The reader state is undefined after an error; drop it instead of
+		// returning it to the pool.
+		return nil, err
+	}
+	flateReaderPool.Put(fr)
+
+	return decompressed.Bytes(), nil
+}
+
+// decompressWithContextTakeover decompresses data using the persistent decompressor,
+// maintaining dictionary state across messages for better decompression.
+func (c *wsConnectionWrapper) decompressWithContextTakeover(compressed []byte) ([]byte, error) {
+	// Reset the decompressor to read from the new compressed data followed by
+	// the RFC 7692 read tail, using the accumulated dictionary.
+	if resetter, ok := c.decompressor.(kpflate.Resetter); ok {
+		src := io.MultiReader(bytes.NewReader(compressed), bytes.NewReader(flateReadTail))
+		if err := resetter.Reset(src, c.decompressDict); err != nil {
+			return nil, err
+		}
+	}
+
+	// Read all decompressed data
+	var decompressed bytes.Buffer
+	if _, err := io.Copy(&decompressed, c.decompressor); err != nil {
+		return nil, err
+	}
+
+	// Update the dictionary with the decompressed data (keep last 32KB per DEFLATE spec)
+	c.updateDecompressDict(decompressed.Bytes())
+
+	return decompressed.Bytes(), nil
+}
+
+// updateDecompressDict updates the decompression dictionary with new data.
+// The dictionary is capped to the negotiated client window size (1 << clientWindowBits).
+func (c *wsConnectionWrapper) updateDecompressDict(data []byte) {
+	maxDictSize := 1 << c.compression.clientWindowBits
+
+	if len(data) >= maxDictSize {
+		c.decompressDict = make([]byte, maxDictSize)
+		copy(c.decompressDict, data[len(data)-maxDictSize:])
+	} else {
+		c.decompressDict = append(c.decompressDict, data...)
+		if len(c.decompressDict) > maxDictSize {
+			c.decompressDict = c.decompressDict[len(c.decompressDict)-maxDictSize:]
+		}
+	}
 }
 
 func (c *wsConnectionWrapper) WriteText(text string) error {
@@ -195,6 +465,10 @@ func (c *wsConnectionWrapper) WriteText(text string) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if c.compression.enabled {
+		return c.writeCompressed([]byte(text))
 	}
 
 	return wsutil.WriteServerText(c.conn, []byte(text))
@@ -215,7 +489,77 @@ func (c *wsConnectionWrapper) WriteJSON(v any) error {
 		}
 	}
 
+	if c.compression.enabled {
+		return c.writeCompressed(data)
+	}
+
 	return wsutil.WriteServerText(c.conn, data)
+}
+
+// writeCompressed writes data with compression. Must be called with the mutex held.
+func (c *wsConnectionWrapper) writeCompressed(data []byte) error {
+	if c.compression.serverContextTakeover {
+		return c.writeCompressedWithContextTakeover(data)
+	}
+	return c.writeCompressedNoContextTakeover(data)
+}
+
+// writeCompressedNoContextTakeover compresses data as an independent DEFLATE
+// stream using a pooled flate.Writer. Resetting the writer provides the empty
+// LZ77 window RFC 7692 requires per message in this mode, so no state crosses
+// messages or connections.
+func (c *wsConnectionWrapper) writeCompressedNoContextTakeover(data []byte) error {
+	fw, pool, err := pooledFlateWriter(c.compression.level)
+	if err != nil {
+		return err
+	}
+
+	var buf bytes.Buffer
+	fw.Reset(&buf)
+	if _, err := fw.Write(data); err != nil {
+		// The writer state is undefined after an error; drop it instead of
+		// returning it to the pool.
+		return err
+	}
+	if err := fw.Flush(); err != nil {
+		return err
+	}
+	pool.Put(fw)
+
+	return c.writeCompressedFrame(buf.Bytes())
+}
+
+// writeCompressedWithContextTakeover compresses data while preserving dictionary state
+// between messages for better compression ratios.
+func (c *wsConnectionWrapper) writeCompressedWithContextTakeover(data []byte) error {
+	// Reset buffer but NOT the compressor - this preserves the dictionary
+	c.compressBuf.Reset()
+
+	if _, err := c.compressor.Write(data); err != nil {
+		return err
+	}
+	if err := c.compressor.Flush(); err != nil {
+		return err
+	}
+
+	return c.writeCompressedFrame(c.compressBuf.Bytes())
+}
+
+// writeCompressedFrame removes the trailing sync marker (0x00 0x00 0xff 0xff)
+// per RFC 7692 when present and writes the result as a final text frame with
+// the RSV1 bit set.
+func (c *wsConnectionWrapper) writeCompressedFrame(compressed []byte) error {
+	if len(compressed) >= 4 &&
+		compressed[len(compressed)-4] == 0x00 &&
+		compressed[len(compressed)-3] == 0x00 &&
+		compressed[len(compressed)-2] == 0xff &&
+		compressed[len(compressed)-1] == 0xff {
+		compressed = compressed[:len(compressed)-4]
+	}
+
+	frame := ws.NewFrame(ws.OpText, true, compressed)
+	frame.Header.Rsv = ws.Rsv(true, false, false) // Set RSV1 bit for compression
+	return ws.WriteFrame(c.conn, frame)
 }
 
 func (c *wsConnectionWrapper) WriteCloseFrame(code ws.StatusCode, reason string) error {
@@ -235,6 +579,12 @@ func (c *wsConnectionWrapper) WriteCloseFrame(code ws.StatusCode, reason string)
 func (c *wsConnectionWrapper) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.compressor != nil {
+		_ = c.compressor.Close()
+	}
+	if c.decompressor != nil {
+		_ = c.decompressor.Close()
+	}
 	return c.conn.Close()
 }
 
@@ -269,6 +619,94 @@ type WebsocketHandler struct {
 	disableVariablesRemapping bool
 
 	apolloCompatibilityFlags config.ApolloCompatibilityFlags
+
+	compression compressionMode
+}
+
+func (h *WebsocketHandler) configureCompressionNegotiation(upgrader *ws.HTTPUpgrader) *wsflate.Extension {
+	if !h.compression.enabled {
+		return nil
+	}
+
+	ext := &wsflate.Extension{
+		Parameters: wsflate.Parameters{
+			ServerNoContextTakeover: true,
+			ClientNoContextTakeover: true,
+			// Accept any client offer for server_max_window_bits (up to 15).
+			ServerMaxWindowBits: 15,
+		},
+	}
+	upgrader.Negotiate = func(opt httphead.Option) (accept httphead.Option, err error) {
+		accept, err = ext.Negotiate(opt)
+		if err != nil || accept.Size() == 0 {
+			return accept, err
+		}
+
+		params, accepted := ext.Accepted()
+		if !accepted {
+			return accept, nil
+		}
+
+		response := wsflate.Parameters{
+			// Mirror no_context_takeover only when explicitly requested by the client.
+			ServerNoContextTakeover: params.ServerNoContextTakeover,
+			ClientNoContextTakeover: params.ClientNoContextTakeover,
+			// Go's compress/flate always uses a 32 KB window (bits=15).
+			ServerMaxWindowBits: 15,
+		}
+
+		// RFC 7692 §7.1.2.2: only include client_max_window_bits in the
+		// response when the client included it in the offer.
+		if params.ClientMaxWindowBits.Defined() {
+			configBits := wsflate.WindowBits(h.compression.clientWindowBits)
+			// Use the more restrictive of the client's offer and server config.
+			// ClientMaxWindowBits == 1 means "parameter present, no value" —
+			// the client accepts any server-chosen value.
+			if params.ClientMaxWindowBits == 1 || configBits < params.ClientMaxWindowBits {
+				response.ClientMaxWindowBits = configBits
+			} else {
+				response.ClientMaxWindowBits = params.ClientMaxWindowBits
+			}
+		}
+
+		return response.Option(), nil
+	}
+
+	return ext
+}
+
+func resolveNegotiatedCompression(base compressionMode, ext *wsflate.Extension, upgradeErr error) compressionMode {
+	if ext == nil || upgradeErr != nil {
+		return compressionMode{
+			enabled: false,
+			level:   base.level,
+		}
+	}
+	params, accepted := ext.Accepted()
+	if !accepted {
+		return compressionMode{
+			enabled: false,
+			level:   base.level,
+		}
+	}
+	// Derive the effective client window bits from the negotiation.
+	// If the client offered client_max_window_bits, use min(offer, config);
+	// otherwise fall back to the configured default.
+	clientWindowBits := base.clientWindowBits
+	if params.ClientMaxWindowBits.Defined() && params.ClientMaxWindowBits > 1 {
+		if int(params.ClientMaxWindowBits) < clientWindowBits {
+			clientWindowBits = int(params.ClientMaxWindowBits)
+		}
+	}
+
+	// Context takeover remains enabled when no_context_takeover is not requested.
+	return compressionMode{
+		enabled:               true,
+		level:                 base.level,
+		serverContextTakeover: !params.ServerNoContextTakeover,
+		clientContextTakeover: !params.ClientNoContextTakeover,
+		clientWindowBits:      clientWindowBits,
+	}
 }
 
 func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.Request) {
@@ -309,7 +747,12 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			return false
 		},
 	}
+
+	compressionExt := h.configureCompressionNegotiation(&upgrader)
+
 	c, _, _, err := upgrader.Upgrade(r, w)
+	connectionCompression := resolveNegotiatedCompression(h.compression, compressionExt, err)
+
 	if err != nil {
 		requestLogger.Warn("Websocket upgrade", zap.Error(err))
 		_ = c.Close()
@@ -325,7 +768,12 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	// After successful upgrade, we can't write to the response writer anymore
 	// because it's hijacked by the websocket connection
 
-	conn := newWSConnectionWrapper(c, h.readTimeout, h.writeTimeout)
+	conn, err := newWSConnectionWrapper(c, h.readTimeout, h.writeTimeout, connectionCompression)
+	if err != nil {
+		requestLogger.Error("Create websocket connection wrapper", zap.Error(err))
+		_ = c.Close()
+		return
+	}
 	protocol, err := wsproto.NewProtocol(subProtocol, conn)
 	if err != nil {
 		requestLogger.Error("Create websocket protocol", zap.Error(err))
