@@ -1,6 +1,6 @@
 import { docsBaseURL } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { CaretSortIcon, Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
+import { CaretSortIcon, ChevronDownIcon, Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { ReactNode, useContext, useState } from 'react';
@@ -24,6 +24,11 @@ import {
 } from '../ui/dropdown-menu';
 import NewFeaturesPopup from '../dashboard/NewFeaturesPopup';
 
+export type NavChild = {
+  title: string;
+  href: string;
+};
+
 export type NavLink = {
   title: ReactNode;
   className?: string;
@@ -31,6 +36,7 @@ export type NavLink = {
   matchExact?: boolean;
   icon: ReactNode;
   separator?: boolean;
+  children?: NavChild[];
 };
 
 const isActive = (path: string, currentPath: string, exact = true) => {
@@ -128,6 +134,74 @@ const Organizations = () => {
   );
 };
 
+const ExpandableNavItem = ({ item }: { item: NavLink & { children: NavChild[] } }) => {
+  const router = useRouter();
+  const currentPath = router.asPath.split('?')[0];
+
+  const matchesHref = (targetHref: string) => {
+    const [targetPath, targetQueryString] = targetHref.split('?');
+    if (encodeURI(targetPath) !== currentPath) return false;
+    if (!targetQueryString) return true;
+
+    const targetParams = new URLSearchParams(targetQueryString);
+    for (const [k, v] of targetParams.entries()) {
+      if (router.query[k] !== v) return false;
+    }
+    return true;
+  };
+
+  const isCurrent = isActive(encodeURI(item.href.split('?')[0]), currentPath, item.matchExact);
+  const isChildActive = item.children.some((child) => matchesHref(child.href));
+
+  // Keep \"Subgraphs\" highlighted while viewing a subgraph in graph context.
+  const isSubgraphPageInGraphContext =
+    router.pathname.includes('/subgraph/') && typeof router.query.graph === 'string' && item.title === 'Subgraphs';
+
+  const isHighlighted = isCurrent || isChildActive || isSubgraphPageInGraphContext;
+
+  const [isOpen, setIsOpen] = useState(isChildActive);
+
+  return (
+    <div>
+      <div className={cn('flex items-center rounded-md', isHighlighted && 'bg-accent/80')}>
+        <Link
+          href={item.href}
+          className="flex flex-1 items-center gap-2 rounded-l-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+        >
+          {item.icon}
+          <span className={cn('whitespace-nowrap', item.className)}>{item.title}</span>
+        </Link>
+        <button
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="flex h-9 items-center rounded-r-md px-2 py-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          aria-label={isOpen ? 'Collapse' : 'Expand'}
+        >
+          <ChevronDownIcon className={cn('h-3 w-3 transition-transform duration-200', isOpen && 'rotate-180')} />
+        </button>
+      </div>
+      {isOpen && (
+        <div className="ml-7 mt-1 space-y-0.5 border-l pl-2">
+          {item.children.map((child, i) => {
+            const isChildCurrent = matchesHref(child.href);
+            return (
+              <Link
+                key={i}
+                href={child.href}
+                className={cn(
+                  'flex items-center rounded-md px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground',
+                  isChildCurrent ? 'bg-accent/60 font-medium' : 'text-muted-foreground',
+                )}
+              >
+                {child.title}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface SideNavLayoutProps extends LayoutProps {
   links?: Partial<NavLink>[];
   isBannerDisplayed?: boolean;
@@ -178,9 +252,10 @@ export const SideNav = (props: SideNavLayoutProps) => {
 
               return (
                 <div key={index}>
-                  {item.href ? (
+                  {item.children && item.children.length > 0 ? (
+                    <ExpandableNavItem item={item as NavLink & { children: NavChild[] }} />
+                  ) : item.href ? (
                     <Link
-                      key={index}
                       href={item.href}
                       className={cn(
                         'group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground',

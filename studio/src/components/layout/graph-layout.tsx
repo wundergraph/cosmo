@@ -29,7 +29,8 @@ import { Link } from '../ui/link';
 import { Loader } from '../ui/loader';
 import { PageHeader } from './head';
 import { LayoutProps } from './layout';
-import { NavLink, SideNav } from './sidenav';
+import { NavChild, NavLink, SideNav } from './sidenav';
+import { buildGraphSideNavLinks } from './graph-sidenav-links';
 import { useFeature } from '@/hooks/use-feature';
 import { WorkspaceSelector } from '@/components/dashboard/workspace-selector';
 import { useWorkspace } from '@/hooks/use-workspace';
@@ -64,98 +65,16 @@ const GraphLayoutSidebarNavigation = ({ organizationSlug, namespace, slug }: Gra
   const links: NavLink[] = useMemo(() => {
     const basePath = `/${organizationSlug}/${namespace}/graph/${slug}`;
 
-    const graphLinks = [
-      {
-        title: 'Overview',
-        href: basePath,
-        icon: <HomeIcon className="h-4 w-4" />,
-      },
-      {
-        title: 'Subgraphs',
-        href: basePath + '/subgraphs',
-        icon: <Component2Icon className="h-4 w-4" />,
-      },
-      {
-        title: 'Feature Flags',
-        href: basePath + '/feature-flags',
-        icon: <MdOutlineFeaturedPlayList className="h-4 w-4" />,
-        matchExact: false,
-      },
-      {
-        title: 'Playground',
-        href: basePath + '/playground',
-        icon: <PlayIcon className="h-4 w-4" />,
-      },
-      {
-        title: 'Schema',
-        href: basePath + '/schema',
-        matchExact: false,
-        icon: <FileTextIcon className="h-4 w-4" />,
-      },
-      {
-        title: 'Analytics',
-        href: basePath + '/analytics',
-        matchExact: false,
-        icon: <ChartBarIcon className="h-4 w-4" />,
-      },
-      {
-        title: 'Operations',
-        href: basePath + '/operations',
-        matchExact: false,
-        icon: <CommandLineIcon className="h-4 w-4" />,
-      },
-      {
-        title: 'Routers',
-        href: basePath + '/routers',
-        matchExact: false,
-        icon: <ServerStackIcon className="h-4 w-4" />,
-      },
-      {
-        title: 'Compositions',
-        href: basePath + '/compositions',
-        matchExact: false,
-        icon: <PiCubeFocus className="h-4 w-4" />,
-      },
-      {
-        title: 'Clients',
-        href: basePath + '/clients',
-        icon: <PiDevices className="h-4 w-4" />,
-      },
-      {
-        title: 'Changelog',
-        href: basePath + '/changelog',
-        icon: <PiGitBranch className="h-4 w-4" />,
-      },
-      {
-        title: 'Checks',
-        href: basePath + '/checks',
-        matchExact: false,
-        icon: <CheckCircledIcon className="h-4 w-4" />,
-      },
-      {
-        title: 'Overrides',
-        href: basePath + '/overrides',
-        matchExact: true,
-        icon: <PiToggleRight className="h-4 w-4" />,
-      },
-      {
-        title: 'Cache Operations',
-        href: basePath + '/cache-operations',
-        matchExact: false,
-        icon: <PiBracketsCurlyBold className="h-4 w-4" />,
-      },
+    const subgraphChildren: NavChild[] = [
+      { title: 'All subgraphs', href: basePath + '/subgraphs' },
+      { title: 'Featured', href: basePath + '/subgraphs?tab=featureSubgraphs' },
     ];
 
-    if (proposalsFeature?.enabled) {
-      graphLinks.push({
-        title: 'Proposals',
-        href: basePath + '/proposals',
-        matchExact: false,
-        icon: <ClipboardIcon className="h-4 w-4" />,
-      });
-    }
-
-    return graphLinks;
+    return buildGraphSideNavLinks({
+      basePath,
+      proposalsEnabled: Boolean(proposalsFeature?.enabled),
+      subgraphChildren,
+    });
   }, [organizationSlug, namespace, slug, proposalsFeature]);
 
   return <SideNav links={links} />;

@@ -1,31 +1,40 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFireworks } from '@/hooks/use-fireworks';
 import { docsBaseURL } from '@/lib/constants';
-import { formatMetric } from '@/lib/format-metric';
+import { formatDurationMetric, formatMetric } from '@/lib/format-metric';
+import { formatNumber } from '@/lib/format-number';
 import { useChartData } from '@/lib/insights-helpers';
 import { cn } from '@/lib/utils';
-import { CommandLineIcon, DocumentArrowDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { ArrowRightIcon, Component2Icon, LightningBoltIcon, PlayIcon } from '@radix-ui/react-icons';
+import { CommandLineIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, LightningBoltIcon, PlayIcon } from '@radix-ui/react-icons';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import {
+  getDashboardAnalyticsView,
+  getFederatedGraphByName,
+  getGraphMetrics,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { FederatedGraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import copy from 'copy-to-clipboard';
 import { getTime, parseISO, subDays } from 'date-fns';
 import Link from 'next/link';
-import { Dispatch, SetStateAction, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import { Dispatch, SetStateAction, useContext, useEffect, useMemo, useState } from 'react';
 import { FiCheck, FiCopy } from 'react-icons/fi';
 import { LuSquareDot } from 'react-icons/lu';
 import { MdNearbyError } from 'react-icons/md';
 import { Line, LineChart, ResponsiveContainer, XAxis } from 'recharts';
 import { UserContext } from './app-provider';
-import { ComposeStatusMessage } from './compose-status';
 import { ComposeStatusBulb } from './compose-status-bulb';
 import { EmptyState } from './empty-state';
 import { TimeAgo } from './time-ago';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 import { Card } from './ui/card';
 import { CLI } from './ui/cli';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { MigrationDialog } from './migration-dialog';
+import { useQuery } from '@connectrpc/connect-query';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useOnboarding } from '@/hooks/use-onboarding';
@@ -312,6 +321,7 @@ export const Empty = ({
 
 const GraphCard = ({ graph, hasStaleMetrics }: { graph: FederatedGraph; hasStaleMetrics: boolean }) => {
   const user = useContext(UserContext);
+  const router = useRouter();
   const { data, ticks, domain, timeFormatter } = useChartData(
     4,
     graph.requestSeries.length > 0 ? graph.requestSeries : fallbackData,
@@ -320,6 +330,76 @@ const GraphCard = ({ graph, hasStaleMetrics }: { graph: FederatedGraph; hasStale
   const totalRequests = graph.requestSeries.reduce((total, r) => total + r.totalRequests, 0);
 
   const totalErrors = graph.requestSeries.reduce((total, r) => total + r.erroredRequests, 0);
+  const isReady = Boolean(graph.lastUpdatedAt);
+  const isHealthy = totalErrors === 0;
+  const errorRatePct = totalRequests > 0 ? (totalErrors / totalRequests) * 100 : 0;
+  const rpm = totalRequests / (4 * 60);
+  const rpmLabel =
+    totalRequests === 0
+      ? formatNumber(0, { minimumFractionDigits: 3, maximumFractionDigits: 3 })
+      : formatMetric(rpm);
+
+  const { data: graphMetrics } = useQuery(
+    getGraphMetrics,
+    { namespace: graph.namespace, federatedGraphName: graph.name, range: 4 },
+    { enabled: isReady, refetchOnWindowFocus: false },
+  );
+
+  const p95LatencyValue = Number.parseInt(graphMetrics?.latency?.value || '0');
+  const p95LatencyLabel =
+    isReady && graphMetrics?.response?.code === EnumStatusCode.OK && p95LatencyValue > 0
+      ? formatDurationMetric(p95LatencyValue, { maximumFractionDigits: 3 })
+      : 'N/A';
+  const p95LatencyTone =
+    p95LatencyLabel === 'N/A'
+      ? 'muted'
+      : p95LatencyValue >= 1000
+        ? 'critical'
+        : p95LatencyValue >= 500
+          ? 'slow'
+          : 'normal';
+
+  const shouldFetchTopErrorSubgraph = isReady && !isHealthy && graph.supportsFederation;
+  const { data: graphDetails } = useQuery(
+    getFederatedGraphByName,
+    { name: graph.name, namespace: graph.namespace },
+    { enabled: shouldFetchTopErrorSubgraph, refetchOnWindowFocus: false },
+  );
+  const { data: dashboardView } = useQuery(
+    getDashboardAnalyticsView,
+    { namespace: graph.namespace, federatedGraphName: graph.name, range: 4 },
+    { enabled: shouldFetchTopErrorSubgraph, refetchOnWindowFocus: false },
+  );
+
+  const topErrorSubgraphName = useMemo(() => {
+    const subgraphMetrics = dashboardView?.subgraphMetrics ?? [];
+    const subgraphs = graphDetails?.subgraphs ?? [];
+    if (subgraphMetrics.length === 0 || subgraphs.length === 0) return undefined;
+
+    const top = subgraphMetrics.reduce((best, next) => (next.errorRate > best.errorRate ? next : best), subgraphMetrics[0]);
+    const match = subgraphs.find((s) => s.id === top.subgraphID);
+    return match?.name;
+  }, [dashboardView?.subgraphMetrics, graphDetails?.subgraphs]);
+
+  const orgSlug = user?.currentOrganization?.slug;
+  const graphBasePath = `/${orgSlug}/${graph.namespace}/graph/${graph.name}`;
+  const topErrorSubgraphAnalyticsPath =
+    topErrorSubgraphName && orgSlug
+      ? `/${orgSlug}/${graph.namespace}/subgraph/${topErrorSubgraphName}/analytics?graph=${encodeURIComponent(graph.name)}`
+      : undefined;
+
+  const primaryCta = (() => {
+    if (!orgSlug) return { label: 'View', href: graphBasePath };
+    if (!isReady) return { label: 'View details', href: graphBasePath };
+    if (!isHealthy) return { label: 'Investigate', href: topErrorSubgraphAnalyticsPath ?? `${graphBasePath}/analytics` };
+    return { label: 'View', href: graphBasePath };
+  })();
+
+  const statusText = (() => {
+    if (!isReady) return 'Waiting for first schema publish.';
+    if (!isHealthy) return topErrorSubgraphName ? topErrorSubgraphName : 'Elevated errors';
+    return 'All good.';
+  })();
 
   const parsedURL = () => {
     try {
@@ -332,12 +412,29 @@ const GraphCard = ({ graph, hasStaleMetrics }: { graph: FederatedGraph; hasStale
     } catch {}
   };
 
+  const endpointLabel = () => {
+    const url = parsedURL();
+    if (!url) return undefined;
+    return url;
+  };
+
   return (
-    <Link
-      href={`/${user?.currentOrganization?.slug}/${graph.namespace}/graph/${graph.name}`}
-      className="project-list-item group"
+    <div
+      role="link"
+      tabIndex={0}
+      aria-label={`View ${graph.name}`}
+      className="project-list-item group cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      onClick={() => {
+        router.push(graphBasePath);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          router.push(graphBasePath);
+        }
+      }}
     >
-      <Card className="flex h-full flex-col py-4 transition-all group-hover:border-input-active">
+      <Card className="flex h-full flex-col pt-4 pb-3 transition-all group-hover:border-input-active">
         <div className="pointer-events-none -mx-1.5 h-20 pb-4">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
@@ -361,29 +458,16 @@ const GraphCard = ({ graph, hasStaleMetrics }: { graph: FederatedGraph; hasStale
             </LineChart>
           </ResponsiveContainer>
         </div>
-        {hasStaleMetrics ? (
-          <Tooltip delayDuration={100}>
-            <TooltipTrigger asChild>
-              <div
-                className="flex w-full items-center justify-end gap-1 px-4 font-mono text-xs text-gray-100"
-                tabIndex={0}
-                role="img"
-                aria-label="Analytics are not available at this moment"
-              >
-                <ExclamationTriangleIcon width={12} height={12} aria-hidden />
-                N/A
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>Analytics are not available at this moment</TooltipContent>
-          </Tooltip>
-        ) : (
-          <div className="flex w-full justify-end px-4 font-mono text-xs text-muted-foreground">
-            {`${formatMetric(totalRequests / (4 * 60))} RPM`}
-          </div>
-        )}
-
         <div className="mt-3 flex flex-1 flex-col items-start px-6">
-          <div className="text-base font-semibold">{graph.name}</div>
+          <div className="flex w-full items-start justify-between gap-3">
+            <div className="min-w-0 text-base font-semibold">{graph.name}</div>
+            <Badge
+              className="shrink-0 tracking-[0.44px]"
+              variant={isHealthy ? 'success' : 'destructive'}
+            >
+              {isHealthy ? 'Healthy' : 'Degraded'}
+            </Badge>
+          </div>
           <Tooltip delayDuration={100}>
             <TooltipTrigger asChild>
               <p
@@ -391,83 +475,98 @@ const GraphCard = ({ graph, hasStaleMetrics }: { graph: FederatedGraph; hasStale
                   italic: !graph.routingURL,
                 })}
               >
-                {parsedURL()}
+                {endpointLabel()}
               </p>
             </TooltipTrigger>
-            <TooltipContent>{parsedURL()}</TooltipContent>
+            <TooltipContent>{endpointLabel()}</TooltipContent>
           </Tooltip>
-          <div className="mb-3 mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
-            <div className="flex items-center gap-x-2">
-              {graph.supportsFederation ? (
-                <Component2Icon className="h-4 w-4 text-[#0284C7]" />
-              ) : (
-                <LuSquareDot className="h-4 w-4 text-[#0284C7]" />
-              )}
-              {graph.supportsFederation ? (
-                <p className="text-sm">
-                  {`${formatMetric(graph.connectedSubgraphs)} ${
-                    graph.connectedSubgraphs === 1 ? 'subgraph' : 'subgraphs'
-                  }`}
-                </p>
-              ) : (
-                <p className="text-sm">monograph</p>
-              )}
-            </div>
 
-            <TooltipProvider>
-              <Tooltip delayDuration={100}>
-                <TooltipTrigger>
-                  <div className="flex items-center gap-x-2">
-                    <MdNearbyError className="h-4 w-4 text-destructive" />
-                    <p className="text-sm">{`${formatMetric(totalErrors)} ${
-                      totalErrors === 1 ? 'error' : 'errors'
-                    }`}</p>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>{`${totalErrors} errors in the last 4 hours.`}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            {graph.contract && (
-              <div className="flex items-center gap-x-2 text-sm">
-                <DocumentArrowDownIcon className="h-4 w-4 text-primary" />
-                Contract
-              </div>
+          <div className="mt-1 w-full text-xs text-muted-foreground">
+            {graph.supportsFederation
+              ? `${formatMetric(graph.connectedSubgraphs)} ${graph.connectedSubgraphs === 1 ? 'subgraph' : 'subgraphs'}`
+              : 'monograph'}{' '}
+            · updated{' '}
+            {graph.lastUpdatedAt ? (
+              <TimeAgo date={getTime(parseISO(graph.lastUpdatedAt))} tooltip={false} compact />
+            ) : (
+              'never'
             )}
           </div>
-          <TooltipProvider>
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger className="flex items-start text-xs">
-                <div className="flex h-4 w-4 items-center justify-center">
+
+          <div className="mt-4 -mx-6 w-[calc(100%+3rem)] overflow-hidden border-y bg-muted/30 text-sm">
+            <div className="grid grid-cols-3 divide-x divide-border">
+              <div className="px-6 py-4">
+                <div className="text-[12px] font-medium tracking-[0px] text-muted-foreground">ERROR RATE</div>
+                <div
+                  className={cn(
+                    'mt-2 text-2xl font-semibold tabular-nums',
+                    isHealthy ? 'text-[#6e677e] dark:text-muted-foreground' : 'text-destructive',
+                  )}
+                >
+                  {`${errorRatePct.toFixed(0)}%`}
+                </div>
+              </div>
+              <div className="px-6 py-4">
+                <div className="text-[12px] font-medium tracking-[0px] text-muted-foreground">P95 LATENCY</div>
+                <div
+                  className={cn(
+                    'mt-2 text-2xl font-semibold tabular-nums',
+                    p95LatencyTone === 'muted' && 'text-muted-foreground',
+                    p95LatencyTone === 'normal' && 'text-[#6e677e] dark:text-muted-foreground',
+                    // Use a darker yellow in light mode for AA contrast.
+                    p95LatencyTone === 'slow' && 'text-yellow-700 dark:text-yellow-500',
+                    p95LatencyTone === 'critical' && 'text-destructive',
+                  )}
+                  style={p95LatencyTone === 'normal' ? { color: 'rgb(110, 103, 126)' } : undefined}
+                >
+                  {p95LatencyLabel}
+                </div>
+              </div>
+              <div className="px-6 py-4">
+                <div className="text-[12px] font-medium tracking-[0px] text-muted-foreground">RPM</div>
+                <div className="mt-2 text-2xl font-semibold tabular-nums text-[#6e677e] dark:text-muted-foreground">
+                  {rpmLabel}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 flex w-full items-center justify-between gap-4 pb-1 text-sm">
+            <div className={cn('flex min-w-0 items-center gap-2', isReady && !isHealthy && 'text-destructive')}>
+              {isReady && !isHealthy ? (
+                <MdNearbyError className="h-4 w-4 shrink-0" />
+              ) : (
+                <div className="flex h-4 w-4 shrink-0 items-center justify-center">
                   <ComposeStatusBulb
                     validGraph={graph.isComposable && !!graph.lastUpdatedAt}
                     emptyGraph={!graph.lastUpdatedAt && !graph.isComposable}
                   />
                 </div>
+              )}
 
-                <p className="ml-1 text-left text-muted-foreground">
-                  {graph.lastUpdatedAt ? (
-                    <>
-                      Schema last updated <TimeAgo date={getTime(parseISO(graph.lastUpdatedAt))} tooltip={false} />
-                    </>
-                  ) : (
-                    'Not ready'
-                  )}
-                </p>
-              </TooltipTrigger>
-              <TooltipContent>
-                <ComposeStatusMessage
-                  isComposable={graph.isComposable}
-                  lastUpdatedAt={graph.lastUpdatedAt}
-                  subgraphsCount={graph.connectedSubgraphs}
-                  isContract={!!graph.contract}
-                />
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+              <div className={cn('min-w-0 truncate', isReady && isHealthy && 'text-muted-foreground')}>
+                {statusText}
+                {isReady && !isHealthy && (
+                  <span className="text-destructive">{` · ${errorRatePct.toFixed(0)}% error rate`}</span>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="shrink-0 font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                router.push(primaryCta.href);
+              }}
+            >
+              {primaryCta.label}
+            </button>
+          </div>
         </div>
       </Card>
-    </Link>
+    </div>
   );
 };
 

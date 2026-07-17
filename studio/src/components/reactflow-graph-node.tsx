@@ -3,12 +3,22 @@ import { PiGraphLight } from 'react-icons/pi';
 import { Handle, NodeProps, Position } from 'reactflow';
 import { VscError, VscRecord } from 'react-icons/vsc';
 import React from 'react';
+import { cn } from '@/lib/utils';
 
-function ReactFlowGraphNode({ data }: NodeProps) {
+function ReactFlowGraphNode({ data, selected }: NodeProps) {
+  const isSubgraph = data.kind === 'subgraph';
   return (
     <>
       {data.parentId && <Handle type="target" position={Position.Left} isConnectable={false} />}
-      <div className="nodrag grid w-[120px] grid-cols-1 divide-y rounded border border-border-emphasized bg-white text-left text-xs shadow-sm shadow-black/5 ring-1 ring-black/[.08] transition duration-150 dark:divide-gray-700 dark:bg-secondary dark:shadow-black/60 dark:ring-white/15">
+      <div
+        className={cn(
+          'nodrag grid w-[120px] grid-cols-1 divide-y rounded border border-border-emphasized bg-white text-left text-xs shadow-sm shadow-black/5 ring-1 ring-black/[.08] transition duration-150 dark:divide-gray-700 dark:bg-secondary dark:shadow-black/60 dark:ring-white/15',
+          isSubgraph && 'cursor-pointer hover:border-primary/40 hover:ring-primary/20 hover:shadow-md',
+          selected &&
+            isSubgraph &&
+            'border-primary/60 ring-2 ring-primary/30 shadow-md shadow-[0_0_18px_hsl(var(--primary)/0.35)]',
+        )}
+      >
         <div className="flex items-center justify-center px-1.5">
           <div className="flex items-center justify-center">
             {data.kind === 'graph' ? (
@@ -17,7 +27,7 @@ function ReactFlowGraphNode({ data }: NodeProps) {
               <Component2Icon className="h-3 w-3 text-secondary-foreground" />
             )}
           </div>
-          <div className="cursor-help truncate px-1 py-1" title={data.label}>
+          <div className={cn('truncate px-1 py-1', isSubgraph ? 'cursor-pointer' : 'cursor-help')} title={data.label}>
             {data.label}
           </div>
         </div>
