@@ -16,6 +16,14 @@ func TestInputValidation(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		t.Run("empty list default for non-null list items", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query MyQuery($names: [String!] = []) { rootFieldWithListArg(arg: $names) }`,
+				Variables: []byte(`{"names":["a"]}`),
+			})
+			require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
+		})
+
 		t.Run("valid input", func(t *testing.T) {
 			header := http.Header{
 				"Content-Type": []string{"application/json"},
