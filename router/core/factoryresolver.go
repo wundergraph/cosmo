@@ -552,6 +552,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				Handlers:              onReceiveEventsFns,
 				MaxConcurrentHandlers: l.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers,
 				Timeout:               l.subscriptionHooks.onReceiveEvents.timeout,
+				WaitForHooks:          l.subscriptionHooks.onReceiveEvents.waitForHooks,
 			},
 			SubscriptionOnCreate: pubsub_datasource.SubscriptionOnCreateHooks{
 				Handlers: subscriptionOnCreateFns,

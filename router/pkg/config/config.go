@@ -874,6 +874,7 @@ type StreamsHandlerConfiguration struct {
 type OnReceiveEventsConfiguration struct {
 	MaxConcurrentHandlers int           `yaml:"max_concurrent_handlers" envDefault:"100"`
 	HandlerTimeout        time.Duration `yaml:"handler_timeout" envDefault:"5s"`
+	WaitForHooks          bool          `yaml:"wait_for_hooks" envDefault:"false"`
 }
 
 type Cluster struct {

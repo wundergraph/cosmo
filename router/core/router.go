@@ -2618,6 +2618,7 @@ func WithStreamsHandlerConfiguration(cfg config.StreamsHandlerConfiguration) Opt
 	return func(r *Router) {
 		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = cfg.OnReceiveEvents.MaxConcurrentHandlers
 		r.subscriptionHooks.onReceiveEvents.timeout = cfg.OnReceiveEvents.HandlerTimeout
+		r.subscriptionHooks.onReceiveEvents.waitForHooks = cfg.OnReceiveEvents.WaitForHooks
 	}
 }
 

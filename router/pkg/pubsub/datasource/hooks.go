@@ -46,4 +46,5 @@ type OnReceiveEventsHooks struct {
 	Handlers              []OnReceiveEventsFn
 	MaxConcurrentHandlers int
 	Timeout               time.Duration
+	WaitForHooks          bool
 }

@@ -31,7 +31,7 @@ type subscriptionEventUpdater struct {
 	eventBuilder                   EventBuilderFn
 	semaphore                      *semaphore.Weighted
 	timeout                        time.Duration
-	waitForCompute                 bool
+	waitForHooks                   bool
 }
 
 func (s *subscriptionEventUpdater) computeSubscriberEvents(events []StreamEvent) map[resolve.SubscriptionIdentifier][]StreamEvent {
@@ -114,7 +114,7 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 
 	// case 2: has hook, atomic update
 	// we need to go through each event and update all subscribers, then move to the next event
-	if s.waitForCompute {
+	if s.waitForHooks {
 		s.updateInBulks(events)
 		return
 	}
@@ -239,6 +239,6 @@ func NewSubscriptionEventUpdater(
 		eventBuilder:                   eventBuilder,
 		semaphore:                      semaphore.NewWeighted(int64(limit)),
 		timeout:                        timeout,
-		waitForCompute:                 true, // TODO: make configurable
+		waitForHooks:                   hooks.OnReceiveEvents.WaitForHooks,
 	}
 }

@@ -2012,6 +2012,7 @@ Configuration for Cosmo Streams handlers. Learn more about [Custom Modules for C
 | :------------------- | :------------------------------------------------- | :--------------------- | :------------------------------------------------------------------------------------- | :-            |
 |                      | handlers.on_receive_events.handler_timeout         | <Icon icon="square" /> | The maximum time to wait for all OnReceiveEvents handlers to complete per event-batch. | 5s            |
 |                      | handlers.on_receive_events.max_concurrent_handlers | <Icon icon="square" /> | The maximum number of concurrent OnReceiveEvents handlers per trigger.                 | 100           |
+|                      | handlers.on_receive_events.wait_for_hooks          | <Icon icon="square" /> | If true, all OnReceiveEvents handlers for all subscribers run and complete for one event before the router moves on to the next event, so subscribers receive events atomically and in order. If false, handlers for each subscriber run concurrently and independently (subject to `max_concurrent_handlers` and `handler_timeout`), which may deliver events out of order when handlers are slow or time out. | true           |
 
 ## Router Engine Configuration
 

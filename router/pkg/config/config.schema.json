@@ -3287,6 +3287,11 @@
                   "type": "string",
                   "description": "The amount of time that OnReceiveEvents handlers can run in total for a single batch of events. Specify as a duration string (e.g., '5s', '1m', '500ms').",
                   "default": "5s"
+                },
+                "wait_for_hooks": {
+                  "type": "boolean",
+                  "description": "If true, all OnReceiveEvents handlers for all subscribers are run and awaited for one event before moving on to the next event, guaranteeing atomic, ordered updates per event across subscribers. If false, handlers for each subscriber run concurrently and independently, which may deliver events out of order under handler timeouts.",
+                  "default": true
                 }
               }
             }

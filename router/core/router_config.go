@@ -52,6 +52,7 @@ type onReceiveEventsHooks struct {
 	handlers              []func(ctx StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 	maxConcurrentHandlers int
 	timeout               time.Duration
+	waitForHooks          bool
 }
 
 type Config struct {
