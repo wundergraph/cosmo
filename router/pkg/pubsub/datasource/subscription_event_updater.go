@@ -99,7 +99,7 @@ func (s *subscriptionEventUpdater) updateInBulks(events []StreamEvent) {
 	updateRounds := s.buildUpdateRounds(eventOutputs)
 
 	for _, round := range updateRounds {
-		s.eventUpdater.BlockUpdate(round)
+		s.eventUpdater.UpdateBulk(round)
 	}
 }
 
