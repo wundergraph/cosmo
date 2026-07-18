@@ -31,44 +31,75 @@ type subscriptionEventUpdater struct {
 	eventBuilder                   EventBuilderFn
 	semaphore                      *semaphore.Weighted
 	timeout                        time.Duration
-	atomicUpdate                   bool
+	waitForCompute                 bool
 }
 
-func (s *subscriptionEventUpdater) updateAtomically(events []StreamEvent) {
+func (s *subscriptionEventUpdater) computeSubscriberEvents(events []StreamEvent) map[resolve.SubscriptionIdentifier][]StreamEvent {
 	subscriptions := s.eventUpdater.Subscriptions()
+	hooks := s.hooks.OnReceiveEvents.Handlers
 
-	for _, event := range events {
-		subData := make(map[resolve.SubscriptionIdentifier][]byte, len(subscriptions))
+	outputs := make(map[resolve.SubscriptionIdentifier][]StreamEvent, len(subscriptions))
 
-		for subCtx, subId := range subscriptions {
-			var (
-				hooks     = s.hooks.OnReceiveEvents.Handlers
-				err       error
-				subEvents = []StreamEvent{event}
-			)
-
-			for i := range s.hooks.OnReceiveEvents.Handlers {
-				// TODO: replace context.Background() with something proper
-				// TODO: check if this mutates global events variable
-				// TODO: This executes the hook once for each event --> maybe better: execute hook once for all events and rekey the map from sub to event
-				subEvents, err = hooks[i](subCtx, context.Background(), s.subscriptionEventConfiguration, s.eventBuilder, subEvents)
-				if err != nil {
-					// TODO: check wether to ignore or to fail and most likely don't swallow err
-					continue
-				}
-			}
-
-			if len(subEvents) == 0 {
-				// hook decided that this sub shall not get the event
-				continue
-			}
-
-			subData[subId] = subEvents[0].GetData() // TODO: ensure subEvents len is 1 but we probably can't know this as the hook could invent events
+	for subCtx, subID := range subscriptions {
+		// Give this subscriber its own copy of the source events so in-place
+		// mutations by a hook stay isolated to this chain.
+		subEvents := make([]StreamEvent, len(events))
+		for i, event := range events {
+			subEvents[i] = event.Clone()
 		}
 
-		// at this point we have all modified event data for every subscriber of this event
-		// call the new update method
-		s.eventUpdater.BlockUpdate(subData)
+		var err error
+		for i := range hooks {
+			// TODO: replace context.Background() with something proper
+			subEvents, err = hooks[i](subCtx, context.Background(), s.subscriptionEventConfiguration, s.eventBuilder, subEvents)
+			if err != nil {
+				break
+			}
+		}
+		if err != nil {
+			// TODO: decide whether to CloseSubscription here or swallow the error
+			continue
+		}
+
+		if len(subEvents) == 0 {
+			// hook decided that this subscriber shall not receive any event
+			continue
+		}
+
+		outputs[subID] = subEvents
+	}
+
+	return outputs
+}
+
+func (s *subscriptionEventUpdater) buildUpdateRounds(outputs map[resolve.SubscriptionIdentifier][]StreamEvent) []map[resolve.SubscriptionIdentifier][]byte {
+	maxLen := 0
+	for _, subEvents := range outputs {
+		if len(subEvents) > maxLen {
+			maxLen = len(subEvents)
+		}
+	}
+
+	rounds := make([]map[resolve.SubscriptionIdentifier][]byte, maxLen)
+	for r := range rounds {
+		subData := make(map[resolve.SubscriptionIdentifier][]byte, len(outputs))
+		for subID, subEvents := range outputs {
+			if r < len(subEvents) {
+				subData[subID] = subEvents[r].GetData()
+			}
+		}
+		rounds[r] = subData
+	}
+
+	return rounds
+}
+
+func (s *subscriptionEventUpdater) updateInBulks(events []StreamEvent) {
+	eventOutputs := s.computeSubscriberEvents(events)
+	updateRounds := s.buildUpdateRounds(eventOutputs)
+
+	for _, round := range updateRounds {
+		s.eventUpdater.BlockUpdate(round)
 	}
 }
 
@@ -83,8 +114,8 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 
 	// case 2: has hook, atomic update
 	// we need to go through each event and update all subscribers, then move to the next event
-	if s.atomicUpdate {
-		s.updateAtomically(events)
+	if s.waitForCompute {
+		s.updateInBulks(events)
 		return
 	}
 
@@ -208,6 +239,6 @@ func NewSubscriptionEventUpdater(
 		eventBuilder:                   eventBuilder,
 		semaphore:                      semaphore.NewWeighted(int64(limit)),
 		timeout:                        timeout,
-		atomicUpdate:                   true, // TODO: make configurable
+		waitForCompute:                 true, // TODO: make configurable
 	}
 }
