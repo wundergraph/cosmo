@@ -31,9 +31,49 @@ type subscriptionEventUpdater struct {
 	eventBuilder                   EventBuilderFn
 	semaphore                      *semaphore.Weighted
 	timeout                        time.Duration
+	atomicUpdate                   bool
+}
+
+func (s *subscriptionEventUpdater) updateAtomically(events []StreamEvent) {
+	subscriptions := s.eventUpdater.Subscriptions()
+
+	for _, event := range events {
+		subData := make(map[resolve.SubscriptionIdentifier][]byte, len(subscriptions))
+
+		for subCtx, subId := range subscriptions {
+			var (
+				hooks     = s.hooks.OnReceiveEvents.Handlers
+				err       error
+				subEvents = []StreamEvent{event}
+			)
+
+			for i := range s.hooks.OnReceiveEvents.Handlers {
+				// TODO: replace context.Background() with something proper
+				// TODO: check if this mutates global events variable
+				// TODO: This executes the hook once for each event --> maybe better: execute hook once for all events and rekey the map from sub to event
+				subEvents, err = hooks[i](subCtx, context.Background(), s.subscriptionEventConfiguration, s.eventBuilder, subEvents)
+				if err != nil {
+					// TODO: check wether to ignore or to fail and most likely don't swallow err
+					continue
+				}
+			}
+
+			if len(subEvents) == 0 {
+				// hook decided that this sub shall not get the event
+				continue
+			}
+
+			subData[subId] = subEvents[0].GetData() // TODO: ensure subEvents len is 1 but we probably can't know this as the hook could invent events
+		}
+
+		// at this point we have all modified event data for every subscriber of this event
+		// call the new update method
+		s.eventUpdater.BlockUpdate(subData)
+	}
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
+	// case 1: no hook, use single update
 	if len(s.hooks.OnReceiveEvents.Handlers) == 0 {
 		for _, event := range events {
 			s.eventUpdater.Update(event.GetData())
@@ -41,6 +81,14 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 		return
 	}
 
+	// case 2: has hook, atomic update
+	// we need to go through each event and update all subscribers, then move to the next event
+	if s.atomicUpdate {
+		s.updateAtomically(events)
+		return
+	}
+
+	// case 3: has hook, no atomic update
 	subscriptions := s.eventUpdater.Subscriptions()
 	wg := sync.WaitGroup{}
 	updaterCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(s.timeout))
@@ -160,5 +208,6 @@ func NewSubscriptionEventUpdater(
 		eventBuilder:                   eventBuilder,
 		semaphore:                      semaphore.NewWeighted(int64(limit)),
 		timeout:                        timeout,
+		atomicUpdate:                   true, // TODO: make configurable
 	}
 }
