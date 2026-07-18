@@ -13,6 +13,12 @@ type OnPublishEventsFn func(ctx context.Context, pubConf PublishEventConfigurati
 
 type OnReceiveEventsFn func(subscriptionCtx context.Context, updaterCtx context.Context, subConf SubscriptionEventConfiguration, eventBuilder EventBuilderFn, evts []StreamEvent) ([]StreamEvent, error)
 
+// OnBroadcastEventsFn is called once per received batch, before any per-subscriber fan-out.
+// Unlike OnReceiveEventsFn it runs on the broadcast path (not per active subscriber), so it
+// does not force the serial per-subscriber delivery path. It has no per-subscriber request
+// context. Returned events replace the batch for all subscribers.
+type OnBroadcastEventsFn func(ctx context.Context, subConf SubscriptionEventConfiguration, eventBuilder EventBuilderFn, evts []StreamEvent) ([]StreamEvent, error)
+
 // SubscriptionOnCreateFn is called before the subscription trigger is created.
 // It receives the current subscription config and may return a modified one.
 // Returning a non-nil error aborts the subscription.
@@ -24,6 +30,7 @@ type Hooks struct {
 	SubscriptionOnStart  SubscriptionOnStartHooks
 	OnPublishEvents      OnPublishEventsHooks
 	OnReceiveEvents      OnReceiveEventsHooks
+	OnBroadcastEvents    OnBroadcastEventsHooks
 }
 
 // SubscriptionOnCreateHooks contains hooks that run before a subscription trigger is created
@@ -46,4 +53,9 @@ type OnReceiveEventsHooks struct {
 	Handlers              []OnReceiveEventsFn
 	MaxConcurrentHandlers int
 	Timeout               time.Duration
+}
+
+// OnBroadcastEventsHooks contains hooks that run once per received batch on the broadcast path
+type OnBroadcastEventsHooks struct {
+	Handlers []OnBroadcastEventsFn
 }

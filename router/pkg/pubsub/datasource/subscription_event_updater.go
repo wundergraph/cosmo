@@ -34,6 +34,21 @@ type subscriptionEventUpdater struct {
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
+	// Broadcast hooks run once per received batch, before any per-subscriber fan-out.
+	// They transform the batch for all subscribers and, crucially, do not force the serial
+	// per-subscriber path below (that is only triggered by OnReceiveEvents handlers). With
+	// only broadcast hooks registered, delivery stays on the concurrent broadcast path.
+	if len(s.hooks.OnBroadcastEvents.Handlers) > 0 {
+		var err error
+		for i := range s.hooks.OnBroadcastEvents.Handlers {
+			events, err = s.hooks.OnBroadcastEvents.Handlers[i](context.Background(), s.subscriptionEventConfiguration, s.eventBuilder, events)
+			if err != nil {
+				s.logger.Error("on_broadcast_events hook failed, dropping batch", zap.Error(err))
+				return
+			}
+		}
+	}
+
 	if len(s.hooks.OnReceiveEvents.Handlers) == 0 {
 		for _, event := range events {
 			s.eventUpdater.Update(event.GetData())
