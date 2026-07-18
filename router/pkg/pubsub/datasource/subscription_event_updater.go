@@ -85,7 +85,10 @@ func (s *subscriptionEventUpdater) buildUpdateRounds(outputs map[resolve.Subscri
 		subData := make(map[resolve.SubscriptionIdentifier][]byte, len(outputs))
 		for subID, subEvents := range outputs {
 			if r < len(subEvents) {
-				subData[subID] = subEvents[r].GetData()
+				event := subEvents[r]
+				if event != nil {
+					subData[subID] = event.GetData()
+				}
 			}
 		}
 		rounds[r] = subData
