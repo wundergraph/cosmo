@@ -35,6 +35,7 @@ type subscriptionHooks struct {
 	onPublishEvents   onPublishEventsHooks
 	onReceiveEvents   onReceiveEventsHooks
 	onBroadcastEvents onBroadcastEventsHooks
+	adapterWrappers   []func(providerID string, inner datasource.Adapter) datasource.Adapter
 }
 
 type onCreateHooks struct {
