@@ -57,7 +57,7 @@ func (s *subscriptionEventUpdater) computeSubscriberEvents(events []StreamEvent)
 			}
 		}
 		if err != nil {
-			// TODO: decide whether to CloseSubscription here or swallow the error
+			s.eventUpdater.CloseSubscription(subID)
 			continue
 		}
 
