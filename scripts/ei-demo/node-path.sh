@@ -2,11 +2,7 @@
 set -e
 
 # Prints the bin directory of a Node version the control plane can run on.
-# Node 25's experimental global localStorage and missing native prebuilds
-# (@sentry-internal/node-native-stacktrace) break `pnpm dev` in
-# controlplane, so odd/experimental majors are rejected: LTS majors 20,
-# 22, 24 are accepted. Falls back to the newest nvm-installed v22/v24 if
-# the system node is unsuitable. Fails loudly with instructions otherwise.
+# Only LTS majors 20, 22, 24 are accepted, see RUNBOOK.md.
 
 node_bin_ok() {
   local bin="$1"

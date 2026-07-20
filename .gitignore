@@ -35,3 +35,10 @@ go.work.sum
 /FEEDBACK.md
 /COMMENTS.md
 /docs/superpowers/
+
+# wgc-generated scaffolding from the EI demo bootstrap
+/cli/mygraph-default/
+
+# EI-only router config, layered in via CONFIG_PATH — see
+# scripts/ei-demo/setup-router-config.sh
+/router/demo.ei-demo.config.yaml

@@ -22,6 +22,7 @@ prerequisites: setup-dev-tools
 	dbmate -v
 	mockery version
 	testifylint -V=full
+	python3 --version
 
 infra-up: dc-dev
 
@@ -192,6 +193,9 @@ demo-compose:
 
 DEMO_STARTUP_ATTEMPTS ?= 60
 DEMO_STARTUP_SLEEP ?= 0.5
+# Overridable for machines with more than one hub checkout (e.g. several
+# git worktrees on different branches): make ei-demo HUB_DIR=../hub-other
+HUB_DIR ?= ../hub
 
 demo:
 	@echo "Composing subgraph schemas..."
@@ -217,45 +221,15 @@ demo:
 # subgraphs, and the router with entity_caching / feature_flag_rollouts
 # enabled via router/demo.config.yaml (router/Makefile's own `dev` target
 # already points there through router/.env's CONFIG_PATH, no --config flag
-# needed). Works from a clean clone: bootstrap-entity-intelligence-demo.sh
-# runs dev-setup, migrates/seeds the DB, publishes the demo graph and
-# subgraphs, and mints a router token if any of that hasn't happened yet —
-# every step in it checks state first, so re-running here costs nothing
-# once it's already done.
+# needed). scripts/ei-demo/start.sh runs the bootstrap (idempotent — see
+# bootstrap-entity-intelligence-demo.sh) then starts the stack. All
+# ei-demo-specific scripts live under scripts/ei-demo/; hub's counterpart
+# (schema import, traffic generation) lives at ../hub/scripts/ei-demo/.
 ei-demo:
-	@echo "Bootstrapping (idempotent — skips anything already done)..."
-	./scripts/bootstrap-entity-intelligence-demo.sh
-	@echo "Starting docker infra (postgres, clickhouse, redis, nats, keycloak)..."
-	$(MAKE) infra-up
-	@echo "Waiting for ClickHouse..."
-	@for i in $$(seq 1 $(DEMO_STARTUP_ATTEMPTS)); do \
-		nc -z 127.0.0.1 8123 && break; \
-		sleep $(DEMO_STARTUP_SLEEP); \
-	done; \
-	nc -z 127.0.0.1 8123 || { echo "ClickHouse did not start" >&2; exit 1; }
-	@echo "Starting control plane (if not already running), graphqlmetrics, and demo subgraphs..."
-	@set -e; \
-	set -m; \
-	cp_pid=""; \
-	if nc -z 127.0.0.1 3001 2>/dev/null; then \
-		echo "Control plane already running (started during bootstrap)."; \
-	else \
-		NODE_BIN="$$(./scripts/ei-demo-node-path.sh)" || exit 1; \
-		(cd controlplane && PATH="$$NODE_BIN:$$PATH" pnpm dev) & cp_pid=$$!; \
-	fi; \
-	(cd graphqlmetrics && make dev) & gqm_pid=$$!; \
-	(cd demo && go run cmd/all/main.go) & sub_pid=$$!; \
-	trap 'kill -TERM -$$cp_pid -$$gqm_pid -$$sub_pid 2>/dev/null; kill $$cp_pid $$gqm_pid $$sub_pid 2>/dev/null; true' EXIT INT TERM HUP; \
-	for p in 3001 4005 4001 4002 4003 4004 4007 4008; do \
-		for i in $$(seq 1 $(DEMO_STARTUP_ATTEMPTS)); do \
-			nc -z 127.0.0.1 $$p && break; \
-			sleep $(DEMO_STARTUP_SLEEP); \
-		done; \
-		nc -z 127.0.0.1 $$p || { echo "port $$p did not start (control plane / graphqlmetrics / a subgraph)" >&2; exit 1; }; \
-	done; \
-	echo "Starting router (entity caching + feature flag rollouts enabled)..."; \
-	echo "Playground will be at http://localhost:3002/"; \
-	cd router && go run cmd/router/main.go
+	@DEMO_STARTUP_ATTEMPTS=$(DEMO_STARTUP_ATTEMPTS) DEMO_STARTUP_SLEEP=$(DEMO_STARTUP_SLEEP) HUB_DIR=$(HUB_DIR) ./scripts/ei-demo/start.sh
+
+ei-demo-down:
+	@./scripts/ei-demo/down.sh
 
 benchmark-cache-demo:
 	pnpm dlx tsx benchmark/scripts/run_suite.ts --all \

@@ -71,7 +71,7 @@ input KafkaInput {
     ids: [Int!]!
 }
 
-type Employee @key(fields: "id", resolvable: false) @openfed__entityCache(maxAge: 3600) {
+type Employee @key(fields: "id", resolvable: false) {
   id: Int! @external
 }
 

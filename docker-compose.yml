@@ -13,13 +13,24 @@ services:
     ports:
       - '5432:5432'
     restart: unless-stopped
+    healthcheck:
+      test: 'pg_isready -U ${POSTGRES_USER:-postgres}'
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - primary
     profiles:
       - dev
 
   keycloak:
-    image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
+    # Pinned (unlike other floating tags here): the EI demo bootstrap
+    # (scripts/ei-demo/bootstrap-entity-intelligence-demo.sh) works around
+    # several eventual-consistency races specific to this build. An unpinned
+    # "latest" can silently swap in a different Keycloak build with a
+    # different bug profile. Verified this tag resolves to the same digest
+    # as the "latest" this repo's docker images already pin (sha256:8f95f6cc...).
+    image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-sha-0a880bd}
     build:
       context: keycloak
       dockerfile: Dockerfile
@@ -171,6 +182,11 @@ services:
     volumes:
       - clickhouse:/var/lib/clickhouse
       - ./docker/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: 'wget --no-verbose --tries=1 --spider http://localhost:8123/ping'
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - primary
     profiles:

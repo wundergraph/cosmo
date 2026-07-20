@@ -25,7 +25,7 @@ func (ipd *Base64Decoder) Decode(value string) error {
 }
 
 type Config struct {
-	ListenAddr      string        `default:"localhost:4005" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
+	ListenAddr      string        `default:"127.0.0.1:4005" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
 	LogLevel        string        `default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
 	IngestJWTSecret string        `envconfig:"INGEST_JWT_SECRET" validate:"required"`
 	ClickHouseDSN   string        `envconfig:"CLICKHOUSE_DSN" validate:"required,url"`
