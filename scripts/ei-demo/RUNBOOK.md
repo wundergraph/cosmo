@@ -204,6 +204,36 @@ single-pid kill to avoid signalling the calling script's own process group.
 Verified directly: a backgrounded process that itself spawns a child no
 longer survives the timeout.
 
+## Proposals: gated behind billing plan and namespace flag, not set by seed
+
+Hub's branch -> proposal -> registry -> feature-flag-rollout workflow needs
+two things `make seed` does not set: an `organization_billing.plan` for
+`wundergraph` whose entitlements include the `proposals` feature
+(`controlplane/src/bin/billing.json` confirms `enterprise` and `scale@1`
+both include it), and `namespace_config.enable_proposals` true for its
+`default` namespace. Without both, hub's "Create on registry" call reaches
+the control plane but fails; the real cause never reaches hub, since
+`catchRest` in hub's own RPC layer logs it and returns a bare
+`InternalServerError` to the client. Confirmed directly: before the fix,
+`organization_billing.plan` was empty and `namespace_config.enable_proposals`
+was false for `wundergraph`/`default`; after setting both, the same click
+through hub succeeded end to end (checks ran, the proposal was approved, and
+the feature-flag rollout became available), verified live in the browser
+with real traffic afterward showing a populated cache hit rate.
+
+Both rows are written directly via `docker exec ... psql`, not through
+`wgc`/the platform API, for two different reasons. `organization_billing`
+has no API or CLI surface at all, it is billing state, normally driven by a
+real billing provider in production, not something a graph admin sets
+through tooling. `namespace_config.enable_proposals` does have a real RPC,
+`enableProposalsForNamespace` (`controlplane/src/core/bufservices/proposal/
+enableProposalsForNamespace.ts`), but it is not wired into the `wgc` CLI
+(confirmed by grepping `cli/src` for it, no matches) and it still requires
+the org's `proposals` feature to already be entitled, i.e. the billing row
+above, before it will do anything. Since one of the two writes has no API
+path either way, both are done together with plain SQL, matching the
+equivalent step already present in hub's own `bootstrap-stack.sh`.
+
 ## Seed step: KC_API_URL and the "already exists" trap
 
 `KC_API_URL`/`KC_FRONTEND_URL` used to be written into `controlplane/.env`
