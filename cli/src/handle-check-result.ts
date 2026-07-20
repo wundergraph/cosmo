@@ -509,9 +509,9 @@ export const handleCheckResult = async ({
 
   let studioCheckDestination = '';
   if (response.checkId && response.checkedFederatedGraphs.length > 0) {
-    const url = `${config.webURL}/${
-      response.checkedFederatedGraphs[0].organizationSlug
-    }/${response.checkedFederatedGraphs[0].namespace}/graph/${response.checkedFederatedGraphs[0].name}/checks/${response.checkId}`;
+    const url = `${config.webURL}/${encodeURIComponent(
+      response.checkedFederatedGraphs[0].organizationSlug,
+    )}/${encodeURIComponent(response.checkedFederatedGraphs[0].namespace)}/graph/${encodeURIComponent(response.checkedFederatedGraphs[0].name)}/checks/${encodeURIComponent(response.checkId)}`;
     jsonBuilder.setUrl(url);
     studioCheckDestination = `${pc.bold('Open in studio')}: ${url}`;
   }

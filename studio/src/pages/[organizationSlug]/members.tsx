@@ -52,6 +52,7 @@ import { UpdateMemberGroupDialog } from '@/components/members/update-member-grou
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { formatDateTime } from '@/lib/format-date';
 import { MultiGroupSelect } from '@/components/multi-group-select';
+import { buildUrl } from '@/lib/build-url';
 
 const emailInputSchema = z.object({
   email: z.string().email(),
@@ -474,7 +475,7 @@ const MembersToolbar = () => {
           )}
           {limitReached && (
             <Button variant="outline" asChild>
-              <Link href={`/${organizationSlug}/billing`}>View plans</Link>
+              <Link href={buildUrl('/:organizationSlug/billing', { organizationSlug })}>View plans</Link>
             </Button>
           )}
         </DialogContent>

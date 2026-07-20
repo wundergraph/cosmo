@@ -14,6 +14,7 @@ import { Pagination } from './ui/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from './ui/table';
 import { Tooltip } from './ui/tooltip';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { buildUrl } from '@/lib/build-url';
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   const {
@@ -100,8 +101,12 @@ export const FeatureFlagsTable = ({
           <TableBody>
             {featureFlags.map(({ name, labels, createdAt, updatedAt, createdBy, namespace, isEnabled }) => {
               const path = graph
-                ? `${router.asPath.split('?')[0]}/${name}`
-                : `/${organizationSlug}/feature-flags/${name}?namespace=${namespace}`;
+                ? buildUrl(`${router.asPath.split('?')[0]}/:name`, { name })
+                : buildUrl('/:organizationSlug/feature-flags/:name', {
+                    organizationSlug,
+                    namespace,
+                    name,
+                  });
 
               return (
                 <TableRow

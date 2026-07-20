@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.244.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.244.0...controlplane@0.244.1) (2026-07-17)
+
+### Bug Fixes
+
+* reactivate users via SCIM ([#3097](https://github.com/wundergraph/cosmo/issues/3097)) ([ef01bcf](https://github.com/wundergraph/cosmo/commit/ef01bcff0c4c130ed1388cdf574e87e8d13b6552)) (@wilsonrivera)
+
+# [0.244.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.243.0...controlplane@0.244.0) (2026-07-17)
+
+### Bug Fixes
+
+* orphan subgraphs not shown as active on the header ([#3086](https://github.com/wundergraph/cosmo/issues/3086)) ([417c9e8](https://github.com/wundergraph/cosmo/commit/417c9e8df987296d47ef2cb28f1eeaef1ff4d7cf)) (@wilsonrivera)
+
+### Features
+
+* test contents of `mapper.json` ([#2854](https://github.com/wundergraph/cosmo/issues/2854)) ([4a56b39](https://github.com/wundergraph/cosmo/commit/4a56b39c3e9ce628900faede74c788342d2113bf)) (@wilsonrivera)
+
 # [0.243.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.242.4...controlplane@0.243.0) (2026-07-16)
 
 ### Features
