@@ -61,6 +61,7 @@ import { z } from 'zod';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 const getSnippets = ({
   clientName,
@@ -373,7 +374,11 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
         <Accordion type="single" collapsible className="mt-4 w-full">
           {filteredOperations.map((op) => {
             const [base, _] = window.location.href.split('?');
-            const link = base + `?clientId=${clientId}&clientName=${clientName}&search=${op.id}`;
+            const link =
+              base +
+              `?clientId=${encodeURIComponent(clientId ?? '')}&clientName=${encodeURIComponent(
+                clientName ?? '',
+              )}&search=${encodeURIComponent(op.id)}`;
 
             const variables = extractVariablesFromGraphQL(op.contents, ast);
 
@@ -464,9 +469,13 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
                           <TooltipTrigger>
                             <Button variant="outline" size="icon" asChild>
                               <Link
-                                href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
-                                  op.contents || '',
-                                )}&variables=${encodeURIComponent(JSON.stringify(variables))}`}
+                                href={buildUrl('/:organizationSlug/:namespace/graph/:slug/playground', {
+                                  organizationSlug,
+                                  namespace,
+                                  slug,
+                                  operation: op.contents,
+                                  variables: JSON.stringify(variables),
+                                })}
                               >
                                 <PlayIcon />
                               </Link>
@@ -570,7 +579,12 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
         isOpen={persistedOperationDeleteState.show}
         operationNames={persistedOperationDeleteState.names ?? []}
         operationHasTraffic={Boolean(persistedOperationDeleteState.hasTraffic)}
-        metricsLink={`/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${encodeURIComponent(createFilterState({ operationPersistedId: persistedOperationDeleteState.id ?? undefined }))}`}
+        metricsLink={buildUrl('/:organizationSlug/:namespace/graph/:slug/analytics', {
+          organizationSlug,
+          namespace,
+          slug,
+          filterState: createFilterState({ operationPersistedId: persistedOperationDeleteState.id ?? undefined }),
+        })}
         onSubmitButtonClick={
           persistedOperationDeleteState.id && clientName
             ? () => {
@@ -708,10 +722,16 @@ const ClientsPage: NextPageWithLayout = () => {
     };
     filters.push(filter);
 
+    const linkBase = buildUrl('/:organizationSlug/:namespace/graph/:slug/analytics', {
+      organizationSlug,
+      namespace,
+      slug,
+    });
+
     if (mode === 'metrics') {
-      return `/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${JSON.stringify(filters)}`;
+      return `${linkBase}?filterState=${encodeURIComponent(JSON.stringify(filters))}`;
     } else {
-      return `/${organizationSlug}/${namespace}/graph/${slug}/analytics/traces?filterState=${JSON.stringify(filters)}`;
+      return `${linkBase}/traces?filterState=${encodeURIComponent(JSON.stringify(filters))}`;
     }
   };
 

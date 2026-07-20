@@ -13,7 +13,6 @@ import { setUser as setSentryUser } from '@sentry/nextjs';
 import { OrganizationRole } from '@/lib/constants';
 import { WorkspaceProvider } from '@/components/dashboard/workspace-provider';
 import JoinInvitationsPage from '@/pages/account/join';
-import { Loader } from './ui/loader';
 
 const sessionQueryClient = new QueryClient();
 
@@ -173,7 +172,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (isFetching || !router.isReady) return;
     if (error && error instanceof UnauthorizedError && !publicPaths.includes(router.pathname)) {
       const redirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}${router.asPath}`;
-      router.replace(`/login?redirectURL=${redirectURL}`);
+      router.replace(`/login?redirectURL=${encodeURIComponent(redirectURL)}`);
     } else if (data && !error) {
       // Orgs accessible with the current login method (treat missing field as allowed).
       const accessibleOrganizations = data.organizations.filter((org) => org.loginMethodAllowed !== false);

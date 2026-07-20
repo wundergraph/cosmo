@@ -5,13 +5,14 @@ import { PageHeader } from './head';
 import { LayoutProps } from './layout';
 import { SideNav, NavLink } from './sidenav';
 import { TitleLayout } from './title-layout';
+import { buildUrl } from '@/lib/build-url';
 
 export const SettingsLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
 
   const links: NavLink[] = useMemo(() => {
-    const basePath = `/${organizationSlug}`;
+    const basePath = buildUrl('/:organizationSlug', { organizationSlug });
 
     return [
       {

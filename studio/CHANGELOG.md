@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.178.3](https://github.com/wundergraph/cosmo/compare/studio@0.178.2...studio@0.178.3) (2026-07-17)
+
+### Bug Fixes
+
+* encode url parameters ([#3070](https://github.com/wundergraph/cosmo/issues/3070)) ([cacf1b5](https://github.com/wundergraph/cosmo/commit/cacf1b5b8d4174c23aabcb4f4919ff13666d53c9)) (@wilsonrivera)
+* orphan subgraphs not shown as active on the header ([#3086](https://github.com/wundergraph/cosmo/issues/3086)) ([417c9e8](https://github.com/wundergraph/cosmo/commit/417c9e8df987296d47ef2cb28f1eeaef1ff4d7cf)) (@wilsonrivera)
+
 ## [0.178.2](https://github.com/wundergraph/cosmo/compare/studio@0.178.1...studio@0.178.2) (2026-07-14)
 
 ### Bug Fixes

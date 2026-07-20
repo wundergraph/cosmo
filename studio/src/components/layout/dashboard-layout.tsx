@@ -32,6 +32,7 @@ import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { useUser } from '@/hooks/use-user';
 import { useStarBannerDisabled } from '@/hooks/use-star-banner-disabled';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { buildUrl } from '@/lib/build-url';
 
 export const StarBanner = ({
   isDisabled,
@@ -128,8 +129,10 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   );
 
   const links = useMemo(() => {
-    const basePath = `/${user?.currentOrganization.slug || organizationSlug}`;
     const nsQueryString = `?namespace=${encodeURIComponent(namespace.name)}`;
+    const basePath = buildUrl('/:organizationSlug', {
+      organizationSlug: user?.currentOrganization.slug || organizationSlug,
+    });
 
     const navigation: Partial<NavLink>[] = [
       {

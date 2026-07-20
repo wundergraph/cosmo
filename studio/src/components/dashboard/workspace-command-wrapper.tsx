@@ -71,13 +71,14 @@ export function WorkspaceCommandWrapper({
         }
 
         // Only search for subgraphs if the graph contains subgraphs
-        if (!graph.subgraphs?.length) {
+        if (!graph.subgraphTargetIds?.length) {
           // The federated graph doesn't contain any subgraphs, we don't need to perform the search here
           continue;
         }
 
         // Apply the filter to the subgraphs, we need to find at least one to add the graph to the search results
-        fuse.setCollection(graph.subgraphs);
+        fuse.setCollection(clonedWns.subgraphs.filter((sg) => graph.subgraphTargetIds.includes(sg.targetId)));
+
         const matchingSubgraphs = fuse.search(filterValue);
         if (matchingSubgraphs.length === 0) {
           // Only add the graph to the list of results if we found at least one matching subgraph
@@ -86,9 +87,9 @@ export function WorkspaceCommandWrapper({
 
         // We need to clone the graph to avoid mutating the original object
         const clonedGraph = clone(WorkspaceFederatedGraphSchema, graph);
-        clonedGraph.subgraphs = matchingSubgraphs
+        clonedGraph.subgraphTargetIds = matchingSubgraphs
           .sort((a, b) => (a.score ?? 0) - (b.score ?? 0))
-          .map((match) => match.item as WorkspaceSubgraph);
+          .map((match) => (match.item as WorkspaceSubgraph).targetId);
 
         clonedWns.graphs.push(clonedGraph);
       }

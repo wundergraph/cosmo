@@ -1,0 +1,46 @@
+{
+  "data": {
+    "employees": [
+      {
+        "__typename": "Employee",
+        "id": 1
+      },
+      {
+        "__typename": "Employee",
+        "id": 2
+      },
+      {
+        "__typename": "Employee",
+        "id": 3
+      },
+      {
+        "__typename": "Employee",
+        "id": 4
+      },
+      {
+        "__typename": "Employee",
+        "id": 5
+      },
+      {
+        "__typename": "Employee",
+        "id": 7
+      },
+      {
+        "__typename": "Employee",
+        "id": 8
+      },
+      {
+        "__typename": "Employee",
+        "id": 10
+      },
+      {
+        "__typename": "Employee",
+        "id": 11
+      },
+      {
+        "__typename": "Employee",
+        "id": 12
+      }
+    ]
+  }
+}

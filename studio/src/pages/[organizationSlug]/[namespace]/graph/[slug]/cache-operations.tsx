@@ -23,6 +23,7 @@ import Link from 'next/link';
 import { docsBaseURL } from '@/lib/constants';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { buildUrl } from '@/lib/build-url';
 
 const CacheOperationsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -103,7 +104,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
         actions={
           <Button
             onClick={() => {
-              router.push(`/${user?.currentOrganization.slug}/billing`);
+              router.push(buildUrl('/:organizationSlug/billing', { organizationSlug: user?.currentOrganization.slug }));
             }}
           >
             Upgrade
@@ -126,7 +127,12 @@ const CacheOperationsPage: NextPageWithLayout = () => {
         actions={
           <Button
             onClick={() => {
-              router.push(`/${user?.currentOrganization.slug}/cache-warmer?namespace=${namespace}`);
+              router.push(
+                buildUrl('/:organizationSlug/cache-warmer', {
+                  organizationSlug: user?.currentOrganization.slug,
+                  namespace,
+                }),
+              );
             }}
           >
             Configure Cache Warmer

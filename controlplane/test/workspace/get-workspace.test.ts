@@ -93,10 +93,13 @@ describe('GetWorkspace', () => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     const defaultNs = response.namespaces.find((ns) => ns.name === DEFAULT_NAMESPACE);
     const graph = defaultNs?.graphs.find((g) => g.name === graphName);
+    const subgraph = defaultNs?.subgraphs.find((sg) => sg.name === subgraphName);
+
     expect(graph?.name).toBe(graphName);
+    expect(subgraph?.name).toBe(subgraphName);
     // Published subgraph with matching label should be associated with the graph
-    expect(graph?.subgraphs.length).toBe(1);
-    expect(graph?.subgraphs[0].name).toBe(subgraphName);
+    expect(graph?.subgraphTargetIds.length).toBe(1);
+    expect(graph?.subgraphTargetIds[0]).toBe(subgraph?.targetId);
   });
 
   test.each([

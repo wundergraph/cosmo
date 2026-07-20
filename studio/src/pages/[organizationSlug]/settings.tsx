@@ -59,6 +59,7 @@ import { FaMagic } from 'react-icons/fa';
 import { z } from 'zod';
 import { DeleteOrganization } from '@/components/settings/delete-organization';
 import { RestoreOrganization } from '@/components/settings/restore-organization';
+import { buildUrl } from '@/lib/build-url';
 
 const OrganizationDetails = () => {
   const user = useContext(UserContext);
@@ -108,7 +109,8 @@ const OrganizationDetails = () => {
       {
         onSuccess: (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            router.replace(`/${encodeURIComponent(data.organizationSlug)}/settings`);
+            router.replace(buildUrl('/:organizationSlug/settings', { organizationSlug: data.organizationSlug }));
+
             toast({
               description: 'Organization details updated successfully.',
               duration: 3000,
