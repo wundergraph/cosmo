@@ -101,10 +101,12 @@ else
   echo "         The Entity Intelligence heatmap will stay empty until you run it yourself." >&2
 fi
 
-# Kills everything recorded in the pidfile, not just this shell's own
-# jobs: bootstrap's spawns (hub dev servers, control plane) run in their
-# own process groups since bootstrap uses set -m, so the group kill on
-# $$ alone no longer reaches them.
+# Kills everything recorded in the pidfile, not just this shell's own jobs:
+# bootstrap's spawns (hub dev servers, control plane) aren't reached by the
+# group kill on $$ alone, since they're backgrounded inside a synchronously
+# run subshell rather than at top level, so they never lead their own group
+# under set -m the way this script's own spawns below do (confirmed
+# directly, see kill_pid_group in lib.sh).
 cleanup() {
   # Each kill is its own guarded statement, not chained: an empty pid var
   # (unset until its own spawn point) makes that one kill fail, and under
@@ -118,8 +120,7 @@ cleanup() {
       [ -n "$line" ] || continue
       pidfile_entry_still_valid "$line" || continue
       pid="${line%%:*}"
-      kill -TERM "-$pid" 2>/dev/null || true
-      kill -TERM "$pid" 2>/dev/null || true
+      kill_pid_group "$pid"
     done < "$PID_FILE"
     rm -f "$PID_FILE"
   fi

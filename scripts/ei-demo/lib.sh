@@ -26,6 +26,22 @@ pidfile_entry_still_valid() {
   [ -n "$live" ] && [ "$live" = "$recorded" ]
 }
 
+# kill_pid_group <pid> [signal]
+# Signals <pid>'s actual process group (looked up fresh), then <pid> itself.
+# "-$pid" alone assumes <pid> leads its own group, true for a job backgrounded
+# directly under `set -m` but false for one backgrounded inside a
+# synchronously-run subshell (confirmed directly: bootstrap-entity-
+# intelligence-demo.sh's control-plane/hub-dev-server spawns inherit their
+# ancestor's group instead of leading their own, so "-$pid" targets a group
+# that doesn't exist and the real service, a child of <pid>, survives
+# untouched). See RUNBOOK.md.
+kill_pid_group() {
+  local pid="$1" sig="${2:-TERM}" pgid
+  pgid="$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ')"
+  [ -n "$pgid" ] && kill -"$sig" "-$pgid" 2>/dev/null
+  kill -"$sig" "$pid" 2>/dev/null
+}
+
 # wait_for_port <port> <attempts> <sleep-seconds>
 # Polls 127.0.0.1:<port> until it accepts a connection. Returns 1 on
 # timeout instead of exiting, so each caller decides what failure means

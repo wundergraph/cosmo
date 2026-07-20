@@ -3,16 +3,18 @@
 # not executed directly. Background on why each workaround exists:
 # scripts/ei-demo/RUNBOOK.md.
 
-# kc_admin_token [base-url]
-# Defaults to cosmo's own keycloak; align-hub-identity.sh passes hub's
-# (localhost:8090) to reuse this instead of a separate copy. Retries because
-# a single admin-login attempt can transiently fail even right after
-# wait_for_cosmo_keycloak reports ready (see RUNBOOK.md). Prints the token,
-# empty on failure.
+# kc_admin_token [base-url] [attempts]
+# Defaults to cosmo's own keycloak, 3 attempts; align-hub-identity.sh passes
+# hub's (localhost:8090) to reuse this instead of a separate copy, and
+# recover_cosmo_keycloak passes a much higher attempt count for its safety
+# check (see there for why). Retries because a single admin-login attempt
+# can transiently fail even right after wait_for_cosmo_keycloak reports
+# ready (see RUNBOOK.md). Prints the token, empty on failure.
 kc_admin_token() {
   local base_url="${1:-http://localhost:8080}"
+  local attempts="${2:-3}"
   local kc_token attempt
-  for attempt in 1 2 3; do
+  for attempt in $(seq 1 "$attempts"); do
     kc_token="$(curl -s -X POST "$base_url/realms/master/protocol/openid-connect/token" \
       -d "grant_type=password" -d "client_id=admin-cli" -d "username=admin" -d "password=changeme" \
       | python3 -c "import json,sys
@@ -78,10 +80,14 @@ wait_for_cosmo_keycloak() {
 # cosmo-dev-keycloak-1 is shared, general-purpose, not exclusive to this
 # demo, so refuse if a realm besides master/cosmo exists, or a "wundergraph"
 # group predates this run (WUNDERGRAPH_KC_GROUP_BASELINE_ID), a drop would
-# destroy either too. Also refuses if no admin token can be obtained at all
-# (kc_admin_token's own 3 retries exhausted): that's a much stronger signal
-# than one transient parse hiccup, and proceeding blind is exactly the
-# scenario these guards exist to prevent. See RUNBOOK.md.
+# destroy either too. Also refuses if no admin token can be obtained after
+# 30 attempts (~60s, not kc_admin_token's usual 3): recovery is usually
+# triggered by the exact same instability window the safety check itself
+# has to get past, and a short retry budget was confirmed live to fail
+# closed on an ordinary transient blip, breaking the common case this
+# whole mechanism exists for. 60s is well past this build's typical blip
+# length but well short of wait_for_cosmo_keycloak's full 5 minutes, so a
+# still-failing check after that is a real signal, not noise. See RUNBOOK.md.
 recover_cosmo_keycloak() {
   if [ -n "${WUNDERGRAPH_KC_GROUP_BASELINE_ID:-}" ]; then
     echo "ERROR: cosmo-dev-keycloak-1 already had a 'wundergraph' group before this run started." >&2
@@ -91,7 +97,7 @@ recover_cosmo_keycloak() {
   fi
 
   local kc_token foreign_realms
-  kc_token="$(kc_admin_token)" || {
+  kc_token="$(kc_admin_token http://localhost:8080 30)" || {
     echo "ERROR: could not obtain a Keycloak admin token to check for foreign realms or pre-existing state." >&2
     echo "       Automatic recovery drops the whole keycloak database; refusing without being able to verify what's on it." >&2
     echo "       Once you've confirmed it's safe, recover by hand: docker stop cosmo-dev-keycloak-1 && docker exec cosmo-dev-postgres-1 psql -U postgres -c 'DROP DATABASE keycloak' -c 'CREATE DATABASE keycloak' && docker start cosmo-dev-keycloak-1" >&2

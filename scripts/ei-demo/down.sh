@@ -33,8 +33,7 @@ else
       continue
     fi
     pid="${line%%:*}"
-    kill -TERM "-$pid" 2>/dev/null
-    kill -TERM "$pid" 2>/dev/null
+    kill_pid_group "$pid"
   done < "$PID_FILE"
   rm -f "$PID_FILE"
 fi
