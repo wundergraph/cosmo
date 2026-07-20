@@ -205,6 +205,24 @@ for attempt in 1 2 3; do
 done
 [ -n "$migrate_seed_ok" ] || { echo "ERROR: migrate/seed did not succeed after 3 full attempts." >&2; exit 1; }
 
+# Proposals (hub's branch -> proposal -> registry -> feature-flag-rollout
+# flow) are gated behind an enterprise billing plan and a namespace flag,
+# neither set by `make seed`. Without this, hub's "Create on registry" call
+# fails with a generic InternalServerError. See RUNBOOK.md.
+echo "==> Enabling cosmo proposals (required for hub's proposal/rollout workflow)"
+docker exec cosmo-dev-postgres-1 psql -U postgres -d controlplane -v ON_ERROR_STOP=1 -c "
+  INSERT INTO public.organization_billing (id, organization_id, plan)
+     SELECT gen_random_uuid(), id, 'enterprise'
+     FROM public.organizations WHERE slug = 'wundergraph'
+   ON CONFLICT (organization_id) DO UPDATE SET plan = 'enterprise';
+
+  INSERT INTO public.namespace_config (namespace_id, enable_proposals)
+     SELECT id, true FROM public.namespaces
+     WHERE name = 'default'
+       AND organization_id = (SELECT id FROM public.organizations WHERE slug = 'wundergraph')
+   ON CONFLICT (namespace_id) DO UPDATE SET enable_proposals = true;
+" || { echo "ERROR: could not enable proposals on the control plane database." >&2; exit 1; }
+
 echo "==> Aligning the demo user with hub's keycloak identity"
 # Its own small retry, not wrapped in cosmo-keycloak recovery: a hiccup
 # here is about hub's API, not cosmo's keycloak. See RUNBOOK.md.
