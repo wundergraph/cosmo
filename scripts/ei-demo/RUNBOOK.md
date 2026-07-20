@@ -234,6 +234,26 @@ above, before it will do anything. Since one of the two writes has no API
 path either way, both are done together with plain SQL, matching the
 equivalent step already present in hub's own `bootstrap-stack.sh`.
 
+## Hub's LIVEBLOCKS_SECRET_KEY: required, not something this script can set for you
+
+`apps/backend/src/config.ts` declares `LIVEBLOCKS_SECRET_KEY` via
+`Config.redacted(...)` with no `.pipe(Config.withDefault(...))` or
+`.pipe(Config.option)`, Effect-TS's way of marking a config value mandatory.
+`apps/backend/.env.example` ships it blank, so a hub checkout freshly set up
+by `make all` fails to boot at all until a real key is set (confirmed by
+reading `apps/backend/src/liveblocks.ts:22-23`, which passes it straight
+into the Liveblocks Node client constructor, and hub's own README, which
+documents creating a liveblocks.io account as a manual setup step).
+
+This can't be auto-generated the way the EI feature flag or the proposals
+DB rows are, it is a real third-party account secret. The bootstrap accepts
+it as `HUB_LIVEBLOCKS_SECRET_KEY` (env var, wired through `make ei-demo`
+the same way as `HUB_DIR`) and writes it into `$HUB_DIR/apps/backend/.env`
+right after `make all` creates that file, before hub's dev server starts.
+If it's not provided and the file doesn't already have a real value, the
+bootstrap prints a warning with the liveblocks.io signup link instead of
+failing silently at hub's own boot with a much less obvious error.
+
 ## Seed step: KC_API_URL and the "already exists" trap
 
 `KC_API_URL`/`KC_FRONTEND_URL` used to be written into `controlplane/.env`

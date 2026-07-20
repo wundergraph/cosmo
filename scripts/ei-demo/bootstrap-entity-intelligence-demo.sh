@@ -101,6 +101,22 @@ else
 
   echo "hub isn't running yet; setting it up..."
   (cd "$HUB_DIR" && make all)
+
+  # LIVEBLOCKS_SECRET_KEY has no default in hub's own .env.example and hub's
+  # backend won't boot without one (Config.redacted, no fallback). Not
+  # something this script can generate, it's a real liveblocks.io account
+  # secret. See RUNBOOK.md.
+  HUB_BACKEND_ENV="$HUB_DIR/apps/backend/.env"
+  if [ -n "${HUB_LIVEBLOCKS_SECRET_KEY:-}" ]; then
+    echo "Setting LIVEBLOCKS_SECRET_KEY in $HUB_BACKEND_ENV..."
+    sed -i.bak "s#^LIVEBLOCKS_SECRET_KEY=.*#LIVEBLOCKS_SECRET_KEY=${HUB_LIVEBLOCKS_SECRET_KEY}#" "$HUB_BACKEND_ENV"
+    rm -f "$HUB_BACKEND_ENV.bak"
+  elif ! grep -q '^LIVEBLOCKS_SECRET_KEY=.\+' "$HUB_BACKEND_ENV" 2>/dev/null; then
+    echo "WARNING: LIVEBLOCKS_SECRET_KEY is empty in $HUB_BACKEND_ENV; hub's backend will fail to start." >&2
+    echo "         Create a free account at https://liveblocks.io, grab a secret key, and either" >&2
+    echo "         set it there by hand, or re-run with: make ei-demo HUB_LIVEBLOCKS_SECRET_KEY=sk_..." >&2
+  fi
+
   echo "Starting hub's dev servers in the background..."
   (cd "$HUB_DIR" && nohup bun run dev > /tmp/hub-dev.log 2>&1 & pid=$!; pidfile_entry "$pid" >> "$PID_FILE")
   echo "Waiting for hub's keycloak (8090)..."

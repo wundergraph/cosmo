@@ -196,6 +196,11 @@ DEMO_STARTUP_SLEEP ?= 0.5
 # Overridable for machines with more than one hub checkout (e.g. several
 # git worktrees on different branches): make ei-demo HUB_DIR=../hub-other
 HUB_DIR ?= ../hub
+# Hub's backend won't start without one (see scripts/ei-demo/RUNBOOK.md).
+# Empty by default: on a fresh hub checkout, get one from
+# https://liveblocks.io and pass it once, e.g.
+# make ei-demo HUB_LIVEBLOCKS_SECRET_KEY=sk_...
+HUB_LIVEBLOCKS_SECRET_KEY ?=
 
 demo:
 	@echo "Composing subgraph schemas..."
@@ -226,7 +231,7 @@ demo:
 # ei-demo-specific scripts live under scripts/ei-demo/; hub's counterpart
 # (schema import, traffic generation) lives at ../hub/scripts/ei-demo/.
 ei-demo:
-	@DEMO_STARTUP_ATTEMPTS=$(DEMO_STARTUP_ATTEMPTS) DEMO_STARTUP_SLEEP=$(DEMO_STARTUP_SLEEP) HUB_DIR=$(HUB_DIR) ./scripts/ei-demo/start.sh
+	@DEMO_STARTUP_ATTEMPTS=$(DEMO_STARTUP_ATTEMPTS) DEMO_STARTUP_SLEEP=$(DEMO_STARTUP_SLEEP) HUB_DIR=$(HUB_DIR) HUB_LIVEBLOCKS_SECRET_KEY=$(HUB_LIVEBLOCKS_SECRET_KEY) ./scripts/ei-demo/start.sh
 
 ei-demo-down:
 	@./scripts/ei-demo/down.sh
