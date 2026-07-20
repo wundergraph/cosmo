@@ -311,6 +311,11 @@ func TestGRPCSubgraph(t *testing.T) {
 				expected: `{"data":{"employee":{"id":1,"taggedProjectSummary":"expertise: Backend Architecture, project tags: [cloud, migration, priority, devops, ci-cd, infrastructure]"}}}`,
 			},
 			{
+				name:     "query employee @requires field resolved with expertise and aliased",
+				query:    `{ employee(id: 1) { id preAlias: taggedProjectSummary taggedProjectSummary aliasedTaggedProjectSummary: taggedProjectSummary } }`,
+				expected: `{"data":{"employee":{"id":1,"preAlias":"expertise: Backend Architecture, project tags: [cloud, migration, priority, devops, ci-cd, infrastructure]","taggedProjectSummary":"expertise: Backend Architecture, project tags: [cloud, migration, priority, devops, ci-cd, infrastructure]","aliasedTaggedProjectSummary":"expertise: Backend Architecture, project tags: [cloud, migration, priority, devops, ci-cd, infrastructure]"}}}`,
+			},
+			{
 				name:     "query employee @requires field resolved with expertise (employee 2)",
 				query:    `{ employee(id: 2) { id taggedProjectSummary } }`,
 				expected: `{"data":{"employee":{"id":2,"taggedProjectSummary":"expertise: Fullstack Development, project tags: [cloud, migration, priority, microservices, architecture, security, zero-trust]"}}}`,
@@ -396,10 +401,20 @@ func TestGRPCSubgraph(t *testing.T) {
 				query:    `{ employee(id: 2) { id deepWorkItemInfo } }`,
 				expected: `{"data":{"employee":{"id":2,"deepWorkItemInfo":"ManagementHandler: Bob Lead"}}}`,
 			},
+			{
+				name:     "query employee @requires aliased nested abstract through concrete (management deep)",
+				query:    `{ employee(id: 2) { id aliasedDeepWorkItemInfo: deepWorkItemInfo } }`,
+				expected: `{"data":{"employee":{"id":2,"aliasedDeepWorkItemInfo":"ManagementHandler: Bob Lead"}}}`,
+			},
 			// Non-existent employee with composite @requires fields
 			{
 				name:     "query non-existent employee with @requires composite fields returns null",
 				query:    `{ employee(id: 999) { id workItemInfo reviewReport } }`,
+				expected: `{"data":{"employee":null}}`,
+			},
+			{
+				name:     "query non-existent employee with @requires and aliased fields returns null",
+				query:    `{ employee(id: 999) { id workItemInfo reviewReport aliasedReviewReport: reviewReport } }`,
 				expected: `{"data":{"employee":null}}`,
 			},
 		}
