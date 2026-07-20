@@ -369,6 +369,8 @@ telemetry:
 
 * `router.http.client.tls_handshake_duration`: Histogram (ms) of the TLS handshake duration for outgoing subgraph requests. Recorded only for new TLS connections.
 
+* `router.http.client.time_to_first_request_byte`: Histogram (ms) of the time from the start of the HTTP attempt to writing the first request byte to the subgraph. It includes acquiring the connection: pool wait, or DNS, TCP connect, and TLS handshake for new connections.
+
 * `router.http.client.time_to_first_byte`: Histogram (ms) of the time from completing the request write to receiving the first response byte from the subgraph.
 
 ## Custom Attributes

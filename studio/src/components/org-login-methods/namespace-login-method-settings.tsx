@@ -23,6 +23,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { buildUrl } from '@/lib/build-url';
 
 // Sentinel values representing built-in methods, which are not SSO provider ids.
 const PASSWORD_VALUE = '__password__';
@@ -235,7 +236,7 @@ export function NamespaceLoginMethodSettings({
           description="Connect at least one OIDC provider before you can restrict namespace access by login method."
           actions={
             <Button asChild>
-              <Link href={`/${organizationSlug}/settings`}>Connect an SSO app</Link>
+              <Link href={buildUrl('/:organizationSlug/settings', { organizationSlug })}>Connect an SSO app</Link>
             </Button>
           }
         />

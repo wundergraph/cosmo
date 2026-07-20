@@ -46,6 +46,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useContext, useState } from 'react';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { buildUrl } from '@/lib/build-url';
 
 export const ProposalDetails = ({
   proposal,
@@ -497,7 +498,12 @@ export const ProposalDetails = ({
                                 checkExtensionErrorMessage,
                               );
 
-                              const path = `/${user?.currentOrganization.slug}/${graphData?.graph?.namespace}/graph/${graphData?.graph?.name}/checks/${id}`;
+                              const path = buildUrl('/:organizationSlug/:namespace/graph/:name/checks/:id', {
+                                organizationSlug: user?.currentOrganization.slug,
+                                namespace: graphData?.graph?.namespace,
+                                name: graphData?.graph?.name,
+                                id,
+                              });
 
                               return (
                                 <TableRow
@@ -614,7 +620,11 @@ export const ProposalDetails = ({
                                               onClick={(e) => e.stopPropagation()}
                                             >
                                               <Link
-                                                href={`https://github.com/${ghDetails.ownerSlug}/${ghDetails.repositorySlug}/commit/${ghDetails.commitSha}`}
+                                                href={`https://github.com/${encodeURIComponent(
+                                                  ghDetails.ownerSlug,
+                                                )}/${encodeURIComponent(
+                                                  ghDetails.repositorySlug,
+                                                )}/commit/${encodeURIComponent(ghDetails.commitSha)}`}
                                                 className="inline-flex items-center gap-2 text-xs"
                                                 aria-label="View on GitHub"
                                                 target="_blank"
@@ -694,7 +704,14 @@ const ProposalDetailsPage: NextPageWithLayout = () => {
       title={id}
       subtitle="A quick glance of the details for this proposal"
       breadcrumbs={[
-        <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/proposals`}>
+        <Link
+          key={0}
+          href={buildUrl('/:organizationSlug/:namespace/graph/:slug/proposals', {
+            organizationSlug,
+            namespace,
+            slug,
+          })}
+        >
           Proposals
         </Link>,
       ]}

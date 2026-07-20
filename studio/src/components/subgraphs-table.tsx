@@ -32,6 +32,7 @@ import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { buildUrl } from '@/lib/build-url';
 
 export const Empty = ({ graph, tab }: { graph?: FederatedGraph; tab: 'subgraphs' | 'featureSubgraphs' }) => {
   const {
@@ -282,7 +283,12 @@ export const SubgraphsTable = ({
           </TableHeader>
           <TableBody>
             {subgraphs.map(({ id, name, routingURL, lastUpdatedAt, labels, namespace, baseSubgraphName, type }) => {
-              const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
+              const path = buildUrl('/:organizationSlug/:namespace/subgraph/:name', {
+                organizationSlug,
+                namespace,
+                name,
+              });
+
               let analyticsPath = `${path}/analytics`;
               if (router.asPath.split('/')[3] === 'graph') {
                 const query = [

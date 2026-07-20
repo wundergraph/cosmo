@@ -13,10 +13,12 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"syscall"
 	"testing"
 	"time"
 
+	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -38,6 +40,15 @@ var (
 	_ core.EnginePreOriginHandler = (*MyBrokenPipeModule)(nil)
 	_ core.Module                 = (*MyBrokenPipeModule)(nil)
 )
+
+func indentedJSON(data string) []byte {
+	var prettyJSON bytes.Buffer
+	err := json.Indent(&prettyJSON, []byte(data), "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return prettyJSON.Bytes()
+}
 
 type MyPanicModule2 struct{}
 
@@ -3610,6 +3621,38 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
+		t.Run("verify timeToFirstRequestByte value is attached", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "time_to_first_request_byte",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.clientTrace.timeToFirstRequestByte",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				requestContextMap := requestLogAll[0].ContextMap()
+
+				timeToFirstRequestByte, ok := requestContextMap["time_to_first_request_byte"].(time.Duration)
+				require.True(t, ok)
+
+				require.Greater(t, int(timeToFirstRequestByte), 0)
+			})
+		})
+
 		t.Run("verify connAcquireDuration value is attached for multiple subgraph calls", func(t *testing.T) {
 			t.Parallel()
 
@@ -3738,6 +3781,13 @@ func TestFlakyAccessLogs(t *testing.T) {
 		t.Run("verify subgraph response body printed", func(t *testing.T) {
 			t.Parallel()
 
+			g := goldie.New(
+				t,
+				goldie.WithFixtureDir("testdata/fixtures/structured_logging"),
+				goldie.WithNameSuffix(".json"),
+				goldie.WithDiffEngine(goldie.ClassicDiff),
+			)
+
 			testenv.Run(t, &testenv.Config{
 				SubgraphAccessLogsEnabled: true,
 				SubgraphAccessLogFields: []config.CustomAttribute{
@@ -3756,35 +3806,30 @@ func TestFlakyAccessLogs(t *testing.T) {
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query myQuery { employees { isAvailable products hobbies { employees { id tag } } }  }`,
 				})
-				requestLog := xEnv.Observer().FilterMessage("/graphql")
-
-				actual1 := requestLog.All()[0].ContextMap()["response_body"].(string)
-				assert.Equal(t,
-					`{"data":{"employees":[{"__typename":"Employee","id":1},{"__typename":"Employee","id":2},{"__typename":"Employee","id":3},{"__typename":"Employee","id":4},{"__typename":"Employee","id":5},{"__typename":"Employee","id":7},{"__typename":"Employee","id":8},{"__typename":"Employee","id":10},{"__typename":"Employee","id":11},{"__typename":"Employee","id":12}]}}`,
-					actual1)
-
-				parallelResponses := []string{
-					`{"data":{"_entities":[{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false}]}}`,
-					`{"data":{"_entities":[{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":4,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]}]}]}}`,
-					`{"data":{"_entities":[{"__typename":"Employee","products":["CONSULTANCY","COSMO","ENGINE","MARKETING","SDK"]},{"__typename":"Employee","products":["COSMO","SDK"]},{"__typename":"Employee","products":["CONSULTANCY","MARKETING"]},{"__typename":"Employee","products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"__typename":"Employee","products":["ENGINE","SDK"]},{"__typename":"Employee","products":["COSMO","SDK"]},{"__typename":"Employee","products":["COSMO","SDK"]},{"__typename":"Employee","products":["CONSULTANCY","COSMO","SDK"]},{"__typename":"Employee","products":["FINANCE"]},{"__typename":"Employee","products":["CONSULTANCY","COSMO","ENGINE","SDK"]}]}}`,
+				// Only subgraph access logs carry the response_body field; the
+				// router's own request log for /graphql does not.
+				var bodies []string
+				for _, entry := range xEnv.Observer().FilterMessage("/graphql").All() {
+					if body, ok := entry.ContextMap()["response_body"].(string); ok {
+						bodies = append(bodies, body)
+					}
 				}
+				require.Len(t, bodies, 5)
 
-				actual2 := requestLog.All()[1].ContextMap()["response_body"].(string)
-				assert.Contains(t, parallelResponses, actual2)
+				g.Assert(t, "subgraph_response_body_employees", indentedJSON(bodies[0]))
 
-				actual3 := requestLog.All()[2].ContextMap()["response_body"].(string)
-				assert.Contains(t, parallelResponses, actual3)
+				// The availability, hobbies and products entity fetches run in
+				// parallel, so their log order is non-deterministic; sort the
+				// bodies to get a stable order before asserting.
+				parallel := bodies[1:4]
+				slices.Sort(parallel)
+				g.Assert(t, "subgraph_response_body_hobbies", indentedJSON(parallel[0]))
+				g.Assert(t, "subgraph_response_body_availability", indentedJSON(parallel[1]))
+				g.Assert(t, "subgraph_response_body_products", indentedJSON(parallel[2]))
 
-				actual4 := requestLog.All()[3].ContextMap()["response_body"].(string)
-				assert.Contains(t, parallelResponses, actual4)
-
-				actual5 := requestLog.All()[4].ContextMap()["response_body"].(string)
-				assert.Equal(t,
-					`{"data":{"_entities":[{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""}]}}`,
-					actual5)
+				g.Assert(t, "subgraph_response_body_tags", indentedJSON(bodies[4]))
 			})
 		})
-
 	})
 
 	t.Run("verify ignore list", func(t *testing.T) {

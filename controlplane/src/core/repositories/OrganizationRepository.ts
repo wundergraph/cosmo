@@ -304,51 +304,53 @@ export class OrganizationRepository {
       .execute();
 
     return Promise.all(
-      userOrganizations.map(async (org) => {
-        const plan = org.billing?.plan || this.defaultBillingPlanId;
-        const groups = await this.getOrganizationMemberGroups({
-          userID: input.userId,
-          organizationID: org.id,
-        });
+      userOrganizations
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .map(async (org) => {
+          const plan = org.billing?.plan || this.defaultBillingPlanId;
+          const groups = await this.getOrganizationMemberGroups({
+            userID: input.userId,
+            organizationID: org.id,
+          });
 
-        const features = await this.getFeatures({ organizationId: org.id, plan });
-        return {
-          id: org.id,
-          name: org.name,
-          slug: org.slug,
-          creatorUserId: org.creatorUserId || undefined,
-          createdAt: org.createdAt.toISOString(),
-          rbac: new RBACEvaluator(groups, input.userId),
-          groups,
-          features,
-          billing: plan
-            ? {
-                plan,
-              }
-            : undefined,
-          subscription: org.subscription
-            ? {
-                status: org.subscription.status,
-                trialEnd: org.subscription.trialEnd?.toISOString(),
-                cancelAtPeriodEnd: org.subscription.cancelAtPeriodEnd,
-                currentPeriodEnd: org.subscription.currentPeriodEnd?.toISOString(),
-              }
-            : undefined,
-          deactivation: org.isDeactivated
-            ? {
-                reason: org.deactivationReason || undefined,
-                initiatedAt: org.deactivatedAt?.toISOString() ?? '',
-              }
-            : undefined,
-          deletion: org.queuedForDeletionAt
-            ? {
-                queuedAt: org.queuedForDeletionAt?.toISOString() ?? '',
-                queuedBy: org.queuedForDeletionBy || undefined,
-              }
-            : undefined,
-          kcGroupId: org.kcGroupId || undefined,
-        };
-      }),
+          const features = await this.getFeatures({ organizationId: org.id, plan });
+          return {
+            id: org.id,
+            name: org.name,
+            slug: org.slug,
+            creatorUserId: org.creatorUserId || undefined,
+            createdAt: org.createdAt.toISOString(),
+            rbac: new RBACEvaluator(groups, input.userId),
+            groups,
+            features,
+            billing: plan
+              ? {
+                  plan,
+                }
+              : undefined,
+            subscription: org.subscription
+              ? {
+                  status: org.subscription.status,
+                  trialEnd: org.subscription.trialEnd?.toISOString(),
+                  cancelAtPeriodEnd: org.subscription.cancelAtPeriodEnd,
+                  currentPeriodEnd: org.subscription.currentPeriodEnd?.toISOString(),
+                }
+              : undefined,
+            deactivation: org.isDeactivated
+              ? {
+                  reason: org.deactivationReason || undefined,
+                  initiatedAt: org.deactivatedAt?.toISOString() ?? '',
+                }
+              : undefined,
+            deletion: org.queuedForDeletionAt
+              ? {
+                  queuedAt: org.queuedForDeletionAt?.toISOString() ?? '',
+                  queuedBy: org.queuedForDeletionBy || undefined,
+                }
+              : undefined,
+            kcGroupId: org.kcGroupId || undefined,
+          };
+        }),
     );
   }
 

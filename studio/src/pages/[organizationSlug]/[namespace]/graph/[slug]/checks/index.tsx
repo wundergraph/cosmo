@@ -316,7 +316,11 @@ const ChecksPage: NextPageWithLayout = () => {
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <Link
-                                    href={`https://github.com/${ghDetails.ownerSlug}/${ghDetails.repositorySlug}/commit/${ghDetails.commitSha}`}
+                                    href={`https://github.com/${encodeURIComponent(
+                                      ghDetails.ownerSlug,
+                                    )}/${encodeURIComponent(ghDetails.repositorySlug)}/commit/${encodeURIComponent(
+                                      ghDetails.commitSha,
+                                    )}`}
                                     className="inline-flex items-center gap-2 text-xs"
                                     aria-label="View on GitHub"
                                     target="_blank"

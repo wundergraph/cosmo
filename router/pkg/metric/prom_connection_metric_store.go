@@ -110,6 +110,12 @@ func (m *promConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context,
 	}
 }
 
+func (m *promConnectionMetrics) MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if m.instruments.timeToFirstRequestByte != nil {
+		m.instruments.timeToFirstRequestByte.Record(ctx, duration, opts...)
+	}
+}
+
 func (m *promConnectionMetrics) MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
 	if m.instruments.timeToFirstByte != nil {
 		m.instruments.timeToFirstByte.Record(ctx, duration, opts...)

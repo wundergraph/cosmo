@@ -4,6 +4,51 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.244.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.244.0...controlplane@0.244.1) (2026-07-17)
+
+### Bug Fixes
+
+* reactivate users via SCIM ([#3097](https://github.com/wundergraph/cosmo/issues/3097)) ([ef01bcf](https://github.com/wundergraph/cosmo/commit/ef01bcff0c4c130ed1388cdf574e87e8d13b6552)) (@wilsonrivera)
+
+# [0.244.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.243.0...controlplane@0.244.0) (2026-07-17)
+
+### Bug Fixes
+
+* orphan subgraphs not shown as active on the header ([#3086](https://github.com/wundergraph/cosmo/issues/3086)) ([417c9e8](https://github.com/wundergraph/cosmo/commit/417c9e8df987296d47ef2cb28f1eeaef1ff4d7cf)) (@wilsonrivera)
+
+### Features
+
+* test contents of `mapper.json` ([#2854](https://github.com/wundergraph/cosmo/issues/2854)) ([4a56b39](https://github.com/wundergraph/cosmo/commit/4a56b39c3e9ce628900faede74c788342d2113bf)) (@wilsonrivera)
+
+# [0.243.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.242.4...controlplane@0.243.0) (2026-07-16)
+
+### Features
+
+* fallback to owned organizations when the user has not been assigned to any group in Keycloak ([#3088](https://github.com/wundergraph/cosmo/issues/3088)) ([711f396](https://github.com/wundergraph/cosmo/commit/711f3965261efd9c87ed00f84f30dcd2f6260e8b)) (@wilsonrivera)
+
+## [0.242.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.242.3...controlplane@0.242.4) (2026-07-15)
+
+### Bug Fixes
+
+* cascade-delete schema check rows on feature flag deletion ([#3089](https://github.com/wundergraph/cosmo/issues/3089)) ([ee9753b](https://github.com/wundergraph/cosmo/commit/ee9753bafec377f30a493051dcbb3f15b6acf458)) (@JivusAyrus)
+
+## [0.242.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.242.2...controlplane@0.242.3) (2026-07-14)
+
+### Bug Fixes
+
+* avoid extra compositions due trailing newline ([#3084](https://github.com/wundergraph/cosmo/issues/3084)) ([3c15243](https://github.com/wundergraph/cosmo/commit/3c152431af88e9c67d78460d6f5f92f9c19818c0)) (@wilsonrivera)
+
+## [0.242.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.242.1...controlplane@0.242.2) (2026-07-14)
+
+### Bug Fixes
+
+* active subgraph not shown on the subgraph details page ([#3063](https://github.com/wundergraph/cosmo/issues/3063)) ([96663cc](https://github.com/wundergraph/cosmo/commit/96663ccf9ec6ed817e3c7f80d0a3cae01f9b9592)) (@wilsonrivera)
+* prevent stack overflow in schema checks by not sending parsed ASTs to the composition worker ([#3079](https://github.com/wundergraph/cosmo/issues/3079)) ([6288994](https://github.com/wundergraph/cosmo/commit/6288994f6f862433e4ae102249996c31bd0b44ed)) (@JivusAyrus)
+
+## [0.242.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.242.0...controlplane@0.242.1) (2026-07-14)
+
+**Note:** Version bump only for package controlplane
+
 # [0.242.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.241.0...controlplane@0.242.0) (2026-07-08)
 
 ### Features

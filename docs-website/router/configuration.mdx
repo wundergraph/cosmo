@@ -711,7 +711,7 @@ This option may change or be removed in future versions as the OpenTelemetry SDK
 | METRICS_OTLP_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        | The metrics to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                        | []            |
 | METRICS_OTLP_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        | The metric labels to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                  | []            |
 | METRICS_OTLP_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false         |
-| METRICS_OTLP_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, and time-to-first-byte histograms.                                                  | false         |
+| METRICS_OTLP_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms.                                                  | false         |
 | METRICS_OTLP_RESOLVER_ENABLED      | resolver.enabled      | <Icon icon="square" />                        | Enable resolver metrics: resolver concurrency gauges and the resolver acquire duration histogram.                                                                           | false         |
 | METRICS_OTLP_CIRCUIT_BREAKER       | circuit_breaker       | <Icon icon="square" />                        | Ensure that circuit breaker metrics are enabled for OTEL.                                                                                                                  | false         |
 | METRICS_OTLP_STREAM                | streams               | <Icon icon="square" />                        | Enable Cosmo Streams metrics.                                                                                                                                              | false         |
@@ -750,7 +750,7 @@ telemetry:
       router_runtime: true
       graphql_cache: true
       connection_stats: false
-      # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first byte)
+      # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first request byte, time to first byte)
       network:
         enabled: false
       # Resolver concurrency gauges and resolver acquire duration histogram
@@ -787,7 +787,7 @@ telemetry:
 | PROMETHEUS_LISTEN_ADDR           | listen_addr           | <Icon icon="square" />                        | The address to listen on for the prometheus metrics endpoint.                                                                                                              | "127.0.0.1:8088" |
 | PROMETHEUS_GRAPHQL_CACHE         | graphql_cache         | <Icon icon="square" />                        | Enable the collection of metrics for the GraphQL operation router caches.                                                                                                  | false            |
 | PROMETHEUS_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false            |
-| PROMETHEUS_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, and time-to-first-byte histograms.                                                  | false            |
+| PROMETHEUS_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms.                                                  | false            |
 | PROMETHEUS_RESOLVER_ENABLED      | resolver.enabled      | <Icon icon="square" />                        | Enable resolver metrics: resolver concurrency gauges and the resolver acquire duration histogram.                                                                           | false            |
 | PROMETHEUS_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        |                                                                                                                                                                            |                  |
 | PROMETHEUS_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        |                                                                                                                                                                            |                  |
@@ -811,7 +811,7 @@ telemetry:
       listen_addr: "127.0.0.1:8088"
       graphql_cache: true
       connection_stats: false
-      # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first byte)
+      # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first request byte, time to first byte)
       network:
         enabled: false
       # Resolver concurrency gauges and resolver acquire duration histogram
@@ -876,10 +876,12 @@ telemetry:
 
 ## GraphQL Metrics
 
-| Environment Variable               | YAML               | Required                                      | Description      | Default Value                         |
-| ---------------------------------- | ------------------ | --------------------------------------------- | ---------------- | ------------------------------------- |
-| GRAPHQL_METRICS_ENABLED            | enabled            | <Icon icon="square" />                        |                  | true                                  |
-| GRAPHQL_METRICS_COLLECTOR_ENDPOINT | collector_endpoint | <Icon icon="square-check" iconType="solid" /> | Default endpoint | https://cosmo-metrics.wundergraph.com |
+The router collects GraphQL schema usage metrics, which are the types, fields, and arguments each client operation uses, and sends them to the Cosmo GraphQL Metrics collector. This data powers [field-level analytics](/studio/analytics/schema-field-usage) and [breaking-change detection](/studio/schema-checks). Set `enabled` to `false` (or `GRAPHQL_METRICS_ENABLED=false`) to stop the router from collecting and sending this data.
+
+| Environment Variable               | YAML               | Required               | Description                                                                                                                           | Default Value                         |
+| ---------------------------------- | ------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| GRAPHQL_METRICS_ENABLED            | enabled            | <Icon icon="square" /> | Enable collection and export of GraphQL schema usage metrics (field-level usage) to the collector. Set to `false` to disable.         | true                                  |
+| GRAPHQL_METRICS_COLLECTOR_ENDPOINT | collector_endpoint | <Icon icon="square" /> | Endpoint of the GraphQL Metrics collector that receives schema usage data. Self-hosted deployments point this at their own collector. | https://cosmo-metrics.wundergraph.com |
 
 ### Example YAML config:
 
@@ -889,6 +891,49 @@ version: "1"
 graphql_metrics:
   enabled: true
   collector_endpoint: "https://cosmo-metrics.wundergraph.com"
+```
+
+## Pyroscope (Continuous Profiling)
+
+Continuously profile the router with [Grafana Pyroscope](https://grafana.com/oss/pyroscope/). When enabled, the router periodically collects profiles (CPU, memory, and more) and uploads them to a Pyroscope server, so you can analyze the router's performance over time in Grafana. This works against a self-hosted Pyroscope instance or [Grafana Cloud Profiles](https://grafana.com/products/cloud/profiles/). See the [Profiling guide](/router/profiling#continuous-profiling-with-grafana-pyroscope) for a walkthrough.
+
+| Environment Variable             | YAML                    | Required                                    | Description                                                                                                                                                                                                                                    | Default Value                                              |
+| -------------------------------- | ----------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| PYROSCOPE_ENABLED                | enabled                 | <Icon icon="square" />                      | Enable continuous profiling. When enabled, `server_address` must be set.                                                                                                                                                                       | false                                                      |
+| PYROSCOPE_SERVER_ADDRESS         | server_address          | <Icon icon="square-check" iconType="solid" /> (when enabled) | Address of the Pyroscope server the profiles are sent to, e.g. your own Pyroscope or a Grafana Cloud instance.                                                                                                                                  |                                                            |
+| PYROSCOPE_APPLICATION_NAME       | application_name        | <Icon icon="square" />                      | Application name the profiles are stored under.                                                                                                                                                                                                | wundergraph.cosmo.router                                   |
+| PYROSCOPE_BASIC_AUTH_USERNAME    | basic_auth.username     | <Icon icon="square" />                      | Username for basic authentication. For Grafana Cloud, this is the stack user ID.                                                                                                                                                               |                                                            |
+| PYROSCOPE_BASIC_AUTH_PASSWORD    | basic_auth.password     | <Icon icon="square" />                      | Password for basic authentication. For Grafana Cloud, this is an access token with profile write permissions.                                                                                                                                  |                                                            |
+| PYROSCOPE_HEADERS                | headers                 | <Icon icon="square" />                      | Map of headers to send with each profile upload request, e.g. to authenticate with a bearer token instead of basic auth. As an environment variable, use the format `key1:value1,key2:value2`.                                                  |                                                            |
+| PYROSCOPE_TAGS                   | tags                    | <Icon icon="square" />                      | Map of static tags attached to all profiles. The router always attaches the hostname and router version as tags. As an environment variable, use the format `key1:value1,key2:value2`.                                                          |                                                            |
+| PYROSCOPE_UPLOAD_RATE            | upload_rate             | <Icon icon="square" />                      | Interval at which profiles are uploaded to the Pyroscope server (e.g. `15s`, `1m`).                                                                                                                                                            | 15s                                                        |
+| PYROSCOPE_PROFILE_TYPES          | profile_types           | <Icon icon="square" />                      | Profile types to collect. Valid values: `cpu`, `alloc_objects`, `alloc_space`, `inuse_objects`, `inuse_space`, `goroutines`, `mutex_count`, `mutex_duration`, `block_count`, `block_duration`, `goroutine_leak`. Unrecognized values are ignored. | cpu, alloc_objects, alloc_space, inuse_objects, inuse_space |
+| PYROSCOPE_DISABLE_GC_RUNS        | disable_gc_runs         | <Icon icon="square" />                      | Disable the automatic `runtime.GC` run before each heap profile upload. Enabling this avoids extra GC pauses on large-heap or latency-sensitive routers, at the cost of less accurate memory profiles.                                          | false                                                      |
+| PYROSCOPE_MUTEX_PROFILE_FRACTION | mutex_profile_fraction  | <Icon icon="square" />                      | Fraction of mutex contention events reported in the mutex profile; on average 1/n events are reported. Set to `0` to disable mutex profiling.                                                                                                   | 5                                                          |
+| PYROSCOPE_BLOCK_PROFILE_RATE     | block_profile_rate      | <Icon icon="square" />                      | Fraction of goroutine blocking events reported in the block profile; on average 1/n events are reported. Set to `0` to disable block profiling.                                                                                                 | 5                                                          |
+
+### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+pyroscope:
+  enabled: true
+  server_address: "http://localhost:4040"
+  application_name: "wundergraph.cosmo.router"
+  # Optional: authenticate against Grafana Cloud
+  basic_auth:
+    username: "<stack-user-id>"
+    password: "<access-token>"
+  tags:
+    env: "production"
+  upload_rate: 15s
+  profile_types:
+    - cpu
+    - alloc_objects
+    - alloc_space
+    - inuse_objects
+    - inuse_space
 ```
 
 ## CORS
@@ -2098,6 +2143,35 @@ engine:
     enable_normalization_cache_response_header: false
     always_include_query_plan: false
     always_skip_loader: false
+```
+
+### Validate Inline Arguments
+
+The configuration for [Validate Inline Arguments](/router/security/validate-inline-arguments). Detects, and
+optionally rejects, operations that pass argument values inline instead of through variables.
+
+| Environment Variable                                            | YAML                            | Required               | Description                                                                                                                                     | Default Value                                              |
+|-----------------------------------------------------------------|---------------------------------|------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_MODE                          | mode                            | <Icon icon="square" /> | `off` disables the feature; `permissive` detects and records inline arguments while still executing; `strict` rejects operations that use inline argument values. | off                                                       |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_ENFORCE_HTTP_STATUS_CODE       | enforce_http_status_code        | <Icon icon="square" /> | HTTP status code returned when an operation is rejected in enforcing mode.                                                                      | 400                                                       |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_ERROR_CODE                     | error_code                      | <Icon icon="square" /> | The `extensions.code` set on the rejection error.                                                                                              | INLINE_ARGUMENT_VALUES_NOT_ALLOWED                        |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_ERROR_MESSAGE                  | error_message                   | <Icon icon="square" /> | The error message returned to the client on rejection.                                                                                         | Inline argument values are not allowed. Use variables instead. |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_INCLUDE_PERSISTED_OPERATIONS   | include_persisted_operations    | <Icon icon="square" /> | When true, the policy also applies to persisted operations. Persisted operations are exempt by default.                                        | false                                                     |
+| ENGINE_VALIDATE_INLINE_ARGUMENTS_RETURN_IN_RESPONSE_EXTENSIONS  | return_in_response_extensions   | <Icon icon="square" /> | When true, detected inline arguments are returned to the client under `extensions.inlineArguments`. Applies only in non-enforcing mode.        | false                                                     |
+
+#### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+engine:
+  validate_inline_arguments:
+    mode: permissive
+    enforce_http_status_code: 400
+    error_code: INLINE_ARGUMENT_VALUES_NOT_ALLOWED
+    error_message: "Inline argument values are not allowed. Use variables instead."
+    include_persisted_operations: false
+    return_in_response_extensions: false
 ```
 
 ## Rate Limiting

@@ -152,3 +152,50 @@ profiles_YYYYMMDD_HHMMSS.zip
 ├── goroutine.prof
 ```
 
+## Continuous Profiling with Grafana Pyroscope
+
+The `pprof` endpoints above are ideal for ad-hoc, point-in-time investigations. For long-running deployments it is often more useful to profile the router *continuously*, so you can correlate a spike in CPU or memory with a deploy, a traffic pattern, or a specific time window — without having to reproduce the issue while attached to `pprof`.
+
+The router integrates with [Grafana Pyroscope](https://grafana.com/oss/pyroscope/) for exactly this. When enabled, the router periodically collects profiles and pushes them to a Pyroscope server, where you can explore them in Grafana using [Explore Profiles](https://grafana.com/docs/grafana/latest/explore/simplified-exploration/profiles/) (formerly Profiles Drilldown). This works against a self-hosted Pyroscope instance or [Grafana Cloud Profiles](https://grafana.com/products/cloud/profiles/).
+
+<Info>
+  Unlike the `pprof` endpoints, continuous profiling *pushes* profiles to a server you control, so there is no publicly exposed debug endpoint. The overhead is low, making it suitable for production.
+</Info>
+
+### Enable Continuous Profiling
+
+Add a `pyroscope` block to your router configuration (or set the equivalent `PYROSCOPE_*` environment variables):
+
+```yaml config.yaml
+version: "1"
+
+pyroscope:
+  enabled: true
+  server_address: "http://localhost:4040"
+```
+
+For Grafana Cloud, point `server_address` at your Profiles endpoint and authenticate with basic auth:
+
+```yaml config.yaml
+version: "1"
+
+pyroscope:
+  enabled: true
+  server_address: "https://profiles-prod-xxx.grafana.net"
+  basic_auth:
+    username: "<stack-user-id>"
+    password: "<access-token>"       # an access token with profile write permissions
+  tags:
+    env: "production"
+```
+
+See the [Pyroscope configuration reference](/router/configuration#pyroscope-continuous-profiling) for all available options, including the profile types to collect, the upload rate, and mutex/block profiling rates.
+
+### View Profiles in Grafana
+
+1. Open Grafana and navigate to **Explore → Profiles** (or the **Explore Profiles** app).
+2. Select the router service by its `application_name` (default `wundergraph.cosmo.router`).
+3. Pick a profile type (e.g. CPU or memory) and a time range to drill into flame graphs for that window.
+
+The router always attaches the hostname and router version as tags, and you can add your own via the `tags` option to filter across instances, environments, or deployments.
+

@@ -27,6 +27,7 @@ import { formatDistanceToNow, formatISO } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { buildUrl } from '@/lib/build-url';
 
 const ProposalsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -85,7 +86,12 @@ const ProposalsPage: NextPageWithLayout = () => {
         actions={
           <Button
             onClick={() => {
-              router.push(`/${user?.currentOrganization.slug}/policies?namespace=${router.query.namespace}#proposals`);
+              router.push(
+                `${buildUrl('/:organizationSlug/policies', {
+                  organizationSlug: user?.currentOrganization.slug,
+                  namespace: router.query.namespace as string,
+                })}#proposals`,
+              );
             }}
           >
             Configure Proposals
@@ -174,7 +180,15 @@ const ProposalsPage: NextPageWithLayout = () => {
                     <TableCell>
                       {latestCheckId ? (
                         <Link
-                          href={`/${user?.currentOrganization.slug}/${namespace}/graph/${federatedGraphName}/checks/${latestCheckId}`}
+                          href={buildUrl(
+                            '/:organizationSlug/:namespace/graph/:federatedGraphName/checks/:latestCheckId',
+                            {
+                              organizationSlug: user?.currentOrganization.slug,
+                              namespace,
+                              federatedGraphName,
+                              latestCheckId,
+                            },
+                          )}
                           onClick={(e) => e.stopPropagation()}
                           className="flex items-center gap-2"
                         >

@@ -25734,6 +25734,7 @@ type WorkspaceNamespace struct {
 	Id            string                     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                     `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Graphs        []*WorkspaceFederatedGraph `protobuf:"bytes,3,rep,name=graphs,proto3" json:"graphs,omitempty"`
+	Subgraphs     []*WorkspaceSubgraph       `protobuf:"bytes,4,rep,name=subgraphs,proto3" json:"subgraphs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -25789,15 +25790,22 @@ func (x *WorkspaceNamespace) GetGraphs() []*WorkspaceFederatedGraph {
 	return nil
 }
 
+func (x *WorkspaceNamespace) GetSubgraphs() []*WorkspaceSubgraph {
+	if x != nil {
+		return x.Subgraphs
+	}
+	return nil
+}
+
 type WorkspaceFederatedGraph struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	TargetId      string                 `protobuf:"bytes,2,opt,name=targetId,proto3" json:"targetId,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	IsContract    bool                   `protobuf:"varint,4,opt,name=isContract,proto3" json:"isContract,omitempty"`
-	Subgraphs     []*WorkspaceSubgraph   `protobuf:"bytes,5,rep,name=subgraphs,proto3" json:"subgraphs,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TargetId          string                 `protobuf:"bytes,2,opt,name=targetId,proto3" json:"targetId,omitempty"`
+	Name              string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	IsContract        bool                   `protobuf:"varint,4,opt,name=isContract,proto3" json:"isContract,omitempty"`
+	SubgraphTargetIds []string               `protobuf:"bytes,5,rep,name=subgraphTargetIds,proto3" json:"subgraphTargetIds,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *WorkspaceFederatedGraph) Reset() {
@@ -25858,20 +25866,22 @@ func (x *WorkspaceFederatedGraph) GetIsContract() bool {
 	return false
 }
 
-func (x *WorkspaceFederatedGraph) GetSubgraphs() []*WorkspaceSubgraph {
+func (x *WorkspaceFederatedGraph) GetSubgraphTargetIds() []string {
 	if x != nil {
-		return x.Subgraphs
+		return x.SubgraphTargetIds
 	}
 	return nil
 }
 
 type WorkspaceSubgraph struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	TargetId      string                 `protobuf:"bytes,2,opt,name=targetId,proto3" json:"targetId,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TargetId          string                 `protobuf:"bytes,2,opt,name=targetId,proto3" json:"targetId,omitempty"`
+	Name              string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	BaseSubgraphId    *string                `protobuf:"bytes,4,opt,name=baseSubgraphId,proto3,oneof" json:"baseSubgraphId,omitempty"`
+	IsFeatureSubgraph bool                   `protobuf:"varint,5,opt,name=isFeatureSubgraph,proto3" json:"isFeatureSubgraph,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *WorkspaceSubgraph) Reset() {
@@ -25923,6 +25933,20 @@ func (x *WorkspaceSubgraph) GetName() string {
 		return x.Name
 	}
 	return ""
+}
+
+func (x *WorkspaceSubgraph) GetBaseSubgraphId() string {
+	if x != nil && x.BaseSubgraphId != nil {
+		return *x.BaseSubgraphId
+	}
+	return ""
+}
+
+func (x *WorkspaceSubgraph) GetIsFeatureSubgraph() bool {
+	if x != nil {
+		return x.IsFeatureSubgraph
+	}
+	return false
 }
 
 type GetWorkspaceRequest struct {
@@ -35840,23 +35864,27 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x02id\x18\x02 \x01(\tR\x02id\"\x91\x01\n" +
 	"\x14GetNamespaceResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12=\n" +
-	"\tnamespace\x18\x02 \x01(\v2\x1f.wg.cosmo.platform.v1.NamespaceR\tnamespace\"\x7f\n" +
+	"\tnamespace\x18\x02 \x01(\v2\x1f.wg.cosmo.platform.v1.NamespaceR\tnamespace\"\xc6\x01\n" +
 	"\x12WorkspaceNamespace\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12E\n" +
-	"\x06graphs\x18\x03 \x03(\v2-.wg.cosmo.platform.v1.WorkspaceFederatedGraphR\x06graphs\"\xc0\x01\n" +
+	"\x06graphs\x18\x03 \x03(\v2-.wg.cosmo.platform.v1.WorkspaceFederatedGraphR\x06graphs\x12E\n" +
+	"\tsubgraphs\x18\x04 \x03(\v2'.wg.cosmo.platform.v1.WorkspaceSubgraphR\tsubgraphs\"\xa7\x01\n" +
 	"\x17WorkspaceFederatedGraph\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\btargetId\x18\x02 \x01(\tR\btargetId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1e\n" +
 	"\n" +
 	"isContract\x18\x04 \x01(\bR\n" +
-	"isContract\x12E\n" +
-	"\tsubgraphs\x18\x05 \x03(\v2'.wg.cosmo.platform.v1.WorkspaceSubgraphR\tsubgraphs\"S\n" +
+	"isContract\x12,\n" +
+	"\x11subgraphTargetIds\x18\x05 \x03(\tR\x11subgraphTargetIds\"\xc1\x01\n" +
 	"\x11WorkspaceSubgraph\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\btargetId\x18\x02 \x01(\tR\btargetId\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\"\x15\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12+\n" +
+	"\x0ebaseSubgraphId\x18\x04 \x01(\tH\x00R\x0ebaseSubgraphId\x88\x01\x01\x12,\n" +
+	"\x11isFeatureSubgraph\x18\x05 \x01(\bR\x11isFeatureSubgraphB\x11\n" +
+	"\x0f_baseSubgraphId\"\x15\n" +
 	"\x13GetWorkspaceRequest\"\x9c\x01\n" +
 	"\x14GetWorkspaceResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12H\n" +
@@ -37627,7 +37655,7 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	19,  // 421: wg.cosmo.platform.v1.GetNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	327, // 422: wg.cosmo.platform.v1.GetNamespaceResponse.namespace:type_name -> wg.cosmo.platform.v1.Namespace
 	409, // 423: wg.cosmo.platform.v1.WorkspaceNamespace.graphs:type_name -> wg.cosmo.platform.v1.WorkspaceFederatedGraph
-	410, // 424: wg.cosmo.platform.v1.WorkspaceFederatedGraph.subgraphs:type_name -> wg.cosmo.platform.v1.WorkspaceSubgraph
+	410, // 424: wg.cosmo.platform.v1.WorkspaceNamespace.subgraphs:type_name -> wg.cosmo.platform.v1.WorkspaceSubgraph
 	19,  // 425: wg.cosmo.platform.v1.GetWorkspaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	408, // 426: wg.cosmo.platform.v1.GetWorkspaceResponse.namespaces:type_name -> wg.cosmo.platform.v1.WorkspaceNamespace
 	19,  // 427: wg.cosmo.platform.v1.PushCacheWarmerOperationResponse.response:type_name -> wg.cosmo.platform.v1.Response
@@ -38228,6 +38256,7 @@ func file_wg_cosmo_platform_v1_platform_proto_init() {
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[366].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[368].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[369].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[392].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[408].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[414].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[421].OneofWrappers = []any{}

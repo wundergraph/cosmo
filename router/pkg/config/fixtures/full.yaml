@@ -67,6 +67,36 @@ instance_id: ''
 graphql_metrics:
   enabled: true
   collector_endpoint: 'https://cosmo-metrics.wundergraph.com'
+
+# Continuous profiling with Grafana Pyroscope
+# If no server_address is specified, the profiles are sent to Cosmo Cloud
+pyroscope:
+  enabled: true
+  server_address: 'https://profiles-prod-001.grafana.net'
+  application_name: 'cosmo-router'
+  basic_auth:
+    username: '123456'
+    password: 'my-access-token'
+  headers:
+    X-Custom-Header: 'value'
+  tags:
+    env: 'prod'
+  upload_rate: 15s
+  profile_types:
+    - cpu
+    - alloc_objects
+    - alloc_space
+    - inuse_objects
+    - inuse_space
+    - goroutines
+    - mutex_count
+    - mutex_duration
+    - block_count
+    - block_duration
+    - goroutine_leak
+  disable_gc_runs: false
+  mutex_profile_fraction: 5
+  block_profile_rate: 5
 localhost_fallback_inside_docker: true
 
 # MCP Server

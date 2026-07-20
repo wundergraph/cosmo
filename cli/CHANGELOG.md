@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.129.3](https://github.com/wundergraph/cosmo/compare/wgc@0.129.2...wgc@0.129.3) (2026-07-17)
+
+### Bug Fixes
+
+* encode url parameters ([#3070](https://github.com/wundergraph/cosmo/issues/3070)) ([cacf1b5](https://github.com/wundergraph/cosmo/commit/cacf1b5b8d4174c23aabcb4f4919ff13666d53c9)) (@wilsonrivera)
+
+## [0.129.2](https://github.com/wundergraph/cosmo/compare/wgc@0.129.1...wgc@0.129.2) (2026-07-14)
+
+**Note:** Version bump only for package wgc
+
+## [0.129.1](https://github.com/wundergraph/cosmo/compare/wgc@0.129.0...wgc@0.129.1) (2026-07-14)
+
+### Bug Fixes
+
+* **cli:** switch to maintained fork of decompress package ([#3069](https://github.com/wundergraph/cosmo/issues/3069)) ([803a4bc](https://github.com/wundergraph/cosmo/commit/803a4bc06d92757144eaa248591a57ac301c779f)) (@pepol)
+
 # [0.129.0](https://github.com/wundergraph/cosmo/compare/wgc@0.128.0...wgc@0.129.0) (2026-07-08)
 
 ### Features
