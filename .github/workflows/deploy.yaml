@@ -1,0 +1,79 @@
+name: Deploy
+
+on:
+  # Fires only when a stable (non-prerelease) release is published. The release
+  # is created by the "Release" workflow using a GitHub App token, which — unlike
+  # the default GITHUB_TOKEN — emits release events that trigger this workflow.
+  release:
+    types: [released]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: Production-Deploy
+  cancel-in-progress: false
+
+env:
+  CI: true
+  DO_NOT_TRACK: '1'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # lerna publishes a separate GitHub release per package, so this workflow
+    # fires once per released package. Only controlplane and studio are deployed,
+    # so ignore every other package's release. Manual dispatch always runs.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.release.tag_name, 'controlplane@') ||
+      startsWith(github.event.release.tag_name, 'studio@')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # On a release event, deploy only the package that was just released (its
+      # version comes from the release tag, e.g. "controlplane@0.243.0"). On a
+      # manual dispatch there is no tag, so deploy the current version of both.
+      # Unset versions stay empty and the cosmo-cloud receiver skips them.
+      - name: Read versions
+        id: versions
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "controlplane=$(node -p "require('./controlplane/package.json').version")" >> "$GITHUB_OUTPUT"
+            echo "studio=$(node -p "require('./studio/package.json').version")" >> "$GITHUB_OUTPUT"
+          else
+            case "$RELEASE_TAG" in
+              controlplane@*) echo "controlplane=${RELEASE_TAG#controlplane@}" >> "$GITHUB_OUTPUT" ;;
+              studio@*)       echo "studio=${RELEASE_TAG#studio@}" >> "$GITHUB_OUTPUT" ;;
+            esac
+          fi
+
+      - name: Authenticate
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: |
+            cosmo-cloud
+          permission-contents: write
+
+      - name: Trigger Deployment Repo Dispatch
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          repository: wundergraph/cosmo-cloud
+          event-type: cosmo
+          client-payload: |-
+            {
+              "controlplane_version": ${{ toJSON(steps.versions.outputs.controlplane) }},
+              "studio_version": ${{ toJSON(steps.versions.outputs.studio) }},
+              "triggered_by": ${{ toJSON(format('{0} <{1}+{2}@users.noreply.github.com>', github.actor, github.actor_id, github.actor)) }}
+            }
