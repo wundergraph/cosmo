@@ -17,7 +17,7 @@ if [ -x "$system_bin/node" ] && node_bin_ok "$system_bin"; then
   exit 0
 fi
 
-for version_glob in v22 v24; do
+for version_glob in v20 v22 v24; do
   candidate="$(ls -d "$HOME"/.nvm/versions/node/$version_glob.*/bin 2>/dev/null | sort -V | tail -1)"
   if [ -n "$candidate" ] && node_bin_ok "$candidate"; then
     echo "$candidate"
