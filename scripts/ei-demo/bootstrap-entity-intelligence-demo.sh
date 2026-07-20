@@ -102,7 +102,7 @@ else
   echo "hub isn't running yet; setting it up..."
   (cd "$HUB_DIR" && make all)
   echo "Starting hub's dev servers in the background..."
-  (cd "$HUB_DIR" && nohup bun run dev > /tmp/hub-dev.log 2>&1 & echo $! >> "$PID_FILE")
+  (cd "$HUB_DIR" && nohup bun run dev > /tmp/hub-dev.log 2>&1 & pid=$!; pidfile_entry "$pid" >> "$PID_FILE")
   echo "Waiting for hub's keycloak (8090)..."
   wait_for_port 8090 60 1 || {
     echo "ERROR: hub's keycloak (port 8090) did not come up after 'make all'. See errors above." >&2
@@ -235,7 +235,7 @@ else
   # Hub's keycloak, passed as env vars rather than written into
   # controlplane/.env: the control plane needs it for the whole time it
   # runs (token validation), but the file itself stays untouched.
-  (cd controlplane && PATH="$NODE_BIN:$PATH" KC_API_URL="http://localhost:8090" KC_FRONTEND_URL="http://localhost:8090" pnpm dev > /tmp/cosmo-controlplane-bootstrap.log 2>&1 & echo $! >> "$PID_FILE")
+  (cd controlplane && PATH="$NODE_BIN:$PATH" KC_API_URL="http://localhost:8090" KC_FRONTEND_URL="http://localhost:8090" pnpm dev > /tmp/cosmo-controlplane-bootstrap.log 2>&1 & pid=$!; pidfile_entry "$pid" >> "$PID_FILE")
   wait_for_port 3001 60 0.5 || { echo "control plane did not start, see /tmp/cosmo-controlplane-bootstrap.log" >&2; exit 1; }
 fi
 

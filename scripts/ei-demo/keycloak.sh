@@ -155,7 +155,11 @@ cleanup_stray_wundergraph_kc_state() {
 
   # pipefail scoped locally: a "curl | python3 | while read" pipe's exit
   # status is otherwise just the while loop's (always 0), which would hide
-  # a real curl/python failure as "no stray roles found".
+  # a real curl/python failure as "no stray roles found". Captured into
+  # role_sweep_rc (not `|| true`, which would discard it before this line
+  # ever sees it) so a real failure here is actually surfaced, not just
+  # relied on to show up indirectly via the poll below.
+  local role_sweep_rc
   set -o pipefail
   curl -s -H "Authorization: Bearer $kc_token" "http://localhost:8080/admin/realms/cosmo/roles" \
     | python3 -c "
@@ -171,8 +175,10 @@ for r in (data if isinstance(data, list) else []):
     encoded="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$role_name")"
     curl -s -o /dev/null -X DELETE -H "Authorization: Bearer $kc_token" \
       "http://localhost:8080/admin/realms/cosmo/roles/$encoded"
-  done || true
+  done
+  role_sweep_rc=$?
   set +o pipefail
+  [ "$role_sweep_rc" = "0" ] || echo "WARNING: role listing/deletion pipeline failed; some stray wundergraph:* roles may remain." >&2
 
   # A prior attempt's in-flight role-creation requests can still land on
   # Keycloak after that attempt's process has exited, racing the delete

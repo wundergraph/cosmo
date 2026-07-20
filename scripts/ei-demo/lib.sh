@@ -1,6 +1,31 @@
 #!/bin/bash
 # Shared helpers for the ei-demo scripts. Sourced, not executed directly.
 
+# pidfile_entry <pid>
+# Prints "pid:start_time" for a live process, empty if it can't be found.
+# start_time (`ps -o lstart=`, fixed at process creation) is what later lets
+# a pidfile reader tell a still-alive pid from one the OS recycled onto an
+# unrelated process, since a command-line guess isn't reliable across every
+# spawn shape (a "go run" subshell execs into "go run ...", but "make dev"
+# execs into "make dev" with no shared substring, and a multi-statement
+# subshell may not exec at all). See RUNBOOK.md.
+pidfile_entry() {
+  local pid="$1" start
+  start="$(ps -o lstart= -p "$pid" 2>/dev/null)"
+  [ -n "$start" ] && printf '%s:%s\n' "$pid" "$start"
+}
+
+# pidfile_entry_still_valid <line>
+# True if a "pid:start_time" pidfile entry still refers to a live process
+# whose actual start time matches what was recorded.
+pidfile_entry_still_valid() {
+  local line="$1" pid="${1%%:*}" recorded="${1#*:}" live
+  [ -n "$pid" ] || return 1
+  kill -0 "$pid" 2>/dev/null || return 1
+  live="$(ps -o lstart= -p "$pid" 2>/dev/null)"
+  [ -n "$live" ] && [ "$live" = "$recorded" ]
+}
+
 # wait_for_port <port> <attempts> <sleep-seconds>
 # Polls 127.0.0.1:<port> until it accepts a connection. Returns 1 on
 # timeout instead of exiting, so each caller decides what failure means

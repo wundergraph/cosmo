@@ -9,6 +9,7 @@
 # Makefile targets, set DOWN_INFRA=1 to also run `make infra-down`.
 
 SCRIPT_DIR="$(dirname "$0")"
+source "$SCRIPT_DIR/lib.sh"
 cd "$SCRIPT_DIR/../.."
 
 PID_FILE="${EI_DEMO_PID_FILE:-/tmp/ei-demo.pids}"
@@ -17,21 +18,21 @@ if [ ! -f "$PID_FILE" ]; then
   echo "No $PID_FILE found, nothing to stop (or it already stopped cleanly)."
 else
   echo "Stopping ei-demo processes..."
-  while IFS= read -r pid; do
-    [ -n "$pid" ] || continue
-    kill -0 "$pid" 2>/dev/null || continue
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
     # "still exists" doesn't rule out the OS having recycled this pid onto
-    # an unrelated process since it was recorded (the same reuse risk
-    # start.sh's own prune exists for, larger here since down.sh often runs
-    # well after the recording session ended), a command-line sanity check
-    # catches the clearest case before sending a kill.
-    case "$(ps -o command= -p "$pid" 2>/dev/null)" in
-      *pnpm*|*"go run"*|*node*|*bun*) ;;
-      *)
-        echo "WARNING: pid $pid in $PID_FILE no longer looks like an ei-demo process (possibly reused); skipping." >&2
-        continue
-        ;;
-    esac
+    # an unrelated process since it was recorded, more likely here than in
+    # start.sh's own prune since down.sh often runs well after the
+    # recording session ended. pidfile_entry_still_valid compares the
+    # process's actual start time against what was recorded (see lib.sh),
+    # which works for every spawn shape, unlike an earlier command-line
+    # guess that missed real ei-demo processes, e.g. graphqlmetrics's
+    # "make dev" (confirmed directly). See RUNBOOK.md.
+    if ! pidfile_entry_still_valid "$line"; then
+      echo "WARNING: pidfile entry '$line' no longer matches a live process with that start time (possibly reused); skipping." >&2
+      continue
+    fi
+    pid="${line%%:*}"
     kill -TERM "-$pid" 2>/dev/null
     kill -TERM "$pid" 2>/dev/null
   done < "$PID_FILE"

@@ -26,11 +26,17 @@ write_pidfile() {
   # RUNBOOK.md for why the read below needs its own "|| true".
   local current=""
   if [ -f "$PID_FILE" ]; then
-    current="$(while IFS= read -r pid; do
-      [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && echo "$pid"
+    current="$(while IFS= read -r line; do
+      [ -n "$line" ] && pidfile_entry_still_valid "$line" && echo "$line"
     done < "$PID_FILE")" || true
   fi
-  printf '%s\n' "$current" "$cp_pid" "$gqm_pid" "$sub_pid" "$traffic_pid" "$router_pid" | sort -u | grep -v '^$' > "$PID_FILE" || true
+  local new=""
+  local p
+  for p in "$cp_pid" "$gqm_pid" "$sub_pid" "$traffic_pid" "$router_pid"; do
+    [ -n "$p" ] && new="$new
+$(pidfile_entry "$p")"
+  done
+  printf '%s\n' "$current" "$new" | sort -u | grep -v '^$' > "$PID_FILE" || true
 }
 cp_pid=""
 gqm_pid=""
@@ -42,8 +48,8 @@ router_pid=""
 # dead pid could get OS-recycled onto an unrelated live process before
 # write_pidfile ever gets a chance to prune it. See RUNBOOK.md.
 if [ -f "$PID_FILE" ]; then
-  while IFS= read -r pid; do
-    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && echo "$pid"
+  while IFS= read -r line; do
+    [ -n "$line" ] && pidfile_entry_still_valid "$line" && echo "$line"
   done < "$PID_FILE" > "$PID_FILE.tmp" || true
   mv "$PID_FILE.tmp" "$PID_FILE"
 fi
@@ -107,8 +113,11 @@ cleanup() {
   kill -TERM -$$ -$cp_pid -$gqm_pid -$sub_pid -$traffic_pid -$router_pid 2>/dev/null || true
   kill $cp_pid $gqm_pid $sub_pid $traffic_pid $router_pid 2>/dev/null || true
   if [ -f "$PID_FILE" ]; then
-    while IFS= read -r pid; do
-      [ -n "$pid" ] || continue
+    local line pid
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      pidfile_entry_still_valid "$line" || continue
+      pid="${line%%:*}"
       kill -TERM "-$pid" 2>/dev/null || true
       kill -TERM "$pid" 2>/dev/null || true
     done < "$PID_FILE"
