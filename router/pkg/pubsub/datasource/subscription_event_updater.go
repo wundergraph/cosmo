@@ -34,19 +34,9 @@ type subscriptionEventUpdater struct {
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
-	// Broadcast hooks run once per received batch, before any per-subscriber fan-out.
-	// They transform the batch for all subscribers and, crucially, do not force the serial
-	// per-subscriber path below (that is only triggered by OnReceiveEvents handlers). With
-	// only broadcast hooks registered, delivery stays on the concurrent broadcast path.
-	if len(s.hooks.OnBroadcastEvents.Handlers) > 0 {
-		var err error
-		for i := range s.hooks.OnBroadcastEvents.Handlers {
-			events, err = s.hooks.OnBroadcastEvents.Handlers[i](context.Background(), s.subscriptionEventConfiguration, s.eventBuilder, events)
-			if err != nil {
-				s.logger.Error("on_broadcast_events hook failed, dropping batch", zap.Error(err))
-				return
-			}
-		}
+	events, ok := s.runOnBroadcastEventsHooks(events)
+	if !ok {
+		return
 	}
 
 	if len(s.hooks.OnReceiveEvents.Handlers) == 0 {
@@ -93,6 +83,26 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 			"Consider increasing events.handler.on_receive_events.handler_timeout and/or max_concurrent_handlers or reduce handler execution time." +
 			"Events may arrive out of order.")
 	}
+}
+
+// runOnBroadcastEventsHooks runs the OnBroadcastEvents hooks once per received batch,
+// before any per-subscriber fan-out. It returns the (possibly transformed) events and
+// false if a hook failed and the batch should be dropped.
+func (s *subscriptionEventUpdater) runOnBroadcastEventsHooks(events []StreamEvent) ([]StreamEvent, bool) {
+	if len(s.hooks.OnBroadcastEvents.Handlers) == 0 {
+		return events, true
+	}
+
+	var err error
+	for i := range s.hooks.OnBroadcastEvents.Handlers {
+		events, err = s.hooks.OnBroadcastEvents.Handlers[i](context.Background(), s.subscriptionEventConfiguration, s.eventBuilder, events)
+		if err != nil {
+			s.logger.Error("on_broadcast_events hook failed, dropping batch", zap.Error(err))
+			return nil, false
+		}
+	}
+
+	return events, true
 }
 
 func (s *subscriptionEventUpdater) Complete() {
