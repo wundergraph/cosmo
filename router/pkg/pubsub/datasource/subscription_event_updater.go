@@ -42,6 +42,9 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 
 	if len(s.hooks.OnReceiveEvents.Handlers) == 0 {
 		for _, event := range events {
+			if event == nil {
+				continue
+			}
 			s.eventUpdater.Update(event.GetData())
 		}
 		return

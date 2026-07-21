@@ -207,6 +207,39 @@ func TestSubscriptionEventUpdater_Update_PassthroughWithNoHooks(t *testing.T) {
 	mockUpdater.AssertNumberOfCalls(t, "Update", 3)
 }
 
+func TestSubscriptionEventUpdater_Update_SkipsNilEvents(t *testing.T) {
+	mockUpdater := NewMockSubscriptionUpdater(t)
+	config := &testSubscriptionEventConfig{
+		providerID:   "test-provider",
+		providerType: ProviderTypeNats,
+		fieldName:    "testField",
+	}
+	events := []StreamEvent{
+		&testEvent{mutableTestEvent("event data 1")},
+		nil,
+		&testEvent{mutableTestEvent("event data 2")},
+	}
+
+	mockUpdater.On("Update", []byte("event data 1")).Return()
+	mockUpdater.On("Update", []byte("event data 2")).Return()
+
+	updater := NewSubscriptionEventUpdater(
+		config,
+		Hooks{}, // No hooks
+		mockUpdater,
+		zap.NewNop(),
+		testEventBuilder,
+	)
+
+	assert.NotPanics(t, func() {
+		updater.Update(events)
+	})
+
+	mockUpdater.AssertCalled(t, "Update", []byte("event data 1"))
+	mockUpdater.AssertCalled(t, "Update", []byte("event data 2"))
+	mockUpdater.AssertNumberOfCalls(t, "Update", 2)
+}
+
 // Test the updateEvents method indirectly through Update method
 func TestSubscriptionEventUpdater_UpdateEvents_EmptyEvents(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
