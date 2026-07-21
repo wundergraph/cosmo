@@ -97,7 +97,9 @@ func (s *subscriptionEventUpdater) runOnBroadcastEventsHooks(events []StreamEven
 	for i := range s.hooks.OnBroadcastEvents.Handlers {
 		events, err = s.hooks.OnBroadcastEvents.Handlers[i](context.Background(), s.subscriptionEventConfiguration, s.eventBuilder, events)
 		if err != nil {
-			s.logger.Error("on_broadcast_events hook failed, dropping batch", zap.Error(err))
+			s.logger.
+				With(zap.Int("handler_index", i)).
+				Warn("OnBroadcastEvents hook failed, dropping event batch", zap.Error(err))
 			return nil, false
 		}
 	}
