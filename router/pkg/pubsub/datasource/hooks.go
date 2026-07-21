@@ -54,4 +54,5 @@ type OnReceiveEventsHooks struct {
 // OnBroadcastEventsHooks contains hooks that run once per received batch on the broadcast path
 type OnBroadcastEventsHooks struct {
 	Handlers []OnBroadcastEventsFn
+	Timeout  time.Duration
 }

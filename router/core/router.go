@@ -280,6 +280,10 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		r.subscriptionHooks.onReceiveEvents.timeout = 5 * time.Second
 	}
 
+	if r.subscriptionHooks.onBroadcastEvents.timeout == 0 {
+		r.subscriptionHooks.onBroadcastEvents.timeout = 5 * time.Second
+	}
+
 	if r.corsOptions == nil {
 		r.corsOptions = CorsDefaultOptions()
 	}
@@ -2622,6 +2626,7 @@ func WithStreamsHandlerConfiguration(cfg config.StreamsHandlerConfiguration) Opt
 	return func(r *Router) {
 		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = cfg.OnReceiveEvents.MaxConcurrentHandlers
 		r.subscriptionHooks.onReceiveEvents.timeout = cfg.OnReceiveEvents.HandlerTimeout
+		r.subscriptionHooks.onBroadcastEvents.timeout = cfg.OnBroadcastEvents.HandlerTimeout
 	}
 }
 

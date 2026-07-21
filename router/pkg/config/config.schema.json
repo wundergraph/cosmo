@@ -3274,7 +3274,7 @@
           "properties": {
             "on_receive_events": {
               "type": "object",
-              "description": "Configuration for the OnReceiveEvents hook that is called when events are received from a broker.",
+              "description": "Configuration for the OnReceiveEvents hook that is called for each subscriber when events are received from a broker.",
               "additionalProperties": false,
               "properties": {
                 "max_concurrent_handlers": {
@@ -3286,6 +3286,18 @@
                 "handler_timeout": {
                   "type": "string",
                   "description": "The amount of time that OnReceiveEvents handlers can run in total for a single batch of events. Specify as a duration string (e.g., '5s', '1m', '500ms').",
+                  "default": "5s"
+                }
+              }
+            },
+            "on_broadcast_events": {
+              "type": "object",
+              "description": "Configuration for the OnBroadcastEvents hook, that is called once per event before delivering them to subscribers.",
+              "additionalProperties": false,
+              "properties": {
+                "handler_timeout": {
+                  "type": "string",
+                  "description": "The amount of time that OnBroadcastEvents handlers can run in total for a single batch of events. Specify as a duration string (e.g., '5s', '1m', '500ms').",
                   "default": "5s"
                 }
               }

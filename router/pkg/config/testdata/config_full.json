@@ -832,6 +832,9 @@
       "OnReceiveEvents": {
         "MaxConcurrentHandlers": 100,
         "HandlerTimeout": 5000000000
+      },
+      "OnBroadcastEvents": {
+        "HandlerTimeout": 5000000000
       }
     }
   },

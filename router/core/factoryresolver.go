@@ -560,6 +560,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			},
 			OnBroadcastEvents: pubsub_datasource.OnBroadcastEventsHooks{
 				Handlers: onBroadcastEventsFns,
+				Timeout:  l.subscriptionHooks.onBroadcastEvents.timeout,
 			},
 			SubscriptionOnCreate: pubsub_datasource.SubscriptionOnCreateHooks{
 				Handlers: subscriptionOnCreateFns,

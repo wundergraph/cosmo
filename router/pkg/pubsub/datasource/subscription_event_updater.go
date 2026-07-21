@@ -27,10 +27,11 @@ type subscriptionEventUpdater struct {
 	eventUpdater                   resolve.SubscriptionUpdater
 	subscriptionEventConfiguration SubscriptionEventConfiguration
 	hooks                          Hooks
+	onReiveEventsTimeout           time.Duration
+	onBroadcastEventsTimeout       time.Duration
 	logger                         *zap.Logger
 	eventBuilder                   EventBuilderFn
 	semaphore                      *semaphore.Weighted
-	timeout                        time.Duration
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
@@ -48,7 +49,7 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 
 	subscriptions := s.eventUpdater.Subscriptions()
 	wg := sync.WaitGroup{}
-	updaterCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(s.timeout))
+	updaterCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(s.onReiveEventsTimeout))
 	defer cancel()
 
 	done := make(chan struct{})
@@ -79,44 +80,69 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 		// Also since we will process the next batch of events while having abandoned updaters,
 		// those updaters might eventually push their events to the subscription late,
 		// which means events might arrive out of order.
-		s.logger.Warn("Subscription update timeout exceeded because handler execution took too long. " +
-			"Consider increasing events.handler.on_receive_events.handler_timeout and/or max_concurrent_handlers or reduce handler execution time." +
-			"Events may arrive out of order.")
+		s.logger.
+			With(zap.String("handler_name", "OnReceiveEvents")).
+			Warn("Subscription update timeout exceeded because handler execution took too long. " +
+				"Consider increasing events.handler.on_receive_events.handler_timeout and/or " +
+				"max_concurrent_handlers or reduce handler execution time." +
+				"Events may arrive out of order.")
 	}
 }
 
 // runOnBroadcastEventsHooks runs the OnBroadcastEvents hooks once per received batch,
 // before any per-subscriber fan-out. It returns the (possibly transformed) events and
 // false if a hook failed and the batch should be dropped.
-func (s *subscriptionEventUpdater) runOnBroadcastEventsHooks(events []StreamEvent) (result []StreamEvent, ok bool) {
+func (s *subscriptionEventUpdater) runOnBroadcastEventsHooks(events []StreamEvent) ([]StreamEvent, bool) {
 	if len(s.hooks.OnBroadcastEvents.Handlers) == 0 {
 		return events, true
 	}
 
-	defer func() {
-		if r := recover(); r != nil {
-			s.logger.
-				WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
-				Error("[Recovery from handler panic]",
-					zap.String("handler_name", "OnBroadcastEvents"),
-					zap.Any("error", r),
-				)
-			result, ok = nil, false
+	ctx, cancel := context.WithTimeout(context.Background(), s.onBroadcastEventsTimeout)
+	defer cancel()
+
+	type hookResult struct {
+		events []StreamEvent
+		ok     bool
+	}
+	done := make(chan hookResult, 1)
+
+	go func() {
+		res := hookResult{nil, false}
+		defer func() {
+			if r := recover(); r != nil {
+				s.logger.
+					WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
+					Error("[Recovery from handler panic]",
+						zap.String("handler_name", "OnBroadcastEvents"),
+						zap.Any("error", r),
+					)
+				res = hookResult{nil, false}
+			}
+			done <- res
+		}()
+
+		evts := events
+		var err error
+		for i := range s.hooks.OnBroadcastEvents.Handlers {
+			evts, err = s.hooks.OnBroadcastEvents.Handlers[i](ctx, s.subscriptionEventConfiguration, s.eventBuilder, evts)
+			if err != nil {
+				s.logger.
+					With(zap.Int("handler_index", i)).
+					Warn("OnBroadcastEvents handler failed, dropping event batch", zap.Error(err))
+				return
+			}
 		}
+		res = hookResult{evts, true}
 	}()
 
-	var err error
-	for i := range s.hooks.OnBroadcastEvents.Handlers {
-		events, err = s.hooks.OnBroadcastEvents.Handlers[i](context.Background(), s.subscriptionEventConfiguration, s.eventBuilder, events)
-		if err != nil {
-			s.logger.
-				With(zap.Int("handler_index", i)).
-				Warn("OnBroadcastEvents hook failed, dropping event batch", zap.Error(err))
-			return nil, false
-		}
+	select {
+	case res := <-done:
+		return res.events, res.ok
+	case <-ctx.Done():
+		s.logger.Warn("OnBroadcastEvents handler timeout exceeded, dropping event batch. " +
+			"Consider increasing events.handler.on_broadcast_events.handler_timeout or reduce handler execution time.")
+		return nil, false
 	}
-
-	return events, true
 }
 
 func (s *subscriptionEventUpdater) Complete() {
@@ -187,9 +213,13 @@ func NewSubscriptionEventUpdater(
 	eventBuilder EventBuilderFn,
 ) SubscriptionEventUpdater {
 	limit := max(hooks.OnReceiveEvents.MaxConcurrentHandlers, 1)
-	timeout := hooks.OnReceiveEvents.Timeout
-	if timeout == 0 {
-		timeout = defaultTimeout
+	onReceiveEventsTimeout := hooks.OnReceiveEvents.Timeout
+	if onReceiveEventsTimeout == 0 {
+		onReceiveEventsTimeout = defaultTimeout
+	}
+	onBroadcastEventsTimeout := hooks.OnBroadcastEvents.Timeout
+	if onBroadcastEventsTimeout == 0 {
+		onBroadcastEventsTimeout = defaultTimeout
 	}
 
 	return &subscriptionEventUpdater{
@@ -199,6 +229,7 @@ func NewSubscriptionEventUpdater(
 		logger:                         logger,
 		eventBuilder:                   eventBuilder,
 		semaphore:                      semaphore.NewWeighted(int64(limit)),
-		timeout:                        timeout,
+		onReiveEventsTimeout:           onReceiveEventsTimeout,
+		onBroadcastEventsTimeout:       onBroadcastEventsTimeout,
 	}
 }

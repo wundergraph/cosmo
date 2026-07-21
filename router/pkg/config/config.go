@@ -868,12 +868,17 @@ type EventsConfiguration struct {
 }
 
 type StreamsHandlerConfiguration struct {
-	OnReceiveEvents OnReceiveEventsConfiguration `yaml:"on_receive_events"`
+	OnReceiveEvents   OnReceiveEventsConfiguration   `yaml:"on_receive_events"`
+	OnBroadcastEvents OnBroadcastEventsConfiguration `yaml:"on_broadcast_events"`
 }
 
 type OnReceiveEventsConfiguration struct {
 	MaxConcurrentHandlers int           `yaml:"max_concurrent_handlers" envDefault:"100"`
 	HandlerTimeout        time.Duration `yaml:"handler_timeout" envDefault:"5s"`
+}
+
+type OnBroadcastEventsConfiguration struct {
+	HandlerTimeout time.Duration `yaml:"handler_timeout" envDefault:"5s"`
 }
 
 type Cluster struct {

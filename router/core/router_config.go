@@ -57,6 +57,7 @@ type onReceiveEventsHooks struct {
 
 type onBroadcastEventsHooks struct {
 	handlers []func(ctx StreamBroadcastEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+	timeout  time.Duration
 }
 
 type Config struct {
