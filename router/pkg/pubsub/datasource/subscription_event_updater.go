@@ -88,10 +88,22 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 // runOnBroadcastEventsHooks runs the OnBroadcastEvents hooks once per received batch,
 // before any per-subscriber fan-out. It returns the (possibly transformed) events and
 // false if a hook failed and the batch should be dropped.
-func (s *subscriptionEventUpdater) runOnBroadcastEventsHooks(events []StreamEvent) ([]StreamEvent, bool) {
+func (s *subscriptionEventUpdater) runOnBroadcastEventsHooks(events []StreamEvent) (result []StreamEvent, ok bool) {
 	if len(s.hooks.OnBroadcastEvents.Handlers) == 0 {
 		return events, true
 	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			s.logger.
+				WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
+				Error("[Recovery from handler panic]",
+					zap.String("handler_name", "OnBroadcastEvents"),
+					zap.Any("error", r),
+				)
+			result, ok = nil, false
+		}
+	}()
 
 	var err error
 	for i := range s.hooks.OnBroadcastEvents.Handlers {
@@ -159,6 +171,7 @@ func (s *subscriptionEventUpdater) recoverPanic(subID resolve.SubscriptionIdenti
 	s.logger.
 		WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
 		Error("[Recovery from handler panic]",
+			zap.String("handler_name", "OnReceiveEvents"),
 			zap.Int64("subscription_id", subID.SubscriptionID),
 			zap.Any("error", err),
 		)
