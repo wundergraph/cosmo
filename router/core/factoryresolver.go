@@ -533,16 +533,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		onBroadcastEventsFns[i] = NewPubSubOnBroadcastEventsHook(fn, l.logger)
 	}
 
-	var adapterMiddleware pubsub_datasource.AdapterMiddlewareFn
-	if wrappers := l.subscriptionHooks.adapterWrappers; len(wrappers) > 0 {
-		adapterMiddleware = func(providerID string, inner pubsub_datasource.Adapter) pubsub_datasource.Adapter {
-			for _, w := range wrappers {
-				inner = w(providerID, inner)
-			}
-			return inner
-		}
-	}
-
 	subscriptionOnCreateFns := make([]pubsub_datasource.SubscriptionOnCreateFn, len(l.subscriptionHooks.onCreate.handlers))
 	for i, fn := range l.subscriptionHooks.onCreate.handlers {
 		subscriptionOnCreateFns[i] = NewPubSubSubscriptionOnCreateHook(fn)
@@ -571,7 +561,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			OnBroadcastEvents: pubsub_datasource.OnBroadcastEventsHooks{
 				Handlers: onBroadcastEventsFns,
 			},
-			AdapterMiddleware: adapterMiddleware,
 			SubscriptionOnCreate: pubsub_datasource.SubscriptionOnCreateHooks{
 				Handlers: subscriptionOnCreateFns,
 			},

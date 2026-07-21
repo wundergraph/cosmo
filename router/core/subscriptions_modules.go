@@ -468,14 +468,6 @@ type StreamBroadcastEventHandler interface {
 	OnBroadcastEvents(ctx StreamBroadcastEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 }
 
-// PubSubAdapterProvider is implemented by modules that want to wrap the pubsub Adapter for a
-// provider — e.g. to transform events or stage bypass data inside the adapter, so the engine only
-// ever receives already-normalized data. WrapAdapter is called once per subscription Start with the
-// provider ID and the inner adapter; return inner unchanged to opt out.
-type PubSubAdapterProvider interface {
-	WrapAdapter(providerID string, inner datasource.Adapter) datasource.Adapter
-}
-
 type pubSubStreamBroadcastEventHookContext struct {
 	logger                         *zap.Logger
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration

@@ -52,14 +52,7 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header htt
 		zap.String("field_name", conf.RootFieldName()),
 	)
 
-	adapter := s.pubSub
-	if s.hooks.AdapterMiddleware != nil {
-		// Let a module wrap the adapter (e.g. to transform events / stage bypass data before they
-		// reach the engine). Runs on the concurrent path; does not affect broadcast vs per-subscriber.
-		adapter = s.hooks.AdapterMiddleware(conf.ProviderID(), adapter)
-	}
-
-	return adapter.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(conf, s.hooks, updater, logger, s.eventBuilder))
+	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(conf, s.hooks, updater, logger, s.eventBuilder))
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx resolve.StartupHookContext, input []byte) (err error) {
