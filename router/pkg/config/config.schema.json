@@ -3292,7 +3292,7 @@
             },
             "on_broadcast_events": {
               "type": "object",
-              "description": "Configuration for the OnBroadcastEvents hook, that is called once per event before delivering them to subscribers.",
+              "description": "Configuration for the OnBroadcastEvents hook, that is called once per event batch, before delivering them to subscribers.",
               "additionalProperties": false,
               "properties": {
                 "handler_timeout": {
