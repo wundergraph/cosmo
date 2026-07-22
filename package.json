@@ -104,7 +104,7 @@
       "minimatch@10.x": "10.2.4",
       "express-rate-limit": "8.2.2",
       "serialize-javascript": "7.0.5",
-      "markdown-it": "14.1.1",
+      "markdown-it": "14.3.0",
       "rollup@3.29.5": "3.30.0",
       "@rollup/pluginutils@5.3.0>rollup": "4.59.0",
       "shell-quote": "1.8.4",
@@ -119,7 +119,8 @@
       "ajv@6.x": "6.14.0",
       "hono@4.x": "4.12.25",
       "dompurify": "3.4.12",
-      "postcss": "8.5.10"
+      "postcss": "8.5.10",
+      "sigstore": "4.1.1"
     },
     "patchedDependencies": {
       "graphql@16.9.0": "patches/graphql@16.9.0.patch"
