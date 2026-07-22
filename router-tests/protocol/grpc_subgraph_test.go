@@ -357,6 +357,11 @@ func TestGRPCSubgraph(t *testing.T) {
 				query:    `{ employee(id: 2) { id reviewReport } }`,
 				expected: `{"data":{"employee":{"id":2,"reviewReport":"Rejected: Needs more documentation (code: DOC_001)"}}}`,
 			},
+			{
+				name:     "query employee @requires flat union aliased (approval)",
+				query:    `{ employee(id: 1) { id aliasedReviewReport: reviewReport } }`,
+				expected: `{"data":{"employee":{"id":1,"aliasedReviewReport":"Approved: Excellent work on the API at 2024-01-15"}}}`,
+			},
 			// Pattern 3: Concrete wrapping abstract
 			{
 				name:     "query employee @requires concrete wrapping abstract (technical)",
