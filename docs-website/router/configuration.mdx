@@ -2051,6 +2051,7 @@ Configure the GraphQL Execution Engine of the Router.
 | ENGINE_SUBSCRIPTION_FETCH_TIMEOUT                             | subscription_fetch_timeout                             | <Icon icon="square" /> | The maximum time a subscription fetch can take before it is considered timed out.                                                                                                                                                                                                                                                           | 30s           |
 | ENGINE_ENABLE_DEFER                                           | enable_defer                                           | <Icon icon="square" /> | Enables support for the `@defer` directive, allowing clients to defer parts of a query so that the initial response is returned faster and deferred fields are streamed incrementally.                                                                                                                                                      | false         |
 | ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY | relax_subgraph_operation_field_selection_merging_nullability | <Icon icon="square" /> | Relaxes nullability validation for [field selection merging](/router/relaxed-field-selection-merging-nullability) across union member types.                                                                                                                                                                                    | false         |
+| ENGINE_ALLOW_STRING_LITERALS_FOR_ENUMS                        | allow_string_literals_for_enums                        | <Icon icon="square" /> | Accepts a [string literal where an enum value is expected](/router/string-literals-for-enums) if the string content matches one of the enum's values. This is a deviation from the GraphQL specification.                                                                                                                                   | false         |
 
 <Warning>
   **Subject to change.** `enable_net_poll`, `websocket_server_poll_timeout`, and `websocket_server_conn_buffer_size` may be removed or changed in a future release without a standard deprecation cycle. Avoid depending on them.
@@ -2098,6 +2099,7 @@ engine:
   enable_subgraph_fetch_operation_name: true
   subscription_fetch_timeout: 30s
   relax_subgraph_operation_field_selection_merging_nullability: false
+  allow_string_literals_for_enums: false
 ```
 
 ### Debug Configuration

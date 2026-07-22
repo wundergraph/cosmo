@@ -985,6 +985,7 @@
     "WebSocketClientAckTimeout": 30000000000,
     "ValidateRequiredExternalFields": false,
     "RelaxSubgraphOperationFieldSelectionMergingNullability": false,
+    "AllowStringLiteralsForEnums": false,
     "ValidateInlineArguments": {
       "Mode": "off",
       "EnforceHTTPStatusCode": 400,
