@@ -4093,6 +4093,11 @@
           "type": "boolean",
           "default": false,
           "description": "Relaxes nullability validation for field selection merging when enclosing types are non-overlapping concrete object types. When enabled, fields with differing nullability (e.g. String! vs String) in inline fragments on different union member types will not cause validation errors."
+        },
+        "allow_string_literals_for_enums": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enables a deliberate deviation from the GraphQL specification that accepts a string literal where an enum value is expected, as long as the string content matches one of the enum's values (e.g. f(arg: \"VALUE1\") for enum SomeEnum { VALUE1 }). When disabled, only enum literals are valid inline values for enum types."
         }
       }
     },

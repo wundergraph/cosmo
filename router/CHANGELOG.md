@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.333.3](https://github.com/wundergraph/cosmo/compare/router@0.333.2...router@0.333.3) (2026-07-22)
+
+### Bug Fixes
+
+* **router:** incorrect alias behavior for required fields ([#3101](https://github.com/wundergraph/cosmo/issues/3101)) ([cfee827](https://github.com/wundergraph/cosmo/commit/cfee827d746d8862d2f51ef191731590e8ed9b08)) (@Noroth)
+
 ## [0.333.2](https://github.com/wundergraph/cosmo/compare/router@0.333.1...router@0.333.2) (2026-07-17)
 
 ### Bug Fixes

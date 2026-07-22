@@ -291,6 +291,7 @@
                 ]
               },
               "router/relaxed-field-selection-merging-nullability",
+              "router/string-literals-for-enums",
               "router/file-upload",
               "router/access-logs",
               "router/profiling",
