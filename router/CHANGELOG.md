@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.334.0](https://github.com/wundergraph/cosmo/compare/router@0.333.3...router@0.334.0) (2026-07-22)
+
+### Features
+
+* **router:** add allow_string_literals_for_enums engine option ([#3103](https://github.com/wundergraph/cosmo/issues/3103)) ([c9838ae](https://github.com/wundergraph/cosmo/commit/c9838ae734f68dec85c4bb787a2a53cac876d473)) (@devsergiy)
+
 ## [0.333.3](https://github.com/wundergraph/cosmo/compare/router@0.333.2...router@0.333.3) (2026-07-22)
 
 ### Bug Fixes

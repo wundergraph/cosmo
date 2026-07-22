@@ -17,11 +17,7 @@ import {
   RouterConfigSchema,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
-import type {
-  FeatureFlagRouterExecutionConfig,
-  FeatureFlagRouterExecutionConfigs,
-  RouterConfig,
-} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import type { FeatureFlagRouterExecutionConfig, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
@@ -29,6 +25,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { ContractRepository } from '../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+import { FeatureFlagRepository } from '../repositories/FeatureFlagRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import {
   AdmissionError,
@@ -157,6 +154,7 @@ export class Composer {
     private subgraphRepo: SubgraphRepository,
     private contractRepo: ContractRepository,
     private graphCompositionRepository: GraphCompositionRepository,
+    private featureFlagRepo: FeatureFlagRepository,
     private chClient?: ClickHouseClient,
     private proxyUrl?: string,
   ) {}
@@ -462,9 +460,17 @@ export class Composer {
     featureFlagId: string;
     splitConfigEnabled: boolean;
   }): Promise<CompositionDeployResult> {
-    const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion({
-      targetId: composedGraph.targetID,
-    });
+    // For a feature-flag composition the baseline is the previous composition of the same feature flag (not the base
+    // graph's latest valid version, which would produce a meaningless base-vs-feature-flag diff). Computed before
+    // addSchemaVersion inserts the new version, so it resolves to the chronologically prior feature-flag version.
+    const prevValidFederatedSDL = isFeatureFlagComposition
+      ? await this.featureFlagRepo.getLatestValidFeatureFlagSchemaVersion({
+          targetId: composedGraph.targetID,
+          featureFlagId,
+        })
+      : await this.federatedGraphRepo.getLatestValidSchemaVersion({
+          targetId: composedGraph.targetID,
+        });
 
     const updatedFederatedGraph = await this.federatedGraphRepo.addSchemaVersion({
       targetId: composedGraph.targetID,
@@ -480,8 +486,8 @@ export class Composer {
       splitConfigEnabled,
     });
 
-    // If the composed schema is invalid, or it is a feature flag composition, we do not create a changelog
-    if (!routerExecutionConfig || !updatedFederatedGraph?.composedSchemaVersionId || isFeatureFlagComposition) {
+    // If the composed schema is invalid, we do not create a changelog
+    if (!routerExecutionConfig || !updatedFederatedGraph?.composedSchemaVersionId) {
       return {
         schemaVersionId: updatedFederatedGraph?.composedSchemaVersionId || '',
       };

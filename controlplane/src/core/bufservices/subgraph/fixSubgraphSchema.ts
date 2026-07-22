@@ -11,6 +11,7 @@ import { buildSchema } from '../../composition/composition.js';
 import { OpenAIGraphql } from '../../openai-graphql/index.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -33,6 +34,7 @@ export function fixSubgraphSchema(
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
     const graphCompositionRepo = new GraphCompositionRepository(logger, opts.db);
+    const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
     const composer = new Composer(
@@ -42,6 +44,7 @@ export function fixSubgraphSchema(
       subgraphRepo,
       contractRepo,
       graphCompositionRepo,
+      featureFlagRepo,
       opts.chClient,
       opts.webhookProxyUrl,
     );

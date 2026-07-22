@@ -1618,6 +1618,41 @@ export class FeatureFlagRepository {
     return ffSchemaVersion;
   }
 
+  public async getLatestValidFeatureFlagSchemaVersion(data: { targetId: string; featureFlagId: string }) {
+    const latest = await this.db
+      .select({
+        schema: schemaVersion.schemaSDL,
+        clientSchema: schemaVersion.clientSchema,
+        schemaVersionId: schemaVersion.id,
+      })
+      .from(federatedGraphsToFeatureFlagSchemaVersions)
+      .innerJoin(
+        schemaVersion,
+        eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
+      )
+      .innerJoin(graphCompositions, eq(graphCompositions.schemaVersionId, schemaVersion.id))
+      .where(
+        and(
+          eq(schemaVersion.targetId, data.targetId),
+          eq(schemaVersion.organizationId, this.organizationId),
+          eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, data.featureFlagId),
+          eq(graphCompositions.isFeatureFlagComposition, true),
+          eq(graphCompositions.isComposable, true),
+          or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
+          or(isNull(graphCompositions.admissionError), eq(graphCompositions.admissionError, '')),
+        ),
+      )
+      .orderBy(desc(graphCompositions.createdAt))
+      .limit(1)
+      .execute();
+
+    if (latest.length === 0) {
+      return undefined;
+    }
+
+    return latest[0];
+  }
+
   public async delete(featureFlagId: string) {
     await this.db
       .delete(featureFlags)

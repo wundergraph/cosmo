@@ -16,6 +16,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -485,6 +486,7 @@ export function updateProposal(
       const schemaCheckRepo = new SchemaCheckRepository(opts.db);
       const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
       const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
+      const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
       const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
       const composer = new Composer(
         logger,
@@ -493,6 +495,7 @@ export function updateProposal(
         subgraphRepo,
         contractRepo,
         graphCompostionRepo,
+        featureFlagRepo,
         opts.chClient,
         opts.webhookProxyUrl,
       );
