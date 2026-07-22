@@ -204,6 +204,76 @@ func TestInlineLiteralValidationWithPersistedOperations(t *testing.T) {
 	})
 }
 
+// TestAllowStringLiteralsForEnums verifies the opt-in spec deviation
+// (engine execution config allow_string_literals_for_enums) that accepts a string
+// literal where an enum value is expected, as long as the string content matches
+// one of the enum's values. Without the flag, the router enforces the strict
+// GraphQL spec behavior and rejects such literals at validation.
+func TestAllowStringLiteralsForEnums(t *testing.T) {
+	t.Parallel()
+
+	t.Run("disabled by default", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("rejects string literal for enum argument", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { rootFieldWithListOfEnumArg(arg: ["A"]) }`,
+				})
+				requireValidationError(t, res.Body, `Enum "EnumType" cannot represent non-enum value: "A".`)
+			})
+
+			t.Run("rejects string literal for enum field of input object", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { rootFieldWithInput(arg: {enum: "A"}) }`,
+				})
+				requireValidationError(t, res.Body, `Enum "EnumType" cannot represent non-enum value: "A".`)
+			})
+		})
+	})
+
+	t.Run("enabled", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.AllowStringLiteralsForEnums = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("accepts string literal matching an enum value for enum argument", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { rootFieldWithListOfEnumArg(arg: ["A"]) }`,
+				})
+				assert.Equal(t, `{"data":{"rootFieldWithListOfEnumArg":["A"]}}`, res.Body)
+			})
+
+			t.Run("accepts string literal matching an enum value for enum field of input object", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { rootFieldWithInput(arg: {enum: "A"}) }`,
+				})
+				assert.Equal(t, `{"data":{"rootFieldWithInput":"A"}}`, res.Body)
+			})
+
+			t.Run("rejects string literal not matching an enum value", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { rootFieldWithListOfEnumArg(arg: ["NOPE"]) }`,
+				})
+				requireValidationError(t, res.Body, `Value "NOPE" does not exist in "EnumType" enum.`)
+			})
+
+			t.Run("still accepts inline enum literal for enum argument", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { rootFieldWithListOfEnumArg(arg: [A]) }`,
+				})
+				assert.Equal(t, `{"data":{"rootFieldWithListOfEnumArg":["A"]}}`, res.Body)
+			})
+
+			t.Run("still rejects string literal for a non-enum argument mismatch", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { floatField(arg: "1.5") }`,
+				})
+				requireValidationError(t, res.Body, `Float cannot represent non numeric value: "1.5"`)
+			})
+		})
+	})
+}
+
 // requireValidationError asserts the GraphQL response body carries exactly one
 // error with the given message and no data payload.
 //

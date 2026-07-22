@@ -128,6 +128,7 @@ type OperationProcessorOptions struct {
 	ApolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
 	DisableExposingVariablesContentOnValidationError       bool
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool
+	AllowStringLiteralsForEnums                            bool
 	ComplexityLimits                                       *config.ComplexityLimits
 	CostControl                                            *config.CostControl
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
@@ -1563,6 +1564,7 @@ type parseKitOptions struct {
 	apolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
 	disableExposingVariablesContentOnValidationError       bool
 	relaxSubgraphOperationFieldSelectionMergingNullability bool
+	allowStringLiteralsForEnums                            bool
 	enableDefer                                            bool
 	validateInlineArguments                                config.ValidateInlineArguments
 }
@@ -1638,6 +1640,9 @@ func createOperationValidator(options *parseKitOptions) *astvalidation.Operation
 	if options.relaxSubgraphOperationFieldSelectionMergingNullability {
 		opts = append(opts, astvalidation.WithRelaxFieldSelectionMergingNullability())
 	}
+	if options.allowStringLiteralsForEnums {
+		opts = append(opts, astvalidation.WithAllowStringLiteralsForEnums())
+	}
 	return astvalidation.DefaultOperationValidator(opts...)
 }
 
@@ -1662,6 +1667,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,
 			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
+			allowStringLiteralsForEnums:                            opts.AllowStringLiteralsForEnums,
 			validateInlineArguments:                                opts.ValidateInlineArguments,
 		},
 	}
