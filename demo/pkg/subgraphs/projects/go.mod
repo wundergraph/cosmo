@@ -6,7 +6,7 @@ require (
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/stretchr/testify v1.11.1
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
-	google.golang.org/grpc v1.81.1
+	google.golang.org/grpc v1.82.1
 	google.golang.org/protobuf v1.36.11
 )
 
