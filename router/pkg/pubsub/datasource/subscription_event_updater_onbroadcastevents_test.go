@@ -1,8 +1,5 @@
 package datasource
 
-// These tests are a reflection of tests in subscription_event_updater_onreceiveevents_test.go,
-// adjusted for the OnBroadcastEvents hook.
-
 import (
 	"context"
 	"errors"

@@ -125,8 +125,8 @@ func (s *subscriptionEventUpdater) runOnBroadcastEventsHooks(events []StreamEven
 		}()
 
 		evts := events
-		var err error
 		for i := range s.hooks.OnBroadcastEvents.Handlers {
+			var err error
 			evts, err = s.hooks.OnBroadcastEvents.Handlers[i](ctx, s.subscriptionEventConfiguration, s.eventBuilder, evts)
 			if err != nil {
 				s.logger.

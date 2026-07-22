@@ -28,7 +28,7 @@ func TestBroadcastHook(t *testing.T) {
 		errValue  error
 	}
 
-	t.Run("Test Broadcast hook could change events for all subscribers", func(t *testing.T) {
+	t.Run("OnBroadcastEvents hook could change events for all subscribers", func(t *testing.T) {
 		t.Parallel()
 
 		// This test verifies that the broadcast hook can modify events by cloning them first, so they become mutable,
@@ -113,14 +113,14 @@ func TestBroadcastHook(t *testing.T) {
 
 			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, Timeout)
 
-			for i := 0; i < numSubscribers; i++ {
+			for i := range numSubscribers {
 				testenv.AwaitChannelWithT(t, Timeout, subscriptionArgsChs[i], func(t *testing.T, args kafkaSubscriptionArgs) {
 					require.NoError(t, args.errValue)
 					assert.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(args.dataValue))
 				})
 			}
 
-			for i := 0; i < numSubscribers; i++ {
+			for i := range numSubscribers {
 				require.NoError(t, clients[i].Close())
 				testenv.AwaitChannelWithT(t, Timeout, clientRunChs[i], func(t *testing.T, err error) {
 					require.NoError(t, err)
@@ -128,11 +128,12 @@ func TestBroadcastHook(t *testing.T) {
 			}
 
 			// The hook runs once per batch, not once per subscriber.
+			// Asserting >=1 since KafkaPublishUntilReceived could publish more than once.
 			assert.GreaterOrEqual(t, customModule.HookCallCount.Load(), int32(1))
 		})
 	})
 
-	t.Run("Test Broadcast hook error drops the batch but keeps the connection open", func(t *testing.T) {
+	t.Run("OnBroadcastEvents hook error drops the batch but keeps the connection open", func(t *testing.T) {
 		t.Parallel()
 
 		// This test verifies that when the broadcast hook returns an error, the whole batch is dropped
@@ -241,7 +242,7 @@ func TestBroadcastHook(t *testing.T) {
 		})
 	})
 
-	t.Run("Test hook can't assert to mutable types", func(t *testing.T) {
+	t.Run("OnBroadcastEvents can't assert to mutable types", func(t *testing.T) {
 		t.Parallel()
 
 		// This test verifies that regular StreamEvents cannot be type-asserted to MutableStreamEvent.
@@ -338,7 +339,7 @@ func TestBroadcastHook(t *testing.T) {
 		})
 	})
 
-	t.Run("Test Broadcast hook can access subscription event configuration", func(t *testing.T) {
+	t.Run("OnBroadcastEvents hook can access subscription event configuration", func(t *testing.T) {
 		t.Parallel()
 
 		// This test verifies that the broadcast hook can access the subscription event configuration
