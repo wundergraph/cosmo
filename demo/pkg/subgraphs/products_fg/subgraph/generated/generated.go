@@ -46,6 +46,8 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
+	Cost     func(ctx context.Context, obj any, next graphql.Resolver, weight int) (res any, err error)
+	ListSize func(ctx context.Context, obj any, next graphql.Resolver, assumedSize *int, slicingArguments []string, sizedFields []string, requireOneSlicingArgument *bool) (res any, err error)
 }
 
 type ComplexityRoot struct {
@@ -103,9 +105,16 @@ type ComplexityRoot struct {
 	Queries struct {
 		FactTypes                func(childComplexity int) int
 		ProductTypes             func(childComplexity int) int
+		SearchThings             func(childComplexity int, input model.ProductSearchInput) int
+		SharedThings             func(childComplexity int, numOfA int, numOfB int) int
+		SlicedThings             func(childComplexity int, first *int, last *int) int
 		TopSecretFederationFacts func(childComplexity int) int
 		__resolve__service       func(childComplexity int) int
 		__resolve_entities       func(childComplexity int, representations []map[string]any) int
+	}
+
+	Thing struct {
+		A func(childComplexity int) int
 	}
 
 	_Service struct {
@@ -129,6 +138,9 @@ type QueriesResolver interface {
 	ProductTypes(ctx context.Context) ([]model.Products, error)
 	TopSecretFederationFacts(ctx context.Context) ([]model.TopSecretFact, error)
 	FactTypes(ctx context.Context) ([]model.TopSecretFactType, error)
+	SharedThings(ctx context.Context, numOfA int, numOfB int) ([]*model.Thing, error)
+	SlicedThings(ctx context.Context, first *int, last *int) ([]*model.Thing, error)
+	SearchThings(ctx context.Context, input model.ProductSearchInput) ([]*model.Thing, error)
 }
 
 type executableSchema struct {
@@ -362,6 +374,42 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Queries.ProductTypes(childComplexity), true
 
+	case "Queries.searchThings":
+		if e.complexity.Queries.SearchThings == nil {
+			break
+		}
+
+		args, err := ec.field_Queries_searchThings_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Queries.SearchThings(childComplexity, args["input"].(model.ProductSearchInput)), true
+
+	case "Queries.sharedThings":
+		if e.complexity.Queries.SharedThings == nil {
+			break
+		}
+
+		args, err := ec.field_Queries_sharedThings_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Queries.SharedThings(childComplexity, args["numOfA"].(int), args["numOfB"].(int)), true
+
+	case "Queries.slicedThings":
+		if e.complexity.Queries.SlicedThings == nil {
+			break
+		}
+
+		args, err := ec.field_Queries_slicedThings_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Queries.SlicedThings(childComplexity, args["first"].(*int), args["last"].(*int)), true
+
 	case "Queries.topSecretFederationFacts":
 		if e.complexity.Queries.TopSecretFederationFacts == nil {
 			break
@@ -388,6 +436,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Queries.__resolve_entities(childComplexity, args["representations"].([]map[string]any)), true
 
+	case "Thing.a":
+		if e.complexity.Thing.A == nil {
+			break
+		}
+
+		return e.complexity.Thing.A(childComplexity), true
+
 	case "_Service.sdl":
 		if e.complexity._Service.SDL == nil {
 			break
@@ -403,6 +458,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
 	ec := executionContext{opCtx, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputProductSearchInput,
+		ec.unmarshalInputProductSearchPagination,
 		ec.unmarshalInputTopSecretFactInput,
 	)
 	first := true
@@ -504,27 +561,57 @@ var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `extend schema
 @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
 
+directive @cost(weight: Int!) on
+  | ARGUMENT_DEFINITION
+  | ENUM
+  | FIELD_DEFINITION
+  | INPUT_FIELD_DEFINITION
+  | OBJECT
+  | SCALAR
+
+directive @listSize(
+  assumedSize: Int,
+  slicingArguments: [String!],
+  sizedFields: [String!],
+  requireOneSlicingArgument: Boolean = true
+) on FIELD_DEFINITION
+
 schema {
   query: Queries
   mutation: Mutation
 }
 
-# dwedwedew
-
 type Queries {
-  productTypes: [Products!]!
+  productTypes: [Products!]! @listSize(assumedSize: 50)
   topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
   factTypes: [TopSecretFactType!]
+  sharedThings(numOfA: Int! numOfB: Int!): [Thing!]! @listSize(slicingArguments: ["numOfA"]) @shareable
+  slicedThings(first: Int, last: Int): [Thing] @listSize(slicingArguments: ["first", "last"])
+  searchThings(input: ProductSearchInput!): [Thing!]! @listSize(slicingArguments: ["input.pagination.first"])
 }
 
 type Mutation {
   addFact(fact: TopSecretFactInput!): TopSecretFact! @requiresScopes(scopes: [["write:fact"], ["write:all"]])
 }
 
+type Thing @shareable {
+  a: String!
+}
+
 input TopSecretFactInput {
   title: String!
   description: FactContent!
   factType: TopSecretFactType!
+}
+
+input ProductSearchPagination {
+  first: Int
+  after: String
+}
+
+input ProductSearchInput {
+  pagination: ProductSearchPagination
+  query: String
 }
 
 enum TopSecretFactType @authenticated {
@@ -538,7 +625,7 @@ interface TopSecretFact @authenticated {
   factType: TopSecretFactType
 }
 
-scalar FactContent @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
+scalar FactContent @cost(weight: 10) @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
 
 type DirectiveFact implements TopSecretFact @authenticated {
   title: String!
@@ -582,7 +669,7 @@ type Consultancy @key(fields: "upc") {
   name: ProductName!
 }
 
-type Cosmo @key(fields: "upc") {
+type Cosmo @key(fields: "upc") @cost(weight: 8) {
   upc: ID!
   name: ProductName!
   repositoryURL: String!
@@ -670,6 +757,131 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) dir_cost_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.dir_cost_argsWeight(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["weight"] = arg0
+	return args, nil
+}
+func (ec *executionContext) dir_cost_argsWeight(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int, error) {
+	if _, ok := rawArgs["weight"]; !ok {
+		var zeroVal int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("weight"))
+	if tmp, ok := rawArgs["weight"]; ok {
+		return ec.unmarshalNInt2int(ctx, tmp)
+	}
+
+	var zeroVal int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) dir_listSize_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.dir_listSize_argsAssumedSize(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["assumedSize"] = arg0
+	arg1, err := ec.dir_listSize_argsSlicingArguments(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["slicingArguments"] = arg1
+	arg2, err := ec.dir_listSize_argsSizedFields(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["sizedFields"] = arg2
+	arg3, err := ec.dir_listSize_argsRequireOneSlicingArgument(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["requireOneSlicingArgument"] = arg3
+	return args, nil
+}
+func (ec *executionContext) dir_listSize_argsAssumedSize(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*int, error) {
+	if _, ok := rawArgs["assumedSize"]; !ok {
+		var zeroVal *int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("assumedSize"))
+	if tmp, ok := rawArgs["assumedSize"]; ok {
+		return ec.unmarshalOInt2ᚖint(ctx, tmp)
+	}
+
+	var zeroVal *int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) dir_listSize_argsSlicingArguments(
+	ctx context.Context,
+	rawArgs map[string]any,
+) ([]string, error) {
+	if _, ok := rawArgs["slicingArguments"]; !ok {
+		var zeroVal []string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("slicingArguments"))
+	if tmp, ok := rawArgs["slicingArguments"]; ok {
+		return ec.unmarshalOString2ᚕstringᚄ(ctx, tmp)
+	}
+
+	var zeroVal []string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) dir_listSize_argsSizedFields(
+	ctx context.Context,
+	rawArgs map[string]any,
+) ([]string, error) {
+	if _, ok := rawArgs["sizedFields"]; !ok {
+		var zeroVal []string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("sizedFields"))
+	if tmp, ok := rawArgs["sizedFields"]; ok {
+		return ec.unmarshalOString2ᚕstringᚄ(ctx, tmp)
+	}
+
+	var zeroVal []string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) dir_listSize_argsRequireOneSlicingArgument(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*bool, error) {
+	if _, ok := rawArgs["requireOneSlicingArgument"]; !ok {
+		var zeroVal *bool
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("requireOneSlicingArgument"))
+	if tmp, ok := rawArgs["requireOneSlicingArgument"]; ok {
+		return ec.unmarshalOBoolean2ᚖbool(ctx, tmp)
+	}
+
+	var zeroVal *bool
+	return zeroVal, nil
+}
 
 func (ec *executionContext) field_Documentation_url_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
@@ -892,6 +1104,136 @@ func (ec *executionContext) field_Queries__entities_argsRepresentations(
 	}
 
 	var zeroVal []map[string]any
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Queries_searchThings_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Queries_searchThings_argsInput(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Queries_searchThings_argsInput(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (model.ProductSearchInput, error) {
+	if _, ok := rawArgs["input"]; !ok {
+		var zeroVal model.ProductSearchInput
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+	if tmp, ok := rawArgs["input"]; ok {
+		return ec.unmarshalNProductSearchInput2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductSearchInput(ctx, tmp)
+	}
+
+	var zeroVal model.ProductSearchInput
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Queries_sharedThings_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Queries_sharedThings_argsNumOfA(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["numOfA"] = arg0
+	arg1, err := ec.field_Queries_sharedThings_argsNumOfB(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["numOfB"] = arg1
+	return args, nil
+}
+func (ec *executionContext) field_Queries_sharedThings_argsNumOfA(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int, error) {
+	if _, ok := rawArgs["numOfA"]; !ok {
+		var zeroVal int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("numOfA"))
+	if tmp, ok := rawArgs["numOfA"]; ok {
+		return ec.unmarshalNInt2int(ctx, tmp)
+	}
+
+	var zeroVal int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Queries_sharedThings_argsNumOfB(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int, error) {
+	if _, ok := rawArgs["numOfB"]; !ok {
+		var zeroVal int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("numOfB"))
+	if tmp, ok := rawArgs["numOfB"]; ok {
+		return ec.unmarshalNInt2int(ctx, tmp)
+	}
+
+	var zeroVal int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Queries_slicedThings_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Queries_slicedThings_argsFirst(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["first"] = arg0
+	arg1, err := ec.field_Queries_slicedThings_argsLast(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["last"] = arg1
+	return args, nil
+}
+func (ec *executionContext) field_Queries_slicedThings_argsFirst(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*int, error) {
+	if _, ok := rawArgs["first"]; !ok {
+		var zeroVal *int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("first"))
+	if tmp, ok := rawArgs["first"]; ok {
+		return ec.unmarshalOInt2ᚖint(ctx, tmp)
+	}
+
+	var zeroVal *int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Queries_slicedThings_argsLast(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*int, error) {
+	if _, ok := rawArgs["last"]; !ok {
+		var zeroVal *int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("last"))
+	if tmp, ok := rawArgs["last"]; ok {
+		return ec.unmarshalOInt2ᚖint(ctx, tmp)
+	}
+
+	var zeroVal *int
 	return zeroVal, nil
 }
 
@@ -1292,8 +1634,35 @@ func (ec *executionContext) _DirectiveFact_description(ctx context.Context, fiel
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Description, nil
+		directive0 := func(rctx context.Context) (any, error) {
+			ctx = rctx // use context from middleware stack in children
+			return obj.Description, nil
+		}
+
+		directive1 := func(ctx context.Context) (any, error) {
+			weight, err := ec.unmarshalNInt2int(ctx, 10)
+			if err != nil {
+				var zeroVal string
+				return zeroVal, err
+			}
+			if ec.directives.Cost == nil {
+				var zeroVal string
+				return zeroVal, errors.New("directive cost is not implemented")
+			}
+			return ec.directives.Cost(ctx, obj, directive0, weight)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(string); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be string`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1721,8 +2090,35 @@ func (ec *executionContext) _Entity_findCosmoByUpc(ctx context.Context, field gr
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Entity().FindCosmoByUpc(rctx, fc.Args["upc"].(string))
+		directive0 := func(rctx context.Context) (any, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Entity().FindCosmoByUpc(rctx, fc.Args["upc"].(string))
+		}
+
+		directive1 := func(ctx context.Context) (any, error) {
+			weight, err := ec.unmarshalNInt2int(ctx, 8)
+			if err != nil {
+				var zeroVal *model.Cosmo
+				return zeroVal, err
+			}
+			if ec.directives.Cost == nil {
+				var zeroVal *model.Cosmo
+				return zeroVal, errors.New("directive cost is not implemented")
+			}
+			return ec.directives.Cost(ctx, nil, directive0, weight)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Cosmo); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg/subgraph/model.Cosmo`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1893,8 +2289,35 @@ func (ec *executionContext) _EntityFact_description(ctx context.Context, field g
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Description, nil
+		directive0 := func(rctx context.Context) (any, error) {
+			ctx = rctx // use context from middleware stack in children
+			return obj.Description, nil
+		}
+
+		directive1 := func(ctx context.Context) (any, error) {
+			weight, err := ec.unmarshalNInt2int(ctx, 10)
+			if err != nil {
+				var zeroVal string
+				return zeroVal, err
+			}
+			if ec.directives.Cost == nil {
+				var zeroVal string
+				return zeroVal, errors.New("directive cost is not implemented")
+			}
+			return ec.directives.Cost(ctx, obj, directive0, weight)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(string); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be string`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2022,8 +2445,35 @@ func (ec *executionContext) _MiscellaneousFact_description(ctx context.Context, 
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Description, nil
+		directive0 := func(rctx context.Context) (any, error) {
+			ctx = rctx // use context from middleware stack in children
+			return obj.Description, nil
+		}
+
+		directive1 := func(ctx context.Context) (any, error) {
+			weight, err := ec.unmarshalNInt2int(ctx, 10)
+			if err != nil {
+				var zeroVal string
+				return zeroVal, err
+			}
+			if ec.directives.Cost == nil {
+				var zeroVal string
+				return zeroVal, errors.New("directive cost is not implemented")
+			}
+			return ec.directives.Cost(ctx, obj, directive0, weight)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(string); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be string`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2162,8 +2612,40 @@ func (ec *executionContext) _Queries_productTypes(ctx context.Context, field gra
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Queries().ProductTypes(rctx)
+		directive0 := func(rctx context.Context) (any, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Queries().ProductTypes(rctx)
+		}
+
+		directive1 := func(ctx context.Context) (any, error) {
+			assumedSize, err := ec.unmarshalOInt2ᚖint(ctx, 50)
+			if err != nil {
+				var zeroVal []model.Products
+				return zeroVal, err
+			}
+			requireOneSlicingArgument, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
+			if err != nil {
+				var zeroVal []model.Products
+				return zeroVal, err
+			}
+			if ec.directives.ListSize == nil {
+				var zeroVal []model.Products
+				return zeroVal, errors.New("directive listSize is not implemented")
+			}
+			return ec.directives.ListSize(ctx, nil, directive0, assumedSize, nil, nil, requireOneSlicingArgument)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]model.Products); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg/subgraph/model.Products`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2274,6 +2756,276 @@ func (ec *executionContext) fieldContext_Queries_factTypes(_ context.Context, fi
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type TopSecretFactType does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Queries_sharedThings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Queries_sharedThings(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		directive0 := func(rctx context.Context) (any, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Queries().SharedThings(rctx, fc.Args["numOfA"].(int), fc.Args["numOfB"].(int))
+		}
+
+		directive1 := func(ctx context.Context) (any, error) {
+			slicingArguments, err := ec.unmarshalOString2ᚕstringᚄ(ctx, []any{"numOfA"})
+			if err != nil {
+				var zeroVal []*model.Thing
+				return zeroVal, err
+			}
+			requireOneSlicingArgument, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
+			if err != nil {
+				var zeroVal []*model.Thing
+				return zeroVal, err
+			}
+			if ec.directives.ListSize == nil {
+				var zeroVal []*model.Thing
+				return zeroVal, errors.New("directive listSize is not implemented")
+			}
+			return ec.directives.ListSize(ctx, nil, directive0, nil, slicingArguments, nil, requireOneSlicingArgument)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.Thing); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg/subgraph/model.Thing`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Thing)
+	fc.Result = res
+	return ec.marshalNThing2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐThingᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Queries_sharedThings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Queries",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "a":
+				return ec.fieldContext_Thing_a(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Thing", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Queries_sharedThings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Queries_slicedThings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Queries_slicedThings(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		directive0 := func(rctx context.Context) (any, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Queries().SlicedThings(rctx, fc.Args["first"].(*int), fc.Args["last"].(*int))
+		}
+
+		directive1 := func(ctx context.Context) (any, error) {
+			slicingArguments, err := ec.unmarshalOString2ᚕstringᚄ(ctx, []any{"first", "last"})
+			if err != nil {
+				var zeroVal []*model.Thing
+				return zeroVal, err
+			}
+			requireOneSlicingArgument, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
+			if err != nil {
+				var zeroVal []*model.Thing
+				return zeroVal, err
+			}
+			if ec.directives.ListSize == nil {
+				var zeroVal []*model.Thing
+				return zeroVal, errors.New("directive listSize is not implemented")
+			}
+			return ec.directives.ListSize(ctx, nil, directive0, nil, slicingArguments, nil, requireOneSlicingArgument)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.Thing); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg/subgraph/model.Thing`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Thing)
+	fc.Result = res
+	return ec.marshalOThing2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐThing(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Queries_slicedThings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Queries",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "a":
+				return ec.fieldContext_Thing_a(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Thing", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Queries_slicedThings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Queries_searchThings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Queries_searchThings(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		directive0 := func(rctx context.Context) (any, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Queries().SearchThings(rctx, fc.Args["input"].(model.ProductSearchInput))
+		}
+
+		directive1 := func(ctx context.Context) (any, error) {
+			slicingArguments, err := ec.unmarshalOString2ᚕstringᚄ(ctx, []any{"input.pagination.first"})
+			if err != nil {
+				var zeroVal []*model.Thing
+				return zeroVal, err
+			}
+			requireOneSlicingArgument, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
+			if err != nil {
+				var zeroVal []*model.Thing
+				return zeroVal, err
+			}
+			if ec.directives.ListSize == nil {
+				var zeroVal []*model.Thing
+				return zeroVal, errors.New("directive listSize is not implemented")
+			}
+			return ec.directives.ListSize(ctx, nil, directive0, nil, slicingArguments, nil, requireOneSlicingArgument)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.Thing); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg/subgraph/model.Thing`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Thing)
+	fc.Result = res
+	return ec.marshalNThing2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐThingᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Queries_searchThings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Queries",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "a":
+				return ec.fieldContext_Thing_a(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Thing", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Queries_searchThings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -2507,6 +3259,50 @@ func (ec *executionContext) fieldContext_Queries___schema(_ context.Context, fie
 				return ec.fieldContext___Schema_directives(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type __Schema", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Thing_a(ctx context.Context, field graphql.CollectedField, obj *model.Thing) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Thing_a(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.A, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Thing_a(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Thing",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4504,6 +5300,74 @@ func (ec *executionContext) fieldContext___Type_isOneOf(_ context.Context, field
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputProductSearchInput(ctx context.Context, obj any) (model.ProductSearchInput, error) {
+	var it model.ProductSearchInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"pagination", "query"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "pagination":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
+			data, err := ec.unmarshalOProductSearchPagination2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductSearchPagination(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Pagination = data
+		case "query":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Query = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputProductSearchPagination(ctx context.Context, obj any) (model.ProductSearchPagination, error) {
+	var it model.ProductSearchPagination
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"first", "after"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "first":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("first"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.First = data
+		case "after":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("after"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.After = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputTopSecretFactInput(ctx context.Context, obj any) (model.TopSecretFactInput, error) {
 	var it model.TopSecretFactInput
 	asMap := map[string]any{}
@@ -4527,11 +5391,31 @@ func (ec *executionContext) unmarshalInputTopSecretFactInput(ctx context.Context
 			it.Title = data
 		case "description":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
-			data, err := ec.unmarshalNFactContent2string(ctx, v)
-			if err != nil {
-				return it, err
+			directive0 := func(ctx context.Context) (any, error) { return ec.unmarshalNFactContent2string(ctx, v) }
+
+			directive1 := func(ctx context.Context) (any, error) {
+				weight, err := ec.unmarshalNInt2int(ctx, 10)
+				if err != nil {
+					var zeroVal string
+					return zeroVal, err
+				}
+				if ec.directives.Cost == nil {
+					var zeroVal string
+					return zeroVal, errors.New("directive cost is not implemented")
+				}
+				return ec.directives.Cost(ctx, obj, directive0, weight)
 			}
-			it.Description = data
+
+			tmp, err := directive1(ctx)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			if data, ok := tmp.(string); ok {
+				it.Description = data
+			} else {
+				err := fmt.Errorf(`unexpected type %T from directive, should be string`, tmp)
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
 		case "factType":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("factType"))
 			data, err := ec.unmarshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, v)
@@ -5270,6 +6154,69 @@ func (ec *executionContext) _Queries(ctx context.Context, sel ast.SelectionSet) 
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "sharedThings":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Queries_sharedThings(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "slicedThings":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Queries_slicedThings(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "searchThings":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Queries_searchThings(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "_entities":
 			field := field
 
@@ -5322,6 +6269,45 @@ func (ec *executionContext) _Queries(ctx context.Context, sel ast.SelectionSet) 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Queries___schema(ctx, field)
 			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var thingImplementors = []string{"Thing"}
+
+func (ec *executionContext) _Thing(ctx context.Context, sel ast.SelectionSet, obj *model.Thing) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, thingImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Thing")
+		case "a":
+			out.Values[i] = ec._Thing_a(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5907,6 +6893,11 @@ func (ec *executionContext) marshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋ
 	return ret
 }
 
+func (ec *executionContext) unmarshalNProductSearchInput2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductSearchInput(ctx context.Context, v any) (model.ProductSearchInput, error) {
+	res, err := ec.unmarshalInputProductSearchInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNProducts2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProducts(ctx context.Context, sel ast.SelectionSet, v model.Products) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -6005,6 +6996,60 @@ func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel
 	}
 
 	return ret
+}
+
+func (ec *executionContext) marshalNThing2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐThingᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Thing) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNThing2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐThing(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNThing2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐThing(ctx context.Context, sel ast.SelectionSet, v *model.Thing) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Thing(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNTopSecretFact2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFact(ctx context.Context, sel ast.SelectionSet, v model.TopSecretFact) graphql.Marshaler {
@@ -6605,6 +7650,32 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v any) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	_ = ctx
+	res := graphql.MarshalInt(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOProductSearchPagination2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductSearchPagination(ctx context.Context, v any) (*model.ProductSearchPagination, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputProductSearchPagination(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v any) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -6669,6 +7740,54 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	_ = ctx
 	res := graphql.MarshalString(*v)
 	return res
+}
+
+func (ec *executionContext) marshalOThing2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐThing(ctx context.Context, sel ast.SelectionSet, v []*model.Thing) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOThing2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐThing(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	return ret
+}
+
+func (ec *executionContext) marshalOThing2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐThing(ctx context.Context, sel ast.SelectionSet, v *model.Thing) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Thing(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOTopSecretFactType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactTypeᚄ(ctx context.Context, v any) ([]model.TopSecretFactType, error) {

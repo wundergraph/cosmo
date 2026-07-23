@@ -62,7 +62,8 @@ var employees = []*model.Employee{
 			model.ProductNameCosmo,
 			model.ProductNameSdk,
 		},
-		Notes: strPtr("Suvij notes resolved by products"),
+		ProductCount: 2,
+		Notes:        strPtr("Suvij notes resolved by products"),
 	},
 	{
 		ID: 8,
