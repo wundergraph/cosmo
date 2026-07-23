@@ -116,7 +116,7 @@
               {
                 "group": "Custom Modules",
                 "icon": "cubes",
-                "pages": ["router/custom-modules", "router/custom-modules-migration"]
+                "pages": ["router/custom-modules", "router/custom-modules-migration", "router/wasm-modules"]
               },
               {
                 "group": "Cosmo Connect",

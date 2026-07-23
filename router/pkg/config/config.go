@@ -1430,6 +1430,31 @@ type IntrospectionConfiguration struct {
 	Secret  string `yaml:"secret" env:"INTROSPECTION_SECRET"`
 }
 
+// WasmModuleConfiguration configures a single WASM (WebAssembly) custom module.
+// WASM modules extend the router the same way in-process custom modules do, but
+// are loaded from a compiled .wasm file referenced in configuration, without
+// recompiling the router. See
+// https://cosmo-docs.wundergraph.com/router/wasm-modules.
+type WasmModuleConfiguration struct {
+	// ID is the unique module identifier. WASM modules share the module ID
+	// namespace and priority ordering with in-process custom modules.
+	ID string `yaml:"id"`
+	// Enabled toggles the module. When omitted the module is enabled.
+	Enabled *bool `yaml:"enabled,omitempty"`
+	// Path is the filesystem path to the compiled .wasm file.
+	Path string `yaml:"path"`
+	// Priority orders module execution; lower runs first (0 is lowest priority).
+	Priority int `yaml:"priority,omitempty"`
+	// Timeout is the per-hook-call timeout.
+	Timeout time.Duration `yaml:"timeout,omitempty"`
+	// MaxInstances is the size of the WASM instance pool. 0 means GOMAXPROCS.
+	MaxInstances int `yaml:"max_instances,omitempty"`
+	// AllowedHosts is an optional egress allowlist granted to the guest.
+	AllowedHosts []string `yaml:"allowed_hosts,omitempty"`
+	// Config is arbitrary configuration passed to the module's provision hook.
+	Config map[string]any `yaml:"config,omitempty"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -1447,12 +1472,13 @@ type Config struct {
 	ConnectRPC     ConnectRPCConfiguration `yaml:"connect_rpc,omitempty"`
 	DemoMode       bool                    `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
 
-	Modules        map[string]interface{} `yaml:"modules,omitempty"`
-	Headers        HeaderRules            `yaml:"headers,omitempty"`
-	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty" envPrefix:"TRAFFIC_SHAPING_"`
-	FileUpload     FileUpload             `yaml:"file_upload,omitempty"`
-	AccessLogs     AccessLogsConfig       `yaml:"access_logs,omitempty"`
-	Batching       BatchingConfig         `yaml:"batching,omitempty"`
+	Modules        map[string]interface{}    `yaml:"modules,omitempty"`
+	WasmModules    []WasmModuleConfiguration `yaml:"wasm_modules,omitempty"`
+	Headers        HeaderRules               `yaml:"headers,omitempty"`
+	TrafficShaping TrafficShapingRules       `yaml:"traffic_shaping,omitempty" envPrefix:"TRAFFIC_SHAPING_"`
+	FileUpload     FileUpload                `yaml:"file_upload,omitempty"`
+	AccessLogs     AccessLogsConfig          `yaml:"access_logs,omitempty"`
+	Batching       BatchingConfig            `yaml:"batching,omitempty"`
 
 	ListenAddr                    string                      `yaml:"listen_addr" envDefault:"localhost:3002" env:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`

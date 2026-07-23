@@ -221,6 +221,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithStorageProviders(config.StorageProviders),
 		WithGraphQLPath(config.GraphQLPath),
 		WithModulesConfig(config.Modules),
+		WithWasmModules(config.WasmModules),
 		WithGracePeriod(config.GracePeriod),
 		WithPlaygroundConfig(config.PlaygroundConfig),
 		WithPlaygroundPath(config.PlaygroundPath),

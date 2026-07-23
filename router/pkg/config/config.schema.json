@@ -2262,6 +2262,60 @@
         "additionalProperties": true
       }
     },
+    "wasm_modules": {
+      "type": "array",
+      "description": "WASM (WebAssembly) custom modules loaded from compiled .wasm files. They extend the router the same way in-process custom modules do, but are loaded from configuration without recompiling the router. See https://cosmo-docs.wundergraph.com/router/wasm-modules for more information.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "path"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The unique identifier of the module. WASM modules share the module id namespace and priority ordering with in-process custom modules."
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enables or disables the module. When omitted the module is enabled."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The filesystem path to the compiled .wasm file."
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Orders module execution relative to other modules. Lower values run first; 0 is treated as the lowest priority."
+          },
+          "timeout": {
+            "type": "string",
+            "format": "go-duration",
+            "default": "10s",
+            "description": "The maximum duration of a single hook invocation. The period is specified as a string with a number and a unit, e.g. 10s, 1m."
+          },
+          "max_instances": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The size of the pool of WASM instances used to serve concurrent calls. 0 means the number of available CPUs (GOMAXPROCS)."
+          },
+          "allowed_hosts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "An optional allowlist of hosts the module may make outbound requests to. Empty means no outbound access is granted."
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Arbitrary configuration passed to the module's provision hook as JSON."
+          }
+        }
+      }
+    },
     "authentication": {
       "type": "object",
       "description": "The configuration for the authentication. The authentication is used to authenticate the incoming requests. We currently support JWK (JSON Web Key) authentication.",

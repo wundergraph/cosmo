@@ -235,6 +235,7 @@
   },
   "DemoMode": false,
   "Modules": null,
+  "WasmModules": null,
   "Headers": {
     "All": null,
     "Subgraphs": null,

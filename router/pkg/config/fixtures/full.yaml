@@ -274,6 +274,18 @@ modules:
     # Arbitrary values, unmarshalled by the module
     value: 1
 
+wasm_modules:
+  - id: myWasmModule
+    enabled: true
+    path: ./modules/my_module.wasm
+    priority: 5
+    timeout: 10s
+    max_instances: 4
+    allowed_hosts:
+      - 'https://example.com'
+    config:
+      value: hello
+
 cluster:
   name: 'my-cluster'
 

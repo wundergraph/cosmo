@@ -666,7 +666,7 @@ func (r *Router) listenAndServe() error {
 	return nil
 }
 
-func (r *Router) initModules(ctx context.Context) error {
+func (r *Router) initModules(ctx context.Context) (err error) {
 	var spanNameFormatterChain []func(SpanNameFormatterFunc) SpanNameFormatterFunc
 
 	moduleList := make([]ModuleInfo, 0, len(modules)+len(r.customModules))
@@ -677,6 +677,34 @@ func (r *Router) initModules(ctx context.Context) error {
 
 	for _, module := range r.customModules {
 		moduleList = append(moduleList, module.Module())
+	}
+
+	// Load WASM modules declared in the router configuration and register them
+	// alongside in-process custom modules. From here on they go through exactly
+	// the same lifecycle (config decode is skipped, Provision, interface
+	// type-asserts, Cleanup).
+	wasmModules, wasmRuntime, err := buildWasmModules(ctx, r.wasmModulesConfig, r.logger)
+	if err != nil {
+		return fmt.Errorf("failed to load wasm modules: %w", err)
+	}
+	r.wasmRuntime = wasmRuntime
+	r.wasmModules = wasmModules
+	// If a later step in initModules fails (e.g. another module's Provision),
+	// the WASM modules have already been compiled and provisioned but may not
+	// yet be tracked in r.modules for the normal Cleanup path, so close them
+	// here to avoid leaking Extism instances. Cleanup/Close are idempotent.
+	defer func() {
+		if err != nil {
+			for _, wm := range wasmModules {
+				_ = wm.Cleanup()
+			}
+			if wasmRuntime != nil {
+				_ = wasmRuntime.Close(ctx)
+			}
+		}
+	}()
+	for _, wm := range wasmModules {
+		moduleList = append(moduleList, wm.Module())
 	}
 
 	moduleList = sortModules(moduleList)
@@ -1966,6 +1994,20 @@ func (r *Router) Shutdown(ctx context.Context) error {
 
 	wg.Wait()
 
+	// Close WASM modules explicitly (idempotent) in case any were loaded but
+	// never registered in r.modules due to a startup failure, then close the
+	// shared WASM runtime after all module cleanups have completed.
+	for _, wm := range r.wasmModules {
+		if closeErr := wm.Cleanup(); closeErr != nil {
+			err.Append(fmt.Errorf("failed to clean wasm module %s: %w", wm.id, closeErr))
+		}
+	}
+	if r.wasmRuntime != nil {
+		if closeErr := r.wasmRuntime.Close(ctx); closeErr != nil {
+			err.Append(fmt.Errorf("failed to close wasm runtime: %w", closeErr))
+		}
+	}
+
 	return err.ErrOrNil()
 }
 
@@ -2226,6 +2268,14 @@ func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
 func WithCustomModules(modules ...Module) Option {
 	return func(r *Router) {
 		r.customModules = modules
+	}
+}
+
+// WithWasmModules configures WASM (WebAssembly) custom modules loaded from
+// compiled .wasm files referenced in the router configuration.
+func WithWasmModules(wasmModules []config.WasmModuleConfiguration) Option {
+	return func(r *Router) {
+		r.wasmModulesConfig = wasmModules
 	}
 }
 

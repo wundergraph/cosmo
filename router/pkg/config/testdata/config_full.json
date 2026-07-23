@@ -308,6 +308,22 @@
       "value": 1
     }
   },
+  "WasmModules": [
+    {
+      "ID": "myWasmModule",
+      "Enabled": true,
+      "Path": "./modules/my_module.wasm",
+      "Priority": 5,
+      "Timeout": 10000000000,
+      "MaxInstances": 4,
+      "AllowedHosts": [
+        "https://example.com"
+      ],
+      "Config": {
+        "value": "hello"
+      }
+    }
+  ],
   "Headers": {
     "All": {
       "Request": [

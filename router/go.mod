@@ -67,6 +67,7 @@ require (
 	github.com/cep21/circuit/v4 v4.0.0
 	github.com/dgraph-io/ristretto/v2 v2.4.0
 	github.com/expr-lang/expr v1.17.7
+	github.com/extism/go-sdk v1.7.1
 	github.com/goccy/go-json v0.10.3
 	github.com/google/go-containerregistry v0.20.3
 	github.com/google/uuid v1.6.0
@@ -81,6 +82,7 @@ require (
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/otlptranslator v1.0.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
+	github.com/tetratelabs/wazero v1.9.0
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
 	github.com/wundergraph/astjson v1.1.0
 	github.com/wundergraph/go-arena v1.3.0
@@ -89,6 +91,13 @@ require (
 	golang.org/x/net v0.55.0
 	golang.org/x/text v0.37.0
 	golang.org/x/time v0.9.0
+)
+
+require (
+	github.com/dylibso/observe-sdk/go v0.0.0-20240819160327-2d926c5d788a // indirect
+	github.com/gobwas/glob v0.2.3 // indirect
+	github.com/ianlancetaylor/demangle v0.0.0-20240805132620-81f5be970eca // indirect
+	github.com/tetratelabs/wabin v0.0.0-20230304001439-f6f874872834 // indirect
 )
 
 require (
@@ -161,6 +170,7 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
+	github.com/wundergraph/cosmo/router-wasm-module v0.0.0-00010101000000-000000000000
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
@@ -181,3 +191,5 @@ require (
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
 // replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+
+replace github.com/wundergraph/cosmo/router-wasm-module => ../router-wasm-module

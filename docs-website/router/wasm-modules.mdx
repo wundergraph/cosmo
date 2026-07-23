@@ -1,0 +1,118 @@
+---
+title: "WASM Modules"
+description: "Load pre-compiled WebAssembly modules into the router from configuration, without recompiling the router binary."
+icon: "cube"
+---
+
+WASM modules are the configuration-loadable counterpart to [custom modules](/router/custom-modules). You write a module in Go, compile it to WebAssembly, and reference the `.wasm` file from the router configuration. The router loads it at startup. No fork or rebuild of the router binary is required.
+
+WASM modules run in a sandbox ([Extism](https://extism.org/) on top of the [wazero](https://wazero.io/) runtime) and implement the same handler interfaces as custom modules, through a guest SDK that mirrors `core.Module`.
+
+<Info>
+  Use a custom module when you compile your own router binary and want full, in-process access to the router APIs. Use a WASM module when you want to ship a module as a self-contained artifact and load it from configuration.
+</Info>
+
+## Supported hooks
+
+A WASM module implements any subset of these SDK interfaces. The router only wires up the hooks a module actually implements.
+
+| SDK interface | Runs |
+|---|---|
+| `Provisioner` | Once per instance at startup. Validate configuration here. |
+| `EnginePreOriginHandler` | Before each subgraph request. Modify the request or short-circuit it. |
+| `EnginePostOriginHandler` | After each subgraph response. Modify or replace the response. |
+| `RouterOnRequestHandler` | Early on the client request, before tracing, authentication, and operation parsing. |
+| `SubscriptionOnStartHandler` | At subscription start (Cosmo Streams / EDFS). |
+| `StreamPublishEventHandler` | Before stream events are published. |
+| `StreamReceiveEventHandler` | After stream events are received. |
+| `SubscriptionOnCreateHandler` | At subscription creation (experimental). |
+
+The router-level `RouterMiddlewareHandler` is not available to WASM modules. Use `RouterOnRequestHandler` instead.
+
+<Note>
+  Each hook receives a JSON snapshot of the request/response and the request context, and returns the changes to apply. A module never holds a live reference to router objects, which keeps it safe to run concurrently behind a pool of WASM instances. At `RouterOnRequest` time the GraphQL operation has not been parsed yet, so the operation fields of the snapshot are empty.
+</Note>
+
+## Writing a module
+
+Create a Go module that depends on the guest SDK and register your module implementation:
+
+```go
+package main
+
+import (
+	"github.com/wundergraph/cosmo/router-wasm-module/sdk"
+	"github.com/wundergraph/cosmo/router-wasm-module/wire"
+)
+
+type MyModule struct {
+	value string
+}
+
+// Provision validates configuration and initializes the module.
+// config is the raw JSON of the `config:` block in wasm_modules.
+func (m *MyModule) Provision(config []byte) error {
+	return nil
+}
+
+// OnOriginRequest mutates the outgoing subgraph request. Return a non-nil
+// response to short-circuit the request.
+func (m *MyModule) OnOriginRequest(req *wire.HTTPRequest, ctx *sdk.RequestContext) *wire.HTTPResponse {
+	req.Header.Set("X-My-Header", "value")
+	return nil
+}
+
+func init() { sdk.Register(&MyModule{}) }
+func main() {}
+```
+
+## Building
+
+Compile the module to a WebAssembly reactor. Use the standard Go toolchain (Go 1.24+):
+
+```bash
+GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o module.wasm .
+```
+
+Or use [TinyGo](https://tinygo.org/) for a smaller binary:
+
+```bash
+tinygo build -o module.wasm -target wasip1 -buildmode=c-shared .
+```
+
+## Configuring the router
+
+Reference the compiled module under `wasm_modules` in the router configuration:
+
+```yaml
+wasm_modules:
+  - id: my_module
+    path: ./modules/module.wasm
+    priority: 5
+    timeout: 10s
+    config:
+      value: hello
+```
+
+### Configuration reference
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `id` | string | required | Unique module identifier. WASM modules share the module id namespace and priority ordering with custom modules. |
+| `path` | string | required | Filesystem path to the compiled `.wasm` file. |
+| `enabled` | boolean | `true` | Enables or disables the module. |
+| `priority` | integer | `0` | Execution order relative to other modules. Lower runs first; `0` is treated as the lowest priority. |
+| `timeout` | duration | `10s` | Maximum duration of a single hook invocation. |
+| `max_instances` | integer | `GOMAXPROCS` | Size of the pool of WASM instances that serve concurrent calls. `0` uses the number of available CPUs. |
+| `allowed_hosts` | string[] | `[]` | Allowlist of hosts the module may make outbound requests to. Empty grants no outbound access. |
+| `config` | object | `{}` | Arbitrary configuration passed to the module's `Provision` hook as JSON. |
+
+<Warning>
+  A `Provision` error aborts router startup, the same as a custom module. If a hook call fails at runtime (error, timeout, or trap), the router logs it and continues with its default behavior for that request.
+</Warning>
+
+## Limitations
+
+- Values written to the request context by a WASM module are JSON-encoded. Numbers cross the boundary as JSON numbers, so a value read back by an in-process custom module is not a native Go `int`.
+- Stream event metadata (for example a Kafka message key and headers, or NATS headers) is preserved for events passed through or edited in place, but is not exposed to the guest for inspection or modification.
+- Outbound network access from a module requires an explicit `allowed_hosts` entry.

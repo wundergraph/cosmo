@@ -10,6 +10,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
+	"github.com/wundergraph/cosmo/router/internal/wasm"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -140,6 +141,9 @@ type Config struct {
 	registrationInfo             *nodev1.RegistrationInfo
 	securityConfiguration        config.SecurityConfiguration
 	customModules                []Module
+	wasmModulesConfig            []config.WasmModuleConfiguration
+	wasmModules                  []*wasmModule
+	wasmRuntime                  *wasm.Runtime
 	engineExecutionConfiguration config.EngineExecutionConfiguration
 	// should be removed once the users have migrated to the new overrides config
 	overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
