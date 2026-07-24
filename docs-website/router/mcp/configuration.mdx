@@ -107,24 +107,9 @@ mcp:
         Employee data is refreshed nightly; do not treat it as real-time.
 ```
 
-<Note>
-  While the legacy `initialize` handshake remains supported during its
-  deprecation window, the same instructions are also served in the `initialize`
-  response, so clients that have not yet adopted `server/discover` receive them
-  too.
-</Note>
+Instructions are served to every MCP client, whether it connects via `server/discover` or the legacy `initialize` handshake.
 
-<Note>
-  Protocol version `2026-07-28` replaces sessions with per-request metadata
-  over the Streamable HTTP transport, so it is only advertised in
-  `supportedVersions` when the server runs in stateless mode. Since
-  `session.stateless` defaults to `true`, this is the out-of-the-box
-  behavior. If you explicitly opt into session-based mode
-  (`session.stateless: false`, e.g. for sticky-session deployments), clients
-  negotiate `2025-11-25` or older.
-</Note>
-
-The `ttlMs` and `cacheScope` fields of the discover response are currently fixed at `0` and `public` respectively (spec-compliant defaults meaning responses are immediately stale and publicly cacheable).
+Protocol version `2026-07-28` is advertised by default. In session-based mode (`session.stateless: false`), clients negotiate `2025-11-25` or older.
 
 ## Session Handling
 
