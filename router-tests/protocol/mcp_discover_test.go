@@ -25,10 +25,10 @@ const protocolVersion20260728 = "2026-07-28"
 // is intentionally sessionless: server/discover is designed to be callable
 // without the legacy initialize handshake.
 //
-// Raw HTTP is used deliberately: xEnv.MCPClient (mark3labs/mcp-go) only speaks
-// the legacy initialize handshake, and the go-sdk client performs discover
-// internally during Connect, discarding the wire-level fields asserted here
-// (resultType, ttlMs, cacheScope, raw _meta). See go-sdk issue #1092.
+// Raw HTTP is used deliberately: no MCP client currently exposes discover as a
+// callable method. The go-sdk client performs discover internally during
+// Connect, discarding the wire-level fields asserted here (resultType, ttlMs,
+// cacheScope, raw _meta). See go-sdk issue #1092.
 func postServerDiscover(t *testing.T, xEnv *testenv.Environment) map[string]any {
 	t.Helper()
 
