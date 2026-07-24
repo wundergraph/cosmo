@@ -2696,7 +2696,7 @@
               "properties": {
                 "instructions": {
                   "type": "string",
-                  "description": "Natural-language guidance for MCP clients (AI agents) on how to use this server effectively. Served in the server/discover response. While the legacy initialize handshake remains in its deprecation window, the same instructions are also served in the initialize response."
+                  "description": "Natural-language guidance for MCP clients (AI agents) on how to use this server effectively. Served in the server/discover response and in the legacy initialize response, so all clients receive it."
                 }
               }
             }

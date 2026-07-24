@@ -1413,9 +1413,8 @@ type MCPServer struct {
 // server/discover method (SEP-2575, protocol version 2026-07-28).
 type MCPDiscoverConfig struct {
 	// Instructions is natural-language guidance for MCP clients on how to use this
-	// server. It is served in the server/discover response and, while the legacy
-	// initialize handshake remains in its deprecation window, in the initialize
-	// response as well.
+	// server. It is served in the server/discover response and in the legacy
+	// initialize response, so all clients receive it regardless of era.
 	Instructions string `yaml:"instructions,omitempty" env:"INSTRUCTIONS"`
 }
 

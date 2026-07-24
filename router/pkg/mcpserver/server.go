@@ -95,8 +95,8 @@ type Options struct {
 	// ResourceDocumentation is a URL to a human-readable page describing this resource
 	ResourceDocumentation string
 	// Instructions is natural-language guidance for MCP clients on how to use
-	// this server. Served in the server/discover response and, during the
-	// initialize deprecation window, in the legacy initialize response.
+	// this server. Served in the server/discover response and in the legacy
+	// initialize response, so all clients receive it regardless of era.
 	Instructions string
 	// ServerVersion is reported as the server version in the MCP serverInfo
 	// (self-reported identity, surfaced in server/discover and initialize).
