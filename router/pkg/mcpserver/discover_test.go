@@ -82,3 +82,27 @@ func TestDiscover_ServerInfoUsesConfiguredVersion(t *testing.T) {
 	require.NotNil(t, serverInfo)
 	assert.Equal(t, "1.2.3", serverInfo.Version)
 }
+
+func TestDiscover_ServerInfoTitleAndDescription(t *testing.T) {
+	srv := newTestServer(t,
+		WithServerTitle("My Commerce API"),
+		WithServerDescription("Query products, orders and customers."),
+	)
+	cs := connectTestClient(t, srv)
+
+	serverInfo := cs.InitializeResult().ServerInfo
+	require.NotNil(t, serverInfo)
+	assert.Equal(t, "My Commerce API", serverInfo.Title)
+	assert.Equal(t, "Query products, orders and customers.", serverInfo.Description)
+}
+
+func TestDiscover_EmptyGraphNameFallsBackToDefault(t *testing.T) {
+	// WithGraphName("") must not clobber the default: an empty graph name would
+	// produce the malformed serverInfo name "wundergraph-cosmo-".
+	srv := newTestServer(t, WithGraphName(""))
+	cs := connectTestClient(t, srv)
+
+	serverInfo := cs.InitializeResult().ServerInfo
+	require.NotNil(t, serverInfo)
+	assert.Equal(t, "wundergraph-cosmo-graph", serverInfo.Name)
+}

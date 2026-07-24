@@ -112,6 +112,8 @@ mcp:
     listen_addr: localhost:5025
     base_url: 'http://localhost:5025'
     version: '1.0.0'
+    title: 'Cosmo Graph'
+    description: 'Federated graph exposed via MCP.'
     discover:
       instructions: 'Use the operation tools to interact with the graph.'
   storage:

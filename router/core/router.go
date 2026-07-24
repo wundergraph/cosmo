@@ -1204,6 +1204,8 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpserver.WithStateless(r.mcp.Session.Stateless),
 		mcpserver.WithInstructions(r.mcp.Server.Discover.Instructions),
 		mcpserver.WithServerVersion(cmp.Or(r.mcp.Server.Version, Version)),
+		mcpserver.WithServerTitle(r.mcp.Server.Title),
+		mcpserver.WithServerDescription(r.mcp.Server.Description),
 	}
 
 	if r.corsOptions != nil {

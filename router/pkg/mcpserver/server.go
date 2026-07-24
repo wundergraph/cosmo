@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -102,6 +103,13 @@ type Options struct {
 	// Callers typically pass the user-configured version, falling back to the
 	// router release version.
 	ServerVersion string
+	// ServerTitle is a human-readable display name reported in the MCP
+	// serverInfo. MCP clients show it in UIs, falling back to the machine name
+	// derived from the graph name when unset.
+	ServerTitle string
+	// ServerDescription is a human-readable description reported in the MCP
+	// serverInfo.
+	ServerDescription string
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -291,8 +299,10 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 	// Create the MCP server with all options
 	mcpServer := mcp.NewServer(
 		&mcp.Implementation{
-			Name:    "wundergraph-cosmo-" + strcase.ToKebab(options.GraphName),
-			Version: options.ServerVersion,
+			Name:        "wundergraph-cosmo-" + strcase.ToKebab(cmp.Or(options.GraphName, "graph")),
+			Title:       options.ServerTitle,
+			Description: options.ServerDescription,
+			Version:     options.ServerVersion,
 		},
 		&mcp.ServerOptions{
 			Instructions: options.Instructions,
@@ -351,6 +361,20 @@ func WithInstructions(instructions string) func(*Options) {
 func WithServerVersion(version string) func(*Options) {
 	return func(o *Options) {
 		o.ServerVersion = version
+	}
+}
+
+// WithServerTitle sets the human-readable display name reported in the MCP serverInfo
+func WithServerTitle(title string) func(*Options) {
+	return func(o *Options) {
+		o.ServerTitle = title
+	}
+}
+
+// WithServerDescription sets the human-readable description reported in the MCP serverInfo
+func WithServerDescription(description string) func(*Options) {
+	return func(o *Options) {
+		o.ServerDescription = description
 	}
 }
 

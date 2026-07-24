@@ -162,6 +162,27 @@ func TestMCPServerInfoVersion(t *testing.T) {
 		})
 	})
 
+	t.Run("reports configured title and description", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			MCP: config.MCPConfiguration{
+				Enabled: true,
+				Server: config.MCPServer{
+					Title:       "My Commerce API",
+					Description: "Query products, orders and customers.",
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			result := postServerDiscover(t, xEnv)
+
+			meta, ok := result["_meta"].(map[string]any)
+			require.True(t, ok, "discover result should carry _meta")
+			serverInfo, ok := meta["io.modelcontextprotocol/serverInfo"].(map[string]any)
+			require.True(t, ok, "_meta should carry serverInfo")
+			assert.Equal(t, "My Commerce API", serverInfo["title"])
+			assert.Equal(t, "Query products, orders and customers.", serverInfo["description"])
+		})
+	})
+
 	t.Run("defaults to router version", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			MCP: config.MCPConfiguration{

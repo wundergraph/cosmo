@@ -193,6 +193,8 @@
       "ListenAddr": "localhost:5025",
       "BaseURL": "",
       "Version": "",
+      "Title": "",
+      "Description": "",
       "Discover": {
         "Instructions": ""
       }

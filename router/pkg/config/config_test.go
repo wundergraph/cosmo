@@ -2338,3 +2338,25 @@ mcp:
 
 	require.Equal(t, "1.4.0", cfg.Config.MCP.Server.Version)
 }
+
+func TestMCPServerTitleAndDescription(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  server:
+    title: "My Commerce API"
+    description: "Query products, orders and customers."
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.Equal(t, "My Commerce API", cfg.Config.MCP.Server.Title)
+	require.Equal(t, "Query products, orders and customers.", cfg.Config.MCP.Server.Description)
+}
