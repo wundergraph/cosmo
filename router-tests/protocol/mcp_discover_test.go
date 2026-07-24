@@ -24,6 +24,11 @@ const protocolVersion20260728 = "2026-07-28"
 // the MCP endpoint and returns the decoded JSON-RPC result object. The request
 // is intentionally sessionless: server/discover is designed to be callable
 // without the legacy initialize handshake.
+//
+// Raw HTTP is used deliberately: xEnv.MCPClient (mark3labs/mcp-go) only speaks
+// the legacy initialize handshake, and the go-sdk client performs discover
+// internally during Connect, discarding the wire-level fields asserted here
+// (resultType, ttlMs, cacheScope, raw _meta). See go-sdk issue #1092.
 func postServerDiscover(t *testing.T, xEnv *testenv.Environment) map[string]any {
 	t.Helper()
 
@@ -46,7 +51,7 @@ func postServerDiscover(t *testing.T, xEnv *testenv.Environment) map[string]any 
 	requestBody, err := json.Marshal(discoverRequest)
 	require.NoError(t, err)
 
-	req, err := http.NewRequest("POST", xEnv.GetMCPServerAddr(), bytes.NewReader(requestBody))
+	req, err := http.NewRequest(http.MethodPost, xEnv.GetMCPServerAddr(), bytes.NewReader(requestBody))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json, text/event-stream")
