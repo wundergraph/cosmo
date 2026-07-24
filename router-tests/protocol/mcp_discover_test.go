@@ -19,21 +19,21 @@ import (
 // the MCP endpoint and returns the decoded JSON-RPC result object. The request
 // is intentionally sessionless: server/discover is designed to be callable
 // without the legacy initialize handshake.
-func postServerDiscover(t *testing.T, xEnv *testenv.Environment) map[string]interface{} {
+func postServerDiscover(t *testing.T, xEnv *testenv.Environment) map[string]any {
 	t.Helper()
 
-	discoverRequest := map[string]interface{}{
+	discoverRequest := map[string]any{
 		"jsonrpc": "2.0",
 		"id":      1,
 		"method":  "server/discover",
-		"params": map[string]interface{}{
-			"_meta": map[string]interface{}{
+		"params": map[string]any{
+			"_meta": map[string]any{
 				"io.modelcontextprotocol/protocolVersion": "2026-07-28",
-				"io.modelcontextprotocol/clientInfo": map[string]interface{}{
+				"io.modelcontextprotocol/clientInfo": map[string]any{
 					"name":    "test-client",
 					"version": "1.0.0",
 				},
-				"io.modelcontextprotocol/clientCapabilities": map[string]interface{}{},
+				"io.modelcontextprotocol/clientCapabilities": map[string]any{},
 			},
 		},
 	}
@@ -69,7 +69,7 @@ func postServerDiscover(t *testing.T, xEnv *testenv.Environment) map[string]inte
 	}
 
 	var rpcResponse struct {
-		Result map[string]interface{} `json:"result"`
+		Result map[string]any `json:"result"`
 		Error  *struct {
 			Code    int    `json:"code"`
 			Message string `json:"message"`
@@ -154,9 +154,9 @@ func TestMCPServerInfoVersion(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			result := postServerDiscover(t, xEnv)
 
-			meta, ok := result["_meta"].(map[string]interface{})
+			meta, ok := result["_meta"].(map[string]any)
 			require.True(t, ok, "discover result should carry _meta")
-			serverInfo, ok := meta["io.modelcontextprotocol/serverInfo"].(map[string]interface{})
+			serverInfo, ok := meta["io.modelcontextprotocol/serverInfo"].(map[string]any)
 			require.True(t, ok, "_meta should carry serverInfo")
 			assert.Equal(t, "9.9.9", serverInfo["version"])
 		})
@@ -170,9 +170,9 @@ func TestMCPServerInfoVersion(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			result := postServerDiscover(t, xEnv)
 
-			meta, ok := result["_meta"].(map[string]interface{})
+			meta, ok := result["_meta"].(map[string]any)
 			require.True(t, ok, "discover result should carry _meta")
-			serverInfo, ok := meta["io.modelcontextprotocol/serverInfo"].(map[string]interface{})
+			serverInfo, ok := meta["io.modelcontextprotocol/serverInfo"].(map[string]any)
 			require.True(t, ok, "_meta should carry serverInfo")
 			assert.Equal(t, core.Version, serverInfo["version"])
 		})
