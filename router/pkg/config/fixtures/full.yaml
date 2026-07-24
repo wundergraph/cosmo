@@ -111,6 +111,9 @@ mcp:
   server:
     listen_addr: localhost:5025
     base_url: 'http://localhost:5025'
+    version: '1.0.0'
+    discover:
+      instructions: 'Use the operation tools to interact with the graph.'
   storage:
     provider_id: mcp
 

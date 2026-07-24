@@ -2261,3 +2261,80 @@ persisted_operations:
 		require.Equal(t, "at '/persisted_operations/manifest/poll_jitter': duration must be greater or equal than 1s", js.Causes[0].Error())
 	})
 }
+
+func TestMCPServerDiscoverInstructions(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  server:
+    discover:
+      instructions: "Use the search tools before executing operations."
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.Equal(t, "Use the search tools before executing operations.", cfg.Config.MCP.Server.Discover.Instructions)
+}
+
+func TestMCPServerDiscoverInstructionsDefaultEmpty(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.Empty(t, cfg.Config.MCP.Server.Discover.Instructions)
+}
+
+func TestMCPServerDiscoverInstructionsFromEnv(t *testing.T) {
+	t.Setenv("MCP_SERVER_DISCOVER_INSTRUCTIONS", "Env-provided guidance.")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.Equal(t, "Env-provided guidance.", cfg.Config.MCP.Server.Discover.Instructions)
+}
+
+func TestMCPServerVersion(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  server:
+    version: "1.4.0"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.Equal(t, "1.4.0", cfg.Config.MCP.Server.Version)
+}

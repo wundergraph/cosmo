@@ -93,6 +93,15 @@ type Options struct {
 	ServerBaseURL string
 	// ResourceDocumentation is a URL to a human-readable page describing this resource
 	ResourceDocumentation string
+	// Instructions is natural-language guidance for MCP clients on how to use
+	// this server. Served in the server/discover response and, during the
+	// initialize deprecation window, in the legacy initialize response.
+	Instructions string
+	// ServerVersion is reported as the server version in the MCP serverInfo
+	// (self-reported identity, surfaced in server/discover and initialize).
+	// Callers typically pass the user-configured version, falling back to the
+	// router release version.
+	ServerVersion string
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -211,6 +220,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		RequestTimeout: 30 * time.Second,
 		ExposeSchema:   true,
 		Stateless:      true,
+		ServerVersion:  "dev",
 	}
 
 	// Apply all option functions
@@ -282,10 +292,11 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 	mcpServer := mcp.NewServer(
 		&mcp.Implementation{
 			Name:    "wundergraph-cosmo-" + strcase.ToKebab(options.GraphName),
-			Version: "0.0.1",
+			Version: options.ServerVersion,
 		},
 		&mcp.ServerOptions{
-			PageSize: 100,
+			Instructions: options.Instructions,
+			PageSize:     100,
 			// Override default capabilities to disable the "logging" capability
 			// that the SDK advertises by default (for historical reasons).
 			// We don't implement logging/setLevel, so advertising it causes
@@ -327,6 +338,20 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 // SetHTTPClient allows setting a custom HTTP client (useful for testing)
 func (s *GraphQLSchemaServer) SetHTTPClient(client *http.Client) {
 	s.httpClient = client
+}
+
+// WithInstructions sets the server instructions returned to MCP clients
+func WithInstructions(instructions string) func(*Options) {
+	return func(o *Options) {
+		o.Instructions = instructions
+	}
+}
+
+// WithServerVersion sets the version reported in the MCP serverInfo
+func WithServerVersion(version string) func(*Options) {
+	return func(o *Options) {
+		o.ServerVersion = version
+	}
 }
 
 // WithGraphName sets the graph name

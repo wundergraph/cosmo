@@ -191,7 +191,11 @@
     "Enabled": false,
     "Server": {
       "ListenAddr": "localhost:5025",
-      "BaseURL": ""
+      "BaseURL": "",
+      "Version": "",
+      "Discover": {
+        "Instructions": ""
+      }
     },
     "Storage": {
       "ProviderID": ""

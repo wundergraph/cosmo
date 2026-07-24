@@ -49,8 +49,9 @@ func TestMCP(t *testing.T) {
 						Required:   []string{"operationName"}},
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
-						Title:        "Get GraphQL Operation Info",
-						ReadOnlyHint: mcp.ToBoolPtr(true),
+						Title:          "Get GraphQL Operation Info",
+						ReadOnlyHint:   mcp.ToBoolPtr(true),
+						IdempotentHint: mcp.ToBoolPtr(false),
 					},
 				})
 			})
@@ -83,14 +84,16 @@ func TestMCP(t *testing.T) {
 					},
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
-						Title:        "Get GraphQL Schema",
-						ReadOnlyHint: mcp.ToBoolPtr(true),
+						Title:          "Get GraphQL Schema",
+						ReadOnlyHint:   mcp.ToBoolPtr(true),
+						IdempotentHint: mcp.ToBoolPtr(false),
 					},
 				})
 
 				// Verify execute tool with proper schema
-				// Note: IdempotentHint is a bool (not *bool) in the new SDK, so false + omitempty
-				// means it's omitted from JSON, and the old client deserializes it as nil.
+				// Note: since go-sdk v1.7.0, ReadOnlyHint and IdempotentHint are always
+				// serialized (no omitempty), so the mark3labs client decodes explicit false
+				// values instead of nil.
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "execute_graphql",
 					Description: "Executes a GraphQL query or mutation.",
@@ -112,7 +115,9 @@ func TestMCP(t *testing.T) {
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
 						Title:           "Execute GraphQL Query",
+						ReadOnlyHint:    mcp.ToBoolPtr(false),
 						DestructiveHint: mcp.ToBoolPtr(true),
+						IdempotentHint:  mcp.ToBoolPtr(false),
 						OpenWorldHint:   mcp.ToBoolPtr(true),
 					},
 				})
@@ -151,15 +156,18 @@ func TestMCP(t *testing.T) {
 				})
 
 				// Verify UpdateMood operation
-				// Note: ReadOnlyHint and IdempotentHint are bool (not *bool) in the new SDK,
-				// so false + omitempty means they're omitted from JSON, and the old client gets nil.
+				// Note: since go-sdk v1.7.0, ReadOnlyHint and IdempotentHint are always
+				// serialized (no omitempty), so the mark3labs client decodes explicit false
+				// values instead of nil.
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "execute_operation_update_mood",
 					Description: "This mutation update the mood of an employee.",
 					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"}}, Required: []string{"employeeID", "mood"}}, RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
-						Title:         "Execute operation UpdateMood",
-						OpenWorldHint: mcp.ToBoolPtr(true),
+						Title:          "Execute operation UpdateMood",
+						ReadOnlyHint:   mcp.ToBoolPtr(false),
+						IdempotentHint: mcp.ToBoolPtr(false),
+						OpenWorldHint:  mcp.ToBoolPtr(true),
 					},
 				})
 			})
