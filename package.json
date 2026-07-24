@@ -120,7 +120,8 @@
       "hono@4.x": "4.12.25",
       "dompurify": "3.4.12",
       "postcss": "8.5.10",
-      "sigstore": "4.1.1"
+      "sigstore": "4.1.1",
+      "find-my-way@8": "8.2.2"
     },
     "patchedDependencies": {
       "graphql@16.9.0": "patches/graphql@16.9.0.patch"
