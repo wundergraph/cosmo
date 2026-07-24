@@ -8,12 +8,17 @@ import (
 	"strings"
 	"testing"
 
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
+
+// protocolVersion20260728 is the first MCP protocol version with server/discover
+// (SEP-2575). The go-sdk does not export its protocol version constants.
+const protocolVersion20260728 = "2026-07-28"
 
 // postServerDiscover sends a raw SEP-2575 server/discover JSON-RPC request to
 // the MCP endpoint and returns the decoded JSON-RPC result object. The request
@@ -28,12 +33,12 @@ func postServerDiscover(t *testing.T, xEnv *testenv.Environment) map[string]any 
 		"method":  "server/discover",
 		"params": map[string]any{
 			"_meta": map[string]any{
-				"io.modelcontextprotocol/protocolVersion": "2026-07-28",
-				"io.modelcontextprotocol/clientInfo": map[string]any{
+				sdkmcp.MetaKeyProtocolVersion: protocolVersion20260728,
+				sdkmcp.MetaKeyClientInfo: map[string]any{
 					"name":    "test-client",
 					"version": "1.0.0",
 				},
-				"io.modelcontextprotocol/clientCapabilities": map[string]any{},
+				sdkmcp.MetaKeyClientCapabilities: map[string]any{},
 			},
 		},
 	}
@@ -45,7 +50,7 @@ func postServerDiscover(t *testing.T, xEnv *testenv.Environment) map[string]any 
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json, text/event-stream")
-	req.Header.Set("Mcp-Protocol-Version", "2026-07-28")
+	req.Header.Set("Mcp-Protocol-Version", protocolVersion20260728)
 	req.Header.Set("Mcp-Method", "server/discover")
 
 	resp, err := xEnv.RouterClient.Do(req)
@@ -137,7 +142,7 @@ func TestMCPServerDiscover(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			result := postServerDiscover(t, xEnv)
 
-			assert.Contains(t, result["supportedVersions"], "2026-07-28")
+			assert.Contains(t, result["supportedVersions"], protocolVersion20260728)
 		})
 	})
 }
@@ -156,7 +161,7 @@ func TestMCPServerInfoVersion(t *testing.T) {
 
 			meta, ok := result["_meta"].(map[string]any)
 			require.True(t, ok, "discover result should carry _meta")
-			serverInfo, ok := meta["io.modelcontextprotocol/serverInfo"].(map[string]any)
+			serverInfo, ok := meta[sdkmcp.MetaKeyServerInfo].(map[string]any)
 			require.True(t, ok, "_meta should carry serverInfo")
 			assert.Equal(t, "9.9.9", serverInfo["version"])
 		})
@@ -176,7 +181,7 @@ func TestMCPServerInfoVersion(t *testing.T) {
 
 			meta, ok := result["_meta"].(map[string]any)
 			require.True(t, ok, "discover result should carry _meta")
-			serverInfo, ok := meta["io.modelcontextprotocol/serverInfo"].(map[string]any)
+			serverInfo, ok := meta[sdkmcp.MetaKeyServerInfo].(map[string]any)
 			require.True(t, ok, "_meta should carry serverInfo")
 			assert.Equal(t, "My Commerce API", serverInfo["title"])
 			assert.Equal(t, "Query products, orders and customers.", serverInfo["description"])
@@ -193,7 +198,7 @@ func TestMCPServerInfoVersion(t *testing.T) {
 
 			meta, ok := result["_meta"].(map[string]any)
 			require.True(t, ok, "discover result should carry _meta")
-			serverInfo, ok := meta["io.modelcontextprotocol/serverInfo"].(map[string]any)
+			serverInfo, ok := meta[sdkmcp.MetaKeyServerInfo].(map[string]any)
 			require.True(t, ok, "_meta should carry serverInfo")
 			assert.Equal(t, core.Version, serverInfo["version"])
 		})
