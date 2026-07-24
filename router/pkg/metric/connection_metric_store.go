@@ -26,6 +26,14 @@ type ConnectionMetricProvider interface {
 	Shutdown() error
 }
 
+// lastByteMetricProvider is an optional extension implemented by the built-in
+// OTLP and Prometheus providers. Keeping it separate avoids adding required
+// methods to the exported ConnectionMetricProvider interface.
+type lastByteMetricProvider interface {
+	MeasureTimeToLastRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
+	MeasureTimeToLastByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
+}
+
 // ConnectionMetricStore is the interface for connection and pool metrics only.
 type ConnectionMetricStore interface {
 	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
@@ -35,6 +43,14 @@ type ConnectionMetricStore interface {
 	MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	Shutdown(ctx context.Context) error
+}
+
+// LastByteMetricStore is an optional extension for first-to-last-byte transfer
+// metrics. Implementations of ConnectionMetricStore that predate these metrics
+// remain source-compatible.
+type LastByteMetricStore interface {
+	MeasureTimeToLastRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
+	MeasureTimeToLastByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 }
 
 type ConnectionMetrics struct {
@@ -121,10 +137,30 @@ func (c *ConnectionMetrics) MeasureTimeToFirstRequestByte(ctx context.Context, d
 	c.promConnectionMetrics.MeasureTimeToFirstRequestByte(ctx, duration, opts)
 }
 
+func (c *ConnectionMetrics) MeasureTimeToLastRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+	opts := c.recordOpts(attrs)
+	if provider, ok := c.otlpConnectionMetrics.(lastByteMetricProvider); ok {
+		provider.MeasureTimeToLastRequestByte(ctx, duration, opts)
+	}
+	if provider, ok := c.promConnectionMetrics.(lastByteMetricProvider); ok {
+		provider.MeasureTimeToLastRequestByte(ctx, duration, opts)
+	}
+}
+
 func (c *ConnectionMetrics) MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
 	opts := c.recordOpts(attrs)
 	c.otlpConnectionMetrics.MeasureTimeToFirstByte(ctx, duration, opts)
 	c.promConnectionMetrics.MeasureTimeToFirstByte(ctx, duration, opts)
+}
+
+func (c *ConnectionMetrics) MeasureTimeToLastByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+	opts := c.recordOpts(attrs)
+	if provider, ok := c.otlpConnectionMetrics.(lastByteMetricProvider); ok {
+		provider.MeasureTimeToLastByte(ctx, duration, opts)
+	}
+	if provider, ok := c.promConnectionMetrics.(lastByteMetricProvider); ok {
+		provider.MeasureTimeToLastByte(ctx, duration, opts)
+	}
 }
 
 func (c *ConnectionMetrics) recordOpts(attrs []attribute.KeyValue) otelmetric.RecordOption {
