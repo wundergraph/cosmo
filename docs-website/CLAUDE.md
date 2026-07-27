@@ -87,6 +87,29 @@ docs-website/
 4. Include code examples where appropriate
 5. Link between related documentation pages
 
+### Frontmatter
+
+Keep frontmatter sparse. Every content page should include:
+
+```yaml
+---
+title: "..."
+description: "..."
+icon: ...
+---
+```
+
+Snippets under `snippets/` do not need page frontmatter.
+
+Do not use `dateModified`. Last-modified dates come from Mintlify's git-backed timestamps (`metadata.timestamp` in `docs.json`). Authors do not bump a date field. Set `timestamp: false` on a page only when a last-modified line would be misleading (redirect stubs, empty shells).
+
+Opt-in fields (omit by default):
+
+- `tag` — sidebar badge. Allowed values only: `New`, `Beta`, `Deprecated`. Apply only when true. Do not tag overview hubs or entire sections by default. Use `tag` only; do not also set Mintlify's `deprecated: true`.
+- `sidebarTitle` — short nav label. Use `Overview` on section index/hub pages whose `title` is the full section name. Use a shortened label when the page title is too long for the sidebar. Keep the full `title` for the H1 and SEO. Do not add `sidebarTitle` on leaf pages with short titles.
+- `noindex: true` — exclude from search engines, sitemaps, site search, and AI context. Page stays in navigation. Use for redirect stubs and pages that should not be indexed.
+- `searchable: false` — exclude from in-product search and AI context only. Page remains externally indexable and in the sitemap. Rare. Prefer `noindex: true` for redirect stubs; do not set both.
+
 ## Common Tasks
 
 ### Adding a New Page
