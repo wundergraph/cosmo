@@ -402,6 +402,7 @@
       "Kafka": null,
       "Redis": null
     },
+    "SkipUnavailableProviders": true,
     "Handlers": {
       "OnReceiveEvents": {
         "MaxConcurrentHandlers": 100,

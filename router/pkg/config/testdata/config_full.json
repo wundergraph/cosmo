@@ -828,6 +828,7 @@
         }
       ]
     },
+    "SkipUnavailableProviders": false,
     "Handlers": {
       "OnReceiveEvents": {
         "MaxConcurrentHandlers": 100,
