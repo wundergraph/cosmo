@@ -275,6 +275,25 @@ type GraphqlMetrics struct {
 	CollectorEndpoint string `yaml:"collector_endpoint" envDefault:"https://cosmo-metrics.wundergraph.com" env:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT"`
 }
 
+type Pyroscope struct {
+	Enabled              bool               `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	ServerAddress        string             `yaml:"server_address" env:"SERVER_ADDRESS"`
+	ApplicationName      string             `yaml:"application_name" envDefault:"wundergraph.cosmo.router" env:"APPLICATION_NAME"`
+	BasicAuth            PyroscopeBasicAuth `yaml:"basic_auth" envPrefix:"BASIC_AUTH_"`
+	Headers              map[string]string  `yaml:"headers" env:"HEADERS"`
+	Tags                 map[string]string  `yaml:"tags" env:"TAGS"`
+	UploadRate           time.Duration      `yaml:"upload_rate" envDefault:"15s" env:"UPLOAD_RATE"`
+	ProfileTypes         []string           `yaml:"profile_types" env:"PROFILE_TYPES"`
+	DisableGCRuns        bool               `yaml:"disable_gc_runs" envDefault:"false" env:"DISABLE_GC_RUNS"`
+	MutexProfileFraction int                `yaml:"mutex_profile_fraction" envDefault:"5" env:"MUTEX_PROFILE_FRACTION"`
+	BlockProfileRate     int                `yaml:"block_profile_rate" envDefault:"5" env:"BLOCK_PROFILE_RATE"`
+}
+
+type PyroscopeBasicAuth struct {
+	Username string `yaml:"username,omitempty" env:"USERNAME"`
+	Password string `yaml:"password,omitempty" env:"PASSWORD"`
+}
+
 type BackoffJitterRetry struct {
 	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"RETRY_ENABLED"`
 	Algorithm   string        `yaml:"algorithm" envDefault:"backoff_jitter" env:"RETRY_ALGORITHM"`
@@ -437,6 +456,7 @@ type EngineDebugConfiguration struct {
 	EnableCacheResponseHeaders             bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_CACHE_RESPONSE_HEADERS" yaml:"enable_cache_response_headers"`
 	AlwaysIncludeQueryPlan                 bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_INCLUDE_QUERY_PLAN" yaml:"always_include_query_plan"`
 	AlwaysSkipLoader                       bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_SKIP_LOADER" yaml:"always_skip_loader"`
+	SynchronousCacheWrites                 bool `envDefault:"false" env:"ENGINE_DEBUG_SYNCHRONOUS_CACHE_WRITES" yaml:"synchronous_cache_writes"`
 }
 
 type EngineExecutionConfiguration struct {
@@ -496,6 +516,10 @@ type EngineExecutionConfiguration struct {
 	ValidateRequiredExternalFields bool `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
 
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool `envDefault:"false" env:"ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY" yaml:"relax_subgraph_operation_field_selection_merging_nullability"`
+
+	AllowStringLiteralsForEnums bool `envDefault:"false" env:"ENGINE_ALLOW_STRING_LITERALS_FOR_ENUMS" yaml:"allow_string_literals_for_enums"`
+
+	ValidateInlineArguments ValidateInlineArguments `yaml:"validate_inline_arguments" envPrefix:"ENGINE_VALIDATE_INLINE_ARGUMENTS_"`
 }
 
 type BlockOperationConfiguration struct {
@@ -593,6 +617,33 @@ type CostControl struct {
 	IgnoreImplementingTypeWeights bool `yaml:"ignore_implementing_type_weights,omitempty" envDefault:"false" env:"IGNORE_IMPLEMENTING_TYPE_WEIGHTS"`
 }
 
+type EnforcementMode string
+
+const (
+	EnforcementModeOff        EnforcementMode = "off"
+	EnforcementModePermissive EnforcementMode = "permissive"
+	EnforcementModeStrict     EnforcementMode = "strict"
+)
+
+type ValidateInlineArguments struct {
+	Mode                       EnforcementMode `yaml:"mode,omitempty" envDefault:"off" env:"MODE"`
+	EnforceHTTPStatusCode      int             `yaml:"enforce_http_status_code,omitempty" envDefault:"400" env:"ENFORCE_HTTP_STATUS_CODE"`
+	ErrorCode                  string          `yaml:"error_code,omitempty" envDefault:"INLINE_ARGUMENT_VALUES_NOT_ALLOWED" env:"ERROR_CODE"`
+	ErrorMessage               string          `yaml:"error_message,omitempty" envDefault:"Inline argument values are not allowed. Use variables instead." env:"ERROR_MESSAGE"`
+	IncludePersistedOperations bool            `yaml:"include_persisted_operations,omitempty" envDefault:"false" env:"INCLUDE_PERSISTED_OPERATIONS"`
+	ReturnInResponseExtensions bool            `yaml:"return_in_response_extensions,omitempty" envDefault:"false" env:"RETURN_IN_RESPONSE_EXTENSIONS"`
+}
+
+// Enabled reports whether the policy is active in any mode.
+func (d ValidateInlineArguments) Enabled() bool {
+	return d.Mode == EnforcementModePermissive || d.Mode == EnforcementModeStrict
+}
+
+// Enforcing reports whether the policy rejects offending operations.
+func (d ValidateInlineArguments) Enforcing() bool {
+	return d.Mode == EnforcementModeStrict
+}
+
 type ComplexityLimit struct {
 	Enabled                   bool `yaml:"enabled" envDefault:"false"`
 	Limit                     int  `yaml:"limit,omitempty" envDefault:"0"`
@@ -665,6 +716,11 @@ type AuthorizationConfiguration struct {
 	RequireAuthentication bool `yaml:"require_authentication" envDefault:"false" env:"REQUIRE_AUTHENTICATION"`
 	// RejectOperationIfUnauthorized makes the router reject the whole GraphQL Operation if one field fails to authorize
 	RejectOperationIfUnauthorized bool `yaml:"reject_operation_if_unauthorized" envDefault:"false" env:"REJECT_OPERATION_IF_UNAUTHORIZED"`
+	// EnablePreFetchFieldAuthorization authorizes fields protected by an authorization rule in a single
+	// batch call before any subgraph fetch executes (scope-only, independent of the returned data),
+	// instead of filtering them out of the response after the fetch. This avoids fetching data that the
+	// client is not authorized to see.
+	EnablePreFetchFieldAuthorization bool `yaml:"enable_pre_fetch_field_authorization" envDefault:"false" env:"ENABLE_PRE_FETCH_FIELD_AUTHORIZATION"`
 }
 
 type RateLimitConfiguration struct {
@@ -1245,6 +1301,7 @@ type ApolloCompatibilityFlags struct {
 type ApolloRouterCompatibilityFlags struct {
 	ReplaceInvalidVarErrors ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
 	SubrequestHTTPError     ApolloCompatibilityFlag `yaml:"subrequest_http_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_"`
+	SkipNullVariablesError  ApolloCompatibilityFlag `yaml:"skip_null_variables_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_"`
 }
 
 type ApolloCompatibilityFlag struct {
@@ -1388,6 +1445,7 @@ type Config struct {
 	InstanceID     string                  `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
 	Graph          Graph                   `yaml:"graph,omitempty"`
 	Telemetry      Telemetry               `yaml:"telemetry,omitempty"`
+	Pyroscope      Pyroscope               `yaml:"pyroscope,omitempty" envPrefix:"PYROSCOPE_"`
 	GraphqlMetrics GraphqlMetrics          `yaml:"graphql_metrics,omitempty"`
 	CORS           CORS                    `yaml:"cors,omitempty"`
 	Cluster        Cluster                 `yaml:"cluster,omitempty"`

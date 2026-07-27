@@ -6,6 +6,7 @@ import {
   type SubgraphName,
   type TypeName,
 } from '../../types/types';
+import { directlyProvidedInterfaceFieldError } from '../errors';
 
 export type IncompatibleMergedTypesErrorParams = {
   actualType: string;
@@ -46,6 +47,15 @@ export type IncompatibleTypeWithProvidesErrorMessageParams = {
   fieldCoords: string;
   responseType: TypeName;
   subgraphName: SubgraphName;
+};
+
+export type DirectlyProvidedInterfaceFieldErrorParams = {
+  directiveCoords: string;
+  directiveName: DirectiveName;
+  fieldSet: string;
+  selection: string;
+  subgraphName: SubgraphName;
+  targetCoords: string;
 };
 
 export type NonExternalConditionalFieldErrorParams = {

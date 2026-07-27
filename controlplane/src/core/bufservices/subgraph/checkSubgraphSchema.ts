@@ -95,27 +95,6 @@ export function checkSubgraphSchema(
     }
 
     const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
-    if (subgraph && subgraph.isFeatureSubgraph) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details:
-            `The subgraph "${req.subgraphName}" is a feature subgraph.` +
-            ` Feature subgraphs do not currently support check operations.`,
-        },
-        breakingChanges: [],
-        nonBreakingChanges: [],
-        composedSchemaBreakingChanges: [],
-        compositionErrors: [],
-        checkId: '',
-        checkedFederatedGraphs: [],
-        lintWarnings: [],
-        lintErrors: [],
-        graphPruneWarnings: [],
-        graphPruneErrors: [],
-        compositionWarnings: [],
-      };
-    }
 
     const webhookService = new OrganizationWebhookService(
       opts.db,
@@ -308,6 +287,7 @@ export function checkSubgraphSchema(
       checkId: schemaCheckID,
       operationUsageStats,
       proposalMatchMessage,
+      featureSubgraphCheckMessage,
       hasClientTraffic,
       checkedFederatedGraphs,
       isCheckExtensionSkipped,
@@ -371,6 +351,7 @@ export function checkSubgraphSchema(
         clientTrafficCheckSkipped: req.skipTrafficCheck,
         compositionWarnings,
         proposalMatchMessage,
+        featureSubgraphCheckMessage,
         counts,
       };
     }
@@ -400,6 +381,7 @@ export function checkSubgraphSchema(
           clientTrafficCheckSkipped: req.skipTrafficCheck,
           compositionWarnings,
           proposalMatchMessage,
+          featureSubgraphCheckMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
           counts,
@@ -432,6 +414,7 @@ export function checkSubgraphSchema(
           clientTrafficCheckSkipped: req.skipTrafficCheck,
           compositionWarnings,
           proposalMatchMessage,
+          featureSubgraphCheckMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
           counts,
@@ -499,6 +482,7 @@ export function checkSubgraphSchema(
           clientTrafficCheckSkipped: req.skipTrafficCheck,
           compositionWarnings,
           proposalMatchMessage,
+          featureSubgraphCheckMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
           counts,
@@ -547,6 +531,7 @@ export function checkSubgraphSchema(
       clientTrafficCheckSkipped: req.skipTrafficCheck,
       compositionWarnings,
       proposalMatchMessage,
+      featureSubgraphCheckMessage,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
       isCheckExtensionSkipped,

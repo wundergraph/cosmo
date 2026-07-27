@@ -18,6 +18,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/profile/pyroscope"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/propagation"
@@ -59,10 +60,12 @@ type Config struct {
 	logger                          *zap.Logger
 	traceConfig                     *rtrace.Config
 	metricConfig                    *rmetric.Config
+	pyroscopeConfig                 *config.Pyroscope
 	tracerProvider                  *sdktrace.TracerProvider
 	otlpMeterProvider               *sdkmetric.MeterProvider
 	promMeterProvider               *sdkmetric.MeterProvider
 	gqlMetricsExporter              *graphqlmetrics.GraphQLMetricsExporter
+	pyroscopeProfiler               *pyroscope.Profiler
 	corsOptions                     *cors.Config
 	setConfigVersionHeader          bool
 	routerGracePeriod               time.Duration
@@ -194,7 +197,7 @@ func (c *Config) Usage() map[string]any {
 
 	usage["apollo_router_compatibility_flags_replace_invalid_var_errors_enabled"] = c.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled
 	usage["apollo_router_compatibility_flags_subrequest_http_error_enabled"] = c.apolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled
-	usage["apollo_router_compatibility_flags_replace_invalid_var_errors_enabled"] = c.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled
+	usage["apollo_router_compatibility_flags_skip_null_variables_error_enabled"] = c.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled
 
 	usage["demo_mode"] = c.demoMode
 

@@ -437,7 +437,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
 
   const organizationSlug = router.query.organizationSlug as string;
   const code = router.query.code as string;
-  const slackRedirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}/${organizationSlug}/integrations`;
+  const slackRedirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}/${encodeURIComponent(organizationSlug)}/integrations`;
   const [shouldCreate, setShouldCreate] = useState(false);
 
   const { data, isLoading, error, refetch } = useQuery(getOrganizationIntegrations);
@@ -486,7 +486,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
           <>
             <Button variant="default" size="default" asChild={isAdminOrDeveloper} disabled={!isAdminOrDeveloper}>
               <Link
-                href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${slackRedirectURL}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
+                href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${encodeURIComponent(slackRedirectURL)}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
               >
                 Integrate
               </Link>
@@ -516,7 +516,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
           <>
             <Button variant="default" size="default" asChild>
               <Link
-                href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${slackRedirectURL}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
+                href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${encodeURIComponent(slackRedirectURL)}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
               >
                 Integrate
               </Link>

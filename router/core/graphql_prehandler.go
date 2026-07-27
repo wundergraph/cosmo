@@ -78,6 +78,9 @@ type PreHandlerOptions struct {
 	ForceEnableInboundRequestDeduplication bool
 	HeaderPropagation                      *HeaderPropagation
 	SpanNameFormatter                      SpanNameFormatterFunc
+
+	// WaitForCacheWrites is set when Debug.SynchronousCacheWrites is enabled; it blocks until pending async operation-cache writes are applied.
+	WaitForCacheWrites func()
 }
 
 type PreHandler struct {
@@ -119,6 +122,7 @@ type PreHandler struct {
 	enableInboundRequestDeduplication      bool
 	forceEnableInboundRequestDeduplication bool
 	spanNameFormatter                      SpanNameFormatterFunc
+	waitForCacheWrites                     func()
 }
 
 type httpOperation struct {
@@ -188,6 +192,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
 		headerPropagation:                      opts.HeaderPropagation,
 		spanNameFormatter:                      spanNameFormatter,
+		waitForCacheWrites:                     opts.WaitForCacheWrites,
 	}
 }
 
@@ -447,6 +452,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
 			return
+		}
+
+		if h.waitForCacheWrites != nil {
+			h.waitForCacheWrites()
 		}
 
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
@@ -885,6 +894,11 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	engineNormalizeSpan.SetAttributes(otel.WgVariablesNormalizationCacheHit.Bool(cached))
 	requestContext.operation.variablesNormalizationCacheHit = cached
 	requestContext.expressionContext.Request.Operation.VariablesNormalizationCacheHit = cached
+
+	logInlineArguments(requestContext.logger, operationKit.parsedOperation)
+	if h.operationProcessor.parseKitOptions.validateInlineArguments.ReturnInResponseExtensions {
+		requestContext.operation.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
+	}
 
 	// Update file upload paths if they were used in the nested field of the extracted variables.
 	for mapping := range slices.Values(uploadsMapping) {
@@ -1414,4 +1428,36 @@ func setExpressionContextClient(requestContext *requestContext) {
 		requestContext.expressionContext.Request.Client.Name = clientName
 		requestContext.expressionContext.Request.Client.Version = clientVersion
 	}
+}
+
+// logInlineArguments emits a warning listing every inline argument value found in
+// the operation (non-enforcing mode of ValidateInlineArguments). It is a no-op
+// when there are no findings, so both the HTTP prehandler and the WebSocket
+// handler can call it unconditionally after a successful normalization.
+func logInlineArguments(logger *zap.Logger, operation *ParsedOperation) {
+	argumentNames := inlineArgumentQualifiedNames(operation)
+	if len(argumentNames) == 0 {
+		return
+	}
+	logger.Warn("Inline argument values found in operation; use variables instead",
+		zap.Int("count", len(argumentNames)),
+		zap.Strings("arguments", argumentNames),
+		zap.String("operation_name", operation.Request.OperationName),
+		zap.Uint64("operation_hash", operation.ID),
+	)
+}
+
+// inlineArgumentQualifiedNames returns the qualified names (e.g. "user.id",
+// "@skip.if") of every inline argument found in the operation, or nil when there
+// are none. Shared by the warning log and the response-extension reporting.
+func inlineArgumentQualifiedNames(operation *ParsedOperation) []string {
+	inlineArguments := operation.InlineArguments
+	if len(inlineArguments) == 0 {
+		return nil
+	}
+	argumentNames := make([]string, len(inlineArguments))
+	for i, arg := range inlineArguments {
+		argumentNames[i] = arg.QualifiedName()
+	}
+	return argumentNames
 }

@@ -1,0 +1,1218 @@
+{
+  "data": {
+    "_entities": [
+      {
+        "__typename": "Employee",
+        "hobbies": [
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Gaming",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 11,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Programming",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Travelling",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "hobbies": [
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Gaming",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Programming",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "hobbies": [
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 11,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Travelling",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "hobbies": [
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Flying",
+            "employees": [
+              {
+                "id": 4,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Travelling",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "hobbies": [
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 11,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 11,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 11,
+                "__typename": "Employee"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "hobbies": [
+          {
+            "__typename": "Gaming",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 11,
+                "__typename": "Employee"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "hobbies": [
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Gaming",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 11,
+                "__typename": "Employee"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "hobbies": [
+          {
+            "__typename": "Programming",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 11,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Travelling",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "hobbies": [
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 5,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 11,
+                "__typename": "Employee"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "hobbies": [
+          {
+            "__typename": "Programming",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Gaming",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 2,
+                "__typename": "Employee"
+              },
+              {
+                "id": 7,
+                "__typename": "Employee"
+              },
+              {
+                "id": 8,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          },
+          {
+            "__typename": "Travelling",
+            "employees": [
+              {
+                "id": 1,
+                "__typename": "Employee"
+              },
+              {
+                "id": 3,
+                "__typename": "Employee"
+              },
+              {
+                "id": 4,
+                "__typename": "Employee"
+              },
+              {
+                "id": 10,
+                "__typename": "Employee"
+              },
+              {
+                "id": 12,
+                "__typename": "Employee"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

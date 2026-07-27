@@ -105,6 +105,22 @@
       "CardinalityLimit": 2000
     }
   },
+  "Pyroscope": {
+    "Enabled": false,
+    "ServerAddress": "",
+    "ApplicationName": "wundergraph.cosmo.router",
+    "BasicAuth": {
+      "Username": "",
+      "Password": ""
+    },
+    "Headers": null,
+    "Tags": null,
+    "UploadRate": 15000000000,
+    "ProfileTypes": null,
+    "DisableGCRuns": false,
+    "MutexProfileFraction": 5,
+    "BlockProfileRate": 5
+  },
   "GraphqlMetrics": {
     "Enabled": true,
     "CollectorEndpoint": "https://cosmo-metrics.wundergraph.com"
@@ -347,7 +363,8 @@
   },
   "Authorization": {
     "RequireAuthentication": false,
-    "RejectOperationIfUnauthorized": false
+    "RejectOperationIfUnauthorized": false,
+    "EnablePreFetchFieldAuthorization": false
   },
   "RateLimit": {
     "Enabled": false,
@@ -460,7 +477,8 @@
       "EnableNormalizationCacheResponseHeader": false,
       "EnableCacheResponseHeaders": false,
       "AlwaysIncludeQueryPlan": false,
-      "AlwaysSkipLoader": false
+      "AlwaysSkipLoader": false,
+      "SynchronousCacheWrites": false
     },
     "EnableSingleFlight": true,
     "ForceEnableSingleFlight": false,
@@ -499,7 +517,16 @@
     "WebSocketClientPingTimeout": 30000000000,
     "WebSocketClientAckTimeout": 30000000000,
     "ValidateRequiredExternalFields": false,
-    "RelaxSubgraphOperationFieldSelectionMergingNullability": false
+    "RelaxSubgraphOperationFieldSelectionMergingNullability": false,
+    "AllowStringLiteralsForEnums": false,
+    "ValidateInlineArguments": {
+      "Mode": "off",
+      "EnforceHTTPStatusCode": 400,
+      "ErrorCode": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
+      "ErrorMessage": "Inline argument values are not allowed. Use variables instead.",
+      "IncludePersistedOperations": false,
+      "ReturnInResponseExtensions": false
+    }
   },
   "WebSocket": {
     "Enabled": true,
@@ -663,6 +690,9 @@
       "Enabled": false
     },
     "SubrequestHTTPError": {
+      "Enabled": false
+    },
+    "SkipNullVariablesError": {
       "Enabled": false
     }
   },

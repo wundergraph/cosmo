@@ -215,7 +215,9 @@ export default (opts: BaseCommandOptions) => {
 
     if ((previewResp.persistedOperationsCount > 0 || previewResp.hasTraffic) && !options.force) {
       const studioUrlObj = new URL(
-        `${previewResp.organizationSlug}/${options.namespace}/graph/${options.graphName}/operations`,
+        `${encodeURIComponent(previewResp.organizationSlug)}/${encodeURIComponent(options.namespace)}/graph/${encodeURIComponent(
+          options.graphName,
+        )}/operations`,
         config.webURL,
       );
       studioUrlObj.searchParams.set('clientNames', previewResp.client?.name ?? '');

@@ -23,6 +23,7 @@ import graphQLPlugin from 'prettier/plugins/graphql';
 import * as prettier from 'prettier/standalone';
 import { useContext, useEffect, useState } from 'react';
 import { GraphContext } from '../layout/graph-layout';
+import { buildUrl } from '@/lib/build-url';
 
 export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
   const { query } = useRouter();
@@ -192,11 +193,13 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
                       <TooltipTrigger asChild>
                         <Button variant="outline" size="icon" className="relative" asChild>
                           <Link
-                            href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
-                              content || '',
-                            )}&variables=${encodeURIComponent(
-                              variables || JSON.stringify(extractVariablesFromGraphQL(content, ast)),
-                            )}`}
+                            href={buildUrl('/:organizationSlug/:namespace/graph/:slug/playground', {
+                              organizationSlug,
+                              namespace,
+                              slug,
+                              operation: content,
+                              variables: variables || JSON.stringify(extractVariablesFromGraphQL(content, ast)),
+                            })}
                           >
                             <PlayIcon className="h-5" />
                             <ExclamationTriangleIcon className="absolute -right-1 -top-1 h-3.5 text-destructive" />
@@ -210,11 +213,13 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
                       <TooltipTrigger asChild>
                         <Button variant="outline" size="icon" asChild>
                           <Link
-                            href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
-                              content || '',
-                            )}&variables=${encodeURIComponent(
-                              variables || JSON.stringify(extractVariablesFromGraphQL(content, ast)),
-                            )}`}
+                            href={buildUrl('/:organizationSlug/:namespace/graph/:slug/playground', {
+                              organizationSlug,
+                              namespace,
+                              slug,
+                              operation: content,
+                              variables: variables || JSON.stringify(extractVariablesFromGraphQL(content, ast)),
+                            })}
                           >
                             <PlayIcon className="h-5" />
                           </Link>

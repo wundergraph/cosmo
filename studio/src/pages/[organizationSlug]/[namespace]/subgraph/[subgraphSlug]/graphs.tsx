@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { PiWarningCircle } from 'react-icons/pi';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { buildUrl } from '@/lib/build-url';
 
 export const Empty = ({ labels }: { labels: string[] }) => {
   const {
@@ -92,7 +93,11 @@ export const FederatedGraphsTable = ({
         <TableBody>
           {graphs.map(
             ({ federatedGraph: { name, routingURL, lastUpdatedAt, labelMatchers, namespace }, isConnected }) => {
-              const path = `/${organizationSlug}/${namespace}/graph/${name}`;
+              const path = buildUrl('/:organizationSlug/:namespace/graph/:name', {
+                organizationSlug: organizationSlug as string,
+                namespace,
+                name,
+              });
               return (
                 <TableRow
                   key={name}

@@ -1,4 +1,4 @@
-import { randomUUID, UUID } from 'node:crypto';
+import { createHash, randomUUID, UUID } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import fs from 'node:fs';
 import { createClient, Client } from '@connectrpc/connect';
@@ -957,6 +957,60 @@ export async function assertExecutionConfigSubgraphNames(
   for (const subgraph of routerExecutionConfig.subgraphs) {
     expect(subgraphIds.has(subgraph.id)).toBe(true);
   }
+}
+export async function assertMapperContentIsCorrect(
+  blobStorage: InMemoryBlobStorage,
+  expectedMapperKeysCount: number,
+  expectedNumberOfFeatureFlags = 1,
+) {
+  const blobKeys = blobStorage.keys();
+  const existingMappers = blobKeys.filter((key) => key.endsWith('mapper.json'));
+  expect(existingMappers).toHaveLength(expectedMapperKeysCount);
+
+  let numberOfRouterConfigsInBlobStorage = 0;
+  for (const mapperKey of existingMappers) {
+    const mapperBlob = await blobStorage.getObject({ key: mapperKey });
+    const mapper = await mapperBlob.stream
+      .getReader()
+      .read()
+      .then((result) => JSON.parse(result.value.toString()));
+
+    const keyPrefix = mapperKey.split('/').slice(0, -1).join('/');
+    const mapperEntries = Object.entries(mapper);
+
+    /**
+     * The mapper should always contain the number of expected feature flags plus one (the federated graph.
+     *
+     * If the expected number of feature flags is `-1`, we are skipping this check.
+     */
+    if (expectedNumberOfFeatureFlags !== -1) {
+      expect(mapperEntries).toHaveLength(expectedNumberOfFeatureFlags + 1);
+    }
+
+    for (const [featureFlagName, hash] of mapperEntries) {
+      const key =
+        featureFlagName === '' ? `${keyPrefix}/latest.json` : `${keyPrefix}/feature-flags/${featureFlagName}.json`;
+
+      expect(blobKeys).include(key);
+
+      const blob = await blobStorage.getObject({ key });
+      const blobContent = await blob.stream
+        .getReader()
+        .read()
+        .then((result) => result.value.toString());
+
+      const actualHash = createHash('sha256').update(blobContent).digest('hex');
+      expect(hash).toBe(actualHash);
+
+      numberOfRouterConfigsInBlobStorage++;
+    }
+  }
+
+  /**
+   * The number of elements in the blob storage should be the number of expected mappers plus the number
+   * of valid hashes in each mapper file
+   */
+  expect(blobKeys).toHaveLength(numberOfRouterConfigsInBlobStorage + expectedMapperKeysCount);
 }
 
 export async function toggleFeatureFlag(

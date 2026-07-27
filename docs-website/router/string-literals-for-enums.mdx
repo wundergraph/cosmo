@@ -1,0 +1,71 @@
+---
+title: "String Literals for Enums"
+icon: "quotes"
+description: "Accept string literals for enum values as an opt-in deviation from the GraphQL specification."
+---
+
+The GraphQL specification distinguishes between enum literals and string literals in an operation document. An enum argument accepts the enum literal `VALUE1`, but not the string literal `"VALUE1"`. By default, the router rejects a string literal used for an enum type with a validation error:
+
+```
+Enum "SomeEnum" cannot represent non-enum value: "VALUE1".
+```
+
+The `allow_string_literals_for_enums` option accepts such string literals when the string content matches one of the enum's values. Strings that do not match a value are still rejected:
+
+```
+Value "NOPE" does not exist in "SomeEnum" enum.
+```
+
+<Warning>
+  This is a deviation from the GraphQL specification. Servers built on graphql-js reject string literals for enums. Prefer fixing clients to send enum literals. Use this option to keep existing clients working while they migrate.
+</Warning>
+
+## Examples
+
+Given the schema:
+
+```graphql
+enum SomeEnum {
+  VALUE1
+  VALUE2
+}
+
+type Query {
+  field(arg: SomeEnum): String
+}
+```
+
+The following queries behave as listed:
+
+```graphql
+{ field(arg: VALUE1) }    # Valid. Enum literal.
+{ field(arg: "VALUE1") }  # Invalid by default. Valid with this option enabled.
+{ field(arg: "NOPE") }    # Invalid. "NOPE" is not a value of SomeEnum.
+```
+
+Variables are not affected by this option. JSON has no enum type, so a string is the standard representation for an enum variable value and is always accepted when it matches an enum value:
+
+```graphql
+query ($arg: SomeEnum) { field(arg: $arg) }
+# variables: {"arg": "VALUE1"} is valid with or without this option
+```
+
+## Configuration
+
+<Tabs>
+  <Tab title="Environment Variable">
+    ```bash
+    ENGINE_ALLOW_STRING_LITERALS_FOR_ENUMS=true
+    ```
+  </Tab>
+  <Tab title="YAML">
+    ```yaml config.yaml
+    version: "1"
+
+    engine:
+      allow_string_literals_for_enums: true
+    ```
+  </Tab>
+</Tabs>
+
+This option is disabled by default. See the [Router Configuration reference](/router/configuration#router-engine-configuration) for all engine flags.
