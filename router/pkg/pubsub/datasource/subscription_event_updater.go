@@ -28,14 +28,14 @@ type subscriptionEventUpdater struct {
 	subscriptionEventConfiguration SubscriptionEventConfiguration
 	hooks                          Hooks
 	onReiveEventsTimeout           time.Duration
-	onBroadcastEventsTimeout       time.Duration
+	beforeEventsDispatchTimeout    time.Duration
 	logger                         *zap.Logger
 	eventBuilder                   EventBuilderFn
 	semaphore                      *semaphore.Weighted
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
-	events, ok := s.runOnBroadcastEventsHooks(events)
+	events, ok := s.runBeforeEventsDispatchHooks(events)
 	if !ok {
 		return
 	}
@@ -92,15 +92,15 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 	}
 }
 
-// runOnBroadcastEventsHooks runs the OnBroadcastEvents hooks once per received batch,
+// runBeforeEventsDispatchHooks runs the BeforeEventsDispatch hooks once per received batch,
 // before any per-subscriber fan-out. It returns the (possibly transformed) events and
 // false if a hook failed and the batch should be dropped.
-func (s *subscriptionEventUpdater) runOnBroadcastEventsHooks(events []StreamEvent) ([]StreamEvent, bool) {
-	if len(s.hooks.OnBroadcastEvents.Handlers) == 0 {
+func (s *subscriptionEventUpdater) runBeforeEventsDispatchHooks(events []StreamEvent) ([]StreamEvent, bool) {
+	if len(s.hooks.BeforeEventsDispatch.Handlers) == 0 {
 		return events, true
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), s.onBroadcastEventsTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), s.beforeEventsDispatchTimeout)
 	defer cancel()
 
 	type hookResult struct {
@@ -116,7 +116,7 @@ func (s *subscriptionEventUpdater) runOnBroadcastEventsHooks(events []StreamEven
 				s.logger.
 					WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
 					Error("[Recovery from handler panic]",
-						zap.String("handler_name", "OnBroadcastEvents"),
+						zap.String("handler_name", "BeforeEventsDispatch"),
 						zap.Any("error", r),
 					)
 				res = hookResult{nil, false}
@@ -125,13 +125,13 @@ func (s *subscriptionEventUpdater) runOnBroadcastEventsHooks(events []StreamEven
 		}()
 
 		evts := events
-		for i := range s.hooks.OnBroadcastEvents.Handlers {
+		for i := range s.hooks.BeforeEventsDispatch.Handlers {
 			var err error
-			evts, err = s.hooks.OnBroadcastEvents.Handlers[i](ctx, s.subscriptionEventConfiguration, s.eventBuilder, evts)
+			evts, err = s.hooks.BeforeEventsDispatch.Handlers[i](ctx, s.subscriptionEventConfiguration, s.eventBuilder, evts)
 			if err != nil {
 				s.logger.
 					With(zap.Int("handler_index", i)).
-					Warn("OnBroadcastEvents handler failed, dropping event batch", zap.Error(err))
+					Warn("BeforeEventsDispatch handler failed, dropping event batch", zap.Error(err))
 				return
 			}
 		}
@@ -142,8 +142,8 @@ func (s *subscriptionEventUpdater) runOnBroadcastEventsHooks(events []StreamEven
 	case res := <-done:
 		return res.events, res.ok
 	case <-ctx.Done():
-		s.logger.Warn("OnBroadcastEvents handler timeout exceeded, dropping event batch. " +
-			"Consider increasing events.handler.on_broadcast_events.handler_timeout or reduce handler execution time.")
+		s.logger.Warn("BeforeEventsDispatch handler timeout exceeded, dropping event batch. " +
+			"Consider increasing events.handler.before_events_dispatch.handler_timeout or reduce handler execution time.")
 		return nil, false
 	}
 }
@@ -220,9 +220,9 @@ func NewSubscriptionEventUpdater(
 	if onReceiveEventsTimeout == 0 {
 		onReceiveEventsTimeout = defaultTimeout
 	}
-	onBroadcastEventsTimeout := hooks.OnBroadcastEvents.Timeout
-	if onBroadcastEventsTimeout == 0 {
-		onBroadcastEventsTimeout = defaultTimeout
+	beforeEventsDispatchTimeout := hooks.BeforeEventsDispatch.Timeout
+	if beforeEventsDispatchTimeout == 0 {
+		beforeEventsDispatchTimeout = defaultTimeout
 	}
 
 	return &subscriptionEventUpdater{
@@ -233,6 +233,6 @@ func NewSubscriptionEventUpdater(
 		eventBuilder:                   eventBuilder,
 		semaphore:                      semaphore.NewWeighted(int64(limit)),
 		onReiveEventsTimeout:           onReceiveEventsTimeout,
-		onBroadcastEventsTimeout:       onBroadcastEventsTimeout,
+		beforeEventsDispatchTimeout:    beforeEventsDispatchTimeout,
 	}
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/events"
-	stream_broadcast "github.com/wundergraph/cosmo/router-tests/modules/stream-broadcast"
+	before_events_dispatch "github.com/wundergraph/cosmo/router-tests/modules/before-events-dispatch"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -28,16 +28,16 @@ func TestBroadcastHook(t *testing.T) {
 		errValue  error
 	}
 
-	t.Run("OnBroadcastEvents hook could change events for all subscribers", func(t *testing.T) {
+	t.Run("BeforeEventsDispatch hook could change events for all subscribers", func(t *testing.T) {
 		t.Parallel()
 
 		// This test verifies that the broadcast hook can modify events by cloning them first, so they become mutable,
-		// and then changing their data. Unlike OnReceiveEvents, OnBroadcastEvents runs once per batch, before the
+		// and then changing their data. Unlike OnReceiveEvents, BeforeEventsDispatch runs once per batch, before the
 		// per-subscriber fan-out, so a single hook invocation must be enough to update all subscribers.
 
-		customModule := stream_broadcast.StreamBroadcastModule{
+		customModule := before_events_dispatch.BeforeEventsDispatchModule{
 			HookCallCount: &atomic.Int32{},
-			Callback: func(ctx core.StreamBroadcastEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+			Callback: func(ctx core.StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 				newEvents := make([]datasource.StreamEvent, 0, events.Len())
 				for _, event := range events.All() {
 					eventCopy := event.Clone()
@@ -52,7 +52,7 @@ func TestBroadcastHook(t *testing.T) {
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamBroadcastModule": customModule,
+				"beforeEventsDispatchModule": customModule,
 			},
 		}
 
@@ -61,7 +61,7 @@ func TestBroadcastHook(t *testing.T) {
 			EnableKafka:              true,
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&stream_broadcast.StreamBroadcastModule{}),
+				core.WithCustomModules(&before_events_dispatch.BeforeEventsDispatchModule{}),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -133,7 +133,7 @@ func TestBroadcastHook(t *testing.T) {
 		})
 	})
 
-	t.Run("OnBroadcastEvents hook error drops the batch but keeps the connection open", func(t *testing.T) {
+	t.Run("BeforeEventsDispatch hook error drops the batch but keeps the connection open", func(t *testing.T) {
 		t.Parallel()
 
 		// This test verifies that when the broadcast hook returns an error, the whole batch is dropped
@@ -143,9 +143,9 @@ func TestBroadcastHook(t *testing.T) {
 		var shouldFail atomic.Bool
 		shouldFail.Store(true)
 
-		customModule := stream_broadcast.StreamBroadcastModule{
+		customModule := before_events_dispatch.BeforeEventsDispatchModule{
 			HookCallCount: &atomic.Int32{},
-			Callback: func(ctx core.StreamBroadcastEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+			Callback: func(ctx core.StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 				if shouldFail.Load() {
 					return datasource.NewStreamEvents(nil), errors.New("test error from broadcast hook")
 				}
@@ -156,7 +156,7 @@ func TestBroadcastHook(t *testing.T) {
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamBroadcastModule": customModule,
+				"beforeEventsDispatchModule": customModule,
 			},
 		}
 
@@ -165,7 +165,7 @@ func TestBroadcastHook(t *testing.T) {
 			EnableKafka:              true,
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&stream_broadcast.StreamBroadcastModule{}),
+				core.WithCustomModules(&before_events_dispatch.BeforeEventsDispatchModule{}),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -222,7 +222,7 @@ func TestBroadcastHook(t *testing.T) {
 				return customModule.HookCallCount.Load() >= 1
 			}, Timeout, time.Millisecond*50)
 
-			warnLogs := xEnv.Observer().FilterMessage("OnBroadcastEvents handler failed, dropping event batch")
+			warnLogs := xEnv.Observer().FilterMessage("BeforeEventsDispatch handler failed, dropping event batch")
 			assert.GreaterOrEqual(t, warnLogs.Len(), 1, "expected a warning about the dropped batch to be logged")
 
 			// Now let a subsequent event succeed to prove the connection is still functional.
@@ -242,7 +242,7 @@ func TestBroadcastHook(t *testing.T) {
 		})
 	})
 
-	t.Run("OnBroadcastEvents can't assert to mutable types", func(t *testing.T) {
+	t.Run("BeforeEventsDispatch can't assert to mutable types", func(t *testing.T) {
 		t.Parallel()
 
 		// This test verifies that regular StreamEvents cannot be type-asserted to MutableStreamEvent.
@@ -255,9 +255,9 @@ func TestBroadcastHook(t *testing.T) {
 		var taPossible atomic.Bool
 		taPossible.Store(true)
 
-		customModule := stream_broadcast.StreamBroadcastModule{
+		customModule := before_events_dispatch.BeforeEventsDispatchModule{
 			HookCallCount: &atomic.Int32{},
-			Callback: func(ctx core.StreamBroadcastEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+			Callback: func(ctx core.StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 				for _, evt := range events.All() {
 					_, ok := evt.(datasource.MutableStreamEvent)
 					if !ok {
@@ -271,7 +271,7 @@ func TestBroadcastHook(t *testing.T) {
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamBroadcastModule": customModule,
+				"beforeEventsDispatchModule": customModule,
 			},
 		}
 
@@ -280,7 +280,7 @@ func TestBroadcastHook(t *testing.T) {
 			EnableKafka:              true,
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&stream_broadcast.StreamBroadcastModule{}),
+				core.WithCustomModules(&before_events_dispatch.BeforeEventsDispatchModule{}),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -339,18 +339,18 @@ func TestBroadcastHook(t *testing.T) {
 		})
 	})
 
-	t.Run("OnBroadcastEvents hook can access subscription event configuration", func(t *testing.T) {
+	t.Run("BeforeEventsDispatch hook can access subscription event configuration", func(t *testing.T) {
 		t.Parallel()
 
 		// This test verifies that the broadcast hook can access the subscription event configuration
-		// (provider ID, provider type, root field name). Unlike OnReceiveEvents, OnBroadcastEvents runs
+		// (provider ID, provider type, root field name). Unlike OnReceiveEvents, BeforeEventsDispatch runs
 		// once per batch before any per-subscriber fan-out, so there is no per-subscriber HTTP request or
 		// client authentication available on its context - only metadata about the subscription/provider
 		// that produced the batch. This test uses that metadata to conditionally transform events.
 
-		customModule := stream_broadcast.StreamBroadcastModule{
+		customModule := before_events_dispatch.BeforeEventsDispatchModule{
 			HookCallCount: &atomic.Int32{},
-			Callback: func(ctx core.StreamBroadcastEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+			Callback: func(ctx core.StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 				subConf := ctx.SubscriptionEventConfiguration()
 				if subConf == nil || subConf.RootFieldName() != "employeeUpdatedMyKafka" || subConf.ProviderType() != datasource.ProviderTypeKafka {
 					return events, nil
@@ -370,7 +370,7 @@ func TestBroadcastHook(t *testing.T) {
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamBroadcastModule": customModule,
+				"beforeEventsDispatchModule": customModule,
 			},
 		}
 
@@ -379,7 +379,7 @@ func TestBroadcastHook(t *testing.T) {
 			EnableKafka:              true,
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&stream_broadcast.StreamBroadcastModule{}),
+				core.WithCustomModules(&before_events_dispatch.BeforeEventsDispatchModule{}),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,

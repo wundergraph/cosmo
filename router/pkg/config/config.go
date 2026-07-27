@@ -870,8 +870,8 @@ type EventsConfiguration struct {
 }
 
 type StreamsHandlerConfiguration struct {
-	OnReceiveEvents   OnReceiveEventsConfiguration   `yaml:"on_receive_events"`
-	OnBroadcastEvents OnBroadcastEventsConfiguration `yaml:"on_broadcast_events"`
+	OnReceiveEvents      OnReceiveEventsConfiguration      `yaml:"on_receive_events"`
+	BeforeEventsDispatch BeforeEventsDispatchConfiguration `yaml:"before_events_dispatch"`
 }
 
 type OnReceiveEventsConfiguration struct {
@@ -879,7 +879,7 @@ type OnReceiveEventsConfiguration struct {
 	HandlerTimeout        time.Duration `yaml:"handler_timeout" envDefault:"5s"`
 }
 
-type OnBroadcastEventsConfiguration struct {
+type BeforeEventsDispatchConfiguration struct {
 	HandlerTimeout time.Duration `yaml:"handler_timeout" envDefault:"5s"`
 }
 

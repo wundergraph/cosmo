@@ -1,4 +1,4 @@
-package stream_broadcast
+package before_events_dispatch
 
 import (
 	"sync/atomic"
@@ -9,24 +9,24 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 )
 
-const myModuleID = "streamBroadcastModule"
+const myModuleID = "beforeEventsDispatchModule"
 
-type StreamBroadcastModule struct {
+type BeforeEventsDispatchModule struct {
 	Logger        *zap.Logger
-	Callback      func(ctx core.StreamBroadcastEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+	Callback      func(ctx core.StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 	HookCallCount *atomic.Int32 // Counter to track how many times the hook is called
 }
 
-func (m *StreamBroadcastModule) Provision(ctx *core.ModuleContext) error {
+func (m *BeforeEventsDispatchModule) Provision(ctx *core.ModuleContext) error {
 	// Assign the logger to the module for non-request related logging
 	m.Logger = ctx.Logger
 
 	return nil
 }
 
-func (m *StreamBroadcastModule) OnBroadcastEvents(ctx core.StreamBroadcastEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+func (m *BeforeEventsDispatchModule) BeforeEventsDispatch(ctx core.StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 	if m.Logger != nil {
-		m.Logger.Info("Stream Broadcast Hook has been run")
+		m.Logger.Info("Before Events Dispatch Hook has been run")
 	}
 
 	if m.HookCallCount != nil {
@@ -40,19 +40,19 @@ func (m *StreamBroadcastModule) OnBroadcastEvents(ctx core.StreamBroadcastEventH
 	return events, nil
 }
 
-func (m *StreamBroadcastModule) Module() core.ModuleInfo {
+func (m *BeforeEventsDispatchModule) Module() core.ModuleInfo {
 	return core.ModuleInfo{
 		// This is the ID of your module, it must be unique
 		ID: myModuleID,
 		// The priority of your module, lower numbers are executed first
 		Priority: 1,
 		New: func() core.Module {
-			return &StreamBroadcastModule{}
+			return &BeforeEventsDispatchModule{}
 		},
 	}
 }
 
 // Interface guard
 var (
-	_ core.StreamBroadcastEventHandler = (*StreamBroadcastModule)(nil)
+	_ core.StreamBeforeEventsDispatchHandler = (*BeforeEventsDispatchModule)(nil)
 )

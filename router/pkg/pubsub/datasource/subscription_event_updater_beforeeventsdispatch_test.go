@@ -19,7 +19,7 @@ type receivedBroadcastHooksArgs struct {
 	cfg    SubscriptionEventConfiguration
 }
 
-func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_Success(t *testing.T) {
+func TestSubscriptionEventUpdater_Update_WithBeforeEventsDispatchHooks_Success(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -46,8 +46,8 @@ func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_Success(t *t
 	updater := NewSubscriptionEventUpdater(
 		config,
 		Hooks{
-			OnBroadcastEvents: OnBroadcastEventsHooks{
-				Handlers: []OnBroadcastEventsFn{testHook},
+			BeforeEventsDispatch: BeforeEventsDispatchHooks{
+				Handlers: []BeforeEventsDispatchFn{testHook},
 			},
 		},
 		mockUpdater,
@@ -69,7 +69,7 @@ func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_Success(t *t
 	mockUpdater.AssertNumberOfCalls(t, "Update", 1)
 }
 
-func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_Error(t *testing.T) {
+func TestSubscriptionEventUpdater_Update_WithBeforeEventsDispatchHooks_Error(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -90,8 +90,8 @@ func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_Error(t *tes
 	updater := NewSubscriptionEventUpdater(
 		config,
 		Hooks{
-			OnBroadcastEvents: OnBroadcastEventsHooks{
-				Handlers: []OnBroadcastEventsFn{testHook},
+			BeforeEventsDispatch: BeforeEventsDispatchHooks{
+				Handlers: []BeforeEventsDispatchFn{testHook},
 			},
 		},
 		mockUpdater,
@@ -108,7 +108,7 @@ func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_Error(t *tes
 	mockUpdater.AssertNotCalled(t, "CloseSubscription")
 }
 
-func TestSubscriptionEventUpdater_Update_WithMultipleOnBroadcastEventsHooks_Success(t *testing.T) {
+func TestSubscriptionEventUpdater_Update_WithMultipleBeforeEventsDispatchHooks_Success(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -137,8 +137,8 @@ func TestSubscriptionEventUpdater_Update_WithMultipleOnBroadcastEventsHooks_Succ
 	updater := NewSubscriptionEventUpdater(
 		config,
 		Hooks{
-			OnBroadcastEvents: OnBroadcastEventsHooks{
-				Handlers: []OnBroadcastEventsFn{hook1, hook2},
+			BeforeEventsDispatch: BeforeEventsDispatchHooks{
+				Handlers: []BeforeEventsDispatchFn{hook1, hook2},
 			},
 		},
 		mockUpdater,
@@ -167,7 +167,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleOnBroadcastEventsHooks_Succ
 	mockUpdater.AssertNumberOfCalls(t, "Update", 1)
 }
 
-func TestSubscriptionEventUpdater_Update_WithMultipleOnBroadcastEventsHooks_Error(t *testing.T) {
+func TestSubscriptionEventUpdater_Update_WithMultipleBeforeEventsDispatchHooks_Error(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -202,8 +202,8 @@ func TestSubscriptionEventUpdater_Update_WithMultipleOnBroadcastEventsHooks_Erro
 	updater := NewSubscriptionEventUpdater(
 		config,
 		Hooks{
-			OnBroadcastEvents: OnBroadcastEventsHooks{
-				Handlers: []OnBroadcastEventsFn{hook1, hook2, hook3},
+			BeforeEventsDispatch: BeforeEventsDispatchHooks{
+				Handlers: []BeforeEventsDispatchFn{hook1, hook2, hook3},
 			},
 		},
 		mockUpdater,
@@ -232,7 +232,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleOnBroadcastEventsHooks_Erro
 	mockUpdater.AssertNotCalled(t, "Update")
 }
 
-func TestSubscriptionEventUpdater_Update_WithSingleOnBroadcastEventsHookModification(t *testing.T) {
+func TestSubscriptionEventUpdater_Update_WithSingleBeforeEventsDispatchHookModification(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -260,8 +260,8 @@ func TestSubscriptionEventUpdater_Update_WithSingleOnBroadcastEventsHookModifica
 	updater := NewSubscriptionEventUpdater(
 		config,
 		Hooks{
-			OnBroadcastEvents: OnBroadcastEventsHooks{
-				Handlers: []OnBroadcastEventsFn{hook},
+			BeforeEventsDispatch: BeforeEventsDispatchHooks{
+				Handlers: []BeforeEventsDispatchFn{hook},
 			},
 		},
 		mockUpdater,
@@ -277,7 +277,7 @@ func TestSubscriptionEventUpdater_Update_WithSingleOnBroadcastEventsHookModifica
 	mockUpdater.AssertNumberOfCalls(t, "Update", 2)
 }
 
-func TestSubscriptionEventUpdater_Update_WithSingleOnBroadcastEventsHookError_DropsBatch(t *testing.T) {
+func TestSubscriptionEventUpdater_Update_WithSingleBeforeEventsDispatchHookError_DropsBatch(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -296,8 +296,8 @@ func TestSubscriptionEventUpdater_Update_WithSingleOnBroadcastEventsHookError_Dr
 	}
 
 	updater := NewSubscriptionEventUpdater(config, Hooks{
-		OnBroadcastEvents: OnBroadcastEventsHooks{
-			Handlers: []OnBroadcastEventsFn{hook},
+		BeforeEventsDispatch: BeforeEventsDispatchHooks{
+			Handlers: []BeforeEventsDispatchFn{hook},
 		},
 	}, mockUpdater, zap.NewNop(), testEventBuilder)
 
@@ -307,7 +307,7 @@ func TestSubscriptionEventUpdater_Update_WithSingleOnBroadcastEventsHookError_Dr
 	mockUpdater.AssertNotCalled(t, "Update")
 }
 
-func TestSubscriptionEventUpdater_Update_WithMultipleOnBroadcastEventsHooksChaining(t *testing.T) {
+func TestSubscriptionEventUpdater_Update_WithMultipleBeforeEventsDispatchHooksChaining(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -373,8 +373,8 @@ func TestSubscriptionEventUpdater_Update_WithMultipleOnBroadcastEventsHooksChain
 	updater := NewSubscriptionEventUpdater(
 		config,
 		Hooks{
-			OnBroadcastEvents: OnBroadcastEventsHooks{
-				Handlers: []OnBroadcastEventsFn{hook1, hook2, hook3},
+			BeforeEventsDispatch: BeforeEventsDispatchHooks{
+				Handlers: []BeforeEventsDispatchFn{hook1, hook2, hook3},
 			},
 		},
 		mockUpdater,
@@ -425,7 +425,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleOnBroadcastEventsHooksChain
 	mockUpdater.AssertNumberOfCalls(t, "Update", 1)
 }
 
-func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHookError_DropsBatch(t *testing.T) {
+func TestSubscriptionEventUpdater_Update_WithBeforeEventsDispatchHookError_DropsBatch(t *testing.T) {
 	testCases := []struct {
 		name      string
 		hookError error
@@ -459,8 +459,8 @@ func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHookError_DropsBat
 			updater := NewSubscriptionEventUpdater(
 				config,
 				Hooks{
-					OnBroadcastEvents: OnBroadcastEventsHooks{
-						Handlers: []OnBroadcastEventsFn{testHook},
+					BeforeEventsDispatch: BeforeEventsDispatchHooks{
+						Handlers: []BeforeEventsDispatchFn{testHook},
 					},
 				},
 				mockUpdater,
@@ -475,7 +475,7 @@ func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHookError_DropsBat
 	}
 }
 
-func TestSubscriptionEventUpdater_OnBroadcastEvents_PanicRecovery(t *testing.T) {
+func TestSubscriptionEventUpdater_BeforeEventsDispatch_PanicRecovery(t *testing.T) {
 	panicErr := errors.New("panic error")
 
 	tests := []struct {
@@ -519,8 +519,8 @@ func TestSubscriptionEventUpdater_OnBroadcastEvents_PanicRecovery(t *testing.T) 
 			updater := NewSubscriptionEventUpdater(
 				config,
 				Hooks{
-					OnBroadcastEvents: OnBroadcastEventsHooks{
-						Handlers: []OnBroadcastEventsFn{testHook},
+					BeforeEventsDispatch: BeforeEventsDispatchHooks{
+						Handlers: []BeforeEventsDispatchFn{testHook},
 					},
 				},
 				mockUpdater,
@@ -543,13 +543,13 @@ func TestSubscriptionEventUpdater_OnBroadcastEvents_PanicRecovery(t *testing.T) 
 			logs := logObserver.FilterMessage("[Recovery from handler panic]").All()
 			assert.Len(t, logs, 1)
 			assert.Equal(t, zap.ErrorLevel, logs[0].Level)
-			assert.Equal(t, "OnBroadcastEvents", logs[0].ContextMap()["handler_name"])
+			assert.Equal(t, "BeforeEventsDispatch", logs[0].ContextMap()["handler_name"])
 			assert.NotNil(t, logs[0].ContextMap()["error"])
 		})
 	}
 }
 
-func TestSubscriptionEventUpdater_Update_OnBroadcastEventsHookTimeout_DropsBatch(t *testing.T) {
+func TestSubscriptionEventUpdater_Update_BeforeEventsDispatchHookTimeout_DropsBatch(t *testing.T) {
 	core, logObserver := observer.New(zap.InfoLevel)
 	logger := zap.New(core)
 
@@ -575,8 +575,8 @@ func TestSubscriptionEventUpdater_Update_OnBroadcastEventsHookTimeout_DropsBatch
 	updater := NewSubscriptionEventUpdater(
 		config,
 		Hooks{
-			OnBroadcastEvents: OnBroadcastEventsHooks{
-				Handlers: []OnBroadcastEventsFn{testHook},
+			BeforeEventsDispatch: BeforeEventsDispatchHooks{
+				Handlers: []BeforeEventsDispatchFn{testHook},
 				Timeout:  10 * time.Millisecond,
 			},
 		},
@@ -592,16 +592,16 @@ func TestSubscriptionEventUpdater_Update_OnBroadcastEventsHookTimeout_DropsBatch
 
 	// Assert the timeout (not some other reason) is what caused the drop
 	assert.Eventually(t, func() bool {
-		logs := logObserver.FilterMessageSnippet("OnBroadcastEvents handler timeout exceeded").All()
+		logs := logObserver.FilterMessageSnippet("BeforeEventsDispatch handler timeout exceeded").All()
 		return len(logs) == 1
 	}, 1*time.Second, 10*time.Millisecond, "expected timeout warning log")
 
-	logs := logObserver.FilterMessageSnippet("OnBroadcastEvents handler timeout exceeded").All()
+	logs := logObserver.FilterMessageSnippet("BeforeEventsDispatch handler timeout exceeded").All()
 	assert.Len(t, logs, 1)
 	assert.Equal(t, zap.WarnLevel, logs[0].Level)
 }
 
-func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_EmptyResult_NoEventsSent(t *testing.T) {
+func TestSubscriptionEventUpdater_Update_WithBeforeEventsDispatchHooks_EmptyResult_NoEventsSent(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -620,8 +620,8 @@ func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_EmptyResult_
 	updater := NewSubscriptionEventUpdater(
 		config,
 		Hooks{
-			OnBroadcastEvents: OnBroadcastEventsHooks{
-				Handlers: []OnBroadcastEventsFn{testHook},
+			BeforeEventsDispatch: BeforeEventsDispatchHooks{
+				Handlers: []BeforeEventsDispatchFn{testHook},
 			},
 		},
 		mockUpdater,
@@ -635,7 +635,7 @@ func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_EmptyResult_
 	mockUpdater.AssertNotCalled(t, "Update")
 }
 
-func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_SuccessHandoffToOnReceiveEvents(t *testing.T) {
+func TestSubscriptionEventUpdater_Update_WithBeforeEventsDispatchHooks_SuccessHandoffToOnReceiveEvents(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -650,7 +650,7 @@ func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_SuccessHando
 		return []StreamEvent{&testEvent{mutableTestEvent("modified by broadcast hook")}}, nil
 	}
 
-	// The OnReceiveEvents hook should receive the events produced by the OnBroadcastEvents hook,
+	// The OnReceiveEvents hook should receive the events produced by the BeforeEventsDispatch hook,
 	// not the original events.
 	receivedByReceiveHook := make(chan []StreamEvent, 1)
 	receiveHook := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
@@ -667,8 +667,8 @@ func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_SuccessHando
 	updater := NewSubscriptionEventUpdater(
 		config,
 		Hooks{
-			OnBroadcastEvents: OnBroadcastEventsHooks{
-				Handlers: []OnBroadcastEventsFn{broadcastHook},
+			BeforeEventsDispatch: BeforeEventsDispatchHooks{
+				Handlers: []BeforeEventsDispatchFn{broadcastHook},
 			},
 			OnReceiveEvents: OnReceiveEventsHooks{
 				Handlers: []OnReceiveEventsFn{receiveHook},
@@ -692,7 +692,7 @@ func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_SuccessHando
 	mockUpdater.AssertNotCalled(t, "Update")
 }
 
-func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_ErrorDropsBeforeOnReceiveEventsFanOut(t *testing.T) {
+func TestSubscriptionEventUpdater_Update_WithBeforeEventsDispatchHooks_ErrorDropsBeforeOnReceiveEventsFanOut(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -717,8 +717,8 @@ func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_ErrorDropsBe
 	updater := NewSubscriptionEventUpdater(
 		config,
 		Hooks{
-			OnBroadcastEvents: OnBroadcastEventsHooks{
-				Handlers: []OnBroadcastEventsFn{broadcastHook},
+			BeforeEventsDispatch: BeforeEventsDispatchHooks{
+				Handlers: []BeforeEventsDispatchFn{broadcastHook},
 			},
 			OnReceiveEvents: OnReceiveEventsHooks{
 				Handlers: []OnReceiveEventsFn{receiveHook},
@@ -735,7 +735,7 @@ func TestSubscriptionEventUpdater_Update_WithOnBroadcastEventsHooks_ErrorDropsBe
 	// OnReceiveEvents hook must never run and no subscription-related calls happen.
 	assert.Never(t, func() bool {
 		return receiveHookCalled.Load()
-	}, 100*time.Millisecond, 10*time.Millisecond, "OnReceiveEvents hook should not have been called after OnBroadcastEvents returned an error")
+	}, 100*time.Millisecond, 10*time.Millisecond, "OnReceiveEvents hook should not have been called after BeforeEventsDispatch returned an error")
 
 	mockUpdater.AssertNotCalled(t, "Subscriptions")
 	mockUpdater.AssertNotCalled(t, "UpdateSubscription")

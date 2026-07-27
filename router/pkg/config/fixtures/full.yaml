@@ -427,7 +427,7 @@ events:
     on_receive_events:
       max_concurrent_handlers: 100
       handler_timeout: 5s
-    on_broadcast_events:
+    before_events_dispatch:
       handler_timeout: 5s
 
 engine:

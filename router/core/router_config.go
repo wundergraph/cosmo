@@ -30,11 +30,11 @@ import (
 )
 
 type subscriptionHooks struct {
-	onCreate          onCreateHooks
-	onStart           onStartHooks
-	onPublishEvents   onPublishEventsHooks
-	onReceiveEvents   onReceiveEventsHooks
-	onBroadcastEvents onBroadcastEventsHooks
+	onCreate             onCreateHooks
+	onStart              onStartHooks
+	onPublishEvents      onPublishEventsHooks
+	onReceiveEvents      onReceiveEventsHooks
+	beforeEventsDispatch beforeEventsDispatchHooks
 }
 
 type onCreateHooks struct {
@@ -55,8 +55,8 @@ type onReceiveEventsHooks struct {
 	timeout               time.Duration
 }
 
-type onBroadcastEventsHooks struct {
-	handlers []func(ctx StreamBroadcastEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+type beforeEventsDispatchHooks struct {
+	handlers []func(ctx StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 	timeout  time.Duration
 }
 

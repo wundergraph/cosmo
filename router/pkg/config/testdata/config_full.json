@@ -833,7 +833,7 @@
         "MaxConcurrentHandlers": 100,
         "HandlerTimeout": 5000000000
       },
-      "OnBroadcastEvents": {
+      "BeforeEventsDispatch": {
         "HandlerTimeout": 5000000000
       }
     }
