@@ -15,22 +15,7 @@ GGT_BRANCH="${GGT_BRANCH:-milinda/entity-intelligence}"
 GGT_REPO="https://github.com/wundergraph/graphql-go-tools.git"
 
 echo "==> graphql-go-tools sibling checkout"
-if [ -d "$GGT_DIR" ] && ! is_real_git_repo "$GGT_DIR"; then
-  echo "ERROR: $GGT_DIR exists but isn't a git repository." >&2
-  echo "       Remove it or point GGT_DIR elsewhere, then re-run." >&2
-  exit 1
-elif [ -d "$GGT_DIR" ]; then
-  current_branch="$(git -C "$GGT_DIR" branch --show-current)"
-  if [ "$current_branch" != "$GGT_BRANCH" ]; then
-    echo "WARNING: $GGT_DIR exists but is on '$current_branch', not '$GGT_BRANCH'."
-    echo "         Not switching it for you, check out '$GGT_BRANCH' yourself if needed."
-  else
-    echo "Already present on $GGT_BRANCH."
-  fi
-else
-  echo "Cloning $GGT_REPO into $GGT_DIR ($GGT_BRANCH)..."
-  git clone --branch "$GGT_BRANCH" "$GGT_REPO" "$GGT_DIR"
-fi
+ensure_sibling_on_branch "$GGT_DIR" "$GGT_REPO" "$GGT_BRANCH" graphql-go-tools
 
 echo "==> graphql-go-tools sibling override (go.work)"
 # go.work is explicitly sanctioned for local overrides instead of editing

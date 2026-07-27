@@ -72,34 +72,16 @@ fi
 # creates (see align-hub-identity.sh). Bring it up here if needed, since
 # hub is a sibling repo this repo's tooling can't depend on directly.
 echo "==> Checking hub ($HUB_DIR)"
-if nc -z 127.0.0.1 8090 2>/dev/null; then
-  echo "hub's keycloak (8090) already up."
-  # Keycloak being up doesn't mean HUB_DIR is valid, so check it here
-  # instead of a confusing failure later in an unrelated-looking step.
-  if [ ! -d "$HUB_DIR" ]; then
-    echo "ERROR: HUB_DIR '$HUB_DIR' does not exist, even though hub's keycloak is up (likely running from a different checkout)." >&2
-    echo "       Point HUB_DIR at wherever that checkout actually lives, then re-run." >&2
-    exit 1
-  fi
-else
-  if [ -d "$HUB_DIR" ] && ! is_real_git_repo "$HUB_DIR"; then
-    echo "ERROR: $HUB_DIR exists but isn't a git repository." >&2
-    echo "       Remove it or point HUB_DIR elsewhere, then re-run." >&2
-    exit 1
-  elif [ ! -d "$HUB_DIR" ]; then
-    echo "Cloning $HUB_REPO into $HUB_DIR ($HUB_BRANCH)..."
-    git clone --branch "$HUB_BRANCH" "$HUB_REPO" "$HUB_DIR"
-  else
-    current_branch="$(git -C "$HUB_DIR" branch --show-current)"
-    if [ "$current_branch" != "$HUB_BRANCH" ]; then
-      echo "WARNING: $HUB_DIR exists but is on '$current_branch', not '$HUB_BRANCH'." >&2
-      echo "         Not switching it for you, check out '$HUB_BRANCH' yourself if needed." >&2
-    else
-      echo "Already present on $HUB_BRANCH."
-    fi
-  fi
+ensure_sibling_on_branch "$HUB_DIR" "$HUB_REPO" "$HUB_BRANCH" hub
 
-  echo "hub isn't running yet; setting it up..."
+# Whether hub is actually serving is decided by its dev servers (3301 frontend,
+# 3305 backend), not its keycloak: keycloak is a docker container that outlives
+# the terminal `bun run dev` runs in, so "keycloak up" can be true while hub
+# itself is down. Key the decision off the servers the demo actually needs.
+if nc -z 127.0.0.1 3301 2>/dev/null && nc -z 127.0.0.1 3305 2>/dev/null; then
+  echo "hub's dev servers (3301/3305) already running."
+else
+  echo "hub isn't fully running; setting it up..."
   (cd "$HUB_DIR" && make all)
 
   # LIVEBLOCKS_SECRET_KEY has no default in hub's own .env.example and hub's
@@ -232,8 +214,10 @@ unapplied="$(unapplied_controlplane_migrations)" || {
   echo "       'make migrate' skipped them: your postgres volume is stale or from another" >&2
   echo "       branch, so drizzle thinks they're already applied. This would otherwise fail" >&2
   echo "       later as a control-plane 'internal error' when publishing a subgraph." >&2
-  echo "       Reset just the control-plane DB, then re-run make ei-demo:" >&2
+  echo "       Reset the control-plane DB, then re-run make ei-demo:" >&2
   echo "         docker exec cosmo-dev-postgres-1 psql -U postgres -c \"DROP DATABASE IF EXISTS controlplane WITH (FORCE)\" -c \"CREATE DATABASE controlplane\"" >&2
+  echo "       If keycloak then fails to start, the whole volume is stale; wipe it instead:" >&2
+  echo "         make ei-demo-down && docker compose --file docker-compose.yml --profile dev down -v" >&2
   exit 1
 }
 
@@ -399,10 +383,12 @@ echo "==> Importing the demo schema into hub"
 # for tsx to resolve it, npx's -p alone doesn't wire that up. See
 # RUNBOOK.md.
 if [ ! -d "$HUB_DIR" ]; then
-  echo "WARNING: $HUB_DIR not found; skipping the schema import." >&2
-  echo "         Run hub's scripts/ei-demo/import-cosmo-schema.ts yourself once hub is up." >&2
+  echo "ERROR: $HUB_DIR not found; cannot import the demo schema into hub." >&2
+  exit 1
 elif [ ! -f "$HUB_DIR/scripts/ei-demo/import-cosmo-schema.ts" ]; then
-  echo "WARNING: $HUB_DIR/scripts/ei-demo/import-cosmo-schema.ts not found; skipping the schema import." >&2
+  echo "ERROR: $HUB_DIR/scripts/ei-demo/import-cosmo-schema.ts not found." >&2
+  echo "       hub must be on $HUB_BRANCH (where this script lives); check out that branch, then re-run." >&2
+  exit 1
 else
   echo "Waiting for hub's frontend (3301) and backend (3305)..."
   for port in 3301 3305; do

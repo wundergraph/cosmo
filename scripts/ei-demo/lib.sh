@@ -136,3 +136,42 @@ for tag in missing:
 sys.exit(1 if missing else 0)
 " "$journal"
 }
+
+# ensure_sibling_on_branch <dir> <repo> <branch> <name>
+# Guarantees <dir> is a checkout of <repo> on <branch>: clones it if missing,
+# switches to <branch> if it's on the wrong one and the tree is clean, and
+# hard-fails with an actionable message if the tree is dirty (never discards
+# uncommitted work) or if <dir> exists but isn't a git repo. Replaces the old
+# "warn and hope the developer noticed", which silently left the wrong branch
+# checked out and broke a later step.
+ensure_sibling_on_branch() {
+  local dir="$1" repo="$2" branch="$3" name="$4"
+  if [ ! -d "$dir" ]; then
+    echo "Cloning $repo into $dir ($branch)..."
+    git clone --branch "$branch" "$repo" "$dir"
+    return
+  fi
+  if ! is_real_git_repo "$dir"; then
+    echo "ERROR: $dir exists but isn't a git repository." >&2
+    echo "       Remove it (or point $name at a real checkout), then re-run." >&2
+    exit 1
+  fi
+  local current
+  current="$(git -C "$dir" branch --show-current 2>/dev/null || true)"
+  if [ "$current" = "$branch" ]; then
+    echo "$name already on $branch."
+    return
+  fi
+  if [ -n "$(git -C "$dir" status --porcelain --untracked-files=no)" ]; then
+    echo "ERROR: $dir is on '$current', not '$branch', and has uncommitted changes." >&2
+    echo "       Commit or stash them (or check out '$branch' yourself), then re-run." >&2
+    echo "       The demo won't switch a dirty checkout, to avoid touching your work." >&2
+    exit 1
+  fi
+  echo "Switching $name to '$branch' (was '$current')..."
+  git -C "$dir" fetch origin "$branch" --quiet 2>/dev/null || true
+  git -C "$dir" checkout "$branch" >/dev/null 2>&1 || {
+    echo "ERROR: could not check out '$branch' in $dir. Check it out by hand, then re-run." >&2
+    exit 1
+  }
+}

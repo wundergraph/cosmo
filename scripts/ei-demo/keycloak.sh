@@ -75,6 +75,17 @@ wait_for_cosmo_keycloak() {
   done
 }
 
+# dump_cosmo_keycloak_log
+# When keycloak can't be reached or recovered, the real reason is in its own
+# container log (a crash loop, a broken schema, a failed realm import), not in
+# anything this script can see over HTTP. Surface it so the failure is
+# self-diagnosing instead of a bare "couldn't get an admin token".
+dump_cosmo_keycloak_log() {
+  echo "       ---- last 40 lines of cosmo-dev-keycloak-1 (the actual reason) ----" >&2
+  docker logs --tail 40 cosmo-dev-keycloak-1 2>&1 | sed 's/^/       /' >&2 || true
+  echo "       -----------------------------------------------------------------" >&2
+}
+
 # Recovery is one unit (drop/recreate/restart/wait): this Keycloak build's
 # instability resurfaces unpredictably across group, role, and login calls.
 # cosmo-dev-keycloak-1 is shared, general-purpose, not exclusive to this
@@ -100,6 +111,7 @@ recover_cosmo_keycloak() {
   kc_token="$(kc_admin_token http://localhost:8080 30)" || {
     echo "ERROR: could not obtain a Keycloak admin token to check for foreign realms or pre-existing state." >&2
     echo "       Automatic recovery drops the whole keycloak database; refusing without being able to verify what's on it." >&2
+    dump_cosmo_keycloak_log
     echo "       Once you've confirmed it's safe, recover by hand: docker stop cosmo-dev-keycloak-1 && docker exec cosmo-dev-postgres-1 psql -U postgres -c 'DROP DATABASE keycloak' -c 'CREATE DATABASE keycloak' && docker start cosmo-dev-keycloak-1" >&2
     return 1
   }
@@ -125,6 +137,7 @@ except Exception:
   wait_for_cosmo_keycloak
   [ -n "$kc_ready" ] || {
     echo "cosmo keycloak still did not become ready after automatic recovery (last admin login HTTP status: $code)." >&2
+    dump_cosmo_keycloak_log
     echo "Try manually: docker stop cosmo-dev-keycloak-1 && docker exec cosmo-dev-postgres-1 psql -U postgres -c 'DROP DATABASE keycloak' -c 'CREATE DATABASE keycloak' && docker start cosmo-dev-keycloak-1" >&2
     return 1
   }
