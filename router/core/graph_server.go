@@ -2340,37 +2340,27 @@ func providersActionWithTimeout(ctx context.Context, providers []datasource.Prov
 	providersGroup := new(errgroup.Group)
 	for _, provider := range providers {
 		providersGroup.Go(func() error {
-			// Each provider is bounded by its own timer. A single shared timer would only
-			// ever deliver its fire to one goroutine, so multiple slow/unreachable providers
-			// would block the others forever and hang startup.
-			timer := time.NewTimer(timeout)
-			defer timer.Stop()
-
 			actionDone := make(chan error, 1)
+
 			go func() {
 				actionDone <- action(timeoutCtx, provider)
 			}()
-			var actionErr error
+
+			var err error
 			select {
-			case err := <-actionDone:
-				return err
+			case err = <-actionDone:
 			case <-timeoutCtx.Done():
-				return errors.New(timeoutMessage)
+				err = errors.New(timeoutMessage)
 			}
-			if actionErr == nil || !continueOnError {
-				return actionErr
+
+			if err == nil || !continueOnError {
+				return err
 			}
-			// Lenient mode (events.skip_unavailable_providers): the provider failed to start.
-			// Log a distinct error and let the router keep running with the affected fields
-			// unavailable. When the cause is an unreachable broker the adapter retains a
-			// resilient client that reconnects in the background, so those fields recover
-			// without a restart once the broker is reachable. When the cause is a
-			// configuration error (e.g. an invalid URL) the provider cannot recover until the
-			// configuration is fixed; the underlying cause is attached as the error field.
+
 			s.logger.Error("EDFS provider could not be started at startup; the router will keep running and the fields backed by this provider are temporarily unavailable. An unreachable broker reconnects and recovers automatically without a restart; see the error for the cause",
 				zap.String("provider_id", provider.ID()),
 				zap.String("provider_type", provider.TypeID()),
-				zap.Error(actionErr),
+				zap.Error(err),
 			)
 			return nil
 		})
