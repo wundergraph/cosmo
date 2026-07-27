@@ -1145,6 +1145,7 @@ func (r *Router) setupTelemetry(ctx context.Context) error {
 
 		// Add default tags to the config
 		maps.Copy(r.pyroscopeConfig.Tags, pyroscope.RouterVersionTags(versioninfo.New(Version, Commit, Date)))
+		r.pyroscopeConfig.Tags["hostname"] = r.hostName
 
 		if len(r.customModules) > 0 {
 			r.pyroscopeConfig.Tags["custom_modules"] = "true"
