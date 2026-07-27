@@ -230,19 +230,37 @@ verify_demo_identity_chain() {
   # claim the control plane reads into the token, and cosmo-cli is the one that
   # is both public and direct-access-grant enabled. scope=openid is required or
   # the userinfo endpoint answers 403. Both confirmed directly against 8090.
-  local user_token userinfo kc_sub kc_groups db_id db_orgs
-  user_token="$(curl -s -X POST "$kc_url/realms/cosmo/protocol/openid-connect/token" \
+  local token_response user_token token_error userinfo kc_sub kc_groups db_id db_orgs
+  token_response="$(curl -s -X POST "$kc_url/realms/cosmo/protocol/openid-connect/token" \
     -d grant_type=password -d client_id=cosmo-cli -d scope=openid \
-    -d "username=$demo_email" -d "password=$demo_password" \
-    | python3 -c "import json,sys
+    -d "username=$demo_email" -d "password=$demo_password")" || true
+  user_token="$(printf '%s' "$token_response" | python3 -c "import json,sys
 try:
     print(json.load(sys.stdin).get('access_token', ''))
 except Exception:
-    print('')")" || true
+    print('')")"
   if [ -z "$user_token" ]; then
-    echo "ERROR: the demo user cannot log in to hub's keycloak at $kc_url (realm cosmo)." >&2
-    echo "       Hub's login will fail the same way. Check that hub's keycloak is up," >&2
-    echo "       then re-run: ./scripts/ei-demo/align-hub-identity.sh" >&2
+    # Keycloak's own error code separates the two very different causes here,
+    # so the message points at the right one instead of always blaming login.
+    token_error="$(printf '%s' "$token_response" | python3 -c "import json,sys
+try:
+    print(json.load(sys.stdin).get('error', ''))
+except Exception:
+    print('')")"
+    case "$token_error" in
+      invalid_client|unauthorized_client)
+        echo "ERROR: hub's keycloak has no usable 'cosmo-cli' client in its 'cosmo' realm." >&2
+        echo "       That realm is imported from hub's docker/keycloak/cosmo.json, so this" >&2
+        echo "       usually means hub's keycloak database predates it. Recreate it:" >&2
+        echo "         (cd \$HUB_DIR && docker compose --file docker-compose.yml down -v && make all)" >&2
+        ;;
+      *)
+        echo "ERROR: the demo user cannot log in to hub's keycloak at $kc_url (realm cosmo)." >&2
+        echo "       Keycloak said: ${token_error:-no response}. Hub's own login will fail the" >&2
+        echo "       same way. Check hub's keycloak is up, then run:" >&2
+        echo "         ./scripts/ei-demo/align-hub-identity.sh" >&2
+        ;;
+    esac
     return 1
   fi
 
