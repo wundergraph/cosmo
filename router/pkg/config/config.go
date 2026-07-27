@@ -874,7 +874,7 @@ type EventsConfiguration struct {
 	// connect keeps a resilient client that reconnects in the background, so the affected
 	// fields are only temporarily unavailable and recover without a restart once the broker
 	// becomes reachable again. The rest of the graph keeps serving traffic throughout.
-	SkipUnavailableProviders bool                        `yaml:"skip_unavailable_providers" envDefault:"false" env:"EVENTS_SKIP_UNAVAILABLE_PROVIDERS"`
+	SkipUnavailableProviders bool                        `yaml:"skip_unavailable_providers" envDefault:"true" env:"EVENTS_SKIP_UNAVAILABLE_PROVIDERS"`
 	Handlers                 StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
 }
 

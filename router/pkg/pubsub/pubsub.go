@@ -70,10 +70,6 @@ func BuildProvidersAndDataSources(
 		logger = zap.NewNop()
 	}
 
-	if config.SkipUnavailableProviders {
-		logger.Warn("EDFS lenient mode is enabled (events.skip_unavailable_providers=true): the router will start even if an event provider referenced by the execution config is undefined or unreachable, disabling only the affected fields")
-	}
-
 	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
 
@@ -185,9 +181,7 @@ func build[P GetID, E GetEngineEventConfiguration](
 		if !skipUnavailableProviders {
 			return pubSubProviders, nil, err
 		}
-		// Lenient mode: do not prevent the router from starting. Log the error so it
-		// surfaces in alerting, record the provider as missing, and skip the data
-		// sources that depend on it. Only the affected fields become unavailable.
+		// Lenient mode: do not prevent the router from starting
 		logger.Error("Event provider referenced by the execution config is not defined; skipping affected data sources, the corresponding fields will be unavailable",
 			zap.String("provider_id", providerId),
 			zap.String("provider_type", builder.TypeID()),

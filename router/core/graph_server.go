@@ -720,7 +720,10 @@ type graphMux struct {
 	streamMetricStore         rmetric.StreamMetricStore
 	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
 
-	pubSubProviders []datasource.Provider
+	pubSubProviders          []datasource.Provider
+	skipUnavailableProviders bool
+
+	logger *zap.Logger
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -990,14 +993,14 @@ func (s *graphMux) addPubsubProviders(providers []datasource.Provider) {
 func (s *graphMux) startPubsubProviders(ctx context.Context) error {
 	return providersActionWithTimeout(ctx, s.pubSubProviders, func(ctx context.Context, provider datasource.Provider) error {
 		return provider.Startup(ctx)
-	}, providerTimeout, "pubsub provider startup timed out")
+	}, providerTimeout, "pubsub provider startup timed out", s.logger, s.skipUnavailableProviders)
 }
 
 // stopPubsubProviders stops all pubsub providers of s.
 func (s *graphMux) stopPubsubProviders(ctx context.Context) error {
 	return providersActionWithTimeout(ctx, s.pubSubProviders, func(ctx context.Context, provider datasource.Provider) error {
 		return provider.Shutdown(ctx)
-	}, providerTimeout, "pubsub provider shutdown timed out")
+	}, providerTimeout, "pubsub provider shutdown timed out", s.logger, s.skipUnavailableProviders)
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
@@ -1072,10 +1075,12 @@ func (s *graphServer) buildGraphMux(
 	graphMuxCtx, graphMuxCancel := context.WithCancel(s.routerCtx)
 
 	gm := &graphMux{
-		ctx:               graphMuxCtx,
-		cancel:            graphMuxCancel,
-		metricStore:       rmetric.NewNoopMetrics(),
-		streamMetricStore: rmetric.NewNoopStreamMetricStore(),
+		ctx:                      graphMuxCtx,
+		cancel:                   graphMuxCancel,
+		metricStore:              rmetric.NewNoopMetrics(),
+		streamMetricStore:        rmetric.NewNoopStreamMetricStore(),
+		skipUnavailableProviders: s.Config.eventsConfig.SkipUnavailableProviders,
+		logger:                   s.logger,
 	}
 
 	// A failed mux isn't in s.graphMuxList yet (added on success below), so the graph
@@ -2333,7 +2338,15 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	return finalErr
 }
 
-func providersActionWithTimeout(ctx context.Context, providers []datasource.Provider, action func(ctx context.Context, provider datasource.Provider) error, timeout time.Duration, timeoutMessage string) error {
+func providersActionWithTimeout(
+	ctx context.Context,
+	providers []datasource.Provider,
+	action func(ctx context.Context, provider datasource.Provider) error,
+	timeout time.Duration,
+	timeoutMessage string,
+	l *zap.Logger,
+	continueOnError bool,
+) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -2357,11 +2370,13 @@ func providersActionWithTimeout(ctx context.Context, providers []datasource.Prov
 				return err
 			}
 
-			s.logger.Error("EDFS provider could not be started at startup; the router will keep running and the fields backed by this provider are temporarily unavailable. An unreachable broker reconnects and recovers automatically without a restart; see the error for the cause",
-				zap.String("provider_id", provider.ID()),
-				zap.String("provider_type", provider.TypeID()),
-				zap.Error(err),
-			)
+			if l != nil {
+				l.Error("EDFS provider could not be started at startup; the router will keep running and the fields backed by this provider are temporarily unavailable. An unreachable broker reconnects and recovers automatically without a restart; see the error for the cause",
+					zap.String("provider_id", provider.ID()),
+					zap.String("provider_type", provider.TypeID()),
+					zap.Error(err),
+				)
+			}
 			return nil
 		})
 	}

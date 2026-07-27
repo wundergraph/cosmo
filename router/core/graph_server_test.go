@@ -3,16 +3,19 @@ package core
 import (
 	"cmp"
 	"context"
+	"errors"
 	"net/http"
 	"runtime"
 	"slices"
 	"sync/atomic"
 	"testing"
+	"time"
 	"weak"
 
 	"go.uber.org/zap"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -20,28 +23,33 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 )
 
-func TestStartupPubSubProviders_SkipUnavailableProviders(t *testing.T) {
+// failingStartupProvider is a provider whose broker is unreachable: its Startup always
+// fails. The mux owns its providers, so skip_unavailable_providers is carried on the mux
+// (buildGraphMux copies it from events.skip_unavailable_providers).
+func failingStartupProvider(t *testing.T) datasource.Provider {
+	t.Helper()
+
+	adapter := datasource.NewMockProvider(t)
+	adapter.On("Startup", mock.Anything).Return(errors.New("connection refused"))
+	return datasource.NewPubSubProvider("redis-1", "redis", adapter, zap.NewNop(), nil)
+}
+
+func TestStartPubsubProviders_SkipUnavailableProviders(t *testing.T) {
 	t.Parallel()
 
-	newServer := func(skip bool, providers ...datasource.Provider) *graphServer {
-		return &graphServer{
-			Config: &Config{
-				logger:       zap.NewNop(),
-				eventsConfig: config.EventsConfiguration{SkipUnavailableProviders: skip},
-			},
-			pubSubProviders: providers,
+	newMux := func(logger *zap.Logger, skip bool, providers ...datasource.Provider) *graphMux {
+		return &graphMux{
+			logger:                   logger,
+			skipUnavailableProviders: skip,
+			pubSubProviders:          providers,
 		}
 	}
 
 	t.Run("aborts startup when a provider fails and the flag is disabled", func(t *testing.T) {
 		t.Parallel()
 
-		adapter := datasource.NewMockProvider(t)
-		adapter.On("Startup", mock.Anything).Return(errors.New("connection refused"))
-		provider := datasource.NewPubSubProvider("redis-1", "redis", adapter, zap.NewNop(), nil)
-
-		s := newServer(false, provider)
-		require.Error(t, s.startupPubSubProviders(context.Background()))
+		gm := newMux(zap.NewNop(), false, failingStartupProvider(t))
+		require.Error(t, gm.startPubsubProviders(context.Background()))
 	})
 
 	t.Run("starts anyway when a provider fails and the flag is enabled", func(t *testing.T) {
@@ -50,12 +58,18 @@ func TestStartupPubSubProviders_SkipUnavailableProviders(t *testing.T) {
 		// The provider could not connect at startup, but lenient mode lets the router start
 		// anyway. The adapter keeps a resilient client that reconnects in the background, so
 		// the provider recovers without a restart once the broker becomes reachable.
-		adapter := datasource.NewMockProvider(t)
-		adapter.On("Startup", mock.Anything).Return(errors.New("connection refused"))
-		provider := datasource.NewPubSubProvider("redis-1", "redis", adapter, zap.NewNop(), nil)
+		gm := newMux(zap.NewNop(), true, failingStartupProvider(t))
+		require.NoError(t, gm.startPubsubProviders(context.Background()))
+	})
 
-		s := newServer(true, provider)
-		require.NoError(t, s.startupPubSubProviders(context.Background()))
+	t.Run("tolerates a mux without a logger", func(t *testing.T) {
+		t.Parallel()
+
+		// Lenient mode logs the swallowed error, so a mux that carries no logger (only
+		// constructed in tests, but the production path must not panic on it) must still
+		// report success rather than dereferencing a nil logger.
+		gm := newMux(nil, true, failingStartupProvider(t))
+		require.NoError(t, gm.startPubsubProviders(context.Background()))
 	})
 }
 
@@ -68,11 +82,6 @@ func TestProvidersActionWithTimeout_MultipleHangingProvidersDoNotDeadlock(t *tes
 	p1 := datasource.NewPubSubProvider("p1", "redis", datasource.NewMockProvider(t), zap.NewNop(), nil)
 	p2 := datasource.NewPubSubProvider("p2", "nats", datasource.NewMockProvider(t), zap.NewNop(), nil)
 
-	s := &graphServer{
-		Config:          &Config{logger: zap.NewNop()},
-		pubSubProviders: []datasource.Provider{p1, p2},
-	}
-
 	// The action blocks until its context is cancelled, simulating two providers whose
 	// Startup hangs (e.g. unreachable brokers).
 	hangingAction := func(ctx context.Context, _ datasource.Provider) error {
@@ -82,7 +91,15 @@ func TestProvidersActionWithTimeout_MultipleHangingProvidersDoNotDeadlock(t *tes
 
 	done := make(chan error, 1)
 	go func() {
-		done <- s.providersActionWithTimeout(context.Background(), hangingAction, 50*time.Millisecond, "timed out", true)
+		done <- providersActionWithTimeout(
+			context.Background(),
+			[]datasource.Provider{p1, p2},
+			hangingAction,
+			50*time.Millisecond,
+			"timed out",
+			zap.NewNop(),
+			true,
+		)
 	}()
 
 	select {
@@ -93,24 +110,41 @@ func TestProvidersActionWithTimeout_MultipleHangingProvidersDoNotDeadlock(t *tes
 	}
 }
 
-// TestShutdownPubSubProviders_StaysStrictWithSkipUnavailableProviders pins that shutdown
-// errors are never swallowed, even when skip_unavailable_providers is enabled.
-func TestShutdownPubSubProviders_StaysStrictWithSkipUnavailableProviders(t *testing.T) {
+// TestStopPubsubProviders_SkipUnavailableProviders pins how a failing provider shutdown
+// is surfaced. stopPubsubProviders passes skip_unavailable_providers as its
+// continue-on-error flag, so the setting that keeps startup lenient makes shutdown
+// lenient too: with the flag enabled the error is only logged.
+func TestStopPubsubProviders_SkipUnavailableProviders(t *testing.T) {
 	t.Parallel()
 
-	adapter := datasource.NewMockProvider(t)
-	adapter.On("Shutdown", mock.Anything).Return(errors.New("shutdown failed"))
-	provider := datasource.NewPubSubProvider("redis-1", "redis", adapter, zap.NewNop(), nil)
+	newMux := func(t *testing.T, skip bool) *graphMux {
+		t.Helper()
 
-	s := &graphServer{
-		Config: &Config{
-			logger:       zap.NewNop(),
-			eventsConfig: config.EventsConfiguration{SkipUnavailableProviders: true},
-		},
-		pubSubProviders: []datasource.Provider{provider},
+		adapter := datasource.NewMockProvider(t)
+		adapter.On("Shutdown", mock.Anything).Return(errors.New("shutdown failed"))
+
+		return &graphMux{
+			logger:                   zap.NewNop(),
+			skipUnavailableProviders: skip,
+			pubSubProviders: []datasource.Provider{
+				datasource.NewPubSubProvider("redis-1", "redis", adapter, zap.NewNop(), nil),
+			},
+		}
 	}
 
-	require.Error(t, s.shutdownPubSubProviders(context.Background()))
+	t.Run("surfaces the error when the flag is disabled", func(t *testing.T) {
+		t.Parallel()
+
+		gm := newMux(t, false)
+		require.Error(t, gm.stopPubsubProviders(context.Background()))
+	})
+
+	t.Run("only logs the error when the flag is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		gm := newMux(t, true)
+		require.NoError(t, gm.stopPubsubProviders(context.Background()))
+	})
 }
 
 func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
