@@ -258,17 +258,25 @@ try:
     print(','.join(json.load(sys.stdin).get('groups', []) or []))
 except Exception:
     print('')")"
+  # Mirrors the control plane exactly: it reads groups[0] and takes the segment
+  # after the leading slash (AccessTokenAuthenticator). Membership alone is not
+  # enough, a leftover group ordered first resolves to that org instead and the
+  # demo org is never reached, so check the first entry rather than the set.
+  kc_first_org="$(printf '%s' "$userinfo" | python3 -c "import json,sys
+try:
+    g = json.load(sys.stdin).get('groups') or []
+    print(g[0].split('/')[1] if g else '')
+except Exception:
+    print('')")"
 
-  case ",$kc_groups," in
-    *",/wundergraph/"*|*",/wundergraph,"*) ;;
-    *)
-      echo "ERROR: the demo user has no 'wundergraph' group in hub's keycloak (groups: ${kc_groups:-none})." >&2
-      echo "       The control plane resolves the organization from this claim, so hub would" >&2
-      echo "       show 'Create organization' instead of the demo org." >&2
-      echo "       Fix with: ./scripts/ei-demo/align-hub-identity.sh" >&2
-      return 1
-      ;;
-  esac
+  if [ "$kc_first_org" != "wundergraph" ]; then
+    echo "ERROR: hub's keycloak does not put the demo user's 'wundergraph' group first." >&2
+    echo "       Groups: ${kc_groups:-none}" >&2
+    echo "       The control plane reads only the first one, so it would resolve" >&2
+    echo "       '${kc_first_org:-no organization}' and hub would show 'Create organization'." >&2
+    echo "       Fix with: ./scripts/ei-demo/align-hub-identity.sh" >&2
+    return 1
+  fi
 
   db_id="$(docker exec "$pg_container" psql -U postgres -d controlplane -t -A \
     -c "SELECT id FROM users WHERE email='$demo_email'" 2>/dev/null)" || true

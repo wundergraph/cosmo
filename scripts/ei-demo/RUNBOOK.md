@@ -300,7 +300,11 @@ along that chain surfaced only minutes later, as a browser timeout on hub's
 control plane is up: it logs the demo user in against hub's Keycloak, reads the
 groups claim back from the userinfo endpoint, and matches the subject against
 the control plane's user id and org membership. Each link fails with its own
-message and the command that fixes it. Verified both ways: it passes on a
+message and the command that fixes it. The groups check mirrors the control
+plane's own parse rather than testing for membership: it reads `groups[0]` and
+takes the segment after the leading slash, because a leftover group ordered
+ahead of `wundergraph` resolves to *that* org and the demo org is never
+reached, which a membership test would pass straight over. Verified both ways: it passes on a
 working stack, and fails with the right message when pointed at cosmo's
 Keycloak instead of hub's (id mismatch) or at a dead port (login failure).
 

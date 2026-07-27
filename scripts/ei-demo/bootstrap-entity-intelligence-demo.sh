@@ -278,10 +278,13 @@ if nc -z 127.0.0.1 3001 2>/dev/null; then
   cp_kc_url="$(controlplane_kc_api_url)"
   if [ "$cp_kc_url" != "http://localhost:8090" ]; then
     echo "ERROR: port 3001 is taken, but not by this demo's control plane." >&2
-    echo "       Its KC_API_URL is '${cp_kc_url:-<not set>}', expected 'http://localhost:8090'." >&2
+    echo "       Its KC_API_URL is '${cp_kc_url:-not visible}', expected 'http://localhost:8090'." >&2
     echo "       It would reject hub's calls, so hub would offer 'Create organization'" >&2
     echo "       instead of the demo org. Stop it and re-run:" >&2
     echo "         kill \$(lsof -tiTCP:3001 -sTCP:LISTEN)" >&2
+    # A dockerised control plane (docker-compose.full.yml publishes 3001) shows
+    # no KC_API_URL here at all, since the value lives inside the container.
+    echo "       If it runs in docker instead: docker compose --file docker-compose.full.yml down" >&2
     exit 1
   fi
   echo "Already running (verified it targets hub's keycloak)."
