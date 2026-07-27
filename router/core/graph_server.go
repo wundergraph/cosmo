@@ -2371,7 +2371,7 @@ func providersActionWithTimeout(
 			}
 
 			if l != nil {
-				l.Error("EDFS provider could not be started at startup; the router will keep running and the fields backed by this provider are temporarily unavailable. An unreachable broker reconnects and recovers automatically without a restart; see the error for the cause",
+				l.Warn("EDFS provider could not be started at startup; the router will keep running and the fields backed by this provider are temporarily unavailable. An unreachable broker reconnects and recovers automatically without a restart; see the error for the cause",
 					zap.String("provider_id", provider.ID()),
 					zap.String("provider_type", provider.TypeID()),
 					zap.Error(err),
