@@ -233,7 +233,7 @@ unapplied="$(unapplied_controlplane_migrations)" || {
   echo "       branch, so drizzle thinks they're already applied. This would otherwise fail" >&2
   echo "       later as a control-plane 'internal error' when publishing a subgraph." >&2
   echo "       Reset just the control-plane DB, then re-run make ei-demo:" >&2
-  echo "         docker exec cosmo-dev-postgres-1 psql -U postgres -c \"DROP DATABASE controlplane WITH (FORCE); CREATE DATABASE controlplane;\"" >&2
+  echo "         docker exec cosmo-dev-postgres-1 psql -U postgres -c \"DROP DATABASE IF EXISTS controlplane WITH (FORCE)\" -c \"CREATE DATABASE controlplane\"" >&2
   exit 1
 }
 
