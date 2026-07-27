@@ -114,27 +114,19 @@ else
 fi
 
 echo "==> hub's Entity Intelligence feature flag"
-# Defaults to false in hub's .env.example (off for everyone else's local
-# dev), force it on here rather than change the shared default for everyone.
+# Force it on here rather than change hub's shared .env.example default (off
+# for everyone else's local dev). The bootstrap already sets this before it
+# starts hub's next dev (the only point it takes effect, see the helper); this
+# call covers running setup-router-config.sh standalone. If hub's frontend is
+# already running, restart it so next dev recompiles with the flag.
 # Overridable the same way as everywhere else (see Makefile's HUB_DIR ?=).
 HUB_DIR="${HUB_DIR:-../hub}"
-HUB_FRONTEND_ENV="$HUB_DIR/apps/frontend/.env"
 if [ ! -d "$HUB_DIR" ]; then
   echo "ERROR: HUB_DIR '$HUB_DIR' does not exist." >&2
   echo "       Clone hub there, or pass HUB_DIR=/path/to/hub." >&2
   exit 1
-elif [ ! -f "$HUB_FRONTEND_ENV" ]; then
-  echo "WARNING: $HUB_FRONTEND_ENV doesn't exist yet; run 'make all' in hub first." >&2
-else
-  # Appended, never sed-replaced: a later duplicate key wins over an
-  # earlier one (confirmed directly against dotenv's own parser, which
-  # @next/env's loading is built on), so this never touches whatever line
-  # was already there, missing or not.
-  if ! grep -q '^NEXT_PUBLIC_ENABLE_ENTITY_INTELLIGENCE=true$' "$HUB_FRONTEND_ENV"; then
-    echo "NEXT_PUBLIC_ENABLE_ENTITY_INTELLIGENCE=true" >> "$HUB_FRONTEND_ENV"
-  fi
-  echo "Set in $HUB_FRONTEND_ENV."
 fi
+enable_hub_ei_frontend_flag "$HUB_DIR" || true
 
 echo "==> Entity Intelligence demo setup complete."
 echo "    Local-only state lives in router/go.work and"

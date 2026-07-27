@@ -175,3 +175,25 @@ ensure_sibling_on_branch() {
     exit 1
   }
 }
+
+# enable_hub_ei_frontend_flag <hub-dir>
+# Turns hub's Entity Intelligence flag on in the frontend .env. Must run BEFORE
+# hub's `next dev` starts: NEXT_PUBLIC_* vars are compiled into the client
+# bundle at server start, so a flag written after the frontend is already up
+# never reaches it until a restart (confirmed directly: a fresh run set this
+# after next dev had started and the EI panel stayed hidden). Appended, never
+# sed-replaced: @next/env lets a later duplicate key win over an earlier one,
+# so this never disturbs whatever value was already there. Returns 1 (with a
+# message) if the frontend .env doesn't exist yet.
+enable_hub_ei_frontend_flag() {
+  local hub_dir="$1"
+  local frontend_env="$hub_dir/apps/frontend/.env"
+  if [ ! -f "$frontend_env" ]; then
+    echo "WARNING: $frontend_env doesn't exist yet; run 'make all' in hub first." >&2
+    return 1
+  fi
+  if ! grep -q '^NEXT_PUBLIC_ENABLE_ENTITY_INTELLIGENCE=true$' "$frontend_env"; then
+    echo "NEXT_PUBLIC_ENABLE_ENTITY_INTELLIGENCE=true" >> "$frontend_env"
+  fi
+  echo "Entity Intelligence flag set in $frontend_env."
+}

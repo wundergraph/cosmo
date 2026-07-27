@@ -99,6 +99,11 @@ else
     echo "         set it there by hand, or re-run with: make ei-demo HUB_LIVEBLOCKS_SECRET_KEY=sk_..." >&2
   fi
 
+  # Must run before next dev starts, not later in setup-router-config.sh: a
+  # NEXT_PUBLIC_* flag is compiled in at server start, so setting it afterward
+  # leaves the running frontend with Entity Intelligence hidden. See lib.sh.
+  enable_hub_ei_frontend_flag "$HUB_DIR" || true
+
   echo "Starting hub's dev servers in the background..."
   (cd "$HUB_DIR" && nohup bun run dev > /tmp/hub-dev.log 2>&1 & pid=$!; pidfile_entry "$pid" >> "$PID_FILE")
   echo "Waiting for hub's keycloak (8090)..."

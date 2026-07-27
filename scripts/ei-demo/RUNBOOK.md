@@ -268,6 +268,37 @@ If it's not provided and the file doesn't already have a real value, the
 bootstrap prints a warning with the liveblocks.io signup link instead of
 failing silently at hub's own boot with a much less obvious error.
 
+## EI feature flag must be set before hub's next dev starts
+
+`NEXT_PUBLIC_ENABLE_ENTITY_INTELLIGENCE` gates the whole Entity Intelligence
+UI (the action-panel overlay and the intelligence route). It is a
+`NEXT_PUBLIC_*` var, which Next.js compiles into the client bundle at server
+start, so a value written after `next dev` is already running never reaches
+the running frontend until it restarts. An earlier version set it only in
+`setup-router-config.sh`, which runs well after the bootstrap has already
+started hub, so a fresh `make ei-demo` came up with EI hidden (confirmed
+directly: the flag landed in the frontend `.env` ~50s after next dev's start
+time, and the UI showed no EI until a manual restart). `lib.sh`'s
+`enable_hub_ei_frontend_flag` now sets it, and the bootstrap calls it in the
+hub block right before `bun run dev` (next to the `LIVEBLOCKS_SECRET_KEY`
+write, same reason and same timing). `setup-router-config.sh` still calls the
+same helper for standalone runs; if hub's frontend was already up, that path
+needs a restart to take effect. Appended, never sed-replaced: `@next/env`
+lets a later duplicate key win, so it never disturbs whatever value was
+already in the file.
+
+## Demo traffic generator lives at hub `scripts/run-traffic.sh`
+
+The EI heatmap and recommendations stay empty until the router sees real
+entity read traffic. `start.sh` runs hub's committed `scripts/run-traffic.sh`
+(a k6 wrapper around `scripts/k6/entity-intelligence-traffic.js`) once the
+router is up on 3002. It used to look for `scripts/ei-demo/run-traffic.sh`, a
+path that only ever existed as an uncommitted local copy, so on any real
+checkout the step silently skipped and the heatmap read empty even though
+everything else worked (confirmed directly: k6 was installed and the router
+was serving, only the path was wrong). The step is still gated on `k6` being
+installed and prints a skip warning if it is not.
+
 ## Seed step: KC_API_URL and the "already exists" trap
 
 `KC_API_URL`/`KC_FRONTEND_URL` used to be written into `controlplane/.env`

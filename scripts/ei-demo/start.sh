@@ -90,10 +90,10 @@ else
 fi
 write_pidfile
 
-if command -v k6 >/dev/null 2>&1 && [ -f "$HUB_DIR/scripts/ei-demo/run-traffic.sh" ]; then
+if command -v k6 >/dev/null 2>&1 && [ -f "$HUB_DIR/scripts/run-traffic.sh" ]; then
   ( wait_for_port 3002 "$DEMO_STARTUP_ATTEMPTS" "$DEMO_STARTUP_SLEEP" || exit 0
     echo "Generating demo traffic (populates the Entity Intelligence heatmap)..."
-    ROUTER_URL=http://localhost:3002/graphql bash "$HUB_DIR/scripts/ei-demo/run-traffic.sh" --vus 20 --duration 60s \
+    ROUTER_URL=http://localhost:3002/graphql bash "$HUB_DIR/scripts/run-traffic.sh" --vus 20 --duration 60s \
       > /tmp/ei-demo-traffic.log 2>&1 || echo "Traffic generation failed, see /tmp/ei-demo-traffic.log" >&2 ) & traffic_pid=$!
   write_pidfile
 else
