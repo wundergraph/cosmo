@@ -287,6 +287,39 @@ needs a restart to take effect. Appended, never sed-replaced: `@next/env`
 lets a later duplicate key win, so it never disturbs whatever value was
 already in the file.
 
+## The identity chain is verified, not assumed
+
+Every step of the demo reported its own success while none of them proved the
+one thing the schema import depends on: that hub will actually list the
+`wundergraph` org. Hub never reads Keycloak groups itself, it asks the control
+plane, which validates the token against its own `KC_API_URL`, resolves the org
+from the groups claim, then checks membership in its database. A break anywhere
+along that chain surfaced only minutes later, as a browser timeout on hub's
+"Create organization" screen, with nothing naming the cause (hit in the wild).
+`verify_demo_identity_chain` (lib.sh) now walks the whole chain right after the
+control plane is up: it logs the demo user in against hub's Keycloak, reads the
+groups claim back from the userinfo endpoint, and matches the subject against
+the control plane's user id and org membership. Each link fails with its own
+message and the command that fixes it. Verified both ways: it passes on a
+working stack, and fails with the right message when pointed at cosmo's
+Keycloak instead of hub's (id mismatch) or at a dead port (login failure).
+
+Two details are load-bearing and were both confirmed directly against 8090.
+The token must be requested for `cosmo-cli`: only the clients carrying the
+`groups` protocol mapper (`cosmo-cli`, `studio`, `hub-oidc` in hub's committed
+realm import) put that claim in the token, and `cosmo-cli` is the one that is
+both public and direct-access-grant enabled, `admin-cli` returns a token with
+no groups at all. And `scope=openid` is required, without it Keycloak answers
+the userinfo endpoint with 403.
+
+Two related guards close the same class of silent failure.
+`controlplane_kc_api_url` checks *whose* control plane holds port 3001 instead
+of treating an open port as proof: one left over from ordinary cosmo work
+validates against cosmo's Keycloak, rejects every hub call, and leaves hub with
+an empty org list. And `align-hub-identity.sh` now exits non-zero when hub's
+Keycloak is unreachable, it used to `exit 0`, which its caller could not tell
+apart from a real alignment.
+
 ## Demo traffic generator lives at hub `scripts/run-traffic.sh`
 
 The EI heatmap and recommendations stay empty until the router sees real

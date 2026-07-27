@@ -13,10 +13,14 @@ DEMO_EMAIL="foo@wundergraph.com"
 DEMO_PASSWORD="wunder@123"
 PG_CONTAINER="cosmo-dev-postgres-1"
 
+# Fails instead of skipping: an exit 0 here reads as "aligned" to every caller,
+# so the run continued with a broken identity and only failed much later, on
+# hub's "Create organization" screen, with nothing pointing back to this step.
 if ! nc -z 127.0.0.1 8090 2>/dev/null; then
-  echo "WARNING: hub's keycloak (8090) is not running; skipping hub identity alignment." >&2
-  echo "         Hub linking will not work until you run scripts/ei-demo/align-hub-identity.sh with hub up." >&2
-  exit 0
+  echo "ERROR: hub's keycloak (8090) is not running, so the demo user cannot be aligned" >&2
+  echo "       with the identity hub logs in with." >&2
+  echo "       Start hub's docker services ('make infra-up' in your hub checkout), then re-run." >&2
+  exit 1
 fi
 
 TOKEN="$(kc_admin_token "$KC_URL")" || { echo "ERROR: could not obtain a hub Keycloak admin token." >&2; exit 1; }

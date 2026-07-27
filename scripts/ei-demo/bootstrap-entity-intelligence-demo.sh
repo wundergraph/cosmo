@@ -271,7 +271,20 @@ fi
 # that and won't start a second one.
 echo "==> Control plane (needed to provision the demo graph)"
 if nc -z 127.0.0.1 3001 2>/dev/null; then
-  echo "Already running."
+  # An open port is not proof it's ours: a control plane left over from ordinary
+  # cosmo work validates tokens against cosmo's keycloak instead of hub's, and
+  # rejects every call hub makes. That surfaces only much later, as an empty
+  # organization list on hub's login. See RUNBOOK.md.
+  cp_kc_url="$(controlplane_kc_api_url)"
+  if [ "$cp_kc_url" != "http://localhost:8090" ]; then
+    echo "ERROR: port 3001 is taken, but not by this demo's control plane." >&2
+    echo "       Its KC_API_URL is '${cp_kc_url:-<not set>}', expected 'http://localhost:8090'." >&2
+    echo "       It would reject hub's calls, so hub would offer 'Create organization'" >&2
+    echo "       instead of the demo org. Stop it and re-run:" >&2
+    echo "         kill \$(lsof -tiTCP:3001 -sTCP:LISTEN)" >&2
+    exit 1
+  fi
+  echo "Already running (verified it targets hub's keycloak)."
 else
   echo "Starting control plane in the background..."
   NODE_BIN="$(./scripts/ei-demo/node-path.sh)" || exit 1
@@ -281,6 +294,17 @@ else
   (cd controlplane && PATH="$NODE_BIN:$PATH" KC_API_URL="http://localhost:8090" KC_FRONTEND_URL="http://localhost:8090" pnpm dev > /tmp/cosmo-controlplane-bootstrap.log 2>&1 & pid=$!; pidfile_entry "$pid" >> "$PID_FILE")
   wait_for_port 3001 60 0.5 || { echo "control plane did not start, see /tmp/cosmo-controlplane-bootstrap.log" >&2; exit 1; }
 fi
+
+# Every step above reports its own success, but nothing so far proves the one
+# thing the browser-driven import actually depends on: that hub will list the
+# demo org. Check the whole chain here, where a break still names its cause,
+# rather than letting it surface as an opaque browser timeout at the last step.
+echo "==> Verifying the demo identity resolves to the 'wundergraph' org"
+verify_demo_identity_chain || {
+  echo "ERROR: the demo identity chain is broken, see above; the schema import would" >&2
+  echo "       fail later on hub's 'Create organization' screen." >&2
+  exit 1
+}
 
 echo "==> Demo federated graph + subgraphs"
 . ./scripts/configurations/local.sh

@@ -197,3 +197,96 @@ enable_hub_ei_frontend_flag() {
   fi
   echo "Entity Intelligence flag set in $frontend_env."
 }
+
+# controlplane_kc_api_url
+# Prints the KC_API_URL of whatever process is listening on 3001, empty if the
+# port is free or the value isn't in its environment. The demo's control plane
+# must validate tokens against hub's keycloak, so one left over from ordinary
+# cosmo work (which validates against cosmo's own) silently rejects every hub
+# call. A bare port check can't tell the two apart. See RUNBOOK.md.
+controlplane_kc_api_url() {
+  local pid
+  pid="$(lsof -tiTCP:3001 -sTCP:LISTEN 2>/dev/null | head -1)"
+  [ -n "$pid" ] || return 0
+  ps eww "$pid" 2>/dev/null | tr ' ' '\n' | sed -n 's/^KC_API_URL=//p' | head -1
+}
+
+# verify_demo_identity_chain [hub-keycloak-url]
+# Proves the demo user will actually see the 'wundergraph' org in hub, before
+# anything depends on it. Hub never reads keycloak groups itself: it asks the
+# control plane, which validates the token against its own KC_API_URL, resolves
+# the org from the groups claim, then checks membership in its database. Every
+# link is checked here so a break names its own cause immediately, instead of
+# surfacing minutes later as a browser timeout on a "Create organization"
+# screen with nothing pointing at the real reason. Returns 1 on any broken link.
+verify_demo_identity_chain() {
+  local kc_url="${1:-http://localhost:8090}"
+  local demo_email="foo@wundergraph.com"
+  local demo_password="wunder@123"
+  local pg_container="cosmo-dev-postgres-1"
+
+  # cosmo-cli, not admin-cli: only the clients carrying the "groups" protocol
+  # mapper (cosmo-cli/studio/hub-oidc in hub's committed realm import) put the
+  # claim the control plane reads into the token, and cosmo-cli is the one that
+  # is both public and direct-access-grant enabled. scope=openid is required or
+  # the userinfo endpoint answers 403. Both confirmed directly against 8090.
+  local user_token userinfo kc_sub kc_groups db_id db_orgs
+  user_token="$(curl -s -X POST "$kc_url/realms/cosmo/protocol/openid-connect/token" \
+    -d grant_type=password -d client_id=cosmo-cli -d scope=openid \
+    -d "username=$demo_email" -d "password=$demo_password" \
+    | python3 -c "import json,sys
+try:
+    print(json.load(sys.stdin).get('access_token', ''))
+except Exception:
+    print('')")" || true
+  if [ -z "$user_token" ]; then
+    echo "ERROR: the demo user cannot log in to hub's keycloak at $kc_url (realm cosmo)." >&2
+    echo "       Hub's login will fail the same way. Check that hub's keycloak is up," >&2
+    echo "       then re-run: ./scripts/ei-demo/align-hub-identity.sh" >&2
+    return 1
+  fi
+
+  userinfo="$(curl -s -H "Authorization: Bearer $user_token" \
+    "$kc_url/realms/cosmo/protocol/openid-connect/userinfo")" || true
+  kc_sub="$(printf '%s' "$userinfo" | python3 -c "import json,sys
+try:
+    print(json.load(sys.stdin).get('sub', ''))
+except Exception:
+    print('')")"
+  kc_groups="$(printf '%s' "$userinfo" | python3 -c "import json,sys
+try:
+    print(','.join(json.load(sys.stdin).get('groups', []) or []))
+except Exception:
+    print('')")"
+
+  case ",$kc_groups," in
+    *",/wundergraph/"*|*",/wundergraph,"*) ;;
+    *)
+      echo "ERROR: the demo user has no 'wundergraph' group in hub's keycloak (groups: ${kc_groups:-none})." >&2
+      echo "       The control plane resolves the organization from this claim, so hub would" >&2
+      echo "       show 'Create organization' instead of the demo org." >&2
+      echo "       Fix with: ./scripts/ei-demo/align-hub-identity.sh" >&2
+      return 1
+      ;;
+  esac
+
+  db_id="$(docker exec "$pg_container" psql -U postgres -d controlplane -t -A \
+    -c "SELECT id FROM users WHERE email='$demo_email'" 2>/dev/null)" || true
+  if [ "$db_id" != "$kc_sub" ]; then
+    echo "ERROR: the control plane's user id does not match hub's keycloak id for $demo_email." >&2
+    echo "       control plane: ${db_id:-<missing>}, hub keycloak: ${kc_sub:-<missing>}" >&2
+    echo "       Hub's org lookup is keyed on the keycloak id, so it would find no membership." >&2
+    echo "       Fix with: ./scripts/ei-demo/align-hub-identity.sh" >&2
+    return 1
+  fi
+
+  db_orgs="$(docker exec "$pg_container" psql -U postgres -d controlplane -t -A \
+    -c "SELECT o.slug FROM organization_members om JOIN organizations o ON o.id = om.organization_id WHERE om.user_id = '$db_id'" 2>/dev/null)" || true
+  if ! printf '%s\n' "$db_orgs" | grep -qx 'wundergraph'; then
+    echo "ERROR: the demo user is not a member of the 'wundergraph' organization in the control plane." >&2
+    echo "       Found: ${db_orgs:-none}. Re-run the seed, then ./scripts/ei-demo/align-hub-identity.sh" >&2
+    return 1
+  fi
+
+  echo "Identity chain verified: $demo_email -> $kc_sub -> org 'wundergraph'."
+}
