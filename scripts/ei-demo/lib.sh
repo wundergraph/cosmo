@@ -108,3 +108,31 @@ run_with_timeout() {
   kill "$watcher" 2>/dev/null
   return "$rc"
 }
+
+# unapplied_controlplane_migrations
+# Prints the tag of every migration in the branch's journal that is NOT recorded
+# as applied in the control plane's DB, and returns 1 if there are any.
+# `make migrate` can silently skip this branch's migrations when the postgres
+# volume is stale or from another branch: drizzle applies migrations by their
+# journal timestamp, not their content, so a volume whose newest applied
+# timestamp is already past this branch's leaves those migrations unapplied. The
+# schema then lags the code and only surfaces much later as a control-plane
+# "internal error" on publish. Returns 0 (nothing printed) if the journal or
+# drizzle bookkeeping can't be read, so the check never blocks the demo on its
+# own infra hiccup.
+unapplied_controlplane_migrations() {
+  local journal="controlplane/migrations/meta/_journal.json"
+  [ -f "$journal" ] || return 0
+  local applied
+  applied="$(docker exec cosmo-dev-postgres-1 psql -U postgres -d controlplane -t -A \
+    -c "SELECT created_at FROM drizzle.__drizzle_migrations" 2>/dev/null)" || return 0
+  printf '%s\n' "$applied" | python3 -c "
+import json, sys
+entries = json.load(open(sys.argv[1]))['entries']
+applied = {line.strip() for line in sys.stdin if line.strip()}
+missing = [e['tag'] for e in entries if str(e['when']) not in applied]
+for tag in missing:
+    print(tag)
+sys.exit(1 if missing else 0)
+" "$journal"
+}

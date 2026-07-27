@@ -221,6 +221,22 @@ for attempt in 1 2 3; do
 done
 [ -n "$migrate_seed_ok" ] || { echo "ERROR: migrate/seed did not succeed after 3 full attempts." >&2; exit 1; }
 
+# `make migrate` reports success even when a stale/cross-branch postgres volume
+# left this branch's migrations unapplied (drizzle keys off timestamps, not
+# content). The schema then lags the code and blows up much later as a cryptic
+# control-plane "internal error" on subgraph publish. Catch it here instead.
+echo "==> Verifying the control-plane schema is fully migrated..."
+unapplied="$(unapplied_controlplane_migrations)" || {
+  echo "ERROR: the control-plane database is missing migrations this branch expects:" >&2
+  echo "$unapplied" | sed 's/^/         - /' >&2
+  echo "       'make migrate' skipped them: your postgres volume is stale or from another" >&2
+  echo "       branch, so drizzle thinks they're already applied. This would otherwise fail" >&2
+  echo "       later as a control-plane 'internal error' when publishing a subgraph." >&2
+  echo "       Reset just the control-plane DB, then re-run make ei-demo:" >&2
+  echo "         docker exec cosmo-dev-postgres-1 psql -U postgres -c \"DROP DATABASE controlplane WITH (FORCE); CREATE DATABASE controlplane;\"" >&2
+  exit 1
+}
+
 # Proposals (hub's branch -> proposal -> registry -> feature-flag-rollout
 # flow) are gated behind an enterprise billing plan and a namespace flag,
 # neither set by `make seed`. Without this, hub's "Create on registry" call
