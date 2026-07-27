@@ -162,7 +162,21 @@ the destructive path can't be reached even from a future, different caller.
 Verified directly: a real pre-existing group makes `cleanup_stray_
 wundergraph_kc_state` return 2 and `recover_cosmo_keycloak` refuse without
 touching keycloak, in both cases confirmed by the container never
-restarting and the group still present afterward.
+restarting and the group still present afterward. When that refusal is a
+false positive (the group is just stale debris from an earlier failed run,
+the common case on a personal machine), re-running with
+`EI_DEMO_FORCE_KC_CLEANUP=1` authorizes the override:
+`force_delete_baseline_wundergraph_kc_group` deletes the baseline group
+through the admin API and clears `WUNDERGRAPH_KC_GROUP_BASELINE_ID`, so both
+guards then see a clean slate. Deliberately opt-in, not the default, for the
+same reason the guards exist: on a shared cosmo keycloak that group can be
+real state. A raw SQL delete is not an equivalent manual workaround here,
+this keycloak build can bind to a different postgres than
+`cosmo-dev-postgres-1` when another stack (e.g. hub) shares the docker
+network and both expose a `postgres` service, so a delete against the
+obvious container can silently hit an empty database while the real row
+lives elsewhere, verified directly. The admin API always targets whatever
+database keycloak actually bound to.
 
 `align-hub-identity.sh` remaps the control plane's primary key for
 `foo@wundergraph.com` from cosmo-keycloak's id to hub-keycloak's id (see

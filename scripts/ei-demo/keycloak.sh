@@ -53,6 +53,30 @@ snapshot_wundergraph_kc_group_baseline() {
   WUNDERGRAPH_KC_GROUP_BASELINE_ID="$(find_wundergraph_kc_group_id "$kc_token")"
 }
 
+# EI_DEMO_FORCE_KC_CLEANUP=1 authorizes deleting a "wundergraph" group that
+# predates this run, the one case cleanup_stray_wundergraph_kc_state and
+# recover_cosmo_keycloak both refuse on purpose (it can be real state on the
+# shared cosmo keycloak). Deletes it through the same admin API and clears the
+# baseline, so every downstream guard then sees a clean slate and the group's
+# stray wundergraph:* roles get swept by the normal per-attempt cleanup. A raw
+# SQL delete can't stand in here: this keycloak build may bind to a different
+# postgres than cosmo-dev-postgres-1 when another stack shares the docker
+# network, so the API is the only target that's reliably correct. See
+# RUNBOOK.md. No-ops unless the flag is set and a baseline group was recorded.
+force_delete_baseline_wundergraph_kc_group() {
+  [ "${EI_DEMO_FORCE_KC_CLEANUP:-}" = "1" ] || return 0
+  [ -n "${WUNDERGRAPH_KC_GROUP_BASELINE_ID:-}" ] || return 0
+  local kc_token
+  kc_token="$(kc_admin_token)" || {
+    echo "WARNING: EI_DEMO_FORCE_KC_CLEANUP=1 set, but no admin token could be obtained to delete the pre-existing 'wundergraph' group; leaving it in place." >&2
+    return 0
+  }
+  echo "EI_DEMO_FORCE_KC_CLEANUP=1: deleting pre-existing 'wundergraph' group ($WUNDERGRAPH_KC_GROUP_BASELINE_ID) so the demo can seed." >&2
+  curl -s -o /dev/null -X DELETE -H "Authorization: Bearer $kc_token" \
+    "http://localhost:8080/admin/realms/cosmo/groups/$WUNDERGRAPH_KC_GROUP_BASELINE_ID"
+  WUNDERGRAPH_KC_GROUP_BASELINE_ID=""
+}
+
 # A TCP-open port isn't enough (Keycloak accepts connections mid-migration),
 # and one successful admin login isn't enough either (this Keycloak build
 # can still answer "user_not_found" intermittently right after). Require
@@ -104,6 +128,7 @@ recover_cosmo_keycloak() {
     echo "ERROR: cosmo-dev-keycloak-1 already had a 'wundergraph' group before this run started." >&2
     echo "       Automatic recovery drops the whole keycloak database, which would destroy it too." >&2
     echo "       Clean it up by hand if it's stale, or investigate if it's real, then re-run." >&2
+    echo "       If you're sure it's stale demo debris, re-run with: make ei-demo EI_DEMO_FORCE_KC_CLEANUP=1" >&2
     return 1
   fi
 

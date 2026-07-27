@@ -153,6 +153,7 @@ run_migrate_and_seed() {
       if [ "$cleanup_rc" = "2" ]; then
         echo "ERROR: cosmo-dev-keycloak-1 already had a 'wundergraph' group before this run started, and seed.ts cannot proceed past it." >&2
         echo "       Clean it up by hand if it's stale, or investigate if it's real, then re-run." >&2
+        echo "       If you're sure it's stale demo debris, re-run with: make ei-demo EI_DEMO_FORCE_KC_CLEANUP=1" >&2
         exit 1
       fi
       if make seed; then
@@ -189,6 +190,9 @@ wait_for_cosmo_keycloak
 # and any snapshot is strictly better than none for the baseline protection
 # recover_cosmo_keycloak and cleanup_stray_wundergraph_kc_state rely on.
 snapshot_wundergraph_kc_group_baseline
+# Opt-in only: if the run was started with EI_DEMO_FORCE_KC_CLEANUP=1, drop a
+# pre-existing "wundergraph" group now so the guards below don't refuse on it.
+force_delete_baseline_wundergraph_kc_group
 
 migrate_seed_ok=""
 for attempt in 1 2 3; do
