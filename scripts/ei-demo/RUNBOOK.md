@@ -311,11 +311,23 @@ postgres` calls from the same container return both orders, so the binding is
 genuinely a coin flip per container start, not a fixed mistake. A crossed
 binding puts a Keycloak on the other stack's database, where its realms and
 users are absent. Both composes already read `${POSTGRES_HOST:-postgres}`,
-and nothing else consumes that variable, so the bootstrap exports the concrete
-container name (`cosmo-dev-postgres-1` for this repo, `hub-dev-postgres-1` for
+and nothing else consumes that variable, so `lib.sh` exports the concrete
+container name (`cosmo-dev-postgres-1`, plus `hub-dev-postgres-1` passed to
 hub's `make all`) and the ambiguity disappears. Confirmed with `docker compose
 config`: exactly one line of the resolved configuration changes. Neither
 compose file is modified, so this stays a demo-local decision.
+
+The export belongs in `lib.sh`, which every entry point sources, not in a
+single script. An earlier version set it only in the bootstrap, and a full run
+proved that insufficient: the bootstrap created Keycloak correctly, then
+`start.sh` ran its own `make infra-up` without the variable, compose computed a
+different configuration for that one service and silently **recreated** the
+container back onto the ambiguous name. The result was both Keycloaks sharing
+hub's database, visible as cosmo's Keycloak serving hub's realm content
+(users and fossil groups that exist only in hub's realm import, while cosmo's
+own import ships no users at all). With the export in `lib.sh` a repeated
+`docker compose up` reports `Running` instead of `Recreate`, so the binding is
+stable no matter which script brings infra up.
 
 Recovery itself was hardened alongside it. The foreign-realm check used to
 treat an unparseable response as "no foreign realms" and continue, which is

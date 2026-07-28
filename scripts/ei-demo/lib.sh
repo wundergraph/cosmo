@@ -1,6 +1,17 @@
 #!/bin/bash
 # Shared helpers for the ei-demo scripts. Sourced, not executed directly.
 
+# This repo's compose and hub's both define a service named "postgres" on the
+# same shared network, so inside a container that name resolves to two
+# addresses and which one Keycloak binds to is decided by DNS answer order.
+# Naming the container removes the ambiguity. Exported here rather than in a
+# single script because every entry point that brings infra up needs it: a
+# later `docker compose up` without it computes a different config for the
+# keycloak service and silently recreates the container back onto the
+# ambiguous name (confirmed directly, that is exactly how start.sh undid the
+# bootstrap's binding). See RUNBOOK.md.
+export POSTGRES_HOST="${POSTGRES_HOST:-cosmo-dev-postgres-1}"
+
 # pidfile_entry <pid>
 # Prints "pid:start_time" for a live process, empty if it can't be found.
 # start_time (`ps -o lstart=`, fixed at process creation) is what later lets
