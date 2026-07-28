@@ -296,6 +296,69 @@ except Exception:
     return 1
   fi
 
+  # Hub does not present this cosmo token itself: it logs the user into its own
+  # "hub" realm and then exchanges that for a cosmo one at the broker endpoint,
+  # which only works while the hub-realm user carries a federated identity
+  # pointing at this exact cosmo user, plus the broker's read-token role. Hub's
+  # `link-cosmo-idp` establishes both during `make all`, a step the bootstrap
+  # skips whenever hub's dev servers are already up, so the link can easily be
+  # missing or left pointing at a replaced cosmo user. Neither shows up in the
+  # checks above, and both surface only as an empty org list. Needs
+  # kc_admin_token from keycloak.sh, which every caller sources alongside this.
+  local admin_token hub_user_id linked_cosmo_id broker_roles
+  admin_token="$(kc_admin_token "$kc_url")" || {
+    echo "ERROR: could not get an admin token for hub's keycloak at $kc_url to check the" >&2
+    echo "       Cosmo identity-provider link. Is hub's keycloak healthy?" >&2
+    return 1
+  }
+  hub_user_id="$(curl -s -H "Authorization: Bearer $admin_token" \
+    "$kc_url/admin/realms/hub/users?email=$demo_email&exact=true" \
+    | python3 -c "import json,sys
+try:
+    d = json.load(sys.stdin)
+    print(d[0]['id'] if d else '')
+except Exception:
+    print('')")"
+  if [ -z "$hub_user_id" ]; then
+    echo "ERROR: $demo_email does not exist in hub's own 'hub' realm, so hub has nobody to log in." >&2
+    echo "       Run hub's setup: (cd \$HUB_DIR && make all)" >&2
+    return 1
+  fi
+
+  linked_cosmo_id="$(curl -s -H "Authorization: Bearer $admin_token" \
+    "$kc_url/admin/realms/hub/users/$hub_user_id/federated-identity" \
+    | python3 -c "import json,sys
+try:
+    print(next((i.get('userId', '') for i in json.load(sys.stdin) if i.get('identityProvider') == 'cosmo-oidc'), ''))
+except Exception:
+    print('')")"
+  if [ "$linked_cosmo_id" != "$kc_sub" ]; then
+    echo "ERROR: hub's user is not linked to the current Cosmo identity." >&2
+    echo "       linked to: ${linked_cosmo_id:-<no cosmo-oidc link>}, expected: $kc_sub" >&2
+    echo "       Hub exchanges its own token for a Cosmo one through this link, so without" >&2
+    echo "       it every call to the control plane fails and hub offers 'Create organization'." >&2
+    echo "       Fix with: (cd \$HUB_DIR/apps/backend && bun run link-cosmo-idp)" >&2
+    return 1
+  fi
+
+  broker_roles="$(curl -s -H "Authorization: Bearer $admin_token" \
+    "$kc_url/admin/realms/hub/users/$hub_user_id/role-mappings" \
+    | python3 -c "import json,sys
+try:
+    d = json.load(sys.stdin)
+    print(','.join(r['name'] for c in (d.get('clientMappings') or {}).values() for r in c.get('mappings', [])))
+except Exception:
+    print('')")"
+  case ",$broker_roles," in
+    *",read-token,"*) ;;
+    *)
+      echo "ERROR: hub's user lacks the broker 'read-token' role, so it cannot exchange its" >&2
+      echo "       token for a Cosmo one and the organization list comes back empty." >&2
+      echo "       Fix with: (cd \$HUB_DIR/apps/backend && bun run link-cosmo-idp)" >&2
+      return 1
+      ;;
+  esac
+
   db_id="$(docker exec "$pg_container" psql -U postgres -d controlplane -t -A \
     -c "SELECT id FROM users WHERE email='$demo_email'" 2>/dev/null)" || true
   if [ "$db_id" != "$kc_sub" ]; then
