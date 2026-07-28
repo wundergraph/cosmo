@@ -413,5 +413,40 @@ except Exception:
     return 1
   fi
 
+  # Hub's backend talks to keycloak as a confidential client whose secret lives
+  # in its own .env. A realm recreated from the committed import while that file
+  # kept an older secret fails every admin call with a bare "invalid_client",
+  # which cost a teammate a morning: hub's own link-cosmo-idp died on it with no
+  # indication that a local file had drifted. Probing the credential here turns
+  # that into a named cause. Skipped rather than failed when the file or keys
+  # are absent, since neither is this script's to create.
+  local hub_env admin_client admin_secret probe_error
+  hub_env="${HUB_DIR:-../hub}/apps/backend/.env"
+  if [ -f "$hub_env" ]; then
+    admin_client="$(sed -n 's/^KEYCLOAK_ADMIN_CLIENT_ID=//p' "$hub_env" | tr -d '"' | head -1)"
+    admin_secret="$(sed -n 's/^KEYCLOAK_ADMIN_CLIENT_SECRET=//p' "$hub_env" | tr -d '"' | head -1)"
+    if [ -n "$admin_client" ] && [ -n "$admin_secret" ]; then
+      probe_error="$(curl -s -X POST "$kc_url/realms/hub/protocol/openid-connect/token" \
+        -d grant_type=client_credentials -d "client_id=$admin_client" -d "client_secret=$admin_secret" \
+        | python3 -c "import json,sys
+try:
+    d = json.load(sys.stdin)
+    print('' if 'access_token' in d else d.get('error', 'no token returned'))
+except Exception:
+    print('unreadable response')")"
+      if [ -n "$probe_error" ]; then
+        echo "ERROR: hub's backend cannot authenticate to its own keycloak as '$admin_client'." >&2
+        echo "       Keycloak said: $probe_error" >&2
+        echo "       KEYCLOAK_ADMIN_CLIENT_SECRET in $hub_env no longer matches the realm," >&2
+        echo "       usually because the realm was recreated while that file kept an older" >&2
+        echo "       secret. Every admin call fails this way, including link-cosmo-idp." >&2
+        echo "       Restore the committed default and re-add your own values:" >&2
+        echo "         cp \$HUB_DIR/apps/backend/.env.example \$HUB_DIR/apps/backend/.env" >&2
+        echo "       then put LIVEBLOCKS_SECRET_KEY back and re-run." >&2
+        return 1
+      fi
+    fi
+  fi
+
   echo "Identity chain verified: $demo_email -> $kc_sub -> org 'wundergraph'."
 }

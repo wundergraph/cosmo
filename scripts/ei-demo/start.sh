@@ -98,7 +98,18 @@ fi
 write_pidfile
 
 if command -v k6 >/dev/null 2>&1 && [ -f "$HUB_DIR/scripts/run-traffic.sh" ]; then
-  ( wait_for_port 3002 "$DEMO_STARTUP_ATTEMPTS" "$DEMO_STARTUP_SLEEP" || exit 0
+  # Its own budget, not DEMO_STARTUP_ATTEMPTS' 30s: the router is compiled on
+  # demand by `go run`, which on a cold module cache takes minutes. The short
+  # wait used to expire and `exit 0` silently, leaving a demo that looks fine
+  # but whose Entity Intelligence heatmap is permanently empty, with no message
+  # and without even creating the log file the warning below points at.
+  ( wait_for_port 3002 600 0.5 || {
+      echo "WARNING: the router never came up on 3002 within 5 minutes, so no demo traffic" >&2
+      echo "         was generated and Entity Intelligence will have no data to show." >&2
+      echo "         Once the router is serving, generate it with:" >&2
+      echo "           ROUTER_URL=http://localhost:3002/graphql bash \"$HUB_DIR/scripts/run-traffic.sh\" --vus 20 --duration 60s" >&2
+      exit 0
+    }
     echo "Generating demo traffic (populates the Entity Intelligence heatmap)..."
     ROUTER_URL=http://localhost:3002/graphql bash "$HUB_DIR/scripts/run-traffic.sh" --vus 20 --duration 60s \
       > /tmp/ei-demo-traffic.log 2>&1 || echo "Traffic generation failed, see /tmp/ei-demo-traffic.log" >&2 ) & traffic_pid=$!
