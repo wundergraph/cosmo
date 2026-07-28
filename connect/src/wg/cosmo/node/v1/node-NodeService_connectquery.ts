@@ -2,7 +2,7 @@
 // @generated from file wg/cosmo/node/v1/node.proto (package wg.cosmo.node.v1, syntax proto3)
 /* eslint-disable */
 
-import { NodeService } from './node_pb.js';
+import { NodeService } from "./node_pb.js";
 
 /**
  * @generated from rpc wg.cosmo.node.v1.NodeService.SelfRegister

@@ -2,23 +2,20 @@
 // @generated from file wg/cosmo/notifications/events.proto (package wg.cosmo.notifications, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2';
-import { enumDesc, fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2';
-import type { Message } from '@bufbuild/protobuf';
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file wg/cosmo/notifications/events.proto.
  */
-export const file_wg_cosmo_notifications_events: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'CiN3Zy9jb3Ntby9ub3RpZmljYXRpb25zL2V2ZW50cy5wcm90bxIWd2cuY29zbW8ubm90aWZpY2F0aW9ucyIqChZHcmFwaFNjaGVtYVVwZGF0ZWRNZXRhEhAKCGdyYXBoSWRzGAEgAygJIiwKGFByb3Bvc2FsU3RhdGVVcGRhdGVkTWV0YRIQCghncmFwaElkcxgBIAMoCSLYAgoJRXZlbnRNZXRhEkEKCmV2ZW50X25hbWUYASABKA4yLS53Zy5jb3Ntby5ub3RpZmljYXRpb25zLk9yZ2FuaXphdGlvbkV2ZW50TmFtZRJYCh5mZWRlcmF0ZWRfZ3JhcGhfc2NoZW1hX3VwZGF0ZWQYAiABKAsyLi53Zy5jb3Ntby5ub3RpZmljYXRpb25zLkdyYXBoU2NoZW1hVXBkYXRlZE1ldGFIABJSChhtb25vZ3JhcGhfc2NoZW1hX3VwZGF0ZWQYAyABKAsyLi53Zy5jb3Ntby5ub3RpZmljYXRpb25zLkdyYXBoU2NoZW1hVXBkYXRlZE1ldGFIABJSChZwcm9wb3NhbF9zdGF0ZV91cGRhdGVkGAQgASgLMjAud2cuY29zbW8ubm90aWZpY2F0aW9ucy5Qcm9wb3NhbFN0YXRlVXBkYXRlZE1ldGFIAEIGCgRtZXRhKnwKEVBsYXRmb3JtRXZlbnROYW1lEhkKFVVTRVJfUkVHSVNURVJfU1VDQ0VTUxAAEhcKE0FQT0xMT19NSUdSQVRFX0lOSVQQARIaChZBUE9MTE9fTUlHUkFURV9TVUNDRVNTEAISFwoTVVNFUl9ERUxFVEVfU1VDQ0VTUxADKooBChVPcmdhbml6YXRpb25FdmVudE5hbWUSIgoeRkVERVJBVEVEX0dSQVBIX1NDSEVNQV9VUERBVEVEEAASHAoYTU9OT0dSQVBIX1NDSEVNQV9VUERBVEVEEAESEwoPVkFMSURBVEVfQ09ORklHEAMSGgoWUFJPUE9TQUxfU1RBVEVfVVBEQVRFRBAEYgZwcm90bzM',
-  );
+export const file_wg_cosmo_notifications_events: GenFile = /*@__PURE__*/
+  fileDesc("CiN3Zy9jb3Ntby9ub3RpZmljYXRpb25zL2V2ZW50cy5wcm90bxIWd2cuY29zbW8ubm90aWZpY2F0aW9ucyIqChZHcmFwaFNjaGVtYVVwZGF0ZWRNZXRhEhAKCGdyYXBoSWRzGAEgAygJIiwKGFByb3Bvc2FsU3RhdGVVcGRhdGVkTWV0YRIQCghncmFwaElkcxgBIAMoCSLYAgoJRXZlbnRNZXRhEkEKCmV2ZW50X25hbWUYASABKA4yLS53Zy5jb3Ntby5ub3RpZmljYXRpb25zLk9yZ2FuaXphdGlvbkV2ZW50TmFtZRJYCh5mZWRlcmF0ZWRfZ3JhcGhfc2NoZW1hX3VwZGF0ZWQYAiABKAsyLi53Zy5jb3Ntby5ub3RpZmljYXRpb25zLkdyYXBoU2NoZW1hVXBkYXRlZE1ldGFIABJSChhtb25vZ3JhcGhfc2NoZW1hX3VwZGF0ZWQYAyABKAsyLi53Zy5jb3Ntby5ub3RpZmljYXRpb25zLkdyYXBoU2NoZW1hVXBkYXRlZE1ldGFIABJSChZwcm9wb3NhbF9zdGF0ZV91cGRhdGVkGAQgASgLMjAud2cuY29zbW8ubm90aWZpY2F0aW9ucy5Qcm9wb3NhbFN0YXRlVXBkYXRlZE1ldGFIAEIGCgRtZXRhKnwKEVBsYXRmb3JtRXZlbnROYW1lEhkKFVVTRVJfUkVHSVNURVJfU1VDQ0VTUxAAEhcKE0FQT0xMT19NSUdSQVRFX0lOSVQQARIaChZBUE9MTE9fTUlHUkFURV9TVUNDRVNTEAISFwoTVVNFUl9ERUxFVEVfU1VDQ0VTUxADKooBChVPcmdhbml6YXRpb25FdmVudE5hbWUSIgoeRkVERVJBVEVEX0dSQVBIX1NDSEVNQV9VUERBVEVEEAASHAoYTU9OT0dSQVBIX1NDSEVNQV9VUERBVEVEEAESEwoPVkFMSURBVEVfQ09ORklHEAMSGgoWUFJPUE9TQUxfU1RBVEVfVVBEQVRFRBAEYgZwcm90bzM");
 
 /**
  * @generated from message wg.cosmo.notifications.GraphSchemaUpdatedMeta
  */
-export type GraphSchemaUpdatedMeta = Message<'wg.cosmo.notifications.GraphSchemaUpdatedMeta'> & {
+export type GraphSchemaUpdatedMeta = Message<"wg.cosmo.notifications.GraphSchemaUpdatedMeta"> & {
   /**
    * @generated from field: repeated string graphIds = 1;
    */
@@ -29,14 +26,13 @@ export type GraphSchemaUpdatedMeta = Message<'wg.cosmo.notifications.GraphSchema
  * Describes the message wg.cosmo.notifications.GraphSchemaUpdatedMeta.
  * Use `create(GraphSchemaUpdatedMetaSchema)` to create a new message.
  */
-export const GraphSchemaUpdatedMetaSchema: GenMessage<GraphSchemaUpdatedMeta> =
-  /*@__PURE__*/
+export const GraphSchemaUpdatedMetaSchema: GenMessage<GraphSchemaUpdatedMeta> = /*@__PURE__*/
   messageDesc(file_wg_cosmo_notifications_events, 0);
 
 /**
  * @generated from message wg.cosmo.notifications.ProposalStateUpdatedMeta
  */
-export type ProposalStateUpdatedMeta = Message<'wg.cosmo.notifications.ProposalStateUpdatedMeta'> & {
+export type ProposalStateUpdatedMeta = Message<"wg.cosmo.notifications.ProposalStateUpdatedMeta"> & {
   /**
    * @generated from field: repeated string graphIds = 1;
    */
@@ -47,14 +43,13 @@ export type ProposalStateUpdatedMeta = Message<'wg.cosmo.notifications.ProposalS
  * Describes the message wg.cosmo.notifications.ProposalStateUpdatedMeta.
  * Use `create(ProposalStateUpdatedMetaSchema)` to create a new message.
  */
-export const ProposalStateUpdatedMetaSchema: GenMessage<ProposalStateUpdatedMeta> =
-  /*@__PURE__*/
+export const ProposalStateUpdatedMetaSchema: GenMessage<ProposalStateUpdatedMeta> = /*@__PURE__*/
   messageDesc(file_wg_cosmo_notifications_events, 1);
 
 /**
  * @generated from message wg.cosmo.notifications.EventMeta
  */
-export type EventMeta = Message<'wg.cosmo.notifications.EventMeta'> & {
+export type EventMeta = Message<"wg.cosmo.notifications.EventMeta"> & {
   /**
    * @generated from field: wg.cosmo.notifications.OrganizationEventName event_name = 1;
    */
@@ -63,36 +58,33 @@ export type EventMeta = Message<'wg.cosmo.notifications.EventMeta'> & {
   /**
    * @generated from oneof wg.cosmo.notifications.EventMeta.meta
    */
-  meta:
-    | {
-        /**
-         * @generated from field: wg.cosmo.notifications.GraphSchemaUpdatedMeta federated_graph_schema_updated = 2;
-         */
-        value: GraphSchemaUpdatedMeta;
-        case: 'federatedGraphSchemaUpdated';
-      }
-    | {
-        /**
-         * @generated from field: wg.cosmo.notifications.GraphSchemaUpdatedMeta monograph_schema_updated = 3;
-         */
-        value: GraphSchemaUpdatedMeta;
-        case: 'monographSchemaUpdated';
-      }
-    | {
-        /**
-         * @generated from field: wg.cosmo.notifications.ProposalStateUpdatedMeta proposal_state_updated = 4;
-         */
-        value: ProposalStateUpdatedMeta;
-        case: 'proposalStateUpdated';
-      }
-    | { case: undefined; value?: undefined };
+  meta: {
+    /**
+     * @generated from field: wg.cosmo.notifications.GraphSchemaUpdatedMeta federated_graph_schema_updated = 2;
+     */
+    value: GraphSchemaUpdatedMeta;
+    case: "federatedGraphSchemaUpdated";
+  } | {
+    /**
+     * @generated from field: wg.cosmo.notifications.GraphSchemaUpdatedMeta monograph_schema_updated = 3;
+     */
+    value: GraphSchemaUpdatedMeta;
+    case: "monographSchemaUpdated";
+  } | {
+    /**
+     * @generated from field: wg.cosmo.notifications.ProposalStateUpdatedMeta proposal_state_updated = 4;
+     */
+    value: ProposalStateUpdatedMeta;
+    case: "proposalStateUpdated";
+  } | { case: undefined; value?: undefined };
 };
 
 /**
  * Describes the message wg.cosmo.notifications.EventMeta.
  * Use `create(EventMetaSchema)` to create a new message.
  */
-export const EventMetaSchema: GenMessage<EventMeta> = /*@__PURE__*/ messageDesc(file_wg_cosmo_notifications_events, 2);
+export const EventMetaSchema: GenMessage<EventMeta> = /*@__PURE__*/
+  messageDesc(file_wg_cosmo_notifications_events, 2);
 
 /**
  * @generated from enum wg.cosmo.notifications.PlatformEventName
@@ -122,8 +114,7 @@ export enum PlatformEventName {
 /**
  * Describes the enum wg.cosmo.notifications.PlatformEventName.
  */
-export const PlatformEventNameSchema: GenEnum<PlatformEventName> =
-  /*@__PURE__*/
+export const PlatformEventNameSchema: GenEnum<PlatformEventName> = /*@__PURE__*/
   enumDesc(file_wg_cosmo_notifications_events, 0);
 
 /**
@@ -154,6 +145,6 @@ export enum OrganizationEventName {
 /**
  * Describes the enum wg.cosmo.notifications.OrganizationEventName.
  */
-export const OrganizationEventNameSchema: GenEnum<OrganizationEventName> =
-  /*@__PURE__*/
+export const OrganizationEventNameSchema: GenEnum<OrganizationEventName> = /*@__PURE__*/
   enumDesc(file_wg_cosmo_notifications_events, 1);
+

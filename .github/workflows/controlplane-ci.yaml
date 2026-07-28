@@ -3,12 +3,12 @@ on:
   pull_request:
     paths:
       - 'pnpm-lock.yaml'
-      - 'controlplane/**/*'
-      - 'connect/**/*'
-      - 'composition/**/*'
-      - 'shared/**/*'
-      - '.github/workflows/cp-ci.yaml'
-      - '.github/scripts/setup-keycloak.sh'
+      - "controlplane/**/*"
+      - "connect/**/*"
+      - "composition/**/*"
+      - "shared/**/*"
+      - ".github/workflows/cp-ci.yaml"
+      - ".github/scripts/setup-keycloak.sh"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -20,7 +20,7 @@ env:
 
 jobs:
   build_test:
-    timeout-minutes: 20
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     services:
       redis:
@@ -94,7 +94,7 @@ jobs:
       - name: Test
         run: pnpm run --filter controlplane test:coverage
         env:
-          DB_URL: 'postgresql://postgres:changeme@localhost:5432/controlplane'
+          DB_URL: "postgresql://postgres:changeme@localhost:5432/controlplane"
 
       - name: Upload Coverage to Codecov
         uses: ./.github/actions/codecov-upload-pr
@@ -123,4 +123,5 @@ jobs:
           dockerfile: controlplane/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: controlplane
-          image_description: 'Cosmo Controlplane'
+          image_description: "Cosmo Controlplane"
+

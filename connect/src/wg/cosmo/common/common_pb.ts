@@ -2,17 +2,14 @@
 // @generated from file wg/cosmo/common/common.proto (package wg.cosmo.common, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile } from '@bufbuild/protobuf/codegenv2';
-import { enumDesc, fileDesc } from '@bufbuild/protobuf/codegenv2';
+import type { GenEnum, GenFile } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc } from "@bufbuild/protobuf/codegenv2";
 
 /**
  * Describes the file wg/cosmo/common/common.proto.
  */
-export const file_wg_cosmo_common_common: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'Chx3Zy9jb3Ntby9jb21tb24vY29tbW9uLnByb3RvEg93Zy5jb3Ntby5jb21tb24qiwQKDkVudW1TdGF0dXNDb2RlEgYKAk9LEAASBwoDRVJSEAESEQoNRVJSX05PVF9GT1VORBACEhYKEkVSUl9BTFJFQURZX0VYSVNUUxADEh8KG0VSUl9JTlZBTElEX1NVQkdSQVBIX1NDSEVNQRAEEiMKH0VSUl9TVUJHUkFQSF9DT01QT1NJVElPTl9GQUlMRUQQBRIdChlFUlJfU1VCR1JBUEhfQ0hFQ0tfRkFJTEVEEAYSFgoSRVJSX0lOVkFMSURfTEFCRUxTEAcSGgoWRVJSX0FOQUxZVElDU19ESVNBQkxFRBAIEhsKF0VSUk9SX05PVF9BVVRIRU5USUNBVEVEEAkSFwoTRVJSX09QRU5BSV9ESVNBQkxFRBAKEhoKFkVSUl9GUkVFX1RSSUFMX0VYUElSRUQQCxIYChRFUlJPUl9OT1RfQVVUSE9SSVpFRBAMEhUKEUVSUl9MSU1JVF9SRUFDSEVEEA0SGQoVRVJSX0RFUExPWU1FTlRfRkFJTEVEEA4SFAoQRVJSX0lOVkFMSURfTkFNRRAPEhQKEEVSUl9VUEdSQURFX1BMQU4QEBITCg9FUlJfQkFEX1JFUVVFU1QQERIuCipFUlJfU0NIRU1BX01JU01BVENIX1dJVEhfQVBQUk9WRURfUFJPUE9TQUwQEhIVChFXQVJOX1BBUlRJQUxfREFUQRATKpYBChtHcmFwaFFMU3Vic2NyaXB0aW9uUHJvdG9jb2wSJAogR1JBUEhRTF9TVUJTQ1JJUFRJT05fUFJPVE9DT0xfV1MQABIlCiFHUkFQSFFMX1NVQlNDUklQVElPTl9QUk9UT0NPTF9TU0UQARIqCiZHUkFQSFFMX1NVQlNDUklQVElPTl9QUk9UT0NPTF9TU0VfUE9TVBACKpsBChtHcmFwaFFMV2Vic29ja2V0U3VicHJvdG9jb2wSJgoiR1JBUEhRTF9XRUJTT0NLRVRfU1VCUFJPVE9DT0xfQVVUTxAAEiQKIEdSQVBIUUxfV0VCU09DS0VUX1NVQlBST1RPQ09MX1dTEAESLgoqR1JBUEhRTF9XRUJTT0NLRVRfU1VCUFJPVE9DT0xfVFJBTlNQT1JUX1dTEAJiBnByb3RvMw',
-  );
+export const file_wg_cosmo_common_common: GenFile = /*@__PURE__*/
+  fileDesc("Chx3Zy9jb3Ntby9jb21tb24vY29tbW9uLnByb3RvEg93Zy5jb3Ntby5jb21tb24qiwQKDkVudW1TdGF0dXNDb2RlEgYKAk9LEAASBwoDRVJSEAESEQoNRVJSX05PVF9GT1VORBACEhYKEkVSUl9BTFJFQURZX0VYSVNUUxADEh8KG0VSUl9JTlZBTElEX1NVQkdSQVBIX1NDSEVNQRAEEiMKH0VSUl9TVUJHUkFQSF9DT01QT1NJVElPTl9GQUlMRUQQBRIdChlFUlJfU1VCR1JBUEhfQ0hFQ0tfRkFJTEVEEAYSFgoSRVJSX0lOVkFMSURfTEFCRUxTEAcSGgoWRVJSX0FOQUxZVElDU19ESVNBQkxFRBAIEhsKF0VSUk9SX05PVF9BVVRIRU5USUNBVEVEEAkSFwoTRVJSX09QRU5BSV9ESVNBQkxFRBAKEhoKFkVSUl9GUkVFX1RSSUFMX0VYUElSRUQQCxIYChRFUlJPUl9OT1RfQVVUSE9SSVpFRBAMEhUKEUVSUl9MSU1JVF9SRUFDSEVEEA0SGQoVRVJSX0RFUExPWU1FTlRfRkFJTEVEEA4SFAoQRVJSX0lOVkFMSURfTkFNRRAPEhQKEEVSUl9VUEdSQURFX1BMQU4QEBITCg9FUlJfQkFEX1JFUVVFU1QQERIuCipFUlJfU0NIRU1BX01JU01BVENIX1dJVEhfQVBQUk9WRURfUFJPUE9TQUwQEhIVChFXQVJOX1BBUlRJQUxfREFUQRATKpYBChtHcmFwaFFMU3Vic2NyaXB0aW9uUHJvdG9jb2wSJAogR1JBUEhRTF9TVUJTQ1JJUFRJT05fUFJPVE9DT0xfV1MQABIlCiFHUkFQSFFMX1NVQlNDUklQVElPTl9QUk9UT0NPTF9TU0UQARIqCiZHUkFQSFFMX1NVQlNDUklQVElPTl9QUk9UT0NPTF9TU0VfUE9TVBACKpsBChtHcmFwaFFMV2Vic29ja2V0U3VicHJvdG9jb2wSJgoiR1JBUEhRTF9XRUJTT0NLRVRfU1VCUFJPVE9DT0xfQVVUTxAAEiQKIEdSQVBIUUxfV0VCU09DS0VUX1NVQlBST1RPQ09MX1dTEAESLgoqR1JBUEhRTF9XRUJTT0NLRVRfU1VCUFJPVE9DT0xfVFJBTlNQT1JUX1dTEAJiBnByb3RvMw");
 
 /**
  * @generated from enum wg.cosmo.common.EnumStatusCode
@@ -122,7 +119,8 @@ export enum EnumStatusCode {
 /**
  * Describes the enum wg.cosmo.common.EnumStatusCode.
  */
-export const EnumStatusCodeSchema: GenEnum<EnumStatusCode> = /*@__PURE__*/ enumDesc(file_wg_cosmo_common_common, 0);
+export const EnumStatusCodeSchema: GenEnum<EnumStatusCode> = /*@__PURE__*/
+  enumDesc(file_wg_cosmo_common_common, 0);
 
 /**
  * @generated from enum wg.cosmo.common.GraphQLSubscriptionProtocol
@@ -153,8 +151,7 @@ export enum GraphQLSubscriptionProtocol {
 /**
  * Describes the enum wg.cosmo.common.GraphQLSubscriptionProtocol.
  */
-export const GraphQLSubscriptionProtocolSchema: GenEnum<GraphQLSubscriptionProtocol> =
-  /*@__PURE__*/
+export const GraphQLSubscriptionProtocolSchema: GenEnum<GraphQLSubscriptionProtocol> = /*@__PURE__*/
   enumDesc(file_wg_cosmo_common_common, 1);
 
 /**
@@ -180,6 +177,6 @@ export enum GraphQLWebsocketSubprotocol {
 /**
  * Describes the enum wg.cosmo.common.GraphQLWebsocketSubprotocol.
  */
-export const GraphQLWebsocketSubprotocolSchema: GenEnum<GraphQLWebsocketSubprotocol> =
-  /*@__PURE__*/
+export const GraphQLWebsocketSubprotocolSchema: GenEnum<GraphQLWebsocketSubprotocol> = /*@__PURE__*/
   enumDesc(file_wg_cosmo_common_common, 2);
+

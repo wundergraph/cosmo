@@ -4,7 +4,7 @@
 // @generated from file wg/cosmo/platform/v1/platform.proto (package wg.cosmo.platform.v1, syntax proto3)
 /* eslint-disable */
 
-import { PlatformService } from './platform_pb.js';
+import { PlatformService } from "./platform_pb.js";
 
 /**
  * PlaygroundScripts
@@ -1026,8 +1026,7 @@ export const getFeatureFlagsByFederatedGraph = PlatformService.method.getFeature
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsInLatestCompositionByFederatedGraph
  */
-export const getFeatureFlagsInLatestCompositionByFederatedGraph =
-  PlatformService.method.getFeatureFlagsInLatestCompositionByFederatedGraph;
+export const getFeatureFlagsInLatestCompositionByFederatedGraph = PlatformService.method.getFeatureFlagsInLatestCompositionByFederatedGraph;
 
 /**
  * GetFeatureSubgraphsByFederatedGraph returns the paginated list of unique feature subgraphs across all feature flags of the federated graph.

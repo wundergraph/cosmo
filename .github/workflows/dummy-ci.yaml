@@ -5,8 +5,8 @@ on:
   pull_request:
     paths:
       - 'scripts/**'
-      - '.github/workflows/*.yaml'
-      - '.github/workflows/*.yml'
+      - '.github/workflows/image-release.yml'
+      - '.github/workflows/cli-binary-release.yaml'
       - '.github/actions/**'
       - 'docs-website/**'
       - 'CLAUDE.md'

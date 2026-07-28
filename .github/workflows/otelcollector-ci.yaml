@@ -2,8 +2,8 @@ name: OTELCollector CI
 on:
   pull_request:
     paths:
-      - 'otelcollector/**/*'
-      - '.github/workflows/otelcollector-ci.yaml'
+      - "otelcollector/**/*"
+      - ".github/workflows/otelcollector-ci.yaml"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -13,6 +13,7 @@ env:
   CI: true
 
 jobs:
+
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
     # For now, we will disable the push to the GitHub Container Registry for external contributors
@@ -30,16 +31,5 @@ jobs:
           dockerfile: otelcollector/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: otelcollector
-          image_description: 'Cosmo OTEL Collector'
+          image_description: "Cosmo OTEL Collector"
 
-  build_test:
-    runs-on: ubuntu-latest
-    needs: [build_push_image]
-    if: always()
-    steps:
-      - name: 'All tests passed'
-        if: ${{ !(contains(needs.*.result, 'failure')) }}
-        run: exit 0
-      - name: 'Some tests failed'
-        if: ${{ contains(needs.*.result, 'failure') }}
-        run: exit 1
