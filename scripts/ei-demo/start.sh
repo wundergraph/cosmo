@@ -63,7 +63,9 @@ echo "Bootstrapping (idempotent, skips anything already done)..."
 ./scripts/ei-demo/bootstrap-entity-intelligence-demo.sh
 
 echo "Starting docker infra (postgres, clickhouse, redis, nats, keycloak)..."
-make infra-up
+# Same scale-to-zero as the bootstrap: without it this call recreates cosmo's
+# keycloak that the bootstrap deliberately left out. See RUNBOOK.md.
+make infra-up DC_FLAGS="--scale keycloak=0"
 
 echo "Waiting for ClickHouse to be healthy..."
 docker compose --file docker-compose.yml --profile dev up --wait --wait-timeout 120 clickhouse \

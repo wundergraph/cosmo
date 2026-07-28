@@ -39,9 +39,14 @@ find -L /tmp -maxdepth 1 -name 'ei-demo-fresh-identity-*' -mtime +1 -delete 2>/d
 echo "==> Prerequisites, install, build, docker infra (skipping codegen, see header)"
 make prerequisites
 pnpm install
-# POSTGRES_HOST is exported by lib.sh, which every entry point sources, so the
-# keycloak binding stays the same no matter which script brings infra up.
-make infra-up
+# keycloak scaled to zero: this demo authenticates entirely against hub's
+# keycloak, so starting cosmo's own leaves a second auth server running that
+# nothing talks to, which is what made "which keycloak holds the identity"
+# ambiguous in the first place. DC_FLAGS is the Makefile's own extension point
+# and must be passed on the command line, since the Makefile assigns it and a
+# plain environment variable would lose. POSTGRES_HOST (lib.sh) still pins the
+# database host for anyone who starts cosmo's keycloak outside the demo.
+make infra-up DC_FLAGS="--scale keycloak=0"
 pnpm -r run --filter '!studio' build
 # Plugin subgraphs aren't part of the EI demo, but their build is flaky
 # (stale toolchain cache) and can hang silently for 15+ min instead of
