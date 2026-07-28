@@ -44,6 +44,40 @@ identity, or hub's "import from Cosmo" can't list the wundergraph
 organization for selection. The seed therefore runs against 8090 as well,
 see "The demo uses one Keycloak" below.
 
+## Cosmo's Keycloak is not started at all
+
+Following from the section below, cosmo's own Keycloak takes no part in the
+demo, so leaving it running was pure ambiguity: two auth servers up, one of
+them unused, and no way to tell from `docker ps` which held the identity. Both
+entry points therefore pass `DC_FLAGS="--scale keycloak=0"` to `make infra-up`.
+`DC_FLAGS` is the Makefile's own extension point and has to be passed on the
+command line rather than exported, because the Makefile assigns it and a plain
+environment variable would lose. Passing it to `make infra-up` only, never to
+`dc-subgraphs-demo`, which shares the variable but has no keycloak service.
+
+Both scripts need it: `start.sh` runs its own `make infra-up` after the
+bootstrap has finished, and without the flag there it would start the container
+the bootstrap deliberately left out. `POSTGRES_HOST` (lib.sh) still pins the
+database host, for anyone who starts cosmo's Keycloak outside the demo.
+
+## A drifted Keycloak client secret is named, not left as "invalid_client"
+
+Hub's backend authenticates to Keycloak as a confidential client whose secret
+lives in `apps/backend/.env`. When a realm is recreated from the committed
+import while that file keeps an older secret, every admin call fails with a
+bare `invalid_client` and no indication that a local file is the cause. It cost
+a teammate a morning: hub's own `link-cosmo-idp` died on it with a stack trace
+that named neither the file nor the mismatch.
+
+`verify_demo_identity_chain` now performs a client-credentials grant with the
+values actually in that file, so the failure is reported as a drifted secret
+with the file path and the restore command. Verified both directions: the live
+credential issues a token, and a deliberately wrong one is caught. Skipped
+rather than failed when the file or keys are absent, since neither is this
+script's to create. The realm name in the probe is fixed rather than read from
+`KEYCLOAK_REALM`, because hub's committed import defines it, so a divergent
+value means hub itself is misconfigured rather than the probe being wrong.
+
 ## The demo uses one Keycloak: hub's
 
 Everything at runtime authenticates against hub's keycloak on 8090, so the
