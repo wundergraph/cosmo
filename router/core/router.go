@@ -94,19 +94,18 @@ type (
 	// Router is the main application instance.
 	Router struct {
 		Config
-		httpServer              *server
-		modules                 []Module
-		EngineStats             statistics.EngineStatistics
-		playgroundHandler       func(http.Handler) http.Handler
-		proxy                   ProxyFunc
-		disableUsageTracking    bool
-		usage                   UsageTracker
-		headerPropagation       *HeaderPropagation
-		reloadPersistentState   *ReloadPersistentState
-		connectionStatsLock     sync.Mutex
-		traceDialer             *TraceDialer
-		connectionMetrics       *rmetric.ConnectionMetrics
-		connectionStatsShutdown bool
+		httpServer            *server
+		modules               []Module
+		EngineStats           statistics.EngineStatistics
+		playgroundHandler     func(http.Handler) http.Handler
+		proxy                 ProxyFunc
+		disableUsageTracking  bool
+		usage                 UsageTracker
+		headerPropagation     *HeaderPropagation
+		reloadPersistentState *ReloadPersistentState
+		connectionStatsLock   sync.Mutex
+		traceDialer           *TraceDialer
+		connectionMetrics     *rmetric.ConnectionMetrics
 	}
 
 	UsageTracker interface {
@@ -2652,13 +2651,11 @@ func (r *Router) connectionStatsEnabled() bool {
 // connectionTraceDialer returns the router-scoped TraceDialer, or nil when
 // connection statistics are disabled. Router-scoped because a reused graph mux
 // keeps the transports, and therefore the stats, of the server that built it.
+// Unlocked: only newGraphServer touches the dialer, and it never runs concurrently.
 func (r *Router) connectionTraceDialer() *TraceDialer {
 	if !r.connectionStatsEnabled() {
 		return nil
 	}
-
-	r.connectionStatsLock.Lock()
-	defer r.connectionStatsLock.Unlock()
 
 	if r.traceDialer == nil {
 		r.traceDialer = NewTraceDialer()
@@ -2678,8 +2675,8 @@ func (r *Router) connectionMetricStore(traceDialer *TraceDialer) (*rmetric.Conne
 	r.connectionStatsLock.Lock()
 	defer r.connectionStatsLock.Unlock()
 
-	if r.connectionStatsShutdown {
-		// Lost the race with Router.Shutdown; this server will never serve.
+	// Check if the router is shutting down to prevent creating asynchronous metrics.
+	if r.shutdown.Load() {
 		return nil, nil
 	}
 
@@ -2700,15 +2697,12 @@ func (r *Router) connectionMetricStore(traceDialer *TraceDialer) (*rmetric.Conne
 	return r.connectionMetrics, nil
 }
 
-// shutdownConnectionMetrics unregisters the store and blocks later creation.
-// The flag is needed because a config reload can still be inside newGraphServer
-// here: it checks r.shutdown before calling newServer. The lock is held across
-// the teardown so such a reload either creates the store first or sees the flag.
+// shutdownConnectionMetrics unregisters the store. Must run after r.shutdown is
+// set, so that a config reload still inside newGraphServer cannot create a new
+// store afterwards.
 func (r *Router) shutdownConnectionMetrics(ctx context.Context) error {
 	r.connectionStatsLock.Lock()
 	defer r.connectionStatsLock.Unlock()
-
-	r.connectionStatsShutdown = true
 
 	if r.connectionMetrics == nil {
 		return nil

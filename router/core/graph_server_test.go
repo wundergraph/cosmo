@@ -1056,9 +1056,10 @@ func TestConnectionMetricStoreLifetime(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, store)
 
+		// Mirrors Router.Shutdown: the flag is set before the teardown runs.
+		r.shutdown.Store(true)
 		require.NoError(t, r.shutdownConnectionMetrics(context.Background()))
 
-		// Without the flag this would register a callback nobody unregisters.
 		late, err := r.connectionMetricStore(dialer)
 		require.NoError(t, err)
 		require.Nil(t, late, "a graph server built after shutdown must not create a new store")
@@ -1069,6 +1070,7 @@ func TestConnectionMetricStoreLifetime(t *testing.T) {
 
 		r := newTestRouter()
 
+		r.shutdown.Store(true)
 		require.NoError(t, r.shutdownConnectionMetrics(context.Background()))
 
 		store, err := r.connectionMetricStore(r.connectionTraceDialer())
