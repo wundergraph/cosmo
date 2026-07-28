@@ -33,6 +33,7 @@ import fs from 'node:fs';
 import path, { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  createSubgraph,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
@@ -813,6 +814,18 @@ describe('FederationFactory tests', () => {
       `,
       ),
     );
+    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        directive @executableDirective(optionalArgInAll: Float, requiredArgInAll: String!, requiredArgInSome: Int!) on FIELD
+
+        type Query {
+          dummy: String
+        }
+      `,
+      ),
+    );
   });
 
   test('that valid executable directives are merged and persisted in the federated graph #2', () => {
@@ -826,6 +839,115 @@ describe('FederationFactory tests', () => {
         type Query {
           a: ID
         }
+      `,
+      ),
+    );
+
+    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        directive @executableDirective on FIELD
+
+        type Query {
+          a: ID
+        }
+      `,
+      ),
+    );
+  });
+
+  test('that an executable directive is merged and persisted in the federated graph without any type system locations', () => {
+    const a = createSubgraph(
+      'a',
+      `
+      directive @a on FIELD | FIELD_DEFINITION
+
+      type Query {
+        a: ID
+      }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+      directive @a on FIELD | FIELD_DEFINITION
+
+      type Query {
+        a: ID
+      }
+    `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [a, b],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+          directive @a on FIELD
+
+          type Query {
+            a: ID
+          }
+      `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+          directive @a on FIELD
+
+          type Query {
+            a: ID
+          }
+      `,
+      ),
+    );
+  });
+
+  test('that an executable directive is not persisted in the federated graph if it is not defined in all subgraphs', () => {
+    const a = createSubgraph(
+      'a',
+      `
+      directive @a on FIELD | FIELD_DEFINITION
+
+      type Query {
+        a: ID
+      }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+      type Query {
+        a: ID
+      }
+    `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [a, b],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+          type Query {
+            a: ID
+          }
+      `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+          type Query {
+            a: ID
+          }
       `,
       ),
     );
