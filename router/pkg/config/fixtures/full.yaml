@@ -428,6 +428,8 @@ events:
     on_receive_events:
       max_concurrent_handlers: 100
       handler_timeout: 5s
+    before_events_dispatch:
+      handler_timeout: 5s
 
 engine:
   enable_single_flight: true

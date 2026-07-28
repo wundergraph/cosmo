@@ -6,15 +6,20 @@ icon: "arrow-left"
 
 The `OnReceiveEvents` handler is a custom module hook that allows you to intercept and process events received from 
 supported message providers before they are delivered to GraphQL subscription clients.
-This handler is called whenever a batch of events is received from a provider, giving you the opportunity to filter, transform, enrich, 
+This handler is called for every subscriber whenever a batch of events is received from a provider, giving you the opportunity to filter, transform, enrich, 
 or validate events before they reach your subscribers.
 
 This handler is particularly useful for:
-- **Event filtering**: Remove unwanted events based on custom logic
-- **Data transformation**: Modify event payloads to match client expectations
-- **Event enrichment**: Add additional data to events from external sources
-- **Authentication and authorization**: Filter events based on user permissions
-- **Monitoring and analytics**: Log or track events for observability
+- **Per-subscriber decisions**: Access subscriber metadata and process events based on it
+- **Individual Data transformation**: Modify event payloads for certain clients to match their expectations
+- **Authentication and authorization**: Filter events for certain subscribers based on user permissions
+
+<Info>
+This handler is similar to the [`BeforeEventsDispatch`](/router/cosmo-streams/custom-modules/before-events-dispatch) handler. The key distinction is that it runs once per subscriber when an event batch is received.  
+This is a trade-off. You can add decisions based on individual subscription client metadata but the hook runs more frequently.
+On a router with 1000 subscribers it runs 1000 times, compared to only once for the [`BeforeEventsDispatch`](/router/cosmo-streams/custom-modules/before-events-dispatch) handler.
+A rule of thumb is to use this handler when you need the per-subscriber flexibility, which [`BeforeEventsDispatch`](/router/cosmo-streams/custom-modules/before-events-dispatch) can't provide.
+</Info>
 
 <Info>
 If there is no active subscription this handler is not executed, even if new messages arrive at the provider.
