@@ -59,6 +59,11 @@ if [ -f "$PID_FILE" ]; then
   mv "$PID_FILE.tmp" "$PID_FILE"
 fi
 
+echo "Entity Intelligence demo. scripts/ei-demo/README.md explains what this does."
+echo "Already develop on cosmo or hub here? Stop and read scripts/ei-demo/TESTING.md"
+echo "first: this rewrites local databases, branches and .env files."
+echo ""
+
 echo "Bootstrapping (idempotent, skips anything already done)..."
 ./scripts/ei-demo/bootstrap-entity-intelligence-demo.sh
 
