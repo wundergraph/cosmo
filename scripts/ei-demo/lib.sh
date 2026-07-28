@@ -337,7 +337,17 @@ except Exception:
     echo "       linked to: ${linked_cosmo_id:-<no cosmo-oidc link>}, expected: $kc_sub" >&2
     echo "       Hub exchanges its own token for a Cosmo one through this link, so without" >&2
     echo "       it every call to the control plane fails and hub offers 'Create organization'." >&2
-    echo "       Fix with: (cd \$HUB_DIR/apps/backend && bun run link-cosmo-idp)" >&2
+    if [ -z "$linked_cosmo_id" ]; then
+      echo "       Fix with: (cd \$HUB_DIR/apps/backend && bun run link-cosmo-idp)" >&2
+    else
+      # link-cosmo-idp skips any user that already has a link, whatever it
+      # points at, so a stale one has to be removed before it will rebuild it.
+      echo "       The link exists but points elsewhere, and link-cosmo-idp skips users that" >&2
+      echo "       already have one, so remove the stale link first, then rebuild it:" >&2
+      echo "         curl -s -X DELETE -H \"Authorization: Bearer \\\$TOKEN\" \\" >&2
+      echo "           $kc_url/admin/realms/hub/users/$hub_user_id/federated-identity/cosmo-oidc" >&2
+      echo "         (cd \$HUB_DIR/apps/backend && bun run link-cosmo-idp)" >&2
+    fi
     return 1
   fi
 
