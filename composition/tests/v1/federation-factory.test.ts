@@ -908,6 +908,51 @@ describe('FederationFactory tests', () => {
     );
   });
 
+  test('that an executable directive is not persisted in the federated graph if it is not defined in all subgraphs', () => {
+    const a = createSubgraph(
+      'a',
+      `
+      directive @a on FIELD | FIELD_DEFINITION
+
+      type Query {
+        a: ID
+      }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+      type Query {
+        a: ID
+      }
+    `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [a, b],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+          type Query {
+            a: ID
+          }
+      `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+          type Query {
+            a: ID
+          }
+      `,
+      ),
+    );
+  });
+
   test('that all nested entity keys are considered to be shareable', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphM, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
