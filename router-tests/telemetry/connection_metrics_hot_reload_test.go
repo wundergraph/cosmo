@@ -227,20 +227,23 @@ func featureFlagHeader(flag string) http.Header {
 func requireActiveConnections(t *testing.T, reader *metric.ManualReader, want connectionsBySubgraph) {
 	t.Helper()
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.Equal(c, want, activeConnections(t, reader))
+		assert.Equal(c, want, activeConnections(c, reader))
 	}, 10*time.Second, 50*time.Millisecond)
 }
 
 // activeConnections sums router.http.client.active_connections per subgraph.
 // Unreported subgraphs read as zero, which is also how an unregistered callback
 // looks: the SDK drops an instrument that produced no observations.
-func activeConnections(t *testing.T, reader *metric.ManualReader) connectionsBySubgraph {
-	t.Helper()
+//
+// Takes an assert.TestingT because it runs on EventuallyWithT's goroutine,
+// where a require-style FailNow is not allowed.
+func activeConnections(t assert.TestingT, reader *metric.ManualReader) connectionsBySubgraph {
+	conns := connectionsBySubgraph{}
 
 	rm := metricdata.ResourceMetrics{}
-	require.NoError(t, reader.Collect(context.Background(), &rm))
-
-	conns := connectionsBySubgraph{}
+	if !assert.NoError(t, reader.Collect(context.Background(), &rm)) {
+		return conns
+	}
 
 	scope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
 	if scope == nil {
@@ -253,7 +256,9 @@ func activeConnections(t *testing.T, reader *metric.ManualReader) connectionsByS
 	}
 
 	gauge, ok := m.Data.(metricdata.Gauge[int64])
-	require.True(t, ok, "router.http.client.active_connections must be an int64 gauge")
+	if !assert.True(t, ok, "router.http.client.active_connections must be an int64 gauge") {
+		return conns
+	}
 
 	for _, dp := range gauge.DataPoints {
 		subgraph, _ := dp.Attributes.Value(otel.WgSubgraphName)
