@@ -19,7 +19,12 @@ PG_CONTAINER="cosmo-dev-postgres-1"
 if ! nc -z 127.0.0.1 8090 2>/dev/null; then
   echo "ERROR: hub's keycloak (8090) is not running, so the demo user cannot be aligned" >&2
   echo "       with the identity hub logs in with." >&2
-  echo "       Start hub's docker services ('make infra-up' in your hub checkout), then re-run." >&2
+  # POSTGRES_HOST is part of the command, not decoration: hub's compose reads
+  # ${POSTGRES_HOST:-postgres}, and "postgres" resolves to two containers on
+  # the shared network, so bringing hub's infra up without it can bind keycloak
+  # to cosmo's database instead of its own. See RUNBOOK.md.
+  echo "       Start hub's docker services, then re-run:" >&2
+  echo "         (cd \$HUB_DIR && POSTGRES_HOST=hub-dev-postgres-1 make infra-up)" >&2
   exit 1
 fi
 

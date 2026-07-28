@@ -203,10 +203,16 @@ enable_hub_ei_frontend_flag() {
     echo "WARNING: $frontend_env doesn't exist yet; run 'make all' in hub first." >&2
     return 1
   fi
-  if ! grep -q '^NEXT_PUBLIC_ENABLE_ENTITY_INTELLIGENCE=true$' "$frontend_env"; then
-    echo "NEXT_PUBLIC_ENABLE_ENTITY_INTELLIGENCE=true" >> "$frontend_env"
+  if grep -q '^NEXT_PUBLIC_ENABLE_ENTITY_INTELLIGENCE=true$' "$frontend_env"; then
+    echo "Entity Intelligence flag already set in $frontend_env."
+    return 0
   fi
+  echo "NEXT_PUBLIC_ENABLE_ENTITY_INTELLIGENCE=true" >> "$frontend_env"
   echo "Entity Intelligence flag set in $frontend_env."
+  # 2, not 0: the flag was missing until now, so any frontend already running
+  # compiled without it and will keep hiding Entity Intelligence until it is
+  # restarted. Callers that did not start the frontend themselves need to know.
+  return 2
 }
 
 # controlplane_kc_api_url
@@ -263,7 +269,8 @@ except Exception:
         echo "ERROR: hub's keycloak has no usable 'cosmo-cli' client in its 'cosmo' realm." >&2
         echo "       That realm is imported from hub's docker/keycloak/cosmo.json, so this" >&2
         echo "       usually means hub's keycloak database predates it. Recreate it:" >&2
-        echo "         (cd \$HUB_DIR && docker compose --file docker-compose.yml down -v && make all)" >&2
+        echo "         (cd \$HUB_DIR && docker compose --file docker-compose.yml down -v \\" >&2
+        echo "            && POSTGRES_HOST=hub-dev-postgres-1 make all)" >&2
         ;;
       *)
         echo "ERROR: the demo user cannot log in to hub's keycloak at $kc_url (realm cosmo)." >&2
@@ -332,7 +339,7 @@ except Exception:
     print('')")"
   if [ -z "$hub_user_id" ]; then
     echo "ERROR: $demo_email does not exist in hub's own 'hub' realm, so hub has nobody to log in." >&2
-    echo "       Run hub's setup: (cd \$HUB_DIR && make all)" >&2
+    echo "       Run hub's setup: (cd \$HUB_DIR && POSTGRES_HOST=hub-dev-postgres-1 make all)" >&2
     return 1
   fi
 
@@ -375,7 +382,15 @@ except Exception:
     *)
       echo "ERROR: hub's user lacks the broker 'read-token' role, so it cannot exchange its" >&2
       echo "       token for a Cosmo one and the organization list comes back empty." >&2
-      echo "       Fix with: (cd \$HUB_DIR/apps/backend && bun run link-cosmo-idp)" >&2
+      # link-cosmo-idp grants this role only while creating a missing link, and
+      # skips any user that already has one. Since the link is present by the
+      # time this check runs, running it alone would report success and change
+      # nothing, so the link has to be removed first to make it rebuild both.
+      echo "       The identity-provider link already exists, and link-cosmo-idp skips users" >&2
+      echo "       that have one, so it grants the role only after the link is removed:" >&2
+      echo "         curl -s -X DELETE -H \"Authorization: Bearer \\\$TOKEN\" \\" >&2
+      echo "           $kc_url/admin/realms/hub/users/$hub_user_id/federated-identity/cosmo-oidc" >&2
+      echo "         (cd \$HUB_DIR/apps/backend && bun run link-cosmo-idp)" >&2
       return 1
       ;;
   esac

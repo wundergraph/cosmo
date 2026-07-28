@@ -87,6 +87,26 @@ ensure_sibling_on_branch "$HUB_DIR" "$HUB_REPO" "$HUB_BRANCH" hub
 # itself is down. Key the decision off the servers the demo actually needs.
 if nc -z 127.0.0.1 3301 2>/dev/null && nc -z 127.0.0.1 3305 2>/dev/null; then
   echo "hub's dev servers (3301/3305) already running."
+  # The flag still has to be checked on this path. It used to be set only in
+  # the branch below, so a developer who already had hub running (its normal
+  # state) got a fully green run with Entity Intelligence silently missing:
+  # the frontend they started compiled without the flag, and writing it later
+  # cannot reach a running next dev. Stop instead of producing that demo.
+  enable_hub_ei_frontend_flag "$HUB_DIR"
+  case $? in
+    2)
+      echo "ERROR: hub's frontend is already running but was started without Entity" >&2
+      echo "       Intelligence enabled. The flag has now been written to" >&2
+      echo "       $HUB_DIR/apps/frontend/.env, but a running next dev compiled its" >&2
+      echo "       value in at startup and will keep hiding the feature." >&2
+      echo "       Restart hub's dev servers, then re-run this demo." >&2
+      exit 1
+      ;;
+    1)
+      echo "ERROR: hub's frontend .env is missing; run 'make all' in $HUB_DIR first." >&2
+      exit 1
+      ;;
+  esac
 else
   echo "hub isn't fully running; setting it up..."
   # Hub's own postgres, for the same ambiguity reason as this repo's above.
@@ -204,7 +224,8 @@ wait_for_demo_keycloak
 if [ -z "$kc_ready" ]; then
   echo "ERROR: hub's keycloak (8090) never became ready (last admin login HTTP status: $code)." >&2
   echo "       Everything below authenticates against it. Bring hub's docker services up" >&2
-  echo "       ('make infra-up' in your hub checkout) and re-run." >&2
+  echo "       Bring them up with the database host pinned, then re-run:" >&2
+  echo "         (cd \$HUB_DIR && POSTGRES_HOST=hub-dev-postgres-1 make infra-up)" >&2
   echo "       ---- last 40 lines of hub-dev-keycloak-1 ----" >&2
   docker logs --tail 40 hub-dev-keycloak-1 2>&1 | sed 's/^/       /' >&2 || true
   exit 1
@@ -448,10 +469,18 @@ elif [ ! -f "$HUB_DIR/scripts/ei-demo/import-cosmo-schema.ts" ]; then
   echo "       hub must be on $HUB_BRANCH (where this script lives); check out that branch, then re-run." >&2
   exit 1
 else
+  # 180s, not 60: on a fresh clone hub's frontend has to compile before it
+  # answers, which is comfortably over a minute on a cold or slow machine. The
+  # old message also told the reader to run `make all` and start the dev
+  # servers, both of which this script already did above, so it sent them
+  # after something that was never the problem.
   echo "Waiting for hub's frontend (3301) and backend (3305)..."
   for port in 3301 3305; do
-    wait_for_port "$port" 60 1 || {
-      echo "ERROR: hub's port $port is not up. Run 'make all' and start hub's dev servers first." >&2
+    wait_for_port "$port" 180 1 || {
+      echo "ERROR: hub's port $port never came up." >&2
+      echo "       This script already ran 'make all' and started hub's dev servers, so the" >&2
+      echo "       reason is in their output: /tmp/hub-dev.log" >&2
+      echo "       A missing LIVEBLOCKS_SECRET_KEY is the usual cause for 3305 specifically." >&2
       exit 1
     }
   done
