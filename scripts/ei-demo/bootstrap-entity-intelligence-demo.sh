@@ -138,16 +138,21 @@ run_migrate_and_seed() {
   make migrate || return 1
 
   echo "==> Database seed (default local dev org/user)"
-  # cosmo's own keycloak, passed as env vars rather than written into
-  # controlplane/.env: dotenv never overrides an already-set process env
-  # var, so this reaches seed.ts without ever touching a file a developer
-  # might have customized for other cosmo work. See RUNBOOK.md.
-  export KC_API_URL="http://localhost:8080"
-  export KC_FRONTEND_URL="http://localhost:8080"
+  # Hub's keycloak, the same one the control plane validates tokens against
+  # everywhere else in this demo. Seeding into cosmo's own keycloak instead
+  # created the identity in a server nothing at runtime consults, which is
+  # what align-hub-identity.sh then had to repair by rewriting the control
+  # plane's user id and every foreign key pointing at it. Seeding here means
+  # the ids match from the start and that repair becomes a no-op. An older
+  # comment claimed hub's keycloak refuses these calls; it does not, every
+  # operation seed.ts performs (group, subgroup, realm role, user, membership)
+  # was confirmed directly against 8090. Passed as env vars rather than
+  # written into controlplane/.env: dotenv never overrides an already-set
+  # process env var, so this reaches seed.ts without touching a file a
+  # developer may have customised for other cosmo work. See RUNBOOK.md.
+  export KC_API_URL="http://localhost:8090"
+  export KC_FRONTEND_URL="http://localhost:8090"
 
-  # seed.ts registers the demo user against cosmo's own keycloak (hub's
-  # keycloak rejects its group API calls), align-hub-identity.sh later
-  # reconciles the id mismatch with hub's keycloak afterward.
   #
   # A failed query here must not fall through as "0 users": that's what
   # gates whether align-hub-identity.sh is later allowed to remap this
@@ -162,12 +167,10 @@ run_migrate_and_seed() {
       cleanup_rc=$?
       # 2 means a real, pre-existing "wundergraph" group is blocking seed.ts
       # (it silently no-ops whenever that group already exists) and cleanup
-      # correctly refused to delete it. Retrying won't help, and letting this
-      # loop exhaust into the outer recovery would destroy that same group
-      # anyway (recover_cosmo_keycloak refuses too, but bail here directly
-      # rather than burning 5 attempts first). See RUNBOOK.md.
+      # correctly refused to delete it. Retrying cannot fix a deterministic
+      # block, so bail here rather than burning the remaining attempts.
       if [ "$cleanup_rc" = "2" ]; then
-        echo "ERROR: cosmo-dev-keycloak-1 already had a 'wundergraph' group before this run started, and seed.ts cannot proceed past it." >&2
+        echo "ERROR: hub's keycloak already had a 'wundergraph' group before this run started, and seed.ts cannot proceed past it." >&2
         echo "       Clean it up by hand if it's stale, or investigate if it's real, then re-run." >&2
         echo "       If you're sure it's stale demo debris, re-run with: make ei-demo EI_DEMO_FORCE_KC_CLEANUP=1" >&2
         exit 1
@@ -199,27 +202,38 @@ run_migrate_and_seed() {
   fi
 }
 
-echo "==> Waiting for cosmo's keycloak (8080) to be fully ready..."
-wait_for_cosmo_keycloak
-# Attempted regardless of kc_ready: a single request can still get through
-# even when the stricter 3-consecutive-successes threshold above never did,
-# and any snapshot is strictly better than none for the baseline protection
-# recover_cosmo_keycloak and cleanup_stray_wundergraph_kc_state rely on.
+echo "==> Waiting for hub's keycloak (8090), the only one this demo uses, to be fully ready..."
+wait_for_demo_keycloak
+if [ -z "$kc_ready" ]; then
+  echo "ERROR: hub's keycloak (8090) never became ready (last admin login HTTP status: $code)." >&2
+  echo "       Everything below authenticates against it. Bring hub's docker services up" >&2
+  echo "       ('make infra-up' in your hub checkout) and re-run." >&2
+  echo "       ---- last 40 lines of hub-dev-keycloak-1 ----" >&2
+  docker logs --tail 40 hub-dev-keycloak-1 2>&1 | sed 's/^/       /' >&2 || true
+  exit 1
+fi
+# Attempted regardless: a single request can still get through even when the
+# stricter 3-consecutive-successes threshold above did not, and any snapshot is
+# strictly better than none for the baseline protection cleanup_stray_
+# wundergraph_kc_state relies on.
 snapshot_wundergraph_kc_group_baseline
 # Opt-in only: if the run was started with EI_DEMO_FORCE_KC_CLEANUP=1, drop a
 # pre-existing "wundergraph" group now so the guards below don't refuse on it.
 force_delete_baseline_wundergraph_kc_group
 
+# Plain retries, with no keycloak recovery step: the demo authenticates only
+# against hub's keycloak, whose database also holds hub's own realm and users,
+# so dropping and recreating it the way the old cosmo-keycloak recovery did is
+# never an acceptable automatic action. seed.ts is idempotent, so a transient
+# failure is worth retrying on its own.
 migrate_seed_ok=""
 for attempt in 1 2 3; do
-  if [ -n "$kc_ready" ] && run_migrate_and_seed; then
+  if run_migrate_and_seed; then
     migrate_seed_ok=1
     break
   fi
-  echo "migrate/seed attempt $attempt failed, cosmo's keycloak is the common thread across every failure mode seen in this zone, so recover it fully and retry the pair rather than guessing which specific step broke." >&2
-  # recover_cosmo_keycloak already printed the specific reason (refused for
-  # safety, or a genuine recovery failure) before returning here.
-  recover_cosmo_keycloak || { echo "ERROR: automatic keycloak recovery did not complete, see above." >&2; exit 1; }
+  echo "migrate/seed attempt $attempt failed, retrying..." >&2
+  sleep 2
 done
 [ -n "$migrate_seed_ok" ] || { echo "ERROR: migrate/seed did not succeed after 3 full attempts." >&2; exit 1; }
 

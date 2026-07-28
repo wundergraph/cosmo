@@ -41,9 +41,37 @@ Hub brokers every user login through its own keycloak (port 8090), whose
 `link-cosmo-idp`). The control plane must validate tokens against that
 keycloak, and the seed step must register the demo user with the same
 identity, or hub's "import from Cosmo" can't list the wundergraph
-organization for selection. Seeding directly against 8090 isn't an option:
-the seed's group-creation calls fail against hub's keycloak version, so
-`align-hub-identity.sh` reconciles the resulting id mismatch afterward.
+organization for selection. The seed therefore runs against 8090 as well,
+see "The demo uses one Keycloak" below.
+
+## The demo uses one Keycloak: hub's
+
+Everything at runtime authenticates against hub's keycloak on 8090, so the
+demo seeds into it too and touches cosmo's own keycloak nowhere. That is a
+correction, not a preference. The seed used to run against cosmo's keycloak
+on 8080 while the control plane validated against hub's, which meant the
+identity was created in a server nothing at runtime ever consulted. Every
+mismatch that followed had to be repaired afterwards by
+`align-hub-identity.sh`: rewriting the control plane's user id, repointing
+every foreign key that referenced it, recreating the groups in the other
+keycloak, all guarded by a marker file and an `EI_DEMO_ALLOW_IDENTITY_REMAP`
+escape hatch. That repair is the single largest source of demo failures this
+runbook records.
+
+An earlier note here claimed seeding against 8090 was impossible because the
+seed's group-creation calls fail on hub's keycloak. That is not true: every
+operation `seed.ts` performs was exercised directly against 8090's `cosmo`
+realm, and all of them succeed (create group, create subgroup, create realm
+role, create user, add user to group). Hub's realm import also ships the
+`studio` client and the `master` login realm the control plane's Keycloak
+config expects, so nothing else needed changing.
+
+With the seed on 8090 the ids match from the start, `align-hub-identity.sh`
+reports "Identities already aligned" and performs no remap, and the whole
+class of identity-mismatch failures disappears rather than being detected and
+repaired. Confirmed on a wiped machine: the remap never executed, the run log
+contains no reference to 8080 at all, and afterwards the demo user and the
+`wundergraph` group exist only in hub's keycloak while cosmo's has neither.
 
 ## cosmo's keycloak: eventual-consistency races
 
@@ -56,7 +84,7 @@ either: this Keycloak build can intermittently answer `user_not_found` on an
 individual request while still stabilizing, even after an earlier login
 already succeeded, confirmed directly, migrate/seed later in the same run
 hit that exact error mid-flow despite the readiness probe having reported
-ready. Hence `wait_for_cosmo_keycloak` requiring several consecutive
+ready. Hence `wait_for_demo_keycloak` requiring several consecutive
 successful admin logins before trusting readiness.
 
 The instability isn't confined to the readiness probe, it resurfaces at
@@ -64,16 +92,16 @@ unpredictable points further into the flow too (group creation, role
 creation, admin login), each a symptom of the same underlying "keycloak
 hasn't actually finished stabilizing" problem. Treating each symptom as its
 own bug was the wrong shape of fix. Migrate and seed are one unit: if either
-fails, for any reason, the pair retries from scratch after the same
-known-good recovery (drop and recreate cosmo's keycloak database, restart,
-wait for it to be stable again).
+fails, for any reason, the pair retries from scratch. They no longer retry
+"after recovery", because the database-level recovery is gone: the one
+Keycloak left is hub's, and its database holds hub's own realm and users, so
+wiping it automatically is never acceptable. `seed.ts` is idempotent, which
+is what makes a plain retry sufficient.
 
-Identity alignment (`align-hub-identity.sh`) is retried separately, without
-that recovery: it only ever talks to hub's own keycloak and cosmo's Postgres
-directly, never cosmo's keycloak, so a failure there was never actually a
-symptom of the instability above. Bundling it into the same retry-with-wipe
-unit used to mean a transient hub-side hiccup got misdiagnosed as cosmo's
-keycloak being unstable and triggered an unnecessary database wipe.
+Identity alignment (`align-hub-identity.sh`) is retried separately: it talks
+only to hub's keycloak and cosmo's Postgres, so a failure there was never a
+symptom of the instability above, and bundling it into the same retry unit
+used to misdiagnose a transient hub-side hiccup as keycloak instability.
 
 `seed.ts`'s own group+role creation (`Keycloak.ts`'s `seedGroup`) is not
 reliably atomic against a fresh Keycloak: creating the top-level group and
@@ -101,34 +129,27 @@ not created fresh for it, a developer doing ordinary `pnpm seed` local dev
 work already has all three. Recovery and cleanup logic that assumes "this
 demo owns everything it finds here" can destroy that unrelated work.
 
-`recover_cosmo_keycloak` drops and recreates keycloak's whole database, every
-realm, to resolve the instability above, checked directly against the
-running instance: creating a realm named `master`/`cosmo` are the only two
-present on a stock cosmo dev setup. Before dropping, it now looks for a realm
-besides those two and refuses if one exists, since a wipe would take it out
-too. If the check itself can't get an answer (the same instability being
-recovered from), it proceeds anyway, there's no way to confirm safety in
-that case, and refusing forever would defeat the recovery. Verified directly:
-created a real foreign realm, confirmed the function refuses and leaves both
-keycloak and the realm untouched, then confirmed a clean instance still
-recovers normally.
+The database-level recovery that used to live here (`recover_cosmo_keycloak`,
+which dropped and recreated Keycloak's entire database) has been removed along
+with the second Keycloak it managed, see "The demo uses one Keycloak" below.
+Nothing automatic may drop the surviving instance: its database also holds
+hub's own realm and users. A Keycloak that will not come up is now reported,
+with its container log, rather than repaired behind the developer's back.
 
 `cleanup_stray_wundergraph_kc_state` sweeps a `wundergraph` Keycloak group
 and its `wundergraph:*` roles before every seed retry (only runs when
 `USER_COUNT` is 0, so Postgres itself can't be used to tell "this run's own
 leftover" apart from "a real org whose Postgres row was lost to an unrelated
 reset"). `snapshot_wundergraph_kc_group_baseline`, called once when Keycloak
-is first confirmed healthy (and again after any `recover_cosmo_keycloak`,
-since that wipes the group along with everything else), records whether a
-group already existed at that point. Cleanup now only removes a group (and
+is first confirmed healthy, records whether a group already existed at that
+point. Cleanup now only removes a group (and
 its roles) that appeared after the baseline was taken, anything that
 predates this run is left alone. Verified directly: a group created before
 the baseline snapshot survives a cleanup call; a group created after it is
 still swept, matching the original behavior for genuinely orphaned state.
 
-Both this and `recover_cosmo_keycloak`'s realm check need a Keycloak admin
-token, and a single fetch attempt can transiently fail even right after
-`wait_for_cosmo_keycloak` reports ready (the same eventual-consistency lag
+This check needs a Keycloak admin token, and a single fetch attempt can transiently fail even right after
+`wait_for_demo_keycloak` reports ready (the same eventual-consistency lag
 documented above), a failed fetch right at the baseline snapshot would read
 as "no group existed" even when one did. `kc_admin_token` (shared by every
 caller that needs a token, including the group lookup itself via
@@ -149,20 +170,13 @@ A related, more consequential case is closed, not just accepted: a group
 that genuinely predates this run blocks `seed.ts` forever (it silently
 no-ops whenever the group already exists, confirmed by reading
 `controlplane/src/bin/seed.ts` directly), cleanup correctly refuses to
-delete it, but retrying 5 times can't fix a deterministic block, and the
-5th failure used to fall through to `recover_cosmo_keycloak`, which would
-still destroy that same "protected" group (its own check only looked at
-realms, not groups within the cosmo realm). Two changes close this
-end-to-end: `cleanup_stray_wundergraph_kc_state` returns 2 (distinct from
-0) specifically for this case, and `run_migrate_and_seed` checks for that
-return and exits immediately with a direct explanation instead of burning
-the remaining attempts. `recover_cosmo_keycloak` also independently refuses
-whenever `WUNDERGRAPH_KC_GROUP_BASELINE_ID` is set, as defense in depth, so
-the destructive path can't be reached even from a future, different caller.
-Verified directly: a real pre-existing group makes `cleanup_stray_
-wundergraph_kc_state` return 2 and `recover_cosmo_keycloak` refuse without
-touching keycloak, in both cases confirmed by the container never
-restarting and the group still present afterward. When that refusal is a
+delete it, but retrying 5 times can't fix a deterministic block.
+`cleanup_stray_wundergraph_kc_state` returns 2 (distinct from 0) specifically
+for this case, and `run_migrate_and_seed` checks for that return and exits
+immediately with a direct explanation instead of burning the remaining
+attempts. Verified directly: a real pre-existing group makes it return 2
+without touching keycloak, confirmed by the group still being present
+afterward. When that refusal is a
 false positive (the group is just stale debris from an earlier failed run,
 the common case on a personal machine), re-running with
 `EI_DEMO_FORCE_KC_CLEANUP=1` authorizes the override:
@@ -296,8 +310,7 @@ to is decided by DNS answer order at connect time: repeated `getent hosts
 postgres` calls from the same container return both orders, so the binding is
 genuinely a coin flip per container start, not a fixed mistake. A crossed
 binding puts a Keycloak on the other stack's database, where its realms and
-users are absent, and `recover_cosmo_keycloak` then drops a database that is
-not the one in use. Both composes already read `${POSTGRES_HOST:-postgres}`,
+users are absent. Both composes already read `${POSTGRES_HOST:-postgres}`,
 and nothing else consumes that variable, so the bootstrap exports the concrete
 container name (`cosmo-dev-postgres-1` for this repo, `hub-dev-postgres-1` for
 hub's `make all`) and the ambiguity disappears. Confirmed with `docker compose

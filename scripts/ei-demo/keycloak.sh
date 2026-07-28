@@ -3,15 +3,18 @@
 # not executed directly. Background on why each workaround exists:
 # scripts/ei-demo/RUNBOOK.md.
 
+# The demo has exactly one Keycloak: hub's. Hub brokers every login through
+# it, the control plane validates tokens against it, and the seed registers
+# the demo identity there, so this is the only instance any of the helpers
+# below should ever touch. Cosmo's own Keycloak takes no part in the flow.
+DEMO_KC_URL="${DEMO_KC_URL:-http://localhost:8090}"
+
 # kc_admin_token [base-url] [attempts]
-# Defaults to cosmo's own keycloak, 3 attempts; align-hub-identity.sh passes
-# hub's (localhost:8090) to reuse this instead of a separate copy, and
-# recover_cosmo_keycloak passes a much higher attempt count for its safety
-# check (see there for why). Retries because a single admin-login attempt
-# can transiently fail even right after wait_for_cosmo_keycloak reports
-# ready (see RUNBOOK.md). Prints the token, empty on failure.
+# Defaults to the demo's keycloak, 3 attempts. Retries because a single
+# admin-login attempt can transiently fail even right after the readiness
+# check reports ready (see RUNBOOK.md). Prints the token, empty on failure.
 kc_admin_token() {
-  local base_url="${1:-http://localhost:8080}"
+  local base_url="${1:-$DEMO_KC_URL}"
   local attempts="${2:-3}"
   local kc_token attempt
   for attempt in $(seq 1 "$attempts"); do
@@ -33,7 +36,7 @@ except Exception:
 find_wundergraph_kc_group_id() {
   local kc_token="$1"
   curl -s -H "Authorization: Bearer $kc_token" \
-    "http://localhost:8080/admin/realms/cosmo/groups?search=wundergraph&exact=true" \
+    "$DEMO_KC_URL/admin/realms/cosmo/groups?search=wundergraph&exact=true" \
     | python3 -c "import json,sys
 try:
     d = json.load(sys.stdin)
@@ -54,15 +57,14 @@ snapshot_wundergraph_kc_group_baseline() {
 }
 
 # EI_DEMO_FORCE_KC_CLEANUP=1 authorizes deleting a "wundergraph" group that
-# predates this run, the one case cleanup_stray_wundergraph_kc_state and
-# recover_cosmo_keycloak both refuse on purpose (it can be real state on the
-# shared cosmo keycloak). Deletes it through the same admin API and clears the
-# baseline, so every downstream guard then sees a clean slate and the group's
-# stray wundergraph:* roles get swept by the normal per-attempt cleanup. A raw
-# SQL delete can't stand in here: this keycloak build may bind to a different
-# postgres than cosmo-dev-postgres-1 when another stack shares the docker
-# network, so the API is the only target that's reliably correct. See
-# RUNBOOK.md. No-ops unless the flag is set and a baseline group was recorded.
+# predates this run, the one case cleanup_stray_wundergraph_kc_state refuses on
+# purpose (it can be real state on a keycloak shared with other work). Deletes
+# it through the admin API and clears the baseline, so the guard then sees a
+# clean slate and the group's stray wundergraph:* roles get swept by the normal
+# per-attempt cleanup. A raw SQL delete can't stand in here: keycloak's database
+# is not reliably the one a container name suggests, so the API is the only
+# target that is always correct. See RUNBOOK.md. No-ops unless the flag is set
+# and a baseline group was recorded.
 force_delete_baseline_wundergraph_kc_group() {
   [ "${EI_DEMO_FORCE_KC_CLEANUP:-}" = "1" ] || return 0
   [ -n "${WUNDERGRAPH_KC_GROUP_BASELINE_ID:-}" ] || return 0
@@ -74,10 +76,9 @@ force_delete_baseline_wundergraph_kc_group() {
   echo "EI_DEMO_FORCE_KC_CLEANUP=1: deleting pre-existing 'wundergraph' group ($WUNDERGRAPH_KC_GROUP_BASELINE_ID) so the demo can seed." >&2
   local delete_code
   delete_code="$(curl -s -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $kc_token" \
-    "http://localhost:8080/admin/realms/cosmo/groups/$WUNDERGRAPH_KC_GROUP_BASELINE_ID")"
-  # The baseline is only cleared once the group is really gone. Clearing it
-  # regardless would disable recover_cosmo_keycloak's refusal, letting a failed
-  # single-group delete escalate into dropping the entire keycloak database.
+    "$DEMO_KC_URL/admin/realms/cosmo/groups/$WUNDERGRAPH_KC_GROUP_BASELINE_ID")"
+  # The baseline is only cleared once the group is really gone, so a failed
+  # delete leaves the guard that protects pre-existing state still armed.
   case "$delete_code" in
     2*)
       WUNDERGRAPH_KC_GROUP_BASELINE_ID=""
@@ -90,16 +91,16 @@ force_delete_baseline_wundergraph_kc_group() {
 }
 
 # A TCP-open port isn't enough (Keycloak accepts connections mid-migration),
-# and one successful admin login isn't enough either (this Keycloak build
-# can still answer "user_not_found" intermittently right after). Require
-# several consecutive successes before trusting it. Sets kc_ready and code
-# as globals for the caller to inspect.
-wait_for_cosmo_keycloak() {
+# and one successful admin login isn't enough either (it can still answer
+# "user_not_found" intermittently right after). Require several consecutive
+# successes before trusting it. Sets kc_ready and code as globals for the
+# caller to inspect.
+wait_for_demo_keycloak() {
   kc_ready=""
   local consecutive_ok=0
   local i
   for i in $(seq 1 150); do
-    code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://localhost:8080/realms/master/protocol/openid-connect/token" \
+    code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$DEMO_KC_URL/realms/master/protocol/openid-connect/token" \
       -d "grant_type=password" -d "client_id=admin-cli" -d "username=admin" -d "password=changeme" 2>/dev/null) || true
     if [ "$code" = "200" ]; then
       consecutive_ok=$((consecutive_ok + 1))
@@ -111,101 +112,6 @@ wait_for_cosmo_keycloak() {
   done
 }
 
-# dump_cosmo_keycloak_log
-# When keycloak can't be reached or recovered, the real reason is in its own
-# container log (a crash loop, a broken schema, a failed realm import), not in
-# anything this script can see over HTTP. Surface it so the failure is
-# self-diagnosing instead of a bare "couldn't get an admin token".
-dump_cosmo_keycloak_log() {
-  echo "       ---- last 40 lines of cosmo-dev-keycloak-1 (the actual reason) ----" >&2
-  docker logs --tail 40 cosmo-dev-keycloak-1 2>&1 | sed 's/^/       /' >&2 || true
-  echo "       -----------------------------------------------------------------" >&2
-}
-
-# Recovery is one unit (drop/recreate/restart/wait): this Keycloak build's
-# instability resurfaces unpredictably across group, role, and login calls.
-# cosmo-dev-keycloak-1 is shared, general-purpose, not exclusive to this
-# demo, so refuse if a realm besides master/cosmo exists, or a "wundergraph"
-# group predates this run (WUNDERGRAPH_KC_GROUP_BASELINE_ID), a drop would
-# destroy either too. Also refuses if no admin token can be obtained after
-# 30 attempts (~60s, not kc_admin_token's usual 3): recovery is usually
-# triggered by the exact same instability window the safety check itself
-# has to get past, and a short retry budget was confirmed live to fail
-# closed on an ordinary transient blip, breaking the common case this
-# whole mechanism exists for. 60s is well past this build's typical blip
-# length but well short of wait_for_cosmo_keycloak's full 5 minutes, so a
-# still-failing check after that is a real signal, not noise. See RUNBOOK.md.
-recover_cosmo_keycloak() {
-  if [ -n "${WUNDERGRAPH_KC_GROUP_BASELINE_ID:-}" ]; then
-    echo "ERROR: cosmo-dev-keycloak-1 already had a 'wundergraph' group before this run started." >&2
-    echo "       Automatic recovery drops the whole keycloak database, which would destroy it too." >&2
-    echo "       Clean it up by hand if it's stale, or investigate if it's real, then re-run." >&2
-    echo "       If you're sure it's stale demo debris, re-run with: make ei-demo EI_DEMO_FORCE_KC_CLEANUP=1" >&2
-    return 1
-  fi
-
-  local kc_token foreign_realms
-  kc_token="$(kc_admin_token http://localhost:8080 30)" || {
-    echo "ERROR: could not obtain a Keycloak admin token to check for foreign realms or pre-existing state." >&2
-    echo "       Automatic recovery drops the whole keycloak database; refusing without being able to verify what's on it." >&2
-    dump_cosmo_keycloak_log
-    echo "       Once you've confirmed it's safe, recover by hand: docker stop cosmo-dev-keycloak-1 && docker exec cosmo-dev-postgres-1 psql -U postgres -c 'DROP DATABASE keycloak' -c 'CREATE DATABASE keycloak' && docker start cosmo-dev-keycloak-1" >&2
-    return 1
-  }
-  # Prints "ok:<realms>" only when the listing genuinely parsed, so a failed
-  # request is never mistaken for "no foreign realms". Recovery runs during the
-  # exact instability this call has to survive, and an empty string from a
-  # transient error used to pass the guard and drop a shared database.
-  foreign_realms="$(curl -s -H "Authorization: Bearer $kc_token" "http://localhost:8080/admin/realms" \
-    | python3 -c "import json,sys
-try:
-    d = json.load(sys.stdin)
-    if not isinstance(d, list):
-        raise ValueError('not a realm list')
-    print('ok:' + ','.join(r['realm'] for r in d if r.get('realm') not in ('master', 'cosmo')))
-except Exception:
-    print('')")" || true
-  case "$foreign_realms" in
-    ok:)
-      ;;
-    ok:*)
-      echo "ERROR: cosmo-dev-keycloak-1 has realm(s) besides 'master'/'cosmo': ${foreign_realms#ok:}" >&2
-      echo "       Automatic recovery drops the whole keycloak database, which would destroy them too." >&2
-      echo "       Back them up (or move them off this instance) and re-run, or recover by hand narrowed to the cosmo realm." >&2
-      return 1
-      ;;
-    *)
-      echo "ERROR: could not read the realm list from cosmo-dev-keycloak-1, so there is no way to tell" >&2
-      echo "       whether dropping its database would destroy someone else's realm. Refusing." >&2
-      dump_cosmo_keycloak_log
-      return 1
-      ;;
-  esac
-
-  echo "Recovering cosmo's keycloak (dropping and recreating its database)..." >&2
-  docker stop cosmo-dev-keycloak-1
-  # WITH (FORCE) because another stack's keycloak can still hold sessions on
-  # this database, and the exit code is checked because this function is always
-  # called in a `||` context, where set -e does not apply: a failed drop used to
-  # pass silently and "recovery" restarted keycloak onto the untouched database.
-  docker exec cosmo-dev-postgres-1 psql -U postgres -v ON_ERROR_STOP=1 \
-    -c 'DROP DATABASE IF EXISTS keycloak WITH (FORCE)' -c 'CREATE DATABASE keycloak' || {
-    echo "ERROR: could not drop and recreate cosmo's keycloak database, so nothing was recovered." >&2
-    docker start cosmo-dev-keycloak-1 >/dev/null 2>&1 || true
-    return 1
-  }
-  docker start cosmo-dev-keycloak-1
-  wait_for_cosmo_keycloak
-  [ -n "$kc_ready" ] || {
-    echo "cosmo keycloak still did not become ready after automatic recovery (last admin login HTTP status: $code)." >&2
-    dump_cosmo_keycloak_log
-    echo "Try manually: docker stop cosmo-dev-keycloak-1 && docker exec cosmo-dev-postgres-1 psql -U postgres -c 'DROP DATABASE keycloak' -c 'CREATE DATABASE keycloak' && docker start cosmo-dev-keycloak-1" >&2
-    return 1
-  }
-  # Database (and any baseline group) was just wiped: re-snapshot so
-  # cleanup_stray_wundergraph_kc_state's baseline reflects reality now.
-  snapshot_wundergraph_kc_group_baseline
-}
 
 # seed.ts's group+role creation isn't atomic against a fresh Keycloak and
 # can leave orphaned wundergraph:* groups/roles behind on a failed attempt,
@@ -230,7 +136,7 @@ cleanup_stray_wundergraph_kc_state() {
 
   if [ -n "$group_id" ]; then
     curl -s -o /dev/null -X DELETE -H "Authorization: Bearer $kc_token" \
-      "http://localhost:8080/admin/realms/cosmo/groups/$group_id"
+      "$DEMO_KC_URL/admin/realms/cosmo/groups/$group_id"
   fi
 
   # pipefail scoped locally: a "curl | python3 | while read" pipe's exit
@@ -241,7 +147,7 @@ cleanup_stray_wundergraph_kc_state() {
   # relied on to show up indirectly via the poll below.
   local role_sweep_rc
   set -o pipefail
-  curl -s -H "Authorization: Bearer $kc_token" "http://localhost:8080/admin/realms/cosmo/roles" \
+  curl -s -H "Authorization: Bearer $kc_token" "$DEMO_KC_URL/admin/realms/cosmo/roles" \
     | python3 -c "
 import json, sys
 try:
@@ -254,7 +160,7 @@ for r in (data if isinstance(data, list) else []):
 " | while IFS= read -r role_name; do
     encoded="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$role_name")"
     curl -s -o /dev/null -X DELETE -H "Authorization: Bearer $kc_token" \
-      "http://localhost:8080/admin/realms/cosmo/roles/$encoded"
+      "$DEMO_KC_URL/admin/realms/cosmo/roles/$encoded"
   done
   role_sweep_rc=$?
   set +o pipefail
@@ -265,7 +171,7 @@ for r in (data if isinstance(data, list) else []):
   # above. Poll until a fresh read genuinely shows zero.
   local i remaining
   for i in $(seq 1 10); do
-    remaining="$(curl -s -H "Authorization: Bearer $kc_token" "http://localhost:8080/admin/realms/cosmo/roles" \
+    remaining="$(curl -s -H "Authorization: Bearer $kc_token" "$DEMO_KC_URL/admin/realms/cosmo/roles" \
       | python3 -c "import json,sys
 try:
     data = json.load(sys.stdin)
