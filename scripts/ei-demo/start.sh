@@ -32,9 +32,14 @@ write_pidfile() {
   fi
   local new=""
   local p
+  # `|| true`: a process that died between being spawned and reaching this loop
+  # makes pidfile_entry return non-zero, and since that substitution is the last
+  # command of the && list, set -e would kill this script mid-write, leaving the
+  # processes already started both running and unrecorded, so down.sh could
+  # never find them. A missing entry for a dead process is the right outcome.
   for p in "$cp_pid" "$gqm_pid" "$sub_pid" "$traffic_pid" "$router_pid"; do
     [ -n "$p" ] && new="$new
-$(pidfile_entry "$p")"
+$(pidfile_entry "$p" || true)"
   done
   printf '%s\n' "$current" "$new" | sort -u | grep -v '^$' > "$PID_FILE" || true
 }

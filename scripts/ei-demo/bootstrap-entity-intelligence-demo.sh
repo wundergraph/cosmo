@@ -39,6 +39,16 @@ find -L /tmp -maxdepth 1 -name 'ei-demo-fresh-identity-*' -mtime +1 -delete 2>/d
 echo "==> Prerequisites, install, build, docker infra (skipping codegen, see header)"
 make prerequisites
 pnpm install
+# Both this repo's compose and hub's define a service literally named
+# "postgres" on the shared "primary" network, so inside a container that name
+# resolves to two addresses and which one Keycloak binds to is decided by DNS
+# answer order at connect time (confirmed directly: repeated lookups return
+# both orders). A crossed binding puts a Keycloak on the other stack's
+# database, where its realms are missing and recovery then drops the wrong one.
+# Both composes already read ${POSTGRES_HOST:-postgres} and nothing else uses
+# it, so naming the container makes the binding deterministic without touching
+# either compose file. See RUNBOOK.md.
+export POSTGRES_HOST=cosmo-dev-postgres-1
 make infra-up
 pnpm -r run --filter '!studio' build
 # Plugin subgraphs aren't part of the EI demo, but their build is flaky
@@ -82,7 +92,8 @@ if nc -z 127.0.0.1 3301 2>/dev/null && nc -z 127.0.0.1 3305 2>/dev/null; then
   echo "hub's dev servers (3301/3305) already running."
 else
   echo "hub isn't fully running; setting it up..."
-  (cd "$HUB_DIR" && make all)
+  # Hub's own postgres, for the same ambiguity reason as this repo's above.
+  (cd "$HUB_DIR" && POSTGRES_HOST=hub-dev-postgres-1 make all)
 
   # LIVEBLOCKS_SECRET_KEY has no default in hub's own .env.example and hub's
   # backend won't boot without one (Config.redacted, no fallback). Not

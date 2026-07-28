@@ -231,7 +231,7 @@ demo:
 # ei-demo-specific scripts live under scripts/ei-demo/; hub's counterpart
 # (schema import, traffic generation) lives at ../hub/scripts/ei-demo/.
 ei-demo:
-	@DEMO_STARTUP_ATTEMPTS=$(DEMO_STARTUP_ATTEMPTS) DEMO_STARTUP_SLEEP=$(DEMO_STARTUP_SLEEP) HUB_DIR=$(HUB_DIR) HUB_LIVEBLOCKS_SECRET_KEY=$(HUB_LIVEBLOCKS_SECRET_KEY) ./scripts/ei-demo/start.sh
+	@DEMO_STARTUP_ATTEMPTS="$(DEMO_STARTUP_ATTEMPTS)" DEMO_STARTUP_SLEEP="$(DEMO_STARTUP_SLEEP)" HUB_DIR="$(HUB_DIR)" HUB_LIVEBLOCKS_SECRET_KEY="$(HUB_LIVEBLOCKS_SECRET_KEY)" ./scripts/ei-demo/start.sh
 
 ei-demo-down:
 	@./scripts/ei-demo/down.sh

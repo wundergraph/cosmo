@@ -287,6 +287,33 @@ needs a restart to take effect. Appended, never sed-replaced: `@next/env`
 lets a later duplicate key win, so it never disturbs whatever value was
 already in the file.
 
+## Each Keycloak is pinned to its own postgres by container name
+
+This repo's compose and hub's both define a service literally named `postgres`,
+and both attach it to the same shared `primary` network. Inside a container
+that name therefore resolves to two addresses, and which one a Keycloak binds
+to is decided by DNS answer order at connect time: repeated `getent hosts
+postgres` calls from the same container return both orders, so the binding is
+genuinely a coin flip per container start, not a fixed mistake. A crossed
+binding puts a Keycloak on the other stack's database, where its realms and
+users are absent, and `recover_cosmo_keycloak` then drops a database that is
+not the one in use. Both composes already read `${POSTGRES_HOST:-postgres}`,
+and nothing else consumes that variable, so the bootstrap exports the concrete
+container name (`cosmo-dev-postgres-1` for this repo, `hub-dev-postgres-1` for
+hub's `make all`) and the ambiguity disappears. Confirmed with `docker compose
+config`: exactly one line of the resolved configuration changes. Neither
+compose file is modified, so this stays a demo-local decision.
+
+Recovery itself was hardened alongside it. The foreign-realm check used to
+treat an unparseable response as "no foreign realms" and continue, which is
+backwards for a guard whose entire job is protecting someone else's realm
+during the exact instability that makes the request fail; it now only proceeds
+on a response it actually parsed. The `DROP DATABASE` gained `WITH (FORCE)`,
+because a crossed binding leaves another Keycloak holding sessions on it, and
+its exit code is now checked: the function is always called in a `||` context
+where `set -e` does not apply, so a failed drop previously passed silently and
+"recovery" restarted Keycloak onto the untouched database.
+
 ## The identity chain is verified, not assumed
 
 Every step of the demo reported its own success while none of them proved the

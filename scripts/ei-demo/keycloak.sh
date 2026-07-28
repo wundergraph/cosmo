@@ -72,9 +72,21 @@ force_delete_baseline_wundergraph_kc_group() {
     return 0
   }
   echo "EI_DEMO_FORCE_KC_CLEANUP=1: deleting pre-existing 'wundergraph' group ($WUNDERGRAPH_KC_GROUP_BASELINE_ID) so the demo can seed." >&2
-  curl -s -o /dev/null -X DELETE -H "Authorization: Bearer $kc_token" \
-    "http://localhost:8080/admin/realms/cosmo/groups/$WUNDERGRAPH_KC_GROUP_BASELINE_ID"
-  WUNDERGRAPH_KC_GROUP_BASELINE_ID=""
+  local delete_code
+  delete_code="$(curl -s -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $kc_token" \
+    "http://localhost:8080/admin/realms/cosmo/groups/$WUNDERGRAPH_KC_GROUP_BASELINE_ID")"
+  # The baseline is only cleared once the group is really gone. Clearing it
+  # regardless would disable recover_cosmo_keycloak's refusal, letting a failed
+  # single-group delete escalate into dropping the entire keycloak database.
+  case "$delete_code" in
+    2*)
+      WUNDERGRAPH_KC_GROUP_BASELINE_ID=""
+      ;;
+    *)
+      echo "WARNING: deleting the 'wundergraph' group failed (HTTP $delete_code); leaving the safety" >&2
+      echo "         baseline in place so recovery still refuses to drop the keycloak database." >&2
+      ;;
+  esac
 }
 
 # A TCP-open port isn't enough (Keycloak accepts connections mid-migration),
@@ -140,24 +152,48 @@ recover_cosmo_keycloak() {
     echo "       Once you've confirmed it's safe, recover by hand: docker stop cosmo-dev-keycloak-1 && docker exec cosmo-dev-postgres-1 psql -U postgres -c 'DROP DATABASE keycloak' -c 'CREATE DATABASE keycloak' && docker start cosmo-dev-keycloak-1" >&2
     return 1
   }
+  # Prints "ok:<realms>" only when the listing genuinely parsed, so a failed
+  # request is never mistaken for "no foreign realms". Recovery runs during the
+  # exact instability this call has to survive, and an empty string from a
+  # transient error used to pass the guard and drop a shared database.
   foreign_realms="$(curl -s -H "Authorization: Bearer $kc_token" "http://localhost:8080/admin/realms" \
     | python3 -c "import json,sys
 try:
     d = json.load(sys.stdin)
-    names = [r['realm'] for r in d if isinstance(d, list) and r.get('realm') not in ('master', 'cosmo')]
-    print(','.join(names))
+    if not isinstance(d, list):
+        raise ValueError('not a realm list')
+    print('ok:' + ','.join(r['realm'] for r in d if r.get('realm') not in ('master', 'cosmo')))
 except Exception:
     print('')")" || true
-  if [ -n "$foreign_realms" ]; then
-    echo "ERROR: cosmo-dev-keycloak-1 has realm(s) besides 'master'/'cosmo': $foreign_realms" >&2
-    echo "       Automatic recovery drops the whole keycloak database, which would destroy them too." >&2
-    echo "       Back them up (or move them off this instance) and re-run, or recover by hand narrowed to the cosmo realm." >&2
-    return 1
-  fi
+  case "$foreign_realms" in
+    ok:)
+      ;;
+    ok:*)
+      echo "ERROR: cosmo-dev-keycloak-1 has realm(s) besides 'master'/'cosmo': ${foreign_realms#ok:}" >&2
+      echo "       Automatic recovery drops the whole keycloak database, which would destroy them too." >&2
+      echo "       Back them up (or move them off this instance) and re-run, or recover by hand narrowed to the cosmo realm." >&2
+      return 1
+      ;;
+    *)
+      echo "ERROR: could not read the realm list from cosmo-dev-keycloak-1, so there is no way to tell" >&2
+      echo "       whether dropping its database would destroy someone else's realm. Refusing." >&2
+      dump_cosmo_keycloak_log
+      return 1
+      ;;
+  esac
 
   echo "Recovering cosmo's keycloak (dropping and recreating its database)..." >&2
   docker stop cosmo-dev-keycloak-1
-  docker exec cosmo-dev-postgres-1 psql -U postgres -c 'DROP DATABASE keycloak' -c 'CREATE DATABASE keycloak'
+  # WITH (FORCE) because another stack's keycloak can still hold sessions on
+  # this database, and the exit code is checked because this function is always
+  # called in a `||` context, where set -e does not apply: a failed drop used to
+  # pass silently and "recovery" restarted keycloak onto the untouched database.
+  docker exec cosmo-dev-postgres-1 psql -U postgres -v ON_ERROR_STOP=1 \
+    -c 'DROP DATABASE IF EXISTS keycloak WITH (FORCE)' -c 'CREATE DATABASE keycloak' || {
+    echo "ERROR: could not drop and recreate cosmo's keycloak database, so nothing was recovered." >&2
+    docker start cosmo-dev-keycloak-1 >/dev/null 2>&1 || true
+    return 1
+  }
   docker start cosmo-dev-keycloak-1
   wait_for_cosmo_keycloak
   [ -n "$kc_ready" ] || {
