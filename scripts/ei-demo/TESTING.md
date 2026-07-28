@@ -105,9 +105,12 @@ demo would otherwise rewrite an identity you may use for normal cosmo work.
 
 ## 6. Getting back afterwards
 
+Through the containers, the same way the backup was taken, so this needs no
+local `psql` install and no password:
+
 ```bash
-psql -h localhost -p 5432 -U postgres -f ~/cosmo-pg-backup.sql postgres
-psql -h localhost -p 5433 -U postgres -f ~/hub-pg-backup.sql postgres
+docker exec -i cosmo-dev-postgres-1 psql -U postgres < ~/cosmo-pg-backup.sql
+docker exec -i hub-dev-postgres-1 psql -U postgres < ~/hub-pg-backup.sql
 ```
 
 Then restore the `.env.bak` files and check the three repos back out onto the
