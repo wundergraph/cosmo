@@ -362,7 +362,10 @@ except Exception:
       # points at, so a stale one has to be removed before it will rebuild it.
       echo "       The link exists but points elsewhere, and link-cosmo-idp skips users that" >&2
       echo "       already have one, so remove the stale link first, then rebuild it:" >&2
-      echo "         curl -s -X DELETE -H \"Authorization: Bearer \\\$TOKEN\" \\" >&2
+      echo "         TOKEN=\$(curl -s -X POST $kc_url/realms/master/protocol/openid-connect/token \\" >&2
+      echo "           -d grant_type=password -d client_id=admin-cli -d username=admin -d password=changeme \\" >&2
+      echo "           | python3 -c 'import json,sys; print(json.load(sys.stdin)[\"access_token\"])')" >&2
+      echo "         curl -s -X DELETE -H \"Authorization: Bearer \$TOKEN\" \\" >&2
       echo "           $kc_url/admin/realms/hub/users/$hub_user_id/federated-identity/cosmo-oidc" >&2
       echo "         (cd \$HUB_DIR/apps/backend && bun run link-cosmo-idp)" >&2
     fi
@@ -388,7 +391,10 @@ except Exception:
       # nothing, so the link has to be removed first to make it rebuild both.
       echo "       The identity-provider link already exists, and link-cosmo-idp skips users" >&2
       echo "       that have one, so it grants the role only after the link is removed:" >&2
-      echo "         curl -s -X DELETE -H \"Authorization: Bearer \\\$TOKEN\" \\" >&2
+      echo "         TOKEN=\$(curl -s -X POST $kc_url/realms/master/protocol/openid-connect/token \\" >&2
+      echo "           -d grant_type=password -d client_id=admin-cli -d username=admin -d password=changeme \\" >&2
+      echo "           | python3 -c 'import json,sys; print(json.load(sys.stdin)[\"access_token\"])')" >&2
+      echo "         curl -s -X DELETE -H \"Authorization: Bearer \$TOKEN\" \\" >&2
       echo "           $kc_url/admin/realms/hub/users/$hub_user_id/federated-identity/cosmo-oidc" >&2
       echo "         (cd \$HUB_DIR/apps/backend && bun run link-cosmo-idp)" >&2
       return 1

@@ -92,8 +92,12 @@ if nc -z 127.0.0.1 3301 2>/dev/null && nc -z 127.0.0.1 3305 2>/dev/null; then
   # state) got a fully green run with Entity Intelligence silently missing:
   # the frontend they started compiled without the flag, and writing it later
   # cannot reach a running next dev. Stop instead of producing that demo.
-  enable_hub_ei_frontend_flag "$HUB_DIR"
-  case $? in
+  # Status captured in a condition context, not read from $? after a plain
+  # call: under `set -e` a bare non-zero return aborts the script immediately,
+  # so the arms below never ran and the abort surfaced as a bare exit right
+  # after a success-sounding "flag set" line (confirmed directly).
+  enable_hub_ei_frontend_flag "$HUB_DIR" && ei_flag_rc=0 || ei_flag_rc=$?
+  case $ei_flag_rc in
     2)
       echo "ERROR: hub's frontend is already running but was started without Entity" >&2
       echo "       Intelligence enabled. The flag has now been written to" >&2
