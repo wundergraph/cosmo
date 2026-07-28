@@ -4,6 +4,9 @@ The demo writes to your local cosmo and hub databases, switches branches in the
 sibling checkouts, and edits a few `.env` files. None of it touches anything
 remote, but back up first so you can get back to where you were.
 
+For what the demo actually does, see [README.md](README.md). For why a
+particular guard exists, see [RUNBOOK.md](RUNBOOK.md).
+
 ## 1. Back up
 
 Both dumps include that stack's Keycloak database, which is the part that is

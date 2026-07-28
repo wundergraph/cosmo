@@ -5,10 +5,14 @@ Intelligence demo: hub on <http://localhost:3301> showing a `cosmo-demo` graph
 whose schema came from cosmo, with the Entity Intelligence panel populated by
 real traffic.
 
-Three documents, three jobs. This one says what happens. `RUNBOOK.md` says why
-the awkward parts are the way they are, one section per problem that cost
-someone a day. `TESTING.md` is for running the demo on a machine you already
-develop on, including backup and restore.
+Three documents, three jobs. This one says what happens. [RUNBOOK.md](RUNBOOK.md)
+says why the awkward parts are the way they are, one section per problem that
+cost someone a day. [TESTING.md](TESTING.md) is for running the demo on a
+machine you already develop on, including backup and restore.
+
+**Already develop on cosmo or hub on this machine? Start with
+[TESTING.md](TESTING.md) instead.** This page assumes a clean machine and will
+not tell you to back up the local state the demo reshapes.
 
 ## What you need
 
@@ -40,8 +44,8 @@ Roughly 30 to 45 minutes on a fresh clone, most of it install and build. Leave
 it running in the foreground, it holds the whole stack up. `make ei-demo-down`
 in another terminal stops everything it started.
 
-If you already develop on this machine, read `TESTING.md` first: it covers
-backing up the local state the demo will otherwise reshape.
+If you already develop on this machine, read [TESTING.md](TESTING.md) first: it
+covers backing up the local state the demo will otherwise reshape.
 
 ## Seeing it
 
@@ -125,5 +129,5 @@ reporting, because the whole point of the identity gate and the import
 diagnostics is that nobody should have to read a stack trace to find out that a
 local `.env` drifted.
 
-`RUNBOOK.md` has the long form for each guard, including the ones that refuse
+[RUNBOOK.md](RUNBOOK.md) has the long form for each guard, including those that refuse
 to act rather than risk destroying local state that is not the demo's.
