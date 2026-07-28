@@ -12,16 +12,42 @@ develop on, including backup and restore.
 
 ## What you need
 
-A clone of cosmo on the demo branch, a GitHub SSH key (hub is private and gets
-cloned for you), Docker, and a liveblocks.io secret key, which hub's backend
-will not boot without and nothing can generate for you. `k6` is optional but
-without it the Entity Intelligence panel has no traffic to describe.
+Docker running, a GitHub SSH key (hub is private and gets cloned for you), and
+a liveblocks.io secret key, which hub's backend will not boot without and
+nothing can generate for you. Ask the team for that one. `k6` is optional but
+without it the Entity Intelligence panel has no traffic to describe:
+`brew install k6`.
+
+## Running it
 
 ```bash
+git clone git@github.com:wundergraph/cosmo.git
+cd cosmo
+git checkout milinda/entity-caching-3-feature-flag-rollout-router
 make ei-demo HUB_LIVEBLOCKS_SECRET_KEY=sk_...
 ```
 
-Roughly 30 to 45 minutes on a fresh clone, most of it install and build.
+Roughly 30 to 45 minutes on a fresh clone, most of it install and build. Leave
+it running in the foreground, it holds the whole stack up. `make ei-demo-down`
+in another terminal stops everything it started.
+
+If you already develop on this machine, read `TESTING.md` first: it covers
+backing up the local state the demo will otherwise reshape.
+
+## Seeing it
+
+Open <http://localhost:3301> and log in as `foo@wundergraph.com` with the
+password `wunder@123`, the demo account the seed creates. Open the `cosmo-demo`
+graph, then click the sparkles icon in the canvas control panel to turn the
+Entity Intelligence overlay on. That is a route, not just a toggle, so you can
+also go straight there:
+
+```
+http://localhost:3301/wundergraph/graph/cosmo-demo/intelligence
+```
+
+An empty heatmap almost always means the traffic step did not run. Check that
+`k6` is installed and look for the router warning in the `make ei-demo` output.
 
 ## The three repositories
 
@@ -62,8 +88,8 @@ than starting over.
    `router/go.work` and layer an EI-only router config in through
    `CONFIG_PATH`. Both files are gitignored; `router/go.mod` and
    `router/demo.config.yaml` are never edited.
-8. **Import the schema into hub** by driving hub's own "Create Graph → Cosmo"
-   wizard in a headless browser, since hub has no password-login API.
+8. **Import the schema into hub** by driving hub's own "Create Graph" wizard,
+   Cosmo branch, in a headless browser, since hub has no password-login API.
 
 `start.sh` then runs the demo itself: control plane, graphqlmetrics, the demo
 subgraphs, the router, and a k6 traffic burst that gives Entity Intelligence
