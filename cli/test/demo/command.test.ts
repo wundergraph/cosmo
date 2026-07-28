@@ -1,8 +1,12 @@
 import { Command } from 'commander';
 import { beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
-import { createPromiseClient, createRouterTransport, type ServiceImpl } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { FederatedGraph, Subgraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { create } from '@bufbuild/protobuf';
+import { createClient, createRouterTransport, type ServiceImpl } from '@connectrpc/connect';
+import {
+  FederatedGraphSchema,
+  SubgraphSchema,
+  PlatformService,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Client } from '../../src/core/client/client.js';
 import DemoCommand from '../../src/commands/demo/index.js';
@@ -72,7 +76,7 @@ function createMockTransport(overrides: PlatformOverrides = {}) {
 
 function runDemo(overrides: PlatformOverrides = {}) {
   const client: Client = {
-    platform: createPromiseClient(PlatformService, createMockTransport(overrides)),
+    platform: createClient(PlatformService, createMockTransport(overrides)),
   };
   const program = new Command();
   program.addCommand(DemoCommand({ client }));
@@ -129,7 +133,7 @@ describe('Demo command', () => {
       const overrides: PlatformOverrides = {
         getFederatedGraphByName: () => ({
           response: { code: EnumStatusCode.OK },
-          graph: new FederatedGraph({
+          graph: create(FederatedGraphSchema, {
             name: 'demo',
             namespace: 'default',
             routingURL: 'http://localhost:3002/graphql',
@@ -151,12 +155,12 @@ describe('Demo command', () => {
       const overrides: PlatformOverrides = {
         getFederatedGraphByName: () => ({
           response: { code: EnumStatusCode.OK },
-          graph: new FederatedGraph({
+          graph: create(FederatedGraphSchema, {
             name: 'demo',
             namespace: 'default',
             routingURL: 'http://localhost:3002/graphql',
           }),
-          subgraphs: [new Subgraph({ name: 'products', namespace: 'default' })],
+          subgraphs: [create(SubgraphSchema, { name: 'products', namespace: 'default' })],
         }),
       };
 
@@ -292,12 +296,12 @@ describe('Demo command', () => {
       const overrides: PlatformOverrides = {
         getFederatedGraphByName: () => ({
           response: { code: EnumStatusCode.OK },
-          graph: new FederatedGraph({
+          graph: create(FederatedGraphSchema, {
             name: 'demo',
             namespace: 'default',
             routingURL: 'http://localhost:3002/graphql',
           }),
-          subgraphs: [new Subgraph({ name: 'products', namespace: 'default' })],
+          subgraphs: [create(SubgraphSchema, { name: 'products', namespace: 'default' })],
         }),
       };
 
@@ -381,12 +385,12 @@ describe('Demo command', () => {
       const overrides: PlatformOverrides = {
         getFederatedGraphByName: () => ({
           response: { code: EnumStatusCode.OK },
-          graph: new FederatedGraph({
+          graph: create(FederatedGraphSchema, {
             name: 'demo',
             namespace: 'default',
             routingURL: 'http://localhost:3002/graphql',
           }),
-          subgraphs: [new Subgraph({ name: 'products', namespace: 'default' })],
+          subgraphs: [create(SubgraphSchema, { name: 'products', namespace: 'default' })],
         }),
         deleteFederatedGraph: () => ({
           response: { code: EnumStatusCode.ERR, details: 'deletion failed' },

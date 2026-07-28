@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -11,6 +10,7 @@ import type { RouterOptions } from '../../routes.js';
 import Slack from '../../services/Slack.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function createIntegration(
   opts: RouterOptions,
@@ -34,8 +34,7 @@ export function createIntegration(
       throw new Error('Slack env variables must be set to use this feature.');
     }
 
-    const integration = await orgRepo.getIntegrationByName(authContext.organizationId, req.name);
-    if (integration) {
+    if (await orgRepo.integrationExists(authContext.organizationId, req.name)) {
       return {
         response: {
           code: EnumStatusCode.ERR_ALREADY_EXISTS,

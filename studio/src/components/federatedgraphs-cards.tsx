@@ -29,6 +29,7 @@ import { MigrationDialog } from './migration-dialog';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useOnboarding } from '@/hooks/use-onboarding';
+import { buildUrl } from '@/lib/build-url';
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -334,7 +335,11 @@ const GraphCard = ({ graph, hasStaleMetrics }: { graph: FederatedGraph; hasStale
 
   return (
     <Link
-      href={`/${user?.currentOrganization?.slug}/${graph.namespace}/graph/${graph.name}`}
+      href={buildUrl('/:organization/:namespace/graph/:graphName', {
+        organization: user?.currentOrganization.slug,
+        namespace: graph.namespace,
+        graphName: graph.name,
+      })}
       className="project-list-item group"
     >
       <Card className="flex h-full flex-col py-4 transition-all group-hover:border-input-active">

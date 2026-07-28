@@ -1,8 +1,8 @@
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { createClient, createRouterTransport } from '@connectrpc/connect';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { execa, type Result, type ResultPromise } from 'execa';
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import {
@@ -341,7 +341,7 @@ describe('publishAllPlugins', () => {
 
     const result = await publishAllPlugins({
       client: {
-        platform: createPromiseClient(PlatformService, createMockTransport()),
+        platform: createClient(PlatformService, createMockTransport()),
       },
       supportDir: tmpDir,
       signal: new AbortController().signal,
@@ -360,7 +360,7 @@ describe('publishAllPlugins', () => {
 
     const result = await publishAllPlugins({
       client: {
-        platform: createPromiseClient(PlatformService, createMockTransport()),
+        platform: createClient(PlatformService, createMockTransport()),
       },
       supportDir: tmpDir,
       signal: new AbortController().signal,

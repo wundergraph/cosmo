@@ -7,6 +7,7 @@ import type {
 import inquirer from 'inquirer';
 import pc from 'picocolors';
 import { config, getBaseHeaders } from '../../../core/config.js';
+import { stripProtobufInternals } from '../../../utils.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 const createJsonSuccessOutput = (
@@ -214,7 +215,9 @@ export default (opts: BaseCommandOptions) => {
 
     if ((previewResp.persistedOperationsCount > 0 || previewResp.hasTraffic) && !options.force) {
       const studioUrlObj = new URL(
-        `${previewResp.organizationSlug}/${options.namespace}/graph/${options.graphName}/operations`,
+        `${encodeURIComponent(previewResp.organizationSlug)}/${encodeURIComponent(options.namespace)}/graph/${encodeURIComponent(
+          options.graphName,
+        )}/operations`,
         config.webURL,
       );
       studioUrlObj.searchParams.set('clientNames', previewResp.client?.name ?? '');
@@ -297,7 +300,7 @@ export default (opts: BaseCommandOptions) => {
         previewResp.persistedOperationsCount,
         previewResp.hasTraffic,
       );
-      console.log(JSON.stringify(output));
+      console.log(JSON.stringify(output, stripProtobufInternals));
       return;
     }
 

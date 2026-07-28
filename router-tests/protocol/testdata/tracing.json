@@ -441,7 +441,7 @@
                 "raw_input_data": {},
                 "input": {
                   "body": {
-                    "query": "{employees {id role {title departments} __typename}}"
+                    "query": "{employees {id role {__typename title departments} __typename}}"
                   },
                   "header": {},
                   "method": "POST",
@@ -453,6 +453,7 @@
                       {
                         "id": 1,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Founder",
                             "CEO"
@@ -467,6 +468,7 @@
                       {
                         "id": 2,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Co-founder",
                             "Tech Lead"
@@ -480,6 +482,7 @@
                       {
                         "id": 3,
                         "role": {
+                          "__typename": "Marketer",
                           "title": [
                             "Co-founder",
                             "Head of Growth"
@@ -493,6 +496,7 @@
                       {
                         "id": 4,
                         "role": {
+                          "__typename": "Operator",
                           "title": [
                             "Co-founder",
                             "COO"
@@ -507,6 +511,7 @@
                       {
                         "id": 5,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Senior GO Engineer"
                           ],
@@ -519,6 +524,7 @@
                       {
                         "id": 7,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Software Engineer"
                           ],
@@ -531,6 +537,7 @@
                       {
                         "id": 8,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Software Engineer"
                           ],
@@ -543,6 +550,7 @@
                       {
                         "id": 10,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Senior Frontend Engineer"
                           ],
@@ -555,6 +563,7 @@
                       {
                         "id": 11,
                         "role": {
+                          "__typename": "Operator",
                           "title": [
                             "Accounting \u0026 Finance"
                           ],
@@ -567,6 +576,7 @@
                       {
                         "id": 12,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Software Engineer"
                           ],
@@ -601,13 +611,13 @@
                         "status": "200 OK",
                         "headers": {
                           "Content-Length": [
-                            "1093"
+                            "1333"
                           ],
                           "Content-Type": [
                             "application/json"
                           ]
                         },
-                        "body_size": 1093
+                        "body_size": 1333
                       }
                     }
                   }
@@ -693,6 +703,7 @@
                       {
                         "id": 1,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Founder",
                             "CEO"
@@ -707,6 +718,7 @@
                       {
                         "id": 2,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Co-founder",
                             "Tech Lead"
@@ -720,6 +732,7 @@
                       {
                         "id": 3,
                         "role": {
+                          "__typename": "Marketer",
                           "title": [
                             "Co-founder",
                             "Head of Growth"
@@ -733,6 +746,7 @@
                       {
                         "id": 4,
                         "role": {
+                          "__typename": "Operator",
                           "title": [
                             "Co-founder",
                             "COO"
@@ -747,6 +761,7 @@
                       {
                         "id": 5,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Senior GO Engineer"
                           ],
@@ -759,6 +774,7 @@
                       {
                         "id": 7,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Software Engineer"
                           ],
@@ -771,6 +787,7 @@
                       {
                         "id": 8,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Software Engineer"
                           ],
@@ -783,6 +800,7 @@
                       {
                         "id": 10,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Senior Frontend Engineer"
                           ],
@@ -795,6 +813,7 @@
                       {
                         "id": 11,
                         "role": {
+                          "__typename": "Operator",
                           "title": [
                             "Accounting \u0026 Finance"
                           ],
@@ -807,6 +826,7 @@
                       {
                         "id": 12,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Software Engineer"
                           ],
@@ -1066,6 +1086,7 @@
                       {
                         "id": 1,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Founder",
                             "CEO"
@@ -1080,6 +1101,7 @@
                       {
                         "id": 2,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Co-founder",
                             "Tech Lead"
@@ -1093,6 +1115,7 @@
                       {
                         "id": 3,
                         "role": {
+                          "__typename": "Marketer",
                           "title": [
                             "Co-founder",
                             "Head of Growth"
@@ -1106,6 +1129,7 @@
                       {
                         "id": 4,
                         "role": {
+                          "__typename": "Operator",
                           "title": [
                             "Co-founder",
                             "COO"
@@ -1120,6 +1144,7 @@
                       {
                         "id": 5,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Senior GO Engineer"
                           ],
@@ -1132,6 +1157,7 @@
                       {
                         "id": 7,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Software Engineer"
                           ],
@@ -1144,6 +1170,7 @@
                       {
                         "id": 8,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Software Engineer"
                           ],
@@ -1156,6 +1183,7 @@
                       {
                         "id": 10,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Senior Frontend Engineer"
                           ],
@@ -1168,6 +1196,7 @@
                       {
                         "id": 11,
                         "role": {
+                          "__typename": "Operator",
                           "title": [
                             "Accounting \u0026 Finance"
                           ],
@@ -1180,6 +1209,7 @@
                       {
                         "id": 12,
                         "role": {
+                          "__typename": "Engineer",
                           "title": [
                             "Software Engineer"
                           ],

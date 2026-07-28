@@ -22,6 +22,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { SafeMarkdown } from '@/components/safe-markdown';
+import { buildUrl } from '@/lib/build-url';
 
 export const Empty = ({ subgraphName }: { subgraphName: string }) => {
   const {
@@ -145,7 +146,11 @@ const SubgraphOverviewPage = () => {
               <dt className="text-sm text-muted-foreground">Linked Subgraph</dt>
               <dd className="flex gap-x-2">
                 <Link
-                  href={`/${router.query.organizationSlug}/${linkedSubgraph.namespace}/subgraph/${linkedSubgraph.name}`}
+                  href={buildUrl('/:organizationSlug/:namespace/subgraph/:name', {
+                    organizationSlug: router.query.organizationSlug as string,
+                    namespace: linkedSubgraph.namespace,
+                    name: linkedSubgraph.name,
+                  })}
                   className="flex items-center gap-1 hover:underline"
                 >
                   {`${linkedSubgraph.namespace}/${linkedSubgraph.name}`}

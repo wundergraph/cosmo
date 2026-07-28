@@ -1,9 +1,9 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   Label,
-  ProposalSubgraph,
+  ProposalSubgraphSchema,
   UpdateProposalRequest,
   UpdateProposalResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -16,6 +16,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -27,6 +28,7 @@ import { SchemaUsageTrafficInspector } from '../../services/SchemaUsageTrafficIn
 import { Composer } from '../../composition/composer.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { hubUserAgent } from '../../constants.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function updateProposal(
   opts: RouterOptions,
@@ -414,6 +416,36 @@ export function updateProposal(
               composedSchemaBreakingChanges: [],
             };
           }
+        } else {
+          // For a new subgraph, its labels determine which federated graph it composes into.
+          // If they do not match the label matchers of the federated graph this proposal targets,
+          // the subgraph would never be composed.
+          const matchingFederatedGraphs = await federatedGraphRepo.bySubgraphLabels({
+            labels: proposalSubgraph.labels,
+            namespaceId: namespace.id,
+          });
+          if (!matchingFederatedGraphs.some((graph) => graph.id === federatedGraph.id)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `The labels of the new subgraph ${proposalSubgraph.name} do not match the label matchers of the federated graph ${federatedGraph.name}. Please provide labels that match the federated graph.`,
+              },
+              proposalId: '',
+              breakingChanges: [],
+              nonBreakingChanges: [],
+              compositionErrors: [],
+              checkId: '',
+              lintWarnings: [],
+              lintErrors: [],
+              graphPruneWarnings: [],
+              graphPruneErrors: [],
+              compositionWarnings: [],
+              lintingSkipped: false,
+              graphPruningSkipped: false,
+              checkUrl: '',
+              composedSchemaBreakingChanges: [],
+            };
+          }
         }
 
         proposalSubgraphs.push({
@@ -454,6 +486,7 @@ export function updateProposal(
       const schemaCheckRepo = new SchemaCheckRepository(opts.db);
       const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
       const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
+      const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
       const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
       const composer = new Composer(
         logger,
@@ -462,6 +495,7 @@ export function updateProposal(
         subgraphRepo,
         contractRepo,
         graphCompostionRepo,
+        featureFlagRepo,
         opts.chClient,
         opts.webhookProxyUrl,
       );
@@ -495,15 +529,14 @@ export function updateProposal(
         proposalRepo,
         trafficInspector,
         composer,
-        subgraphs: proposalSubgraphs.map(
-          (subgraph) =>
-            new ProposalSubgraph({
-              name: subgraph.subgraphName,
-              schemaSDL: subgraph.schemaSDL,
-              labels: subgraph.labels,
-              isDeleted: subgraph.isDeleted,
-              isNew: subgraph.isNew,
-            }),
+        subgraphs: proposalSubgraphs.map((subgraph) =>
+          create(ProposalSubgraphSchema, {
+            name: subgraph.subgraphName,
+            schemaSDL: subgraph.schemaSDL,
+            labels: subgraph.labels,
+            isDeleted: subgraph.isDeleted,
+            isNew: subgraph.isNew,
+          }),
         ),
         namespace,
         logger,

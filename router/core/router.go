@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -19,6 +20,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
+	"github.com/wundergraph/cosmo/router/pkg/profile/pyroscope"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -46,6 +48,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/internal/track"
+	"github.com/wundergraph/cosmo/router/internal/versioninfo"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -275,6 +278,10 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 
 	if r.subscriptionHooks.onReceiveEvents.timeout == 0 {
 		r.subscriptionHooks.onReceiveEvents.timeout = 5 * time.Second
+	}
+
+	if r.subscriptionHooks.beforeEventsDispatch.timeout == 0 {
+		r.subscriptionHooks.beforeEventsDispatch.timeout = 5 * time.Second
 	}
 
 	if r.corsOptions == nil {
@@ -766,6 +773,14 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.subscriptionHooks.onReceiveEvents.handlers = append(r.subscriptionHooks.onReceiveEvents.handlers, handler.OnReceiveEvents)
 		}
 
+		if handler, ok := moduleInstance.(StreamBeforeEventsDispatchHandler); ok {
+			r.subscriptionHooks.beforeEventsDispatch.handlers = append(r.subscriptionHooks.beforeEventsDispatch.handlers, handler.BeforeEventsDispatch)
+		}
+
+		if handler, ok := moduleInstance.(SubscriptionOnCreateHandler); ok {
+			r.subscriptionHooks.onCreate.handlers = append(r.subscriptionHooks.onCreate.handlers, handler.SubscriptionOnCreate)
+		}
+
 		r.modules = append(r.modules, moduleInstance)
 
 		r.logger.Info("Module registered",
@@ -894,81 +909,8 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 	}
 
-	if r.traceConfig.Enabled {
-		tp, err := rtrace.NewTracerProvider(ctx, &rtrace.ProviderConfig{
-			Logger:            r.logger,
-			Config:            r.traceConfig,
-			ServiceInstanceID: r.instanceID,
-			IPAnonymization: &attributeprocessor.IPAnonymizationConfig{
-				Enabled: r.ipAnonymization.Enabled,
-				Method:  attributeprocessor.IPAnonymizationMethod(r.ipAnonymization.Method),
-			},
-			SanitizeUTF8:   r.traceConfig.SanitizeUTF8,
-			MemoryExporter: r.traceConfig.TestMemoryExporter,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to start trace agent: %w", err)
-		}
-		r.tracerProvider = tp
-	}
-
-	// Prometheus metrics rely on OTLP metrics
-	if r.metricConfig.IsEnabled() {
-		if r.metricConfig.Prometheus.Enabled {
-			mp, registry, err := rmetric.NewPrometheusMeterProvider(ctx, r.metricConfig, r.instanceID)
-			if err != nil {
-				return fmt.Errorf("failed to create Prometheus exporter: %w", err)
-			}
-			r.promMeterProvider = mp
-
-			r.prometheusServer = rmetric.NewPrometheusServer(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path, registry)
-			go func() {
-				if err := r.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
-				}
-			}()
-		}
-
-		if r.metricConfig.OpenTelemetry.Enabled {
-			mp, err := rmetric.NewOtlpMeterProvider(ctx, r.logger, r.metricConfig, r.instanceID)
-			if err != nil {
-				return fmt.Errorf("failed to start trace agent: %w", err)
-			}
-			r.otlpMeterProvider = mp
-		}
-
-	}
-
-	if r.graphqlMetricsConfig.Enabled {
-		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
-			http.DefaultClient,
-			r.graphqlMetricsConfig.CollectorEndpoint,
-			connect.WithSendGzip(),
-		)
-		ge, err := graphqlmetrics.NewGraphQLMetricsExporter(
-			r.logger,
-			client,
-			r.graphApiToken,
-			exporter.NewDefaultExporterSettings(),
-		)
-		if err != nil {
-			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
-		}
-		r.gqlMetricsExporter = ge
-
-		r.logger.Info("GraphQL schema coverage metrics enabled")
-	}
-
-	// Create Prometheus metrics exporter for schema field usage
-	// Note: This is separate from the Prometheus meter provider which handles OTEL metrics
-	// This exporter is specifically for schema field usage tracking via the Prometheus sink
-	if r.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled {
-		// The metric store will be passed in later when building the graph mux
-		// because each mux has its own metric store
-		// We'll create the exporter when building the mux in buildGraphMux
-		r.logger.Info("Prometheus schema field usage metrics enabled",
-			zap.Bool("include_operation_sha", r.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha),
-		)
+	if err := r.setupTelemetry(ctx); err != nil {
+		return err
 	}
 
 	if r.rateLimit != nil && r.rateLimit.Enabled {
@@ -1053,7 +995,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if _, isNoop := r.EngineStats.(*statistics.NoopEngineStats); isNoop {
-		if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
+		if r.metricConfig.OpenTelemetry.EngineStats.Enabled() ||
+			r.metricConfig.OpenTelemetry.ResolverStats ||
+			r.metricConfig.Prometheus.EngineStats.Enabled() ||
+			r.metricConfig.Prometheus.ResolverStats ||
+			r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
 			r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
 		}
 	}
@@ -1117,6 +1063,109 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		if r.traceConfig.TestMemoryExporter == nil {
 			otel.SetTextMapPropagator(r.compositePropagator)
 		}
+	}
+
+	return nil
+}
+
+func (r *Router) setupTelemetry(ctx context.Context) error {
+	if r.traceConfig.Enabled {
+		tp, err := rtrace.NewTracerProvider(ctx, &rtrace.ProviderConfig{
+			Logger:            r.logger,
+			Config:            r.traceConfig,
+			ServiceInstanceID: r.instanceID,
+			IPAnonymization: &attributeprocessor.IPAnonymizationConfig{
+				Enabled: r.ipAnonymization.Enabled,
+				Method:  attributeprocessor.IPAnonymizationMethod(r.ipAnonymization.Method),
+			},
+			SanitizeUTF8:   r.traceConfig.SanitizeUTF8,
+			MemoryExporter: r.traceConfig.TestMemoryExporter,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to start trace agent: %w", err)
+		}
+		r.tracerProvider = tp
+	}
+
+	// Prometheus metrics rely on OTLP metrics
+	if r.metricConfig.IsEnabled() {
+		if r.metricConfig.Prometheus.Enabled {
+			mp, registry, err := rmetric.NewPrometheusMeterProvider(ctx, r.metricConfig, r.instanceID)
+			if err != nil {
+				return fmt.Errorf("failed to create Prometheus exporter: %w", err)
+			}
+			r.promMeterProvider = mp
+
+			r.prometheusServer = rmetric.NewPrometheusServer(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path, registry)
+			go func() {
+				if err := r.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
+				}
+			}()
+		}
+
+		if r.metricConfig.OpenTelemetry.Enabled {
+			mp, err := rmetric.NewOtlpMeterProvider(ctx, r.logger, r.metricConfig, r.instanceID)
+			if err != nil {
+				return fmt.Errorf("failed to start OTLP metrics meter provider: %w", err)
+			}
+			r.otlpMeterProvider = mp
+		}
+
+	}
+
+	if r.graphqlMetricsConfig.Enabled {
+		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
+			http.DefaultClient,
+			r.graphqlMetricsConfig.CollectorEndpoint,
+			connect.WithSendGzip(),
+		)
+		ge, err := graphqlmetrics.NewGraphQLMetricsExporter(
+			r.logger,
+			client,
+			r.graphApiToken,
+			exporter.NewDefaultExporterSettings(),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
+		}
+		r.gqlMetricsExporter = ge
+
+		r.logger.Info("GraphQL schema coverage metrics enabled")
+	}
+
+	// Create Prometheus metrics exporter for schema field usage
+	// Note: This is separate from the Prometheus meter provider which handles OTEL metrics
+	// This exporter is specifically for schema field usage tracking via the Prometheus sink
+	if r.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled {
+		// The metric store will be passed in later when building the graph mux
+		// because each mux has its own metric store
+		// We'll create the exporter when building the mux in buildGraphMux
+		r.logger.Info("Prometheus schema field usage metrics enabled",
+			zap.Bool("include_operation_sha", r.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha),
+		)
+	}
+
+	if r.pyroscopeConfig != nil && r.pyroscopeConfig.Enabled {
+		if r.pyroscopeConfig.Tags == nil {
+			r.pyroscopeConfig.Tags = make(map[string]string)
+		}
+
+		// Add default tags to the config
+		maps.Copy(r.pyroscopeConfig.Tags, pyroscope.RouterVersionTags(versioninfo.New(Version, Commit, Date)))
+
+		if len(r.customModules) > 0 {
+			r.pyroscopeConfig.Tags["custom_modules"] = "true"
+		}
+
+		profiler, err := pyroscope.NewProfiler(r.logger, r.pyroscopeConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create pyroscope profiler: %w", err)
+		}
+
+		r.pyroscopeProfiler = profiler
+
+		r.logger.Info("Pyroscope profiling enabled", zap.String("server_address", r.pyroscopeConfig.ServerAddress))
 	}
 
 	return nil
@@ -1553,7 +1602,7 @@ func (r *Router) Start(ctx context.Context) error {
 	}
 
 	/**
-	* Server logging after features has been initialized / disabled
+	 * Server logging after features has been initialized / disabled
 	 */
 
 	if r.localhostFallbackInsideDocker && docker.Inside() {
@@ -1887,6 +1936,14 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		})
 	}
 
+	if r.pyroscopeProfiler != nil {
+		wg.Go(func() {
+			if subErr := r.pyroscopeProfiler.Stop(); subErr != nil {
+				err.Append(fmt.Errorf("failed to shutdown pyroscope profiler: %w", subErr))
+			}
+		})
+	}
+
 	if r.redisClient != nil {
 		wg.Go(func() {
 			if closeErr := r.redisClient.Close(); closeErr != nil {
@@ -2031,6 +2088,12 @@ func WithGracePeriod(timeout time.Duration) Option {
 func WithMetrics(cfg *rmetric.Config) Option {
 	return func(r *Router) {
 		r.metricConfig = cfg
+	}
+}
+
+func WithPyroscope(cfg config.Pyroscope) Option {
+	return func(r *Router) {
+		r.pyroscopeConfig = &cfg
 	}
 }
 
@@ -2563,6 +2626,7 @@ func WithStreamsHandlerConfiguration(cfg config.StreamsHandlerConfiguration) Opt
 	return func(r *Router) {
 		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = cfg.OnReceiveEvents.MaxConcurrentHandlers
 		r.subscriptionHooks.onReceiveEvents.timeout = cfg.OnReceiveEvents.HandlerTimeout
+		r.subscriptionHooks.beforeEventsDispatch.timeout = cfg.BeforeEventsDispatch.HandlerTimeout
 	}
 }
 
@@ -2742,6 +2806,8 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			RouterRuntime:   cfg.Metrics.OTLP.RouterRuntime,
 			GraphqlCache:    cfg.Metrics.OTLP.GraphqlCache,
 			ConnectionStats: cfg.Metrics.OTLP.ConnectionStats,
+			NetworkStats:    cfg.Metrics.OTLP.Network.Enabled,
+			ResolverStats:   cfg.Metrics.OTLP.Resolver.Enabled,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
 			},
@@ -2764,6 +2830,8 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			Path:            cfg.Metrics.Prometheus.Path,
 			GraphqlCache:    cfg.Metrics.Prometheus.GraphqlCache,
 			ConnectionStats: cfg.Metrics.Prometheus.ConnectionStats,
+			NetworkStats:    cfg.Metrics.Prometheus.Network.Enabled,
+			ResolverStats:   cfg.Metrics.Prometheus.Resolver.Enabled,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},

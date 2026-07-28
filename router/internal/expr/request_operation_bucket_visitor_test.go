@@ -138,6 +138,26 @@ func TestRequestOperationBucketVisitor(t *testing.T) {
 			description:    "Normalization time is higher priority than parsing time",
 		},
 
+		// BucketNormalizationTime - request.operation.variables (available after normalization)
+		{
+			name:           "variables",
+			expression:     `request.operation.variables`,
+			expectedBucket: BucketNormalizationTime,
+			description:    "Variables access should use normalization time bucket",
+		},
+		{
+			name:           "variables with bracket notation",
+			expression:     `request["operation"]["variables"]`,
+			expectedBucket: BucketNormalizationTime,
+			description:    "Variables with bracket notation should use normalization time bucket",
+		},
+		{
+			name:           "variables in conditional with cache hit",
+			expression:     `request.operation.variablesRemappingCacheHit ? "" : request.operation.variables`,
+			expectedBucket: BucketNormalizationTime,
+			description:    "Variables conditional with a default-bucket cache-hit flag should still use normalization time bucket",
+		},
+
 		// BucketHash - request.operation.hash
 		{
 			name:           "operation hash",

@@ -177,6 +177,56 @@ engine:
 	})
 }
 
+func TestEventsSkipUnavailableProvidersConfigLoading(t *testing.T) {
+	t.Run("defaults to true", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.True(t, cfg.Config.Events.SkipUnavailableProviders)
+	})
+
+	t.Run("can be disabled from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  skip_unavailable_providers: false
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.False(t, cfg.Config.Events.SkipUnavailableProviders)
+	})
+
+	t.Run("can be disabled from env", func(t *testing.T) {
+		t.Setenv("EVENTS_SKIP_UNAVAILABLE_PROVIDERS", "false")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.False(t, cfg.Config.Events.SkipUnavailableProviders)
+	})
+}
+
 // Confirms https://github.com/caarlos0/env/issues/354 is fixed
 func TestConfigSlicesHaveDefaults(t *testing.T) {
 	t.Parallel()
@@ -1052,6 +1102,32 @@ version: "1"
 
 	require.True(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
 	require.True(t, c.Config.Telemetry.Metrics.OTLP.EngineStats.Subscriptions)
+}
+
+func TestPrefixedTelemetryCategoryConfig(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+	c, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.False(t, c.Config.Telemetry.Metrics.Prometheus.Network.Enabled)
+	require.False(t, c.Config.Telemetry.Metrics.Prometheus.Resolver.Enabled)
+	require.False(t, c.Config.Telemetry.Metrics.OTLP.Network.Enabled)
+	require.False(t, c.Config.Telemetry.Metrics.OTLP.Resolver.Enabled)
+
+	t.Setenv("PROMETHEUS_NETWORK_ENABLED", "true")
+	t.Setenv("PROMETHEUS_RESOLVER_ENABLED", "true")
+	t.Setenv("METRICS_OTLP_NETWORK_ENABLED", "true")
+	t.Setenv("METRICS_OTLP_RESOLVER_ENABLED", "true")
+
+	c, err = LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.True(t, c.Config.Telemetry.Metrics.Prometheus.Network.Enabled)
+	require.True(t, c.Config.Telemetry.Metrics.Prometheus.Resolver.Enabled)
+	require.True(t, c.Config.Telemetry.Metrics.OTLP.Network.Enabled)
+	require.True(t, c.Config.Telemetry.Metrics.OTLP.Resolver.Enabled)
 }
 
 func TestMatchAndNegateMatch(t *testing.T) {

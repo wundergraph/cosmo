@@ -14,6 +14,7 @@ import { useContext } from 'react';
 import { GraphContext } from '@/components/layout/graph-layout';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 export const LintIssuesTable = ({
   lintIssues,
@@ -96,11 +97,14 @@ export const LintIssuesTable = ({
                     <TooltipTrigger asChild>
                       <Button asChild variant="ghost" size="sm" className="table-action">
                         <Link
-                          href={`/${organizationSlug}/${namespace}/graph/${router.query.slug}/checks/${
-                            router.query.checkId
-                          }?tab=schema&${l.subgraphName ? `subgraph=${l.subgraphName}` : ''}${
-                            l.issueLocation?.line ? `#L${l.issueLocation?.line}` : ''
-                          }`}
+                          href={`${buildUrl('/:organizationSlug/:namespace/graph/:slug/checks/:checkId', {
+                            organizationSlug,
+                            namespace,
+                            slug: router.query.slug as string,
+                            checkId: router.query.checkId as string,
+                            tab: 'schema',
+                            subgraph: l.subgraphName,
+                          })}${l.issueLocation?.line ? `#L${l.issueLocation?.line}` : ''}`}
                         >
                           View
                         </Link>

@@ -1,0 +1,82 @@
+{
+  "data": {
+    "_entities": [
+      {
+        "__typename": "Employee",
+        "products": [
+          "CONSULTANCY",
+          "COSMO",
+          "ENGINE",
+          "MARKETING",
+          "SDK"
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "products": [
+          "COSMO",
+          "SDK"
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "products": [
+          "CONSULTANCY",
+          "MARKETING"
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "products": [
+          "FINANCE",
+          "HUMAN_RESOURCES",
+          "MARKETING"
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "products": [
+          "ENGINE",
+          "SDK"
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "products": [
+          "COSMO",
+          "SDK"
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "products": [
+          "COSMO",
+          "SDK"
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "products": [
+          "CONSULTANCY",
+          "COSMO",
+          "SDK"
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "products": [
+          "FINANCE"
+        ]
+      },
+      {
+        "__typename": "Employee",
+        "products": [
+          "CONSULTANCY",
+          "COSMO",
+          "ENGINE",
+          "SDK"
+        ]
+      }
+    ]
+  }
+}

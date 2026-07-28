@@ -1,6 +1,5 @@
 import { identify, resetTracking } from '@/lib/track';
 import type { NextRouter } from 'next/router';
-import { PlainMessage } from '@bufbuild/protobuf';
 import { Transport } from '@connectrpc/connect';
 import { TransportProvider } from '@connectrpc/connect-query';
 import { createConnectTransport } from '@connectrpc/connect-web';
@@ -9,11 +8,11 @@ import { LoginMethod as ProtoLoginMethod } from '@wundergraph/cosmo-connect/dist
 import { useRouter } from 'next/router';
 import { ReactNode, createContext, useEffect, useState } from 'react';
 import { useCookieOrganization } from '@/hooks/use-cookie-organization';
+import { useAnalyticsConsent } from '@/hooks/use-analytics-consent';
 import { setUser as setSentryUser } from '@sentry/nextjs';
 import { OrganizationRole } from '@/lib/constants';
 import { WorkspaceProvider } from '@/components/dashboard/workspace-provider';
 import JoinInvitationsPage from '@/pages/account/join';
-import { Loader } from './ui/loader';
 
 const sessionQueryClient = new QueryClient();
 
@@ -24,7 +23,7 @@ const publicPaths = ['/login', '/signup', '/login-method-restricted'];
 
 // The /session endpoint returns the same shape as the platform LoginMethod proto
 // message (plain JSON), so reuse the generated type instead of duplicating it.
-export type LoginMethod = PlainMessage<ProtoLoginMethod>;
+export type LoginMethod = Omit<ProtoLoginMethod, '$typeName' | '$unknown'>;
 
 export interface User {
   id: string;
@@ -145,6 +144,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [queryResetCounter, setQueryResetCounter] = useState(-1);
   const queryClient = useQueryClient();
 
+  // identify() skips PostHog while opted out, so re-run it once consent is granted.
+  const analyticsConsented = useAnalyticsConsent();
+
   const [user, setUser] = useState<User>();
 
   useEffect(() => {
@@ -170,7 +172,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (isFetching || !router.isReady) return;
     if (error && error instanceof UnauthorizedError && !publicPaths.includes(router.pathname)) {
       const redirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}${router.asPath}`;
-      router.replace(`/login?redirectURL=${redirectURL}`);
+      router.replace(`/login?redirectURL=${encodeURIComponent(redirectURL)}`);
     } else if (data && !error) {
       // Orgs accessible with the current login method (treat missing field as allowed).
       const accessibleOrganizations = data.organizations.filter((org) => org.loginMethodAllowed !== false);
@@ -237,7 +239,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         router.replace(params.size !== 0 ? `/${organization.slug}?${params}` : `/${organization.slug}`);
       }
     }
-  }, [router, data, isFetching, error, cookieOrgSlug, isNewUser]);
+  }, [router, data, isFetching, error, cookieOrgSlug, isNewUser, analyticsConsented]);
 
   useEffect(() => {
     if (!verifiedOrganizationSlug) {
@@ -254,7 +256,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         },
       ],
       // Allow cookies to be sent to the server
-      credentials: 'include',
+      fetch: (input, init) => fetch(input, { ...init, credentials: 'include' }),
     });
 
     setTransport(newTransport);

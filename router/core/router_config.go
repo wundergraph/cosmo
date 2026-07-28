@@ -18,6 +18,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/profile/pyroscope"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/propagation"
@@ -29,9 +30,15 @@ import (
 )
 
 type subscriptionHooks struct {
-	onStart         onStartHooks
-	onPublishEvents onPublishEventsHooks
-	onReceiveEvents onReceiveEventsHooks
+	onCreate             onCreateHooks
+	onStart              onStartHooks
+	onPublishEvents      onPublishEventsHooks
+	onReceiveEvents      onReceiveEventsHooks
+	beforeEventsDispatch beforeEventsDispatchHooks
+}
+
+type onCreateHooks struct {
+	handlers []func(ctx SubscriptionOnCreateHandlerContext) error
 }
 
 type onStartHooks struct {
@@ -48,16 +55,23 @@ type onReceiveEventsHooks struct {
 	timeout               time.Duration
 }
 
+type beforeEventsDispatchHooks struct {
+	handlers []func(ctx StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+	timeout  time.Duration
+}
+
 type Config struct {
 	clusterName                     string
 	instanceID                      string
 	logger                          *zap.Logger
 	traceConfig                     *rtrace.Config
 	metricConfig                    *rmetric.Config
+	pyroscopeConfig                 *config.Pyroscope
 	tracerProvider                  *sdktrace.TracerProvider
 	otlpMeterProvider               *sdkmetric.MeterProvider
 	promMeterProvider               *sdkmetric.MeterProvider
 	gqlMetricsExporter              *graphqlmetrics.GraphQLMetricsExporter
+	pyroscopeProfiler               *pyroscope.Profiler
 	corsOptions                     *cors.Config
 	setConfigVersionHeader          bool
 	routerGracePeriod               time.Duration
@@ -189,7 +203,7 @@ func (c *Config) Usage() map[string]any {
 
 	usage["apollo_router_compatibility_flags_replace_invalid_var_errors_enabled"] = c.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled
 	usage["apollo_router_compatibility_flags_subrequest_http_error_enabled"] = c.apolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled
-	usage["apollo_router_compatibility_flags_replace_invalid_var_errors_enabled"] = c.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled
+	usage["apollo_router_compatibility_flags_skip_null_variables_error_enabled"] = c.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled
 
 	usage["demo_mode"] = c.demoMode
 
@@ -221,6 +235,8 @@ func (c *Config) Usage() map[string]any {
 			usage["metrics_otel_graphql_cache"] = c.metricConfig.OpenTelemetry.GraphqlCache
 			usage["metrics_otel_router_runtime"] = c.metricConfig.OpenTelemetry.RouterRuntime
 			usage["metrics_otel_connection_stats"] = c.metricConfig.OpenTelemetry.ConnectionStats
+			usage["metrics_otel_network_stats"] = c.metricConfig.OpenTelemetry.NetworkStats
+			usage["metrics_otel_resolver_stats"] = c.metricConfig.OpenTelemetry.ResolverStats
 		}
 		usage["metrics_prometheus_enabled"] = c.metricConfig.Prometheus.Enabled
 		if c.metricConfig.Prometheus.Enabled {
@@ -232,6 +248,8 @@ func (c *Config) Usage() map[string]any {
 			usage["metrics_prometheus_exclude_scope_info"] = c.metricConfig.Prometheus.ExcludeScopeInfo
 			usage["metrics_prometheus_schema_field_usage_enabled"] = c.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled
 			usage["metrics_prometheus_connection_stats"] = c.metricConfig.Prometheus.ConnectionStats
+			usage["metrics_prometheus_network_stats"] = c.metricConfig.Prometheus.NetworkStats
+			usage["metrics_prometheus_resolver_stats"] = c.metricConfig.Prometheus.ResolverStats
 		}
 	}
 

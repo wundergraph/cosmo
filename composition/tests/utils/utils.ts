@@ -7,6 +7,7 @@ import {
   federateSubgraphsContract,
   federateSubgraphsWithContracts,
   type FederationFailure,
+  type FederationResult,
   type FederationResultWithContractsSuccess,
   type FederationSuccess,
   type NormalizationFailure,
@@ -137,4 +138,29 @@ export function createSubgraph(name: SubgraphName, sdlString: string): Subgraph 
 
 export function createSubgraphWithDefaultName(sdlString: string): Subgraph {
   return createSubgraph(DEFAULT_SUBGRAPH_NAME, sdlString);
+}
+
+export function getContractFailure(
+  resultByContractName: Map<string, FederationResult>,
+  contractName: string,
+): FederationFailure {
+  const result = resultByContractName.get(contractName)!;
+  expect(result).toBeDefined();
+  expect(result.success, 'get contract by name failed when expected to fail').toBe(false);
+  return result as FederationFailure;
+}
+
+export function getContractSuccess(
+  resultByContractName: Map<string, FederationResult>,
+  contractName: string,
+): FederationSuccess {
+  const result = resultByContractName.get(contractName)!;
+  expect(result).toBeDefined();
+  if (!result.success) {
+    for (const error of result.errors) {
+      console.dir(error, { depth: null });
+    }
+  }
+  expect(result.success, 'get contract by name failed when expected to succeed').toBe(true);
+  return result as FederationSuccess;
 }

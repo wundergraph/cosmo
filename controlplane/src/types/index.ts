@@ -1,3 +1,4 @@
+import type { Message } from '@bufbuild/protobuf';
 import {
   CompositionError,
   CompositionWarning,
@@ -5,10 +6,33 @@ import {
   LintSeverity,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import { PlainMessage } from '@bufbuild/protobuf';
 import { DBSubgraphType, GraphPruningRuleEnum, OrganizationRole, ProposalMatch, ProposalOrigin } from '../db/models.js';
 import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
 import { ComposeGraphsTaskResultItem } from '../core/composition/composeGraphs.types.js';
+
+/**
+ * Utility type that strips protobuf-es V2 message metadata ($typeName, $unknown)
+ * from a message type, making it compatible with plain object literals.
+ * This is the V2 equivalent of protobuf-es V1's PlainMessage<T>.
+ * It recursively strips metadata from nested message types as well.
+ */
+export type PlainMessage<T> =
+  T extends Message<any>
+    ? { [P in keyof T as P extends '$typeName' | '$unknown' ? never : P]: PlainField<T[P]> }
+    : { [P in keyof T as P extends '$typeName' | '$unknown' ? never : P]: PlainField<T[P]> };
+
+type PlainField<F> =
+  F extends Message<any>
+    ? PlainMessage<F>
+    : F extends Array<infer U>
+      ? U extends Message<any>
+        ? PlainMessage<U>[]
+        : F
+      : F extends { [key: string]: Message<any> }
+        ? { [K in keyof F]: PlainMessage<F[K]> }
+        : F extends { value: Message<any>; case: string }
+          ? { value: PlainMessage<F['value']>; case: F['case'] }
+          : F;
 
 export const COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID = 'composition-ignore-external-keys';
 export const SPLIT_CONFIG_LOADING_FEATURE_ID = 'split-config-loading';
@@ -184,6 +208,7 @@ export interface CheckedSubgraphDTO {
   subgraphName: string;
   isDeleted: boolean;
   isNew: boolean;
+  isFeatureSubgraph: boolean;
   labels: Label[];
 }
 
@@ -234,6 +259,7 @@ export interface SchemaCheckDTO {
   linkedChecks: LinkedCheckDTO[];
   checkExtensionDeliveryId: string | undefined;
   checkExtensionErrorMessage: string | undefined;
+  hasFeatureSubgraphCheck: boolean;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
@@ -258,8 +284,8 @@ export interface SchemaCheckDetailsDTO {
     isBreaking: boolean;
     subgraphName?: string;
   }[];
-  compositionErrors: string[];
-  compositionWarnings: string[];
+  compositionErrors: PlainMessage<CompositionError>[];
+  compositionWarnings: PlainMessage<CompositionWarning>[];
   composedSchemaBreakingChanges: {
     id: string;
     message: string;
@@ -267,6 +293,7 @@ export interface SchemaCheckDetailsDTO {
     path?: string;
     isBreaking: boolean;
     federatedGraphName: string;
+    featureFlag: string;
   }[];
 }
 
@@ -633,6 +660,8 @@ export interface GraphCompositionDTO {
   admissionError?: string;
   deploymentError?: string;
   routerCompatibilityVersion: string;
+  isFeatureFlagComposition: boolean;
+  featureFlagName?: string;
 }
 
 export interface FeatureFlagCompositionDTO {

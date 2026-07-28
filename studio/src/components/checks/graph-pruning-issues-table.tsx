@@ -14,6 +14,7 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 export const GraphPruningIssuesTable = ({
   pruneIssues,
@@ -102,11 +103,14 @@ export const GraphPruningIssuesTable = ({
                     <TooltipTrigger asChild>
                       <Button asChild variant="ghost" size="sm" className="table-action">
                         <Link
-                          href={`/${organizationSlug}/${namespace}/graph/${router.query.slug}/checks/${
-                            router.query.checkId
-                          }?tab=schema&${l.subgraphName ? `subgraph=${l.subgraphName}` : ''}${
-                            l.issueLocation?.line ? `#L${l.issueLocation?.line}` : ''
-                          }`}
+                          href={buildUrl('/:organizationSlug/:namespace/graph/:slug/checks/:checkId', {
+                            organizationSlug,
+                            namespace,
+                            slug: router.query.slug as string,
+                            checkId: router.query.checkId as string,
+                            tab: 'schema',
+                            subgraph: l.subgraphName,
+                          })}
                         >
                           View
                         </Link>

@@ -1,15 +1,151 @@
 package core
 
 import (
+	"cmp"
+	"context"
+	"errors"
+	"net/http"
+	"runtime"
 	"slices"
+	"sync/atomic"
 	"testing"
+	"time"
+	"weak"
 
-	"golang.org/x/exp/constraints"
+	"go.uber.org/zap"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 )
+
+// failingStartupProvider is a provider whose broker is unreachable: its Startup always
+// fails. The mux owns its providers, so skip_unavailable_providers is carried on the mux
+// (buildGraphMux copies it from events.skip_unavailable_providers).
+func failingStartupProvider(t *testing.T) datasource.Provider {
+	t.Helper()
+
+	adapter := datasource.NewMockProvider(t)
+	adapter.On("Startup", mock.Anything).Return(errors.New("connection refused"))
+	return datasource.NewPubSubProvider("redis-1", "redis", adapter, zap.NewNop(), nil)
+}
+
+func TestStartPubsubProviders_SkipUnavailableProviders(t *testing.T) {
+	t.Parallel()
+
+	newMux := func(logger *zap.Logger, skip bool, providers ...datasource.Provider) *graphMux {
+		return &graphMux{
+			logger:                   logger,
+			skipUnavailableProviders: skip,
+			pubSubProviders:          providers,
+		}
+	}
+
+	t.Run("aborts startup when a provider fails and the flag is disabled", func(t *testing.T) {
+		t.Parallel()
+
+		gm := newMux(zap.NewNop(), false, failingStartupProvider(t))
+		require.Error(t, gm.startPubsubProviders(context.Background()))
+	})
+
+	t.Run("starts anyway when a provider fails and the flag is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		// The provider could not connect at startup, but lenient mode lets the router start
+		// anyway. The adapter keeps a resilient client that reconnects in the background, so
+		// the provider recovers without a restart once the broker becomes reachable.
+		gm := newMux(zap.NewNop(), true, failingStartupProvider(t))
+		require.NoError(t, gm.startPubsubProviders(context.Background()))
+	})
+
+	t.Run("tolerates a mux without a logger", func(t *testing.T) {
+		t.Parallel()
+
+		// Lenient mode logs the swallowed error, so a mux that carries no logger (only
+		// constructed in tests, but the production path must not panic on it) must still
+		// report success rather than dereferencing a nil logger.
+		gm := newMux(nil, true, failingStartupProvider(t))
+		require.NoError(t, gm.startPubsubProviders(context.Background()))
+	})
+}
+
+// TestProvidersActionWithTimeout_MultipleHangingProvidersDoNotDeadlock guards against a
+// regression to a single shared timer: with per-provider timers, several providers whose
+// action never returns must each independently time out instead of blocking startup.
+func TestProvidersActionWithTimeout_MultipleHangingProvidersDoNotDeadlock(t *testing.T) {
+	t.Parallel()
+
+	p1 := datasource.NewPubSubProvider("p1", "redis", datasource.NewMockProvider(t), zap.NewNop(), nil)
+	p2 := datasource.NewPubSubProvider("p2", "nats", datasource.NewMockProvider(t), zap.NewNop(), nil)
+
+	// The action blocks until its context is cancelled, simulating two providers whose
+	// Startup hangs (e.g. unreachable brokers).
+	hangingAction := func(ctx context.Context, _ datasource.Provider) error {
+		<-ctx.Done()
+		return ctx.Err()
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- providersActionWithTimeout(
+			context.Background(),
+			[]datasource.Provider{p1, p2},
+			hangingAction,
+			50*time.Millisecond,
+			"timed out",
+			zap.NewNop(),
+			true,
+		)
+	}()
+
+	select {
+	case err := <-done:
+		require.NoError(t, err) // both timed out and were tolerated in lenient mode
+	case <-time.After(5 * time.Second):
+		t.Fatal("providersActionWithTimeout deadlocked with multiple hanging providers")
+	}
+}
+
+// TestStopPubsubProviders_SkipUnavailableProviders pins how a failing provider shutdown
+// is surfaced. stopPubsubProviders passes skip_unavailable_providers as its
+// continue-on-error flag, so the setting that keeps startup lenient makes shutdown
+// lenient too: with the flag enabled the error is only logged.
+func TestStopPubsubProviders_SkipUnavailableProviders(t *testing.T) {
+	t.Parallel()
+
+	newMux := func(t *testing.T, skip bool) *graphMux {
+		t.Helper()
+
+		adapter := datasource.NewMockProvider(t)
+		adapter.On("Shutdown", mock.Anything).Return(errors.New("shutdown failed"))
+
+		return &graphMux{
+			logger:                   zap.NewNop(),
+			skipUnavailableProviders: skip,
+			pubSubProviders: []datasource.Provider{
+				datasource.NewPubSubProvider("redis-1", "redis", adapter, zap.NewNop(), nil),
+			},
+		}
+	}
+
+	t.Run("surfaces the error when the flag is disabled", func(t *testing.T) {
+		t.Parallel()
+
+		gm := newMux(t, false)
+		require.Error(t, gm.stopPubsubProviders(context.Background()))
+	})
+
+	t.Run("only logs the error when the flag is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		gm := newMux(t, true)
+		require.NoError(t, gm.stopPubsubProviders(context.Background()))
+	})
+}
 
 func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 	t.Parallel()
@@ -749,6 +885,112 @@ func TestCommitReusedMuxes(t *testing.T) {
 	})
 }
 
+// The routing handler must not close over opts.currentGraphMuxes (the previous
+// server's muxes); doing so leaks a full graphServer per hot reload. A weak
+// pointer is used instead of a finalizer because the graphServer/mux graph is
+// cyclic, and finalizers never run on objects in a cycle.
+func TestBuildMultiGraphHandler(t *testing.T) {
+	t.Run("does not retain the previous server's graph muxes", func(t *testing.T) {
+		s := &graphServer{Config: &Config{logger: zap.NewNop()}}
+
+		// Build in a nested scope so only the handler can keep the muxes alive.
+		build := func() (http.HandlerFunc, weak.Pointer[graphMux]) {
+			// stale: a previous-server mux the new build never touches; must be collectable.
+			stale := &graphMux{mux: chi.NewMux()}
+			// active: unchanged flag, taken via the reuse branch (no buildGraphMux).
+			active := &graphMux{mux: chi.NewMux()}
+
+			handler, _, err := s.buildMultiGraphHandler(buildMultiGraphHandlerOptions{
+				baseMux:            chi.NewMux(),
+				featureFlagConfigs: map[string]*nodev1.FeatureFlagRouterExecutionConfig{"active": {}},
+				changes:            &routerconfig.Changes{}, // active unchanged => reused
+				currentGraphMuxes:  map[string]*graphMux{"active": active, "stale": stale},
+			})
+			require.NoError(t, err)
+
+			return handler, weak.Make(stale)
+		}
+
+		handler, weakStale := build()
+
+		runtime.GC()
+		runtime.GC()
+
+		require.Nil(t, weakStale.Value(), "handler retained the previous server's graph muxes")
+		runtime.KeepAlive(handler)
+	})
+}
+
+// reuseTrackingProvider is a pubsub provider that only records whether Shutdown
+// was called. The embedded interface satisfies datasource.Provider; every other
+// method is unused in this test (and would panic on the nil interface if hit).
+// shutdown is atomic because providersActionWithTimeout calls Shutdown from a
+// separate goroutine.
+type reuseTrackingProvider struct {
+	datasource.Provider
+	shutdown atomic.Bool
+}
+
+func (p *reuseTrackingProvider) Shutdown(context.Context) error {
+	p.shutdown.Store(true)
+	return nil
+}
+
+func TestGraphServerShutdown(t *testing.T) {
+	// When the base graph is unchanged, a hot reload reuses the previous server's
+	// base mux, and that mux keeps serving on the new server. Its pubsub providers
+	// are owned by the mux, so shutting down the previous server must leave a
+	// reused mux and the providers it depends on intact.
+	t.Run("keeps a reused mux's pubsub providers alive after the previous server shuts down", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// The base mux and its pubsub provider, built by the previous server.
+		provider := &reuseTrackingProvider{}
+		baseMux := &graphMux{mux: chi.NewMux(), pubSubProviders: []datasource.Provider{provider}}
+
+		prev := &graphServer{
+			Config:            &Config{logger: zap.NewNop()},
+			graphServerCancel: cancel,
+			baseTransport:     &http.Transport{},
+			graphMuxList:      map[string]*graphMux{"": baseMux},
+		}
+
+		// The next server reuses the unchanged base mux, inheriting its provider
+		// rather than rebuilding it.
+		next := &graphServer{graphMuxList: map[string]*graphMux{}}
+		next.commitReusedMuxes([]reusedGraphMux{{key: "", mux: baseMux}})
+		require.True(t, baseMux.reused.Load(), "base mux must be flagged as reused")
+
+		require.NoError(t, prev.Shutdown(ctx))
+
+		// The reused mux lives on in the next server, and its provider stays up.
+		require.Same(t, baseMux, next.graphMuxList[""], "reused mux must live on in the next server")
+		require.False(t, provider.shutdown.Load(),
+			"provider for a reused mux must stay up after the previous server shuts down")
+	})
+
+	t.Run("shuts down pubsub providers of a non-reused mux", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		provider := &reuseTrackingProvider{}
+		mux := &graphMux{mux: chi.NewMux(), pubSubProviders: []datasource.Provider{provider}, cancel: func() {}}
+
+		srv := &graphServer{
+			Config:            &Config{logger: zap.NewNop()},
+			graphServerCancel: cancel,
+			baseTransport:     &http.Transport{},
+			graphMuxList:      map[string]*graphMux{"": mux},
+		}
+
+		require.NoError(t, srv.Shutdown(ctx))
+
+		require.True(t, provider.shutdown.Load(),
+			"provider for a non-reused mux must be shut down when the server shuts down")
+	})
+}
+
 func toSet[T comparable](slice ...T) map[T]bool {
 	set := make(map[T]bool, len(slice))
 	for _, v := range slice {
@@ -757,7 +999,7 @@ func toSet[T comparable](slice ...T) map[T]bool {
 	return set
 }
 
-func toKeys[K constraints.Ordered, V any](m map[K]V) []K {
+func toKeys[K cmp.Ordered, V any](m map[K]V) []K {
 	keys := make([]K, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)

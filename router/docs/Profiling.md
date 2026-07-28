@@ -4,7 +4,7 @@ The router is set up with pprof, so users can run the router with `pprof` runnin
 thorough understanding of the active performance.
 
 > **We recommend that before adding a new feature, users should profile it to make sure that there
-aren't any surprise resource drains from the feature.**
+> aren't any surprise resource drains from the feature.**
 
 ## Running the router with pprof
 
@@ -98,7 +98,7 @@ Showing top 20 nodes out of 69
          0     0%   100%  1967.30kB 14.62%  github.com/dgraph-io/ristretto.NewCache[go.shape.string,go.shape.[]uint8]
          0     0%   100%  1157.33kB  8.60%  github.com/dgraph-io/ristretto.newCmSketch
          0     0%   100%  1967.30kB 14.62%  github.com/dgraph-io/ristretto.newDefaultPolicy[go.shape.[]uint8]
-(pprof) 
+(pprof)
 ```
 
 Then, you can also do `list <function>` to get a better understanding of where the memory is being
@@ -110,13 +110,18 @@ You can also run a profile for an amount of time (for example, 5 seconds), by ru
 go tool pprof 'http://localhost:6060/debug/pprof/profile?seconds=5'
 ```
 
-## Pyroscope
+## Continuous Profiling with Pyroscope
 
-To use Pyroscope for continuous profiling of the router:
+The router supports continuous profiling with Grafana Pyroscope. This is configured via the
+`pyroscope` block in the router config (or the corresponding `PYROSCOPE_*` environment variables).
+See the [Profiling documentation](https://cosmo-docs.wundergraph.com/router/profiling) and the
+[configuration reference](https://cosmo-docs.wundergraph.com/router/configuration#pyroscope-continuous-profiling)
+for details.
 
-1. Raise the infra-debug stack with `make infra-debug-up`
-2. Run the router with either `PYROSCOPE_ADDR=http://localhost:4040` or
-   `-pyroscope-addr http://localhost:4040` to enable sending continuous profiling data to Pyroscope.
-   You can view this data in Grafana.
-3. Visit the drilldown profiles section in Grafana at `http://localhost:9300`
-4. Select the router from the service dropdown
+To try it locally against the debug stack:
+
+1. Raise the infra-debug stack with `make infra-debug-up`.
+2. Run the router with `pyroscope.enabled: true` and `pyroscope.server_address: http://localhost:4040`
+   (or `PYROSCOPE_ENABLED=true` and `PYROSCOPE_SERVER_ADDRESS=http://localhost:4040`).
+3. Visit the drilldown profiles section in Grafana at `http://localhost:9300`.
+4. Select the router from the service dropdown.
