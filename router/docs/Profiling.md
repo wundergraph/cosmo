@@ -4,7 +4,7 @@ The router is set up with pprof, so users can run the router with `pprof` runnin
 thorough understanding of the active performance.
 
 > **We recommend that before adding a new feature, users should profile it to make sure that there
-> aren't any surprise resource drains from the feature.**
+aren't any surprise resource drains from the feature.**
 
 ## Running the router with pprof
 
@@ -98,7 +98,7 @@ Showing top 20 nodes out of 69
          0     0%   100%  1967.30kB 14.62%  github.com/dgraph-io/ristretto.NewCache[go.shape.string,go.shape.[]uint8]
          0     0%   100%  1157.33kB  8.60%  github.com/dgraph-io/ristretto.newCmSketch
          0     0%   100%  1967.30kB 14.62%  github.com/dgraph-io/ristretto.newDefaultPolicy[go.shape.[]uint8]
-(pprof)
+(pprof) 
 ```
 
 Then, you can also do `list <function>` to get a better understanding of where the memory is being

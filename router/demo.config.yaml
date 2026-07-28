@@ -3,20 +3,20 @@
 # See pkg/config/config.go for the full list of configuration options.
 # This file is used for the demo environment
 
-version: '1'
+version: "1"
 
 events:
   providers:
     nats:
       - id: default
-        url: 'nats://localhost:4222'
+        url: "nats://localhost:4222"
       - id: my-nats
-        url: 'nats://localhost:4222'
+        url: "nats://localhost:4222"
     kafka:
       - id: my-kafka
         brokers:
-          - 'localhost:9092'
+          - "localhost:9092"
     redis:
       - id: my-redis
         urls:
-          - 'redis://localhost:6379/2'
+          - "redis://localhost:6379/2"
