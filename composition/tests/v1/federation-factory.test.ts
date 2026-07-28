@@ -33,6 +33,7 @@ import fs from 'node:fs';
 import path, { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  createSubgraph,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
@@ -851,6 +852,57 @@ describe('FederationFactory tests', () => {
         type Query {
           a: ID
         }
+      `,
+      ),
+    );
+  });
+
+  test('that an executable directive is merged and persisted in the federated graph without any type system locations', () => {
+    const a = createSubgraph(
+      'a',
+      `
+      directive @a on FIELD | FIELD_DEFINITION
+
+      type Query {
+        a: ID
+      }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+      directive @a on FIELD | FIELD_DEFINITION
+
+      type Query {
+        a: ID
+      }
+    `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [a, b],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+          directive @a on FIELD
+
+          type Query {
+            a: ID
+          }
+      `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+          directive @a on FIELD
+
+          type Query {
+            a: ID
+          }
       `,
       ),
     );
