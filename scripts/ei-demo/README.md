@@ -18,6 +18,15 @@ nothing can generate for you. Ask the team for that one. `k6` is optional but
 without it the Entity Intelligence panel has no traffic to describe:
 `brew install k6`.
 
+Go, Node, pnpm and python3 must already be on your PATH. The demo installs the
+smaller Go tools itself but not these four, and it does not check for them
+first, so a missing one surfaces as a raw failure part way through.
+
+The two stacks never collide with each other, cosmo sits on 5432 and hub on
+5433, but they do need those ports free on your machine, along with 8090,
+3001, 3002, 3301, 3305 and 4001 to 4008. Your own postgres already holding
+5432 is the usual cause of a container that will not start.
+
 ## Running it
 
 ```bash
