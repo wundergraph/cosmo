@@ -84,8 +84,11 @@ That step is the one most worth testing. It walks the whole login chain and, if
 any link is broken, stops there naming the cause and the command that fixes it,
 rather than failing much later in the browser step with a bare timeout.
 
-When it finishes, hub is on <http://localhost:3301> with a `cosmo-demo` graph,
-and Entity Intelligence shows populated suggestions.
+When it finishes, log in to <http://localhost:3301> as `foo@wundergraph.com`
+with the password `wunder@123`, open the `cosmo-demo` graph and click the
+sparkles icon in the canvas control panel. Entity Intelligence is a route, so
+<http://localhost:3301/wundergraph/graph/cosmo-demo/intelligence> works too.
+An empty heatmap there means the traffic step did not run, check for `k6`.
 
 ## 5. If it fails
 
