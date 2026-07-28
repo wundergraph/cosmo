@@ -104,7 +104,6 @@ type (
 		prometheusEngineMetrics *rmetric.EngineMetrics
 		connectionMetrics       *rmetric.ConnectionMetrics
 		instanceData            InstanceData
-		traceDialer             *TraceDialer
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
 		headerPropagation       *HeaderPropagation
@@ -160,14 +159,9 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, response.Config.CompatibilityVersion)
 	}
 
-	// Active-connection tracking via TraceDialer is only needed when ConnectionStats is on.
-	// The httptrace-based network metrics attach in the RoundTripper and don't require the dialer.
-	networkStatsEnabled := r.metricConfig.OpenTelemetry.NetworkStats || r.metricConfig.Prometheus.NetworkStats
-	connectionStatsEnabled := networkStatsEnabled || r.metricConfig.OpenTelemetry.ConnectionStats || r.metricConfig.Prometheus.ConnectionStats
-	var traceDialer *TraceDialer
-	if connectionStatsEnabled {
-		traceDialer = NewTraceDialer()
-	}
+	// Nil unless ConnectionStats is on. Owned by the router, not by this server:
+	// muxes reused across a reload keep the transports they were built with.
+	traceDialer := r.connectionTraceDialer()
 
 	// Build subgraph client TLS configs (mTLS for outbound subgraph connections)
 	defaultClientTLS, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(
@@ -220,7 +214,6 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		baseTransport:           baseTransport,
 		subgraphTransports:      subgraphTransports,
 		playgroundHandler:       r.playgroundHandler,
-		traceDialer:             traceDialer,
 		baseRouterConfigVersion: response.Config.GetVersion(),
 		graphMuxList:            make(map[string]*graphMux, 1),
 		instanceData: InstanceData{
@@ -276,20 +269,12 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		}
 	}
 
-	if connectionStatsEnabled {
-		connStore, err := rmetric.NewConnectionMetricStore(
-			s.logger,
-			nil,
-			s.otlpMeterProvider,
-			s.promMeterProvider,
-			s.metricConfig,
-			s.traceDialer.connectionPoolStats,
-		)
-		if err != nil {
-			return nil, err
-		}
-		s.connectionMetrics = connStore
+	// Created here so the transports above have seeded the max connection counts.
+	connStore, err := r.connectionMetricStore(traceDialer)
+	if err != nil {
+		return nil, err
 	}
+	s.connectionMetrics = connStore
 
 	if err := s.setupEngineStatistics(mappedMetricAttributes); err != nil {
 		return nil, fmt.Errorf("failed to setup engine statistics: %w", err)
@@ -2284,12 +2269,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	if s.runtimeMetrics != nil {
 		if err := s.runtimeMetrics.Shutdown(); err != nil {
 			finalErr = errors.Join(finalErr, err)
-		}
-	}
-
-	if s.connectionMetrics != nil {
-		if aErr := s.connectionMetrics.Shutdown(ctx); aErr != nil {
-			finalErr = errors.Join(finalErr, aErr)
 		}
 	}
 

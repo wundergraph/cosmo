@@ -53,7 +53,7 @@ func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterPro
 }
 
 func (h *otlpConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats, attributes []attribute.KeyValue) error {
-	for subgraph, maxConns := range connStats.MaxConnsPerSubgraph {
+	for subgraph, maxConns := range connStats.GetMaxConnsPerSubgraph() {
 		attrs := make([]attribute.KeyValue, 0, 1)
 		if subgraph != "" {
 			attrs = append(attrs, otel.WgSubgraphName.String(subgraph))

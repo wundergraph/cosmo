@@ -94,15 +94,19 @@ type (
 	// Router is the main application instance.
 	Router struct {
 		Config
-		httpServer            *server
-		modules               []Module
-		EngineStats           statistics.EngineStatistics
-		playgroundHandler     func(http.Handler) http.Handler
-		proxy                 ProxyFunc
-		disableUsageTracking  bool
-		usage                 UsageTracker
-		headerPropagation     *HeaderPropagation
-		reloadPersistentState *ReloadPersistentState
+		httpServer              *server
+		modules                 []Module
+		EngineStats             statistics.EngineStatistics
+		playgroundHandler       func(http.Handler) http.Handler
+		proxy                   ProxyFunc
+		disableUsageTracking    bool
+		usage                   UsageTracker
+		headerPropagation       *HeaderPropagation
+		reloadPersistentState   *ReloadPersistentState
+		connectionStatsLock     sync.Mutex
+		traceDialer             *TraceDialer
+		connectionMetrics       *rmetric.ConnectionMetrics
+		connectionStatsShutdown bool
 	}
 
 	UsageTracker interface {
@@ -1878,6 +1882,10 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	if subErr := r.shutdownConnectionMetrics(ctx); subErr != nil {
+		err.Append(fmt.Errorf("failed to shutdown connection metrics: %w", subErr))
+	}
+
 	var wg sync.WaitGroup
 
 	if r.prometheusServer != nil {
@@ -2631,6 +2639,82 @@ func WithStreamsHandlerConfiguration(cfg config.StreamsHandlerConfiguration) Opt
 }
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
+
+// connectionStatsEnabled reports whether any exporter asks for subgraph
+// connection statistics.
+func (r *Router) connectionStatsEnabled() bool {
+	return r.metricConfig.OpenTelemetry.ConnectionStats ||
+		r.metricConfig.Prometheus.ConnectionStats ||
+		r.metricConfig.OpenTelemetry.NetworkStats ||
+		r.metricConfig.Prometheus.NetworkStats
+}
+
+// connectionTraceDialer returns the router-scoped TraceDialer, or nil when
+// connection statistics are disabled. Router-scoped because a reused graph mux
+// keeps the transports, and therefore the stats, of the server that built it.
+func (r *Router) connectionTraceDialer() *TraceDialer {
+	if !r.connectionStatsEnabled() {
+		return nil
+	}
+
+	r.connectionStatsLock.Lock()
+	defer r.connectionStatsLock.Unlock()
+
+	if r.traceDialer == nil {
+		r.traceDialer = NewTraceDialer()
+	}
+	return r.traceDialer
+}
+
+// connectionMetricStore returns the router-scoped connection metric store, or
+// nil when traceDialer is nil. Created on the first graph server rather than in
+// setupTelemetry: it seeds the max-connections gauge from the transports, which
+// do not exist yet. Shut down in Router.Shutdown.
+func (r *Router) connectionMetricStore(traceDialer *TraceDialer) (*rmetric.ConnectionMetrics, error) {
+	if traceDialer == nil {
+		return nil, nil
+	}
+
+	r.connectionStatsLock.Lock()
+	defer r.connectionStatsLock.Unlock()
+
+	if r.connectionStatsShutdown {
+		// Lost the race with Router.Shutdown; this server will never serve.
+		return nil, nil
+	}
+
+	if r.connectionMetrics == nil {
+		store, err := rmetric.NewConnectionMetricStore(
+			r.logger,
+			nil,
+			r.otlpMeterProvider,
+			r.promMeterProvider,
+			r.metricConfig,
+			traceDialer.connectionPoolStats,
+		)
+		if err != nil {
+			return nil, err
+		}
+		r.connectionMetrics = store
+	}
+	return r.connectionMetrics, nil
+}
+
+// shutdownConnectionMetrics unregisters the store and blocks later creation.
+// The flag is needed because a config reload can still be inside newGraphServer
+// here: it checks r.shutdown before calling newServer. The lock is held across
+// the teardown so such a reload either creates the store first or sees the flag.
+func (r *Router) shutdownConnectionMetrics(ctx context.Context) error {
+	r.connectionStatsLock.Lock()
+	defer r.connectionStatsLock.Unlock()
+
+	r.connectionStatsShutdown = true
+
+	if r.connectionMetrics == nil {
+		return nil
+	}
+	return r.connectionMetrics.Shutdown(ctx)
+}
 
 func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string, clientTLS *tls.Config) *http.Transport {
 	dialer := &net.Dialer{
