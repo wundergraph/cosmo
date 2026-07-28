@@ -813,6 +813,18 @@ describe('FederationFactory tests', () => {
       `,
       ),
     );
+    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        directive @executableDirective(optionalArgInAll: Float, requiredArgInAll: String!, requiredArgInSome: Int!) on FIELD
+
+        type Query {
+          dummy: String
+        }
+      `,
+      ),
+    );
   });
 
   test('that valid executable directives are merged and persisted in the federated graph #2', () => {
@@ -823,6 +835,19 @@ describe('FederationFactory tests', () => {
           `
         directive @executableDirective on FIELD
         
+        type Query {
+          a: ID
+        }
+      `,
+      ),
+    );
+
+    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        directive @executableDirective on FIELD
+
         type Query {
           a: ID
         }
