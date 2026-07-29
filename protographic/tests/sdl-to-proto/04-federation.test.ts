@@ -2797,5 +2797,74 @@ describe('SDL to Proto - Federation and Special Types', () => {
       );
       expectValidProto(protoText);
     });
+
+    test('should define the list wrapper for a nullable list field argument on a required field', () => {
+      const sdl = `
+      type User @key(fields: "id") {
+        id: ID!
+        name: String! @external
+
+        posts(tags: [String]): [Post!]! @requires(fields: "name")
+      }
+
+      type Post {
+        id: ID!
+        title: String!
+      }
+
+      type Query {
+        user(id: ID!): User
+      }
+    `;
+
+      const { proto: protoText } = compileGraphQLToProto(sdl);
+
+      expect(protoText).toContain('ListOfString tags');
+      expect(protoText).toContain(
+        [
+          'message ListOfString {',
+          '  message List {',
+          '    repeated string items = 1;',
+          '  }',
+          '  List list = 1;',
+          '}',
+        ].join('\n'),
+      );
+      expectValidProto(protoText);
+    });
+
+    test('should define the list wrapper for a nullable list field inside the @requires selection set', () => {
+      const sdl = `
+      type Address {
+        street: String!
+        zipCodes: [String]
+      }
+
+      type User @key(fields: "id") {
+        id: ID!
+        address: Address! @external
+        greeting: String! @requires(fields: "address { zipCodes }")
+      }
+
+      type Query {
+        user(id: ID!): User
+      }
+    `;
+
+      const { proto: protoText } = compileGraphQLToProto(sdl);
+
+      expect(protoText).toContain('ListOfString zip_codes');
+      expect(protoText).toContain(
+        [
+          'message ListOfString {',
+          '  message List {',
+          '    repeated string items = 1;',
+          '  }',
+          '  List list = 1;',
+          '}',
+        ].join('\n'),
+      );
+      expectValidProto(protoText);
+    });
   });
 });
