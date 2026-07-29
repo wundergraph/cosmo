@@ -1033,13 +1033,13 @@ func TestConnectionMetricStoreLifetime(t *testing.T) {
 
 		firstDialer := r.connectionTraceDialer()
 		require.NotNil(t, firstDialer)
-		firstStore, err := r.connectionMetricStore(firstDialer)
+		firstStore, err := r.connectionMetricStore(t.Context(), firstDialer)
 		require.NoError(t, err)
 		require.NotNil(t, firstStore)
 
 		// A mux reused across a reload counts into the first server's stats.
 		secondDialer := r.connectionTraceDialer()
-		secondStore, err := r.connectionMetricStore(secondDialer)
+		secondStore, err := r.connectionMetricStore(t.Context(), secondDialer)
 		require.NoError(t, err)
 
 		require.Same(t, firstDialer, secondDialer, "the trace dialer must survive a graph server swap")
@@ -1052,7 +1052,7 @@ func TestConnectionMetricStoreLifetime(t *testing.T) {
 		r := newTestRouter()
 
 		dialer := r.connectionTraceDialer()
-		store, err := r.connectionMetricStore(dialer)
+		store, err := r.connectionMetricStore(t.Context(), dialer)
 		require.NoError(t, err)
 		require.NotNil(t, store)
 
@@ -1060,7 +1060,7 @@ func TestConnectionMetricStoreLifetime(t *testing.T) {
 		r.shutdown.Store(true)
 		require.NoError(t, r.shutdownConnectionMetrics(context.Background()))
 
-		late, err := r.connectionMetricStore(dialer)
+		late, err := r.connectionMetricStore(t.Context(), dialer)
 		require.NoError(t, err)
 		require.Nil(t, late, "a graph server built after shutdown must not create a new store")
 	})
@@ -1073,7 +1073,7 @@ func TestConnectionMetricStoreLifetime(t *testing.T) {
 		r.shutdown.Store(true)
 		require.NoError(t, r.shutdownConnectionMetrics(context.Background()))
 
-		store, err := r.connectionMetricStore(r.connectionTraceDialer())
+		store, err := r.connectionMetricStore(t.Context(), r.connectionTraceDialer())
 		require.NoError(t, err)
 		require.Nil(t, store)
 	})
@@ -1086,7 +1086,7 @@ func TestConnectionMetricStoreLifetime(t *testing.T) {
 
 		require.Nil(t, r.connectionTraceDialer())
 
-		store, err := r.connectionMetricStore(nil)
+		store, err := r.connectionMetricStore(t.Context(), nil)
 		require.NoError(t, err)
 		require.Nil(t, store)
 	})

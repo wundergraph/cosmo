@@ -2667,7 +2667,7 @@ func (r *Router) connectionTraceDialer() *TraceDialer {
 // nil when traceDialer is nil. Created on the first graph server rather than in
 // setupTelemetry: it seeds the max-connections gauge from the transports, which
 // do not exist yet. Shut down in Router.Shutdown.
-func (r *Router) connectionMetricStore(traceDialer *TraceDialer) (*rmetric.ConnectionMetrics, error) {
+func (r *Router) connectionMetricStore(ctx context.Context, traceDialer *TraceDialer) (*rmetric.ConnectionMetrics, error) {
 	if traceDialer == nil {
 		return nil, nil
 	}
@@ -2694,6 +2694,10 @@ func (r *Router) connectionMetricStore(traceDialer *TraceDialer) (*rmetric.Conne
 		}
 		r.connectionMetrics = store
 	}
+
+	// Ensure to record max connections on each graph server creation.
+	r.connectionMetrics.RecordMaxConnections(ctx, traceDialer.connectionPoolStats)
+
 	return r.connectionMetrics, nil
 }
 

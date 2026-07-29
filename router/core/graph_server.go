@@ -270,7 +270,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	}
 
 	// Created here so the transports above have seeded the max connection counts.
-	connStore, err := r.connectionMetricStore(traceDialer)
+	connStore, err := r.connectionMetricStore(routerCtx, traceDialer)
 	if err != nil {
 		return nil, err
 	}

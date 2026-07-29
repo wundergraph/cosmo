@@ -78,6 +78,20 @@ func NewConnectionMetricStore(
 	return connMetrics, nil
 }
 
+// RecordMaxConnections records the configured per-subgraph connection ceiling.
+// Must be called on every graph server build.
+func (c *ConnectionMetrics) RecordMaxConnections(ctx context.Context, connectionPoolStats *ConnectionPoolStats) {
+	for subgraph, maxConns := range connectionPoolStats.GetMaxConnsPerSubgraph() {
+		attrs := make([]attribute.KeyValue, 0, 1)
+		if subgraph != "" {
+			attrs = append(attrs, otel.WgSubgraphName.String(subgraph))
+		}
+		opts := otelmetric.WithAttributes(attrs...)
+		c.otlpConnectionMetrics.MeasureMaxConnections(ctx, maxConns, opts)
+		c.promConnectionMetrics.MeasureMaxConnections(ctx, maxConns, opts)
+	}
+}
+
 func (c *ConnectionMetrics) MeasureMaxConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue) {
 	// Add the reused attribute to the base attributes
 	reusedAttr := otel.WgClientReusedConnection.Bool(reused)
