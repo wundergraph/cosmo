@@ -2834,10 +2834,6 @@ describe('SDL to Proto - Federation and Special Types', () => {
     });
 
     test('should define the list wrapper for a nullable list field inside the @requires selection set', () => {
-      // `tags` is a scalar @external field selected directly (not nested through an
-      // object type), so it is excluded from User's own message (which only carries
-      // "id") and the ListOfString wrapper can only be registered via the required
-      // field's selection-set traversal, not any other code path.
       const sdl = `
       type User @key(fields: "id") {
         id: ID!
