@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.336.0](https://github.com/wundergraph/cosmo/compare/router@0.335.0...router@0.336.0) (2026-07-28)
+
+### Features
+
+* **router:** add `BeforeEventsDispatch` Custom Module ([#3102](https://github.com/wundergraph/cosmo/issues/3102)) ([d66f503](https://github.com/wundergraph/cosmo/commit/d66f5037ba6e44d160903929a3574fb0351d635e)) (@dkorittki)
+
+# [0.335.0](https://github.com/wundergraph/cosmo/compare/router@0.334.0...router@0.335.0) (2026-07-27)
+
+### Features
+
+* router start more lenient on cosmo streams problems ([#2994](https://github.com/wundergraph/cosmo/issues/2994)) ([6d7687e](https://github.com/wundergraph/cosmo/commit/6d7687ec11482ac5eb3a0b3d0b83ef132e705d85)) (@alepane21)
+
+# [0.334.0](https://github.com/wundergraph/cosmo/compare/router@0.333.3...router@0.334.0) (2026-07-22)
+
+### Features
+
+* **router:** add allow_string_literals_for_enums engine option ([#3103](https://github.com/wundergraph/cosmo/issues/3103)) ([c9838ae](https://github.com/wundergraph/cosmo/commit/c9838ae734f68dec85c4bb787a2a53cac876d473)) (@devsergiy)
+
+## [0.333.3](https://github.com/wundergraph/cosmo/compare/router@0.333.2...router@0.333.3) (2026-07-22)
+
+### Bug Fixes
+
+* **router:** incorrect alias behavior for required fields ([#3101](https://github.com/wundergraph/cosmo/issues/3101)) ([cfee827](https://github.com/wundergraph/cosmo/commit/cfee827d746d8862d2f51ef191731590e8ed9b08)) (@Noroth)
+
 ## [0.333.2](https://github.com/wundergraph/cosmo/compare/router@0.333.1...router@0.333.2) (2026-07-17)
 
 ### Bug Fixes

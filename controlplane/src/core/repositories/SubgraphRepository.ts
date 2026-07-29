@@ -2515,6 +2515,7 @@ export class SubgraphRepository {
       subgraphRepo,
       contractRepo,
       graphCompostionRepo,
+      featureFlagRepo,
       chClient,
       webhookProxyUrl,
     );

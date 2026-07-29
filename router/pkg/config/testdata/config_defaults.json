@@ -402,9 +402,13 @@
       "Kafka": null,
       "Redis": null
     },
+    "SkipUnavailableProviders": true,
     "Handlers": {
       "OnReceiveEvents": {
         "MaxConcurrentHandlers": 100,
+        "HandlerTimeout": 5000000000
+      },
+      "BeforeEventsDispatch": {
         "HandlerTimeout": 5000000000
       }
     }
@@ -517,6 +521,7 @@
     "WebSocketClientAckTimeout": 30000000000,
     "ValidateRequiredExternalFields": false,
     "RelaxSubgraphOperationFieldSelectionMergingNullability": false,
+    "AllowStringLiteralsForEnums": false,
     "ValidateInlineArguments": {
       "Mode": "off",
       "EnforceHTTPStatusCode": 400,

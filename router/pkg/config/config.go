@@ -517,6 +517,8 @@ type EngineExecutionConfiguration struct {
 
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool `envDefault:"false" env:"ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY" yaml:"relax_subgraph_operation_field_selection_merging_nullability"`
 
+	AllowStringLiteralsForEnums bool `envDefault:"false" env:"ENGINE_ALLOW_STRING_LITERALS_FOR_ENUMS" yaml:"allow_string_literals_for_enums"`
+
 	ValidateInlineArguments ValidateInlineArguments `yaml:"validate_inline_arguments" envPrefix:"ENGINE_VALIDATE_INLINE_ARGUMENTS_"`
 }
 
@@ -863,17 +865,31 @@ type EventProviders struct {
 }
 
 type EventsConfiguration struct {
-	Providers EventProviders              `yaml:"providers,omitempty"`
-	Handlers  StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
+	Providers EventProviders `yaml:"providers,omitempty"`
+	// SkipUnavailableProviders allows the router to start even when an event provider
+	// referenced by the execution config is unavailable: either not defined in the router
+	// configuration, or defined but unreachable at startup (e.g. the broker is down).
+	// When enabled, the router logs an error and starts anyway instead of failing. A
+	// provider that is not defined has its data sources skipped; a provider that fails to
+	// connect keeps a resilient client that reconnects in the background, so the affected
+	// fields are only temporarily unavailable and recover without a restart once the broker
+	// becomes reachable again. The rest of the graph keeps serving traffic throughout.
+	SkipUnavailableProviders bool                        `yaml:"skip_unavailable_providers" envDefault:"true" env:"EVENTS_SKIP_UNAVAILABLE_PROVIDERS"`
+	Handlers                 StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
 }
 
 type StreamsHandlerConfiguration struct {
-	OnReceiveEvents OnReceiveEventsConfiguration `yaml:"on_receive_events"`
+	OnReceiveEvents      OnReceiveEventsConfiguration      `yaml:"on_receive_events"`
+	BeforeEventsDispatch BeforeEventsDispatchConfiguration `yaml:"before_events_dispatch"`
 }
 
 type OnReceiveEventsConfiguration struct {
 	MaxConcurrentHandlers int           `yaml:"max_concurrent_handlers" envDefault:"100"`
 	HandlerTimeout        time.Duration `yaml:"handler_timeout" envDefault:"5s"`
+}
+
+type BeforeEventsDispatchConfiguration struct {
+	HandlerTimeout time.Duration `yaml:"handler_timeout" envDefault:"5s"`
 }
 
 type Cluster struct {

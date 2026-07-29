@@ -280,6 +280,10 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		r.subscriptionHooks.onReceiveEvents.timeout = 5 * time.Second
 	}
 
+	if r.subscriptionHooks.beforeEventsDispatch.timeout == 0 {
+		r.subscriptionHooks.beforeEventsDispatch.timeout = 5 * time.Second
+	}
+
 	if r.corsOptions == nil {
 		r.corsOptions = CorsDefaultOptions()
 	}
@@ -767,6 +771,10 @@ func (r *Router) initModules(ctx context.Context) error {
 
 		if handler, ok := moduleInstance.(StreamReceiveEventHandler); ok {
 			r.subscriptionHooks.onReceiveEvents.handlers = append(r.subscriptionHooks.onReceiveEvents.handlers, handler.OnReceiveEvents)
+		}
+
+		if handler, ok := moduleInstance.(StreamBeforeEventsDispatchHandler); ok {
+			r.subscriptionHooks.beforeEventsDispatch.handlers = append(r.subscriptionHooks.beforeEventsDispatch.handlers, handler.BeforeEventsDispatch)
 		}
 
 		if handler, ok := moduleInstance.(SubscriptionOnCreateHandler); ok {
@@ -1594,7 +1602,7 @@ func (r *Router) Start(ctx context.Context) error {
 	}
 
 	/**
-	* Server logging after features has been initialized / disabled
+	 * Server logging after features has been initialized / disabled
 	 */
 
 	if r.localhostFallbackInsideDocker && docker.Inside() {
@@ -2618,6 +2626,7 @@ func WithStreamsHandlerConfiguration(cfg config.StreamsHandlerConfiguration) Opt
 	return func(r *Router) {
 		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = cfg.OnReceiveEvents.MaxConcurrentHandlers
 		r.subscriptionHooks.onReceiveEvents.timeout = cfg.OnReceiveEvents.HandlerTimeout
+		r.subscriptionHooks.beforeEventsDispatch.timeout = cfg.BeforeEventsDispatch.HandlerTimeout
 	}
 }
 
