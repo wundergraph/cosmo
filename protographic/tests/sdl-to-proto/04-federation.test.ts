@@ -2637,4 +2637,133 @@ describe('SDL to Proto - Federation and Special Types', () => {
       expect(protoText).not.toContain('typename');
     });
   });
+
+  describe('Required fields returning nullable lists', () => {
+    // A nullable list is modelled with a ListOfX wrapper message so that null can be
+    // distinguished from an empty list. The @requires response path emits the reference
+    // to that wrapper but never registers its definition, so the generated proto does
+    // not resolve. This only goes unnoticed when some other field in the schema happens
+    // to register the same wrapper (e.g. ListOfString via an external [String!] field).
+    test('should define the list wrapper for a required field returning a nullable list of an object type', () => {
+      const sdl = `
+      type User @key(fields: "id") {
+        id: ID!
+        name: String! @external
+
+        badges: [Badge!] @requires(fields: "name")
+      }
+
+      type Badge {
+        id: ID!
+        label: String!
+      }
+
+      type Query {
+        user(id: ID!): User
+      }
+    `;
+
+      const { proto: protoText } = compileGraphQLToProto(sdl);
+
+      expect(protoText).toContain('ListOfBadge badges');
+      // Fails today: the field references ListOfBadge but no `message ListOfBadge` is emitted.
+      expect(protoText).toContain('message ListOfBadge {');
+      expectValidProto(protoText);
+    });
+
+    test('should define the list wrapper for a required field returning a nullable list of an interface type', () => {
+      const sdl = `
+      type Storage @key(fields: "id") {
+        id: ID!
+        name: String! @external
+
+        recommendedItems: [StorageItem!] @requires(fields: "name")
+      }
+
+      interface StorageItem {
+        id: ID!
+        name: String!
+      }
+
+      type PalletItem implements StorageItem {
+        id: ID!
+        name: String!
+        palletCount: Int!
+      }
+
+      type ContainerItem implements StorageItem {
+        id: ID!
+        name: String!
+        containerSize: String!
+      }
+
+      type Query {
+        storage(id: ID!): Storage
+      }
+    `;
+
+      const { proto: protoText } = compileGraphQLToProto(sdl);
+
+      expect(protoText).toContain('ListOfStorageItem recommended_items');
+      // Fails today: the field references ListOfStorageItem but no wrapper message is emitted.
+      expect(protoText).toContain('message ListOfStorageItem {');
+      expectValidProto(protoText);
+    });
+
+    test('should define the list wrapper for a required field returning a nullable list of a union type', () => {
+      const sdl = `
+      type Storage @key(fields: "id") {
+        id: ID!
+        name: String! @external
+
+        operationHistory: [StorageOperationResult!] @requires(fields: "name")
+      }
+
+      union StorageOperationResult = StorageSuccess | StorageFailure
+
+      type StorageSuccess {
+        message: String!
+      }
+
+      type StorageFailure {
+        errorCode: String!
+      }
+
+      type Query {
+        storage(id: ID!): Storage
+      }
+    `;
+
+      const { proto: protoText } = compileGraphQLToProto(sdl);
+
+      expect(protoText).toContain('ListOfStorageOperationResult operation_history');
+      // Fails today: the field references ListOfStorageOperationResult but no wrapper message is emitted.
+      expect(protoText).toContain('message ListOfStorageOperationResult {');
+      expectValidProto(protoText);
+    });
+
+    test('should define the list wrapper for a non-required field returning a nullable list (control)', () => {
+      const sdl = `
+      type User @key(fields: "id") {
+        id: ID!
+        badges: [Badge!]
+      }
+
+      type Badge {
+        id: ID!
+        label: String!
+      }
+
+      type Query {
+        user(id: ID!): User
+      }
+    `;
+
+      const { proto: protoText } = compileGraphQLToProto(sdl);
+
+      // Passes today: the regular SDL path registers the wrapper correctly.
+      expect(protoText).toContain('message ListOfBadge {');
+      expectValidProto(protoText);
+    });
+  });
 });
