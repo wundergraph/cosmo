@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.63.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.63.1...@wundergraph/composition@0.63.2) (2026-07-29)
+
+### Bug Fixes
+
+* executable directive definitions missing in client schema ([#3123](https://github.com/wundergraph/cosmo/issues/3123)) ([207203b](https://github.com/wundergraph/cosmo/commit/207203bd28d93baf63707d62e70a3e4ff06b5675)) (@comatory)
+
 ## [0.63.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.63.0...@wundergraph/composition@0.63.1) (2026-07-14)
 
 ### Bug Fixes

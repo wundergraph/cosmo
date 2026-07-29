@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.178.4](https://github.com/wundergraph/cosmo/compare/studio@0.178.3...studio@0.178.4) (2026-07-29)
+
+### Bug Fixes
+
+* osano and analytics script not being bootstrapped correctly ([#3126](https://github.com/wundergraph/cosmo/issues/3126)) ([2c93bca](https://github.com/wundergraph/cosmo/commit/2c93bca89be91043334829c99f4a248630b3788e)) (@wilsonrivera)
+
 ## [0.178.3](https://github.com/wundergraph/cosmo/compare/studio@0.178.2...studio@0.178.3) (2026-07-17)
 
 ### Bug Fixes
