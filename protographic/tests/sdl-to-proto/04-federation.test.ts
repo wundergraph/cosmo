@@ -2666,8 +2666,18 @@ describe('SDL to Proto - Federation and Special Types', () => {
       const { proto: protoText } = compileGraphQLToProto(sdl);
 
       expect(protoText).toContain('ListOfBadge badges');
-      // Fails today: the field references ListOfBadge but no `message ListOfBadge` is emitted.
-      expect(protoText).toContain('message ListOfBadge {');
+      expect(protoText).toContain(
+        [
+          'message ListOfBadge {',
+          '  message List {',
+          '    repeated Badge items = 1;',
+          '  }',
+          '  List list = 1;',
+          '}'
+        ].join(
+          '\n',
+        ),
+      );
       expectValidProto(protoText);
     });
 
@@ -2705,8 +2715,16 @@ describe('SDL to Proto - Federation and Special Types', () => {
       const { proto: protoText } = compileGraphQLToProto(sdl);
 
       expect(protoText).toContain('ListOfStorageItem recommended_items');
-      // Fails today: the field references ListOfStorageItem but no wrapper message is emitted.
-      expect(protoText).toContain('message ListOfStorageItem {');
+      expect(protoText).toContain(
+        [
+          'message ListOfStorageItem {',
+          '  message List {',
+          '    repeated StorageItem items = 1;',
+          '  }',
+          '  List list = 1;',
+          '}',
+        ].join('\n'),
+      );
       expectValidProto(protoText);
     });
 
@@ -2737,8 +2755,16 @@ describe('SDL to Proto - Federation and Special Types', () => {
       const { proto: protoText } = compileGraphQLToProto(sdl);
 
       expect(protoText).toContain('ListOfStorageOperationResult operation_history');
-      // Fails today: the field references ListOfStorageOperationResult but no wrapper message is emitted.
-      expect(protoText).toContain('message ListOfStorageOperationResult {');
+      expect(protoText).toContain(
+        [
+          'message ListOfStorageOperationResult {',
+          '  message List {',
+          '    repeated StorageOperationResult items = 1;',
+          '  }',
+          '  List list = 1;',
+          '}',
+        ].join('\n'),
+      );
       expectValidProto(protoText);
     });
 
@@ -2761,8 +2787,11 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       const { proto: protoText } = compileGraphQLToProto(sdl);
 
-      // Passes today: the regular SDL path registers the wrapper correctly.
-      expect(protoText).toContain('message ListOfBadge {');
+      expect(protoText).toContain(
+        ['message ListOfBadge {', '  message List {', '    repeated Badge items = 1;', '  }', '  List list = 1;', '}'].join(
+          '\n',
+        ),
+      );
       expectValidProto(protoText);
     });
   });
