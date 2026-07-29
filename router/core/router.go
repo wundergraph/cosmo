@@ -103,9 +103,9 @@ type (
 		usage                 UsageTracker
 		headerPropagation     *HeaderPropagation
 		reloadPersistentState *ReloadPersistentState
-		connectionStatsLock   sync.Mutex
-		traceDialer           *TraceDialer
+		connectionMetricsLock sync.Mutex
 		connectionMetrics     *rmetric.ConnectionMetrics
+		traceDialer           *TraceDialer
 	}
 
 	UsageTracker interface {
@@ -2672,8 +2672,8 @@ func (r *Router) connectionMetricStore(ctx context.Context, traceDialer *TraceDi
 		return nil, nil
 	}
 
-	r.connectionStatsLock.Lock()
-	defer r.connectionStatsLock.Unlock()
+	r.connectionMetricsLock.Lock()
+	defer r.connectionMetricsLock.Unlock()
 
 	// Check if the router is shutting down to prevent creating asynchronous metrics.
 	if r.shutdown.Load() {
@@ -2705,8 +2705,8 @@ func (r *Router) connectionMetricStore(ctx context.Context, traceDialer *TraceDi
 // set, so that a config reload still inside newGraphServer cannot create a new
 // store afterwards.
 func (r *Router) shutdownConnectionMetrics(ctx context.Context) error {
-	r.connectionStatsLock.Lock()
-	defer r.connectionStatsLock.Unlock()
+	r.connectionMetricsLock.Lock()
+	defer r.connectionMetricsLock.Unlock()
 
 	if r.connectionMetrics == nil {
 		return nil
