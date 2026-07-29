@@ -2834,16 +2834,16 @@ describe('SDL to Proto - Federation and Special Types', () => {
     });
 
     test('should define the list wrapper for a nullable list field inside the @requires selection set', () => {
+      // `tags` is a scalar @external field selected directly (not nested through an
+      // object type), so it is excluded from User's own message (which only carries
+      // "id") and the ListOfString wrapper can only be registered via the required
+      // field's selection-set traversal, not any other code path.
       const sdl = `
-      type Address {
-        street: String!
-        zipCodes: [String]
-      }
-
       type User @key(fields: "id") {
         id: ID!
-        address: Address! @external
-        greeting: String! @requires(fields: "address { zipCodes }")
+        tags: [String] @external
+
+        greeting: String! @requires(fields: "tags")
       }
 
       type Query {
@@ -2853,7 +2853,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       const { proto: protoText } = compileGraphQLToProto(sdl);
 
-      expect(protoText).toContain('ListOfString zip_codes');
+      expect(protoText).toContain('ListOfString tags');
       expect(protoText).toContain(
         [
           'message ListOfString {',
