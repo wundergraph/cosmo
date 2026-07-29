@@ -2673,10 +2673,8 @@ describe('SDL to Proto - Federation and Special Types', () => {
           '    repeated Badge items = 1;',
           '  }',
           '  List list = 1;',
-          '}'
-        ].join(
-          '\n',
-        ),
+          '}',
+        ].join('\n'),
       );
       expectValidProto(protoText);
     });
@@ -2788,9 +2786,14 @@ describe('SDL to Proto - Federation and Special Types', () => {
       const { proto: protoText } = compileGraphQLToProto(sdl);
 
       expect(protoText).toContain(
-        ['message ListOfBadge {', '  message List {', '    repeated Badge items = 1;', '  }', '  List list = 1;', '}'].join(
-          '\n',
-        ),
+        [
+          'message ListOfBadge {',
+          '  message List {',
+          '    repeated Badge items = 1;',
+          '  }',
+          '  List list = 1;',
+          '}',
+        ].join('\n'),
       );
       expectValidProto(protoText);
     });
