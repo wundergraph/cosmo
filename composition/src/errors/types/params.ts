@@ -116,3 +116,8 @@ export type InvalidEntityReturnTypeErrorParams = {
   fieldCoords: string;
   returnTypeName: string;
 };
+
+export type InvalidCacheTagArgumentTypeErrorParams = {
+  reference: string;
+  typeString: string;
+};
