@@ -107,9 +107,9 @@ mcp:
         Employee data is refreshed nightly; do not treat it as real-time.
 ```
 
-Instructions are served to every MCP client, whether it connects via `server/discover` or the legacy `initialize` handshake.
+The server sends the instructions to every MCP client. This covers clients that connect with `server/discover` and clients that still use the legacy `initialize` handshake.
 
-Protocol version `2026-07-28` is advertised by default. In session-based mode (`session.stateless: false`), clients negotiate `2025-11-25` or older.
+The router advertises protocol version `2026-07-28` by default. In session-based mode (`session.stateless: false`), clients negotiate `2025-11-25` or older.
 
 ## Session Handling
 
