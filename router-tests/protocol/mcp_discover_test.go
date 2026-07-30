@@ -153,7 +153,20 @@ func TestMCPServerDiscover(t *testing.T) {
 	})
 }
 
-func TestMCPServerInfoVersion(t *testing.T) {
+// discoverServerInfo returns the serverInfo object carried in the discover
+// result _meta.
+func discoverServerInfo(t *testing.T, xEnv *testenv.Environment) map[string]any {
+	t.Helper()
+
+	meta, ok := postServerDiscover(t, xEnv)["_meta"].(map[string]any)
+	require.True(t, ok, "discover result should carry _meta")
+	serverInfo, ok := meta[sdkmcp.MetaKeyServerInfo].(map[string]any)
+	require.True(t, ok, "_meta should carry serverInfo")
+
+	return serverInfo
+}
+
+func TestMCPServerInfo(t *testing.T) {
 	t.Run("uses configured server version", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			MCP: config.MCPConfiguration{
