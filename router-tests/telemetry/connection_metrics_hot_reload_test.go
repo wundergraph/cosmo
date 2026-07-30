@@ -165,6 +165,71 @@ func TestConnectionMetrics_AddedAndRemovedMuxesAfterHotReload(t *testing.T) {
 	})
 }
 
+// A feature flag can route to a subgraph that no earlier execution config
+// mentioned. Here myff introduces products_fg, which the base graph never
+// references, so its first connection is opened by a mux that did not exist
+// before the reload.
+//
+// Its data points still carry wg.subgraph.name because the transport set comes
+// from static router configuration, not from the execution config: products_fg
+// has a traffic-shaping entry, so its transport exists from boot even while no
+// config mentions the subgraph. A subgraph without such an entry would instead
+// share the unnamed base transport.
+func TestConnectionMetrics_SubgraphAddedByFeatureFlagAfterHotReload(t *testing.T) {
+	t.Parallel()
+
+	const (
+		featureFlag = "myff"
+		// Routed to by the myff flag only; the base graph uses products instead.
+		newSubgraph = "products_fg"
+	)
+
+	metricReader := metric.NewManualReader()
+	// No feature flags initially, so nothing references products_fg yet.
+	poller := newReloadConfigPoller(nil)
+
+	testenv.Run(t, connectionMetricsReloadEnv(metricReader, poller), func(t *testing.T, xEnv *testenv.Environment) {
+		// Guard the premise: the router must not have heard of products_fg yet, or
+		// the reload below is not introducing anything.
+		served, err := poller.GetRouterConfig(context.Background())
+		require.NoError(t, err)
+		require.NotContains(t, subgraphNames(served.Config), newSubgraph,
+			"%s must be absent from the config the router booted with", newSubgraph)
+
+		// Step 1: the base graph resolves factTypes through products.
+		xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: queryProductsSubgraph})
+		requireActiveConnections(t, metricReader, connectionsBySubgraph{"products": 1})
+
+		baseline := len(xEnv.Observer().All())
+
+		next := poller.configWithNativeFeatureFlags(featureFlag)
+		// Guard the fixture: without the real flag config there is no new subgraph.
+		require.Contains(t, subgraphNames(next), newSubgraph,
+			"the %s flag config must introduce the %s subgraph", featureFlag, newSubgraph)
+
+		// Step 2: add the flag. The base graph is untouched, so its mux is reused.
+		require.NoError(t, poller.Emit(next, &routerconfig.Changes{
+			AddedConfigs:   map[string]struct{}{featureFlag: {}},
+			RemovedConfigs: map[string]struct{}{},
+			ChangedConfigs: map[string]struct{}{},
+		}))
+		require.Contains(t, muxKeysFor(xEnv, baseline, muxReusedMessage), "",
+			"the base mux must be reused by the new graph server")
+
+		// Step 3: the same query through the new mux resolves through products_fg.
+		xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query:  queryProductsSubgraph,
+			Header: featureFlagHeader(featureFlag),
+		})
+
+		// products dropped to zero because the outgoing server closed its idle
+		// connections and nothing has asked the reused base mux for more.
+		requireActiveConnections(t, metricReader, connectionsBySubgraph{
+			"products": 0, newSubgraph: 1,
+		})
+	})
+}
+
 // The first four resolve within a single subgraph, so a connection identifies
 // the mux that served the request. The last two also reach employees.
 const (
@@ -202,7 +267,9 @@ func connectionMetricsReloadEnv(reader *metric.ManualReader, poller *reloadConfi
 					"hobbies":   {},
 					"mood":      {},
 					"products":  {},
-					"test1":     {},
+					// Only referenced by the myff feature flag, never by the base graph.
+					"products_fg": {},
+					"test1":       {},
 				},
 			})),
 		},
@@ -291,6 +358,21 @@ func (c connectionsBySubgraph) String() string {
 	return "{" + strings.Join(parts, " ") + "}"
 }
 
+// subgraphNames lists every subgraph the config names, base graph and feature
+// flags alike, i.e. everything the router could route to.
+func subgraphNames(cfg *nodev1.RouterConfig) []string {
+	names := make([]string, 0)
+	for _, sg := range cfg.GetSubgraphs() {
+		names = append(names, sg.GetName())
+	}
+	for _, ff := range cfg.GetFeatureFlagConfigs().GetConfigByFeatureFlagName() {
+		for _, sg := range ff.GetSubgraphs() {
+			names = append(names, sg.GetName())
+		}
+	}
+	return names
+}
+
 // muxKeysFor returns the mux keys logged with message after the from-th entry.
 // The base graph mux uses the empty string as its key.
 func muxKeysFor(xEnv *testenv.Environment, from int, message string) []string {
@@ -353,6 +435,24 @@ func (p *reloadConfigPoller) Emit(cfg *nodev1.RouterConfig, changes *routerconfi
 		return fmt.Errorf("reloadConfigPoller: Subscribe was never called by the router")
 	}
 	return h(&routerconfig.Response{Config: cfg, Changes: changes})
+}
+
+// configWithNativeFeatureFlags rebuilds the base config keeping only the named
+// feature flags as testenv assembled them, so the subgraphs they route to are the
+// real ones rather than copies of the base graph.
+func (p *reloadConfigPoller) configWithNativeFeatureFlags(names ...string) *nodev1.RouterConfig {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	next := proto.Clone(p.baseConfig).(*nodev1.RouterConfig)
+	kept := make(map[string]*nodev1.FeatureFlagRouterExecutionConfig, len(names))
+	for _, name := range names {
+		if cfg, ok := next.GetFeatureFlagConfigs().GetConfigByFeatureFlagName()[name]; ok {
+			kept[name] = cfg
+		}
+	}
+	next.FeatureFlagConfigs = &nodev1.FeatureFlagRouterExecutionConfigs{ConfigByFeatureFlagName: kept}
+	return next
 }
 
 // configWithFeatureFlags rebuilds the base config with exactly these flags. The
