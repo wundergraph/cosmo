@@ -357,10 +357,11 @@ func WithInstructions(instructions string) func(*Options) {
 	}
 }
 
-// WithServerVersion sets the version reported in the MCP serverInfo
+// WithServerVersion sets the version reported in the MCP serverInfo.
+// An empty version keeps the default.
 func WithServerVersion(version string) func(*Options) {
 	return func(o *Options) {
-		o.ServerVersion = version
+		o.ServerVersion = cmp.Or(version, o.ServerVersion)
 	}
 }
 
