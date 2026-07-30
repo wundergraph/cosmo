@@ -76,7 +76,7 @@ require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/klauspost/compress v1.18.6
 	github.com/minio/minio-go/v7 v7.0.74
-	github.com/modelcontextprotocol/go-sdk v1.7.0-pre.3
+	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/posthog/posthog-go v1.5.5
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/otlptranslator v1.0.0
