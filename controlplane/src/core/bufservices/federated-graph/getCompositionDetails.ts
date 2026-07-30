@@ -58,12 +58,24 @@ export function getCompositionDetails(
       };
     }
 
-    if (composition.targetId) {
-      const graph = await fedRepo.byTargetId(composition.targetId);
-      if (graph && !authContext.rbac.hasFederatedGraphReadAccess(graph)) {
-        throw new UnauthorizedError();
-      }
+    // A composition is always tied to a federated graph (its target is only nulled once the graph is deleted), so an
+    // unresolvable graph means the composition is orphaned — treat it as not found rather than serving it without an
+    // authorization check.
+    const graph = composition.targetId ? await fedRepo.byTargetId(composition.targetId) : undefined;
+    if (!graph) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Federated graph for composition '${req.compositionId}' not found`,
+        },
+        compositionSubgraphs: [],
+        featureFlagCompositions: [],
+      };
     }
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
+    }
+    const federatedGraphId = graph.id;
 
     const compositionSubgraphs = await compositionRepo.getCompositionSubgraphs({
       compositionId: composition.id,
@@ -87,11 +99,15 @@ export function getCompositionDetails(
       }
     }
 
-    const featureFlagCompositions = await featureFlagRepo.getFeatureFlagCompositionsByBaseSchemaVersion({
-      baseSchemaVersionId: composition.schemaVersionId,
-      namespaceId: namespace.id,
-      organizationId: authContext.organizationId,
-    });
+    // Feature flag compositions are resolved from a base composition, so only a base composition can have them.
+    const featureFlagCompositions = composition.isFeatureFlagComposition
+      ? []
+      : await featureFlagRepo.getFeatureFlagCompositionsByBaseSchemaVersion({
+          baseSchemaVersionId: composition.schemaVersionId,
+          federatedGraphId,
+          namespaceId: namespace.id,
+          organizationId: authContext.organizationId,
+        });
 
     return {
       response: {

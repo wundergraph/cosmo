@@ -68,7 +68,7 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     expect(resp.featureFlags.some((f) => f.name === flagName)).toBe(true);
   });
 
-  test('that feature flag compositions are decoupled when split config loading is enabled', async (testContext) => {
+  test('that feature flags in the latest composition are returned when split config loading is enabled', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['split-config-loading'] });
     testContext.onTestFinished(() => server.close());
 
@@ -118,7 +118,8 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
-    expect(resp.featureFlags).toHaveLength(0);
+    expect(resp.featureFlags).toHaveLength(1);
+    expect(resp.featureFlags.some((f) => f.name === flagName)).toBe(true);
 
     // Create a second, enabled feature flag
     const secondFlagName = genID('flag');
@@ -129,7 +130,9 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
       namespace,
     });
     expect(withSecondFlag.response?.code).toBe(EnumStatusCode.OK);
-    expect(withSecondFlag.featureFlags).toHaveLength(0);
+    expect(withSecondFlag.featureFlags).toHaveLength(2);
+    expect(withSecondFlag.featureFlags.some((f) => f.name === flagName)).toBe(true);
+    expect(withSecondFlag.featureFlags.some((f) => f.name === secondFlagName)).toBe(true);
 
     // Only the base graph composition should show up when excluding feature flag compositions
     let compositionsResp = await client.getCompositions({

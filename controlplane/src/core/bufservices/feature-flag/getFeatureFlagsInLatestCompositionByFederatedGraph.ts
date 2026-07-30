@@ -67,6 +67,7 @@ export function getFeatureFlagsInLatestCompositionByFederatedGraph(
       // Get feature flag IDs from the latest valid composition
       const ffsInLatestValidComposition = await featureFlagRepo.getFeatureFlagSchemaVersionsByBaseSchemaVersion({
         baseSchemaVersionId: federatedGraph.schemaVersionId,
+        federatedGraphId: federatedGraph.id,
       });
 
       const featureFlags: FeatureFlagDTO[] = [];
