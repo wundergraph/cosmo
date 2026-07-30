@@ -27,6 +27,7 @@ import {
 import {
   CompositeMessageDefinition,
   CompositeMessageKind,
+  ProtoFieldType,
   ProtoMessage,
   ProtoMessageField,
   RPCMethod,
@@ -236,7 +237,7 @@ export class RequiredFieldsVisitor {
    * Tracks list wrapper messages produced by getProtoTypeFromGraphQL so the caller
    * can include their definitions in the final proto output.
    */
-  private trackListWrapper(protoType: ReturnType<typeof getProtoTypeFromGraphQL>): void {
+  private trackListWrapper(protoType: ProtoFieldType): void {
     const listWrapper = protoType.listWrapper;
     if (!listWrapper) {
       return;
