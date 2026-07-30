@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.178.5](https://github.com/wundergraph/cosmo/compare/studio@0.178.4...studio@0.178.5) (2026-07-30)
+
+### Bug Fixes
+
+* **studio:** load studio when analytics cookies are declined ([#3127](https://github.com/wundergraph/cosmo/issues/3127)) ([1bc4562](https://github.com/wundergraph/cosmo/commit/1bc4562737341a96023d026672c63b503e897909)) (@thisisnithin)
+
 ## [0.178.4](https://github.com/wundergraph/cosmo/compare/studio@0.178.3...studio@0.178.4) (2026-07-29)
 
 ### Bug Fixes
