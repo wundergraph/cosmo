@@ -834,9 +834,13 @@
         }
       ]
     },
+    "SkipUnavailableProviders": false,
     "Handlers": {
       "OnReceiveEvents": {
         "MaxConcurrentHandlers": 100,
+        "HandlerTimeout": 5000000000
+      },
+      "BeforeEventsDispatch": {
         "HandlerTimeout": 5000000000
       }
     }

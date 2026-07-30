@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.336.0](https://github.com/wundergraph/cosmo/compare/router@0.335.0...router@0.336.0) (2026-07-28)
+
+### Features
+
+* **router:** add `BeforeEventsDispatch` Custom Module ([#3102](https://github.com/wundergraph/cosmo/issues/3102)) ([d66f503](https://github.com/wundergraph/cosmo/commit/d66f5037ba6e44d160903929a3574fb0351d635e)) (@dkorittki)
+
+# [0.335.0](https://github.com/wundergraph/cosmo/compare/router@0.334.0...router@0.335.0) (2026-07-27)
+
+### Features
+
+* router start more lenient on cosmo streams problems ([#2994](https://github.com/wundergraph/cosmo/issues/2994)) ([6d7687e](https://github.com/wundergraph/cosmo/commit/6d7687ec11482ac5eb3a0b3d0b83ef132e705d85)) (@alepane21)
+
 # [0.334.0](https://github.com/wundergraph/cosmo/compare/router@0.333.3...router@0.334.0) (2026-07-22)
 
 ### Features

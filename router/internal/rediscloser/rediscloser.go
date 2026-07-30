@@ -21,6 +21,11 @@ type RedisCloserOptions struct {
 	URLs           []string
 	ClusterEnabled bool
 	Password       string
+	// Context bounds the initial connectivity check (Ping). When nil, context.Background()
+	// is used. Callers that must guarantee NewRedisCloser returns within a deadline (e.g. a
+	// bounded provider startup) should pass a context with a timeout so a black-holed broker
+	// cannot block the ping for the full go-redis dial timeout.
+	Context context.Context
 }
 
 func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
@@ -73,7 +78,11 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 		}
 	}
 
-	if isFunctioning, err := IsFunctioningClient(rdb); !isFunctioning {
+	pingCtx := opts.Context
+	if pingCtx == nil {
+		pingCtx = context.Background()
+	}
+	if isFunctioning, err := IsFunctioningClient(pingCtx, rdb); !isFunctioning {
 		return rdb, fmt.Errorf("failed to create a functioning redis client with the provided URLs: %w", err)
 	}
 
@@ -110,12 +119,12 @@ func addClusterUrlsToQuery(opts *RedisCloserOptions, parsedUrl *url.URL) {
 	parsedUrl.RawQuery = queryVals.Encode()
 }
 
-func IsFunctioningClient(rdb RDCloser) (bool, error) {
+func IsFunctioningClient(ctx context.Context, rdb RDCloser) (bool, error) {
 	if rdb == nil {
 		return false, nil
 	}
 
-	res, err := rdb.Ping(context.Background()).Result()
+	res, err := rdb.Ping(ctx).Result()
 	return err == nil && res == "PONG", err
 }
 

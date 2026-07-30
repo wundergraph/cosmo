@@ -3064,6 +3064,11 @@
       "description": "The configuration for EDFS. See https://cosmo-docs.wundergraph.com/router/event-driven-federated-subscriptions-edfs for more information.",
       "additionalProperties": false,
       "properties": {
+        "skip_unavailable_providers": {
+          "type": "boolean",
+          "default": false,
+          "description": "Start the router even when an event provider referenced by the execution config is unavailable, instead of aborting startup. This covers both a provider that is not defined in this configuration and a provider that is defined but cannot be reached at startup (e.g. the broker is down). The router logs an error and starts anyway, leaving only the fields backed by that provider unavailable; requests to them return an error instead of crashing the router. Defaults to false, in which case an unavailable provider prevents the router from starting."
+        },
         "providers": {
           "type": "object",
           "description": "The provider configuration. The provider configuration is used to configure the event-driven federated subscriptions.",
@@ -3297,7 +3302,7 @@
           "properties": {
             "on_receive_events": {
               "type": "object",
-              "description": "Configuration for the OnReceiveEvents hook that is called when events are received from a broker.",
+              "description": "Configuration for the OnReceiveEvents hook that is called for each subscriber when events are received from a broker.",
               "additionalProperties": false,
               "properties": {
                 "max_concurrent_handlers": {
@@ -3309,6 +3314,18 @@
                 "handler_timeout": {
                   "type": "string",
                   "description": "The amount of time that OnReceiveEvents handlers can run in total for a single batch of events. Specify as a duration string (e.g., '5s', '1m', '500ms').",
+                  "default": "5s"
+                }
+              }
+            },
+            "before_events_dispatch": {
+              "type": "object",
+              "description": "Configuration for the BeforeEventsDispatch hook, that is called once per event batch, before delivering them to subscribers.",
+              "additionalProperties": false,
+              "properties": {
+                "handler_timeout": {
+                  "type": "string",
+                  "description": "The amount of time that BeforeEventsDispatch handlers can run in total for a single batch of events. Specify as a duration string (e.g., '5s', '1m', '500ms').",
                   "default": "5s"
                 }
               }

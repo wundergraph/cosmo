@@ -78,7 +78,7 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
   const value = useMemo(
     () => ({
       onboarding,
-      enabled: Boolean(onboardingFlag.enabled && featureFlagStatus === 'success' && onboardingFlag),
+      enabled: featureFlagStatus === 'success' && onboardingFlag.enabled,
       setOnboarding,
       currentStep,
       setStep,

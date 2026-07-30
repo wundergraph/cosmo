@@ -1879,6 +1879,7 @@ We support NATS, Kafka and Redis as event bus provider.
 version: "1"
 
 events:
+  skip_unavailable_providers: false
   providers:
     nats:
       - id: default
@@ -1905,8 +1906,14 @@ events:
     redis:
       - id: my-redis
         urls:
-          - "localhost:9092"
+          - "redis://localhost:6379"
 ```
+
+### Options
+
+| Environment Variable              | YAML                       | Required               | Description                                                                                                                                                                                                                                                                                                                       | Default Value |
+| --------------------------------- | -------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| EVENTS_SKIP_UNAVAILABLE_PROVIDERS | skip_unavailable_providers | <Icon icon="square" /> | Start the router even when an event provider referenced by the execution config is unavailable: either not defined under `providers`, or defined but unreachable at startup (e.g. the broker is down). The router logs a warn and disables only the affected fields instead of failing to start. A provider that is unreachable reconnects in the background and its fields recover without a restart once the broker is back. Enabled by default. | true         |
 
 ### Provider
 
@@ -2012,6 +2019,7 @@ Configuration for Cosmo Streams handlers. Learn more about [Custom Modules for C
 | :------------------- | :------------------------------------------------- | :--------------------- | :------------------------------------------------------------------------------------- | :-            |
 |                      | handlers.on_receive_events.handler_timeout         | <Icon icon="square" /> | The maximum time to wait for all OnReceiveEvents handlers to complete per event-batch. | 5s            |
 |                      | handlers.on_receive_events.max_concurrent_handlers | <Icon icon="square" /> | The maximum number of concurrent OnReceiveEvents handlers per trigger.                 | 100           |
+|                      | handlers.before_events_dispatch.handler_timeout       | <Icon icon="square" /> | The maximum time to wait for all BeforeEventsDispatch handlers to complete per event-batch. | 5s          |
 
 ## Router Engine Configuration
 
