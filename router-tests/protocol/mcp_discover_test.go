@@ -176,12 +176,8 @@ func TestMCPServerInfo(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			result := postServerDiscover(t, xEnv)
+			serverInfo := discoverServerInfo(t, xEnv)
 
-			meta, ok := result["_meta"].(map[string]any)
-			require.True(t, ok, "discover result should carry _meta")
-			serverInfo, ok := meta[sdkmcp.MetaKeyServerInfo].(map[string]any)
-			require.True(t, ok, "_meta should carry serverInfo")
 			assert.Equal(t, "9.9.9", serverInfo["version"])
 		})
 	})
@@ -196,12 +192,8 @@ func TestMCPServerInfo(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			result := postServerDiscover(t, xEnv)
+			serverInfo := discoverServerInfo(t, xEnv)
 
-			meta, ok := result["_meta"].(map[string]any)
-			require.True(t, ok, "discover result should carry _meta")
-			serverInfo, ok := meta[sdkmcp.MetaKeyServerInfo].(map[string]any)
-			require.True(t, ok, "_meta should carry serverInfo")
 			assert.Equal(t, "My Commerce API", serverInfo["title"])
 			assert.Equal(t, "Query products, orders and customers.", serverInfo["description"])
 		})
@@ -213,12 +205,8 @@ func TestMCPServerInfo(t *testing.T) {
 				Enabled: true,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			result := postServerDiscover(t, xEnv)
+			serverInfo := discoverServerInfo(t, xEnv)
 
-			meta, ok := result["_meta"].(map[string]any)
-			require.True(t, ok, "discover result should carry _meta")
-			serverInfo, ok := meta[sdkmcp.MetaKeyServerInfo].(map[string]any)
-			require.True(t, ok, "_meta should carry serverInfo")
 			assert.Equal(t, core.Version, serverInfo["version"])
 		})
 	})
