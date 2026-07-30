@@ -299,7 +299,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 	// Create the MCP server with all options
 	mcpServer := mcp.NewServer(
 		&mcp.Implementation{
-			Name:        "wundergraph-cosmo-" + strcase.ToKebab(cmp.Or(options.GraphName, "graph")),
+			Name:        "wundergraph-cosmo-" + strcase.ToKebab(options.GraphName),
 			Title:       options.ServerTitle,
 			Description: options.ServerDescription,
 			Version:     options.ServerVersion,
@@ -307,6 +307,10 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		&mcp.ServerOptions{
 			Instructions: options.Instructions,
 			PageSize:     100,
+			// ttlMs and cacheScope use the SDK defaults (0 / "public"). They
+			// become configurable under mcp.server.discover once the SDK adds a
+			// DiscoverHandler hook: modelcontextprotocol/go-sdk#1092.
+			//
 			// Override default capabilities to disable the "logging" capability
 			// that the SDK advertises by default (for historical reasons).
 			// We don't implement logging/setLevel, so advertising it causes
@@ -379,10 +383,10 @@ func WithServerDescription(description string) func(*Options) {
 	}
 }
 
-// WithGraphName sets the graph name
+// WithGraphName sets the graph name. An empty name keeps the default.
 func WithGraphName(graphName string) func(*Options) {
 	return func(o *Options) {
-		o.GraphName = graphName
+		o.GraphName = cmp.Or(graphName, o.GraphName)
 	}
 }
 

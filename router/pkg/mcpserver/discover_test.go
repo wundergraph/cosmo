@@ -11,28 +11,11 @@ import (
 	"go.uber.org/zap"
 )
 
-// connectTestClient connects an in-memory MCP client to the given server and
-// returns the client session. The SDK client negotiates via the SEP-2575
-// server/discover RPC by default (protocol version 2026-07-28), so the
-// returned session state reflects the server/discover response.
-func connectTestClient(t *testing.T, srv *GraphQLSchemaServer) *mcp.ClientSession {
-	t.Helper()
-
-	serverTransport, clientTransport := mcp.NewInMemoryTransports()
-
-	ss, err := srv.server.Connect(t.Context(), serverTransport, nil)
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = ss.Close() })
-
-	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "1.0.0"}, nil)
-	cs, err := client.Connect(t.Context(), clientTransport, nil)
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = cs.Close() })
-
-	return cs
-}
-
-func newTestServer(t *testing.T, opts ...func(*Options)) *GraphQLSchemaServer {
+// newTestSession builds a GraphQLSchemaServer with the given options and
+// connects an in-memory MCP client to it. The SDK client negotiates via the
+// SEP-2575 server/discover RPC by default (protocol version 2026-07-28), so
+// the returned session state reflects the server/discover response.
+func newTestSession(t *testing.T, opts ...func(*Options)) *mcp.ClientSession {
 	t.Helper()
 
 	tempDir := t.TempDir()
@@ -55,54 +38,62 @@ func newTestServer(t *testing.T, opts ...func(*Options)) *GraphQLSchemaServer {
 	require.NoError(t, err)
 	require.NoError(t, srv.Reload(&schemaDoc, nil))
 
-	return srv
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+
+	ss, err := srv.server.Connect(t.Context(), serverTransport, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = ss.Close() })
+
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "1.0.0"}, nil)
+	cs, err := client.Connect(t.Context(), clientTransport, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = cs.Close() })
+
+	return cs
 }
 
-func TestDiscover_ReturnsConfiguredInstructions(t *testing.T) {
-	const instructions = "Call list_employees before querying individual employees."
+func TestDiscover(t *testing.T) {
+	t.Run("returns configured instructions", func(t *testing.T) {
+		const instructions = "Call list_employees before querying individual employees."
 
-	srv := newTestServer(t, WithInstructions(instructions))
-	cs := connectTestClient(t, srv)
+		cs := newTestSession(t, WithInstructions(instructions))
 
-	assert.Equal(t, instructions, cs.InitializeResult().Instructions)
-}
+		assert.Equal(t, instructions, cs.InitializeResult().Instructions)
+	})
 
-func TestDiscover_NoInstructionsByDefault(t *testing.T) {
-	srv := newTestServer(t)
-	cs := connectTestClient(t, srv)
+	t.Run("no instructions by default", func(t *testing.T) {
+		cs := newTestSession(t)
 
-	assert.Empty(t, cs.InitializeResult().Instructions)
-}
+		assert.Empty(t, cs.InitializeResult().Instructions)
+	})
 
-func TestDiscover_ServerInfoUsesConfiguredVersion(t *testing.T) {
-	srv := newTestServer(t, WithServerVersion("1.2.3"))
-	cs := connectTestClient(t, srv)
+	t.Run("serverInfo uses configured version", func(t *testing.T) {
+		cs := newTestSession(t, WithServerVersion("1.2.3"))
 
-	serverInfo := cs.InitializeResult().ServerInfo
-	require.NotNil(t, serverInfo)
-	assert.Equal(t, "1.2.3", serverInfo.Version)
-}
+		serverInfo := cs.InitializeResult().ServerInfo
+		require.NotNil(t, serverInfo)
+		assert.Equal(t, "1.2.3", serverInfo.Version)
+	})
 
-func TestDiscover_ServerInfoTitleAndDescription(t *testing.T) {
-	srv := newTestServer(t,
-		WithServerTitle("My Commerce API"),
-		WithServerDescription("Query products, orders and customers."),
-	)
-	cs := connectTestClient(t, srv)
+	t.Run("serverInfo carries title and description", func(t *testing.T) {
+		cs := newTestSession(t,
+			WithServerTitle("My Commerce API"),
+			WithServerDescription("Query products, orders and customers."),
+		)
 
-	serverInfo := cs.InitializeResult().ServerInfo
-	require.NotNil(t, serverInfo)
-	assert.Equal(t, "My Commerce API", serverInfo.Title)
-	assert.Equal(t, "Query products, orders and customers.", serverInfo.Description)
-}
+		serverInfo := cs.InitializeResult().ServerInfo
+		require.NotNil(t, serverInfo)
+		assert.Equal(t, "My Commerce API", serverInfo.Title)
+		assert.Equal(t, "Query products, orders and customers.", serverInfo.Description)
+	})
 
-func TestDiscover_EmptyGraphNameFallsBackToDefault(t *testing.T) {
-	// WithGraphName("") must not clobber the default: an empty graph name would
-	// produce the malformed serverInfo name "wundergraph-cosmo-".
-	srv := newTestServer(t, WithGraphName(""))
-	cs := connectTestClient(t, srv)
+	t.Run("empty graph name falls back to default", func(t *testing.T) {
+		// WithGraphName("") must not clobber the default: an empty graph name
+		// would produce the malformed serverInfo name "wundergraph-cosmo-".
+		cs := newTestSession(t, WithGraphName(""))
 
-	serverInfo := cs.InitializeResult().ServerInfo
-	require.NotNil(t, serverInfo)
-	assert.Equal(t, "wundergraph-cosmo-graph", serverInfo.Name)
+		serverInfo := cs.InitializeResult().ServerInfo
+		require.NotNil(t, serverInfo)
+		assert.Equal(t, "wundergraph-cosmo-graph", serverInfo.Name)
+	})
 }
