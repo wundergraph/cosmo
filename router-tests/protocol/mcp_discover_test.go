@@ -66,17 +66,18 @@ func postServerDiscover(t *testing.T, xEnv *testenv.Environment) map[string]any 
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode, "server/discover should succeed, body: %s", string(body))
 
-	// The streamable HTTP transport may reply with a plain JSON body or an SSE
-	// stream depending on negotiation; support both.
-	payload := string(body)
-	if strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
-		for _, line := range strings.Split(payload, "\n") {
-			if strings.HasPrefix(line, "data:") {
-				payload = strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-				break
-			}
+	// The streamable HTTP transport answers POSTs with an SSE stream: the router
+	// does not set StreamableHTTPOptions.JSONResponse.
+	require.Contains(t, resp.Header.Get("Content-Type"), "text/event-stream")
+
+	var payload string
+	for line := range strings.SplitSeq(string(body), "\n") {
+		if after, ok := strings.CutPrefix(line, "data:"); ok {
+			payload = strings.TrimSpace(after)
+			break
 		}
 	}
+	require.NotEmpty(t, payload, "no SSE data frame in response: %s", string(body))
 
 	var rpcResponse struct {
 		Result map[string]any `json:"result"`
