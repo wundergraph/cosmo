@@ -51,7 +51,7 @@ func postServerDiscover(t *testing.T, xEnv *testenv.Environment) map[string]any 
 	requestBody, err := json.Marshal(discoverRequest)
 	require.NoError(t, err)
 
-	req, err := http.NewRequest(http.MethodPost, xEnv.GetMCPServerAddr(), bytes.NewReader(requestBody))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, xEnv.GetMCPServerAddr(), bytes.NewReader(requestBody))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json, text/event-stream")
