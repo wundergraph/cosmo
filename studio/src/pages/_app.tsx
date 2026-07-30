@@ -71,10 +71,15 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
     const applyConsent = () => {
       if (hasAnalyticsConsent(window.Osano?.cm?.getConsent?.())) {
         posthog.opt_in_capturing();
-        posthog.reloadFeatureFlags();
       } else {
         posthog.opt_out_capturing();
       }
+
+      // Both transitions reset PostHog's flag state (opting out additionally
+      // disables persistence, so rejecting users hold no cached flags at all).
+      // Re-request in either direction, otherwise flags stay unresolved for
+      // anyone who declines analytics cookies.
+      posthog.reloadFeatureFlags();
     };
 
     const onOsanoReady = () => {
