@@ -2312,10 +2312,11 @@ persisted_operations:
 	})
 }
 
-func TestMCPServerDiscoverInstructions(t *testing.T) {
-	t.Parallel()
+func TestMCPServerConfig(t *testing.T) {
+	t.Run("reads discover instructions from yaml", func(t *testing.T) {
+		t.Parallel()
 
-	f := createTempFileFromFixture(t, `
+		f := createTempFileFromFixture(t, `
 version: "1"
 
 graph:
@@ -2327,16 +2328,16 @@ mcp:
     discover:
       instructions: "Use the search tools before executing operations."
 `)
-	cfg, err := LoadConfig([]string{f})
-	require.NoError(t, err)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
 
-	require.Equal(t, "Use the search tools before executing operations.", cfg.Config.MCP.Server.Discover.Instructions)
-}
+		require.Equal(t, "Use the search tools before executing operations.", cfg.Config.MCP.Server.Discover.Instructions)
+	})
 
-func TestMCPServerDiscoverInstructionsDefaultEmpty(t *testing.T) {
-	t.Parallel()
+	t.Run("leaves discover instructions empty when unset", func(t *testing.T) {
+		t.Parallel()
 
-	f := createTempFileFromFixture(t, `
+		f := createTempFileFromFixture(t, `
 version: "1"
 
 graph:
@@ -2345,16 +2346,16 @@ graph:
 mcp:
   enabled: true
 `)
-	cfg, err := LoadConfig([]string{f})
-	require.NoError(t, err)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
 
-	require.Empty(t, cfg.Config.MCP.Server.Discover.Instructions)
-}
+		require.Empty(t, cfg.Config.MCP.Server.Discover.Instructions)
+	})
 
-func TestMCPServerDiscoverInstructionsFromEnv(t *testing.T) {
-	t.Setenv("MCP_SERVER_DISCOVER_INSTRUCTIONS", "Env-provided guidance.")
+	t.Run("reads discover instructions from env", func(t *testing.T) {
+		t.Setenv("MCP_SERVER_DISCOVER_INSTRUCTIONS", "Env-provided guidance.")
 
-	f := createTempFileFromFixture(t, `
+		f := createTempFileFromFixture(t, `
 version: "1"
 
 graph:
@@ -2363,16 +2364,16 @@ graph:
 mcp:
   enabled: true
 `)
-	cfg, err := LoadConfig([]string{f})
-	require.NoError(t, err)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
 
-	require.Equal(t, "Env-provided guidance.", cfg.Config.MCP.Server.Discover.Instructions)
-}
+		require.Equal(t, "Env-provided guidance.", cfg.Config.MCP.Server.Discover.Instructions)
+	})
 
-func TestMCPServerVersion(t *testing.T) {
-	t.Parallel()
+	t.Run("reads the server version from yaml", func(t *testing.T) {
+		t.Parallel()
 
-	f := createTempFileFromFixture(t, `
+		f := createTempFileFromFixture(t, `
 version: "1"
 
 graph:
@@ -2383,16 +2384,16 @@ mcp:
   server:
     version: "1.4.0"
 `)
-	cfg, err := LoadConfig([]string{f})
-	require.NoError(t, err)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
 
-	require.Equal(t, "1.4.0", cfg.Config.MCP.Server.Version)
-}
+		require.Equal(t, "1.4.0", cfg.Config.MCP.Server.Version)
+	})
 
-func TestMCPServerTitleAndDescription(t *testing.T) {
-	t.Parallel()
+	t.Run("reads the server title and description from yaml", func(t *testing.T) {
+		t.Parallel()
 
-	f := createTempFileFromFixture(t, `
+		f := createTempFileFromFixture(t, `
 version: "1"
 
 graph:
@@ -2404,9 +2405,10 @@ mcp:
     title: "My Commerce API"
     description: "Query products, orders and customers."
 `)
-	cfg, err := LoadConfig([]string{f})
-	require.NoError(t, err)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
 
-	require.Equal(t, "My Commerce API", cfg.Config.MCP.Server.Title)
-	require.Equal(t, "Query products, orders and customers.", cfg.Config.MCP.Server.Description)
+		require.Equal(t, "My Commerce API", cfg.Config.MCP.Server.Title)
+		require.Equal(t, "Query products, orders and customers.", cfg.Config.MCP.Server.Description)
+	})
 }
