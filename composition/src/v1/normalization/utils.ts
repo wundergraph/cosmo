@@ -33,7 +33,7 @@ import {
   nonIterableLinkDirectiveImportError,
   noPathLinkDirectiveUrlError,
   noVersionLinkDirectiveUrlError,
-  unbalancedCacheTagFormatErrorMessage,
+  invalidCacheTagBraceErrorMessage,
   undefinedEventSubjectsArgumentErrorMessage,
   undefinedFieldInFieldSetErrorMessage,
   unexpectedArgumentErrorMessage,
@@ -487,9 +487,6 @@ export function validateArgumentTemplateReferences(
  */
 export function parseCacheTagFormat(format: string, errorMessages: Array<string>): Array<CacheTagPlaceholder> {
   const placeholders: Array<CacheTagPlaceholder> = [];
-  /* Each matched segment is removed from the remainder so that any curly brace left over belongs to an
-   * unclosed placeholder, e.g. "product-{$key.id", which would otherwise be silently treated as literal text.
-   */
   let remainder = format;
   for (const match of format.matchAll(CACHE_TAG_SEGMENT_REGEXP)) {
     remainder = remainder.replace(match[0], '');
@@ -501,7 +498,7 @@ export function parseCacheTagFormat(format: string, errorMessages: Array<string>
     placeholders.push({ namespace: placeholderMatch[1], reference: placeholderMatch[2] });
   }
   if (remainder.includes('{') || remainder.includes('}')) {
-    errorMessages.push(unbalancedCacheTagFormatErrorMessage(format));
+    errorMessages.push(invalidCacheTagBraceErrorMessage(format));
   }
   return placeholders;
 }

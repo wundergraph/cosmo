@@ -2179,8 +2179,12 @@ export function invalidCacheTagPlaceholderErrorMessage(placeholder: string): str
   );
 }
 
-export function unbalancedCacheTagFormatErrorMessage(format: string): string {
-  return `The "format" argument defines an extra curly brace; received "${format}".`;
+export function invalidCacheTagBraceErrorMessage(format: string): string {
+  return (
+    `The "format" argument defines a curly brace outside of a placeholder;` +
+    ` a curly brace is valid only as the delimiter of a placeholder, e.g. "{$args.id}".` +
+    ` Received "${format}".`
+  );
 }
 
 export function invalidQueryRootFieldErrorMessage(): string {

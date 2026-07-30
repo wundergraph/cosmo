@@ -873,12 +873,6 @@ export const OPENFED_ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-/* @cacheTag(format: String!) repeatable on FIELD_DEFINITION
- * Modelled on the Apollo Federation v2.12 directive of the same name, which additionally permits OBJECT.
- * `format` is a template string whose placeholders the router interpolates at request time to produce the
- * cache tags used for targeted invalidation. The directive is valid only upon a Query root field, where the
- * sole supported placeholder is `{$args.<argumentName>}`, which interpolates an argument of that field.
- */
 export const CACHE_TAG_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
