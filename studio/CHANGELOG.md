@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.178.6](https://github.com/wundergraph/cosmo/compare/studio@0.178.5...studio@0.178.6) (2026-07-30)
+
+### Bug Fixes
+
+* **studio:** read document.referrer inside an effect on onboarding ([#3128](https://github.com/wundergraph/cosmo/issues/3128)) ([cb6d98d](https://github.com/wundergraph/cosmo/commit/cb6d98db32478d7d3a261f639cac0a1fd245c6ff)) (@thisisnithin)
+
 ## [0.178.5](https://github.com/wundergraph/cosmo/compare/studio@0.178.4...studio@0.178.5) (2026-07-30)
 
 ### Bug Fixes
