@@ -123,7 +123,7 @@ func TestMCPServerDiscover(t *testing.T) {
 
 			assert.Equal(t, "complete", result["resultType"])
 			assert.NotEmpty(t, result["supportedVersions"])
-			assert.Contains(t, result, "ttlMs")
+			assert.Equal(t, float64(0), result["ttlMs"])
 			assert.Equal(t, "public", result["cacheScope"])
 			assert.NotEmpty(t, result["capabilities"])
 		})
