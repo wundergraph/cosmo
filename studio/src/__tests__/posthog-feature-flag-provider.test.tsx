@@ -3,10 +3,7 @@ import { act } from 'react';
 import { PostHogProvider } from 'posthog-js/react';
 import type { PostHog } from 'posthog-js';
 import { afterEach, expect, test } from 'vitest';
-import {
-  PostHogFeatureFlagProvider,
-  usePostHogFeatureFlags,
-} from '@/components/posthog-feature-flag-provider';
+import { PostHogFeatureFlagProvider, usePostHogFeatureFlags } from '@/components/posthog-feature-flag-provider';
 
 /**
  * Stub standing in for a PostHog client. The real `useFeatureFlagEnabled` hook
