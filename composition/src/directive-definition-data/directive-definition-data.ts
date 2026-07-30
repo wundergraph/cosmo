@@ -6,6 +6,7 @@ import {
   ASSUMED_SIZE,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
+  CACHE_TAG,
   CHANNEL,
   CHANNELS,
   COMPOSE_DIRECTIVE,
@@ -33,6 +34,7 @@ import {
   FIELD_DEFINITION_UPPER,
   FIELDS,
   FOR,
+  FORMAT,
   FROM,
   IMPORT,
   INACCESSIBLE,
@@ -92,6 +94,7 @@ import {
 } from '../utils/string-constants';
 import {
   AUTHENTICATED_DEFINITION,
+  CACHE_TAG_DEFINITION,
   COMPOSE_DIRECTIVE_DEFINITION,
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION,
   CONFIGURE_DESCRIPTION_DEFINITION,
@@ -1044,4 +1047,23 @@ export const CACHE_POPULATE_DEFINITION_DATA = newDirectiveDefinitionData({
   name: OPENFED_CACHE_POPULATE,
   node: OPENFED_CACHE_POPULATE_DEFINITION,
   optionalArgumentNames: new Set<ArgumentName>([MAX_AGE]),
+});
+
+export const CACHE_TAG_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      FORMAT,
+      newDirectiveArgumentData({
+        directive: `@${CACHE_TAG}`,
+        name: FORMAT,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      }),
+    ],
+  ]),
+  isRepeatable: true,
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: CACHE_TAG,
+  node: CACHE_TAG_DEFINITION,
+  requiredArgumentNames: new Set<ArgumentName>([FORMAT]),
 });

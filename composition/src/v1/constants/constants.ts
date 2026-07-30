@@ -8,6 +8,7 @@ import {
   CONNECT_FIELD_RESOLVER,
   OPENFED_CACHE_INVALIDATE,
   OPENFED_CACHE_POPULATE,
+  CACHE_TAG,
   COST,
   OPENFED_ENTITY_CACHE,
   DEPRECATED,
@@ -46,6 +47,7 @@ import {
 import { type DirectiveName } from '../../types/types';
 import {
   AUTHENTICATED_DEFINITION,
+  CACHE_TAG_DEFINITION,
   COMPOSE_DIRECTIVE_DEFINITION,
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION,
   CONFIGURE_DESCRIPTION_DEFINITION,
@@ -87,6 +89,7 @@ export const DIRECTIVE_DEFINITION_BY_NAME: ReadonlyMap<DirectiveName, DirectiveD
   DirectiveDefinitionNode
 >([
   [AUTHENTICATED, AUTHENTICATED_DEFINITION],
+  [CACHE_TAG, CACHE_TAG_DEFINITION],
   [COMPOSE_DIRECTIVE, COMPOSE_DIRECTIVE_DEFINITION],
   [CONFIGURE_DESCRIPTION, CONFIGURE_DESCRIPTION_DEFINITION],
   [CONFIGURE_CHILD_DESCRIPTIONS, CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION],
@@ -147,5 +150,18 @@ export const V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<DirectiveName, 
 ]);
 
 export const EDFS_ARGS_REGEXP = /{{\s*args\.([a-zA-Z0-9_]+)\s*}}/g;
+
+/* Captures every brace-delimited segment of a @cacheTag `format` string without asserting that the
+ * contents are well-formed, so that malformed placeholders are reported rather than silently ignored.
+ */
+export const CACHE_TAG_SEGMENT_REGEXP = /{([^{}]*)}/g;
+
+/* A well-formed @cacheTag placeholder, e.g. "{$args.id}", "{ $args.searchKey }", or "{$args.filter.category}".
+ * Group 1 is the namespace; group 2 is the reference, which is a period-delimited path so that a field of an
+ * Input Object argument can be referenced. Whether the path resolves is decided by the consumer, which alone
+ * knows the field upon which the directive was defined.
+ */
+export const CACHE_TAG_PLACEHOLDER_REGEXP =
+  /^\s*\$([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)\s*$/;
 
 export const MAX_OR_SCOPES = 16;
