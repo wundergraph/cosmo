@@ -12,7 +12,7 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
   type TypeName,
-  unbalancedCacheTagFormatErrorMessage,
+  invalidCacheTagBraceErrorMessage,
   undefinedCacheTagArgumentErrorMessage,
   unsupportedFieldCacheTagNamespaceErrorMessage,
 } from '../../../src';
@@ -77,7 +77,7 @@ describe('@cacheTag tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
-          unbalancedCacheTagFormatErrorMessage('products-{$args.searchKey'),
+          invalidCacheTagBraceErrorMessage('products-{$args.searchKey'),
         ]),
       );
     });
