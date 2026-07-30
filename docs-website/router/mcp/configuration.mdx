@@ -93,9 +93,9 @@ A storage provider **must** be specified to load GraphQL operations. See [Storag
 
 ## Server Discovery
 
-The MCP server implements the `server/discover` method (introduced in MCP protocol version `2026-07-28` as the successor to the `initialize` handshake). Clients use it to query the server's supported protocol versions, capabilities, and identity in a single stateless request.
+The MCP server implements the `server/discover` method. This method arrived in MCP protocol version `2026-07-28` as the successor to the `initialize` handshake. Clients call it to read the supported protocol versions, capabilities, and identity in one stateless request.
 
-The **instructions** option lets you provide natural-language guidance that tells AI agents how to use your server effectively:
+The `discover.instructions` option sends natural-language guidance to MCP clients. Use it to tell AI agents how to work with your graph:
 
 ```yaml
 mcp:
