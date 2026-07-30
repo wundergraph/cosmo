@@ -234,6 +234,25 @@ describe('@cacheTag tests', () => {
       ] satisfies Array<CacheTagConfiguration>);
     });
 
+    test('that an "$args" placeholder referencing a custom Scalar argument is valid', () => {
+      expect(
+        getCacheTagConfigurations(
+          createSubgraphWithDefaultName(`
+            scalar DateTime
+            type Query {
+              products(after: DateTime): [Product!]! @cacheTag(format: "products-{$args.after}")
+            }
+            type Product @key(fields: "id") {
+              id: ID!
+            }
+          `),
+          'Query',
+        ),
+      ).toStrictEqual([
+        { fieldName: 'products', format: 'products-{$args.after}', typeName: 'Query' },
+      ] satisfies Array<CacheTagConfiguration>);
+    });
+
     test('that an "$args" placeholder referencing an Input Object field is valid', () => {
       expect(
         getCacheTagConfigurations(
