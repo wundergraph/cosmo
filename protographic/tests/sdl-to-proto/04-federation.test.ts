@@ -2665,18 +2665,99 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       const { proto: protoText } = compileGraphQLToProto(sdl);
 
-      expect(protoText).toContain('ListOfBadge badges');
-      expect(protoText).toContain(
-        [
-          'message ListOfBadge {',
-          '  message List {',
-          '    repeated Badge items = 1;',
-          '  }',
-          '  List list = 1;',
-          '}',
-        ].join('\n'),
-      );
       expectValidProto(protoText);
+      expect(protoText).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        // Service definition for DefaultService
+        service DefaultService {
+          // Lookup User entity by id
+          rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
+          rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+          rpc RequireUserBadgesById(RequireUserBadgesByIdRequest) returns (RequireUserBadgesByIdResponse) {}
+        }
+
+        message ListOfBadge {
+          message List {
+            repeated Badge items = 1;
+          }
+          List list = 1;
+        }
+        // Key message for User entity lookup
+        message LookupUserByIdRequestKey {
+          // Key field for User entity lookup.
+          string id = 1;
+        }
+
+        // Request message for User entity lookup.
+        message LookupUserByIdRequest {
+          /*
+           * List of keys to look up User entities.
+           * Order matters - each key maps to one entity in LookupUserByIdResponse.
+           */
+          repeated LookupUserByIdRequestKey keys = 1;
+        }
+
+        // Response message for User entity lookup.
+        message LookupUserByIdResponse {
+          /*
+           * List of User entities in the same order as the keys in LookupUserByIdRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated User result = 1;
+        }
+
+        // Request message for user operation.
+        message QueryUserRequest {
+          string id = 1;
+        }
+        // Response message for user operation.
+        message QueryUserResponse {
+          User user = 1;
+        }
+        message RequireUserBadgesByIdRequest {
+          // RequireUserBadgesByIdContext provides the context for the required fields method RequireUserBadgesById.
+          repeated RequireUserBadgesByIdContext context = 1;
+        }
+
+        message RequireUserBadgesByIdContext {
+          LookupUserByIdRequestKey key = 1;
+          RequireUserBadgesByIdFields fields = 2;
+        }
+
+        message RequireUserBadgesByIdResponse {
+          // RequireUserBadgesByIdResult provides the result for the required fields method RequireUserBadgesById.
+          repeated RequireUserBadgesByIdResult result = 1;
+        }
+
+        message RequireUserBadgesByIdResult {
+          ListOfBadge badges = 1;
+        }
+
+        message RequireUserBadgesByIdFields {
+          string name = 1;
+        }
+
+        message User {
+          string id = 1;
+        }
+
+        message Badge {
+          string id = 1;
+          string label = 2;
+        }"
+      `);
     });
 
     test('should define the list wrapper for a required field returning a nullable list of an interface type', () => {
@@ -2712,18 +2793,113 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       const { proto: protoText } = compileGraphQLToProto(sdl);
 
-      expect(protoText).toContain('ListOfStorageItem recommended_items');
-      expect(protoText).toContain(
-        [
-          'message ListOfStorageItem {',
-          '  message List {',
-          '    repeated StorageItem items = 1;',
-          '  }',
-          '  List list = 1;',
-          '}',
-        ].join('\n'),
-      );
       expectValidProto(protoText);
+      expect(protoText).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        // Service definition for DefaultService
+        service DefaultService {
+          // Lookup Storage entity by id
+          rpc LookupStorageById(LookupStorageByIdRequest) returns (LookupStorageByIdResponse) {}
+          rpc QueryStorage(QueryStorageRequest) returns (QueryStorageResponse) {}
+          rpc RequireStorageRecommendedItemsById(RequireStorageRecommendedItemsByIdRequest) returns (RequireStorageRecommendedItemsByIdResponse) {}
+        }
+
+        message ListOfStorageItem {
+          message List {
+            repeated StorageItem items = 1;
+          }
+          List list = 1;
+        }
+        // Key message for Storage entity lookup
+        message LookupStorageByIdRequestKey {
+          // Key field for Storage entity lookup.
+          string id = 1;
+        }
+
+        // Request message for Storage entity lookup.
+        message LookupStorageByIdRequest {
+          /*
+           * List of keys to look up Storage entities.
+           * Order matters - each key maps to one entity in LookupStorageByIdResponse.
+           */
+          repeated LookupStorageByIdRequestKey keys = 1;
+        }
+
+        // Response message for Storage entity lookup.
+        message LookupStorageByIdResponse {
+          /*
+           * List of Storage entities in the same order as the keys in LookupStorageByIdRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated Storage result = 1;
+        }
+
+        // Request message for storage operation.
+        message QueryStorageRequest {
+          string id = 1;
+        }
+        // Response message for storage operation.
+        message QueryStorageResponse {
+          Storage storage = 1;
+        }
+        message RequireStorageRecommendedItemsByIdRequest {
+          // RequireStorageRecommendedItemsByIdContext provides the context for the required fields method RequireStorageRecommendedItemsById.
+          repeated RequireStorageRecommendedItemsByIdContext context = 1;
+        }
+
+        message RequireStorageRecommendedItemsByIdContext {
+          LookupStorageByIdRequestKey key = 1;
+          RequireStorageRecommendedItemsByIdFields fields = 2;
+        }
+
+        message RequireStorageRecommendedItemsByIdResponse {
+          // RequireStorageRecommendedItemsByIdResult provides the result for the required fields method RequireStorageRecommendedItemsById.
+          repeated RequireStorageRecommendedItemsByIdResult result = 1;
+        }
+
+        message RequireStorageRecommendedItemsByIdResult {
+          ListOfStorageItem recommended_items = 1;
+        }
+
+        message RequireStorageRecommendedItemsByIdFields {
+          string name = 1;
+        }
+
+        message Storage {
+          string id = 1;
+        }
+
+        message StorageItem {
+          oneof instance {
+          PalletItem pallet_item = 1;
+          ContainerItem container_item = 2;
+          }
+        }
+
+        message PalletItem {
+          string id = 1;
+          string name = 2;
+          int32 pallet_count = 3;
+        }
+
+        message ContainerItem {
+          string id = 1;
+          string name = 2;
+          string container_size = 3;
+        }"
+      `);
     });
 
     test('should define the list wrapper for a required field returning a nullable list of a union type', () => {
@@ -2752,18 +2928,109 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       const { proto: protoText } = compileGraphQLToProto(sdl);
 
-      expect(protoText).toContain('ListOfStorageOperationResult operation_history');
-      expect(protoText).toContain(
-        [
-          'message ListOfStorageOperationResult {',
-          '  message List {',
-          '    repeated StorageOperationResult items = 1;',
-          '  }',
-          '  List list = 1;',
-          '}',
-        ].join('\n'),
-      );
       expectValidProto(protoText);
+      expect(protoText).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        // Service definition for DefaultService
+        service DefaultService {
+          // Lookup Storage entity by id
+          rpc LookupStorageById(LookupStorageByIdRequest) returns (LookupStorageByIdResponse) {}
+          rpc QueryStorage(QueryStorageRequest) returns (QueryStorageResponse) {}
+          rpc RequireStorageOperationHistoryById(RequireStorageOperationHistoryByIdRequest) returns (RequireStorageOperationHistoryByIdResponse) {}
+        }
+
+        message ListOfStorageOperationResult {
+          message List {
+            repeated StorageOperationResult items = 1;
+          }
+          List list = 1;
+        }
+        // Key message for Storage entity lookup
+        message LookupStorageByIdRequestKey {
+          // Key field for Storage entity lookup.
+          string id = 1;
+        }
+
+        // Request message for Storage entity lookup.
+        message LookupStorageByIdRequest {
+          /*
+           * List of keys to look up Storage entities.
+           * Order matters - each key maps to one entity in LookupStorageByIdResponse.
+           */
+          repeated LookupStorageByIdRequestKey keys = 1;
+        }
+
+        // Response message for Storage entity lookup.
+        message LookupStorageByIdResponse {
+          /*
+           * List of Storage entities in the same order as the keys in LookupStorageByIdRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated Storage result = 1;
+        }
+
+        // Request message for storage operation.
+        message QueryStorageRequest {
+          string id = 1;
+        }
+        // Response message for storage operation.
+        message QueryStorageResponse {
+          Storage storage = 1;
+        }
+        message RequireStorageOperationHistoryByIdRequest {
+          // RequireStorageOperationHistoryByIdContext provides the context for the required fields method RequireStorageOperationHistoryById.
+          repeated RequireStorageOperationHistoryByIdContext context = 1;
+        }
+
+        message RequireStorageOperationHistoryByIdContext {
+          LookupStorageByIdRequestKey key = 1;
+          RequireStorageOperationHistoryByIdFields fields = 2;
+        }
+
+        message RequireStorageOperationHistoryByIdResponse {
+          // RequireStorageOperationHistoryByIdResult provides the result for the required fields method RequireStorageOperationHistoryById.
+          repeated RequireStorageOperationHistoryByIdResult result = 1;
+        }
+
+        message RequireStorageOperationHistoryByIdResult {
+          ListOfStorageOperationResult operation_history = 1;
+        }
+
+        message RequireStorageOperationHistoryByIdFields {
+          string name = 1;
+        }
+
+        message Storage {
+          string id = 1;
+        }
+
+        message StorageOperationResult {
+          oneof value {
+          StorageSuccess storage_success = 1;
+          StorageFailure storage_failure = 2;
+          }
+        }
+
+        message StorageSuccess {
+          string message = 1;
+        }
+
+        message StorageFailure {
+          string error_code = 1;
+        }"
+      `);
     });
 
     test('should define the list wrapper for a non-required field returning a nullable list (control)', () => {
@@ -2785,17 +3052,78 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       const { proto: protoText } = compileGraphQLToProto(sdl);
 
-      expect(protoText).toContain(
-        [
-          'message ListOfBadge {',
-          '  message List {',
-          '    repeated Badge items = 1;',
-          '  }',
-          '  List list = 1;',
-          '}',
-        ].join('\n'),
-      );
       expectValidProto(protoText);
+      expect(protoText).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        // Service definition for DefaultService
+        service DefaultService {
+          // Lookup User entity by id
+          rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
+          rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+        }
+
+        // Wrapper message for a list of Badge.
+        message ListOfBadge {
+          message List {
+            repeated Badge items = 1;
+          }
+          List list = 1;
+        }
+        // Key message for User entity lookup
+        message LookupUserByIdRequestKey {
+          // Key field for User entity lookup.
+          string id = 1;
+        }
+
+        // Request message for User entity lookup.
+        message LookupUserByIdRequest {
+          /*
+           * List of keys to look up User entities.
+           * Order matters - each key maps to one entity in LookupUserByIdResponse.
+           */
+          repeated LookupUserByIdRequestKey keys = 1;
+        }
+
+        // Response message for User entity lookup.
+        message LookupUserByIdResponse {
+          /*
+           * List of User entities in the same order as the keys in LookupUserByIdRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated User result = 1;
+        }
+
+        // Request message for user operation.
+        message QueryUserRequest {
+          string id = 1;
+        }
+        // Response message for user operation.
+        message QueryUserResponse {
+          User user = 1;
+        }
+
+        message User {
+          string id = 1;
+          ListOfBadge badges = 2;
+        }
+
+        message Badge {
+          string id = 1;
+          string label = 2;
+        }"
+      `);
     });
 
     test('should define the list wrapper for a nullable list field argument on a required field', () => {
@@ -2819,18 +3147,105 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       const { proto: protoText } = compileGraphQLToProto(sdl);
 
-      expect(protoText).toContain('ListOfString tags');
-      expect(protoText).toContain(
-        [
-          'message ListOfString {',
-          '  message List {',
-          '    repeated string items = 1;',
-          '  }',
-          '  List list = 1;',
-          '}',
-        ].join('\n'),
-      );
       expectValidProto(protoText);
+      expect(protoText).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        // Service definition for DefaultService
+        service DefaultService {
+          // Lookup User entity by id
+          rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
+          rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+          rpc RequireUserPostsById(RequireUserPostsByIdRequest) returns (RequireUserPostsByIdResponse) {}
+        }
+
+        message ListOfString {
+          message List {
+            repeated string items = 1;
+          }
+          List list = 1;
+        }
+        // Key message for User entity lookup
+        message LookupUserByIdRequestKey {
+          // Key field for User entity lookup.
+          string id = 1;
+        }
+
+        // Request message for User entity lookup.
+        message LookupUserByIdRequest {
+          /*
+           * List of keys to look up User entities.
+           * Order matters - each key maps to one entity in LookupUserByIdResponse.
+           */
+          repeated LookupUserByIdRequestKey keys = 1;
+        }
+
+        // Response message for User entity lookup.
+        message LookupUserByIdResponse {
+          /*
+           * List of User entities in the same order as the keys in LookupUserByIdRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated User result = 1;
+        }
+
+        // Request message for user operation.
+        message QueryUserRequest {
+          string id = 1;
+        }
+        // Response message for user operation.
+        message QueryUserResponse {
+          User user = 1;
+        }
+        message RequireUserPostsByIdRequest {
+          // RequireUserPostsByIdContext provides the context for the required fields method RequireUserPostsById.
+          repeated RequireUserPostsByIdContext context = 1;
+          // RequireUserPostsByIdArgs provides the field arguments for the required field with method RequireUserPostsById.
+          RequireUserPostsByIdArgs field_args = 2;
+        }
+
+        message RequireUserPostsByIdContext {
+          LookupUserByIdRequestKey key = 1;
+          RequireUserPostsByIdFields fields = 2;
+        }
+
+        message RequireUserPostsByIdArgs {
+          ListOfString tags = 1;
+        }
+
+        message RequireUserPostsByIdResponse {
+          // RequireUserPostsByIdResult provides the result for the required fields method RequireUserPostsById.
+          repeated RequireUserPostsByIdResult result = 1;
+        }
+
+        message RequireUserPostsByIdResult {
+          repeated Post posts = 1;
+        }
+
+        message RequireUserPostsByIdFields {
+          string name = 1;
+        }
+
+        message User {
+          string id = 1;
+        }
+
+        message Post {
+          string id = 1;
+          string title = 2;
+        }"
+      `);
     });
 
     test('should define the list wrapper for a nullable list field inside the @requires selection set', () => {
@@ -2849,18 +3264,94 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       const { proto: protoText } = compileGraphQLToProto(sdl);
 
-      expect(protoText).toContain('ListOfString tags');
-      expect(protoText).toContain(
-        [
-          'message ListOfString {',
-          '  message List {',
-          '    repeated string items = 1;',
-          '  }',
-          '  List list = 1;',
-          '}',
-        ].join('\n'),
-      );
       expectValidProto(protoText);
+      expect(protoText).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        // Service definition for DefaultService
+        service DefaultService {
+          // Lookup User entity by id
+          rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
+          rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+          rpc RequireUserGreetingById(RequireUserGreetingByIdRequest) returns (RequireUserGreetingByIdResponse) {}
+        }
+
+        message ListOfString {
+          message List {
+            repeated string items = 1;
+          }
+          List list = 1;
+        }
+        // Key message for User entity lookup
+        message LookupUserByIdRequestKey {
+          // Key field for User entity lookup.
+          string id = 1;
+        }
+
+        // Request message for User entity lookup.
+        message LookupUserByIdRequest {
+          /*
+           * List of keys to look up User entities.
+           * Order matters - each key maps to one entity in LookupUserByIdResponse.
+           */
+          repeated LookupUserByIdRequestKey keys = 1;
+        }
+
+        // Response message for User entity lookup.
+        message LookupUserByIdResponse {
+          /*
+           * List of User entities in the same order as the keys in LookupUserByIdRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated User result = 1;
+        }
+
+        // Request message for user operation.
+        message QueryUserRequest {
+          string id = 1;
+        }
+        // Response message for user operation.
+        message QueryUserResponse {
+          User user = 1;
+        }
+        message RequireUserGreetingByIdRequest {
+          // RequireUserGreetingByIdContext provides the context for the required fields method RequireUserGreetingById.
+          repeated RequireUserGreetingByIdContext context = 1;
+        }
+
+        message RequireUserGreetingByIdContext {
+          LookupUserByIdRequestKey key = 1;
+          RequireUserGreetingByIdFields fields = 2;
+        }
+
+        message RequireUserGreetingByIdResponse {
+          // RequireUserGreetingByIdResult provides the result for the required fields method RequireUserGreetingById.
+          repeated RequireUserGreetingByIdResult result = 1;
+        }
+
+        message RequireUserGreetingByIdResult {
+          string greeting = 1;
+        }
+
+        message RequireUserGreetingByIdFields {
+          ListOfString tags = 1;
+        }
+
+        message User {
+          string id = 1;
+        }"
+      `);
     });
   });
 });
