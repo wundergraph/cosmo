@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.996.0",
-    "@hono/node-server": "1.19.13",
+    "@hono/node-server": "catalog:",
     "@wundergraph/cosmo-cdn": "workspace:*",
     "dotenv": "catalog:",
     "hono": "catalog:"
