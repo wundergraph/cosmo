@@ -197,6 +197,151 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     expect(resp.featureFlags).toHaveLength(0);
   });
 
+  test('that a feature flag is still returned when its latest composition failed', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['split-config-loading'] });
+    testContext.onTestFinished(() => server.close());
+
+    const namespace = genID('namespace').toLowerCase();
+    const labels = [genUniqueLabel()];
+    const federatedGraphName = genID('fedGraph');
+
+    await createNamespace(client, namespace);
+
+    await createAndPublishSubgraph(
+      client,
+      'users',
+      namespace,
+      fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/users.graphql')).toString(),
+      labels,
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createAndPublishSubgraph(
+      client,
+      'products-standalone',
+      namespace,
+      fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/products-standalone.graphql')).toString(),
+      labels,
+      'http://localhost:4002',
+    );
+
+    // A feature subgraph for `users` that mirrors the base schema plus one extra field, so it composes on its own
+    await createThenPublishFeatureSubgraph(
+      client,
+      'users-ff',
+      'users',
+      namespace,
+      `
+        type User @key(fields: "id") {
+          id: ID!
+          name: String!
+          email: String!
+          isPremium: Boolean! @tag(name: "exclude")
+          nickname: String!
+        }
+
+        type Query {
+          user(id: ID!): User
+          users: [User!]!
+        }
+      `,
+      labels,
+      'http://localhost:4101',
+    );
+
+    await createThenPublishFeatureSubgraph(
+      client,
+      'products-standalone-feature',
+      'products-standalone',
+      namespace,
+      fs
+        .readFileSync(join(process.cwd(), 'test/test-data/feature-flags/products-standalone-feature.graphql'))
+        .toString(),
+      labels,
+      'http://localhost:4102',
+    );
+
+    const federatedGraphLabels = labels.map(({ key, value }) => `${key}=${value}`);
+    await createFederatedGraph(client, federatedGraphName, namespace, federatedGraphLabels, DEFAULT_ROUTER_URL);
+
+    // Two enabled flags, each built on its own feature subgraph, both composing successfully
+    const successfulFlagName = genID('flag');
+    await createFeatureFlag(client, successfulFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+    const failingFlagName = genID('flag');
+    await createFeatureFlag(client, failingFlagName, labels, ['users-ff'], namespace, true);
+
+    let resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
+      federatedGraphName,
+      namespace,
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(resp.featureFlags).toHaveLength(2);
+
+    /**
+     * Break the composition of only the second flag by declaring `Product.details` with a type that conflicts with the
+     * `products-standalone` subgraph (`String!` there, `Int!` here). This is published to a feature subgraph, so the
+     * base composition — and therefore the graph's base schema version — is untouched, and the other flag still
+     * composes.
+     */
+    const publishResp = await client.publishFederatedSubgraph({
+      name: 'users-ff',
+      namespace,
+      schema: `
+        type User @key(fields: "id") {
+          id: ID!
+          name: String!
+          email: String!
+          isPremium: Boolean! @tag(name: "exclude")
+        }
+
+        type Product @key(fields: "upc sku") {
+          upc: Int!
+          sku: String!
+          details: Int!
+        }
+
+        type Query {
+          user(id: ID!): User
+          users: [User!]!
+        }
+      `,
+    });
+    expect(publishResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+    expect(publishResp.compositionErrors.length).toBeGreaterThan(0);
+
+    // Confirm the failure landed as a non-composable composition for the failing flag only
+    const compositionsResp = await client.getCompositions({
+      fedGraphName: federatedGraphName,
+      namespace,
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addMinutes(new Date(), 1)),
+    });
+    expect(compositionsResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(
+      compositionsResp.compositions.some((c) => c.featureFlagName === failingFlagName && !c.isComposable),
+    ).toBe(true);
+    expect(
+      compositionsResp.compositions.some((c) => c.featureFlagName === successfulFlagName && !c.isComposable),
+    ).toBe(false);
+
+    /**
+     * Both flags are still in the latest composition. A failed composition does not remove the flag: its router config
+     * is not replaced, so the last valid composition keeps being served, and the flag remains attached and enabled.
+     */
+    resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
+      federatedGraphName,
+      namespace,
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(resp.featureFlags).toHaveLength(2);
+    expect(resp.featureFlags.map((f) => f.name).sort()).toStrictEqual(
+      [successfulFlagName, failingFlagName].sort((a, b) => a.localeCompare(b)),
+    );
+  });
+
   test('Should return ERR_NOT_FOUND for non-existent federated graph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
     testContext.onTestFinished(() => server.close());
