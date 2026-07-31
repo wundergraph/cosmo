@@ -160,11 +160,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		return err
 	}
 
-	p.closeWg.Add(1)
-
-	go func() {
-
-		defer p.closeWg.Done()
+	p.closeWg.Go(func() {
 
 		// The consumer client owns background goroutines, broker connections and buffered
 		// fetches. It must be closed when the poller stops, otherwise every ended subscription
@@ -197,7 +193,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 			}
 			return
 		}
-	}()
+	})
 
 	return nil
 }
