@@ -337,9 +337,7 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
     expect(resp.featureFlags).toHaveLength(2);
-    expect(resp.featureFlags.map((f) => f.name).sort()).toStrictEqual(
-      [successfulFlagName, failingFlagName].sort((a, b) => a.localeCompare(b)),
-    );
+    expect(new Set(resp.featureFlags.map((f) => f.name))).toStrictEqual(new Set([successfulFlagName, failingFlagName]));
   });
 
   test('Should return ERR_NOT_FOUND for non-existent federated graph', async (testContext) => {
