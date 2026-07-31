@@ -74,7 +74,7 @@ export function getFederatedGraphById(
     const featureFlagsInLatestValidComposition: FeatureFlagDTO[] = [];
 
     if (federatedGraph.schemaVersionId) {
-      const ffsInLatestValidComposition = await featureFlagRepo.getFeatureFlagSchemaVersionsByBaseSchemaVersion({
+      const ffsInLatestValidComposition = await featureFlagRepo.getFeatureFlagSchemaVersionsInLatestComposition({
         baseSchemaVersionId: federatedGraph.schemaVersionId,
         federatedGraphId: federatedGraph.id,
       });

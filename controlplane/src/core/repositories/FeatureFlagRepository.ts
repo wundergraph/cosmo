@@ -1483,9 +1483,7 @@ export class FeatureFlagRepository {
     return featureFlagCompositions;
   }
 
-  // return all the feature flag schema versions associated with the base schema version
-  // input: base schema version id
-  public async getFeatureFlagSchemaVersionsByBaseSchemaVersion({
+  public async getFeatureFlagSchemaVersionsInLatestComposition({
     baseSchemaVersionId,
     federatedGraphId,
   }: {
@@ -1498,9 +1496,6 @@ export class FeatureFlagRepository {
       featureId: 'split-config-loading',
     });
 
-    // A feature flag can have multiple composed schema versions against the same base schema version
-    // (e.g. recomposing the feature flag recomposes it against the unchanged base, so rows accumulate).
-    // Deduplicate by feature flag, keeping the latest composed version, so callers get one entry per flag.
     const ffSchemaVersions = await this.db
       .selectDistinctOn([federatedGraphsToFeatureFlagSchemaVersions.featureFlagId], {
         id: federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
