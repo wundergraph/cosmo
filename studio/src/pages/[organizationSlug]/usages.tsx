@@ -21,6 +21,7 @@ import { useContext, useEffect } from 'react';
 import { CgDanger } from 'react-icons/cg';
 import { IoWarningOutline } from 'react-icons/io5';
 import { Bar, BarChart, Legend, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { buildUrl } from '@/lib/build-url';
 
 const valueFormatter = (number: number) => `${formatMetric(number)}`;
 
@@ -209,12 +210,11 @@ const UsagesPage: NextPageWithLayout = () => {
 
 const IncreaseLimits = () => {
   const router = useRouter();
-
   const slug = router.query.organizationSlug as string;
 
   return (
     <Button asChild variant="outline">
-      <Link href={`/${slug}/billing`}>Increase limits</Link>
+      <Link href={buildUrl('/:slug/billing', { slug })}>Increase limits</Link>
     </Button>
   );
 };

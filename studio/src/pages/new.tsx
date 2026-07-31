@@ -4,6 +4,7 @@ import { useUser } from '@/hooks/use-user';
 import { NextPageWithLayout } from '@/lib/page';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
+import { buildUrl } from '@/lib/build-url';
 
 const NewGraphPage: NextPageWithLayout = () => {
   const user = useUser();
@@ -12,7 +13,7 @@ const NewGraphPage: NextPageWithLayout = () => {
   useEffect(() => {
     if (!user) return;
 
-    router.push(`/${user.currentOrganization.slug}/new`);
+    router.push(buildUrl('/:organizationSlug/new', { organizationSlug: user.currentOrganization.slug }));
   }, [user, router]);
 
   return (

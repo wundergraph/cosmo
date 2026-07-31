@@ -12,6 +12,7 @@ import { getCompositionDetails } from '@wundergraph/cosmo-connect/dist/platform/
 import { useQuery } from '@connectrpc/connect-query';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 const FeatureFlagCompositionDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -37,7 +38,15 @@ const FeatureFlagCompositionDetailsPage: NextPageWithLayout = () => {
         title={featureFlagCompositionId}
         subtitle="A quick glance of the details for this feature flag composition"
         breadcrumbs={[
-          <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions/${id}`}>
+          <Link
+            key={0}
+            href={buildUrl('/:organizationSlug/:namespace/graph/:slug/compositions/:id', {
+              organizationSlug,
+              namespace,
+              slug,
+              id,
+            })}
+          >
             {id}
           </Link>,
         ]}
@@ -59,13 +68,37 @@ const FeatureFlagCompositionDetailsPage: NextPageWithLayout = () => {
       title={featureFlagCompositionId}
       subtitle="A quick glance of the details for this feature flag composition"
       breadcrumbs={[
-        <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions`}>
+        <Link
+          key={0}
+          href={buildUrl('/:organizationSlug/:namespace/graph/:slug/compositions', {
+            organizationSlug,
+            namespace,
+            slug,
+          })}
+        >
           Compositions
         </Link>,
-        <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions/${id}`}>
+        <Link
+          key={0}
+          href={buildUrl('/:organizationSlug/:namespace/graph/:slug/compositions/:id', {
+            organizationSlug,
+            namespace,
+            slug,
+            id,
+          })}
+        >
           {id}
         </Link>,
-        <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions/${id}?tab=ffCompostions`}>
+        <Link
+          key={0}
+          href={buildUrl('/:organizationSlug/:namespace/graph/:slug/compositions/:id', {
+            organizationSlug,
+            namespace,
+            slug,
+            id,
+            tab: 'ffCompostions',
+          })}
+        >
           Feature Flag Compositions
         </Link>,
       ]}

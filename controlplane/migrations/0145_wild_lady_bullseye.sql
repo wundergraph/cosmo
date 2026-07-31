@@ -1,0 +1,4 @@
+ALTER TABLE "federated_graphs_to_feature_flag_schema_versions" DROP CONSTRAINT "federated_graphs_to_feature_flag_schema_versions_federated_graph_id_base_composition_schema_version_id_composed_schema_version_id_pk";--> statement-breakpoint
+ALTER TABLE "federated_graphs_to_feature_flag_schema_versions" ALTER COLUMN "base_composition_schema_version_id" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "federated_graphs_to_feature_flag_schema_versions" ADD CONSTRAINT "federated_graphs_to_feature_flag_schema_versions_federated_graph_id_composed_schema_version_id_pk" PRIMARY KEY("federated_graph_id","composed_schema_version_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "fgffsv_composite_idx" ON "federated_graphs_to_feature_flag_schema_versions" USING btree ("federated_graph_id","base_composition_schema_version_id","composed_schema_version_id");

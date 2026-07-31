@@ -23,6 +23,7 @@ import {
   type SubgraphCheckExtensionsConfig,
 } from '@/components/check-extensions/check-extensions-config';
 import { useToast } from '@/components/ui/use-toast';
+import { buildUrl } from '@/lib/build-url';
 
 const CheckExtensionsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -121,7 +122,7 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
         actions={
           <Button
             onClick={() => {
-              router.push(`/${user?.currentOrganization.slug}/billing`);
+              router.push(buildUrl('/:organizationSlug/billing', { organizationSlug: user?.currentOrganization.slug }));
             }}
           >
             Upgrade

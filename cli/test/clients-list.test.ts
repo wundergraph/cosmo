@@ -1,15 +1,18 @@
 import { Command } from 'commander';
 import { afterEach, beforeEach, describe, expect, test, vi, type MockInstance } from 'vitest';
-import { type PartialMessage } from '@bufbuild/protobuf';
-import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
+import { type MessageInitShape } from '@bufbuild/protobuf';
+import { createClient, createRouterTransport } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { type GetClientsRequest, GetClientsResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  type GetClientsRequest,
+  GetClientsResponseSchema,
+  PlatformService,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import ListClientsCommand from '../src/commands/clients/commands/list.js';
 import { Client } from '../src/core/client/client.js';
 
 function createMockTransport(
-  response: PartialMessage<GetClientsResponse>,
+  response: MessageInitShape<typeof GetClientsResponseSchema>,
   onGetClients?: (req: GetClientsRequest) => void,
 ) {
   return createRouterTransport(({ service }) => {
@@ -23,12 +26,12 @@ function createMockTransport(
 }
 
 async function runList(
-  response: PartialMessage<GetClientsResponse>,
+  response: MessageInitShape<typeof GetClientsResponseSchema>,
   args: string[] = [],
   onGetClients?: (req: GetClientsRequest) => void,
 ): Promise<void> {
   const client: Client = {
-    platform: createPromiseClient(PlatformService, createMockTransport(response, onGetClients)),
+    platform: createClient(PlatformService, createMockTransport(response, onGetClients)),
   };
   const program = new Command();
   program.exitOverride();

@@ -22,6 +22,7 @@ import { useEffect, useState } from 'react';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { WorkspaceSelector } from '@/components/dashboard/workspace-selector';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { buildUrl } from '@/lib/build-url';
 
 const CacheWarmerPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -74,7 +75,7 @@ const CacheWarmerPage: NextPageWithLayout = () => {
         actions={
           <Button
             onClick={() => {
-              router.push(`/${user?.currentOrganization.slug}/billing`);
+              router.push(buildUrl('/:organizationSlug/billing', { organizationSlug: user?.currentOrganization.slug }));
             }}
           >
             Upgrade

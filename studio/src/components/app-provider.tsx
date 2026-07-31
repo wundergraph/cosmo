@@ -1,6 +1,5 @@
 import { identify, resetTracking } from '@/lib/track';
 import type { NextRouter } from 'next/router';
-import { PlainMessage } from '@bufbuild/protobuf';
 import { Transport } from '@connectrpc/connect';
 import { TransportProvider } from '@connectrpc/connect-query';
 import { createConnectTransport } from '@connectrpc/connect-web';
@@ -14,7 +13,6 @@ import { setUser as setSentryUser } from '@sentry/nextjs';
 import { OrganizationRole } from '@/lib/constants';
 import { WorkspaceProvider } from '@/components/dashboard/workspace-provider';
 import JoinInvitationsPage from '@/pages/account/join';
-import { Loader } from './ui/loader';
 
 const sessionQueryClient = new QueryClient();
 
@@ -25,7 +23,7 @@ const publicPaths = ['/login', '/signup', '/login-method-restricted'];
 
 // The /session endpoint returns the same shape as the platform LoginMethod proto
 // message (plain JSON), so reuse the generated type instead of duplicating it.
-export type LoginMethod = PlainMessage<ProtoLoginMethod>;
+export type LoginMethod = Omit<ProtoLoginMethod, '$typeName' | '$unknown'>;
 
 export interface User {
   id: string;
@@ -174,7 +172,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (isFetching || !router.isReady) return;
     if (error && error instanceof UnauthorizedError && !publicPaths.includes(router.pathname)) {
       const redirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}${router.asPath}`;
-      router.replace(`/login?redirectURL=${redirectURL}`);
+      router.replace(`/login?redirectURL=${encodeURIComponent(redirectURL)}`);
     } else if (data && !error) {
       // Orgs accessible with the current login method (treat missing field as allowed).
       const accessibleOrganizations = data.organizations.filter((org) => org.loginMethodAllowed !== false);
@@ -258,7 +256,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         },
       ],
       // Allow cookies to be sent to the server
-      credentials: 'include',
+      fetch: (input, init) => fetch(input, { ...init, credentials: 'include' }),
     });
 
     setTransport(newTransport);

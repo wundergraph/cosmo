@@ -3243,6 +3243,10 @@ export class FederationFactory {
       }
 
       this.routerDefinitions.push(data.node);
+
+      if (!data.isComposed && data.executableLocations.size > 0) {
+        this.clientDefinitions.push(data.node);
+      }
     }
   }
 

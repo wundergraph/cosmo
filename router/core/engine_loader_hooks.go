@@ -13,6 +13,7 @@ import (
 
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
+	"github.com/wundergraph/cosmo/router/internal/traceclient"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
@@ -103,6 +104,7 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 
 	duration := atomic.Int64{}
 	ctx = context.WithValue(ctx, rcontext.FetchTimingKey, &duration)
+	ctx = traceclient.WithClientTraceResults(ctx)
 
 	reqContext := getRequestContext(ctx)
 	if reqContext == nil {
@@ -174,6 +176,18 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	exprCtx.Subgraph.Id = ds.ID
 	exprCtx.Subgraph.Name = ds.Name
 	exprCtx.Subgraph.Request.Error = WrapExprError(responseInfo.Err)
+	// Expose the start of the subgraph latency measurement (OnLoad) as a Unix epoch in
+	// milliseconds
+	exprCtx.Subgraph.Request.StartTime = hookCtx.startTime.UnixMilli()
+	// Expose the subgraph response headers (after response header rules have been applied above)
+	// so expressions can read them, e.g. subgraph.response.header.Get('X-Custom-Header'). A nil
+	// header map is safe; http.Header.Get returns an empty string.
+	exprCtx.Subgraph.Response.Header = expr.Headers{Header: responseInfo.ResponseHeaders}
+
+	// Get trace results from the context, that were introduced in OnLoad
+	if results := traceclient.ClientTraceResultsFromContext(ctx); results != nil {
+		exprCtx.Subgraph.Request.ClientTrace = *results
+	}
 
 	if value := ctx.Value(rcontext.FetchTimingKey); value != nil {
 		if fetchTiming, ok := value.(*atomic.Int64); ok {

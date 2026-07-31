@@ -28,6 +28,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useQueryClient } from '@tanstack/react-query';
+import { buildUrl } from '@/lib/build-url';
 
 export const CreateGraphForm = ({ isMonograph = false }: { isMonograph?: boolean }) => {
   const router = useRouter();
@@ -112,8 +113,16 @@ export const CreateGraphForm = ({ isMonograph = false }: { isMonograph?: boolean
       onSuccess: async (d: CreateFederatedGraphResponse | CreateMonographResponse) => {
         if (d.response?.code === EnumStatusCode.OK) {
           // We need to refresh the workspace after creating a graph
-          await queryClient.refetchQueries({ queryKey: createConnectQueryKey(getWorkspace) });
-          router.replace(`/${user?.currentOrganization.slug}/${namespace}/graph/${data.name}`);
+          await queryClient.refetchQueries({
+            queryKey: createConnectQueryKey({ schema: getWorkspace, cardinality: undefined }),
+          });
+          router.replace(
+            buildUrl('/:organization/:namespace/graph/:graphName', {
+              organization: user?.currentOrganization.slug,
+              namespace,
+              graphName: data.name,
+            }),
+          );
         } else if (d.response?.details) {
           toast({ description: d.response.details, duration: 3000 });
         }

@@ -18,6 +18,7 @@ import { useRouter } from 'next/router';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { WorkspaceSelector } from '@/components/dashboard/workspace-selector';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { buildUrl } from '@/lib/build-url';
 
 const GraphToolbar = () => {
   const checkUserAccess = useCheckUserAccess();
@@ -51,7 +52,7 @@ const GraphToolbar = () => {
         </SelectContent>
       </Select>
       <Button asChild={isAdminOrDeveloper} disabled={!isAdminOrDeveloper}>
-        <Link href={`/${org?.slug}/new?namespace=${namespace}`}>Create</Link>
+        <Link href={buildUrl('/:organizationSlug/new', { organizationSlug: org?.slug, namespace })}>Create</Link>
       </Button>
     </Toolbar>
   );

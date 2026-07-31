@@ -1,6 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlainMessage } from '@bufbuild/protobuf';
 import { ConfigureSubgraphCheckExtensionsRequest } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -20,8 +19,12 @@ import { clsx } from 'clsx';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { useWorkspace } from '@/hooks/use-workspace';
 import Link from 'next/link';
+import { buildUrl } from '@/lib/build-url';
 
-export type SubgraphCheckExtensionsConfig = Omit<PlainMessage<ConfigureSubgraphCheckExtensionsRequest>, 'namespace'>;
+export type SubgraphCheckExtensionsConfig = Omit<
+  ConfigureSubgraphCheckExtensionsRequest,
+  'namespace' | '$typeName' | '$unknown'
+>;
 
 const validationSchema = z.object({
   endpoint: z
@@ -151,7 +154,10 @@ export function CheckExtensionsConfig({
           <>
             <>
               You must{' '}
-              <Link href={`/${organizationSlug}/policies?namespace=${namespace.name}`} className="text-primary">
+              <Link
+                href={buildUrl('/:organizationSlug/policies', { organizationSlug, namespace: namespace.name })}
+                className="text-primary"
+              >
                 enable the linter
               </Link>{' '}
               for the namespace to be able to receive lint warnings and errors.
@@ -169,7 +175,10 @@ export function CheckExtensionsConfig({
         ) : (
           <>
             You must{' '}
-            <Link href={`/${organizationSlug}/policies?namespace=${namespace.name}`} className="text-primary">
+            <Link
+              href={buildUrl('/:organizationSlug/policies', { organizationSlug, namespace: namespace.name })}
+              className="text-primary"
+            >
               enable the graph pruning linter
             </Link>{' '}
             for the namespace to be able to receive graph pruning warnings and errors.

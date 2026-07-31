@@ -4,6 +4,56 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.129.6](https://github.com/wundergraph/cosmo/compare/wgc@0.129.5...wgc@0.129.6) (2026-07-30)
+
+**Note:** Version bump only for package wgc
+
+## [0.129.5](https://github.com/wundergraph/cosmo/compare/wgc@0.129.4...wgc@0.129.5) (2026-07-29)
+
+**Note:** Version bump only for package wgc
+
+## [0.129.4](https://github.com/wundergraph/cosmo/compare/wgc@0.129.3...wgc@0.129.4) (2026-07-27)
+
+**Note:** Version bump only for package wgc
+
+## [0.129.3](https://github.com/wundergraph/cosmo/compare/wgc@0.129.2...wgc@0.129.3) (2026-07-17)
+
+### Bug Fixes
+
+* encode url parameters ([#3070](https://github.com/wundergraph/cosmo/issues/3070)) ([cacf1b5](https://github.com/wundergraph/cosmo/commit/cacf1b5b8d4174c23aabcb4f4919ff13666d53c9)) (@wilsonrivera)
+
+## [0.129.2](https://github.com/wundergraph/cosmo/compare/wgc@0.129.1...wgc@0.129.2) (2026-07-14)
+
+**Note:** Version bump only for package wgc
+
+## [0.129.1](https://github.com/wundergraph/cosmo/compare/wgc@0.129.0...wgc@0.129.1) (2026-07-14)
+
+### Bug Fixes
+
+* **cli:** switch to maintained fork of decompress package ([#3069](https://github.com/wundergraph/cosmo/issues/3069)) ([803a4bc](https://github.com/wundergraph/cosmo/commit/803a4bc06d92757144eaa248591a57ac301c779f)) (@pepol)
+
+# [0.129.0](https://github.com/wundergraph/cosmo/compare/wgc@0.128.0...wgc@0.129.0) (2026-07-08)
+
+### Features
+
+* add support for feature subgraph checks ([#3029](https://github.com/wundergraph/cosmo/issues/3029)) ([8aadbf0](https://github.com/wundergraph/cosmo/commit/8aadbf0995725f7ef27f93e118679d12571354d9)) (@JivusAyrus)
+
+# [0.128.0](https://github.com/wundergraph/cosmo/compare/wgc@0.127.1...wgc@0.128.0) (2026-07-06)
+
+### Features
+
+* upgrade connect v1 to v2 ([#2705](https://github.com/wundergraph/cosmo/issues/2705)) ([c7203f4](https://github.com/wundergraph/cosmo/commit/c7203f47529f75675ca04e6ac4018efe55d4e498)) (@JivusAyrus)
+
+## [0.127.1](https://github.com/wundergraph/cosmo/compare/wgc@0.127.0...wgc@0.127.1) (2026-07-02)
+
+**Note:** Version bump only for package wgc
+
+# [0.127.0](https://github.com/wundergraph/cosmo/compare/wgc@0.126.2...wgc@0.127.0) (2026-07-01)
+
+### Features
+
+* add support for config splitting ([#2893](https://github.com/wundergraph/cosmo/issues/2893)) ([4d54ed9](https://github.com/wundergraph/cosmo/commit/4d54ed991997d2700e130e876199b53d4318538c)) (@wilsonrivera)
+
 ## [0.126.2](https://github.com/wundergraph/cosmo/compare/wgc@0.126.0...wgc@0.126.2) (2026-06-26)
 
 ### Bug Fixes

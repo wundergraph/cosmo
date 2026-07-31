@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -25,13 +26,13 @@ type otlpConnectionMetrics struct {
 	instrumentRegistrations []otelmetric.Registration
 }
 
-func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, stats *ConnectionPoolStats, baseAttributes []attribute.KeyValue) (*otlpConnectionMetrics, error) {
+func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, stats *ConnectionPoolStats, baseAttributes []attribute.KeyValue, enhancedConnectionStats bool) (*otlpConnectionMetrics, error) {
 	meter := meterProvider.Meter(
 		cosmoRouterConnectionMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterConnectionMeterVersion),
 	)
 
-	instruments, err := newConnectionInstruments(meter)
+	instruments, err := newConnectionInstruments(meter, enhancedConnectionStats)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create otlp connection instruments: %w", err)
 	}
@@ -52,14 +53,6 @@ func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterPro
 }
 
 func (h *otlpConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats, attributes []attribute.KeyValue) error {
-	for subgraph, maxConns := range connStats.MaxConnsPerSubgraph {
-		attrs := make([]attribute.KeyValue, 0, 1)
-		if subgraph != "" {
-			attrs = append(attrs, otel.WgSubgraphName.String(subgraph))
-		}
-		h.MeasureMaxConnections(context.Background(), maxConns, otelmetric.WithAttributes(attrs...))
-	}
-
 	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
 		stats := connStats.GetStats()
 		for key, activeConnections := range stats {
@@ -92,6 +85,36 @@ func (h *otlpConnectionMetrics) MeasureMaxConnections(ctx context.Context, count
 	h.instruments.maxConnections.Record(ctx, count, opts...)
 }
 
+func (h *otlpConnectionMetrics) MeasureDNSLookupDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if h.instruments.dnsLookupDuration != nil {
+		h.instruments.dnsLookupDuration.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *otlpConnectionMetrics) MeasureTCPConnectDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if h.instruments.tcpConnectDuration != nil {
+		h.instruments.tcpConnectDuration.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *otlpConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if h.instruments.tlsHandshakeDuration != nil {
+		h.instruments.tlsHandshakeDuration.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *otlpConnectionMetrics) MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if h.instruments.timeToFirstRequestByte != nil {
+		h.instruments.timeToFirstRequestByte.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *otlpConnectionMetrics) MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if h.instruments.timeToFirstByte != nil {
+		h.instruments.timeToFirstByte.Record(ctx, duration, opts...)
+	}
+}
+
 func (h *otlpConnectionMetrics) Flush(ctx context.Context) error {
 	return h.meterProvider.ForceFlush(ctx)
 }
@@ -101,7 +124,7 @@ func (h *otlpConnectionMetrics) Shutdown() error {
 
 	for _, reg := range h.instrumentRegistrations {
 		if regErr := reg.Unregister(); regErr != nil {
-			err = errors.Join(regErr)
+			err = errors.Join(err, regErr)
 		}
 	}
 
