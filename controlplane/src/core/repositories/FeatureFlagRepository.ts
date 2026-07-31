@@ -1419,73 +1419,43 @@ export class FeatureFlagRepository {
   // input: base schema version id, namespace id
   public async getFeatureFlagCompositionsByBaseSchemaVersion({
     baseSchemaVersionId,
-    federatedGraphId,
     namespaceId,
     organizationId,
   }: {
     baseSchemaVersionId: string;
-    federatedGraphId: string;
     namespaceId: string;
     organizationId: string;
   }) {
     const featureFlagCompositions: FeatureFlagCompositionDTO[] = [];
-
-    const orgRepo = new OrganizationRepository(this.logger, this.db);
-    const splitConfigFeature = await orgRepo.getFeature({
-      organizationId,
-      featureId: 'split-config-loading',
-    });
-
-    const compositionColumns = {
-      id: graphCompositions.id,
-      featureFlagId: federatedGraphsToFeatureFlagSchemaVersions.featureFlagId,
-      schemaVersionId: graphCompositions.schemaVersionId,
-      isComposable: graphCompositions.isComposable,
-      compositionErrors: graphCompositions.compositionErrors,
-      compositionWarnings: graphCompositions.compositionWarnings,
-      createdAt: graphCompositions.createdAt,
-      createdBy: users.email,
-      createdByEmail: graphCompositions.createdByEmail,
-      routerConfigSignature: graphCompositions.routerConfigSignature,
-      admissionError: graphCompositions.admissionError,
-      deploymentError: graphCompositions.deploymentError,
-    };
-
-    const compositions = splitConfigFeature?.enabled
-      ? await this.db
-          .selectDistinctOn([federatedGraphsToFeatureFlagSchemaVersions.featureFlagId], compositionColumns)
-          .from(graphCompositions)
-          .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-          .innerJoin(
-            federatedGraphsToFeatureFlagSchemaVersions,
-            eq(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, schemaVersion.id),
-          )
-          .leftJoin(users, eq(users.id, graphCompositions.createdById))
-          .where(
-            and(
-              isNull(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId),
-              eq(federatedGraphsToFeatureFlagSchemaVersions.federatedGraphId, federatedGraphId),
-              eq(schemaVersion.organizationId, organizationId),
-            ),
-          )
-          .orderBy(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, desc(graphCompositions.createdAt))
-          .execute()
-      : await this.db
-          .select(compositionColumns)
-          .from(graphCompositions)
-          .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-          .innerJoin(
-            federatedGraphsToFeatureFlagSchemaVersions,
-            eq(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, schemaVersion.id),
-          )
-          .leftJoin(users, eq(users.id, graphCompositions.createdById))
-          .where(
-            and(
-              eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
-              eq(schemaVersion.organizationId, organizationId),
-            ),
-          )
-          .execute();
+    const compositions = await this.db
+      .select({
+        id: graphCompositions.id,
+        featureFlagId: federatedGraphsToFeatureFlagSchemaVersions.featureFlagId,
+        schemaVersionId: graphCompositions.schemaVersionId,
+        isComposable: graphCompositions.isComposable,
+        compositionErrors: graphCompositions.compositionErrors,
+        compositionWarnings: graphCompositions.compositionWarnings,
+        createdAt: graphCompositions.createdAt,
+        createdBy: users.email,
+        createdByEmail: graphCompositions.createdByEmail,
+        routerConfigSignature: graphCompositions.routerConfigSignature,
+        admissionError: graphCompositions.admissionError,
+        deploymentError: graphCompositions.deploymentError,
+      })
+      .from(graphCompositions)
+      .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+      .innerJoin(
+        federatedGraphsToFeatureFlagSchemaVersions,
+        eq(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, schemaVersion.id),
+      )
+      .leftJoin(users, eq(users.id, graphCompositions.createdById))
+      .where(
+        and(
+          eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
+          eq(schemaVersion.organizationId, organizationId),
+        ),
+      )
+      .execute();
 
     for (const composition of compositions) {
       let featureFlagName = '';

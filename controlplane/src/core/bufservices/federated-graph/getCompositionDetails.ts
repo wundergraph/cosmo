@@ -75,7 +75,6 @@ export function getCompositionDetails(
     if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
       throw new UnauthorizedError();
     }
-    const federatedGraphId = graph.id;
 
     const compositionSubgraphs = await compositionRepo.getCompositionSubgraphs({
       compositionId: composition.id,
@@ -99,15 +98,11 @@ export function getCompositionDetails(
       }
     }
 
-    // Feature flag compositions are resolved from a base composition, so only a base composition can have them.
-    const featureFlagCompositions = composition.isFeatureFlagComposition
-      ? []
-      : await featureFlagRepo.getFeatureFlagCompositionsByBaseSchemaVersion({
-          baseSchemaVersionId: composition.schemaVersionId,
-          federatedGraphId,
-          namespaceId: namespace.id,
-          organizationId: authContext.organizationId,
-        });
+    const featureFlagCompositions = await featureFlagRepo.getFeatureFlagCompositionsByBaseSchemaVersion({
+      baseSchemaVersionId: composition.schemaVersionId,
+      namespaceId: namespace.id,
+      organizationId: authContext.organizationId,
+    });
 
     return {
       response: {

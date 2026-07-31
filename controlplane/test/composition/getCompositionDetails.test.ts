@@ -594,10 +594,9 @@ describe('getCompositionDetails', () => {
       expect(compositionResp.response?.code).toBe(EnumStatusCode.OK);
       expect(compositionResp.composition).toBeDefined();
       expect(compositionResp.compositionSubgraphs).toHaveLength(2);
-      // Under split config the base composition surfaces the feature flag's compositions (scoped by federated graph,
-      // deduplicated to the latest per flag) even though the base linkage on the rows is null.
-      expect(compositionResp.featureFlagCompositions).toHaveLength(1);
-      expect(compositionResp.featureFlagCompositions[0].featureFlagName).toBe(ffName);
+      // Under split config feature flag compositions are decoupled from the base composition, so a base composition
+      // has no associated feature flag compositions.
+      expect(compositionResp.featureFlagCompositions).toHaveLength(0);
       expect(compositionResp.composition?.isFeatureFlagComposition).toBe(false);
 
       expect(compositionResp.compositionSubgraphs).toEqual([
