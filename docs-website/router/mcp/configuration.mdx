@@ -31,6 +31,10 @@ storage_providers:
 | `enabled`                     | Enable or disable the MCP server                                                                                                                                                                                                                                             | `false`          |
 | `server.listen_addr`          | The address and port where the MCP server will listen for requests                                                                                                                                                                                                           | `localhost:5025` |
 | `server.base_url`             | The public base URL of the MCP server. **Required when OAuth is enabled.** Used for the RFC 9728 metadata endpoint and `resource_metadata` in `WWW-Authenticate` headers. Set this to your externally-reachable URL when behind a reverse proxy or load balancer.            | -                |
+| `server.version`              | The version reported to MCP clients as the server version in `serverInfo`, alongside the server name derived from `graph_name`. Use this to expose your own API version to AI agents.                                                                                        | Router version   |
+| `server.title`                | A human-readable display name for this MCP server, reported in `serverInfo`. MCP clients show it in UIs, falling back to the machine name derived from `graph_name` when unset.                                                                                              | -                |
+| `server.description`          | A human-readable description of this MCP server, reported in `serverInfo`.                                                                                                                                                                                                   | -                |
+| `server.discover.instructions` | Natural-language guidance for MCP clients (AI agents) on how to use this server effectively. Served in the `server/discover` response. See [Server Discovery](#server-discovery).                                                                                           | -                |
 | `router_url`                  | Custom URL to use for the router GraphQL endpoint in MCP responses. Use this when your router is behind a proxy.                                                                                                                                                             | -                |
 | `storage.provider_id`         | The ID of a storage provider to use for loading GraphQL operations. Only `file_system` providers are supported.                                                                                                                                                              | -                |
 | `session.stateless`           | Whether the MCP server should operate in stateless mode. When `true`, no server-side session state is maintained between requests.                                                                                                                                           | `true`           |
@@ -51,6 +55,10 @@ All MCP options can also be set via environment variables:
 | `MCP_ENABLED`                     | `mcp.enabled`                     |
 | `MCP_SERVER_LISTEN_ADDR`          | `mcp.server.listen_addr`          |
 | `MCP_SERVER_BASE_URL`             | `mcp.server.base_url`             |
+| `MCP_SERVER_VERSION`              | `mcp.server.version`              |
+| `MCP_SERVER_TITLE`                | `mcp.server.title`                |
+| `MCP_SERVER_DESCRIPTION`          | `mcp.server.description`          |
+| `MCP_SERVER_DISCOVER_INSTRUCTIONS` | `mcp.server.discover.instructions` |
 | `MCP_ROUTER_URL`                  | `mcp.router_url`                  |
 | `MCP_STORAGE_PROVIDER_ID`         | `mcp.storage.provider_id`         |
 | `MCP_SESSION_STATELESS`           | `mcp.session.stateless`           |
@@ -82,6 +90,26 @@ mcp:
 ```
 
 A storage provider **must** be specified to load GraphQL operations. See [Storage Providers](/router/storage-providers) for more details on configuring storage providers.
+
+## Server Discovery
+
+The MCP server implements the `server/discover` method. This method arrived in MCP protocol version `2026-07-28` as the successor to the `initialize` handshake. Clients call it to read the supported protocol versions, capabilities, and identity in one stateless request.
+
+The `discover.instructions` option sends natural-language guidance to MCP clients. Use it to tell AI agents how to work with your graph:
+
+```yaml
+mcp:
+  enabled: true
+  server:
+    discover:
+      instructions: |
+        Prefer the pre-defined operation tools over execute_graphql.
+        Employee data is refreshed nightly; do not treat it as real-time.
+```
+
+The server sends the instructions to every MCP client. This covers clients that connect with `server/discover` and clients that still use the legacy `initialize` handshake.
+
+The router advertises protocol version `2026-07-28` by default. In session-based mode (`session.stateless: false`), clients negotiate `2025-11-25` or older.
 
 ## Session Handling
 
