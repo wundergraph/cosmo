@@ -319,12 +319,12 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
       endDate: formatISO(addMinutes(new Date(), 1)),
     });
     expect(compositionsResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(
-      compositionsResp.compositions.some((c) => c.featureFlagName === failingFlagName && !c.isComposable),
-    ).toBe(true);
-    expect(
-      compositionsResp.compositions.some((c) => c.featureFlagName === successfulFlagName && !c.isComposable),
-    ).toBe(false);
+    expect(compositionsResp.compositions.some((c) => c.featureFlagName === failingFlagName && !c.isComposable)).toBe(
+      true,
+    );
+    expect(compositionsResp.compositions.some((c) => c.featureFlagName === successfulFlagName && !c.isComposable)).toBe(
+      false,
+    );
 
     /**
      * Both flags are still in the latest composition. A failed composition does not remove the flag: its router config
