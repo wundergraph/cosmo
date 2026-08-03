@@ -54,7 +54,7 @@ mutation CreateUser($name: String!, $email: String!) {
 
 Each file becomes a tool that AI models can call. The tool's name is derived from the operation name (see [Tool Naming](#tool-naming)), its description from the operation's description string (see [Tool Descriptions](#tool-descriptions)), and its input schema from the operation's variables (see [Tool Schema](#tool-schema)).
 
-The MCP server automatically adds a warning to mutation tools that they have side effects.
+The MCP server marks mutation tools as non-read-only and non-idempotent through [MCP tool annotations](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-annotations), signaling to AI clients that the tool has side effects.
 
 <Warning>
   To prevent AI models from making unintended changes, consider setting `exclude_mutations: true` in your configuration
@@ -63,7 +63,7 @@ The MCP server automatically adds a warning to mutation tools that they have sid
 
 ### Directory Structure
 
-Here's an example of how your project directory should be structured:
+Use this directory structure:
 
 ```
 my-router-project/
@@ -252,31 +252,34 @@ query FindEmployees($criteria: SearchInput) {
 }
 ```
 
-produces a fully described tool:
+produces a fully described tool. The root field description becomes the tool's description, and the type and field descriptions land in the input schema:
 
 ```json
 {
-  "type": "object",
+  "name": "execute_operation_find_employees",
   "description": "Searches employees by filter criteria. Returns at most 100 results.",
-  "properties": {
-    "criteria": {
-      "type": "object",
-      "description": "Search criteria for employee lookup",
-      "properties": {
-        "name": {
-          "description": "Match employees with this exact name",
-          "type": ["string", "null"]
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "criteria": {
+        "type": "object",
+        "description": "Search criteria for employee lookup",
+        "properties": {
+          "name": {
+            "description": "Match employees with this exact name",
+            "type": ["string", "null"]
+          },
+          "department": {
+            "description": "Only include employees in this department",
+            "type": ["string", "null"],
+            "enum": ["ENGINEERING", "MARKETING", "OPERATIONS", null]
+          }
         },
-        "department": {
-          "description": "Only include employees in this department",
-          "type": ["string", "null"],
-          "enum": ["ENGINEERING", "MARKETING", "OPERATIONS", null]
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  "additionalProperties": false
+        "additionalProperties": false
+      }
+    },
+    "additionalProperties": false
+  }
 }
 ```
 

@@ -176,7 +176,7 @@ When an AI model interacts with your MCP endpoint:
 
 The MCP server exposes two kinds of tools to AI models:
 
-- **Built-in tools** provided by the server itself: `get_operation_info` for tool discovery, and the optional `get_schema` and `execute_graphql` for schema access and arbitrary queries.
+- **Built-in tools** provided by the server itself: `get_operation_info` for HTTP execution and integration instructions, and the optional `get_schema` and `execute_graphql` for schema access and arbitrary queries.
 - **Tools you create**, each defined by a GraphQL operation. This is the primary way to shape what AI models can do with your API.
 
 See the [Tools](/router/mcp/tools) page for the built-in tool reference and how to create your own.
