@@ -5,6 +5,7 @@ import { EmptySchema } from '@/components/schema/empty-schema-state';
 import { SDLViewerActions } from '@/components/schema/sdl-viewer';
 import { SDLViewerMonaco } from '@/components/schema/sdl-viewer-monaco';
 import { SchemaToolbar } from '@/components/schema/toolbar';
+import { StaleCompositionBanner, StaleCompositionIcon } from '@/components/schema/stale-composition-warning';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,6 +50,7 @@ const SDLPage: NextPageWithLayout = () => {
     namespace: { name: namespace },
   } = useWorkspace();
   const graphName = router.query.slug as string;
+  const organizationSlug = router.query.organizationSlug as string;
   const schemaType = router.query.schemaType as string;
 
   const fullPath = router.asPath;
@@ -103,8 +105,14 @@ const SDLPage: NextPageWithLayout = () => {
       return {
         name: each.name,
         query: `?featureFlag=${each.name}`,
+        hasFailedLatestComposition: !!each.hasFailedLatestComposition,
       };
     }) ?? [];
+
+  // The active flag is identified by name in the URL, so resolve staleness by name for the banner
+  const activeFeatureFlagIsStale = featureFlags.some(
+    (flag) => flag.name === activeFeatureFlag && flag.hasFailedLatestComposition,
+  );
 
   const activeSubgraphObject = graphData?.subgraphs.find((each) => {
     return each.name === activeSubgraph;
@@ -241,11 +249,16 @@ const SDLPage: NextPageWithLayout = () => {
                             <DropdownMenuLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
                               <MdOutlineFeaturedPlayList className="h-3 w-3" /> Feature Flags
                             </DropdownMenuLabel>
-                            {featureFlags.map(({ name, query }) => {
+                            {featureFlags.map(({ name, query, hasFailedLatestComposition }) => {
                               return (
                                 <>
                                   <DropdownMenuSub>
-                                    <DropdownMenuSubTrigger>{name}</DropdownMenuSubTrigger>
+                                    <DropdownMenuSubTrigger>
+                                      <span className="flex items-center gap-x-1.5">
+                                        {name}
+                                        {hasFailedLatestComposition && <StaleCompositionIcon />}
+                                      </span>
+                                    </DropdownMenuSubTrigger>
                                     <DropdownMenuPortal>
                                       <DropdownMenuSubContent>
                                         <DropdownMenuRadioGroup
@@ -330,6 +343,13 @@ const SDLPage: NextPageWithLayout = () => {
         }
       >
         {!validGraph && <CompositionErrorsBanner errors={graphData?.graph?.compositionErrors} className="mx-4 mt-4" />}
+        {activeFeatureFlagIsStale && (
+          <StaleCompositionBanner
+            featureFlagName={activeFeatureFlag}
+            compositionsHref={`/${organizationSlug}/${namespace}/graph/${graphName}/compositions`}
+            className="mx-4 mt-4"
+          />
+        )}
         {content}
       </GraphPageLayout>
     </PageHeader>

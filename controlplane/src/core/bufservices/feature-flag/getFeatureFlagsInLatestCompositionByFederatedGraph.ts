@@ -55,19 +55,10 @@ export function getFeatureFlagsInLatestCompositionByFederatedGraph(
         throw new UnauthorizedError();
       }
 
-      if (!federatedGraph.schemaVersionId) {
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          featureFlags: [],
-        };
-      }
-
       // Get feature flag IDs from the latest valid composition
       const ffsInLatestValidComposition = await featureFlagRepo.getFeatureFlagSchemaVersionsInLatestComposition({
-        baseSchemaVersionId: federatedGraph.schemaVersionId,
         federatedGraphId: federatedGraph.id,
+        federatedGraphTargetId: federatedGraph.targetId,
       });
 
       const featureFlags: FeatureFlagDTO[] = [];
@@ -84,7 +75,8 @@ export function getFeatureFlagsInLatestCompositionByFederatedGraph(
           // A disabled feature flag is no longer served in the latest composition (its router config is
           // removed without recomposing), so exclude it even though its schema version rows still exist.
           if (flag && flag.isEnabled) {
-            featureFlags.push(flag);
+            // True means the composition reported for this flag is its last successful one, not its latest.
+            featureFlags.push({ ...flag, hasFailedLatestComposition: ff.hasFailedLatestComposition });
           }
         }
       }

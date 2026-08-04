@@ -1,6 +1,6 @@
 import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, desc, eq, inArray, like, or, sql, arrayOverlaps, isNull } from 'drizzle-orm';
+import { SQL, and, asc, count, desc, eq, inArray, like, or, sql, arrayOverlaps, isNull, isNotNull } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { validate as isValidUuid } from 'uuid';
@@ -1484,11 +1484,11 @@ export class FeatureFlagRepository {
   }
 
   public async getFeatureFlagSchemaVersionsInLatestComposition({
-    baseSchemaVersionId,
     federatedGraphId,
+    federatedGraphTargetId,
   }: {
-    baseSchemaVersionId: string;
     federatedGraphId: string;
+    federatedGraphTargetId: string;
   }) {
     const orgRepo = new OrganizationRepository(this.logger, this.db);
     const splitConfigFeature = await orgRepo.getFeature({
@@ -1496,7 +1496,31 @@ export class FeatureFlagRepository {
       featureId: 'split-config-loading',
     });
 
-    const ffSchemaVersions = await this.db
+    let baseLinkageCondition;
+    if (splitConfigFeature?.enabled) {
+      // Flag compositions are decoupled from the base composition, so the base schema version is irrelevant here.
+      baseLinkageCondition = and(
+        isNull(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId),
+        eq(federatedGraphsToFeatureFlagSchemaVersions.federatedGraphId, federatedGraphId),
+      );
+    } else {
+      const federatedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+      const latestValidBaseSchemaVersion = await federatedGraphRepo.getLatestValidSchemaVersion({
+        targetId: federatedGraphTargetId,
+      });
+
+      if (!latestValidBaseSchemaVersion) {
+        return;
+      }
+
+      baseLinkageCondition = eq(
+        federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId,
+        latestValidBaseSchemaVersion.schemaVersionId,
+      );
+    }
+
+    // The latest composition per flag that actually succeeded and deployed; this is what we return.
+    const validSchemaVersions = await this.db
       .selectDistinctOn([federatedGraphsToFeatureFlagSchemaVersions.featureFlagId], {
         id: federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
         featureFlagId: federatedGraphsToFeatureFlagSchemaVersions.featureFlagId,
@@ -1506,22 +1530,51 @@ export class FeatureFlagRepository {
         schemaVersion,
         eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
       )
+      .innerJoin(graphCompositions, eq(graphCompositions.schemaVersionId, schemaVersion.id))
       .where(
-        splitConfigFeature?.enabled
-          ? and(
-              isNull(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId),
-              eq(federatedGraphsToFeatureFlagSchemaVersions.federatedGraphId, federatedGraphId),
-            )
-          : eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
+        and(
+          baseLinkageCondition,
+          isNotNull(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId),
+          eq(graphCompositions.isComposable, true),
+          or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
+          or(isNull(graphCompositions.admissionError), eq(graphCompositions.admissionError, '')),
+        ),
       )
       .orderBy(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, desc(schemaVersion.createdAt))
       .execute();
 
-    if (ffSchemaVersions.length === 0) {
+    if (validSchemaVersions.length === 0) {
       return;
     }
 
-    return ffSchemaVersions;
+    if (!splitConfigFeature?.enabled) {
+      return validSchemaVersions.map((version) => ({
+        ...version,
+        hasFailedLatestComposition: false,
+      }));
+    }
+
+    // The latest composition per flag regardless of status, used only to detect a newer failed composition.
+    const latestSchemaVersions = await this.db
+      .selectDistinctOn([federatedGraphsToFeatureFlagSchemaVersions.featureFlagId], {
+        id: federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
+        featureFlagId: federatedGraphsToFeatureFlagSchemaVersions.featureFlagId,
+      })
+      .from(federatedGraphsToFeatureFlagSchemaVersions)
+      .innerJoin(
+        schemaVersion,
+        eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
+      )
+      .where(and(baseLinkageCondition, isNotNull(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId)))
+      .orderBy(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, desc(schemaVersion.createdAt))
+      .execute();
+
+    const latestIdByFeatureFlagId = new Map(latestSchemaVersions.map((version) => [version.featureFlagId, version.id]));
+
+    return validSchemaVersions.map((version) => ({
+      ...version,
+      hasFailedLatestComposition: latestIdByFeatureFlagId.get(version.featureFlagId) !== version.id,
+    }));
   }
 
   /*
@@ -1598,16 +1651,22 @@ export class FeatureFlagRepository {
         schemaVersion,
         eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
       )
+      .innerJoin(graphCompositions, eq(graphCompositions.schemaVersionId, schemaVersion.id))
       .where(
         /**
          * When split config is enabled, the feature flag composition will not be tied to the base schema version, so
-         * we need to check that the baseCompositionSchemaVersionId is null
+         * we need to check that the baseCompositionSchemaVersionId is null. We also require the composition to have
+         * succeeded, otherwise a failed latest composition resolves to a null SDL and the caller 404s instead of
+         * serving the last valid schema.
          */
         splitConfigFeature?.enabled
           ? and(
               isNull(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId),
               eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
               eq(federatedGraphsToFeatureFlagSchemaVersions.federatedGraphId, federatedGraphId),
+              eq(graphCompositions.isComposable, true),
+              or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
+              or(isNull(graphCompositions.admissionError), eq(graphCompositions.admissionError, '')),
             )
           : and(
               eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
