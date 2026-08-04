@@ -293,6 +293,33 @@ Descriptions in the operation take priority over descriptions from the schema:
   variable description in the operation.
 </Info>
 
+## Structured Tool Output
+
+The MCP specification (revision 2025-06-18) allows tools to declare an [output schema](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#structured-content) describing the shape of their results, and to return results as machine-readable `structuredContent` alongside the human-readable text content.
+
+When you enable `output_schema.enabled`, the router:
+
+- **Declares an `outputSchema`** on every tool generated from a GraphQL operation. The schema is derived from the operation's selection set and describes the GraphQL response envelope (`{"data": ...}`), including field types, nullability, enum values, and field descriptions from your graph's schema.
+- **Returns `structuredContent`** on every successful tool result, mirroring the text content. This also applies to the `execute_graphql` built-in tool when arbitrary operations are enabled.
+
+This lets MCP clients know a tool's response shape ahead of time, validate results against the declared schema, and bind results to typed code instead of re-parsing a text blob.
+
+```yaml
+mcp:
+  enabled: true
+  output_schema:
+    enabled: true
+```
+
+<Warning>
+  Output schemas are included in every `tools/list` response, which grows with the size of your operations' selection
+  sets, and structured content roughly doubles the size of each successful tool result because the response is carried
+  both as text and as structured content. Both consume the AI model's context window. Keep this feature disabled (the
+  default) unless your MCP clients consume output schemas or structured content.
+</Warning>
+
+The generated schemas are intentionally permissive: they describe what the router returns without over-constraining it, so a valid GraphQL response is never rejected by a client validating against the schema. Fields behind `@skip`, `@include`, or `@defer` directives and fragments on abstract types are marked optional, and custom scalars accept any JSON value. If a schema cannot be derived for an operation, the tool is still registered, just without an output schema.
+
 ## Best Practices
 
 ### Write Effective Descriptions
