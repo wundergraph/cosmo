@@ -226,7 +226,10 @@
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
     },
-    "ResourceDocumentation": ""
+    "ResourceDocumentation": "",
+    "OutputSchema": {
+      "Enabled": false
+    }
   },
   "ConnectRPC": {
     "Enabled": false,
