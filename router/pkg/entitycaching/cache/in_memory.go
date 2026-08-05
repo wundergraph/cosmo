@@ -21,8 +21,11 @@ type inMemoryEntry struct {
 	expiresAt time.Time
 }
 
+// InMemoryCache sweeps every expired entry on each call, so both methods take
+// the mutex exclusively, hence a plain Mutex rather than an RWMutex.
+// This cache should only be used for tests OR development and never production
 type InMemoryCache struct {
-	mu      sync.RWMutex
+	mu      sync.Mutex
 	entries map[string]inMemoryEntry
 	now     func() time.Time
 }
@@ -35,7 +38,8 @@ func NewInMemoryCache() *InMemoryCache {
 	}
 }
 
-// GetMany returns one result per key, in the same order as keys.
+// GetMany returns one result per key, in the same order as keys. It also drops
+// every expired entry, including those no key in this batch asked about.
 func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) ([]enginecache.Result, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -44,34 +48,20 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) ([]enginecac
 		return nil, nil
 	}
 
-	results := make([]enginecache.Result, len(keys))
-	var expired []string
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	c.mu.RLock()
-	now := c.now()
+	// Sweeping first means anything still present is live, so the lookup below
+	// needs no expiry check of its own.
+	c.sweepExpired(c.now())
+
+	results := make([]enginecache.Result, len(keys))
 	for i, key := range keys {
 		entry, ok := c.entries[key]
 		if !ok {
 			continue
 		}
-		if now.After(entry.expiresAt) {
-			expired = append(expired, key)
-			continue
-		}
 		results[i] = enginecache.Result{Value: bytes.Clone(entry.value), Found: true}
-	}
-	c.mu.RUnlock()
-
-	if len(expired) > 0 {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-		for _, key := range expired {
-			// Only drop the entry we observed as expired, it may have been
-			// overwritten with a fresh one in the meantime.
-			if entry, ok := c.entries[key]; ok && now.After(entry.expiresAt) {
-				delete(c.entries, key)
-			}
-		}
 	}
 
 	return results, nil
@@ -79,7 +69,8 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) ([]enginecac
 
 // SetMany stores every item carrying a positive TTL. Items without one are
 // skipped and reported as an ErrMissingTTL, the rest of the batch is still
-// stored. It otherwise only fails on a cancelled context.
+// stored. It otherwise only fails on a cancelled context. It also drops every
+// expired entry, including those no lookup has claimed.
 func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -106,9 +97,24 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 		}
 	}
 
+	// Everything just stored has a deadline in the future, so a batch never
+	// sweeps away its own entries.
+	c.sweepExpired(now)
+
 	if len(skipped) > 0 {
 		return fmt.Errorf("%w: %v", ErrMissingTTL, skipped)
 	}
 
 	return nil
+}
+
+// sweepExpired drops every entry that has expired by now. The caller must hold
+// the mutex. A TTL of d covers [set, set+d), so an entry reaching its deadline
+// exactly is already expired.
+func (c *InMemoryCache) sweepExpired(now time.Time) {
+	for key, entry := range c.entries {
+		if !now.Before(entry.expiresAt) {
+			delete(c.entries, key)
+		}
+	}
 }
