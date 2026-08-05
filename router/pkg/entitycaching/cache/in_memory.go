@@ -41,11 +41,12 @@ func NewInMemoryCache() *InMemoryCache {
 // GetMany returns one result per key, in the same order as keys. It also drops
 // every expired entry, including those no key in this batch asked about.
 func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) ([]enginecache.Result, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
 	if len(keys) == 0 {
 		return nil, nil
+	}
+	
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	c.mu.Lock()
@@ -67,8 +68,8 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) ([]enginecac
 	return results, nil
 }
 
-// SetMany stores every item carrying a positive TTL. Items without one are
-// skipped and reported as an ErrMissingTTL, the rest of the batch is still
+// SetMany stores every item, all of which must carry a positive TTL. A single
+// item without one fails the whole batch with an ErrMissingTTL and nothing is
 // stored. It otherwise only fails on a cancelled context. It also drops every
 // expired entry, including those no lookup has claimed.
 func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) error {
@@ -80,17 +81,19 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 		return nil
 	}
 
+	// Validated up front, before the lock is taken, so a batch carrying a bad
+	// item writes nothing at all rather than being applied in part.
+	for _, item := range items {
+		if item.TTL <= 0 {
+			return fmt.Errorf("%w: key %q", ErrMissingTTL, item.Key)
+		}
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	var skipped []string
-
 	now := c.now()
 	for _, item := range items {
-		if item.TTL <= 0 {
-			skipped = append(skipped, item.Key)
-			continue
-		}
 		c.entries[item.Key] = inMemoryEntry{
 			value:     bytes.Clone(item.Value),
 			expiresAt: now.Add(item.TTL),
@@ -100,10 +103,6 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	// Everything just stored has a deadline in the future, so a batch never
 	// sweeps away its own entries.
 	c.sweepExpired(now)
-
-	if len(skipped) > 0 {
-		return fmt.Errorf("%w: %v", ErrMissingTTL, skipped)
-	}
 
 	return nil
 }
