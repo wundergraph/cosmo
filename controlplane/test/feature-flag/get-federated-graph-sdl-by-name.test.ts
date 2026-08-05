@@ -211,7 +211,7 @@ describe('GetFederatedGraphSDLByName with a feature flag', () => {
   );
 
   test.each([true, false])(
-    'that the SDL of a flag whose latest composition failed falls back to the last valid one under split config (split config: %s)',
+    'that a flag whose latest composition failed serves its last valid SDL under split config but not in legacy (split config: %s)',
     async (splitConfigEnabled) => {
       const { client, server } = await SetupTest({
         dbname,

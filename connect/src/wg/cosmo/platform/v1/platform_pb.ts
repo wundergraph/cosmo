@@ -11327,11 +11327,6 @@ export type FeatureFlag = Message<"wg.cosmo.platform.v1.FeatureFlag"> & {
   updatedAt: string;
 
   /**
-   * Whether this flag's latest composition failed, meaning the composition being reported for it is the
-   * last successful one rather than the latest. Only populated by RPCs that resolve a flag against a
-   * federated graph's composition (currently GetFeatureFlagsInLatestCompositionByFederatedGraph); left
-   * unset elsewhere, so treat unset as "not computed" rather than "not stale".
-   *
    * @generated from field: optional bool has_failed_latest_composition = 9;
    */
   hasFailedLatestComposition?: boolean | undefined;
