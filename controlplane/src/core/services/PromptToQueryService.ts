@@ -110,7 +110,6 @@ export class PromptToQueryService {
       });
 
       const parsedResponse = ptqResponseSchema.safeParse(response.data);
-      console.log(parsedResponse.error);
       return parsedResponse.success
         ? PromptToQueryService.handleServiceResponse(parsedResponse.data)
         : create(GenerateQueryResponseSchema, {
