@@ -27,6 +27,7 @@ import {
 import {
   CompositeMessageDefinition,
   CompositeMessageKind,
+  ProtoFieldType,
   ProtoMessage,
   ProtoMessageField,
   RPCMethod,
@@ -42,7 +43,7 @@ import {
   formatKeyElements,
   graphqlArgumentToProtoField,
 } from './naming-conventions.js';
-import { getProtoTypeFromGraphQL } from './proto-utils.js';
+import { createNestedListWrapper, getProtoTypeFromGraphQL, listNameByNestingLevel } from './proto-utils.js';
 import { AbstractSelectionRewriter } from './abstract-selection-rewriter.js';
 
 /**
@@ -117,6 +118,9 @@ export class RequiredFieldsVisitor {
 
   /** Whether any field argument uses a protobuf wrapper type */
   private _usesWrapperTypes = false;
+
+  /** Generated ListOfX wrapper message definitions, keyed by wrapper name */
+  private _nestedListWrappers = new Map<string, string>();
 
   /**
    * Creates a new RequiredFieldsVisitor.
@@ -218,6 +222,35 @@ export class RequiredFieldsVisitor {
    */
   public get usesWrapperTypes(): boolean {
     return this._usesWrapperTypes;
+  }
+
+  /**
+   * Returns the ListOfX wrapper message definitions generated while resolving
+   * required field types, keyed by wrapper name.
+   * Used by the caller to include these wrapper messages in the final proto output.
+   */
+  public get nestedListWrappers(): Map<string, string> {
+    return this._nestedListWrappers;
+  }
+
+  /**
+   * Tracks list wrapper messages produced by getProtoTypeFromGraphQL so the caller
+   * can include their definitions in the final proto output.
+   */
+  private trackListWrapper(protoType: ProtoFieldType): void {
+    const listWrapper = protoType.listWrapper;
+    if (!listWrapper) {
+      return;
+    }
+
+    for (let i = 1; i <= listWrapper.nestingLevel; i++) {
+      const wrapperName = listNameByNestingLevel(i, listWrapper.baseType);
+      if (this._nestedListWrappers.has(wrapperName)) {
+        continue;
+      }
+
+      this._nestedListWrappers.set(wrapperName, createNestedListWrapper(false, i, listWrapper.baseType));
+    }
   }
 
   /**
@@ -367,6 +400,7 @@ export class RequiredFieldsVisitor {
           if (protoType.isWrapper) {
             this._usesWrapperTypes = true;
           }
+          this.trackListWrapper(protoType);
           return {
             fieldName: graphqlArgumentToProtoField(d.name),
             typeName: protoType.typeName,
@@ -403,6 +437,7 @@ export class RequiredFieldsVisitor {
 
     // Get the type name from the required field
     const typeInfo = getProtoTypeFromGraphQL(false, this.requiredField.type);
+    this.trackListWrapper(typeInfo);
 
     this.messageDefinitions.push({
       messageName: resultMessageName,
@@ -450,6 +485,7 @@ export class RequiredFieldsVisitor {
     }
 
     const typeInfo = getProtoTypeFromGraphQL(false, fieldDefinition.type);
+    this.trackListWrapper(typeInfo);
     this.current.fields.push({
       fieldName: protoFieldName,
       typeName: typeInfo.typeName,

@@ -27,15 +27,24 @@ type subscriptionEventUpdater struct {
 	eventUpdater                   resolve.SubscriptionUpdater
 	subscriptionEventConfiguration SubscriptionEventConfiguration
 	hooks                          Hooks
+	onReiveEventsTimeout           time.Duration
+	beforeEventsDispatchTimeout    time.Duration
 	logger                         *zap.Logger
 	eventBuilder                   EventBuilderFn
 	semaphore                      *semaphore.Weighted
-	timeout                        time.Duration
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
+	events, ok := s.runBeforeEventsDispatchHooks(events)
+	if !ok {
+		return
+	}
+
 	if len(s.hooks.OnReceiveEvents.Handlers) == 0 {
 		for _, event := range events {
+			if event == nil {
+				continue
+			}
 			s.eventUpdater.Update(event.GetData())
 		}
 		return
@@ -43,7 +52,7 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 
 	subscriptions := s.eventUpdater.Subscriptions()
 	wg := sync.WaitGroup{}
-	updaterCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(s.timeout))
+	updaterCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(s.onReiveEventsTimeout))
 	defer cancel()
 
 	done := make(chan struct{})
@@ -74,9 +83,68 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 		// Also since we will process the next batch of events while having abandoned updaters,
 		// those updaters might eventually push their events to the subscription late,
 		// which means events might arrive out of order.
-		s.logger.Warn("Subscription update timeout exceeded because handler execution took too long. " +
-			"Consider increasing events.handler.on_receive_events.handler_timeout and/or max_concurrent_handlers or reduce handler execution time." +
-			"Events may arrive out of order.")
+		s.logger.
+			With(zap.String("handler_name", "OnReceiveEvents")).
+			Warn("Subscription update timeout exceeded because handler execution took too long. " +
+				"Consider increasing events.handler.on_receive_events.handler_timeout and/or " +
+				"max_concurrent_handlers or reduce handler execution time." +
+				"Events may arrive out of order.")
+	}
+}
+
+// runBeforeEventsDispatchHooks runs the BeforeEventsDispatch hooks once per received batch,
+// before any per-subscriber fan-out. It returns the (possibly transformed) events and
+// false if a hook failed and the batch should be dropped.
+func (s *subscriptionEventUpdater) runBeforeEventsDispatchHooks(events []StreamEvent) ([]StreamEvent, bool) {
+	if len(s.hooks.BeforeEventsDispatch.Handlers) == 0 {
+		return events, true
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), s.beforeEventsDispatchTimeout)
+	defer cancel()
+
+	type hookResult struct {
+		events []StreamEvent
+		ok     bool
+	}
+	done := make(chan hookResult, 1)
+
+	go func() {
+		res := hookResult{nil, false}
+		defer func() {
+			if r := recover(); r != nil {
+				s.logger.
+					WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
+					Error("[Recovery from handler panic]",
+						zap.String("handler_name", "BeforeEventsDispatch"),
+						zap.Any("error", r),
+					)
+				res = hookResult{nil, false}
+			}
+			done <- res
+		}()
+
+		evts := events
+		for i := range s.hooks.BeforeEventsDispatch.Handlers {
+			var err error
+			evts, err = s.hooks.BeforeEventsDispatch.Handlers[i](ctx, s.subscriptionEventConfiguration, s.eventBuilder, evts)
+			if err != nil {
+				s.logger.
+					With(zap.Int("handler_index", i)).
+					Warn("BeforeEventsDispatch handler failed, dropping event batch", zap.Error(err))
+				return
+			}
+		}
+		res = hookResult{evts, true}
+	}()
+
+	select {
+	case res := <-done:
+		return res.events, res.ok
+	case <-ctx.Done():
+		s.logger.Warn("BeforeEventsDispatch handler timeout exceeded, dropping event batch. " +
+			"Consider increasing events.handler.before_events_dispatch.handler_timeout or reduce handler execution time.")
+		return nil, false
 	}
 }
 
@@ -132,6 +200,7 @@ func (s *subscriptionEventUpdater) recoverPanic(subID resolve.SubscriptionIdenti
 	s.logger.
 		WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
 		Error("[Recovery from handler panic]",
+			zap.String("handler_name", "OnReceiveEvents"),
 			zap.Int64("subscription_id", subID.SubscriptionID),
 			zap.Any("error", err),
 		)
@@ -147,9 +216,13 @@ func NewSubscriptionEventUpdater(
 	eventBuilder EventBuilderFn,
 ) SubscriptionEventUpdater {
 	limit := max(hooks.OnReceiveEvents.MaxConcurrentHandlers, 1)
-	timeout := hooks.OnReceiveEvents.Timeout
-	if timeout == 0 {
-		timeout = defaultTimeout
+	onReceiveEventsTimeout := hooks.OnReceiveEvents.Timeout
+	if onReceiveEventsTimeout == 0 {
+		onReceiveEventsTimeout = defaultTimeout
+	}
+	beforeEventsDispatchTimeout := hooks.BeforeEventsDispatch.Timeout
+	if beforeEventsDispatchTimeout == 0 {
+		beforeEventsDispatchTimeout = defaultTimeout
 	}
 
 	return &subscriptionEventUpdater{
@@ -159,6 +232,7 @@ func NewSubscriptionEventUpdater(
 		logger:                         logger,
 		eventBuilder:                   eventBuilder,
 		semaphore:                      semaphore.NewWeighted(int64(limit)),
-		timeout:                        timeout,
+		onReiveEventsTimeout:           onReceiveEventsTimeout,
+		beforeEventsDispatchTimeout:    beforeEventsDispatchTimeout,
 	}
 }

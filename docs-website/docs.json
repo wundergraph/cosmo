@@ -98,7 +98,7 @@
                 "pages": [
                   "router/mcp",
                   "router/mcp/quickstart",
-                  "router/mcp/operations",
+                  "router/mcp/tools",
                   "router/mcp/configuration",
                   {
                     "group": "OAuth 2.1",
@@ -273,6 +273,7 @@
                       "router/cosmo-streams/custom-modules",
                       "router/cosmo-streams/custom-modules/subscription-on-create",
                       "router/cosmo-streams/custom-modules/subscription-on-start",
+                      "router/cosmo-streams/custom-modules/before-events-dispatch",
                       "router/cosmo-streams/custom-modules/on-receive-event",
                       "router/cosmo-streams/custom-modules/on-publish-event"
                     ]
@@ -291,6 +292,7 @@
                 ]
               },
               "router/relaxed-field-selection-merging-nullability",
+              "router/string-literals-for-enums",
               "router/file-upload",
               "router/access-logs",
               "router/profiling",
@@ -810,6 +812,10 @@
     {
       "source": "/router/subgraph-error-propagation",
       "destination": "/router/subgraph-data-propagation/subgraph-error-propagation"
+    },
+    {
+      "source": "/router/mcp/operations",
+      "destination": "/router/mcp/tools"
     }
   ]
 }
