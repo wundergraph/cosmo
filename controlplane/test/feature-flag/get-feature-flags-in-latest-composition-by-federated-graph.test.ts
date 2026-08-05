@@ -672,4 +672,101 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
       expect(after.featureFlags.map((f) => f.name)).toStrictEqual([flagName]);
     },
   );
+
+  test.each([true, false])(
+    'that a disabled feature flag is not reported (split config: %s)',
+    async (splitConfigEnabled) => {
+      const { client, server } = await SetupTest({
+        dbname,
+        enabledFeatures: splitConfigEnabled ? ['split-config-loading'] : [],
+      });
+      onTestFinished(() => server.close());
+
+      const namespace = genID('namespace').toLowerCase();
+      const labels = [genUniqueLabel()];
+      const federatedGraphName = genID('fedGraph');
+
+      await createNamespace(client, namespace);
+
+      await createAndPublishSubgraph(
+        client,
+        'users',
+        namespace,
+        fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/users.graphql')).toString(),
+        labels,
+        DEFAULT_SUBGRAPH_URL_ONE,
+      );
+
+      await createAndPublishSubgraph(
+        client,
+        'products-standalone',
+        namespace,
+        fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/products-standalone.graphql')).toString(),
+        labels,
+        'http://localhost:4002',
+      );
+
+      await createThenPublishFeatureSubgraph(
+        client,
+        'users-ff',
+        'users',
+        namespace,
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            name: String!
+            email: String!
+            isPremium: Boolean! @tag(name: "exclude")
+            nickname: String!
+          }
+
+          type Query {
+            user(id: ID!): User
+            users: [User!]!
+          }
+        `,
+        labels,
+        'http://localhost:4101',
+      );
+
+      await createThenPublishFeatureSubgraph(
+        client,
+        'products-standalone-feature',
+        'products-standalone',
+        namespace,
+        fs
+          .readFileSync(join(process.cwd(), 'test/test-data/feature-flags/products-standalone-feature.graphql'))
+          .toString(),
+        labels,
+        'http://localhost:4102',
+      );
+
+      const federatedGraphLabels = labels.map(({ key, value }) => `${key}=${value}`);
+      await createFederatedGraph(client, federatedGraphName, namespace, federatedGraphLabels, DEFAULT_ROUTER_URL);
+
+      const enabledFlagName = genID('flag');
+      await createFeatureFlag(client, enabledFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+      const disabledFlagName = genID('flag');
+      await createFeatureFlag(client, disabledFlagName, labels, ['users-ff'], namespace, true);
+
+      // Both compose successfully, so both are reported to begin with
+      let resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
+        federatedGraphName,
+        namespace,
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(new Set(resp.featureFlags.map((f) => f.name))).toStrictEqual(new Set([enabledFlagName, disabledFlagName]));
+
+      const disableResp = await client.enableFeatureFlag({ name: disabledFlagName, namespace, enabled: false });
+      expect(disableResp.response?.code).toBe(EnumStatusCode.OK);
+
+      resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
+        federatedGraphName,
+        namespace,
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(resp.featureFlags.map((f) => f.name)).toStrictEqual([enabledFlagName]);
+    },
+  );
 });
