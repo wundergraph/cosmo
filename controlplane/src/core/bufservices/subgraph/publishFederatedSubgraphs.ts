@@ -433,6 +433,8 @@ async function runBatchPublish({
     opts.chClient,
     opts.webhookProxyUrl,
     disableResolvabilityValidation,
+    opts.promptToQueryServiceAddress,
+    opts.billingDefaultPlanId,
   );
 
   const { compositionErrors, compositionWarnings, deploymentErrors } =

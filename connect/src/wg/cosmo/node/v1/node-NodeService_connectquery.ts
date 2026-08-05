@@ -8,3 +8,8 @@ import { NodeService } from "./node_pb.js";
  * @generated from rpc wg.cosmo.node.v1.NodeService.SelfRegister
  */
 export const selfRegister = NodeService.method.selfRegister;
+
+/**
+ * @generated from rpc wg.cosmo.node.v1.NodeService.GenerateQuery
+ */
+export const generateQuery = NodeService.method.generateQuery;

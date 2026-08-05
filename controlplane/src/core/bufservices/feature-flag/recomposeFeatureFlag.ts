@@ -100,6 +100,8 @@ export function recomposeFeatureFlag(
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
+        opts.promptToQueryServiceAddress,
+        opts.billingDefaultPlanId,
       );
 
       return compositionService.composeAndDeployFeatureFlag({
