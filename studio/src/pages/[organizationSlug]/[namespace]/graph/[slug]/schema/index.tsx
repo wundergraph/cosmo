@@ -5,7 +5,7 @@ import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/
 import { EmptyState } from '@/components/empty-state';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { EmptySchema } from '@/components/schema/empty-schema-state';
-import { StaleCompositionBanner, StaleCompositionIcon } from '@/components/schema/stale-composition-warning';
+import { StaleCompositionIcon } from '@/components/schema/stale-composition-warning';
 import { SchemaToolbar } from '@/components/schema/toolbar';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -93,6 +93,7 @@ import { Line, LineChart, ResponsiveContainer } from 'recharts';
 import { useDebounce } from 'use-debounce';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { buildUrl } from '@/lib/build-url';
+import { CompositionErrorsBanner } from '@/components/composition-errors-banner';
 
 const fallback = buildASTSchema(parse(`type Query { dummy: String! }`));
 
@@ -1338,9 +1339,8 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
         noPadding
       >
         {activeFeatureFlagIsStale && (
-          <StaleCompositionBanner
-            featureFlagName={featureFlagName}
-            compositionsHref={`/${organizationSlug}/${namespace}/graph/${graphName}/compositions`}
+          <CompositionErrorsBanner
+            viewCompositionsHref={`/${organizationSlug}/${namespace}/graph/${graphName}/compositions`}
             className="mx-4 mt-4"
           />
         )}

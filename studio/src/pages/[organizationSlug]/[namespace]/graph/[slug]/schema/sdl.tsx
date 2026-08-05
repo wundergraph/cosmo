@@ -5,7 +5,7 @@ import { EmptySchema } from '@/components/schema/empty-schema-state';
 import { SDLViewerActions } from '@/components/schema/sdl-viewer';
 import { SDLViewerMonaco } from '@/components/schema/sdl-viewer-monaco';
 import { SchemaToolbar } from '@/components/schema/toolbar';
-import { StaleCompositionBanner, StaleCompositionIcon } from '@/components/schema/stale-composition-warning';
+import { StaleCompositionIcon } from '@/components/schema/stale-composition-warning';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -342,11 +342,12 @@ const SDLPage: NextPageWithLayout = () => {
           </SchemaToolbar>
         }
       >
-        {!validGraph && <CompositionErrorsBanner errors={graphData?.graph?.compositionErrors} className="mx-4 mt-4" />}
-        {activeFeatureFlagIsStale && (
-          <StaleCompositionBanner
-            featureFlagName={activeFeatureFlag}
-            compositionsHref={`/${organizationSlug}/${namespace}/graph/${graphName}/compositions`}
+        {!validGraph && !activeFeatureFlag && (
+          <CompositionErrorsBanner errors={graphData?.graph?.compositionErrors} className="mx-4 mt-4" />
+        )}
+        {activeFeatureFlagIsStale && activeFeatureFlag && (
+          <CompositionErrorsBanner
+            viewCompositionsHref={`/${organizationSlug}/${namespace}/graph/${graphName}/compositions`}
             className="mx-4 mt-4"
           />
         )}
