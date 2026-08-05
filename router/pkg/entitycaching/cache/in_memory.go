@@ -44,7 +44,7 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) ([]enginecac
 	if len(keys) == 0 {
 		return nil, nil
 	}
-	
+
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
