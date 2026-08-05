@@ -237,6 +237,8 @@ telemetry:
 
 * `router_http_client_tls_handshake_duration`: The TLS handshake duration in ms for outgoing subgraph requests. Recorded only for new TLS connections.
 
+* `router_http_client_time_to_first_request_byte`: The time in ms from the start of the HTTP attempt to writing the first request byte to the subgraph. It includes acquiring the connection: pool wait, or DNS, TCP connect, and TLS handshake for new connections.
+
 * `router_http_client_time_to_first_byte`: The time in ms from completing the request write to receiving the first response byte from the subgraph.
 
 ### Go Runtime Metrics

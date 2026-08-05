@@ -59,6 +59,7 @@ import { FaMagic } from 'react-icons/fa';
 import { z } from 'zod';
 import { DeleteOrganization } from '@/components/settings/delete-organization';
 import { RestoreOrganization } from '@/components/settings/restore-organization';
+import { buildUrl } from '@/lib/build-url';
 
 const OrganizationDetails = () => {
   const user = useContext(UserContext);
@@ -108,7 +109,8 @@ const OrganizationDetails = () => {
       {
         onSuccess: (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            router.replace(`/${encodeURIComponent(data.organizationSlug)}/settings`);
+            router.replace(buildUrl('/:organizationSlug/settings', { organizationSlug: data.organizationSlug }));
+
             toast({
               description: 'Organization details updated successfully.',
               duration: 3000,
@@ -1178,7 +1180,7 @@ const Scim = () => {
             <Badge variant="outline">Enterprise feature</Badge>
           </CardTitle>
           <CardDescription>
-            Enabling SCIM allows the admin to provision and unprovision the users from the Identity prodviders.{' '}
+            Enabling SCIM allows the admin to manage user provisioning from identity providers.{' '}
             <Link href={docsBaseURL + '/studio/scim'} className="text-sm text-primary" target="_blank" rel="noreferrer">
               Learn more
             </Link>
@@ -1197,7 +1199,7 @@ const Scim = () => {
       {scim?.enabled && (
         <CardContent>
           <div className="flex flex-col gap-y-2">
-            <span className="px-1">SCIM server url</span>
+            <span className="px-1">SCIM server URL</span>
             <CLI command={scimBaseURL} />
           </div>
         </CardContent>

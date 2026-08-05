@@ -275,6 +275,25 @@ type GraphqlMetrics struct {
 	CollectorEndpoint string `yaml:"collector_endpoint" envDefault:"https://cosmo-metrics.wundergraph.com" env:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT"`
 }
 
+type Pyroscope struct {
+	Enabled              bool               `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	ServerAddress        string             `yaml:"server_address" env:"SERVER_ADDRESS"`
+	ApplicationName      string             `yaml:"application_name" envDefault:"wundergraph.cosmo.router" env:"APPLICATION_NAME"`
+	BasicAuth            PyroscopeBasicAuth `yaml:"basic_auth" envPrefix:"BASIC_AUTH_"`
+	Headers              map[string]string  `yaml:"headers" env:"HEADERS"`
+	Tags                 map[string]string  `yaml:"tags" env:"TAGS"`
+	UploadRate           time.Duration      `yaml:"upload_rate" envDefault:"15s" env:"UPLOAD_RATE"`
+	ProfileTypes         []string           `yaml:"profile_types" env:"PROFILE_TYPES"`
+	DisableGCRuns        bool               `yaml:"disable_gc_runs" envDefault:"false" env:"DISABLE_GC_RUNS"`
+	MutexProfileFraction int                `yaml:"mutex_profile_fraction" envDefault:"5" env:"MUTEX_PROFILE_FRACTION"`
+	BlockProfileRate     int                `yaml:"block_profile_rate" envDefault:"5" env:"BLOCK_PROFILE_RATE"`
+}
+
+type PyroscopeBasicAuth struct {
+	Username string `yaml:"username,omitempty" env:"USERNAME"`
+	Password string `yaml:"password,omitempty" env:"PASSWORD"`
+}
+
 type BackoffJitterRetry struct {
 	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"RETRY_ENABLED"`
 	Algorithm   string        `yaml:"algorithm" envDefault:"backoff_jitter" env:"RETRY_ALGORITHM"`
@@ -437,6 +456,7 @@ type EngineDebugConfiguration struct {
 	EnableCacheResponseHeaders             bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_CACHE_RESPONSE_HEADERS" yaml:"enable_cache_response_headers"`
 	AlwaysIncludeQueryPlan                 bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_INCLUDE_QUERY_PLAN" yaml:"always_include_query_plan"`
 	AlwaysSkipLoader                       bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_SKIP_LOADER" yaml:"always_skip_loader"`
+	SynchronousCacheWrites                 bool `envDefault:"false" env:"ENGINE_DEBUG_SYNCHRONOUS_CACHE_WRITES" yaml:"synchronous_cache_writes"`
 }
 
 type EngineExecutionConfiguration struct {
@@ -496,6 +516,10 @@ type EngineExecutionConfiguration struct {
 	ValidateRequiredExternalFields bool `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
 
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool `envDefault:"false" env:"ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY" yaml:"relax_subgraph_operation_field_selection_merging_nullability"`
+
+	AllowStringLiteralsForEnums bool `envDefault:"false" env:"ENGINE_ALLOW_STRING_LITERALS_FOR_ENUMS" yaml:"allow_string_literals_for_enums"`
+
+	ValidateInlineArguments ValidateInlineArguments `yaml:"validate_inline_arguments" envPrefix:"ENGINE_VALIDATE_INLINE_ARGUMENTS_"`
 }
 
 type BlockOperationConfiguration struct {
@@ -593,6 +617,33 @@ type CostControl struct {
 	IgnoreImplementingTypeWeights bool `yaml:"ignore_implementing_type_weights,omitempty" envDefault:"false" env:"IGNORE_IMPLEMENTING_TYPE_WEIGHTS"`
 }
 
+type EnforcementMode string
+
+const (
+	EnforcementModeOff        EnforcementMode = "off"
+	EnforcementModePermissive EnforcementMode = "permissive"
+	EnforcementModeStrict     EnforcementMode = "strict"
+)
+
+type ValidateInlineArguments struct {
+	Mode                       EnforcementMode `yaml:"mode,omitempty" envDefault:"off" env:"MODE"`
+	EnforceHTTPStatusCode      int             `yaml:"enforce_http_status_code,omitempty" envDefault:"400" env:"ENFORCE_HTTP_STATUS_CODE"`
+	ErrorCode                  string          `yaml:"error_code,omitempty" envDefault:"INLINE_ARGUMENT_VALUES_NOT_ALLOWED" env:"ERROR_CODE"`
+	ErrorMessage               string          `yaml:"error_message,omitempty" envDefault:"Inline argument values are not allowed. Use variables instead." env:"ERROR_MESSAGE"`
+	IncludePersistedOperations bool            `yaml:"include_persisted_operations,omitempty" envDefault:"false" env:"INCLUDE_PERSISTED_OPERATIONS"`
+	ReturnInResponseExtensions bool            `yaml:"return_in_response_extensions,omitempty" envDefault:"false" env:"RETURN_IN_RESPONSE_EXTENSIONS"`
+}
+
+// Enabled reports whether the policy is active in any mode.
+func (d ValidateInlineArguments) Enabled() bool {
+	return d.Mode == EnforcementModePermissive || d.Mode == EnforcementModeStrict
+}
+
+// Enforcing reports whether the policy rejects offending operations.
+func (d ValidateInlineArguments) Enforcing() bool {
+	return d.Mode == EnforcementModeStrict
+}
+
 type ComplexityLimit struct {
 	Enabled                   bool `yaml:"enabled" envDefault:"false"`
 	Limit                     int  `yaml:"limit,omitempty" envDefault:"0"`
@@ -665,6 +716,11 @@ type AuthorizationConfiguration struct {
 	RequireAuthentication bool `yaml:"require_authentication" envDefault:"false" env:"REQUIRE_AUTHENTICATION"`
 	// RejectOperationIfUnauthorized makes the router reject the whole GraphQL Operation if one field fails to authorize
 	RejectOperationIfUnauthorized bool `yaml:"reject_operation_if_unauthorized" envDefault:"false" env:"REJECT_OPERATION_IF_UNAUTHORIZED"`
+	// EnablePreFetchFieldAuthorization authorizes fields protected by an authorization rule in a single
+	// batch call before any subgraph fetch executes (scope-only, independent of the returned data),
+	// instead of filtering them out of the response after the fetch. This avoids fetching data that the
+	// client is not authorized to see.
+	EnablePreFetchFieldAuthorization bool `yaml:"enable_pre_fetch_field_authorization" envDefault:"false" env:"ENABLE_PRE_FETCH_FIELD_AUTHORIZATION"`
 }
 
 type RateLimitConfiguration struct {
@@ -809,17 +865,31 @@ type EventProviders struct {
 }
 
 type EventsConfiguration struct {
-	Providers EventProviders              `yaml:"providers,omitempty"`
-	Handlers  StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
+	Providers EventProviders `yaml:"providers,omitempty"`
+	// SkipUnavailableProviders allows the router to start even when an event provider
+	// referenced by the execution config is unavailable: either not defined in the router
+	// configuration, or defined but unreachable at startup (e.g. the broker is down).
+	// When enabled, the router logs an error and starts anyway instead of failing. A
+	// provider that is not defined has its data sources skipped; a provider that fails to
+	// connect keeps a resilient client that reconnects in the background, so the affected
+	// fields are only temporarily unavailable and recover without a restart once the broker
+	// becomes reachable again. The rest of the graph keeps serving traffic throughout.
+	SkipUnavailableProviders bool                        `yaml:"skip_unavailable_providers" envDefault:"true" env:"EVENTS_SKIP_UNAVAILABLE_PROVIDERS"`
+	Handlers                 StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
 }
 
 type StreamsHandlerConfiguration struct {
-	OnReceiveEvents OnReceiveEventsConfiguration `yaml:"on_receive_events"`
+	OnReceiveEvents      OnReceiveEventsConfiguration      `yaml:"on_receive_events"`
+	BeforeEventsDispatch BeforeEventsDispatchConfiguration `yaml:"before_events_dispatch"`
 }
 
 type OnReceiveEventsConfiguration struct {
 	MaxConcurrentHandlers int           `yaml:"max_concurrent_handlers" envDefault:"100"`
 	HandlerTimeout        time.Duration `yaml:"handler_timeout" envDefault:"5s"`
+}
+
+type BeforeEventsDispatchConfiguration struct {
+	HandlerTimeout time.Duration `yaml:"handler_timeout" envDefault:"5s"`
 }
 
 type Cluster struct {
@@ -1340,6 +1410,26 @@ type MCPStorageConfig struct {
 type MCPServer struct {
 	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5025" env:"MCP_SERVER_LISTEN_ADDR"`
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
+	// Version is reported to MCP clients as the server version in serverInfo.
+	// Defaults to the router release version when unset.
+	Version string `yaml:"version,omitempty" env:"MCP_SERVER_VERSION"`
+	// Title is a human-readable display name for this MCP server, reported in
+	// serverInfo. MCP clients show it in UIs, falling back to the machine name
+	// derived from graph_name when unset.
+	Title string `yaml:"title,omitempty" env:"MCP_SERVER_TITLE"`
+	// Description is a human-readable description of this MCP server, reported
+	// in serverInfo.
+	Description string            `yaml:"description,omitempty" env:"MCP_SERVER_DESCRIPTION"`
+	Discover    MCPDiscoverConfig `yaml:"discover,omitempty" envPrefix:"MCP_SERVER_DISCOVER_"`
+}
+
+// MCPDiscoverConfig configures the server identity exposed via the MCP
+// server/discover method (SEP-2575, protocol version 2026-07-28).
+type MCPDiscoverConfig struct {
+	// Instructions is natural-language guidance for MCP clients on how to use this
+	// server. It is served in the server/discover response and in the legacy
+	// initialize response, so all clients receive it regardless of era.
+	Instructions string `yaml:"instructions,omitempty" env:"INSTRUCTIONS"`
 }
 
 type ConnectRPCConfiguration struct {
@@ -1380,6 +1470,7 @@ type Config struct {
 	InstanceID     string                  `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
 	Graph          Graph                   `yaml:"graph,omitempty"`
 	Telemetry      Telemetry               `yaml:"telemetry,omitempty"`
+	Pyroscope      Pyroscope               `yaml:"pyroscope,omitempty" envPrefix:"PYROSCOPE_"`
 	GraphqlMetrics GraphqlMetrics          `yaml:"graphql_metrics,omitempty"`
 	CORS           CORS                    `yaml:"cors,omitempty"`
 	Cluster        Cluster                 `yaml:"cluster,omitempty"`

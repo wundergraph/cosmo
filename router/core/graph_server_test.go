@@ -3,22 +3,151 @@ package core
 import (
 	"cmp"
 	"context"
+	"errors"
 	"net/http"
 	"runtime"
 	"slices"
 	"sync/atomic"
 	"testing"
+	"time"
 	"weak"
 
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 )
+
+// failingStartupProvider is a provider whose broker is unreachable: its Startup always
+// fails. The mux owns its providers, so skip_unavailable_providers is carried on the mux
+// (buildGraphMux copies it from events.skip_unavailable_providers).
+func failingStartupProvider(t *testing.T) datasource.Provider {
+	t.Helper()
+
+	adapter := datasource.NewMockProvider(t)
+	adapter.On("Startup", mock.Anything).Return(errors.New("connection refused"))
+	return datasource.NewPubSubProvider("redis-1", "redis", adapter, zap.NewNop(), nil)
+}
+
+func TestStartPubsubProviders_SkipUnavailableProviders(t *testing.T) {
+	t.Parallel()
+
+	newMux := func(logger *zap.Logger, skip bool, providers ...datasource.Provider) *graphMux {
+		return &graphMux{
+			logger:                   logger,
+			skipUnavailableProviders: skip,
+			pubSubProviders:          providers,
+		}
+	}
+
+	t.Run("aborts startup when a provider fails and the flag is disabled", func(t *testing.T) {
+		t.Parallel()
+
+		gm := newMux(zap.NewNop(), false, failingStartupProvider(t))
+		require.Error(t, gm.startPubsubProviders(context.Background()))
+	})
+
+	t.Run("starts anyway when a provider fails and the flag is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		// The provider could not connect at startup, but lenient mode lets the router start
+		// anyway. The adapter keeps a resilient client that reconnects in the background, so
+		// the provider recovers without a restart once the broker becomes reachable.
+		gm := newMux(zap.NewNop(), true, failingStartupProvider(t))
+		require.NoError(t, gm.startPubsubProviders(context.Background()))
+	})
+
+	t.Run("tolerates a mux without a logger", func(t *testing.T) {
+		t.Parallel()
+
+		// Lenient mode logs the swallowed error, so a mux that carries no logger (only
+		// constructed in tests, but the production path must not panic on it) must still
+		// report success rather than dereferencing a nil logger.
+		gm := newMux(nil, true, failingStartupProvider(t))
+		require.NoError(t, gm.startPubsubProviders(context.Background()))
+	})
+}
+
+// TestProvidersActionWithTimeout_MultipleHangingProvidersDoNotDeadlock guards against a
+// regression to a single shared timer: with per-provider timers, several providers whose
+// action never returns must each independently time out instead of blocking startup.
+func TestProvidersActionWithTimeout_MultipleHangingProvidersDoNotDeadlock(t *testing.T) {
+	t.Parallel()
+
+	p1 := datasource.NewPubSubProvider("p1", "redis", datasource.NewMockProvider(t), zap.NewNop(), nil)
+	p2 := datasource.NewPubSubProvider("p2", "nats", datasource.NewMockProvider(t), zap.NewNop(), nil)
+
+	// The action blocks until its context is cancelled, simulating two providers whose
+	// Startup hangs (e.g. unreachable brokers).
+	hangingAction := func(ctx context.Context, _ datasource.Provider) error {
+		<-ctx.Done()
+		return ctx.Err()
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- providersActionWithTimeout(
+			context.Background(),
+			[]datasource.Provider{p1, p2},
+			hangingAction,
+			50*time.Millisecond,
+			"timed out",
+			zap.NewNop(),
+			true,
+		)
+	}()
+
+	select {
+	case err := <-done:
+		require.NoError(t, err) // both timed out and were tolerated in lenient mode
+	case <-time.After(5 * time.Second):
+		t.Fatal("providersActionWithTimeout deadlocked with multiple hanging providers")
+	}
+}
+
+// TestStopPubsubProviders_SkipUnavailableProviders pins how a failing provider shutdown
+// is surfaced. stopPubsubProviders passes skip_unavailable_providers as its
+// continue-on-error flag, so the setting that keeps startup lenient makes shutdown
+// lenient too: with the flag enabled the error is only logged.
+func TestStopPubsubProviders_SkipUnavailableProviders(t *testing.T) {
+	t.Parallel()
+
+	newMux := func(t *testing.T, skip bool) *graphMux {
+		t.Helper()
+
+		adapter := datasource.NewMockProvider(t)
+		adapter.On("Shutdown", mock.Anything).Return(errors.New("shutdown failed"))
+
+		return &graphMux{
+			logger:                   zap.NewNop(),
+			skipUnavailableProviders: skip,
+			pubSubProviders: []datasource.Provider{
+				datasource.NewPubSubProvider("redis-1", "redis", adapter, zap.NewNop(), nil),
+			},
+		}
+	}
+
+	t.Run("surfaces the error when the flag is disabled", func(t *testing.T) {
+		t.Parallel()
+
+		gm := newMux(t, false)
+		require.Error(t, gm.stopPubsubProviders(context.Background()))
+	})
+
+	t.Run("only logs the error when the flag is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		gm := newMux(t, true)
+		require.NoError(t, gm.stopPubsubProviders(context.Background()))
+	})
+}
 
 func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 	t.Parallel()
@@ -825,7 +954,6 @@ func TestGraphServerShutdown(t *testing.T) {
 		prev := &graphServer{
 			Config:            &Config{logger: zap.NewNop()},
 			graphServerCancel: cancel,
-			inFlightRequests:  &atomic.Int64{},
 			baseTransport:     &http.Transport{},
 			graphMuxList:      map[string]*graphMux{"": baseMux},
 		}
@@ -854,7 +982,6 @@ func TestGraphServerShutdown(t *testing.T) {
 		srv := &graphServer{
 			Config:            &Config{logger: zap.NewNop()},
 			graphServerCancel: cancel,
-			inFlightRequests:  &atomic.Int64{},
 			baseTransport:     &http.Transport{},
 			graphMuxList:      map[string]*graphMux{"": mux},
 		}
@@ -881,4 +1008,86 @@ func toKeys[K cmp.Ordered, V any](m map[K]V) []K {
 	}
 	slices.Sort(keys)
 	return keys
+}
+
+// The connection metric store is router-scoped and unregistered exactly once, by
+// Router.Shutdown, which can race with an in-flight config reload.
+func TestConnectionMetricStoreLifetime(t *testing.T) {
+	t.Parallel()
+
+	newTestRouter := func() *Router {
+		r := &Router{}
+		r.logger = zap.NewNop()
+		r.metricConfig = &rmetric.Config{
+			OpenTelemetry: rmetric.OpenTelemetry{ConnectionStats: true},
+		}
+		r.otlpMeterProvider = sdkmetric.NewMeterProvider()
+		r.promMeterProvider = sdkmetric.NewMeterProvider()
+		return r
+	}
+
+	t.Run("successive graph servers share one dialer and one store", func(t *testing.T) {
+		t.Parallel()
+
+		r := newTestRouter()
+
+		firstDialer := r.connectionTraceDialer()
+		require.NotNil(t, firstDialer)
+		firstStore, err := r.connectionMetricStore(t.Context(), firstDialer)
+		require.NoError(t, err)
+		require.NotNil(t, firstStore)
+
+		// A mux reused across a reload counts into the first server's stats.
+		secondDialer := r.connectionTraceDialer()
+		secondStore, err := r.connectionMetricStore(t.Context(), secondDialer)
+		require.NoError(t, err)
+
+		require.Same(t, firstDialer, secondDialer, "the trace dialer must survive a graph server swap")
+		require.Same(t, firstStore, secondStore, "the connection metric store must survive a graph server swap")
+	})
+
+	t.Run("a build losing the race with shutdown gets no store", func(t *testing.T) {
+		t.Parallel()
+
+		r := newTestRouter()
+
+		dialer := r.connectionTraceDialer()
+		store, err := r.connectionMetricStore(t.Context(), dialer)
+		require.NoError(t, err)
+		require.NotNil(t, store)
+
+		// Mirrors Router.Shutdown: the flag is set before the teardown runs.
+		r.shutdown.Store(true)
+		require.NoError(t, r.shutdownConnectionMetrics(context.Background()))
+
+		late, err := r.connectionMetricStore(t.Context(), dialer)
+		require.NoError(t, err)
+		require.Nil(t, late, "a graph server built after shutdown must not create a new store")
+	})
+
+	t.Run("shutdown before any graph server was built still blocks creation", func(t *testing.T) {
+		t.Parallel()
+
+		r := newTestRouter()
+
+		r.shutdown.Store(true)
+		require.NoError(t, r.shutdownConnectionMetrics(context.Background()))
+
+		store, err := r.connectionMetricStore(t.Context(), r.connectionTraceDialer())
+		require.NoError(t, err)
+		require.Nil(t, store)
+	})
+
+	t.Run("connection stats disabled yields no dialer and no store", func(t *testing.T) {
+		t.Parallel()
+
+		r := newTestRouter()
+		r.metricConfig = &rmetric.Config{}
+
+		require.Nil(t, r.connectionTraceDialer())
+
+		store, err := r.connectionMetricStore(t.Context(), nil)
+		require.NoError(t, err)
+		require.Nil(t, store)
+	})
 }

@@ -14,6 +14,8 @@ export interface ExecutionSuccess {
   success: true;
 }
 
+export type ExecutionResult = ExecutionFailure | ExecutionSuccess;
+
 export type ExecutionMultiResult = ExecutionMultiFailure | ExecutionSuccess;
 
 export type ExecutionSingleFailureResult = ExecutionSingleFailure | ExecutionSuccess;

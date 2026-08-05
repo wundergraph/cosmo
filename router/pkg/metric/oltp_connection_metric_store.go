@@ -53,14 +53,6 @@ func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterPro
 }
 
 func (h *otlpConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats, attributes []attribute.KeyValue) error {
-	for subgraph, maxConns := range connStats.MaxConnsPerSubgraph {
-		attrs := make([]attribute.KeyValue, 0, 1)
-		if subgraph != "" {
-			attrs = append(attrs, otel.WgSubgraphName.String(subgraph))
-		}
-		h.MeasureMaxConnections(context.Background(), maxConns, otelmetric.WithAttributes(attrs...))
-	}
-
 	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
 		stats := connStats.GetStats()
 		for key, activeConnections := range stats {
@@ -108,6 +100,12 @@ func (h *otlpConnectionMetrics) MeasureTCPConnectDuration(ctx context.Context, d
 func (h *otlpConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
 	if h.instruments.tlsHandshakeDuration != nil {
 		h.instruments.tlsHandshakeDuration.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *otlpConnectionMetrics) MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if h.instruments.timeToFirstRequestByte != nil {
+		h.instruments.timeToFirstRequestByte.Record(ctx, duration, opts...)
 	}
 }
 

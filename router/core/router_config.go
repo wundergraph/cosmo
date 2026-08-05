@@ -18,6 +18,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/profile/pyroscope"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/propagation"
@@ -29,10 +30,11 @@ import (
 )
 
 type subscriptionHooks struct {
-	onCreate        onCreateHooks
-	onStart         onStartHooks
-	onPublishEvents onPublishEventsHooks
-	onReceiveEvents onReceiveEventsHooks
+	onCreate             onCreateHooks
+	onStart              onStartHooks
+	onPublishEvents      onPublishEventsHooks
+	onReceiveEvents      onReceiveEventsHooks
+	beforeEventsDispatch beforeEventsDispatchHooks
 }
 
 type onCreateHooks struct {
@@ -53,16 +55,23 @@ type onReceiveEventsHooks struct {
 	timeout               time.Duration
 }
 
+type beforeEventsDispatchHooks struct {
+	handlers []func(ctx StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+	timeout  time.Duration
+}
+
 type Config struct {
 	clusterName                     string
 	instanceID                      string
 	logger                          *zap.Logger
 	traceConfig                     *rtrace.Config
 	metricConfig                    *rmetric.Config
+	pyroscopeConfig                 *config.Pyroscope
 	tracerProvider                  *sdktrace.TracerProvider
 	otlpMeterProvider               *sdkmetric.MeterProvider
 	promMeterProvider               *sdkmetric.MeterProvider
 	gqlMetricsExporter              *graphqlmetrics.GraphQLMetricsExporter
+	pyroscopeProfiler               *pyroscope.Profiler
 	corsOptions                     *cors.Config
 	setConfigVersionHeader          bool
 	routerGracePeriod               time.Duration

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
 import { useUser } from '@/hooks/use-user';
 import { NextPageWithLayout } from '@/lib/page';
+import { buildUrl } from '@/lib/build-url';
 
 type Invitation = {
   id: string;
@@ -50,9 +51,9 @@ const JoinInvitationsPage: NextPageWithLayout<{
     const queryParams = new URLSearchParams();
     queryParams.append('redirected-to-invited-org', 'true');
 
-    router.push(`/${slug}?${queryParams.toString()}`);
+    router.push(`/${encodeURIComponent(slug)}?${queryParams.toString()}`);
   };
-  const handleSkipButtonClick = () => router.push(`/${personalOrgSlug}`);
+  const handleSkipButtonClick = () => router.push(buildUrl('/:personalOrgSlug', { personalOrgSlug }));
 
   if (isLoading || !user) {
     return <Loader fullscreen />;

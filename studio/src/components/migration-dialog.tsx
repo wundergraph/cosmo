@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { SubmitHandler, useZodForm } from '@/hooks/use-form';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 export const MigrationDialog = ({
   refetch,
@@ -42,7 +43,8 @@ export const MigrationDialog = ({
     namespace: { name: namespace },
   } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
-  const graphsPath = organizationSlug ? `/${organizationSlug}/graphs` : '/graphs';
+  const graphsPath = organizationSlug ? buildUrl('/:organizationSlug', { organizationSlug }) : buildUrl('/graphs');
+
   const migrate = !!router.query.migrate;
 
   const migrateInputSchema = z.object({

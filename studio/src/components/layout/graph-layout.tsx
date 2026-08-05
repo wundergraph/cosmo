@@ -34,6 +34,7 @@ import { useFeature } from '@/hooks/use-feature';
 import { WorkspaceSelector } from '@/components/dashboard/workspace-selector';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse['graph'];
@@ -62,7 +63,11 @@ const GraphLayoutSidebarNavigation = ({ organizationSlug, namespace, slug }: Gra
   const proposalsFeature = useFeature('proposals');
 
   const links: NavLink[] = useMemo(() => {
-    const basePath = `/${organizationSlug}/${namespace}/graph/${slug}`;
+    const basePath = buildUrl('/:organizationSlug/:namespace/graph/:slug', {
+      organizationSlug,
+      namespace,
+      slug,
+    });
 
     const graphLinks = [
       {
@@ -216,7 +221,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
           description={data?.response?.details || 'Graph not found'}
           actions={
             <Button asChild>
-              <Link href={`/${organizationSlug}`}>Go home</Link>
+              <Link href={buildUrl('/:organizationSlug', { organizationSlug })}>Go home</Link>
             </Button>
           }
         />

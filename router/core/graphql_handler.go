@@ -167,6 +167,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resolveCtx.TracingOptions = reqCtx.operation.traceOptions
 	resolveCtx.InitialPayload = reqCtx.operation.initialPayload
 	resolveCtx.Extensions = reqCtx.operation.extensions
+	resolveCtx.InlineArguments = reqCtx.operation.inlineArguments
 	resolveCtx.ExecutionOptions = reqCtx.operation.executionOptions
 
 	if h.headerPropagation != nil {
@@ -179,6 +180,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.authorizer)
+		if h.authorizer.IsPreFetchFieldAuthorizationEnabled() {
+			resolveCtx.SetPreFetchFieldAuthorizer(h.authorizer)
+		}
 	}
 	if h.engineLoaderHooks != nil {
 		resolveCtx.SetEngineLoaderHooks(h.engineLoaderHooks)

@@ -1,0 +1,176 @@
+---
+title: "Validate Inline Arguments"
+description: "Detect, and optionally reject, operations that pass argument values inline instead of through variables."
+icon: shield-halved
+---
+
+## Overview
+
+An inline argument is an argument whose value is written directly into the operation as a literal
+instead of being supplied through a variable.
+
+```graphql
+# Inline argument: the value "12345" is hardcoded in the operation.
+query GetUser {
+  userById(userId: "12345") {
+    name
+  }
+}
+
+# Compliant: the value arrives through a variable.
+query GetUser($userId: ID!) {
+  userById(userId: $userId) {
+    name
+  }
+}
+```
+
+Inline argument values make operations harder to cache and observe. Every distinct literal produces a
+distinct operation, which lowers plan cache hit rates. Literals can also embed sensitive data (IDs, tokens,
+filter values) directly into query strings, where it ends up in logs and traces. Requiring variables keeps
+the operation shape stable and moves the values into the variables payload.
+
+`validate_inline_arguments` detects these arguments during operation normalization. Depending on the mode,
+the router logs the findings, returns them to the client, or rejects the operation.
+
+## Modes
+
+The feature has three modes:
+
+| Mode                    | Behavior                                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `off`                   | The feature is disabled. This is the default.                                                                                    |
+| `permissive` | The router detects inline arguments and records them. The operation still executes. Use this to observe traffic before enforcing. |
+| `strict`     | The router rejects any operation that uses an inline argument value. No subgraph requests are made.                              |
+
+## Configuration
+
+The feature is configured under `engine.validate_inline_arguments`:
+
+```yaml
+engine:
+  validate_inline_arguments:
+    mode: permissive
+    enforce_http_status_code: 400
+    error_code: INLINE_ARGUMENT_VALUES_NOT_ALLOWED
+    error_message: "Inline argument values are not allowed. Use variables instead."
+    include_persisted_operations: false
+    return_in_response_extensions: false
+```
+
+These options are also listed in more detail in the [router configuration reference](/router/configuration#validate-inline-arguments).
+
+## What counts as an inline argument
+
+Detection runs during normalization and covers every argument whose value is not a variable:
+
+- Field arguments, including introspection fields such as `__type(name: "User")`.
+- Directive arguments, including the built-in `@skip` and `@include` and any custom directive.
+
+The following are not flagged:
+
+- Arguments supplied through a variable, for example `userById(userId: $userId)`.
+- Variable default values, for example `query($first: Int = 10)`. A default value is not an argument.
+
+Detection happens before `@skip` and `@include` prune the selection set. An inline argument on a field or
+directive that normalization later removes is still reported.
+
+## Qualified names
+
+Findings are reported using a qualified name that identifies where the argument was used:
+
+| Context           | Format             | Example         |
+| ----------------- | ------------------ | --------------- |
+| Field argument    | `field.argument`   | `userById.userId` |
+| Directive argument | `@directive.argument` | `@include.if`  |
+
+## Non-enforcing mode
+
+In `permissive` mode the operation executes normally. The router surfaces the findings in two ways.
+
+### Warning log
+
+For every operation that contains inline arguments, the router emits a warning. This happens regardless of
+the `return_in_response_extensions` setting.
+
+```json
+{
+  "level": "warn",
+  "msg": "Inline argument values found in operation; use variables instead",
+  "count": 2,
+  "arguments": ["userById.userId", "@include.if"],
+  "operation_name": "GetUser",
+  "operation_hash": 1234567890
+}
+```
+
+### Response extensions
+
+When `return_in_response_extensions` is `true`, the findings are also returned to the client under
+`extensions.inlineArguments`. The `count` field is the number of inline arguments, and `arguments` lists their
+qualified names.
+
+```json
+{
+  "data": { "userById": { "name": "Me" } },
+  "extensions": {
+    "inlineArguments": {
+      "count": 2,
+      "arguments": ["userById.userId", "@include.if"]
+    }
+  }
+}
+```
+
+`return_in_response_extensions` has no effect in enforcing mode, because offending operations are rejected
+before a response is produced.
+
+## Enforcing mode
+
+In `strict` mode the router rejects any operation that uses an inline argument value. The operation
+is rejected during normalization, so no subgraph requests are made.
+
+The rejection is generic. The router stops at the first inline argument and does not name the argument or
+point at its location. The response uses the configured `error_message`, `error_code`, and
+`enforce_http_status_code`.
+
+```json
+{
+  "errors": [
+    {
+      "message": "Inline argument values are not allowed. Use variables instead.",
+      "extensions": {
+        "code": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED"
+      }
+    }
+  ]
+}
+```
+
+## Persisted operations
+
+Persisted operations are exempt by default. They are authored and registered ahead of time, so inline values
+in a persisted operation are a controlled, reviewable input rather than arbitrary client traffic.
+
+Set `include_persisted_operations: true` to apply the policy to persisted operations as well. This applies to
+both non-enforcing and enforcing modes.
+
+## Rollout
+
+Start in `permissive` mode to understand your traffic without breaking clients.
+
+```yaml
+engine:
+  validate_inline_arguments:
+    mode: permissive
+    return_in_response_extensions: true
+```
+
+Use the warning logs and `extensions.inlineArguments` to find operations that still send inline values and
+migrate them to variables. Once the offending operations are gone, switch to `strict`.
+
+```yaml
+engine:
+  validate_inline_arguments:
+    mode: strict
+```

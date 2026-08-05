@@ -165,6 +165,7 @@ type ClientTrace struct {
 	DNSLookupDuration         time.Duration `expr:"dnsLookupDuration"`
 	TCPConnectDuration        time.Duration `expr:"tcpConnectDuration"`
 	TLSHandshakeDuration      time.Duration `expr:"tlsHandshakeDuration"`
+	TimeToFirstRequestByte    time.Duration `expr:"timeToFirstRequestByte"`
 	TimeToFirstByte           time.Duration `expr:"timeToFirstByte"`
 }
 

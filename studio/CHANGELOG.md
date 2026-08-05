@@ -4,6 +4,52 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.178.7](https://github.com/wundergraph/cosmo/compare/studio@0.178.6...studio@0.178.7) (2026-07-31)
+
+**Note:** Version bump only for package studio
+
+## [0.178.6](https://github.com/wundergraph/cosmo/compare/studio@0.178.5...studio@0.178.6) (2026-07-30)
+
+### Bug Fixes
+
+* **studio:** read document.referrer inside an effect on onboarding ([#3128](https://github.com/wundergraph/cosmo/issues/3128)) ([cb6d98d](https://github.com/wundergraph/cosmo/commit/cb6d98db32478d7d3a261f639cac0a1fd245c6ff)) (@thisisnithin)
+
+## [0.178.5](https://github.com/wundergraph/cosmo/compare/studio@0.178.4...studio@0.178.5) (2026-07-30)
+
+### Bug Fixes
+
+* **studio:** load studio when analytics cookies are declined ([#3127](https://github.com/wundergraph/cosmo/issues/3127)) ([1bc4562](https://github.com/wundergraph/cosmo/commit/1bc4562737341a96023d026672c63b503e897909)) (@thisisnithin)
+
+## [0.178.4](https://github.com/wundergraph/cosmo/compare/studio@0.178.3...studio@0.178.4) (2026-07-29)
+
+### Bug Fixes
+
+* osano and analytics script not being bootstrapped correctly ([#3126](https://github.com/wundergraph/cosmo/issues/3126)) ([2c93bca](https://github.com/wundergraph/cosmo/commit/2c93bca89be91043334829c99f4a248630b3788e)) (@wilsonrivera)
+
+## [0.178.3](https://github.com/wundergraph/cosmo/compare/studio@0.178.2...studio@0.178.3) (2026-07-17)
+
+### Bug Fixes
+
+* encode url parameters ([#3070](https://github.com/wundergraph/cosmo/issues/3070)) ([cacf1b5](https://github.com/wundergraph/cosmo/commit/cacf1b5b8d4174c23aabcb4f4919ff13666d53c9)) (@wilsonrivera)
+* orphan subgraphs not shown as active on the header ([#3086](https://github.com/wundergraph/cosmo/issues/3086)) ([417c9e8](https://github.com/wundergraph/cosmo/commit/417c9e8df987296d47ef2cb28f1eeaef1ff4d7cf)) (@wilsonrivera)
+
+## [0.178.2](https://github.com/wundergraph/cosmo/compare/studio@0.178.1...studio@0.178.2) (2026-07-14)
+
+### Bug Fixes
+
+* active subgraph not shown on the subgraph details page ([#3063](https://github.com/wundergraph/cosmo/issues/3063)) ([96663cc](https://github.com/wundergraph/cosmo/commit/96663ccf9ec6ed817e3c7f80d0a3cae01f9b9592)) (@wilsonrivera)
+* **studio:** fix typo in SCIM setting description ([#3080](https://github.com/wundergraph/cosmo/issues/3080)) ([6d7aec2](https://github.com/wundergraph/cosmo/commit/6d7aec20cd2e03e27f3f899e1f77d220757493aa)) (@gausie)
+
+## [0.178.1](https://github.com/wundergraph/cosmo/compare/studio@0.178.0...studio@0.178.1) (2026-07-14)
+
+**Note:** Version bump only for package studio
+
+# [0.178.0](https://github.com/wundergraph/cosmo/compare/studio@0.177.0...studio@0.178.0) (2026-07-08)
+
+### Features
+
+* add support for feature subgraph checks ([#3029](https://github.com/wundergraph/cosmo/issues/3029)) ([8aadbf0](https://github.com/wundergraph/cosmo/commit/8aadbf0995725f7ef27f93e118679d12571354d9)) (@JivusAyrus)
+
 # [0.177.0](https://github.com/wundergraph/cosmo/compare/studio@0.176.1...studio@0.177.0) (2026-07-06)
 
 ### Features

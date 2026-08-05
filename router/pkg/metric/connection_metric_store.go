@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 
@@ -21,6 +22,7 @@ type ConnectionMetricProvider interface {
 	MeasureDNSLookupDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTCPConnectDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
+	MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	Shutdown() error
 }
@@ -31,6 +33,7 @@ type ConnectionMetricStore interface {
 	MeasureDNSLookupDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTCPConnectDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
+	MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	Shutdown(ctx context.Context) error
 }
@@ -76,17 +79,18 @@ func NewConnectionMetricStore(
 	return connMetrics, nil
 }
 
-func (c *ConnectionMetrics) MeasureMaxConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue) {
-	// Add the reused attribute to the base attributes
-	reusedAttr := otel.WgClientReusedConnection.Bool(reused)
-	allAttrs := append([]attribute.KeyValue{}, c.baseAttributes...)
-	allAttrs = append(allAttrs, reusedAttr)
-	allAttrs = append(allAttrs, attrs...)
-
-	opts := otelmetric.WithAttributes(allAttrs...)
-
-	c.otlpConnectionMetrics.MeasureMaxConnections(ctx, 1, opts)
-	c.promConnectionMetrics.MeasureMaxConnections(ctx, 1, opts)
+// RecordMaxConnections records the configured per-subgraph connection ceiling.
+// Must be called on every graph server build.
+func (c *ConnectionMetrics) RecordMaxConnections(ctx context.Context, connectionPoolStats *ConnectionPoolStats) {
+	for subgraph, maxConns := range connectionPoolStats.GetMaxConnsPerSubgraph() {
+		attrs := make([]attribute.KeyValue, 0, 1)
+		if subgraph != "" {
+			attrs = append(attrs, otel.WgSubgraphName.String(subgraph))
+		}
+		opts := c.recordOpts(attrs)
+		c.otlpConnectionMetrics.MeasureMaxConnections(ctx, maxConns, opts)
+		c.promConnectionMetrics.MeasureMaxConnections(ctx, maxConns, opts)
+	}
 }
 
 func (c *ConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
@@ -113,6 +117,12 @@ func (c *ConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, dur
 	c.promConnectionMetrics.MeasureTLSHandshakeDuration(ctx, duration, opts)
 }
 
+func (c *ConnectionMetrics) MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+	opts := c.recordOpts(attrs)
+	c.otlpConnectionMetrics.MeasureTimeToFirstRequestByte(ctx, duration, opts)
+	c.promConnectionMetrics.MeasureTimeToFirstRequestByte(ctx, duration, opts)
+}
+
 func (c *ConnectionMetrics) MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
 	opts := c.recordOpts(attrs)
 	c.otlpConnectionMetrics.MeasureTimeToFirstByte(ctx, duration, opts)
@@ -120,8 +130,7 @@ func (c *ConnectionMetrics) MeasureTimeToFirstByte(ctx context.Context, duration
 }
 
 func (c *ConnectionMetrics) recordOpts(attrs []attribute.KeyValue) otelmetric.RecordOption {
-	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
-	return otelmetric.WithAttributes(append(copied, attrs...)...)
+	return otelmetric.WithAttributes(append(slices.Clone(c.baseAttributes), attrs...)...)
 }
 
 // Flush flushes the metrics to the backend synchronously.

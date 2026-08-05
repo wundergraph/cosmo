@@ -3,7 +3,7 @@ import { Octokit } from 'octokit';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import cliProgress from 'cli-progress';
-import decompress from 'decompress';
+import decompress from '@xhmikosr/decompress';
 import { resolve, join } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 

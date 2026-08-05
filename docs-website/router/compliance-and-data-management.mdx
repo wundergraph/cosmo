@@ -69,6 +69,8 @@ Besides measuring common request metrics, we also collect information about Grap
 
 * Used GraphQL types per operation
 
+You can disable this collection with `graphql_metrics.enabled: false` in the router config (see [GraphQL Metrics](/router/configuration#graphql-metrics)).
+
 ## Router self-registering
 
 When the router starts, it attempts to connect with the control plane to self-register. This mechanism is used to exchange cryptographic keys when using [ART](/router/advanced-request-tracing-art) and to ensure that certain limits are maintained when data is sent to Cosmo Cloud.

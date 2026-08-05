@@ -19,54 +19,58 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ProjectsService_LookupEmployeeById_FullMethodName                        = "/service.ProjectsService/LookupEmployeeById"
-	ProjectsService_LookupMilestoneById_FullMethodName                       = "/service.ProjectsService/LookupMilestoneById"
-	ProjectsService_LookupProductByUpc_FullMethodName                        = "/service.ProjectsService/LookupProductByUpc"
-	ProjectsService_LookupProjectById_FullMethodName                         = "/service.ProjectsService/LookupProjectById"
-	ProjectsService_LookupTaskById_FullMethodName                            = "/service.ProjectsService/LookupTaskById"
-	ProjectsService_MutationAddMilestone_FullMethodName                      = "/service.ProjectsService/MutationAddMilestone"
-	ProjectsService_MutationAddProject_FullMethodName                        = "/service.ProjectsService/MutationAddProject"
-	ProjectsService_MutationAddTask_FullMethodName                           = "/service.ProjectsService/MutationAddTask"
-	ProjectsService_MutationUpdateProjectStatus_FullMethodName               = "/service.ProjectsService/MutationUpdateProjectStatus"
-	ProjectsService_QueryArchivedProjects_FullMethodName                     = "/service.ProjectsService/QueryArchivedProjects"
-	ProjectsService_QueryKillService_FullMethodName                          = "/service.ProjectsService/QueryKillService"
-	ProjectsService_QueryMilestones_FullMethodName                           = "/service.ProjectsService/QueryMilestones"
-	ProjectsService_QueryNodesById_FullMethodName                            = "/service.ProjectsService/QueryNodesById"
-	ProjectsService_QueryPanic_FullMethodName                                = "/service.ProjectsService/QueryPanic"
-	ProjectsService_QueryProject_FullMethodName                              = "/service.ProjectsService/QueryProject"
-	ProjectsService_QueryProjectActivities_FullMethodName                    = "/service.ProjectsService/QueryProjectActivities"
-	ProjectsService_QueryProjectResources_FullMethodName                     = "/service.ProjectsService/QueryProjectResources"
-	ProjectsService_QueryProjectStatuses_FullMethodName                      = "/service.ProjectsService/QueryProjectStatuses"
-	ProjectsService_QueryProjectTags_FullMethodName                          = "/service.ProjectsService/QueryProjectTags"
-	ProjectsService_QueryProjects_FullMethodName                             = "/service.ProjectsService/QueryProjects"
-	ProjectsService_QueryProjectsByStatus_FullMethodName                     = "/service.ProjectsService/QueryProjectsByStatus"
-	ProjectsService_QueryResourceMatrix_FullMethodName                       = "/service.ProjectsService/QueryResourceMatrix"
-	ProjectsService_QuerySearchProjects_FullMethodName                       = "/service.ProjectsService/QuerySearchProjects"
-	ProjectsService_QueryTasks_FullMethodName                                = "/service.ProjectsService/QueryTasks"
-	ProjectsService_QueryTasksByPriority_FullMethodName                      = "/service.ProjectsService/QueryTasksByPriority"
-	ProjectsService_RequireEmployeeDeepWorkItemInfoById_FullMethodName       = "/service.ProjectsService/RequireEmployeeDeepWorkItemInfoById"
-	ProjectsService_RequireEmployeeFilteredProjectSummaryById_FullMethodName = "/service.ProjectsService/RequireEmployeeFilteredProjectSummaryById"
-	ProjectsService_RequireEmployeeReviewReportById_FullMethodName           = "/service.ProjectsService/RequireEmployeeReviewReportById"
-	ProjectsService_RequireEmployeeTaggedProjectSummaryById_FullMethodName   = "/service.ProjectsService/RequireEmployeeTaggedProjectSummaryById"
-	ProjectsService_RequireEmployeeWorkItemHandlerInfoById_FullMethodName    = "/service.ProjectsService/RequireEmployeeWorkItemHandlerInfoById"
-	ProjectsService_RequireEmployeeWorkItemInfoById_FullMethodName           = "/service.ProjectsService/RequireEmployeeWorkItemInfoById"
-	ProjectsService_RequireEmployeeWorkItemSpecsInfoById_FullMethodName      = "/service.ProjectsService/RequireEmployeeWorkItemSpecsInfoById"
-	ProjectsService_RequireEmployeeWorkSetupSummaryById_FullMethodName       = "/service.ProjectsService/RequireEmployeeWorkSetupSummaryById"
-	ProjectsService_ResolveEmployeeAverageTaskCompletionDays_FullMethodName  = "/service.ProjectsService/ResolveEmployeeAverageTaskCompletionDays"
-	ProjectsService_ResolveEmployeeCurrentWorkload_FullMethodName            = "/service.ProjectsService/ResolveEmployeeCurrentWorkload"
-	ProjectsService_ResolveEmployeeTotalProjectCount_FullMethodName          = "/service.ProjectsService/ResolveEmployeeTotalProjectCount"
-	ProjectsService_ResolveMilestoneDaysUntilDue_FullMethodName              = "/service.ProjectsService/ResolveMilestoneDaysUntilDue"
-	ProjectsService_ResolveMilestoneIsAtRisk_FullMethodName                  = "/service.ProjectsService/ResolveMilestoneIsAtRisk"
-	ProjectsService_ResolveProjectActiveMilestoneCount_FullMethodName        = "/service.ProjectsService/ResolveProjectActiveMilestoneCount"
-	ProjectsService_ResolveProjectCompletionRate_FullMethodName              = "/service.ProjectsService/ResolveProjectCompletionRate"
-	ProjectsService_ResolveProjectCriticalDeadline_FullMethodName            = "/service.ProjectsService/ResolveProjectCriticalDeadline"
-	ProjectsService_ResolveProjectEstimatedDaysRemaining_FullMethodName      = "/service.ProjectsService/ResolveProjectEstimatedDaysRemaining"
-	ProjectsService_ResolveProjectFilteredTasks_FullMethodName               = "/service.ProjectsService/ResolveProjectFilteredTasks"
-	ProjectsService_ResolveProjectSubProjects_FullMethodName                 = "/service.ProjectsService/ResolveProjectSubProjects"
-	ProjectsService_ResolveProjectTaskCount_FullMethodName                   = "/service.ProjectsService/ResolveProjectTaskCount"
-	ProjectsService_ResolveProjectTopPriorityItem_FullMethodName             = "/service.ProjectsService/ResolveProjectTopPriorityItem"
-	ProjectsService_ResolveTaskIsBlocked_FullMethodName                      = "/service.ProjectsService/ResolveTaskIsBlocked"
-	ProjectsService_ResolveTaskTotalEffort_FullMethodName                    = "/service.ProjectsService/ResolveTaskTotalEffort"
+	ProjectsService_LookupEmployeeById_FullMethodName                             = "/service.ProjectsService/LookupEmployeeById"
+	ProjectsService_LookupMilestoneById_FullMethodName                            = "/service.ProjectsService/LookupMilestoneById"
+	ProjectsService_LookupProductByUpc_FullMethodName                             = "/service.ProjectsService/LookupProductByUpc"
+	ProjectsService_LookupProjectById_FullMethodName                              = "/service.ProjectsService/LookupProjectById"
+	ProjectsService_LookupTaskById_FullMethodName                                 = "/service.ProjectsService/LookupTaskById"
+	ProjectsService_MutationAddMilestone_FullMethodName                           = "/service.ProjectsService/MutationAddMilestone"
+	ProjectsService_MutationAddProject_FullMethodName                             = "/service.ProjectsService/MutationAddProject"
+	ProjectsService_MutationAddTask_FullMethodName                                = "/service.ProjectsService/MutationAddTask"
+	ProjectsService_MutationUpdateProjectStatus_FullMethodName                    = "/service.ProjectsService/MutationUpdateProjectStatus"
+	ProjectsService_QueryArchivedProjects_FullMethodName                          = "/service.ProjectsService/QueryArchivedProjects"
+	ProjectsService_QueryKillService_FullMethodName                               = "/service.ProjectsService/QueryKillService"
+	ProjectsService_QueryMilestones_FullMethodName                                = "/service.ProjectsService/QueryMilestones"
+	ProjectsService_QueryNodesById_FullMethodName                                 = "/service.ProjectsService/QueryNodesById"
+	ProjectsService_QueryPanic_FullMethodName                                     = "/service.ProjectsService/QueryPanic"
+	ProjectsService_QueryProject_FullMethodName                                   = "/service.ProjectsService/QueryProject"
+	ProjectsService_QueryProjectActivities_FullMethodName                         = "/service.ProjectsService/QueryProjectActivities"
+	ProjectsService_QueryProjectResources_FullMethodName                          = "/service.ProjectsService/QueryProjectResources"
+	ProjectsService_QueryProjectStatuses_FullMethodName                           = "/service.ProjectsService/QueryProjectStatuses"
+	ProjectsService_QueryProjectTags_FullMethodName                               = "/service.ProjectsService/QueryProjectTags"
+	ProjectsService_QueryProjects_FullMethodName                                  = "/service.ProjectsService/QueryProjects"
+	ProjectsService_QueryProjectsByStatus_FullMethodName                          = "/service.ProjectsService/QueryProjectsByStatus"
+	ProjectsService_QueryResourceMatrix_FullMethodName                            = "/service.ProjectsService/QueryResourceMatrix"
+	ProjectsService_QuerySearchProjects_FullMethodName                            = "/service.ProjectsService/QuerySearchProjects"
+	ProjectsService_QueryTasks_FullMethodName                                     = "/service.ProjectsService/QueryTasks"
+	ProjectsService_QueryTasksByPriority_FullMethodName                           = "/service.ProjectsService/QueryTasksByPriority"
+	ProjectsService_RequireEmployeeDeepWorkItemInfoById_FullMethodName            = "/service.ProjectsService/RequireEmployeeDeepWorkItemInfoById"
+	ProjectsService_RequireEmployeeFilteredProjectSummaryById_FullMethodName      = "/service.ProjectsService/RequireEmployeeFilteredProjectSummaryById"
+	ProjectsService_RequireEmployeeLatestWorkOperationById_FullMethodName         = "/service.ProjectsService/RequireEmployeeLatestWorkOperationById"
+	ProjectsService_RequireEmployeeOptionalLatestWorkOperationById_FullMethodName = "/service.ProjectsService/RequireEmployeeOptionalLatestWorkOperationById"
+	ProjectsService_RequireEmployeeRecommendedWorkItemById_FullMethodName         = "/service.ProjectsService/RequireEmployeeRecommendedWorkItemById"
+	ProjectsService_RequireEmployeeRecommendedWorkItemsById_FullMethodName        = "/service.ProjectsService/RequireEmployeeRecommendedWorkItemsById"
+	ProjectsService_RequireEmployeeReviewReportById_FullMethodName                = "/service.ProjectsService/RequireEmployeeReviewReportById"
+	ProjectsService_RequireEmployeeTaggedProjectSummaryById_FullMethodName        = "/service.ProjectsService/RequireEmployeeTaggedProjectSummaryById"
+	ProjectsService_RequireEmployeeWorkItemHandlerInfoById_FullMethodName         = "/service.ProjectsService/RequireEmployeeWorkItemHandlerInfoById"
+	ProjectsService_RequireEmployeeWorkItemInfoById_FullMethodName                = "/service.ProjectsService/RequireEmployeeWorkItemInfoById"
+	ProjectsService_RequireEmployeeWorkItemSpecsInfoById_FullMethodName           = "/service.ProjectsService/RequireEmployeeWorkItemSpecsInfoById"
+	ProjectsService_RequireEmployeeWorkSetupSummaryById_FullMethodName            = "/service.ProjectsService/RequireEmployeeWorkSetupSummaryById"
+	ProjectsService_ResolveEmployeeAverageTaskCompletionDays_FullMethodName       = "/service.ProjectsService/ResolveEmployeeAverageTaskCompletionDays"
+	ProjectsService_ResolveEmployeeCurrentWorkload_FullMethodName                 = "/service.ProjectsService/ResolveEmployeeCurrentWorkload"
+	ProjectsService_ResolveEmployeeTotalProjectCount_FullMethodName               = "/service.ProjectsService/ResolveEmployeeTotalProjectCount"
+	ProjectsService_ResolveMilestoneDaysUntilDue_FullMethodName                   = "/service.ProjectsService/ResolveMilestoneDaysUntilDue"
+	ProjectsService_ResolveMilestoneIsAtRisk_FullMethodName                       = "/service.ProjectsService/ResolveMilestoneIsAtRisk"
+	ProjectsService_ResolveProjectActiveMilestoneCount_FullMethodName             = "/service.ProjectsService/ResolveProjectActiveMilestoneCount"
+	ProjectsService_ResolveProjectCompletionRate_FullMethodName                   = "/service.ProjectsService/ResolveProjectCompletionRate"
+	ProjectsService_ResolveProjectCriticalDeadline_FullMethodName                 = "/service.ProjectsService/ResolveProjectCriticalDeadline"
+	ProjectsService_ResolveProjectEstimatedDaysRemaining_FullMethodName           = "/service.ProjectsService/ResolveProjectEstimatedDaysRemaining"
+	ProjectsService_ResolveProjectFilteredTasks_FullMethodName                    = "/service.ProjectsService/ResolveProjectFilteredTasks"
+	ProjectsService_ResolveProjectSubProjects_FullMethodName                      = "/service.ProjectsService/ResolveProjectSubProjects"
+	ProjectsService_ResolveProjectTaskCount_FullMethodName                        = "/service.ProjectsService/ResolveProjectTaskCount"
+	ProjectsService_ResolveProjectTopPriorityItem_FullMethodName                  = "/service.ProjectsService/ResolveProjectTopPriorityItem"
+	ProjectsService_ResolveTaskIsBlocked_FullMethodName                           = "/service.ProjectsService/ResolveTaskIsBlocked"
+	ProjectsService_ResolveTaskTotalEffort_FullMethodName                         = "/service.ProjectsService/ResolveTaskTotalEffort"
 )
 
 // ProjectsServiceClient is the client API for ProjectsService service.
@@ -107,6 +111,10 @@ type ProjectsServiceClient interface {
 	QueryTasksByPriority(ctx context.Context, in *QueryTasksByPriorityRequest, opts ...grpc.CallOption) (*QueryTasksByPriorityResponse, error)
 	RequireEmployeeDeepWorkItemInfoById(ctx context.Context, in *RequireEmployeeDeepWorkItemInfoByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeDeepWorkItemInfoByIdResponse, error)
 	RequireEmployeeFilteredProjectSummaryById(ctx context.Context, in *RequireEmployeeFilteredProjectSummaryByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeFilteredProjectSummaryByIdResponse, error)
+	RequireEmployeeLatestWorkOperationById(ctx context.Context, in *RequireEmployeeLatestWorkOperationByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeLatestWorkOperationByIdResponse, error)
+	RequireEmployeeOptionalLatestWorkOperationById(ctx context.Context, in *RequireEmployeeOptionalLatestWorkOperationByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeOptionalLatestWorkOperationByIdResponse, error)
+	RequireEmployeeRecommendedWorkItemById(ctx context.Context, in *RequireEmployeeRecommendedWorkItemByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeRecommendedWorkItemByIdResponse, error)
+	RequireEmployeeRecommendedWorkItemsById(ctx context.Context, in *RequireEmployeeRecommendedWorkItemsByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeRecommendedWorkItemsByIdResponse, error)
 	RequireEmployeeReviewReportById(ctx context.Context, in *RequireEmployeeReviewReportByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeReviewReportByIdResponse, error)
 	RequireEmployeeTaggedProjectSummaryById(ctx context.Context, in *RequireEmployeeTaggedProjectSummaryByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeTaggedProjectSummaryByIdResponse, error)
 	RequireEmployeeWorkItemHandlerInfoById(ctx context.Context, in *RequireEmployeeWorkItemHandlerInfoByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeWorkItemHandlerInfoByIdResponse, error)
@@ -408,6 +416,46 @@ func (c *projectsServiceClient) RequireEmployeeFilteredProjectSummaryById(ctx co
 	return out, nil
 }
 
+func (c *projectsServiceClient) RequireEmployeeLatestWorkOperationById(ctx context.Context, in *RequireEmployeeLatestWorkOperationByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeLatestWorkOperationByIdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequireEmployeeLatestWorkOperationByIdResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_RequireEmployeeLatestWorkOperationById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) RequireEmployeeOptionalLatestWorkOperationById(ctx context.Context, in *RequireEmployeeOptionalLatestWorkOperationByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeOptionalLatestWorkOperationByIdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequireEmployeeOptionalLatestWorkOperationByIdResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_RequireEmployeeOptionalLatestWorkOperationById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) RequireEmployeeRecommendedWorkItemById(ctx context.Context, in *RequireEmployeeRecommendedWorkItemByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeRecommendedWorkItemByIdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequireEmployeeRecommendedWorkItemByIdResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_RequireEmployeeRecommendedWorkItemById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) RequireEmployeeRecommendedWorkItemsById(ctx context.Context, in *RequireEmployeeRecommendedWorkItemsByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeRecommendedWorkItemsByIdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequireEmployeeRecommendedWorkItemsByIdResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_RequireEmployeeRecommendedWorkItemsById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *projectsServiceClient) RequireEmployeeReviewReportById(ctx context.Context, in *RequireEmployeeReviewReportByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeReviewReportByIdResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RequireEmployeeReviewReportByIdResponse)
@@ -656,6 +704,10 @@ type ProjectsServiceServer interface {
 	QueryTasksByPriority(context.Context, *QueryTasksByPriorityRequest) (*QueryTasksByPriorityResponse, error)
 	RequireEmployeeDeepWorkItemInfoById(context.Context, *RequireEmployeeDeepWorkItemInfoByIdRequest) (*RequireEmployeeDeepWorkItemInfoByIdResponse, error)
 	RequireEmployeeFilteredProjectSummaryById(context.Context, *RequireEmployeeFilteredProjectSummaryByIdRequest) (*RequireEmployeeFilteredProjectSummaryByIdResponse, error)
+	RequireEmployeeLatestWorkOperationById(context.Context, *RequireEmployeeLatestWorkOperationByIdRequest) (*RequireEmployeeLatestWorkOperationByIdResponse, error)
+	RequireEmployeeOptionalLatestWorkOperationById(context.Context, *RequireEmployeeOptionalLatestWorkOperationByIdRequest) (*RequireEmployeeOptionalLatestWorkOperationByIdResponse, error)
+	RequireEmployeeRecommendedWorkItemById(context.Context, *RequireEmployeeRecommendedWorkItemByIdRequest) (*RequireEmployeeRecommendedWorkItemByIdResponse, error)
+	RequireEmployeeRecommendedWorkItemsById(context.Context, *RequireEmployeeRecommendedWorkItemsByIdRequest) (*RequireEmployeeRecommendedWorkItemsByIdResponse, error)
 	RequireEmployeeReviewReportById(context.Context, *RequireEmployeeReviewReportByIdRequest) (*RequireEmployeeReviewReportByIdResponse, error)
 	RequireEmployeeTaggedProjectSummaryById(context.Context, *RequireEmployeeTaggedProjectSummaryByIdRequest) (*RequireEmployeeTaggedProjectSummaryByIdResponse, error)
 	RequireEmployeeWorkItemHandlerInfoById(context.Context, *RequireEmployeeWorkItemHandlerInfoByIdRequest) (*RequireEmployeeWorkItemHandlerInfoByIdResponse, error)
@@ -767,6 +819,18 @@ func (UnimplementedProjectsServiceServer) RequireEmployeeDeepWorkItemInfoById(co
 }
 func (UnimplementedProjectsServiceServer) RequireEmployeeFilteredProjectSummaryById(context.Context, *RequireEmployeeFilteredProjectSummaryByIdRequest) (*RequireEmployeeFilteredProjectSummaryByIdResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequireEmployeeFilteredProjectSummaryById not implemented")
+}
+func (UnimplementedProjectsServiceServer) RequireEmployeeLatestWorkOperationById(context.Context, *RequireEmployeeLatestWorkOperationByIdRequest) (*RequireEmployeeLatestWorkOperationByIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequireEmployeeLatestWorkOperationById not implemented")
+}
+func (UnimplementedProjectsServiceServer) RequireEmployeeOptionalLatestWorkOperationById(context.Context, *RequireEmployeeOptionalLatestWorkOperationByIdRequest) (*RequireEmployeeOptionalLatestWorkOperationByIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequireEmployeeOptionalLatestWorkOperationById not implemented")
+}
+func (UnimplementedProjectsServiceServer) RequireEmployeeRecommendedWorkItemById(context.Context, *RequireEmployeeRecommendedWorkItemByIdRequest) (*RequireEmployeeRecommendedWorkItemByIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequireEmployeeRecommendedWorkItemById not implemented")
+}
+func (UnimplementedProjectsServiceServer) RequireEmployeeRecommendedWorkItemsById(context.Context, *RequireEmployeeRecommendedWorkItemsByIdRequest) (*RequireEmployeeRecommendedWorkItemsByIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequireEmployeeRecommendedWorkItemsById not implemented")
 }
 func (UnimplementedProjectsServiceServer) RequireEmployeeReviewReportById(context.Context, *RequireEmployeeReviewReportByIdRequest) (*RequireEmployeeReviewReportByIdResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequireEmployeeReviewReportById not implemented")
@@ -1338,6 +1402,78 @@ func _ProjectsService_RequireEmployeeFilteredProjectSummaryById_Handler(srv inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_RequireEmployeeLatestWorkOperationById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequireEmployeeLatestWorkOperationByIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).RequireEmployeeLatestWorkOperationById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_RequireEmployeeLatestWorkOperationById_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).RequireEmployeeLatestWorkOperationById(ctx, req.(*RequireEmployeeLatestWorkOperationByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_RequireEmployeeOptionalLatestWorkOperationById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequireEmployeeOptionalLatestWorkOperationByIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).RequireEmployeeOptionalLatestWorkOperationById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_RequireEmployeeOptionalLatestWorkOperationById_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).RequireEmployeeOptionalLatestWorkOperationById(ctx, req.(*RequireEmployeeOptionalLatestWorkOperationByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_RequireEmployeeRecommendedWorkItemById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequireEmployeeRecommendedWorkItemByIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).RequireEmployeeRecommendedWorkItemById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_RequireEmployeeRecommendedWorkItemById_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).RequireEmployeeRecommendedWorkItemById(ctx, req.(*RequireEmployeeRecommendedWorkItemByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_RequireEmployeeRecommendedWorkItemsById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequireEmployeeRecommendedWorkItemsByIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).RequireEmployeeRecommendedWorkItemsById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_RequireEmployeeRecommendedWorkItemsById_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).RequireEmployeeRecommendedWorkItemsById(ctx, req.(*RequireEmployeeRecommendedWorkItemsByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ProjectsService_RequireEmployeeReviewReportById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RequireEmployeeReviewReportByIdRequest)
 	if err := dec(in); err != nil {
@@ -1830,6 +1966,22 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RequireEmployeeFilteredProjectSummaryById",
 			Handler:    _ProjectsService_RequireEmployeeFilteredProjectSummaryById_Handler,
+		},
+		{
+			MethodName: "RequireEmployeeLatestWorkOperationById",
+			Handler:    _ProjectsService_RequireEmployeeLatestWorkOperationById_Handler,
+		},
+		{
+			MethodName: "RequireEmployeeOptionalLatestWorkOperationById",
+			Handler:    _ProjectsService_RequireEmployeeOptionalLatestWorkOperationById_Handler,
+		},
+		{
+			MethodName: "RequireEmployeeRecommendedWorkItemById",
+			Handler:    _ProjectsService_RequireEmployeeRecommendedWorkItemById_Handler,
+		},
+		{
+			MethodName: "RequireEmployeeRecommendedWorkItemsById",
+			Handler:    _ProjectsService_RequireEmployeeRecommendedWorkItemsById_Handler,
 		},
 		{
 			MethodName: "RequireEmployeeReviewReportById",

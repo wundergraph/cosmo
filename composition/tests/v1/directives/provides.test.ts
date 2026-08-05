@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   type ConditionalFieldData,
   type ConfigurationData,
+  directlyProvidedInterfaceFieldError,
   externalEntityExtensionKeyFieldWarning,
   fieldAlreadyProvidedErrorMessage,
   fieldAlreadyProvidedWarning,
@@ -17,6 +18,7 @@ import {
   parse,
   PROVIDES,
   providesOnUnionWarning,
+  providesWithInterfaceFieldSelectionWarning,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
   subgraphValidationError,
@@ -143,7 +145,16 @@ describe('@provides directive tests', () => {
           ],
         ]),
       );
-      expect(warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Object.entity',
+          fieldCoords: 'Interface.name',
+          fieldSet: 'interface { ... on Interface { ... on Interface { name } } }',
+          selection: 'interface { name }',
+          subgraphName: d.name,
+        }),
+      ]);
     });
 
     test('that a @provides field set supports an inline fragment with a valid type condition', () => {
@@ -821,6 +832,53 @@ describe('@provides directive tests', () => {
         ]),
       );
     });
+
+    test('that an error is returned if an implementation type unconditionally provides an external ancestor for an Interface field', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          entityAs: [EntityA!]! @provides(fields: "interface { id }")
+        }
+        
+        type EntityA @key(fields: "id") {
+          id: ID!
+          interface: Interface!
+        }
+        
+        interface Interface {
+          id: ID!
+        }
+        
+        extend type EntityB implements Interface @key(fields: "id") {
+          id: ID! @external
+        }
+      `,
+      );
+      const { errors, warnings } = normalizeSubgraphFailure(subgraphA, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        directlyProvidedInterfaceFieldError({
+          directiveCoords: 'Query.entityAs',
+          directiveName: PROVIDES,
+          fieldSet: 'interface { id }',
+          selection: 'interface { id }',
+          subgraphName: subgraphA.name,
+          targetCoords: 'Interface.id',
+        }),
+      ]);
+      expect(warnings).toHaveLength(2);
+      expect(warnings).toStrictEqual([
+        externalEntityExtensionKeyFieldWarning('EntityB', 'id', ['EntityB.id'], subgraphA.name),
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Query.entityAs',
+          fieldSet: 'interface { id }',
+          fieldCoords: 'Interface.id',
+          selection: 'interface { id }',
+          subgraphName: subgraphA.name,
+        }),
+      ]);
+    });
   });
 
   describe('Federation tests', () => {
@@ -1243,177 +1301,6 @@ describe('@provides directive tests', () => {
       expect(warnings[1]).toStrictEqual(externalEntityExtensionKeyFieldWarning(`Object`, `id`, [`Object.id`], af.name));
     });
 
-    test('that provides on a field that returns a Union is valid #1', () => {
-      const subgraphA = createSubgraph(
-        'a',
-        `
-        type Query {
-          union: Union @provides(fields: "... on Entity { name }")
-        }
-        
-        type Entity @key(fields: "id") {
-          id: ID!
-          name: String! @external @shareable
-        }
-        
-        union Union = Entity
-      `,
-      );
-      const subgraphB = createSubgraph(
-        'b',
-        `
-        type Entity @key(fields: "id") {
-          id: ID!
-          name: String! @shareable
-        }
-        `,
-      );
-      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(warnings).toHaveLength(1);
-      expect(warnings).toStrictEqual([
-        providesOnUnionWarning({
-          fieldCoords: 'Query.union',
-          fieldSet: '... on Entity { name }',
-          namedTypeName: UNION,
-          subgraphName: subgraphA.name,
-        }),
-      ]);
-    });
-
-    test('that provides on a field that returns a Union is valid #2', () => {
-      const subgraphA = createSubgraph(
-        'a',
-        `
-        extend schema
-          @link(
-            url: "https://specs.apollo.dev/federation/v2.3"
-            import: ["@key", "@shareable", "@external"]
-          )
-    
-        type Query {
-          media: [Media] @shareable
-        }
-    
-        union Media = Book | Movie
-    
-        type Book @key(fields: "id") {
-          id: ID!
-        }
-    
-        type Movie @key(fields: "id") {
-          id: ID!
-        }
-      `,
-      );
-      const subgraphB = createSubgraph(
-        'b',
-        `
-        extend schema
-          @link(
-            url: "https://specs.apollo.dev/federation/v2.3"
-            import: ["@key", "@shareable", "@provides", "@external"]
-          )
-    
-        type Query {
-          media: [Media] @shareable @provides(fields: "... on Book { title }")
-        }
-    
-        union Media = Book | Movie
-    
-        type Book @key(fields: "id") {
-          id: ID!
-          title: String @external
-        }
-    
-        type Movie @key(fields: "id") {
-          id: ID!
-        }
-        `,
-      );
-      const subgraphC = createSubgraph(
-        'c',
-        `
-        extend schema
-          @link(
-            url: "https://specs.apollo.dev/federation/v2.3"
-            import: ["@key", "@shareable"]
-          )
-    
-        type Book @key(fields: "id") {
-          id: ID!
-          title: String @shareable
-        }
-    
-        type Movie @key(fields: "id") {
-          id: ID!
-          title: String @shareable
-        }
-        `,
-      );
-      const { warnings } = federateSubgraphsSuccess(
-        [subgraphA, subgraphB, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(warnings).toHaveLength(1);
-      expect(warnings).toStrictEqual([
-        providesOnUnionWarning({
-          fieldCoords: 'Query.media',
-          fieldSet: '... on Book { title }',
-          namedTypeName: 'Media',
-          subgraphName: subgraphB.name,
-        }),
-      ]);
-    });
-
-    test('that an error is returned if a non-external field is provided through a Union type fragment', () => {
-      const subgraphA = createSubgraph(
-        'a',
-        `
-        type Query {
-          union: Union @provides(fields: "... on Entity { name }")
-        }
-        
-        type Entity @key(fields: "id") {
-          id: ID!
-          name: String! @shareable
-        }
-        
-        union Union = Entity
-      `,
-      );
-      const subgraphB = createSubgraph(
-        'b',
-        `
-        type Entity @key(fields: "id") {
-          id: ID!
-          name: String! @shareable
-        }
-        `,
-      );
-      const { errors, warnings } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(errors).toHaveLength(1);
-      expect(errors).toStrictEqual([
-        subgraphValidationError(subgraphA.name, [
-          nonExternalConditionalFieldError({
-            directiveCoords: 'Query.union',
-            fieldSet: `... on Entity { name }`,
-            directiveName: PROVIDES,
-            subgraphName: subgraphA.name,
-            targetCoords: 'Entity.name',
-          }),
-        ]),
-      ]);
-      expect(warnings).toHaveLength(1);
-      expect(warnings).toStrictEqual([
-        providesOnUnionWarning({
-          fieldCoords: 'Query.union',
-          fieldSet: '... on Entity { name }',
-          namedTypeName: UNION,
-          subgraphName: subgraphA.name,
-        }),
-      ]);
-    });
-
     test('that an error is returned if a Union fields et defines an unknown type fragment', () => {
       const subgraphA = createSubgraph(
         'a',
@@ -1456,7 +1343,7 @@ describe('@provides directive tests', () => {
       ]);
       expect(warnings).toStrictEqual([
         providesOnUnionWarning({
-          fieldCoords: 'Query.union',
+          directiveCoords: 'Query.union',
           fieldSet: '... on Unknown { name }',
           namedTypeName: UNION,
           subgraphName: subgraphA.name,
@@ -1512,7 +1399,7 @@ describe('@provides directive tests', () => {
       ]);
       expect(warnings).toStrictEqual([
         providesOnUnionWarning({
-          fieldCoords: 'Query.union',
+          directiveCoords: 'Query.union',
           fieldSet: '... on EntityB { name }',
           namedTypeName: UNION,
           subgraphName: subgraphA.name,
@@ -1575,7 +1462,7 @@ describe('@provides directive tests', () => {
       expect(warnings).toHaveLength(1);
       expect(warnings).toStrictEqual([
         providesOnUnionWarning({
-          fieldCoords: 'Query.union',
+          directiveCoords: 'Query.union',
           fieldSet: '... on EntityB { name }',
           namedTypeName: UNION,
           subgraphName: subgraphA.name,
@@ -1630,7 +1517,89 @@ describe('@provides directive tests', () => {
           }
         `,
       );
-      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const aConfig = subgraphConfigBySubgraphName.get(subgraphA.name)!;
+      expect(aConfig).toBeDefined();
+      const bConfig = subgraphConfigBySubgraphName.get(subgraphB.name)!;
+      expect(bConfig).toBeDefined();
+      expect(aConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              provides: [
+                {
+                  fieldName: 'entities',
+                  selectionSet: 'object { ... on Interface { ... on Object { id } } }',
+                },
+              ],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id']),
+              externalFieldNames: new Set<string>(['object']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            INTERFACE,
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: INTERFACE,
+            },
+          ],
+          [
+            OBJECT,
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: OBJECT,
+            },
+          ],
+        ]),
+      );
+      expect(bConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            OBJECT,
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: OBJECT,
+            },
+          ],
+        ]),
+      );
       expect(warnings).toHaveLength(0);
     });
 
@@ -1783,14 +1752,1683 @@ describe('@provides directive tests', () => {
           }
         `,
       );
-      const { warnings } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const aConfig = subgraphConfigBySubgraphName.get(subgraphA.name)!;
+      expect(aConfig).toBeDefined();
+      const bConfig = subgraphConfigBySubgraphName.get(subgraphB.name)!;
+      expect(bConfig).toBeDefined();
+      expect(aConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              provides: [
+                {
+                  fieldName: 'entities',
+                  selectionSet: 'object { ... on Union { ... on Interface { ... on Object { id } } } }',
+                },
+              ],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id']),
+              externalFieldNames: new Set<string>(['object']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Interface',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Interface',
+            },
+          ],
+          [
+            OBJECT,
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: OBJECT,
+            },
+          ],
+        ]),
+      );
+      expect(bConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            OBJECT,
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: OBJECT,
+            },
+          ],
+        ]),
+      );
       expect(warnings).toHaveLength(0);
     });
 
-    // TODO
-    test.skip('that provides on Interface is valid', () => {
-      const { warnings } = federateSubgraphsSuccess([q, r, s], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(warnings).toHaveLength(0);
+    test('that provides on a field that returns a Union is valid #1', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          union: Union @provides(fields: "... on Entity { name }")
+        }
+        
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @external @shareable
+        }
+        
+        union Union = Entity
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        `,
+      );
+      const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const aConfig = subgraphConfigBySubgraphName.get(subgraphA.name)!;
+      expect(aConfig).toBeDefined();
+      const bConfig = subgraphConfigBySubgraphName.get(subgraphB.name)!;
+      expect(bConfig).toBeDefined();
+      expect(aConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['union']),
+              isRootNode: true,
+              provides: [
+                {
+                  fieldName: 'union',
+                  selectionSet: '... on Entity { name }',
+                },
+              ],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id']),
+              externalFieldNames: new Set<string>(['name']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+        ]),
+      );
+      expect(bConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+        ]),
+      );
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          directiveCoords: 'Query.union',
+          fieldSet: '... on Entity { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
+    });
+
+    test('that provides on a field that returns a Union is valid #2', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@external"]
+          )
+    
+        type Query {
+          media: [Media] @shareable
+        }
+    
+        union Media = Book | Movie
+    
+        type Book @key(fields: "id") {
+          id: ID!
+        }
+    
+        type Movie @key(fields: "id") {
+          id: ID!
+        }
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable", "@provides", "@external"]
+          )
+    
+        type Query {
+          media: [Media] @shareable @provides(fields: "... on Book { title }")
+        }
+    
+        union Media = Book | Movie
+    
+        type Book @key(fields: "id") {
+          id: ID!
+          title: String @external
+        }
+    
+        type Movie @key(fields: "id") {
+          id: ID!
+        }
+        `,
+      );
+      const subgraphC = createSubgraph(
+        'c',
+        `
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.3"
+            import: ["@key", "@shareable"]
+          )
+    
+        type Book @key(fields: "id") {
+          id: ID!
+          title: String @shareable
+        }
+    
+        type Movie @key(fields: "id") {
+          id: ID!
+          title: String @shareable
+        }
+        `,
+      );
+      const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB, subgraphC],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const aConfig = subgraphConfigBySubgraphName.get(subgraphA.name)!;
+      expect(aConfig).toBeDefined();
+      const bConfig = subgraphConfigBySubgraphName.get(subgraphB.name)!;
+      expect(bConfig).toBeDefined();
+      const cConfig = subgraphConfigBySubgraphName.get(subgraphC.name)!;
+      expect(cConfig).toBeDefined();
+      expect(aConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['media']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Book',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Book',
+            },
+          ],
+          [
+            'Movie',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Movie',
+            },
+          ],
+        ]),
+      );
+      expect(bConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['media']),
+              isRootNode: true,
+              provides: [
+                {
+                  fieldName: 'media',
+                  selectionSet: '... on Book { title }',
+                },
+              ],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Book',
+            {
+              fieldNames: new Set<string>(['id']),
+              externalFieldNames: new Set<string>(['title']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Book',
+            },
+          ],
+          [
+            'Movie',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Movie',
+            },
+          ],
+        ]),
+      );
+      expect(cConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Book',
+            {
+              fieldNames: new Set<string>(['id', 'title']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Book',
+            },
+          ],
+          [
+            'Movie',
+            {
+              fieldNames: new Set<string>(['id', 'title']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Movie',
+            },
+          ],
+        ]),
+      );
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          directiveCoords: 'Query.media',
+          fieldSet: '... on Book { title }',
+          namedTypeName: 'Media',
+          subgraphName: subgraphB.name,
+        }),
+      ]);
+    });
+
+    test('that an error is returned if a non-external field is provided through a Union type fragment', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          union: Union @provides(fields: "... on Entity { name }")
+        }
+        
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        
+        union Union = Entity
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          nonExternalConditionalFieldError({
+            directiveCoords: 'Query.union',
+            fieldSet: `... on Entity { name }`,
+            directiveName: PROVIDES,
+            subgraphName: subgraphA.name,
+            targetCoords: 'Entity.name',
+          }),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          directiveCoords: 'Query.union',
+          fieldSet: '... on Entity { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
+    });
+
+    test('that an error is returned if a Union field set defines an unknown type fragment', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          union: Union @provides(fields: "... on Unknown { name }")
+        }
+        
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        
+        union Union = Entity
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        type Entity @key(fields: "id") {
+          id: ID!
+          name: String! @shareable
+        }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          invalidProvidesOrRequiresDirectivesError(PROVIDES, [
+            ` On field "Query.union":\n -` +
+              unknownInlineFragmentTypeConditionErrorMessage(
+                `... on Unknown { name }`,
+                ['Query.union'],
+                UNION,
+                'Unknown',
+              ),
+          ]),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesOnUnionWarning({
+          directiveCoords: 'Query.union',
+          fieldSet: '... on Unknown { name }',
+          namedTypeName: UNION,
+          subgraphName: subgraphA.name,
+        }),
+      ]);
+    });
+
+    test('that an error is returned if a field is directly provided on an Interface', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          interface: Interface! @provides(fields: "name")
+        }
+        
+        interface Interface {
+          name: String!
+        }
+        
+        type Object implements Interface {
+          name: String!
+        }
+      `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          directlyProvidedInterfaceFieldError({
+            directiveCoords: `Query.interface`,
+            directiveName: PROVIDES,
+            fieldSet: 'name',
+            selection: 'interface { name }',
+            subgraphName: subgraphA.name,
+            targetCoords: 'Interface.name',
+          }),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Query.interface',
+          fieldCoords: 'Interface.name',
+          fieldSet: 'name',
+          selection: 'interface { name }',
+          subgraphName: subgraphA.name,
+        }),
+      ]);
+    });
+
+    test('that an error is returned if a field is directly provided on a nested Interface (no external ancestor)', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          object: Object! @provides(fields: "interface { name }")
+        }
+        
+        interface Interface {
+          name: String!
+        }
+        
+        type Object implements Interface {
+          interface: Interface!
+          name: String!
+        }
+      `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([subgraphA], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphA.name, [
+          directlyProvidedInterfaceFieldError({
+            directiveCoords: `Query.object`,
+            directiveName: PROVIDES,
+            fieldSet: 'interface { name }',
+            selection: 'interface { name }',
+            subgraphName: subgraphA.name,
+            targetCoords: 'Interface.name',
+          }),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Query.object',
+          fieldCoords: 'Interface.name',
+          fieldSet: 'interface { name }',
+          selection: 'interface { name }',
+          subgraphName: subgraphA.name,
+        }),
+      ]);
+    });
+
+    test('that an error is returned if a field is directly provided on a nested Interface (with external ancestor)', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        type Query {
+          objectA: ObjectA! @provides(fields: "interface { name }")
+        }
+        
+        interface Interface {
+          name: String!
+        }
+        
+        type ObjectA @shareable {
+          interface: Interface! @external
+          name: String!
+        }
+        
+        type ObjectB implements Interface @shareable {
+          name: String!
+        }
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        interface Interface {
+          name: String!
+        }
+        
+        type ObjectA @shareable {
+          interface: Interface!
+        }
+        
+        type ObjectB implements Interface @shareable {
+          name: String!
+        }
+      `,
+      );
+      const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const aConfig = subgraphConfigBySubgraphName.get(subgraphA.name)!;
+      expect(aConfig).toBeDefined();
+      const bConfig = subgraphConfigBySubgraphName.get(subgraphB.name)!;
+      expect(bConfig).toBeDefined();
+      expect(aConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['objectA']),
+              isRootNode: true,
+              provides: [
+                {
+                  fieldName: 'objectA',
+                  selectionSet: 'interface { name }',
+                },
+              ],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Interface',
+            {
+              fieldNames: new Set<string>(['name']),
+              isRootNode: false,
+              typeName: 'Interface',
+            },
+          ],
+          [
+            'ObjectA',
+            {
+              fieldNames: new Set<string>(['name']),
+              externalFieldNames: new Set<string>(['interface']),
+              isRootNode: false,
+              typeName: 'ObjectA',
+            },
+          ],
+          [
+            'ObjectB',
+            {
+              fieldNames: new Set<string>(['name']),
+              isRootNode: false,
+              typeName: 'ObjectB',
+            },
+          ],
+        ]),
+      );
+      expect(bConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Interface',
+            {
+              fieldNames: new Set<string>(['name']),
+              isRootNode: false,
+              typeName: 'Interface',
+            },
+          ],
+          [
+            'ObjectA',
+            {
+              fieldNames: new Set<string>(['interface']),
+              isRootNode: false,
+              typeName: 'ObjectA',
+            },
+          ],
+          [
+            'ObjectB',
+            {
+              fieldNames: new Set<string>(['name']),
+              isRootNode: false,
+              typeName: 'ObjectB',
+            },
+          ],
+        ]),
+      );
+      expect(warnings).toHaveLength(1);
+      expect(warnings).toStrictEqual([
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Query.objectA',
+          fieldCoords: 'Interface.name',
+          fieldSet: 'interface { name }',
+          selection: 'interface { name }',
+          subgraphName: subgraphA.name,
+        }),
+      ]);
+    });
+
+    test('that provides on an Interface field returning an Interface can be valid (all implementations provide an @external ancestor)', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable", "@external", "@provides"]
+        )
+        
+        type Query {
+          media: Media @shareable
+          book: Book @provides(fields: "animals { ... on Dog { name } }")
+        }
+        
+        interface Media {
+          id: ID!
+        }
+        
+        interface Animal {
+          id: ID!
+        }
+        
+        type Book implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal @key(fields: "id") {
+          id: ID! @external
+          name: String @external
+        }
+        
+        type Cat implements Animal @key(fields: "id") {
+          id: ID! @external
+        }
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable", "@provides", "@external"]
+        )
+        
+        type Query {
+          media: Media @shareable @provides(fields: "animals { id name }")
+        }
+        
+        interface Media {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        interface Animal {
+          id: ID!
+          name: String
+        }
+        
+        type Book implements Media {
+          id: ID! @shareable
+          animals: [Animal] @external
+        }
+        
+        type Dog implements Animal {
+          id: ID! @external
+          name: String @external
+        }
+        
+        type Cat implements Animal {
+          id: ID! @external
+          name: String @external
+        }
+      `,
+      );
+      const subgraphC = createSubgraph(
+        'c',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable"]
+        )
+        
+        interface Media {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        interface Animal {
+          id: ID!
+          name: String
+        }
+        
+        type Book implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal @key(fields: "id") {
+          id: ID!
+          name: String @shareable
+          age: Int
+        }
+        
+        type Cat implements Animal @key(fields: "id") {
+          id: ID!
+          name: String @shareable
+          age: Int
+        }
+      `,
+      );
+      const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB, subgraphC],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const aConfig = subgraphConfigBySubgraphName.get(subgraphA.name)!;
+      expect(aConfig).toBeDefined();
+      const bConfig = subgraphConfigBySubgraphName.get(subgraphB.name)!;
+      expect(bConfig).toBeDefined();
+      const cConfig = subgraphConfigBySubgraphName.get(subgraphC.name)!;
+      expect(cConfig).toBeDefined();
+      expect(aConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['media', 'book']),
+              isRootNode: true,
+              provides: [
+                {
+                  fieldName: 'book',
+                  selectionSet: 'animals { ... on Dog { name } }',
+                },
+              ],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Media',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Media',
+            },
+          ],
+          [
+            'Animal',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Animal',
+            },
+          ],
+          [
+            'Book',
+            {
+              fieldNames: new Set<string>(['id', 'animals']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Book',
+            },
+          ],
+          [
+            'Dog',
+            {
+              fieldNames: new Set<string>([]),
+              externalFieldNames: new Set<string>(['id', 'name']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Dog',
+            },
+          ],
+          [
+            'Cat',
+            {
+              fieldNames: new Set<string>([]),
+              externalFieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Cat',
+            },
+          ],
+        ]),
+      );
+      expect(bConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['media']),
+              isRootNode: true,
+              provides: [
+                {
+                  fieldName: 'media',
+                  selectionSet: 'animals { id name }',
+                },
+              ],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Media',
+            {
+              fieldNames: new Set<string>(['id', 'animals']),
+              isRootNode: false,
+              typeName: 'Media',
+            },
+          ],
+          [
+            'Animal',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: false,
+              typeName: 'Animal',
+            },
+          ],
+          [
+            'Book',
+            {
+              fieldNames: new Set<string>(['id']),
+              externalFieldNames: new Set<string>(['animals']),
+              isRootNode: true,
+              keys: [
+                {
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Book',
+            },
+          ],
+          [
+            'Dog',
+            {
+              fieldNames: new Set<string>([]),
+              externalFieldNames: new Set<string>(['id', 'name']),
+              isRootNode: true,
+              keys: [
+                {
+                  conditions: [
+                    {
+                      fieldCoordinatesPath: ['Query.media', 'Media.animals', 'Animal.id'],
+                      fieldPath: ['media', 'animals', 'id'],
+                    },
+                  ],
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Dog',
+            },
+          ],
+          [
+            'Cat',
+            {
+              fieldNames: new Set<string>([]),
+              externalFieldNames: new Set<string>(['id', 'name']),
+              isRootNode: true,
+              keys: [
+                {
+                  conditions: [
+                    {
+                      fieldCoordinatesPath: ['Query.media', 'Media.animals', 'Animal.id'],
+                      fieldPath: ['media', 'animals', 'id'],
+                    },
+                  ],
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Cat',
+            },
+          ],
+        ]),
+      );
+      expect(cConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Media',
+            {
+              fieldNames: new Set<string>(['id', 'animals']),
+              isRootNode: false,
+              typeName: 'Media',
+            },
+          ],
+          [
+            'Animal',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: false,
+              typeName: 'Animal',
+            },
+          ],
+          [
+            'Book',
+            {
+              fieldNames: new Set<string>(['id', 'animals']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Book',
+            },
+          ],
+          [
+            'Dog',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'age']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Dog',
+            },
+          ],
+          [
+            'Cat',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'age']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Cat',
+            },
+          ],
+        ]),
+      );
+      expect(warnings).toHaveLength(3);
+      expect(warnings).toStrictEqual([
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Query.media',
+          fieldSet: 'animals { id name }',
+          fieldCoords: 'Media.animals',
+          selection: 'media { animals }',
+          subgraphName: subgraphB.name,
+        }),
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Query.media',
+          fieldSet: 'animals { id name }',
+          fieldCoords: 'Animal.id',
+          selection: 'animals { id }',
+          subgraphName: subgraphB.name,
+        }),
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Query.media',
+          fieldSet: 'animals { id name }',
+          fieldCoords: 'Animal.name',
+          selection: 'animals { name }',
+          subgraphName: subgraphB.name,
+        }),
+      ]);
+    });
+
+    test('that provides on an Interface field returning an Interface can be valid (only one implementations provides an @external ancestor)', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable", "@external", "@provides"]
+        )
+        
+        type Query {
+          media: Media @shareable
+          book: Book @provides(fields: "animals { ... on Dog { name } }")
+        }
+        
+        interface Media {
+          id: ID!
+        }
+        
+        interface Animal {
+          id: ID!
+        }
+        
+        type Book implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal @key(fields: "id") {
+          id: ID! @external
+          name: String @external
+        }
+        
+        type Cat implements Animal @key(fields: "id") {
+          id: ID! @external
+        }
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable", "@provides", "@external"]
+        )
+        
+        type Query {
+          media: Media @shareable @provides(fields: "animals { id name }")
+        }
+        
+        interface Media {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        interface Animal {
+          id: ID!
+          name: String
+        }
+        
+        type Book implements Media @shareable {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        type Video implements Media {
+          id: ID! @shareable
+          animals: [Animal] @external
+        }
+        
+        type Dog implements Animal {
+          id: ID! @external
+          name: String @external
+        }
+        
+        type Cat implements Animal {
+          id: ID! @external
+          name: String @external
+        }
+      `,
+      );
+      const subgraphC = createSubgraph(
+        'c',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable"]
+        )
+        
+        interface Media {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        interface Animal {
+          id: ID!
+          name: String
+        }
+        
+        type Book implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Video implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal @key(fields: "id") {
+          id: ID!
+          name: String @shareable
+          age: Int
+        }
+        
+        type Cat implements Animal @key(fields: "id") {
+          id: ID!
+          name: String @shareable
+          age: Int
+        }
+      `,
+      );
+      const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB, subgraphC],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const aConfig = subgraphConfigBySubgraphName.get(subgraphA.name)!;
+      expect(aConfig).toBeDefined();
+      const bConfig = subgraphConfigBySubgraphName.get(subgraphB.name)!;
+      expect(bConfig).toBeDefined();
+      const cConfig = subgraphConfigBySubgraphName.get(subgraphC.name)!;
+      expect(cConfig).toBeDefined();
+      expect(aConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['media', 'book']),
+              isRootNode: true,
+              provides: [
+                {
+                  fieldName: 'book',
+                  selectionSet: 'animals { ... on Dog { name } }',
+                },
+              ],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Media',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Media',
+            },
+          ],
+          [
+            'Animal',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Animal',
+            },
+          ],
+          [
+            'Book',
+            {
+              fieldNames: new Set<string>(['id', 'animals']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Book',
+            },
+          ],
+          [
+            'Dog',
+            {
+              fieldNames: new Set<string>([]),
+              externalFieldNames: new Set<string>(['id', 'name']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Dog',
+            },
+          ],
+          [
+            'Cat',
+            {
+              fieldNames: new Set<string>([]),
+              externalFieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Cat',
+            },
+          ],
+        ]),
+      );
+      expect(bConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['media']),
+              isRootNode: true,
+              provides: [
+                {
+                  fieldName: 'media',
+                  selectionSet: 'animals { id name }',
+                },
+              ],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Media',
+            {
+              fieldNames: new Set<string>(['id', 'animals']),
+              isRootNode: false,
+              typeName: 'Media',
+            },
+          ],
+          [
+            'Animal',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: false,
+              typeName: 'Animal',
+            },
+          ],
+          [
+            'Book',
+            {
+              fieldNames: new Set<string>(['id', 'animals']),
+              isRootNode: true,
+              keys: [
+                {
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Book',
+            },
+          ],
+          [
+            'Video',
+            {
+              fieldNames: new Set<string>(['id']),
+              externalFieldNames: new Set<string>(['animals']),
+              isRootNode: true,
+              keys: [
+                {
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Video',
+            },
+          ],
+          [
+            'Dog',
+            {
+              fieldNames: new Set<string>([]),
+              externalFieldNames: new Set<string>(['id', 'name']),
+              isRootNode: true,
+              keys: [
+                {
+                  conditions: [
+                    {
+                      fieldCoordinatesPath: ['Query.media', 'Media.animals', 'Animal.id'],
+                      fieldPath: ['media', 'animals', 'id'],
+                    },
+                  ],
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Dog',
+            },
+          ],
+          [
+            'Cat',
+            {
+              fieldNames: new Set<string>([]),
+              externalFieldNames: new Set<string>(['id', 'name']),
+              isRootNode: true,
+              keys: [
+                {
+                  conditions: [
+                    {
+                      fieldCoordinatesPath: ['Query.media', 'Media.animals', 'Animal.id'],
+                      fieldPath: ['media', 'animals', 'id'],
+                    },
+                  ],
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Cat',
+            },
+          ],
+        ]),
+      );
+      expect(cConfig.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            'Media',
+            {
+              fieldNames: new Set<string>(['id', 'animals']),
+              isRootNode: false,
+              typeName: 'Media',
+            },
+          ],
+          [
+            'Animal',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: false,
+              typeName: 'Animal',
+            },
+          ],
+          [
+            'Book',
+            {
+              fieldNames: new Set<string>(['id', 'animals']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Book',
+            },
+          ],
+          [
+            'Video',
+            {
+              fieldNames: new Set<string>(['id', 'animals']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Video',
+            },
+          ],
+          [
+            'Dog',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'age']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Dog',
+            },
+          ],
+          [
+            'Cat',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'age']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Cat',
+            },
+          ],
+        ]),
+      );
+      expect(warnings).toHaveLength(3);
+      expect(warnings).toStrictEqual([
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Query.media',
+          fieldSet: 'animals { id name }',
+          fieldCoords: 'Media.animals',
+          selection: 'media { animals }',
+          subgraphName: subgraphB.name,
+        }),
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Query.media',
+          fieldCoords: 'Animal.id',
+          fieldSet: 'animals { id name }',
+          selection: 'animals { id }',
+          subgraphName: subgraphB.name,
+        }),
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Query.media',
+          fieldCoords: 'Animal.name',
+          fieldSet: 'animals { id name }',
+          selection: 'animals { name }',
+          subgraphName: subgraphB.name,
+        }),
+      ]);
+    });
+
+    test('that an error is returned if no implementation type provides an external ancestor for an Interface field', () => {
+      const subgraphA = createSubgraph(
+        'a',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable", "@external", "@provides"]
+        )
+        
+        type Query {
+          media: Media @shareable
+          book: Book @provides(fields: "animals { ... on Dog { name } }")
+        }
+        
+        interface Media {
+          id: ID!
+        }
+        
+        interface Animal {
+          id: ID!
+        }
+        
+        type Book implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal @key(fields: "id") {
+          id: ID! @external
+          name: String @external
+        }
+        
+        type Cat implements Animal @key(fields: "id") {
+          id: ID! @external
+        }
+      `,
+      );
+      const subgraphB = createSubgraph(
+        'b',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable", "@provides", "@external"]
+        )
+        
+        type Query {
+          media: Media @shareable @provides(fields: "animals { id name }")
+        }
+        
+        interface Media {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        interface Animal {
+          id: ID!
+          name: String
+        }
+        
+        type Book implements Media {
+          id: ID! @shareable
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal {
+          id: ID! @external
+          name: String @external
+        }
+        
+        type Cat implements Animal {
+          id: ID! @external
+          name: String @external
+        }
+      `,
+      );
+      const subgraphC = createSubgraph(
+        'c',
+        `
+        extend schema
+        @link(
+          url: "https://specs.apollo.dev/federation/v2.3"
+          import: ["@key", "@shareable"]
+        )
+        
+        interface Media {
+          id: ID!
+          animals: [Animal]
+        }
+        
+        interface Animal {
+          id: ID!
+          name: String
+        }
+        
+        type Book implements Media @key(fields: "id") {
+          id: ID!
+          animals: [Animal] @shareable
+        }
+        
+        type Dog implements Animal @key(fields: "id") {
+          id: ID!
+          name: String @shareable
+          age: Int
+        }
+        
+        type Cat implements Animal @key(fields: "id") {
+          id: ID!
+          name: String @shareable
+          age: Int
+        }
+      `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure(
+        [subgraphA, subgraphB, subgraphC],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        subgraphValidationError(subgraphB.name, [
+          directlyProvidedInterfaceFieldError({
+            directiveCoords: 'Query.media',
+            directiveName: PROVIDES,
+            fieldSet: 'animals { id name }',
+            selection: 'animals { id }',
+            subgraphName: subgraphB.name,
+            targetCoords: 'Animal.id',
+          }),
+          directlyProvidedInterfaceFieldError({
+            directiveCoords: 'Query.media',
+            directiveName: PROVIDES,
+            fieldSet: 'animals { id name }',
+            selection: 'animals { name }',
+            subgraphName: subgraphB.name,
+            targetCoords: 'Animal.name',
+          }),
+        ]),
+      ]);
+      expect(warnings).toHaveLength(3);
+      expect(warnings).toStrictEqual([
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Query.media',
+          fieldSet: 'animals { id name }',
+          fieldCoords: 'Media.animals',
+          selection: 'media { animals }',
+          subgraphName: subgraphB.name,
+        }),
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Query.media',
+          fieldCoords: 'Animal.id',
+          fieldSet: 'animals { id name }',
+          selection: 'animals { id }',
+          subgraphName: subgraphB.name,
+        }),
+        providesWithInterfaceFieldSelectionWarning({
+          directiveCoords: 'Query.media',
+          fieldCoords: 'Animal.name',
+          fieldSet: 'animals { id name }',
+          selection: 'animals { name }',
+          subgraphName: subgraphB.name,
+        }),
+      ]);
     });
   });
 });
@@ -2125,125 +3763,6 @@ const p: Subgraph = {
     
     type Entity @key(fields: "id") {
       id: ID!
-    }
-  `),
-};
-
-const q: Subgraph = {
-  name: 'q',
-  url: '',
-  definitions: parse(`
-    extend schema
-    @link(
-      url: "https://specs.apollo.dev/federation/v2.3"
-      import: ["@key", "@shareable", "@external", "@provides"]
-    )
-    
-    type Query {
-      media: Media @shareable
-      book: Book @provides(fields: "animals { ... on Dog { name } }")
-    }
-    
-    interface Media {
-      id: ID!
-    }
-    
-    interface Animal {
-      id: ID!
-    }
-    
-    type Book implements Media @key(fields: "id") {
-      id: ID!
-      animals: [Animal] @shareable
-    }
-    
-    type Dog implements Animal @key(fields: "id") {
-      id: ID! @external
-      name: String @external
-    }
-    
-    type Cat implements Animal @key(fields: "id") {
-      id: ID! @external
-    }
-  `),
-};
-
-const r: Subgraph = {
-  name: 'r',
-  url: '',
-  definitions: parse(`
-    extend schema
-    @link(
-      url: "https://specs.apollo.dev/federation/v2.3"
-      import: ["@key", "@shareable", "@provides", "@external"]
-    )
-    
-    type Query {
-      media: Media @shareable @provides(fields: "animals { id name }")
-    }
-    
-    interface Media {
-      id: ID!
-      animals: [Animal]
-    }
-    
-    interface Animal {
-      id: ID!
-      name: String
-    }
-    
-    type Book implements Media {
-      id: ID! @shareable
-      animals: [Animal] @external
-    }
-    
-    type Dog implements Animal {
-      id: ID! @external
-      name: String @external
-    }
-    
-    type Cat implements Animal {
-      id: ID! @external
-      name: String @external
-    }
-  `),
-};
-
-const s: Subgraph = {
-  name: 's',
-  url: '',
-  definitions: parse(`
-    extend schema
-    @link(
-      url: "https://specs.apollo.dev/federation/v2.3"
-      import: ["@key", "@shareable"]
-    )
-    
-    interface Media {
-      id: ID!
-      animals: [Animal]
-    }
-    
-    interface Animal {
-      id: ID!
-      name: String
-    }
-    
-    type Book implements Media @key(fields: "id") {
-      id: ID!
-      animals: [Animal] @shareable
-    }
-    
-    type Dog implements Animal @key(fields: "id") {
-      id: ID!
-      name: String @shareable
-      age: Int
-    }
-    
-    type Cat implements Animal @key(fields: "id") {
-      id: ID!
-      name: String @shareable
-      age: Int
     }
   `),
 };

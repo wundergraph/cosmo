@@ -2,6 +2,7 @@ import { Loader } from '@/components/ui/loader';
 import { NextPageWithLayout } from '@/lib/page';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
+import { buildUrl } from '@/lib/build-url';
 
 const DashboardPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -11,7 +12,9 @@ const DashboardPage: NextPageWithLayout = () => {
     if (!organizationSlug) return;
     const url = new URL(window.location.origin + router.basePath + router.asPath);
     const params = new URLSearchParams(url.search);
-    router.replace(params.size !== 0 ? `/${organizationSlug}/graphs?${params}` : `/${organizationSlug}/graphs`);
+    const link = buildUrl('/:organizationSlug/graphs', { organizationSlug: organizationSlug as string });
+
+    router.replace(params.size !== 0 ? `${link}?${params}` : link);
   }, [router, organizationSlug]);
 
   return (
