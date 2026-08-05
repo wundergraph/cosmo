@@ -3,14 +3,21 @@ package cache
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 	"time"
 
 	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
 )
 
+// ErrMissingTTL reports items that were rejected because they carried no
+// positive TTL. Every cached entry expires, so a TTL is mandatory.
+var ErrMissingTTL = errors.New("cache item requires a positive TTL")
+
 type inMemoryEntry struct {
-	value     []byte
+	value []byte
+	// expiresAt is always set, an entry without an expiry is never stored.
 	expiresAt time.Time
 }
 
@@ -47,11 +54,11 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) ([]enginecac
 		if !ok {
 			continue
 		}
-		if !entry.expiresAt.IsZero() && now.After(entry.expiresAt) {
+		if now.After(entry.expiresAt) {
 			expired = append(expired, key)
 			continue
 		}
-		results[i] = enginecache.Result{Value: bytes.Clone(entry.value)}
+		results[i] = enginecache.Result{Value: bytes.Clone(entry.value), Found: true}
 	}
 	c.mu.RUnlock()
 
@@ -61,7 +68,7 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) ([]enginecac
 		for _, key := range expired {
 			// Only drop the entry we observed as expired, it may have been
 			// overwritten with a fresh one in the meantime.
-			if entry, ok := c.entries[key]; ok && !entry.expiresAt.IsZero() && now.After(entry.expiresAt) {
+			if entry, ok := c.entries[key]; ok && now.After(entry.expiresAt) {
 				delete(c.entries, key)
 			}
 		}
@@ -70,7 +77,9 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) ([]enginecac
 	return results, nil
 }
 
-// SetMany stores every item and never fails, other than on a cancelled context.
+// SetMany stores every item carrying a positive TTL. Items without one are
+// skipped and reported as an ErrMissingTTL, the rest of the batch is still
+// stored. It otherwise only fails on a cancelled context.
 func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -83,18 +92,22 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	var skipped []string
+
 	now := c.now()
 	for _, item := range items {
-		value := bytes.Clone(item.Value)
-		if value == nil {
-			// A nil value reads back as a miss, so keep stored entries non-nil
-			value = []byte{}
+		if item.TTL <= 0 {
+			skipped = append(skipped, item.Key)
+			continue
 		}
-		entry := inMemoryEntry{value: value}
-		if item.TTL > 0 {
-			entry.expiresAt = now.Add(item.TTL)
+		c.entries[item.Key] = inMemoryEntry{
+			value:     bytes.Clone(item.Value),
+			expiresAt: now.Add(item.TTL),
 		}
-		c.entries[item.Key] = entry
+	}
+
+	if len(skipped) > 0 {
+		return fmt.Errorf("%w: %v", ErrMissingTTL, skipped)
 	}
 
 	return nil
