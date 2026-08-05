@@ -409,7 +409,7 @@ func TestInMemoryCache(t *testing.T) {
 			require.True(t, results[0].Found)
 		})
 
-		t.Run("exactly at expiry is still a hit", func(t *testing.T) {
+		t.Run("exactly at expiry is a miss and evicts the entry", func(t *testing.T) {
 			t.Parallel()
 
 			c, clock := newTestCache(t)
@@ -418,13 +418,14 @@ func TestInMemoryCache(t *testing.T) {
 				"a": {value: []byte("value"), expiresAt: clock.Now().Add(time.Minute)},
 			}
 
-			// Expiry is exclusive: the entry dies strictly after expiresAt.
+			// A TTL of a minute covers [set, set+minute), so reaching the
+			// deadline exactly is already too late.
 			clock.Advance(time.Minute)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
-			require.True(t, results[0].Found)
-			require.Len(t, c.entries, 1)
+			require.False(t, results[0].Found)
+			require.Empty(t, c.entries)
 		})
 
 		t.Run("past expiry is a miss and evicts the entry", func(t *testing.T) {
@@ -521,6 +522,136 @@ func TestInMemoryCache(t *testing.T) {
 			results, err = c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
 			require.Equal(t, []enginecache.Result{{Value: []byte("new"), Found: true}}, results)
+		})
+	})
+
+	t.Run("expired entry sweep", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("a set drops expired entries no lookup asked for", func(t *testing.T) {
+			t.Parallel()
+
+			c, clock := newTestCache(t)
+			start := clock.Now()
+
+			c.entries = map[string]inMemoryEntry{
+				"stale": {value: []byte("stale"), expiresAt: start.Add(time.Second)},
+				"live":  {value: []byte("live"), expiresAt: start.Add(time.Hour)},
+			}
+
+			clock.Advance(time.Minute)
+
+			// Nothing ever reads "stale", an unrelated key is written instead.
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "other", Value: []byte("other"), TTL: time.Hour},
+			})
+			require.NoError(t, err)
+
+			require.NotContains(t, c.entries, "stale")
+			require.Contains(t, c.entries, "live")
+			require.Contains(t, c.entries, "other")
+		})
+
+		t.Run("a get drops expired entries no key asked for", func(t *testing.T) {
+			t.Parallel()
+
+			c, clock := newTestCache(t)
+			start := clock.Now()
+
+			c.entries = map[string]inMemoryEntry{
+				"stale": {value: []byte("stale"), expiresAt: start.Add(time.Second)},
+				"live":  {value: []byte("live"), expiresAt: start.Add(time.Hour)},
+			}
+
+			clock.Advance(time.Minute)
+
+			// "stale" is not among the keys looked up, yet it still goes.
+			results, err := c.GetMany(ctx, []string{"live"})
+			require.NoError(t, err)
+			require.True(t, results[0].Found)
+
+			require.NotContains(t, c.entries, "stale")
+			require.Contains(t, c.entries, "live")
+		})
+
+		t.Run("an empty get does not sweep", func(t *testing.T) {
+			t.Parallel()
+
+			c, clock := newTestCache(t)
+			start := clock.Now()
+
+			c.entries = map[string]inMemoryEntry{
+				"stale": {value: []byte("stale"), expiresAt: start.Add(time.Second)},
+			}
+
+			clock.Advance(time.Minute)
+
+			results, err := c.GetMany(ctx, nil)
+			require.NoError(t, err)
+			require.Nil(t, results)
+
+			require.Contains(t, c.entries, "stale")
+		})
+
+		t.Run("an empty set does not sweep", func(t *testing.T) {
+			t.Parallel()
+
+			c, clock := newTestCache(t)
+			start := clock.Now()
+
+			c.entries = map[string]inMemoryEntry{
+				"stale": {value: []byte("stale"), expiresAt: start.Add(time.Second)},
+			}
+
+			clock.Advance(time.Minute)
+
+			err := c.SetMany(ctx, nil)
+			require.NoError(t, err)
+
+			require.Contains(t, c.entries, "stale")
+		})
+
+		t.Run("a set spares an entry it refreshes in the same batch", func(t *testing.T) {
+			t.Parallel()
+
+			c, clock := newTestCache(t)
+			start := clock.Now()
+
+			c.entries = map[string]inMemoryEntry{
+				"a": {value: []byte("old"), expiresAt: start.Add(time.Second)},
+			}
+
+			clock.Advance(time.Minute)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "a", Value: []byte("new"), TTL: time.Hour},
+			})
+			require.NoError(t, err)
+
+			// Refreshed before the sweep runs, so its new deadline protects it.
+			require.Equal(t, map[string]inMemoryEntry{
+				"a": {value: []byte("new"), expiresAt: start.Add(time.Minute + time.Hour)},
+			}, c.entries)
+		})
+
+		t.Run("a sweep drops entries exactly at their deadline", func(t *testing.T) {
+			t.Parallel()
+
+			c, clock := newTestCache(t)
+			start := clock.Now()
+
+			c.entries = map[string]inMemoryEntry{
+				"boundary": {value: []byte("boundary"), expiresAt: start.Add(time.Minute)},
+			}
+
+			clock.Advance(time.Minute)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "other", Value: []byte("other"), TTL: time.Hour},
+			})
+			require.NoError(t, err)
+
+			require.NotContains(t, c.entries, "boundary")
 		})
 	})
 
