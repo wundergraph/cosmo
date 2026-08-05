@@ -1,0 +1,355 @@
+---
+title: 'Tools'
+description: 'How to define, describe, and organize the tools the MCP server exposes to AI models.'
+icon: 'wrench'
+---
+
+The MCP server gives AI models a set of tools they can discover and execute. It exposes two kinds:
+
+- **Built-in tools** provided by the server itself, for discovering your API and, optionally, running arbitrary GraphQL.
+- **Tools you create**, each defined by a GraphQL operation in a `.graphql` file. The operation determines the tool's name, description, input schema, and the data it returns.
+
+## Built-in Tools
+
+| Tool                 | Description                                                                                                                         |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `get_operation_info` | Returns instructions for executing the operation behind one of your tools directly via HTTP and integrating it into an application. |
+| `get_schema`         | Returns the full GraphQL schema of the API, helping AI models understand the entire API structure.                                  |
+| `execute_graphql`    | Executes an arbitrary GraphQL query or mutation, letting AI models craft operations beyond the tools you have created.              |
+
+<Warning>
+  `get_schema` and `execute_graphql` are disabled by default because they expose your full API surface to AI models.
+  Enable them with [`expose_schema: true`](/router/mcp/configuration) and
+  [`enable_arbitrary_operations: true`](/router/mcp/configuration) respectively, and only when arbitrary access is
+  intended. Prefer creating focused tools.
+</Warning>
+
+## Creating Tools
+
+Create a directory for your tools (as specified in your [storage provider configuration](/router/mcp/configuration#storage-providers)) and add `.graphql` or `.gql` files containing GraphQL operations.
+
+Each file defines a **single tool** through a single operation. Named operations are recommended, but if an operation is unnamed, the filename (without extension) is used as the operation name.
+
+```graphql
+# getUsers.graphql
+query GetUsers {
+  users {
+    id
+    name
+    email
+  }
+}
+```
+
+```graphql
+# createUser.graphql
+mutation CreateUser($name: String!, $email: String!) {
+  createUser(input: { name: $name, email: $email }) {
+    id
+    name
+    email
+  }
+}
+```
+
+Each file becomes a tool that AI models can call. The tool's name is derived from the operation name (see [Tool Naming](#tool-naming)), its description from the operation's description string (see [Tool Descriptions](#tool-descriptions)), and its input schema from the operation's variables (see [Tool Schema](#tool-schema)).
+
+The MCP server marks mutation tools as non-read-only and non-idempotent through [MCP tool annotations](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-annotations), signaling to AI clients that the tool has side effects.
+
+<Warning>
+  To prevent AI models from making unintended changes, consider setting `exclude_mutations: true` in your configuration
+  until you've validated your mutation tools thoroughly.
+</Warning>
+
+### Directory Structure
+
+Use this directory structure:
+
+```
+my-router-project/
+├── config.yaml                 # Router configuration file
+├── operations/                 # Tools directory (as configured in storage provider)
+│   ├── getUsers.graphql        # Query tool
+│   ├── createUser.graphql      # Mutation tool
+│   ├── getUserById.graphql     # Query tool with parameters
+│   └── billing/                # Subdirectory for grouping
+│       ├── getInvoices.graphql
+│       └── getPayments.graphql
+└── ...
+```
+
+Key points:
+
+- The path in your `storage_providers.file_system.path` should point to this directory
+- All `.graphql` and `.gql` files in this directory **and subdirectories** will be loaded
+- Duplicate operation names across files are rejected (the second file is skipped with an error log)
+
+### Validation
+
+Operations are validated against your GraphQL schema at load time. Invalid operations are logged as errors and skipped - they will not appear as MCP tools. Subscription operations are not supported and are also skipped.
+
+## Tool Naming
+
+Each tool's name is derived from its operation name:
+
+| Operation Name | Tool Name                          |
+| -------------- | ---------------------------------- |
+| `GetUsers`     | `execute_operation_get_users`      |
+| `CreateUser`   | `execute_operation_create_user`    |
+| `GetUserById`  | `execute_operation_get_user_by_id` |
+
+Operation names are converted to `snake_case` for tool naming consistency.
+
+### Omitting the Tool Name Prefix
+
+By default, all operation-defined tools include the `execute_operation_` prefix. You can enable `omit_tool_name_prefix` to generate shorter tool names:
+
+```yaml
+mcp:
+  enabled: true
+  omit_tool_name_prefix: true
+```
+
+| Operation Name | Default                         | With `omit_tool_name_prefix` |
+| -------------- | ------------------------------- | ---------------------------- |
+| `GetUsers`     | `execute_operation_get_users`   | `get_users`                  |
+| `CreateUser`   | `execute_operation_create_user` | `create_user`                |
+
+<Warning>
+  Enabling this option changes all tool names and may break existing integrations that rely on the `execute_operation_`
+  prefix. Only enable this for new deployments or when you can update all dependent systems.
+</Warning>
+
+<Info>
+  Tools whose names would collide with any already-registered tool (including the [built-in tools](#built-in-tools) or
+  a previously registered operation) are **skipped** and logged as errors. Rename the operation to avoid the conflict.
+</Info>
+
+## Tool Descriptions
+
+The description is the primary way AI models understand what a tool does and when to use it. Set it with a description string on the operation, following the September 2025 GraphQL spec:
+
+```graphql
+"""
+Returns a list of all users in the system with their basic information.
+This is a read-only operation that doesn't modify any data.
+"""
+query GetUsers {
+  users {
+    id
+    name
+    email
+  }
+}
+```
+
+If no description is provided, the description of the queried root field from your graph's schema is used instead (see [Field Descriptions](#field-descriptions)). If neither exists, a default description is generated from the operation name and type.
+
+<Info>
+  Only description strings (`"""..."""` or `"..."`) are supported. Standard GraphQL comments (`# comment`) are not
+  extracted as tool descriptions.
+</Info>
+
+## Tool Schema
+
+The tool's input schema is automatically generated from your GraphQL operation's variables, ensuring type safety. AI models use this schema to understand what parameters are required and their types.
+
+The generated schema reflects your operation and graph schema:
+
+- Non-nullable variables are listed as `required`.
+- Variable default values become `default` values.
+- Descriptions on variable definitions become property descriptions. See [Variable Descriptions](#variable-descriptions).
+- Descriptions defined in your graph's schema are included automatically. See [Field Descriptions](#field-descriptions).
+
+### Variable Descriptions
+
+Add a description string before a variable definition to describe that parameter to AI models. This follows the [September 2025 GraphQL spec](https://spec.graphql.org/September2025/#sec-Language.Variables):
+
+```graphql
+"""
+Returns a single employee by ID.
+"""
+query GetEmployee(
+  "The unique identifier of the employee"
+  $id: ID!
+  "Set to true to include the employee's manager in the response"
+  $withManager: Boolean = false
+) {
+  employee(id: $id) {
+    id
+    name
+    manager @include(if: $withManager) {
+      id
+      name
+    }
+  }
+}
+```
+
+Each description becomes the `description` of the corresponding property in the tool's input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "description": "The unique identifier of the employee",
+      "type": "string"
+    },
+    "withManager": {
+      "default": false,
+      "description": "Set to true to include the employee's manager in the response",
+      "type": ["boolean", "null"]
+    }
+  },
+  "required": ["id"],
+  "additionalProperties": false
+}
+```
+
+Both single-quoted (`"..."`) and triple-quoted (`"""..."""`) strings are supported for variable descriptions.
+
+The router strips operation and variable descriptions before forwarding the operation to your subgraphs. Subgraph servers do not need to support the September 2025 GraphQL spec.
+
+<Info>
+  Variable descriptions require router version 0.316.0 or above.
+</Info>
+
+### Field Descriptions
+
+Descriptions defined in your graph's schema are carried into the generated tool. You do not need to repeat them in the operation:
+
+- The description of the queried root field becomes the tool description when the operation has no description of its own.
+- Input object type descriptions become the description of the corresponding variable property.
+- Input object field descriptions become the descriptions of nested properties.
+- Enum and custom scalar type descriptions are included wherever those types are used.
+
+Given this schema:
+
+```graphql
+type Query {
+  "Searches employees by filter criteria. Returns at most 100 results."
+  findEmployees(criteria: SearchInput): [Employee!]!
+}
+
+"Search criteria for employee lookup"
+input SearchInput {
+  "Match employees with this exact name"
+  name: String
+  "Only include employees in this department"
+  department: Department
+}
+```
+
+An operation without any descriptions:
+
+```graphql
+query FindEmployees($criteria: SearchInput) {
+  findEmployees(criteria: $criteria) {
+    id
+    name
+  }
+}
+```
+
+produces a fully described tool. The root field description becomes the tool's description, and the type and field descriptions land in the input schema:
+
+```json
+{
+  "name": "execute_operation_find_employees",
+  "description": "Searches employees by filter criteria. Returns at most 100 results.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "criteria": {
+        "type": "object",
+        "description": "Search criteria for employee lookup",
+        "properties": {
+          "name": {
+            "description": "Match employees with this exact name",
+            "type": ["string", "null"]
+          },
+          "department": {
+            "description": "Only include employees in this department",
+            "type": ["string", "null"],
+            "enum": ["ENGINEERING", "MARKETING", "OPERATIONS", null]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "additionalProperties": false
+  }
+}
+```
+
+Descriptions in the operation take priority over descriptions from the schema:
+
+- An operation description replaces the root field description as the tool description.
+- A [variable description](#variable-descriptions) replaces the schema-derived description for that property.
+
+<Info>
+  Descriptions on field arguments are not propagated. To describe a variable that maps to a plain argument, add a
+  variable description in the operation.
+</Info>
+
+## Best Practices
+
+### Write Effective Descriptions
+
+Descriptions are the most important part of a tool for AI consumption. A good description tells the AI model:
+
+- **What** data the tool provides or changes
+- **When** to use this tool (and when not to)
+- **What** is excluded or restricted (especially for security-sensitive data)
+
+```graphql
+"""
+Retrieves recent transaction history for a customer account.
+Returns only non-sensitive transaction details suitable for AI assistant responses.
+Excludes: account numbers, routing information, precise location data, and full merchant details.
+Use this to answer customer questions about recent purchases and payment status.
+"""
+query GetTransactionHistory(
+  "The account to fetch transactions for"
+  $accountId: ID!
+  "The number of most recent transactions to return"
+  $last: Int!
+) {
+  account(id: $accountId) {
+    transactions(last: $last) {
+      id
+      date
+      merchantNameMasked
+      category
+      amount
+      status
+    }
+  }
+}
+```
+
+### Design for AI Consumption
+
+<Steps>
+  <Step title="Use meaningful names">
+    Give operations clear, action-oriented names that describe what the tool does: `GetActiveUsers`, `SearchProducts`,
+    `CreateSupportTicket`.
+  </Step>
+  <Step title="Use explicit types">
+    Define all input variables with explicit types to ensure proper validation and help AI models understand required
+    inputs.
+  </Step>
+  <Step title="Describe your variables">
+    Add a [description](/router/mcp/tools#variable-descriptions) to each variable. Descriptions appear in the
+    tool's input schema and tell AI models what each parameter means, its expected format, and any constraints.
+  </Step>
+  <Step title="Create focused tools">
+    Design each tool specifically for AI model consumption rather than exposing generic operations. A tool that
+    returns exactly what the AI needs is better than one that returns everything.
+  </Step>
+  <Step title="Add safety checks for mutations">
+    For mutation tools, add checks and validations in your backend to prevent misuse. Consider requiring
+    confirmation parameters for destructive operations.
+  </Step>
+</Steps>
