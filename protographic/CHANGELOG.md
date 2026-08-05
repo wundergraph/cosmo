@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.24.7](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.24.6...@wundergraph/protographic@0.24.7) (2026-07-31)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.24.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.24.5...@wundergraph/protographic@0.24.6) (2026-07-30)
+
+### Bug Fixes
+
+* **protographic:** fix proto codegen omitting `ListOfX` wrapper for required fields on nullable list ([#3125](https://github.com/wundergraph/cosmo/issues/3125)) ([c21c092](https://github.com/wundergraph/cosmo/commit/c21c0920fe918bf91bb9c61f5afd1361d4d56b72)) (@dkorittki)
+
+## [0.24.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.24.4...@wundergraph/protographic@0.24.5) (2026-07-29)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
 ## [0.24.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.24.3...@wundergraph/protographic@0.24.4) (2026-07-17)
 
 **Note:** Version bump only for package @wundergraph/protographic

@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.14.1
+	github.com/wundergraph/graphql-go-tools/v2 v2.14.2
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.44.0
@@ -76,7 +76,7 @@ require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/klauspost/compress v1.18.6
 	github.com/minio/minio-go/v7 v7.0.74
-	github.com/modelcontextprotocol/go-sdk v1.6.1
+	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/posthog/posthog-go v1.5.5
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/otlptranslator v1.0.0
@@ -88,7 +88,7 @@ require (
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/net v0.56.0
 	golang.org/x/text v0.39.0
-	golang.org/x/time v0.9.0
+	golang.org/x/time v0.15.0
 )
 
 require (

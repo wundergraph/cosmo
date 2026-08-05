@@ -2311,3 +2311,104 @@ persisted_operations:
 		require.Equal(t, "at '/persisted_operations/manifest/poll_jitter': duration must be greater or equal than 1s", js.Causes[0].Error())
 	})
 }
+
+func TestMCPServerConfig(t *testing.T) {
+	t.Run("reads discover instructions from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  server:
+    discover:
+      instructions: "Use the search tools before executing operations."
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, "Use the search tools before executing operations.", cfg.Config.MCP.Server.Discover.Instructions)
+	})
+
+	t.Run("leaves discover instructions empty when unset", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Empty(t, cfg.Config.MCP.Server.Discover.Instructions)
+	})
+
+	t.Run("reads discover instructions from env", func(t *testing.T) {
+		t.Setenv("MCP_SERVER_DISCOVER_INSTRUCTIONS", "Env-provided guidance.")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, "Env-provided guidance.", cfg.Config.MCP.Server.Discover.Instructions)
+	})
+
+	t.Run("reads the server version from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  server:
+    version: "1.4.0"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, "1.4.0", cfg.Config.MCP.Server.Version)
+	})
+
+	t.Run("reads the server title and description from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  server:
+    title: "My Commerce API"
+    description: "Query products, orders and customers."
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, "My Commerce API", cfg.Config.MCP.Server.Title)
+		require.Equal(t, "Query products, orders and customers.", cfg.Config.MCP.Server.Description)
+	})
+}

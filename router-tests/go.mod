@@ -15,7 +15,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hasura/go-graphql-client v0.14.3
 	github.com/mark3labs/mcp-go v0.43.2
-	github.com/modelcontextprotocol/go-sdk v1.6.1
+	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/nats-io/nats-server/v2 v2.12.7
 	github.com/nats-io/nats.go v1.50.0
 	github.com/prometheus/client_golang v1.23.2
@@ -31,7 +31,7 @@ require (
 	github.com/wundergraph/cosmo/router v0.0.0-20260710155145-803a4bc06d92
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
 	github.com/wundergraph/cosmo/speedtrap v0.0.0-00010101000000-000000000000
-	github.com/wundergraph/graphql-go-tools/v2 v2.14.1
+	github.com/wundergraph/graphql-go-tools/v2 v2.14.2
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/sdk v1.44.0
 	go.opentelemetry.io/otel/sdk/metric v1.44.0
