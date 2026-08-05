@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.337.1](https://github.com/wundergraph/cosmo/compare/router@0.337.0...router@0.337.1) (2026-08-05)
+
+### Bug Fixes
+
+* **router:** ignore header rules for pubsub trigger sources ([#3135](https://github.com/wundergraph/cosmo/issues/3135)) ([64eaf60](https://github.com/wundergraph/cosmo/commit/64eaf607b292b6f632982b7862dd20a8466aa0af)) (@dkorittki)
+
 # [0.337.0](https://github.com/wundergraph/cosmo/compare/router@0.336.0...router@0.337.0) (2026-07-31)
 
 ### Bug Fixes
