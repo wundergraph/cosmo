@@ -203,6 +203,8 @@ export function updateFeatureFlag(
           opts.chClient,
           opts.webhookProxyUrl,
           req.disableResolvabilityValidation,
+          opts.promptToQueryServiceAddress,
+          opts.billingDefaultPlanId,
         );
 
         const compositionResult = await compositionService.composeAndDeployFeatureFlag({

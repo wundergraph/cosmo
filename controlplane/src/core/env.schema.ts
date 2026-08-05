@@ -230,6 +230,10 @@ export const envVariables = z
      * Admission Webhook
      */
     AUTH_ADMISSION_JWT_SECRET: z.string(),
+    /**
+     * Prompt-to-Query
+     */
+    PROMPT_TO_QUERY_SERVICE_ENDPOINT: z.string().url().optional(),
   })
   .merge(sentryEnvVariables)
   .refine((input) => {
