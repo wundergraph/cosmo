@@ -1410,6 +1410,26 @@ type MCPStorageConfig struct {
 type MCPServer struct {
 	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5025" env:"MCP_SERVER_LISTEN_ADDR"`
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
+	// Version is reported to MCP clients as the server version in serverInfo.
+	// Defaults to the router release version when unset.
+	Version string `yaml:"version,omitempty" env:"MCP_SERVER_VERSION"`
+	// Title is a human-readable display name for this MCP server, reported in
+	// serverInfo. MCP clients show it in UIs, falling back to the machine name
+	// derived from graph_name when unset.
+	Title string `yaml:"title,omitempty" env:"MCP_SERVER_TITLE"`
+	// Description is a human-readable description of this MCP server, reported
+	// in serverInfo.
+	Description string            `yaml:"description,omitempty" env:"MCP_SERVER_DESCRIPTION"`
+	Discover    MCPDiscoverConfig `yaml:"discover,omitempty" envPrefix:"MCP_SERVER_DISCOVER_"`
+}
+
+// MCPDiscoverConfig configures the server identity exposed via the MCP
+// server/discover method (SEP-2575, protocol version 2026-07-28).
+type MCPDiscoverConfig struct {
+	// Instructions is natural-language guidance for MCP clients on how to use this
+	// server. It is served in the server/discover response and in the legacy
+	// initialize response, so all clients receive it regardless of era.
+	Instructions string `yaml:"instructions,omitempty" env:"INSTRUCTIONS"`
 }
 
 type ConnectRPCConfiguration struct {

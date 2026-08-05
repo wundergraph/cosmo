@@ -98,7 +98,7 @@
                 "pages": [
                   "router/mcp",
                   "router/mcp/quickstart",
-                  "router/mcp/operations",
+                  "router/mcp/tools",
                   "router/mcp/configuration",
                   {
                     "group": "OAuth 2.1",
@@ -812,6 +812,10 @@
     {
       "source": "/router/subgraph-error-propagation",
       "destination": "/router/subgraph-data-propagation/subgraph-error-propagation"
+    },
+    {
+      "source": "/router/mcp/operations",
+      "destination": "/router/mcp/tools"
     }
   ]
 }
