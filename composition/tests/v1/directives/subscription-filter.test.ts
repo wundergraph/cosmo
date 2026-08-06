@@ -404,7 +404,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       ]);
     });
 
-    test('that inaccessible fields from edsg can be used as fieldPath reference', () => {
+    test('that inaccessible EDG fields can be used within a subscription filter fieldPath', () => {
       const subgraphA = createSubgraph(
         'subgraph-a',
         `
@@ -498,7 +498,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       );
     });
 
-    test('that inaccessible fields from non-edsg can be used as fieldPath reference', () => {
+    test('that EDG fields that are defined inaccessible in another subgraph can be used within a subscription filter fieldPath', () => {
       const subgraphA = createSubgraph(
         'subgraph-a',
         `
