@@ -7,6 +7,7 @@ package subgraph
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg/subgraph/model"
@@ -75,6 +76,65 @@ func (r *queriesResolver) TopSecretFederationFacts(ctx context.Context) ([]model
 // FactTypes is the resolver for the factTypes field.
 func (r *queriesResolver) FactTypes(ctx context.Context) ([]model.TopSecretFactType, error) {
 	return model.AllTopSecretFactType, nil
+}
+
+// SharedThings is the resolver for the sharedThings field.
+func (r *queriesResolver) SharedThings(ctx context.Context, numOfA int, numOfB int) ([]*model.Thing, error) {
+	const MaxNumOfA = 1000
+	if numOfA < 0 || numOfA > MaxNumOfA {
+		return nil, errors.New("numOfA is out of allowed range")
+	}
+	things := make([]*model.Thing, 0, numOfA)
+	for i := 0; i < numOfA; i++ {
+		thing := &model.Thing{
+			A: fmt.Sprintf("a-%d", i),
+		}
+		things = append(things, thing)
+	}
+	return things, nil
+}
+
+// SlicedThings is the resolver for the slicedThings field.
+func (r *queriesResolver) SlicedThings(ctx context.Context, first *int, last *int) ([]*model.Thing, error) {
+	const maxSliceSize = 1000
+	if first == nil && last == nil {
+		return nil, nil
+	}
+	var size int
+	// just pick the first non-nil value
+	if first != nil {
+		size = *first
+	} else {
+		size = *last
+	}
+	if size < 0 || size > maxSliceSize {
+		return nil, errors.New("slicing argument is out of allowed range")
+	}
+	things := make([]*model.Thing, 0, size)
+	for i := 0; i < size; i++ {
+		thing := &model.Thing{
+			A: fmt.Sprintf("a-%d", i),
+		}
+		things = append(things, thing)
+	}
+	return things, nil
+}
+
+// SearchThings is the resolver for the searchThings field.
+func (r *queriesResolver) SearchThings(ctx context.Context, input model.ProductSearchInput) ([]*model.Thing, error) {
+	const maxSize = 1000
+	var size int
+	if input.Pagination != nil && input.Pagination.First != nil {
+		size = *input.Pagination.First
+	}
+	if size < 0 || size > maxSize {
+		return nil, errors.New("pagination.first is out of allowed range")
+	}
+	things := make([]*model.Thing, 0, size)
+	for i := 0; i < size; i++ {
+		things = append(things, &model.Thing{A: fmt.Sprintf("a-%d", i)})
+	}
+	return things, nil
 }
 
 // Documentation returns generated.DocumentationResolver implementation.
