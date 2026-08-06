@@ -1,0 +1,34 @@
+name: Linear Release (report)
+
+on:
+  workflow_call:
+    inputs:
+      include_paths:
+        description: Git pathspec scoping commits to this component (e.g. router/**).
+        required: true
+        type: string
+    secrets:
+      access_key:
+        description: Linear pipeline access key for this component.
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Report to Linear
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: linear/linear-release-action@v0.14.5
+        with:
+          access_key: ${{ secrets.access_key }}
+          name: ${{ github.event.release.tag_name }}
+          version: ${{ github.event.release.tag_name }}
+          include_paths: ${{ inputs.include_paths }}
