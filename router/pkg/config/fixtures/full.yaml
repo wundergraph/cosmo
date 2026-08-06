@@ -111,6 +111,11 @@ mcp:
   server:
     listen_addr: localhost:5025
     base_url: 'http://localhost:5025'
+    version: '1.0.0'
+    title: 'Cosmo Graph'
+    description: 'Federated graph exposed via MCP.'
+    discover:
+      instructions: 'Use the operation tools to interact with the graph.'
   storage:
     provider_id: mcp
 
@@ -427,6 +432,8 @@ events:
   handlers:
     on_receive_events:
       max_concurrent_handlers: 100
+      handler_timeout: 5s
+    before_events_dispatch:
       handler_timeout: 5s
 
 engine:

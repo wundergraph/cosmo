@@ -260,7 +260,13 @@
     "Enabled": false,
     "Server": {
       "ListenAddr": "localhost:5025",
-      "BaseURL": "http://localhost:5025"
+      "BaseURL": "http://localhost:5025",
+      "Version": "1.0.0",
+      "Title": "Cosmo Graph",
+      "Description": "Federated graph exposed via MCP.",
+      "Discover": {
+        "Instructions": "Use the operation tools to interact with the graph."
+      }
     },
     "Storage": {
       "ProviderID": "mcp"
@@ -832,6 +838,9 @@
     "Handlers": {
       "OnReceiveEvents": {
         "MaxConcurrentHandlers": 100,
+        "HandlerTimeout": 5000000000
+      },
+      "BeforeEventsDispatch": {
         "HandlerTimeout": 5000000000
       }
     }

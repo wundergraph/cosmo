@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 
@@ -94,17 +95,18 @@ func NewConnectionMetricStore(
 	return connMetrics, nil
 }
 
-func (c *ConnectionMetrics) MeasureMaxConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue) {
-	// Add the reused attribute to the base attributes
-	reusedAttr := otel.WgClientReusedConnection.Bool(reused)
-	allAttrs := append([]attribute.KeyValue{}, c.baseAttributes...)
-	allAttrs = append(allAttrs, reusedAttr)
-	allAttrs = append(allAttrs, attrs...)
-
-	opts := otelmetric.WithAttributes(allAttrs...)
-
-	c.otlpConnectionMetrics.MeasureMaxConnections(ctx, 1, opts)
-	c.promConnectionMetrics.MeasureMaxConnections(ctx, 1, opts)
+// RecordMaxConnections records the configured per-subgraph connection ceiling.
+// Must be called on every graph server build.
+func (c *ConnectionMetrics) RecordMaxConnections(ctx context.Context, connectionPoolStats *ConnectionPoolStats) {
+	for subgraph, maxConns := range connectionPoolStats.GetMaxConnsPerSubgraph() {
+		attrs := make([]attribute.KeyValue, 0, 1)
+		if subgraph != "" {
+			attrs = append(attrs, otel.WgSubgraphName.String(subgraph))
+		}
+		opts := c.recordOpts(attrs)
+		c.otlpConnectionMetrics.MeasureMaxConnections(ctx, maxConns, opts)
+		c.promConnectionMetrics.MeasureMaxConnections(ctx, maxConns, opts)
+	}
 }
 
 func (c *ConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
@@ -164,8 +166,7 @@ func (c *ConnectionMetrics) MeasureTimeToLastByte(ctx context.Context, duration 
 }
 
 func (c *ConnectionMetrics) recordOpts(attrs []attribute.KeyValue) otelmetric.RecordOption {
-	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
-	return otelmetric.WithAttributes(append(copied, attrs...)...)
+	return otelmetric.WithAttributes(append(slices.Clone(c.baseAttributes), attrs...)...)
 }
 
 // Flush flushes the metrics to the backend synchronously.

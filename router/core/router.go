@@ -1,6 +1,7 @@
 package core
 
 import (
+	"cmp"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -103,6 +104,9 @@ type (
 		usage                 UsageTracker
 		headerPropagation     *HeaderPropagation
 		reloadPersistentState *ReloadPersistentState
+		connectionMetricsLock sync.Mutex
+		connectionMetrics     *rmetric.ConnectionMetrics
+		traceDialer           *TraceDialer
 	}
 
 	UsageTracker interface {
@@ -278,6 +282,10 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 
 	if r.subscriptionHooks.onReceiveEvents.timeout == 0 {
 		r.subscriptionHooks.onReceiveEvents.timeout = 5 * time.Second
+	}
+
+	if r.subscriptionHooks.beforeEventsDispatch.timeout == 0 {
+		r.subscriptionHooks.beforeEventsDispatch.timeout = 5 * time.Second
 	}
 
 	if r.corsOptions == nil {
@@ -769,6 +777,10 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.subscriptionHooks.onReceiveEvents.handlers = append(r.subscriptionHooks.onReceiveEvents.handlers, handler.OnReceiveEvents)
 		}
 
+		if handler, ok := moduleInstance.(StreamBeforeEventsDispatchHandler); ok {
+			r.subscriptionHooks.beforeEventsDispatch.handlers = append(r.subscriptionHooks.beforeEventsDispatch.handlers, handler.BeforeEventsDispatch)
+		}
+
 		if handler, ok := moduleInstance.(SubscriptionOnCreateHandler); ok {
 			r.subscriptionHooks.onCreate.handlers = append(r.subscriptionHooks.onCreate.handlers, handler.SubscriptionOnCreate)
 		}
@@ -1201,6 +1213,10 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
 		mcpserver.WithOmitToolNamePrefix(r.mcp.OmitToolNamePrefix),
 		mcpserver.WithStateless(r.mcp.Session.Stateless),
+		mcpserver.WithInstructions(r.mcp.Server.Discover.Instructions),
+		mcpserver.WithServerVersion(cmp.Or(r.mcp.Server.Version, Version)),
+		mcpserver.WithServerTitle(r.mcp.Server.Title),
+		mcpserver.WithServerDescription(r.mcp.Server.Description),
 	}
 
 	if r.corsOptions != nil {
@@ -1868,6 +1884,10 @@ func (r *Router) Shutdown(ctx context.Context) error {
 			}
 			err.Append(fmt.Errorf("failed to shutdown router: %w", subErr))
 		}
+	}
+
+	if subErr := r.shutdownConnectionMetrics(ctx); subErr != nil {
+		err.Append(fmt.Errorf("failed to shutdown connection metrics: %w", subErr))
 	}
 
 	var wg sync.WaitGroup
@@ -2618,10 +2638,86 @@ func WithStreamsHandlerConfiguration(cfg config.StreamsHandlerConfiguration) Opt
 	return func(r *Router) {
 		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = cfg.OnReceiveEvents.MaxConcurrentHandlers
 		r.subscriptionHooks.onReceiveEvents.timeout = cfg.OnReceiveEvents.HandlerTimeout
+		r.subscriptionHooks.beforeEventsDispatch.timeout = cfg.BeforeEventsDispatch.HandlerTimeout
 	}
 }
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
+
+// connectionStatsEnabled reports whether any exporter asks for subgraph
+// connection statistics.
+func (r *Router) connectionStatsEnabled() bool {
+	return r.metricConfig.OpenTelemetry.ConnectionStats ||
+		r.metricConfig.Prometheus.ConnectionStats ||
+		r.metricConfig.OpenTelemetry.NetworkStats ||
+		r.metricConfig.Prometheus.NetworkStats
+}
+
+// connectionTraceDialer returns the router-scoped TraceDialer, or nil when
+// connection statistics are disabled. Router-scoped because a reused graph mux
+// keeps the transports, and therefore the stats, of the server that built it.
+// Unlocked: only newGraphServer touches the dialer, and it never runs concurrently.
+func (r *Router) connectionTraceDialer() *TraceDialer {
+	if !r.connectionStatsEnabled() {
+		return nil
+	}
+
+	if r.traceDialer == nil {
+		r.traceDialer = NewTraceDialer()
+	}
+	return r.traceDialer
+}
+
+// connectionMetricStore returns the router-scoped connection metric store, or
+// nil when traceDialer is nil. Created on the first graph server rather than in
+// setupTelemetry: it seeds the max-connections gauge from the transports, which
+// do not exist yet. Shut down in Router.Shutdown.
+func (r *Router) connectionMetricStore(ctx context.Context, traceDialer *TraceDialer) (*rmetric.ConnectionMetrics, error) {
+	if traceDialer == nil {
+		return nil, nil
+	}
+
+	r.connectionMetricsLock.Lock()
+	defer r.connectionMetricsLock.Unlock()
+
+	// Check if the router is shutting down to prevent creating asynchronous metrics.
+	if r.shutdown.Load() {
+		return nil, nil
+	}
+
+	if r.connectionMetrics == nil {
+		store, err := rmetric.NewConnectionMetricStore(
+			r.logger,
+			nil,
+			r.otlpMeterProvider,
+			r.promMeterProvider,
+			r.metricConfig,
+			traceDialer.connectionPoolStats,
+		)
+		if err != nil {
+			return nil, err
+		}
+		r.connectionMetrics = store
+	}
+
+	// Ensure to record max connections on each graph server creation.
+	r.connectionMetrics.RecordMaxConnections(ctx, traceDialer.connectionPoolStats)
+
+	return r.connectionMetrics, nil
+}
+
+// shutdownConnectionMetrics unregisters the store. Must run after r.shutdown is
+// set, so that a config reload still inside newGraphServer cannot create a new
+// store afterwards.
+func (r *Router) shutdownConnectionMetrics(ctx context.Context) error {
+	r.connectionMetricsLock.Lock()
+	defer r.connectionMetricsLock.Unlock()
+
+	if r.connectionMetrics == nil {
+		return nil
+	}
+	return r.connectionMetrics.Shutdown(ctx)
+}
 
 func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string, clientTLS *tls.Config) *http.Transport {
 	dialer := &net.Dialer{
