@@ -769,7 +769,8 @@
     "ErrorExtensionCode": {
       "Enabled": true,
       "Code": "RATE_LIMIT_EXCEEDED"
-    }
+    },
+    "ExcludeSubscriptions": true
   },
   "LocalhostFallbackInsideDocker": true,
   "CDN": {

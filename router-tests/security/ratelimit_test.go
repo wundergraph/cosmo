@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -1054,6 +1055,240 @@ func TestRateLimit(t *testing.T) {
 				})
 				require.Equal(t, fmt.Sprintf(`{"errors":[{"message":"Rate limit exceeded for Subgraph 'employees'."}],"data":{"employee":null},"extensions":{"rateLimit":{"key":"%s","requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), res.Body)
 			})
+		})
+	})
+}
+
+func TestRateLimitExcludeSubscriptions(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	t.Parallel()
+
+	const subscriptionQuery = `{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`
+	employeeUpdatedEvent := []byte(`{"id":3,"__typename": "Employee"}`)
+
+	newRateLimitConfig := func(key string, excludeSubscriptions, rejectExceedingRequests bool) *config.RateLimitConfiguration {
+		return &config.RateLimitConfiguration{
+			Enabled:  true,
+			Strategy: "simple",
+			SimpleStrategy: config.RateLimitSimpleStrategy{
+				Rate:                    1,
+				Burst:                   1,
+				Period:                  time.Second * 10,
+				RejectExceedingRequests: rejectExceedingRequests,
+			},
+			Storage: config.RedisConfiguration{
+				URLs:      []string{"redis://localhost:6379"},
+				KeyPrefix: key,
+			},
+			Debug:                true,
+			ExcludeSubscriptions: excludeSubscriptions,
+		}
+	}
+
+	cleanupKey := func(t *testing.T, key string) {
+		t.Cleanup(func() {
+			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
+			del := client.Del(context.Background(), key)
+			require.NoError(t, del.Err())
+		})
+	}
+
+	t.Run("subscription events are rate limited when exclude_subscriptions is disabled", func(t *testing.T) {
+		t.Parallel()
+
+		key := uuid.New().String()
+		cleanupKey(t, key)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			RouterOptions: []core.Option{
+				core.WithRateLimitConfig(newRateLimitConfig(key, false, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(subscriptionQuery),
+			})
+			require.NoError(t, err)
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			xEnv.WaitForTriggerCount(1, time.Second*15)
+
+			subject := xEnv.GetPubSubName("employeeUpdated.3")
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, employeeUpdatedEvent, 1, time.Second*15)
+
+			// The first event consumes the whole budget with the entity fetch resolving the details.
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Equal(t, fmt.Sprintf(`{"data":{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}},"extensions":{"rateLimit":{"key":"%s","requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), string(res.Payload))
+
+			// The entity fetch of the second event must be denied.
+			err = xEnv.NatsConnectionDefault.Publish(subject, employeeUpdatedEvent)
+			require.NoError(t, err)
+			require.NoError(t, xEnv.NatsConnectionDefault.Flush())
+
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Contains(t, string(res.Payload), "Rate limit exceeded")
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*15)
+		})
+	})
+	t.Run("subscription events over websocket are not rate limited when exclude_subscriptions is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		key := uuid.New().String()
+		cleanupKey(t, key)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			RouterOptions: []core.Option{
+				core.WithRateLimitConfig(newRateLimitConfig(key, true, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(subscriptionQuery),
+			})
+			require.NoError(t, err)
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			xEnv.WaitForTriggerCount(1, time.Second*15)
+
+			subject := xEnv.GetPubSubName("employeeUpdated.3")
+
+			// With a budget of 1, any rate limiting of the entity fetches would deny the second and third event.
+			for range 3 {
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, employeeUpdatedEvent, 1, time.Second*15)
+
+				var res testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &res)
+				require.NoError(t, err)
+				require.Equal(t, "next", res.Type)
+				require.Equal(t, "1", res.ID)
+				require.Equal(t, `{"data":{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}}`, string(res.Payload))
+			}
+
+			// Queries remain rate limited.
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			})
+			require.Equal(t, fmt.Sprintf(`{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}},"extensions":{"rateLimit":{"key":"%s","requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), res.Body)
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			})
+			require.Equal(t, fmt.Sprintf(`{"errors":[{"message":"Rate limit exceeded"}],"data":null,"extensions":{"rateLimit":{"key":"%s","requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), res.Body)
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*15)
+		})
+	})
+	t.Run("queries over websocket are still rate limited when exclude_subscriptions is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		key := uuid.New().String()
+		cleanupKey(t, key)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithRateLimitConfig(newRateLimitConfig(key, true, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"query { employee(id:1) { id } }"}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Equal(t, fmt.Sprintf(`{"data":{"employee":{"id":1}},"extensions":{"rateLimit":{"key":"%s","requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), string(res.Payload))
+
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "complete", res.Type)
+			require.Equal(t, "1", res.ID)
+
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "2",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"query { employee(id:1) { id } }"}`),
+			})
+			require.NoError(t, err)
+
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "2", res.ID)
+			require.Contains(t, string(res.Payload), "Rate limit exceeded")
+
+			require.NoError(t, conn.Close())
+		})
+	})
+	t.Run("subscription events over sse are not rate limited when exclude_subscriptions is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		key := uuid.New().String()
+		cleanupKey(t, key)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			RouterOptions: []core.Option{
+				core.WithRateLimitConfig(newRateLimitConfig(key, true, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			events := make(chan string, 8)
+			go xEnv.GraphQLSubscriptionOverSSE(ctx, testenv.GraphQLRequest{
+				Query: `subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}`,
+				Header: map[string][]string{
+					"Content-Type": {"application/json"},
+					"Accept":       {"text/event-stream"},
+				},
+			}, func(data string) {
+				events <- data
+			})
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			xEnv.WaitForTriggerCount(1, time.Second*15)
+
+			subject := xEnv.GetPubSubName("employeeUpdated.3")
+
+			// With a budget of 1, any rate limiting of the entity fetches would deny the second and third event.
+			for range 3 {
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, employeeUpdatedEvent, 1, time.Second*15)
+
+				select {
+				case data := <-events:
+					require.Equal(t, `{"data":{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}}`, strings.TrimSpace(data))
+				case <-ctx.Done():
+					t.Fatal("timed out waiting for subscription event")
+				}
+			}
 		})
 	})
 }

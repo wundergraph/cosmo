@@ -733,6 +733,8 @@ type RateLimitConfiguration struct {
 	Debug               bool                        `yaml:"debug" envDefault:"false" env:"RATE_LIMIT_DEBUG"`
 	KeySuffixExpression string                      `yaml:"key_suffix_expression,omitempty" env:"RATE_LIMIT_KEY_SUFFIX_EXPRESSION"`
 	ErrorExtensionCode  RateLimitErrorExtensionCode `yaml:"error_extension_code"`
+	// ExcludeSubscriptions disables rate limiting for subscription operations only.
+	ExcludeSubscriptions bool `yaml:"exclude_subscriptions" envDefault:"false" env:"RATE_LIMIT_EXCLUDE_SUBSCRIPTIONS"`
 }
 
 type RateLimitErrorExtensionCode struct {
