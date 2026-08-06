@@ -23498,17 +23498,18 @@ func (x *DeleteFeatureFlagResponse) GetCompositionWarnings() []*CompositionWarni
 }
 
 type FeatureFlag struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Namespace     string                 `protobuf:"bytes,3,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	Labels        []*Label               `protobuf:"bytes,4,rep,name=labels,proto3" json:"labels,omitempty"`
-	IsEnabled     bool                   `protobuf:"varint,5,opt,name=is_enabled,json=isEnabled,proto3" json:"is_enabled,omitempty"`
-	CreatedBy     string                 `protobuf:"bytes,6,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
-	CreatedAt     string                 `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     string                 `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	Id                         string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                       string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Namespace                  string                 `protobuf:"bytes,3,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Labels                     []*Label               `protobuf:"bytes,4,rep,name=labels,proto3" json:"labels,omitempty"`
+	IsEnabled                  bool                   `protobuf:"varint,5,opt,name=is_enabled,json=isEnabled,proto3" json:"is_enabled,omitempty"`
+	CreatedBy                  string                 `protobuf:"bytes,6,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	CreatedAt                  string                 `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                  string                 `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	HasFailedLatestComposition *bool                  `protobuf:"varint,9,opt,name=has_failed_latest_composition,json=hasFailedLatestComposition,proto3,oneof" json:"has_failed_latest_composition,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *FeatureFlag) Reset() {
@@ -23595,6 +23596,13 @@ func (x *FeatureFlag) GetUpdatedAt() string {
 		return x.UpdatedAt
 	}
 	return ""
+}
+
+func (x *FeatureFlag) GetHasFailedLatestComposition() bool {
+	if x != nil && x.HasFailedLatestComposition != nil {
+		return *x.HasFailedLatestComposition
+	}
+	return false
 }
 
 type GetFeatureFlagsRequest struct {
@@ -35683,7 +35691,7 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12U\n" +
 	"\x12composition_errors\x18\x02 \x03(\v2&.wg.cosmo.platform.v1.CompositionErrorR\x11compositionErrors\x12R\n" +
 	"\x11deployment_errors\x18\x03 \x03(\v2%.wg.cosmo.platform.v1.DeploymentErrorR\x10deploymentErrors\x12Z\n" +
-	"\x13compositionWarnings\x18\x04 \x03(\v2(.wg.cosmo.platform.v1.CompositionWarningR\x13compositionWarnings\"\x80\x02\n" +
+	"\x13compositionWarnings\x18\x04 \x03(\v2(.wg.cosmo.platform.v1.CompositionWarningR\x13compositionWarnings\"\xea\x02\n" +
 	"\vFeatureFlag\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1c\n" +
@@ -35696,7 +35704,9 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\tR\tupdatedAt\"\x89\x01\n" +
+	"updated_at\x18\b \x01(\tR\tupdatedAt\x12F\n" +
+	"\x1dhas_failed_latest_composition\x18\t \x01(\bH\x00R\x1ahasFailedLatestComposition\x88\x01\x01B \n" +
+	"\x1e_has_failed_latest_composition\"\x89\x01\n" +
 	"\x16GetFeatureFlagsRequest\x12\x14\n" +
 	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
 	"\x06offset\x18\x02 \x01(\x05R\x06offset\x12\x1c\n" +
@@ -38250,6 +38260,7 @@ func file_wg_cosmo_platform_v1_platform_proto_init() {
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[349].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[350].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[351].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[353].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[354].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[360].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[362].OneofWrappers = []any{}

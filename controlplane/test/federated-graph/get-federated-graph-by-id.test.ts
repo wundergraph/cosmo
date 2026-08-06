@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
@@ -6,8 +8,20 @@ import {
   createTestGroup,
   createTestRBACEvaluator,
   genID,
+  genUniqueLabel,
 } from '../../src/core/test-util.js';
-import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from '../test-util.js';
+import {
+  createAndPublishSubgraph,
+  createFeatureFlag,
+  createFederatedGraph,
+  createNamespace,
+  createThenPublishFeatureSubgraph,
+  createThenPublishSubgraph,
+  DEFAULT_NAMESPACE,
+  DEFAULT_ROUTER_URL,
+  DEFAULT_SUBGRAPH_URL_ONE,
+  SetupTest,
+} from '../test-util.js';
 
 let dbname = '';
 
@@ -177,4 +191,57 @@ describe('GetFederatedGraphById', () => {
       expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     },
   );
+
+  test('Should return the feature flags in the latest composition when split config loading is enabled', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['split-config-loading'] });
+    testContext.onTestFinished(() => server.close());
+
+    const namespace = genID('namespace').toLowerCase();
+    const labels = [genUniqueLabel()];
+    const federatedGraphName = genID('fedGraph');
+
+    await createNamespace(client, namespace);
+
+    await createAndPublishSubgraph(
+      client,
+      'users',
+      namespace,
+      fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/users.graphql')).toString(),
+      labels,
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createThenPublishFeatureSubgraph(
+      client,
+      'users-feature',
+      'users',
+      namespace,
+      fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/users-feature.graphql')).toString(),
+      labels,
+      'http://localhost:4101',
+    );
+
+    const federatedGraphLabels = labels.map(({ key, value }) => `${key}=${value}`);
+    await createFederatedGraph(client, federatedGraphName, namespace, federatedGraphLabels, DEFAULT_ROUTER_URL);
+
+    const flagName = genID('flag');
+    await createFeatureFlag(client, flagName, labels, ['users-feature'], namespace, true);
+
+    const graphByName = await client.getFederatedGraphByName({
+      name: federatedGraphName,
+      namespace,
+    });
+    expect(graphByName.response?.code).toBe(EnumStatusCode.OK);
+
+    // Under split config the feature flag composition rows have a null base linkage; getFederatedGraphById must still
+    // resolve them via the federated graph so the flag shows up in the latest composition (COSMO-315).
+    const response = await client.getFederatedGraphById({
+      id: graphByName.graph!.id,
+      includeMetrics: false,
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.featureFlagsInLatestValidComposition).toHaveLength(1);
+    expect(response.featureFlagsInLatestValidComposition.some((f) => f.name === flagName)).toBe(true);
+  });
 });
