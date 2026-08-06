@@ -86,7 +86,7 @@ export const CopyOperation = () => {
       <Tooltip delayDuration={100}>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="graphiql-toolbar-button">
+            <Button variant="ghost" size="icon" className="graphiql-toolbar-button" aria-label="Copy operation">
               <CopyIcon className="graphiql-toolbar-icon" />
             </Button>
           </DropdownMenuTrigger>

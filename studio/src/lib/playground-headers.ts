@@ -1,6 +1,8 @@
+export const isValidHeaderName = (name: string) => /^[\^`\-\w!#$%&'*+.|~]+$/.test(name);
+
 export const validateHeaders = (headers: Record<string, string>) => {
   for (const headersKey in headers) {
-    if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
+    if (!isValidHeaderName(headersKey)) {
       throw new TypeError(`Header name must be a valid HTTP token [${headersKey}]`);
     }
   }

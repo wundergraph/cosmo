@@ -1,4 +1,4 @@
-import { substituteHeadersFromEnv } from '@/lib/playground-headers';
+import { isValidHeaderName, substituteHeadersFromEnv } from '@/lib/playground-headers';
 
 interface BuildCurlOptions {
   url: string;
@@ -75,6 +75,19 @@ export const buildCurlCommand = ({
   }
 
   requestHeaders = { ...requestHeaders, ...extraHeaders };
+
+  // the router rejects header names that are not valid http tokens, so drop them instead of
+  // producing a command that curl refuses to run
+  const invalidHeaderNames = Object.keys(requestHeaders).filter((key) => !isValidHeaderName(key));
+  for (const key of invalidHeaderNames) {
+    delete requestHeaders[key];
+  }
+
+  if (invalidHeaderNames.length > 0) {
+    warnings.push(
+      `The following header names are not valid HTTP tokens and were excluded from the cURL command: ${invalidHeaderNames.join(', ')}.`,
+    );
+  }
 
   const hasContentType = Object.keys(requestHeaders).some((key) => key.toLowerCase() === 'content-type');
 

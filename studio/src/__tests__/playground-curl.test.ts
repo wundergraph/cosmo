@@ -71,6 +71,20 @@ describe('buildCurlCommand', () => {
     expect(command).toContain(`-H 'X-Feature-Flag: my-flag'`);
   });
 
+  test('warns and skips header names that are not valid http tokens', () => {
+    const { command, warnings } = buildCurlCommand({
+      url,
+      query,
+      headers: '{ "My Header": "nope", "X-Valid": "yes" }',
+    });
+
+    expect(warnings).toEqual([
+      'The following header names are not valid HTTP tokens and were excluded from the cURL command: My Header.',
+    ]);
+    expect(command).not.toContain('My Header');
+    expect(command).toContain(`-H 'X-Valid: yes'`);
+  });
+
   test('warns and skips malformed variables and headers', () => {
     const { command, warnings } = buildCurlCommand({ url, query, variables: '{ invalid', headers: '{ invalid' });
 
