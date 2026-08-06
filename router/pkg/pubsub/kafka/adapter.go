@@ -55,14 +55,12 @@ type PollerOpts struct {
 func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater datasource.SubscriptionEventUpdater, pollerOpts PollerOpts) error {
 	for {
 		select {
-		case <-p.ctx.Done(): // Close the poller if the application context was canceled
-			return p.ctx.Err()
-		case <-ctx.Done(): // Close the poller if the subscription context was canceled
+		case <-ctx.Done(): // Close the poller if the context was canceled (subscription ended, or router shutdown/hot reload)
 			return ctx.Err()
 
 		default:
 			// Try to fetch max records from any subscribed topics
-			fetches := client.PollRecords(p.ctx, 10_000)
+			fetches := client.PollRecords(ctx, 10_000)
 			if fetches.IsClientClosed() {
 				return errClientClosed
 			}
@@ -104,7 +102,7 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 					headers[header.Key] = header.Value
 				}
 
-				p.streamMetricStore.Consume(p.ctx, metric.StreamsEvent{
+				p.streamMetricStore.Consume(ctx, metric.StreamsEvent{
 					ProviderId:          pollerOpts.providerId,
 					StreamOperationName: kafkaReceive,
 					ProviderType:        metric.ProviderTypeKafka,
@@ -161,24 +159,21 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	}
 
 	p.closeWg.Go(func() {
-
 		// The consumer client owns background goroutines, broker connections and buffered
-		// fetches. It must be closed when the poller stops, otherwise every ended subscription
-		// leaks a full client for the lifetime of the process. Client.Close is not safe to call
-		// twice, so guard it with a sync.Once shared with the cancellation hook below.
-		var closeOnce sync.Once
-		closeClient := func() { closeOnce.Do(client.Close) }
-		defer closeClient()
+		// fetches, so it must be closed when the poller stops, otherwise every ended
+		// subscription leaks a full client for the lifetime of the process.
+		defer client.Close()
 
-		// topicPoller blocks in PollRecords on the adapter (application) context, not the
-		// subscription context. A subscription that is cancelled while its topic is idle would
-		// therefore never unblock the poller, so neither the goroutine nor the client would ever
-		// be reclaimed. Closing the client on subscription cancellation makes the in-flight
-		// PollRecords return IsClientClosed, so the poller exits promptly and the client is freed.
-		stopOnCancel := context.AfterFunc(ctx, closeClient)
-		defer stopOnCancel()
+		// Drive the poller with a context that is cancelled when EITHER the subscription
+		// context (ctx) or the adapter/application context (p.ctx) is cancelled. This makes
+		// topicPoller return immediately on a trigger close, router shutdown or hot reload,
+		// at which point the deferred Close above reclaims the client.
+		pollerCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		stop := context.AfterFunc(p.ctx, cancel)
+		defer stop()
 
-		err := p.topicPoller(ctx, client, updater, PollerOpts{providerId: conf.ProviderID()})
+		err := p.topicPoller(pollerCtx, client, updater, PollerOpts{providerId: conf.ProviderID()})
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
 				log.Debug("poller canceled", zap.Error(err))
