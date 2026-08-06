@@ -64,7 +64,16 @@ export type CompositionResult = {
 
 export interface S3RouterConfigMetadata extends Record<string, string> {
   version: string;
-  'signature-sha256': string;
+}
+
+export function createRouterConfigMetadata(version: string, signatureSha256?: string): S3RouterConfigMetadata {
+  const metadata: S3RouterConfigMetadata = { version };
+
+  if (signatureSha256) {
+    metadata['signature-sha256'] = signatureSha256;
+  }
+
+  return metadata;
 }
 
 export type BaseCompositionData = {
@@ -267,10 +276,7 @@ export class Composer {
           key: s3PathDraft,
           body: routerConfigJsonStringBytes,
           contentType: 'application/json; charset=utf-8',
-          metadata: {
-            version: federatedSchemaVersionId,
-            'signature-sha256': '', // The signature will be added by the admission webhook
-          },
+          metadata: createRouterConfigMetadata(federatedSchemaVersionId),
         });
         try {
           // 2. Create a private URL with a token that the admission webhook can use to fetch the draft config.
@@ -329,10 +335,7 @@ export class Composer {
           key: s3PathReady,
           body: routerConfigJsonStringBytes,
           contentType: 'application/json; charset=utf-8',
-          metadata: {
-            version: federatedSchemaVersionId,
-            'signature-sha256': signatureSha256 || '',
-          },
+          metadata: createRouterConfigMetadata(federatedSchemaVersionId, signatureSha256),
         });
       } catch (err: any) {
         this.logger.error(err, `Failed to upload the final router config for ${federatedGraphId} to the blob storage`);
