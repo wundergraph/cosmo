@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest';
 import {
   CONDITION,
   FIRST_ORDINAL,
-  inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
   invalidEventDrivenGraphError,
@@ -404,27 +403,8 @@ describe('@openfed__subscriptionFilter tests', () => {
       ]);
     });
 
-    test('that an error is returned if fieldPath references an inaccessible field', () => {
-      const result = federateSubgraphsFailure([subgraphB, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors).toStrictEqual([
-        invalidSubscriptionFilterDirectiveError('Subscription.one', [
-          subscriptionFieldConditionInvalidInputFieldError(
-            'condition.IN',
-            [],
-            [],
-            [],
-            [
-              inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage(
-                'condition.IN.fieldPath',
-                'object.id',
-                'object.id',
-                'Object.id',
-              ),
-            ],
-          ),
-        ]),
-      ]);
+    test('that inaccessible fields can be used as fieldPath reference', () => {
+      federateSubgraphsSuccess([subgraphR, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
     });
 
     test('that an error is if condition.AND or condition.OR contain no elements or more than 5 elements', () => {
@@ -927,19 +907,14 @@ const subgraphN: Subgraph = {
   name: 'subgraph-n',
   url: '',
   definitions: parse(`
-    type Entity @key(fields: "id object { id }", resolvable: false) {
+    type Entity @key(fields: "id", resolvable: false) @key(fields: "name", resolvable: false) {
       id: ID! @external
-      object: Object! @external
-    }
-
-    type Object {
-      id: ID! @external @inaccessible
+      name: String! @external @inaccessible
     }
 
     type Subscription {
-      one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "object.id", values: [1], } })
-    }
-  `),
+      one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "name", values: ["test"], } })
+  }`),
 };
 
 const subgraphO: Subgraph = {
