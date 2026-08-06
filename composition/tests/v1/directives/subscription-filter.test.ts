@@ -34,6 +34,7 @@ import {
   undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage,
 } from '../../../src';
 import {
+  createSubgraph,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
@@ -404,7 +405,213 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that inaccessible fields can be used as fieldPath reference', () => {
-      federateSubgraphsSuccess([subgraphR, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+    type Query{
+      entity: Entity!
+    }
+
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+  `,
+      );
+
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+    type Entity @key(fields: "id", resolvable: false) @key(fields: "name", resolvable: false) {
+      id: ID! @external
+      name: String! @external @inaccessible
+    }
+
+    type Subscription {
+      one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "name", values: ["test"], } })
+  }`,
+      );
+
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(result.success).toBe(true);
+      const subscriptionFields = result.fieldConfigurations.filter(
+        (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'one',
+      );
+      expect(subscriptionFields).toHaveLength(1);
+      expect(subscriptionFields[0]).toStrictEqual({
+        argumentNames: [],
+        fieldName: 'one',
+        typeName: SUBSCRIPTION,
+        subscriptionFilterCondition: {
+          in: {
+            fieldPath: ['name'],
+            values: ['test'],
+          },
+        },
+      });
+
+      expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+        normalizeString(
+          `schema {
+          query: Query
+          subscription: Subscription
+        }
+
+        type Entity {
+          id: ID!
+        }
+
+        type Query {
+          entity: Entity!
+        }
+
+        type Subscription {
+          one: Entity!
+        }
+      `,
+        ),
+      );
+
+      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+        normalizeString(
+          `schema {
+          query: Query
+          subscription: Subscription
+        }
+
+        directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+        
+        type Entity {
+          id: ID!
+          name: String! @inaccessible
+        }
+
+        type Query {
+          entity: Entity!
+        }
+
+        type Subscription {
+          one: Entity!
+        }
+      `,
+        ),
+      );
+    });
+
+    test('that inaccessible fields can be used as fieldPath reference', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+    type Query{
+      entity: Entity!
+    }
+
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+  `,
+      );
+
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `directive @edfs__natsRequest(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
+    directive @edfs__natsPublish(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
+    directive @edfs__natsSubscribe(subjects: [String!]!, providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
+    
+    type edfs__PublishResult {
+        success: Boolean!
+    }
+    
+    input edfs__NatsStreamConfiguration {
+        consumerInactiveThreshold: Int! = 30
+        consumerName: String!
+        streamName: String!
+    }
+
+    type Entity @key(fields: "id", resolvable: false) @key(fields: "name", resolvable: false) {
+      id: ID! @external
+      name: String! @external @inaccessible
+    }
+
+    type Subscription {
+      one: Entity! @edfs__natsSubscribe(subjects: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "name", values: ["test"], } })
+  }`,
+      );
+
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(result.success).toBe(true);
+      const subscriptionFields = result.fieldConfigurations.filter(
+        (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'one',
+      );
+      expect(result.warnings).toHaveLength(0);
+      expect(subscriptionFields).toHaveLength(1);
+      expect(subscriptionFields[0]).toStrictEqual({
+        argumentNames: [],
+        fieldName: 'one',
+        typeName: SUBSCRIPTION,
+        subscriptionFilterCondition: {
+          in: {
+            fieldPath: ['name'],
+            values: ['test'],
+          },
+        },
+      });
+
+      expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+        normalizeString(
+          `schema {
+          query: Query
+          subscription: Subscription
+        }
+
+        type Entity {
+          id: ID!
+        }
+
+        type Query {
+          entity: Entity!
+        }
+
+        type Subscription {
+          one: Entity!
+        }
+    
+        type edfs__PublishResult {
+            success: Boolean!
+        }
+      `,
+        ),
+      );
+
+      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+        normalizeString(
+          `schema {
+          query: Query
+          subscription: Subscription
+        }
+
+        directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+        
+        type Entity {
+          id: ID!
+          name: String! @inaccessible
+        }
+
+        type Query {
+          entity: Entity!
+        }
+
+        type Subscription {
+          one: Entity!
+        }
+    
+        type edfs__PublishResult {
+            success: Boolean!
+        }
+      `,
+        ),
+      );
     });
 
     test('that an error is if condition.AND or condition.OR contain no elements or more than 5 elements', () => {
@@ -901,20 +1108,6 @@ const subgraphM: Subgraph = {
       one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "object", values: [1], } })
     }
   `),
-};
-
-const subgraphN: Subgraph = {
-  name: 'subgraph-n',
-  url: '',
-  definitions: parse(`
-    type Entity @key(fields: "id", resolvable: false) @key(fields: "name", resolvable: false) {
-      id: ID! @external
-      name: String! @external @inaccessible
-    }
-
-    type Subscription {
-      one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "name", values: ["test"], } })
-  }`),
 };
 
 const subgraphO: Subgraph = {
