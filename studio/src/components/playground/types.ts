@@ -29,11 +29,16 @@ type PlaygroundContextType = {
   setView: (val: PlaygroundView) => void;
   isHydrated: boolean;
   setIsHydrated: (v: boolean) => void;
+  /** The url the playground sends its operations to. */
+  routingUrl: string;
+  /** Set when a feature flag is selected in the playground toolbar. */
+  featureFlagName?: string;
 };
 
 export const PlaygroundContext = createContext<PlaygroundContextType>({
   graphId: '',
   tabsState: { tabs: [], activeTabIndex: 0 },
+  routingUrl: '',
   view: 'response',
   setView: () => {},
   isHydrated: false,
