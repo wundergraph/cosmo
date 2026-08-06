@@ -404,7 +404,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       ]);
     });
 
-    test('that inaccessible fields can be used as fieldPath reference', () => {
+    test('that inaccessible fields from edsg can be used as fieldPath reference', () => {
       const subgraphA = createSubgraph(
         'subgraph-a',
         `
@@ -498,7 +498,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       );
     });
 
-    test('that inaccessible fields can be used as fieldPath reference', () => {
+    test('that inaccessible fields from non-edsg can be used as fieldPath reference', () => {
       const subgraphA = createSubgraph(
         'subgraph-a',
         `
@@ -508,7 +508,7 @@ describe('@openfed__subscriptionFilter tests', () => {
 
     type Entity @key(fields: "id") {
       id: ID!
-      name: String!
+      name: String! @inaccessible
     }
   `,
       );
@@ -531,7 +531,7 @@ describe('@openfed__subscriptionFilter tests', () => {
 
     type Entity @key(fields: "id", resolvable: false) @key(fields: "name", resolvable: false) {
       id: ID! @external
-      name: String! @external @inaccessible
+      name: String! @external
     }
 
     type Subscription {
