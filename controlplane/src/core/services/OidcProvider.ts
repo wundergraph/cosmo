@@ -35,7 +35,7 @@ export default class OidcProvider {
 
     await kcClient.createOIDCProvider({
       clientId: input.clientID,
-      clientSecret: input.clientSecrect,
+      clientSecret: input.clientSecret,
       discoveryEndpoint: input.discoveryEndpoint,
       name: input.name,
       realm: kcRealm,

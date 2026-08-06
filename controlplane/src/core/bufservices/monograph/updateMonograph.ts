@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -21,6 +20,8 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import type { PlainMessage } from '../../../types/index.js';
+import { CompositionService } from '../../services/CompositionService.js';
 
 export function updateMonograph(
   opts: RouterOptions,
@@ -135,25 +136,32 @@ export function updateMonograph(
         authContext,
       });
 
+      const compositionService = new CompositionService(
+        tx,
+        authContext.organizationId,
+        logger,
+        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+        opts.blobStorage,
+        opts.chClient!,
+        opts.webhookProxyUrl,
+        false,
+      );
+
+      // Update the federated graph
       await fedGraphRepo.update({
+        compositionService,
         targetId: graph.targetId,
         labelMatchers: [],
         routingUrl: req.routingUrl,
         updatedBy: authContext.userId,
         readme: req.readme,
-        blobStorage: opts.blobStorage,
         namespaceId: graph.namespaceId,
         unsetLabelMatchers: false,
-        admissionConfig: {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          jwtSecret: opts.admissionWebhookJWTSecret,
-        },
         admissionWebhookURL: req.admissionWebhookURL,
         admissionWebhookSecret: req.admissionWebhookSecret,
-        chClient: opts.chClient!,
-        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
+      // Update the subgraph
       await subgraphRepo.update(
         {
           targetId: subgraph.targetId,
@@ -169,14 +177,7 @@ export function updateMonograph(
           readme: req.readme,
           namespaceId: subgraph.namespaceId,
         },
-        opts.blobStorage,
-        {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          webhookJWTSecret: opts.admissionWebhookJWTSecret,
-        },
-        opts.chClient!,
-        undefined,
-        opts.webhookProxyUrl,
+        compositionService,
       );
 
       await auditLogRepo.addAuditLog({

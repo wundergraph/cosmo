@@ -7,11 +7,11 @@ import type {
   EntityInterfaceSubgraphData,
   FieldAuthorizationData,
   FieldData,
-  NodeData,
   ObjectDefinitionData,
   ParentDefinitionData,
   SimpleFieldData,
-} from '../../schema-building/types';
+  UnionDefinitionData,
+} from '../../schema-building/types/types';
 import {
   BOOLEAN_SCALAR,
   ENUM,
@@ -29,7 +29,7 @@ import {
   UNION,
 } from '../../utils/string-constants';
 import { addIterableToSet, addSets } from '../../utils/utils';
-import type { KeyFieldSetData } from '../normalization/types';
+import type { KeyFieldSetData } from '../normalization/types/types';
 import { MAX_OR_SCOPES } from '../constants/constants';
 import 'core-js/modules/esnext.set.is-subset-of.v2';
 import 'core-js/modules/esnext.set.is-superset-of.v2';
@@ -460,19 +460,9 @@ export function isObjectDefinitionData(data?: ParentDefinitionData): data is Obj
   return data.kind === Kind.OBJECT_TYPE_DEFINITION;
 }
 
-export function getNodeCoords(data: NodeData): string {
-  switch (data.kind) {
-    case Kind.ARGUMENT:
-    // Intentional fallthrough
-    case Kind.FIELD_DEFINITION:
-    // Intentional fallthrough
-    case Kind.INPUT_VALUE_DEFINITION:
-    // Intentional fallthrough
-    case Kind.ENUM_VALUE_DEFINITION: {
-      return data.federatedCoords;
-    }
-    default: {
-      return data.name;
-    }
+export function isUnionDefinitionData(data?: ParentDefinitionData): data is UnionDefinitionData {
+  if (!data) {
+    return false;
   }
+  return data.kind === Kind.UNION_TYPE_DEFINITION;
 }

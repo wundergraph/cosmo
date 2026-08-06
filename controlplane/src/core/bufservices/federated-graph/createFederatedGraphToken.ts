@@ -1,11 +1,10 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   CreateFederatedGraphTokenRequest,
   CreateFederatedGraphTokenResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { GraphApiKeyJwtPayload } from '../../../types/index.js';
+import { PlainMessage, GraphApiKeyJwtPayload } from '../../../types/index.js';
 import { audiences, signJwtHS256 } from '../../crypto/jwt.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -13,6 +12,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
 export function createFederatedGraphToken(
   opts: RouterOptions,
@@ -71,6 +71,9 @@ export function createFederatedGraphToken(
       };
     }
 
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const features = await orgRepo.getOrganizationGraphTokenFeatures(authContext.organizationId);
+
     const tokenValue = await signJwtHS256<GraphApiKeyJwtPayload>({
       secret: opts.jwtSecret,
       token: {
@@ -78,6 +81,7 @@ export function createFederatedGraphToken(
         federated_graph_id: graph.id,
         aud: audiences.cosmoGraphKey, // to distinguish from other tokens
         organization_id: authContext.organizationId,
+        features: features.length > 0 ? features : undefined,
       },
     });
 

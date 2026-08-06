@@ -8,11 +8,9 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 	"time"
 
-	"github.com/grafana/pyroscope-go"
 	"github.com/joho/godotenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/internal/timex"
@@ -29,7 +27,6 @@ var (
 	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
 	routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
 	pprofListenAddr = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
-	pyroscopeAddr   = flag.String("pyroscope-addr", os.Getenv("PYROSCOPE_ADDR"), "Address to use for pyroscope continuous profiling. e.g. http://localhost:4040")
 
 	memProfilePath = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
 	cpuProfilePath = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
@@ -96,11 +93,11 @@ func Main() {
 			zap.String("service_version", core.Version),
 		)
 
-	if *pprofListenAddr != "" && *pyroscopeAddr != "" {
+	if *pprofListenAddr != "" && result.Config.Pyroscope.Enabled {
 		baseLogger.Fatal("Cannot use pprof and pyroscope at the same time")
 	}
 
-	if *pyroscopeAddr != "" && (*cpuProfilePath != "" || *memProfilePath != "") {
+	if result.Config.Pyroscope.Enabled && (*cpuProfilePath != "" || *memProfilePath != "") {
 		baseLogger.Fatal("Cannot use --cpuprofile or --memprofile while Pyroscope is enabled")
 	}
 
@@ -114,42 +111,6 @@ func Main() {
 	// Start profiling if flags are set
 	profiler := profile.Start(baseLogger, *cpuProfilePath, *memProfilePath)
 	defer profiler.Finish()
-
-	if *pyroscopeAddr != "" {
-		runtime.SetMutexProfileFraction(5)
-		runtime.SetBlockProfileRate(5)
-
-		logger := baseLogger.With(zap.String("component", "pyroscope"))
-		logger.Info("starting pyroscope server")
-
-		pyro, err := pyroscope.Start(pyroscope.Config{
-			ApplicationName: "wundergraph.cosmo.router",
-			ServerAddress:   *pyroscopeAddr,
-			Logger:          logger.Sugar(),
-			Tags:            map[string]string{"hostname": os.Getenv("HOSTNAME")},
-
-			ProfileTypes: []pyroscope.ProfileType{
-				pyroscope.ProfileCPU,
-				pyroscope.ProfileAllocObjects,
-				pyroscope.ProfileAllocSpace,
-				pyroscope.ProfileInuseObjects,
-				pyroscope.ProfileInuseSpace,
-				pyroscope.ProfileGoroutines,
-				pyroscope.ProfileMutexCount,
-				pyroscope.ProfileMutexDuration,
-				pyroscope.ProfileBlockCount,
-				pyroscope.ProfileBlockDuration,
-			},
-		})
-		if err != nil {
-			logger.Error("failed to start pyroscope", zap.Error(err))
-		}
-		if pyro != nil {
-			defer func() {
-				_ = pyro.Stop()
-			}()
-		}
-	}
 
 	rs, err := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
 		BaseLogger:            baseLogger,

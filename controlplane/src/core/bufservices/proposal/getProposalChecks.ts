@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -10,6 +9,8 @@ import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import type { PlainMessage } from '../../../types/index.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getProposalChecks(
   opts: RouterOptions,
@@ -49,6 +50,10 @@ export function getProposalChecks(
         checks: [],
         totalChecksCount: 0,
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     const breakingChangeRetention = await orgRepo.getFeature({

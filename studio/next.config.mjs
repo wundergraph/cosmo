@@ -103,7 +103,22 @@ const config = {
   },
   // This is done to reduce the production build size
   // see: https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/tree-shaking/
-  webpack: (config, { webpack }) => {
+  webpack: (config, { webpack, dev, isServer }) => {
+    // Firefox doesn't handle eval-based source maps well (webpack/webpack#9267).
+    // Replace Next.js's default EvalSourceMapDevToolPlugin with SourceMapDevToolPlugin
+    // to generate proper source maps. Opt-in via NEXT_DEVTOOL=source-map.
+    if (dev && !isServer && process.env.NEXT_DEVTOOL === 'source-map') {
+      config.plugins = config.plugins.filter((plugin) => plugin.constructor.name !== 'EvalSourceMapDevToolPlugin');
+      config.devtool = false;
+      config.plugins.push(
+        new webpack.SourceMapDevToolPlugin({
+          filename: '[file].map',
+          module: true,
+          columns: true,
+        }),
+      );
+    }
+
     config.plugins.push(
       new webpack.DefinePlugin({
         __SENTRY_TRACING__: !isSentryTracesEnabled,

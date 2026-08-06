@@ -21,6 +21,7 @@ import { useContext, useEffect } from 'react';
 import { CgDanger } from 'react-icons/cg';
 import { IoWarningOutline } from 'react-icons/io5';
 import { Bar, BarChart, Legend, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { buildUrl } from '@/lib/build-url';
 
 const valueFormatter = (number: number) => `${formatMetric(number)}`;
 
@@ -158,6 +159,12 @@ const UsagesPage: NextPageWithLayout = () => {
                 </dd>
               </div>
               <div className="flex">
+                <dt className="flex-1 px-2 text-sm text-muted-foreground">Persisted Operations (per graph)</dt>
+                <dd className="w-1/3 px-2 text-right text-sm font-medium">
+                  <FeatureLimit id="persisted-operations" fallback={3000} />
+                </dd>
+              </div>
+              <div className="flex">
                 <dt className="flex-1 px-2 text-sm text-muted-foreground">Analytics Data Retention</dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
                   <FeatureLimit id="analytics-retention" fallback={30} /> days
@@ -203,12 +210,11 @@ const UsagesPage: NextPageWithLayout = () => {
 
 const IncreaseLimits = () => {
   const router = useRouter();
-
   const slug = router.query.organizationSlug as string;
 
   return (
     <Button asChild variant="outline">
-      <Link href={`/${slug}/billing`}>Increase limits</Link>
+      <Link href={buildUrl('/:slug/billing', { slug })}>Increase limits</Link>
     </Button>
   );
 };

@@ -211,7 +211,7 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         id: user.userID,
         emails: [{ value: user.email }],
         userName: user.email,
-        active: keycloakUsers[0].enabled ?? true,
+        active: user.active,
         name: {
           givenName: keycloakUsers[0].firstName || '',
           familyName: keycloakUsers[0].lastName || '',
@@ -241,7 +241,7 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
           id: member.userID,
           emails: [{ value: member.email }],
           userName: member.email,
-          active: keycloakUsers[0].enabled ?? true,
+          active: member.active,
           name: {
             givenName: keycloakUsers[0].firstName || '',
             familyName: keycloakUsers[0].lastName || '',

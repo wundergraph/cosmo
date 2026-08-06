@@ -673,6 +673,7 @@ describe('Proposal Data Isolation Tests', () => {
     });
     expect(getProposals1.response?.code).toBe(EnumStatusCode.OK);
     expect(getProposals1.proposals.length).toBe(1);
+    expect(getProposals1.totalCount).toBe(1);
     expect(getProposals1.proposals[0].name).toBe(proposalName1);
 
     // Get proposals for second federated graph - should only return its proposals
@@ -684,6 +685,7 @@ describe('Proposal Data Isolation Tests', () => {
     });
     expect(getProposals2.response?.code).toBe(EnumStatusCode.OK);
     expect(getProposals2.proposals.length).toBe(2);
+    expect(getProposals2.totalCount).toBe(2);
     // Should contain both proposals for fedGraphName2, but not proposals from fedGraphName1
     const proposalNames2 = getProposals2.proposals.map((p) => p.name);
     expect(proposalNames2).toContain(proposalName2);

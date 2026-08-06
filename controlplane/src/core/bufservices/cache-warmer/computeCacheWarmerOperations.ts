@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -12,6 +11,7 @@ import { OrganizationRepository } from '../../../core/repositories/OrganizationR
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function computeCacheWarmerOperations(
   opts: RouterOptions,
@@ -57,6 +57,10 @@ export function computeCacheWarmerOperations(
           details: `Federated graph '${req.federatedGraphName}' not found`,
         },
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     const namespace = await namespaceRepository.byId(federatedGraph!.namespaceId);

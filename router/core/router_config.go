@@ -1,7 +1,6 @@
 package core
 
 import (
-	"crypto/tls"
 	"net/http"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/profile/pyroscope"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/propagation"
@@ -26,12 +26,19 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 type subscriptionHooks struct {
-	onStart         onStartHooks
-	onPublishEvents onPublishEventsHooks
-	onReceiveEvents onReceiveEventsHooks
+	onCreate             onCreateHooks
+	onStart              onStartHooks
+	onPublishEvents      onPublishEventsHooks
+	onReceiveEvents      onReceiveEventsHooks
+	beforeEventsDispatch beforeEventsDispatchHooks
+}
+
+type onCreateHooks struct {
+	handlers []func(ctx SubscriptionOnCreateHandlerContext) error
 }
 
 type onStartHooks struct {
@@ -48,16 +55,23 @@ type onReceiveEventsHooks struct {
 	timeout               time.Duration
 }
 
+type beforeEventsDispatchHooks struct {
+	handlers []func(ctx StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+	timeout  time.Duration
+}
+
 type Config struct {
 	clusterName                     string
 	instanceID                      string
 	logger                          *zap.Logger
 	traceConfig                     *rtrace.Config
 	metricConfig                    *rmetric.Config
+	pyroscopeConfig                 *config.Pyroscope
 	tracerProvider                  *sdktrace.TracerProvider
 	otlpMeterProvider               *sdkmetric.MeterProvider
 	promMeterProvider               *sdkmetric.MeterProvider
 	gqlMetricsExporter              *graphqlmetrics.GraphQLMetricsExporter
+	pyroscopeProfiler               *pyroscope.Profiler
 	corsOptions                     *cors.Config
 	setConfigVersionHeader          bool
 	routerGracePeriod               time.Duration
@@ -98,6 +112,7 @@ type Config struct {
 	prometheusServer                *http.Server
 	modulesConfig                   map[string]interface{}
 	executionConfig                 *ExecutionConfig
+	manifestConfig                  *ManifestConfig
 	routerOnRequestHandlers         []func(http.Handler) http.Handler
 	routerMiddlewares               []func(http.Handler) http.Handler
 	preOriginHandlers               []TransportPreHandler
@@ -120,12 +135,11 @@ type Config struct {
 	accessLogsConfig                *AccessLogsConfig
 	// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 	localhostFallbackInsideDocker bool
-	tlsServerConfig               *tls.Config
-	tlsConfig                     *TlsConfig
-	subgraphTLSConfiguration      config.ClientTLSConfiguration
+	tls                           TlsConfig
 	telemetryAttributes           []config.CustomAttribute
 	tracePropagators              []propagation.TextMapPropagator
 	compositePropagator           propagation.TextMapPropagator
+	spanNameFormatter             SpanNameFormatterFunc
 	// Poller
 	configPoller                 configpoller.ConfigPoller
 	selfRegister                 selfregister.SelfRegister
@@ -141,6 +155,7 @@ type Config struct {
 	rateLimit                     *config.RateLimitConfiguration
 	webSocketConfiguration        *config.WebSocketConfiguration
 	subgraphErrorPropagation      config.SubgraphErrorPropagationConfiguration
+	subgraphExtensionPropagation  config.SubgraphExtensionPropagationConfiguration
 	clientHeader                  config.ClientHeader
 	cacheWarmup                   *config.CacheWarmupConfiguration
 	planningDurationOverride      func(content string) time.Duration
@@ -149,6 +164,7 @@ type Config struct {
 	mcp                           config.MCPConfiguration
 	connectRPC                    config.ConnectRPCConfiguration
 	plugins                       config.PluginsConfiguration
+	grpcPluginDialOptions         []grpc.DialOption
 	tracingAttributes             []config.CustomAttribute
 	subscriptionHooks             subscriptionHooks
 }
@@ -187,7 +203,7 @@ func (c *Config) Usage() map[string]any {
 
 	usage["apollo_router_compatibility_flags_replace_invalid_var_errors_enabled"] = c.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled
 	usage["apollo_router_compatibility_flags_subrequest_http_error_enabled"] = c.apolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled
-	usage["apollo_router_compatibility_flags_replace_invalid_var_errors_enabled"] = c.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled
+	usage["apollo_router_compatibility_flags_skip_null_variables_error_enabled"] = c.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled
 
 	usage["demo_mode"] = c.demoMode
 
@@ -219,6 +235,8 @@ func (c *Config) Usage() map[string]any {
 			usage["metrics_otel_graphql_cache"] = c.metricConfig.OpenTelemetry.GraphqlCache
 			usage["metrics_otel_router_runtime"] = c.metricConfig.OpenTelemetry.RouterRuntime
 			usage["metrics_otel_connection_stats"] = c.metricConfig.OpenTelemetry.ConnectionStats
+			usage["metrics_otel_network_stats"] = c.metricConfig.OpenTelemetry.NetworkStats
+			usage["metrics_otel_resolver_stats"] = c.metricConfig.OpenTelemetry.ResolverStats
 		}
 		usage["metrics_prometheus_enabled"] = c.metricConfig.Prometheus.Enabled
 		if c.metricConfig.Prometheus.Enabled {
@@ -230,6 +248,8 @@ func (c *Config) Usage() map[string]any {
 			usage["metrics_prometheus_exclude_scope_info"] = c.metricConfig.Prometheus.ExcludeScopeInfo
 			usage["metrics_prometheus_schema_field_usage_enabled"] = c.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled
 			usage["metrics_prometheus_connection_stats"] = c.metricConfig.Prometheus.ConnectionStats
+			usage["metrics_prometheus_network_stats"] = c.metricConfig.Prometheus.NetworkStats
+			usage["metrics_prometheus_resolver_stats"] = c.metricConfig.Prometheus.ResolverStats
 		}
 	}
 
@@ -258,8 +278,8 @@ func (c *Config) Usage() map[string]any {
 	usage["development_mode"] = c.developmentMode
 	usage["access_logs"] = c.accessLogsConfig != nil
 	usage["localhost_fallback_inside_docker"] = c.localhostFallbackInsideDocker
-	usage["tls_server"] = c.tlsServerConfig != nil
-	usage["tls_client"] = c.tlsConfig != nil
+	usage["tls_server"] = c.tls.settings.Server.Enabled
+	usage["tls_client"] = c.tls.settings.Client.Enabled()
 	usage["self_register"] = c.selfRegister != nil
 	usage["registration_info"] = c.registrationInfo != nil
 
@@ -272,6 +292,7 @@ func (c *Config) Usage() map[string]any {
 
 	usage["engine_execution_configuration_enable_single_flight"] = c.engineExecutionConfiguration.EnableSingleFlight
 	usage["engine_execution_configuration_enable_request_tracing"] = c.engineExecutionConfiguration.EnableRequestTracing
+	usage["engine_execution_configuration_force_unauthenticated_request_tracing"] = c.engineExecutionConfiguration.ForceUnauthenticatedRequestTracing
 	usage["engine_execution_configuration_enable_net_poll"] = c.engineExecutionConfiguration.EnableNetPoll
 	usage["engine_execution_configuration_execution_plan_cache_size"] = c.engineExecutionConfiguration.ExecutionPlanCacheSize
 	usage["engine_execution_configuration_minify_subgraph_operations"] = c.engineExecutionConfiguration.MinifySubgraphOperations
@@ -343,6 +364,7 @@ func (c *Config) Usage() map[string]any {
 	usage["cosmo_cdn"] = c.cdnConfig.URL == "https://cosmo-cdn.wundergraph.com"
 
 	usage["static_execution_config"] = c.staticExecutionConfig != nil
+	usage["manifest_config"] = c.manifestConfig != nil
 
 	if c.clusterName != "" {
 		usage["cluster_name"] = c.clusterName

@@ -1,14 +1,14 @@
 package trace
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
@@ -20,9 +20,13 @@ func TestWrapHttpHandler(t *testing.T) {
 
 	t.Run("create a span for every request", func(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
+		tp := sdktrace.NewTracerProvider(
+			sdktrace.WithSyncer(exporter),
+			sdktrace.WithSpanProcessor(&semconvProcessor{}),
+		)
 		h := NewMiddleware(
 			WithOtelHttp(
-				otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
+				otelhttp.WithTracerProvider(&FilteringTracerProvider{TracerProvider: tp}),
 			),
 		)
 
@@ -72,9 +76,13 @@ func TestWrapHttpHandler(t *testing.T) {
 
 		for _, test := range statusCodeTests {
 			router := chi.NewRouter()
+			tp := sdktrace.NewTracerProvider(
+				sdktrace.WithSyncer(exporter),
+				sdktrace.WithSpanProcessor(&semconvProcessor{}),
+			)
 			h := NewMiddleware(
 				WithOtelHttp(
-					otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
+					otelhttp.WithTracerProvider(&FilteringTracerProvider{TracerProvider: tp}),
 				),
 			)
 

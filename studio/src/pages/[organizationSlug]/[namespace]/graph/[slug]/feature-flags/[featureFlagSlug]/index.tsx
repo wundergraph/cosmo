@@ -12,6 +12,7 @@ import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 const FeatureFlagDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -30,13 +31,19 @@ const FeatureFlagDetailsPage: NextPageWithLayout = () => {
 
   if (isLoading) return <Loader fullscreen />;
 
+  const featureFlagsLink = buildUrl('/:organizationSlug/:namespace/graph/:slug/feature-flags', {
+    organizationSlug,
+    namespace,
+    slug,
+  });
+
   if (error || !data || data?.response?.code !== EnumStatusCode.OK || !data.featureFlag)
     return (
       <GraphPageLayout
         title={featureFlagSlug}
         subtitle="A quick glance of the details for this feature flag"
         breadcrumbs={[
-          <Link key={featureFlagSlug} href={`/${organizationSlug}/${namespace}/graph/${slug}/feature-flags`}>
+          <Link key={featureFlagSlug} href={featureFlagsLink}>
             Feature Flags
           </Link>,
         ]}
@@ -56,7 +63,7 @@ const FeatureFlagDetailsPage: NextPageWithLayout = () => {
       title={featureFlagSlug}
       subtitle="A quick glance of the details for this feature flag"
       breadcrumbs={[
-        <Link key={0} href={`/${organizationSlug}/${namespace}/graph/${slug}/feature-flags`}>
+        <Link key={0} href={featureFlagsLink}>
           Feature Flags
         </Link>,
       ]}

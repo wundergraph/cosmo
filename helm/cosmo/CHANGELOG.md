@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.20.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.19.0...helm-cosmo@0.20.0) (2026-07-27)
+
+
+### Features
+
+* add script to delete data older than 90 days ([#2693](https://github.com/wundergraph/cosmo/issues/2693)) ([068592b](https://github.com/wundergraph/cosmo/commit/068592b99aaf5650327b7db7a5d0c4d421b345cc))
+* cron to enqueue inactive organizations for deletion ([#2418](https://github.com/wundergraph/cosmo/issues/2418)) ([1658315](https://github.com/wundergraph/cosmo/commit/1658315cb996954dd00c5c1af1bf2edf3509bb27))
+
+## [0.19.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.18.0...helm-cosmo@0.19.0) (2026-06-04)
+
+
+### Features
+
+* **helm:** add unhealthy pod eviction policy support to pdb ([#2907](https://github.com/wundergraph/cosmo/issues/2907)) ([39a83f2](https://github.com/wundergraph/cosmo/commit/39a83f2d2053b5a93af99244d584392c7fae65e6))
+
+## [0.18.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.17.0...helm-cosmo@0.18.0) (2026-05-11)
+
+
+### Features
+
+* **controlplane:** add support for failover s3 bucket in helm chart ([#2803](https://github.com/wundergraph/cosmo/issues/2803)) ([9780ce7](https://github.com/wundergraph/cosmo/commit/9780ce7b2b883de434bf846018bf28459ac27ea3))
+* **helm:** update minio to latest available version ([#2783](https://github.com/wundergraph/cosmo/issues/2783)) ([f5e7716](https://github.com/wundergraph/cosmo/commit/f5e77160cf2841a7dc27624d23abed77b718a099))
+
 ## [0.17.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.16.0...helm-cosmo@0.17.0) (2026-04-21)
 
 

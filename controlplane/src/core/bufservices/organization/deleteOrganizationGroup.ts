@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -10,7 +9,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { OidcRepository } from '../../repositories/OidcRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { OrganizationGroupDTO } from '../../../types/index.js';
+import { PlainMessage, OrganizationGroupDTO } from '../../../types/index.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import OidcProvider from '../../services/OidcProvider.js';
@@ -71,21 +70,31 @@ export function deleteOrganizationGroup(
 
       await opts.keycloakClient.authenticateClient();
 
-      // Retrieve the OIDC mappers that have been assigned to the group
-      const oidc = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+      // Retrieve the OIDC mappers that have been assigned to the group, across
+      // every configured provider. Each mapper carries the alias of the provider
+      // it belongs to so it can be re-created on the same provider below.
+      const providers = await oidcRepo.listOidcProvidersByOrganizationId({
+        organizationId: authContext.organizationId,
+      });
 
-      let oidcMappersForGroup: { id: string; claims: string }[] = [];
-      if (oidc) {
+      const oidcMappersForGroup: { id: string; claims: string; alias: string }[] = [];
+      if (providers.length > 0) {
         const oidcProvider = new OidcProvider();
-        const oidcMappers = await oidcProvider.fetchIDPMappers({
-          kcClient: opts.keycloakClient,
-          kcRealm: opts.keycloakRealm,
-          alias: oidc.alias,
-          organizationId: authContext.organizationId,
-          db: opts.db,
-        });
+        for (const provider of providers) {
+          const oidcMappers = await oidcProvider.fetchIDPMappers({
+            kcClient: opts.keycloakClient,
+            kcRealm: opts.keycloakRealm,
+            alias: provider.alias,
+            organizationId: authContext.organizationId,
+            db: opts.db,
+          });
 
-        oidcMappersForGroup = oidcMappers.filter((mapper) => mapper.groupId === orgGroup.groupId);
+          oidcMappersForGroup.push(
+            ...oidcMappers
+              .filter((mapper) => mapper.groupId === orgGroup.groupId)
+              .map((mapper) => ({ id: mapper.id, claims: mapper.claims, alias: provider.alias })),
+          );
+        }
       }
 
       // If the group have one member or the organization OIDC is enabled, we need to move the members to the
@@ -151,9 +160,9 @@ export function deleteOrganizationGroup(
         });
       }
 
-      // When the organization have linked an OIDC provider, we need to update the mappers that were tied
-      // to the group we are deleting
-      if (oidc && oidcMappersForGroup.length > 0 && moveToGroup) {
+      // When the organization has linked OIDC providers, we need to update the mappers that were tied
+      // to the group we are deleting — on whichever provider each mapper belongs to.
+      if (oidcMappersForGroup.length > 0 && moveToGroup) {
         for (const mapper of oidcMappersForGroup) {
           // To update the mapper, we need to delete the existing mapper and create a new one with the same claims.
           //
@@ -163,13 +172,13 @@ export function deleteOrganizationGroup(
           // parameters as returned by Keycloak
           await opts.keycloakClient.client.identityProviders.delMapper({
             realm: opts.keycloakRealm,
-            alias: oidc.alias,
+            alias: mapper.alias,
             id: mapper.id,
           });
 
           await opts.keycloakClient.createIDPMapper({
             realm: opts.keycloakRealm,
-            alias: oidc.alias,
+            alias: mapper.alias,
             keycloakGroupName: `/${authContext.organizationSlug}/${moveToGroup.name}`,
             claims: mapper.claims,
           });

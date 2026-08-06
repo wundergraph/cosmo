@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/gobwas/ws"
 	"github.com/tidwall/sjson"
 )
 
@@ -202,14 +201,6 @@ func (p *absintheWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessag
 		Type:     absintheMessageEventTypeReply,
 		Payload:  absintheErrorPayload,
 	})
-}
-
-func (p *absintheWSProtocol) Close(code ws.StatusCode, reason string) error {
-	if err := p.conn.WriteCloseFrame(code, reason); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (p *absintheWSProtocol) Complete(id string) error {

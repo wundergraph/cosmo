@@ -18,6 +18,7 @@ import { useRouter } from 'next/router';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { WorkspaceSelector } from '@/components/dashboard/workspace-selector';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { buildUrl } from '@/lib/build-url';
 
 const GraphToolbar = () => {
   const checkUserAccess = useCheckUserAccess();
@@ -51,7 +52,7 @@ const GraphToolbar = () => {
         </SelectContent>
       </Select>
       <Button asChild={isAdminOrDeveloper} disabled={!isAdminOrDeveloper}>
-        <Link href={`/${org?.slug}/new?namespace=${namespace}`}>Create</Link>
+        <Link href={buildUrl('/:organizationSlug/new', { organizationSlug: org?.slug, namespace })}>Create</Link>
       </Button>
     </Toolbar>
   );
@@ -74,7 +75,10 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
 
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data?.response?.code !== EnumStatusCode.OK)
+  if (
+    error ||
+    (data?.response?.code !== EnumStatusCode.OK && data?.response?.code !== EnumStatusCode.WARN_PARTIAL_DATA)
+  )
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
@@ -94,7 +98,13 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
     }
   });
 
-  return <FederatedGraphsCards graphs={graphs} refetch={refetch} />;
+  return (
+    <FederatedGraphsCards
+      graphs={graphs}
+      refetch={refetch}
+      hasStaleMetrics={data?.response?.code === EnumStatusCode.WARN_PARTIAL_DATA}
+    />
+  );
 };
 
 GraphsDashboardPage.getLayout = (page) => {

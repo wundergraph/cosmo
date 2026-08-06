@@ -1,27 +1,23 @@
-name: "Setup Node"
-description: "This action install node and cache modules. It uses pnpm as package manager."
+name: 'Setup Node'
+description: 'This action install node and cache modules. It uses pnpm as package manager.'
 inputs:
   node-version:
-    description: "The node version to install (Default: lts)"
-    # TODO: revert to lts/* after 20 is EOL
-    default: "22.x"
-    required: false
-  working-directory:
-    description: "The working directory of your node package"
-    default: "."
+    description: 'The node version to install'
     required: false
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
-    - uses: actions/setup-node@v4
+    # `node-version` takes priority if not empty, otherwise fallback to root `package.json`
+    - uses: actions/setup-node@v6.4.0
       with:
         node-version: ${{ inputs.node-version }}
+        node-version-file: './package.json'
 
-    - uses: pnpm/action-setup@v4.0.0
+    # Using version from `package.json` field
+    - uses: pnpm/action-setup@v5.0.0
       id: pnpm-install
       with:
-        version: 9.12.3
         run_install: false
 
     - name: Get pnpm store directory

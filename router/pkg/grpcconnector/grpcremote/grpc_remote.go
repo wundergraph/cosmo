@@ -2,6 +2,7 @@ package grpcremote
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -18,14 +20,17 @@ type RemoteGRPCProviderConfig struct {
 	Logger *zap.Logger
 	// Endpoint is the URL of the gRPC server to connect to.
 	Endpoint string
+	// TLSConfig is the TLS configuration for the gRPC connection. When nil, an insecure connection is used.
+	TLSConfig *tls.Config
 }
 
 // RemoteGRPCProvider is a client provider that manages a gRPC client connection to a standalone gRPC server.
 // It is used to connect to a standalone gRPC server that is not part of the cosmo cluster.
 // The provider maintains a single client connection and provides thread-safe access to it.
 type RemoteGRPCProvider struct {
-	logger   *zap.Logger
-	endpoint string
+	logger    *zap.Logger
+	endpoint  string
+	tlsConfig *tls.Config
 
 	cc grpc.ClientConnInterface
 	mu sync.RWMutex
@@ -46,8 +51,9 @@ func NewRemoteGRPCProvider(config RemoteGRPCProviderConfig) (*RemoteGRPCProvider
 	}
 
 	return &RemoteGRPCProvider{
-		logger:   config.Logger,
-		endpoint: config.Endpoint,
+		logger:    config.Logger,
+		endpoint:  config.Endpoint,
+		tlsConfig: config.TLSConfig,
 	}, nil
 }
 
@@ -61,10 +67,18 @@ func (g *RemoteGRPCProvider) GetClient() grpc.ClientConnInterface {
 }
 
 // Start initializes the gRPC client connection if it hasn't been created yet.
-// It parses the endpoint URL and creates a new insecure gRPC connection.
+// It creates a new gRPC connection using TLS when a TLSConfig is provided,
+// otherwise uses an insecure connection.
 func (g *RemoteGRPCProvider) Start(ctx context.Context) error {
 	if g.cc == nil {
-		clientConn, err := grpc.NewClient(g.endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		var transportCreds grpc.DialOption
+		if g.tlsConfig != nil {
+			transportCreds = grpc.WithTransportCredentials(credentials.NewTLS(g.tlsConfig))
+		} else {
+			transportCreds = grpc.WithTransportCredentials(insecure.NewCredentials())
+		}
+
+		clientConn, err := grpc.NewClient(g.endpoint, transportCreds)
 		if err != nil {
 			return fmt.Errorf("failed to create client connection: %w", err)
 		}

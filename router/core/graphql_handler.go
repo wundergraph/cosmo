@@ -11,15 +11,17 @@ import (
 	"strconv"
 	"strings"
 
+	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource/subscriptionclient/transport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
@@ -71,6 +73,7 @@ type HandlerOptions struct {
 	Executor       *Executor
 	Log            *zap.Logger
 	EngineStats    statistics.EngineStatistics
+	MetricStore    rmetric.Store
 	TracerProvider trace.TracerProvider
 	Authorizer     *CosmoAuthorizer
 	RateLimiter    *CosmoRateLimiter
@@ -98,6 +101,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		enableResponseHeaderPropagation:          opts.EnableResponseHeaderPropagation,
 		enableCostResponseHeaders:                opts.EnableCostResponseHeaders,
 		engineStats:                              opts.EngineStats,
+		metricStore:                              opts.MetricStore,
 		tracer:                                   tracer,
 		authorizer:                               opts.Authorizer,
 		rateLimiter:                              opts.RateLimiter,
@@ -124,6 +128,7 @@ type GraphQLHandler struct {
 	log         *zap.Logger
 	executor    *Executor
 	engineStats statistics.EngineStatistics
+	metricStore rmetric.Store
 	tracer      trace.Tracer
 	authorizer  *CosmoAuthorizer
 	rateLimiter *CosmoRateLimiter
@@ -162,6 +167,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resolveCtx.TracingOptions = reqCtx.operation.traceOptions
 	resolveCtx.InitialPayload = reqCtx.operation.initialPayload
 	resolveCtx.Extensions = reqCtx.operation.extensions
+	resolveCtx.InlineArguments = reqCtx.operation.inlineArguments
 	resolveCtx.ExecutionOptions = reqCtx.operation.executionOptions
 
 	if h.headerPropagation != nil {
@@ -174,6 +180,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.authorizer)
+		if h.authorizer.IsPreFetchFieldAuthorizationEnabled() {
+			resolveCtx.SetPreFetchFieldAuthorizer(h.authorizer)
+		}
 	}
 	if h.engineLoaderHooks != nil {
 		resolveCtx.SetEngineLoaderHooks(h.engineLoaderHooks)
@@ -227,13 +236,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				pw.reqCtx = reqCtx
 			}
 			if h.enableCostResponseHeaders && reqCtx.operation.costEstimatedSet {
-				// actualListSizes is populated by the resolver after resolution completes,
+				// ArrayStats is populated by the resolver after resolution completes,
 				// and we need to set headers before actual write happens in the same resolver.
-				pw.costHeaderSetter = func(actualListSizes map[string]int) {
+				pw.costHeaderSetter = func(typeStats map[string]resolve.TypeNameStats) {
 					pw.writer.Header().Set(CostEstimatedHeader, strconv.Itoa(reqCtx.operation.costEstimated))
-					if actualListSizes != nil {
+					if typeStats != nil {
 						if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-							actual := costCalc.ActualCost(resolveCtx.Variables, actualListSizes)
+							actual := costCalc.ActualCost(resolveCtx.VariablesView(), typeStats)
 							reqCtx.operation.costActual = actual
 							reqCtx.operation.costActualSet = true
 							pw.writer.Header().Set(CostActualHeader, strconv.Itoa(actual))
@@ -252,16 +261,27 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Compute actual cost for metrics/telemetry if not already set by the header callback
-		if !reqCtx.operation.costActualSet && resolveCtx.ActualListSizes != nil &&
+		if !reqCtx.operation.costActualSet && resolveCtx.TypeNameStats != nil &&
 			reqCtx.operation.preparedPlan != nil && reqCtx.operation.preparedPlan.preparedPlan != nil {
 			if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-				reqCtx.operation.costActual = costCalc.ActualCost(resolveCtx.Variables, resolveCtx.ActualListSizes)
+				reqCtx.operation.costActual = costCalc.ActualCost(resolveCtx.VariablesView(), resolveCtx.TypeNameStats)
 				reqCtx.operation.costActualSet = true
 			}
 		}
 
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
 		graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
+
+		reqCtx.expressionContext.Request.Operation.ResolverAcquireDuration = info.ResolveAcquireWaitTime
+
+		if h.metricStore != nil {
+			h.metricStore.MeasureResolverAcquireDuration(
+				resolveCtx.Context(),
+				info.ResolveAcquireWaitTime,
+				reqCtx.telemetry.metricSliceAttrs,
+				otelmetric.WithAttributes(reqCtx.telemetry.metricAttrs...),
+			)
+		}
 	case *plan.SubscriptionResponsePlan:
 		var (
 			writer resolve.SubscriptionResponseWriter
@@ -323,6 +343,67 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+	case *plan.DeferResponsePlan:
+		var (
+			writer resolve.DeferResponseWriter
+			ok     bool
+		)
+		h.setDebugCacheHeaders(w, reqCtx.operation)
+
+		defer propagateSubgraphErrors(resolveCtx)
+		resolveCtx, writer, ok = GetDeferResponseWriter(resolveCtx, r, w)
+		if !ok {
+			reqCtx.logger.Error("unable to get defer response writer", zap.Error(errCouldNotFlushResponse))
+			trackFinalResponseError(r.Context(), errCouldNotFlushResponse)
+			writeRequestErrors(writeRequestErrorsParams{
+				request:           r,
+				writer:            w,
+				statusCode:        http.StatusInternalServerError,
+				requestErrors:     graphqlerrors.RequestErrorsFromError(errCouldNotFlushResponse),
+				logger:            reqCtx.logger,
+				headerPropagation: h.headerPropagation,
+			})
+			return
+		}
+
+		if !resolveCtx.ExecutionOptions.SkipLoader {
+			h.engineStats.ConnectionsInc()
+			defer h.engineStats.ConnectionsDec()
+		}
+
+		_, err := h.executor.Resolver.ResolveGraphQLDeferResponse(resolveCtx, p.Response, writer)
+		reqCtx.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)
+
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				reqCtx.logger.Debug("context canceled: unable to resolve defer response", zap.Error(err))
+				trackFinalResponseError(r.Context(), err)
+				return
+			} else if errors.Is(err, ErrUnauthorized) {
+				trackFinalResponseError(resolveCtx.Context(), err)
+				writeRequestErrors(writeRequestErrorsParams{
+					request:           r,
+					writer:            w,
+					statusCode:        http.StatusUnauthorized,
+					requestErrors:     graphqlerrors.RequestErrorsFromError(err),
+					logger:            reqCtx.logger,
+					headerPropagation: h.headerPropagation,
+				})
+				return
+			}
+
+			reqCtx.logger.Error("unable to resolve defer response", zap.Error(err))
+			trackFinalResponseError(resolveCtx.Context(), err)
+			writeRequestErrors(writeRequestErrorsParams{
+				request:           r,
+				writer:            w,
+				statusCode:        http.StatusInternalServerError,
+				requestErrors:     graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse),
+				logger:            reqCtx.logger,
+				headerPropagation: h.headerPropagation,
+			})
+			return
+		}
 	default:
 		reqCtx.logger.Error("unsupported plan kind")
 		trackFinalResponseError(resolveCtx.Context(), errOperationPlanUnsupported)
@@ -370,7 +451,24 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Co
 // WriteError writes the error to the response writer. This function must be concurrency-safe.
 // @TODO This function should be refactored to be a helper function for websocket and http error writing
 // In the websocket case, we call this function concurrently as part of the polling loop. This is error-prone.
+// WriteError is used by the resolver's AsyncErrorWriter and by request-scoped
+// handlers. For subscription writers it emits a non-terminal error frame
+// (inlined into a next/data frame) so the subscription stays alive - the
+// per-update contract in the resolver. Terminal subscription failures should
+// call WriteTerminalError instead.
 func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer) {
+	h.writeError(ctx, err, res, w, false)
+}
+
+// WriteTerminalError delivers a terminal error to a subscription writer. The
+// writer emits a protocol-level error frame (and, for subscriptions-transport-ws,
+// a following complete) so the client stops the subscription. For
+// non-subscription writers this behaves identically to WriteError.
+func (h *GraphQLHandler) WriteTerminalError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer) {
+	h.writeError(ctx, err, res, w, true)
+}
+
+func (h *GraphQLHandler) writeError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer, terminal bool) {
 	reqContext := getRequestContext(ctx.Context())
 
 	if reqContext == nil {
@@ -453,7 +551,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}
 	case errorTypeUpgradeFailed:
-		var upgradeErr *graphql_datasource.UpgradeRequestError
+		var upgradeErr transport.ErrFailedUpgrade
 		if h.subgraphErrorPropagation.PropagateStatusCodes && errors.As(err, &upgradeErr) && upgradeErr.StatusCode != 0 {
 			response.Errors[0].Extensions = &Extensions{
 				StatusCode: upgradeErr.StatusCode,
@@ -510,6 +608,26 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		}
 	}
 
+	if sub, ok := w.(resolve.SubscriptionResponseWriter); ok {
+		data, encErr := json.Marshal(response)
+		if encErr != nil {
+			requestLogger.Error("Unable to marshal error response", zap.Error(encErr))
+			return
+		}
+		if terminal || isTerminalSubscriptionError(err) {
+			sub.Error(data)
+			return
+		}
+		if _, wErr := sub.Write(data); wErr != nil {
+			requestLogger.Debug("Unable to write error response", zap.Error(wErr))
+			return
+		}
+		if flushErr := sub.Flush(); flushErr != nil {
+			requestLogger.Debug("Unable to flush error response", zap.Error(flushErr))
+		}
+		return
+	}
+
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		if rErrors.IsBrokenPipe(err) {
@@ -517,10 +635,6 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		} else {
 			requestLogger.Error("Unable to write error response", zap.Error(err))
 		}
-	}
-
-	if flusher, ok := w.(resolve.SubscriptionResponseWriter); ok {
-		_ = flusher.Flush()
 	}
 }
 

@@ -1,11 +1,10 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetFeatureFlagsInLatestCompositionByFederatedGraphRequest,
   GetFeatureFlagsInLatestCompositionByFederatedGraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { FeatureFlagDTO } from '../../../types/index.js';
+import { PlainMessage, FeatureFlagDTO } from '../../../types/index.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
@@ -81,7 +80,9 @@ export function getFeatureFlagsInLatestCompositionByFederatedGraph(
             namespaceId: namespace.id,
             includeSubgraphs: false,
           });
-          if (flag) {
+          // A disabled feature flag is no longer served in the latest composition (its router config is
+          // removed without recomposing), so exclude it even though its schema version rows still exist.
+          if (flag && flag.isEnabled) {
             featureFlags.push(flag);
           }
         }

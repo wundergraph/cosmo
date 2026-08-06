@@ -14,6 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { useUser } from '@/hooks/use-user';
 import { useContext, useEffect, useState } from 'react';
 import { GraphContext } from '../layout/graph-layout';
+import { buildUrl } from '@/lib/build-url';
 
 export const CacheDetailsSheet: React.FC<any> = ({ operations }: { operations: CacheWarmerOperation[] }) => {
   const router = useRouter();
@@ -215,9 +216,12 @@ export const CacheOperationDetails = ({ operation }: { operation: CacheWarmerOpe
                 <TooltipTrigger asChild>
                   <Button variant="outline" size="icon" asChild>
                     <Link
-                      href={`/${user?.currentOrganization.slug}/${graphData?.graph?.namespace}/graph/${
-                        graphData?.graph?.name
-                      }/playground?operation=${encodeURIComponent(operationContent)}`}
+                      href={buildUrl('/:organization/:namespace/graph/:name/playground', {
+                        organization: user?.currentOrganization.slug,
+                        namespace: graphData?.graph?.namespace,
+                        name: graphData?.graph?.name,
+                        operation: operationContent,
+                      })}
                     >
                       <PlayIcon className="h-5" />
                     </Link>

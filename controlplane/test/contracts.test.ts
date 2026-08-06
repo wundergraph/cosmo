@@ -4,6 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { Label } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { normalizeString } from '../../composition/tests/utils/utils.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { unsuccessfulBaseCompositionError } from '../src/core/errors/errors.js';
@@ -12,6 +13,7 @@ import {
   assertFeatureFlagExecutionConfig,
   assertNumberOfCompositions,
   createAndPublishSubgraph,
+  createFeatureFlag,
   createFederatedGraph,
   createNamespace,
   createThenPublishSubgraph,
@@ -19,10 +21,13 @@ import {
   DEFAULT_ROUTER_URL,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_TWO,
+  featureFlagIntegrationTestSetUp,
+  getDebugTestOptions,
   SetupTest,
 } from './test-util.js';
 
 const schemaDefinition = `schema {\n  query: Query\n}\n\n`;
+const isDebugMode = false;
 let dbname = '';
 
 vi.mock('../src/core/clickhouse/index.js', () => {
@@ -159,8 +164,8 @@ describe('Contract tests', () => {
     expect(blobStorage.keys().length).toBe(2);
   });
 
-  test('that an error is returned if a contract is created with both excluded and included tags', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname, chClient });
+  test('that a contract is created with both excluded and included tags', async (testContext) => {
+    const { blobStorage, client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
@@ -168,7 +173,7 @@ describe('Contract tests', () => {
     const contractGraphName = genID('contract');
     const label = genUniqueLabel('label');
 
-    const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
+    const subgraphSchemaSDL = 'type Query @tag(name: "include") { hello: String!, hi: String! @tag(name: "exclude") }';
 
     await createThenPublishSubgraph(
       client,
@@ -191,11 +196,29 @@ describe('Contract tests', () => {
       readme: 'test',
     });
 
-    expect(createContractResponse.response?.code).toBe(1);
-    expect(createContractResponse.response?.details).toBe(
-      `The "exclude" and "include" options for tags are currently mutually exclusive.` +
-        ` Both options have been provided, but one of the options must be empty or unset.`,
-    );
+    expect(createContractResponse.response?.code).toBe(0);
+
+    const fedGraphRes = await client.getFederatedGraphByName({
+      name: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(fedGraphRes.graph?.name).toBe(fedGraphName);
+
+    const contractGraphRes = await client.getFederatedGraphByName({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(contractGraphRes.graph?.namespace).toBe(DEFAULT_NAMESPACE);
+    expect(contractGraphRes.subgraphs.length).toBe(1);
+    expect(contractGraphRes.subgraphs[0].name).toBe(subgraphName);
+    expect(contractGraphRes.graph?.contract?.sourceFederatedGraphId).toBe(fedGraphRes.graph?.id);
+    expect(contractGraphRes.graph?.contract?.excludeTags).toEqual(['exclude']);
+    expect(contractGraphRes.graph?.contract?.includeTags).toEqual(['include']);
+    expect(contractGraphRes.graph?.labelMatchers).toEqual(fedGraphRes.graph?.labelMatchers);
+    expect(contractGraphRes.graph?.routingURL).toBe('http://localhost:8081');
+    expect(contractGraphRes.graph?.readme).toBe('test');
+    expect(contractGraphRes.graph?.supportsFederation).toEqual(true);
+    expect(blobStorage.keys().length).toBe(2);
   });
 
   test('that the exclude tags of a contract are updated', async (testContext) => {
@@ -302,8 +325,8 @@ describe('Contract tests', () => {
     expect(contractGraphUpdatedRes.graph?.contract?.includeTags).toEqual(['new']);
   });
 
-  test('that an error is returned if a contract is updated with both excludes and includes', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname, chClient });
+  test('that a contract is updated with both excludes and includes', async (testContext) => {
+    const { blobStorage, client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
@@ -311,7 +334,7 @@ describe('Contract tests', () => {
     const contractGraphName = genID('contract');
     const label = genUniqueLabel('label');
 
-    const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
+    const subgraphSchemaSDL = 'type Query @tag(name: "include") { hello: String!, hi: String! @tag(name: "exclude") }';
 
     await createThenPublishSubgraph(
       client,
@@ -328,30 +351,45 @@ describe('Contract tests', () => {
       name: contractGraphName,
       namespace: DEFAULT_NAMESPACE,
       sourceGraphName: fedGraphName,
-      includeTags: ['test'],
+      includeTags: ['include'],
       routingUrl: 'http://localhost:8081',
       readme: 'test',
     });
 
-    const contractGraphRes = await client.getFederatedGraphByName({
+    const contractGraphResA = await client.getFederatedGraphByName({
       name: contractGraphName,
       namespace: DEFAULT_NAMESPACE,
     });
-    expect(contractGraphRes.graph?.contract?.excludeTags).toEqual([]);
-    expect(contractGraphRes.graph?.contract?.includeTags).toEqual(['test']);
+    expect(contractGraphResA.graph?.contract?.excludeTags).toEqual([]);
+    expect(contractGraphResA.graph?.contract?.includeTags).toEqual(['include']);
 
-    const updateContractResponse = await client.updateContract({
+    await client.updateContract({
       name: contractGraphName,
       namespace: DEFAULT_NAMESPACE,
-      excludeTags: ['test'],
-      includeTags: ['new'],
+      includeTags: ['include'],
+      excludeTags: ['exclude'],
     });
+    const fedGraphRes = await client.getFederatedGraphByName({
+      name: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(fedGraphRes.graph?.name).toBe(fedGraphName);
 
-    expect(updateContractResponse.response?.code).toBe(1);
-    expect(updateContractResponse.response?.details).toBe(
-      `The "exclude" and "include" options for tags are currently mutually exclusive.` +
-        ` Both options have been provided, but one of the options must be empty or unset.`,
-    );
+    const contractGraphResB = await client.getFederatedGraphByName({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(contractGraphResB.graph?.namespace).toBe(DEFAULT_NAMESPACE);
+    expect(contractGraphResB.subgraphs.length).toBe(1);
+    expect(contractGraphResB.subgraphs[0].name).toBe(subgraphName);
+    expect(contractGraphResB.graph?.contract?.sourceFederatedGraphId).toBe(fedGraphRes.graph?.id);
+    expect(contractGraphResB.graph?.contract?.excludeTags).toEqual(['exclude']);
+    expect(contractGraphResB.graph?.contract?.includeTags).toEqual(['include']);
+    expect(contractGraphResB.graph?.labelMatchers).toEqual(fedGraphRes.graph?.labelMatchers);
+    expect(contractGraphResB.graph?.routingURL).toBe('http://localhost:8081');
+    expect(contractGraphResB.graph?.readme).toBe('test');
+    expect(contractGraphResB.graph?.supportsFederation).toEqual(true);
+    expect(blobStorage.keys().length).toBe(2);
   });
 
   test('that contract tags are updated from exclude to include', async (testContext) => {
@@ -734,10 +772,10 @@ describe('Contract tests', () => {
     const fedGraphName = genID('fedGraph');
     const contractGraphName = genID('contract');
     const label = genUniqueLabel('label');
-    const prod = 'prod';
+    const prodNamespace = genID('prod').toLowerCase();
 
     await client.createNamespace({
-      name: prod,
+      name: prodNamespace,
     });
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
@@ -750,7 +788,14 @@ describe('Contract tests', () => {
       [label],
       'http://localhost:8082',
     );
-    await createThenPublishSubgraph(client, subgraphName, prod, subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      prodNamespace,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
 
@@ -763,18 +808,88 @@ describe('Contract tests', () => {
       readme: 'test',
     });
 
+    await assertNumberOfCompositions(client, fedGraphName, 1);
+    await assertNumberOfCompositions(client, contractGraphName, 1);
+
     const moveRes = await client.moveFederatedGraph({
       name: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
-      newNamespace: prod,
+      newNamespace: prodNamespace,
     });
     expect(moveRes.response?.code).toEqual(EnumStatusCode.OK);
 
     const contractResAfterMove = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: prod,
+      namespace: prodNamespace,
     });
     expect(contractResAfterMove.response?.code).toEqual(EnumStatusCode.OK);
+
+    await assertNumberOfCompositions(client, fedGraphName, 2, prodNamespace);
+    await assertNumberOfCompositions(client, contractGraphName, 2, prodNamespace);
+  });
+
+  test('that moving source federated graph moves contract graph with `split-config-loading` enabled', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient, enabledFeatures: ['split-config-loading'] });
+    testContext.onTestFinished(() => server.close());
+
+    const subgraphName = genID('subgraph');
+    const fedGraphName = genID('fedGraph');
+    const contractGraphName = genID('contract');
+    const label = genUniqueLabel('label');
+    const prodNamespace = genID('prod').toLowerCase();
+
+    await client.createNamespace({
+      name: prodNamespace,
+    });
+
+    const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      prodNamespace,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
+
+    await client.createContract({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      sourceGraphName: fedGraphName,
+      excludeTags: ['test'],
+      routingUrl: 'http://localhost:8081',
+      readme: 'test',
+    });
+
+    await assertNumberOfCompositions(client, fedGraphName, 1);
+    await assertNumberOfCompositions(client, contractGraphName, 1);
+
+    const moveRes = await client.moveFederatedGraph({
+      name: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      newNamespace: prodNamespace,
+    });
+    expect(moveRes.response?.code).toEqual(EnumStatusCode.OK);
+
+    const contractResAfterMove = await client.getFederatedGraphByName({
+      name: contractGraphName,
+      namespace: prodNamespace,
+    });
+    expect(contractResAfterMove.response?.code).toEqual(EnumStatusCode.OK);
+
+    await assertNumberOfCompositions(client, fedGraphName, 2, prodNamespace);
+    await assertNumberOfCompositions(client, contractGraphName, 2, prodNamespace);
   });
 
   test('that moving contract federated graph is not allowed', async (testContext) => {
@@ -785,10 +900,10 @@ describe('Contract tests', () => {
     const fedGraphName = genID('fedGraph');
     const contractGraphName = genID('contract');
     const label = genUniqueLabel('label');
-    const prod = 'prod';
+    const prodNamespace = genID('prod').toLowerCase();
 
     await client.createNamespace({
-      name: prod,
+      name: prodNamespace,
     });
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
@@ -816,7 +931,7 @@ describe('Contract tests', () => {
     const moveRes = await client.moveFederatedGraph({
       name: contractGraphName,
       namespace: DEFAULT_NAMESPACE,
-      newNamespace: prod,
+      newNamespace: prodNamespace,
     });
     expect(moveRes.response?.code).toEqual(EnumStatusCode.ERR);
   });
@@ -860,10 +975,10 @@ describe('Contract tests', () => {
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
-    const prod = 'prod';
+    const prodNamespace = genID('prod').toLowerCase();
 
     await client.createNamespace({
-      name: prod,
+      name: prodNamespace,
     });
 
     const createResp = await client.createMonograph({
@@ -886,13 +1001,13 @@ describe('Contract tests', () => {
     const moveRes = await client.moveMonograph({
       name: monographName,
       namespace: DEFAULT_NAMESPACE,
-      newNamespace: prod,
+      newNamespace: prodNamespace,
     });
     expect(moveRes.response?.code).toEqual(EnumStatusCode.OK);
 
     const getContractRes = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: prod,
+      namespace: prodNamespace,
     });
     expect(getContractRes.response?.code).toEqual(EnumStatusCode.OK);
     expect(getContractRes.subgraphs.length).toEqual(1);
@@ -1235,9 +1350,10 @@ describe('Contract tests', () => {
     const fedGraphName = genID('fedGraph');
     const contractGraphName = genID('contract');
     const label = genUniqueLabel('label');
+    const prodNamespace = genID('prod').toLowerCase();
 
     await client.createNamespace({
-      name: 'prod',
+      name: prodNamespace,
     });
 
     const subgraph1SchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
@@ -1287,7 +1403,7 @@ describe('Contract tests', () => {
     await client.moveSubgraph({
       name: subgraph2Name,
       namespace: DEFAULT_NAMESPACE,
-      newNamespace: 'prod',
+      newNamespace: prodNamespace,
     });
 
     const sdlResponse2 = await client.getFederatedGraphSDLByName({
@@ -2117,4 +2233,77 @@ describe('Contract tests', () => {
     `),
     );
   });
+
+  test(
+    'that a contract is not composed multiple times when a feature subgraph is published',
+    getDebugTestOptions(isDebugMode),
+    async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const namespace = genID('namespace').toLowerCase();
+      const labels: Label[] = [];
+      const baseGraphName = genID('baseFederatedGraph');
+      const contractName = genID('contract');
+      const ffName = genID('featureFlag');
+
+      await createNamespace(client, namespace);
+      await featureFlagIntegrationTestSetUp(
+        client,
+        [
+          { name: 'users', hasFeatureSubgraph: true },
+          { name: 'products-standalone', hasFeatureSubgraph: true },
+        ],
+        baseGraphName,
+        labels,
+        namespace,
+      );
+
+      // Create a contract
+      const createContractResponse = await client.createContract({
+        name: contractName,
+        namespace,
+        sourceGraphName: baseGraphName,
+        excludeTags: [],
+        includeTags: [],
+        routingUrl: 'http://localhost:8081',
+        readme: 'test',
+      });
+
+      expect(createContractResponse.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create a feature flag
+      await createFeatureFlag(client, ffName, labels, ['products-standalone-feature'], namespace, true);
+
+      /**
+       * We expect the base graph and contract to be composed twice, once for the creation and once when the
+       * feature flag was created
+       */
+      await assertNumberOfCompositions(client, baseGraphName, 2, namespace, EnumStatusCode.OK, true);
+      await assertNumberOfCompositions(client, contractName, 2, namespace, EnumStatusCode.OK, true);
+
+      // We expect to see feature flag to be composed
+      await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+      await assertNumberOfCompositions(client, contractName, 3, namespace);
+
+      // Update the feature subgraph
+      const updateFeatureSubgraphResp = await client.publishFederatedSubgraph({
+        name: 'products-standalone-feature',
+        namespace,
+        schema: fs
+          .readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-feature-update.graphql`))
+          .toString(),
+      });
+
+      expect(updateFeatureSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // We expect to see a new composition for both the base graph and contract
+      await assertNumberOfCompositions(client, baseGraphName, 3, namespace, EnumStatusCode.OK, true);
+      await assertNumberOfCompositions(client, contractName, 3, namespace, EnumStatusCode.OK, true);
+
+      // And also expect a new composition for the feature flag
+      await assertNumberOfCompositions(client, baseGraphName, 5, namespace);
+      await assertNumberOfCompositions(client, contractName, 5, namespace);
+    },
+  );
 });

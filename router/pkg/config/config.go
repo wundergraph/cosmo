@@ -107,21 +107,8 @@ type CostStats struct {
 	ActualEnabled    bool `yaml:"actual_enabled" envDefault:"false" env:"ACTUAL_ENABLED"`
 }
 
-type Prometheus struct {
-	Enabled             bool        `yaml:"enabled" envDefault:"true" env:"PROMETHEUS_ENABLED"`
-	Path                string      `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
-	ListenAddr          string      `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
-	GraphqlCache        bool        `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
-	ConnectionStats     bool        `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
-	Streams             bool        `yaml:"streams" envDefault:"false" env:"PROMETHEUS_STREAM"`
-	EngineStats         EngineStats `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
-	CostStats           CostStats   `yaml:"cost_stats" envPrefix:"PROMETHEUS_COST_STATS_"`
-	CircuitBreaker      bool        `yaml:"circuit_breaker" envDefault:"false" env:"PROMETHEUS_CIRCUIT_BREAKER"`
-	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
-	ExcludeMetricLabels RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
-	ExcludeScopeInfo    bool        `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
-
-	SchemaFieldUsage PrometheusSchemaFieldUsage `yaml:"schema_usage" envPrefix:"PROMETHEUS_SCHEMA_FIELD_USAGE_"`
+type TelemetryCategory struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -159,11 +146,32 @@ type MetricsLogExporter struct {
 	IncludeMetrics RegExArray `yaml:"include_metrics,omitempty" env:"INCLUDE_METRICS"`
 }
 
+type Prometheus struct {
+	Enabled             bool                       `yaml:"enabled" envDefault:"true" env:"PROMETHEUS_ENABLED"`
+	Path                string                     `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
+	ListenAddr          string                     `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
+	GraphqlCache        bool                       `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
+	ConnectionStats     bool                       `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
+	Network             TelemetryCategory          `yaml:"network" envPrefix:"PROMETHEUS_NETWORK_"`
+	Resolver            TelemetryCategory          `yaml:"resolver" envPrefix:"PROMETHEUS_RESOLVER_"`
+	Streams             bool                       `yaml:"streams" envDefault:"false" env:"PROMETHEUS_STREAM"`
+	EngineStats         EngineStats                `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
+	CostStats           CostStats                  `yaml:"cost_stats" envPrefix:"PROMETHEUS_COST_STATS_"`
+	CircuitBreaker      bool                       `yaml:"circuit_breaker" envDefault:"false" env:"PROMETHEUS_CIRCUIT_BREAKER"`
+	ExcludeMetrics      RegExArray                 `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
+	ExcludeMetricLabels RegExArray                 `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
+	ExcludeScopeInfo    bool                       `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
+	SchemaFieldUsage    PrometheusSchemaFieldUsage `yaml:"schema_usage" envPrefix:"PROMETHEUS_SCHEMA_FIELD_USAGE_"`
+	ExemplarFilter      ExemplarFilter             `yaml:"exemplar_filter" envDefault:"always_off" env:"PROMETHEUS_EXEMPLAR_FILTER"`
+}
+
 type MetricsOTLP struct {
 	Enabled             bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
 	RouterRuntime       bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
 	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
 	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
+	Network             TelemetryCategory     `yaml:"network" envPrefix:"METRICS_OTLP_NETWORK_"`
+	Resolver            TelemetryCategory     `yaml:"resolver" envPrefix:"METRICS_OTLP_RESOLVER_"`
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
 	CostStats           CostStats             `yaml:"cost_stats" envPrefix:"METRICS_OTLP_COST_STATS_"`
 	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
@@ -172,7 +180,16 @@ type MetricsOTLP struct {
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
 	LogExporter         MetricsLogExporter    `yaml:"log_exporter" envPrefix:"METRICS_OTLP_LOG_EXPORTER_"`
+	ExemplarFilter      ExemplarFilter        `yaml:"exemplar_filter" envDefault:"always_off" env:"METRICS_OTLP_EXEMPLAR_FILTER"`
 }
+
+type ExemplarFilter string
+
+const (
+	ExemplarFilterTraceBased ExemplarFilter = "trace_based"
+	ExemplarFilterAlwaysOff  ExemplarFilter = "always_off"
+	ExemplarFilterAlwaysOn   ExemplarFilter = "always_on"
+)
 
 type Telemetry struct {
 	ServiceName        string                  `yaml:"service_name" envDefault:"cosmo-router" env:"TELEMETRY_SERVICE_NAME"`
@@ -258,6 +275,25 @@ type GraphqlMetrics struct {
 	CollectorEndpoint string `yaml:"collector_endpoint" envDefault:"https://cosmo-metrics.wundergraph.com" env:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT"`
 }
 
+type Pyroscope struct {
+	Enabled              bool               `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	ServerAddress        string             `yaml:"server_address" env:"SERVER_ADDRESS"`
+	ApplicationName      string             `yaml:"application_name" envDefault:"wundergraph.cosmo.router" env:"APPLICATION_NAME"`
+	BasicAuth            PyroscopeBasicAuth `yaml:"basic_auth" envPrefix:"BASIC_AUTH_"`
+	Headers              map[string]string  `yaml:"headers" env:"HEADERS"`
+	Tags                 map[string]string  `yaml:"tags" env:"TAGS"`
+	UploadRate           time.Duration      `yaml:"upload_rate" envDefault:"15s" env:"UPLOAD_RATE"`
+	ProfileTypes         []string           `yaml:"profile_types" env:"PROFILE_TYPES"`
+	DisableGCRuns        bool               `yaml:"disable_gc_runs" envDefault:"false" env:"DISABLE_GC_RUNS"`
+	MutexProfileFraction int                `yaml:"mutex_profile_fraction" envDefault:"5" env:"MUTEX_PROFILE_FRACTION"`
+	BlockProfileRate     int                `yaml:"block_profile_rate" envDefault:"5" env:"BLOCK_PROFILE_RATE"`
+}
+
+type PyroscopeBasicAuth struct {
+	Username string `yaml:"username,omitempty" env:"USERNAME"`
+	Password string `yaml:"password,omitempty" env:"PASSWORD"`
+}
+
 type BackoffJitterRetry struct {
 	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"RETRY_ENABLED"`
 	Algorithm   string        `yaml:"algorithm" envDefault:"backoff_jitter" env:"RETRY_ALGORITHM"`
@@ -332,6 +368,15 @@ type RequestHeaderRule struct {
 	Expression string `yaml:"expression"`
 	// ValueFrom is deprecated in favor of Expression. Use Expression instead.
 	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
+	// FromFile sources the header value from a file's contents. The file is
+	// loaded into memory and refreshed at RefreshInterval, so reads on the
+	// request hot path do not touch disk.
+	FromFile *FileHeaderSource `yaml:"from_file,omitempty"`
+}
+
+type FileHeaderSource struct {
+	Path            string        `yaml:"path"`
+	RefreshInterval time.Duration `yaml:"refresh_interval,omitempty"`
 }
 
 func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {
@@ -411,6 +456,7 @@ type EngineDebugConfiguration struct {
 	EnableCacheResponseHeaders             bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_CACHE_RESPONSE_HEADERS" yaml:"enable_cache_response_headers"`
 	AlwaysIncludeQueryPlan                 bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_INCLUDE_QUERY_PLAN" yaml:"always_include_query_plan"`
 	AlwaysSkipLoader                       bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_SKIP_LOADER" yaml:"always_skip_loader"`
+	SynchronousCacheWrites                 bool `envDefault:"false" env:"ENGINE_DEBUG_SYNCHRONOUS_CACHE_WRITES" yaml:"synchronous_cache_writes"`
 }
 
 type EngineExecutionConfiguration struct {
@@ -424,20 +470,17 @@ type EngineExecutionConfiguration struct {
 	EnableInboundRequestDeduplication bool `envDefault:"true" env:"ENGINE_ENABLE_INBOUND_REQUEST_DEDUPLICATION" yaml:"enable_inbound_request_deduplication"`
 	// ForceEnableInboundRequestDeduplication forces enable inbound request deduplication, even when PreOriginHandlers are configured
 	ForceEnableInboundRequestDeduplication bool `envDefault:"false" env:"ENGINE_FORCE_ENABLE_INBOUND_REQUEST_DEDUPLICATION" yaml:"force_enable_inbound_request_deduplication"`
-	EnableRequestTracing                   bool `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
 
-	// EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
+	EnableRequestTracing bool `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
+	// ForceUnauthenticatedRequestTracing always enables request tracing for unauthenticated requests,
+	// even when Development Mode is not enabled. USE WITH CAUTION.
+	ForceUnauthenticatedRequestTracing bool `envDefault:"false" env:"ENGINE_FORCE_UNAUTHENTICATED_REQUEST_TRACING" yaml:"force_unauthenticated_request_tracing"`
+
+	// Deprecated: EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
 	EnableExecutionPlanCacheResponseHeader bool `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
 
 	MaxConcurrentResolvers                           int           `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
 	EnableNetPoll                                    bool          `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
-	WebSocketClientPollTimeout                       time.Duration `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
-	WebSocketClientConnBufferSize                    int           `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
-	WebSocketClientReadTimeout                       time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
-	WebSocketClientWriteTimeout                      time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
-	WebSocketClientPingInterval                      time.Duration `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
-	WebSocketClientPingTimeout                       time.Duration `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty"`
-	WebSocketClientFrameTimeout                      time.Duration `envDefault:"100ms" env:"ENGINE_WEBSOCKET_CLIENT_FRAME_TIMEOUT" yaml:"websocket_client_frame_timeout,omitempty"`
 	ExecutionPlanCacheSize                           int64         `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	SlowPlanCacheSize                                int64         `envDefault:"300" env:"ENGINE_SLOW_PLAN_CACHE_SIZE" yaml:"slow_plan_cache_size,omitempty"`
 	SlowPlanCacheThreshold                           time.Duration `envDefault:"100ms" env:"ENGINE_SLOW_PLAN_CACHE_THRESHOLD" yaml:"slow_plan_cache_threshold,omitempty"`
@@ -455,10 +498,28 @@ type EngineExecutionConfiguration struct {
 	DisableVariablesRemapping                        bool          `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
 	EnableRequireFetchReasons                        bool          `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
 	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
+	EnableDefer                                      bool          `envDefault:"false" env:"ENGINE_ENABLE_DEFER" yaml:"enable_defer"`
+
+	// Server-side WebSocket handler options (router accepting client connections)
+	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`
+	WebSocketServerWriteTimeout   time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT" yaml:"websocket_server_write_timeout,omitempty"`
+	WebSocketServerPollTimeout    time.Duration `envDefault:"1s" env:"ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT" yaml:"websocket_server_poll_timeout,omitempty"`
+	WebSocketServerConnBufferSize int           `envDefault:"128" env:"ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE" yaml:"websocket_server_conn_buffer_size,omitempty"`
+
+	// Subscription client options (router connecting to subgraphs)
+	WebSocketClientWriteTimeout time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
+	WebSocketClientReadLimit    BytesString   `envDefault:"1MB" env:"ENGINE_WEBSOCKET_CLIENT_READ_LIMIT" yaml:"websocket_client_read_limit,omitempty"`
+	WebSocketClientPingInterval time.Duration `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
+	WebSocketClientPingTimeout  time.Duration `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty"`
+	WebSocketClientAckTimeout   time.Duration `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_ACK_TIMEOUT" yaml:"websocket_client_ack_timeout,omitempty"`
 
 	ValidateRequiredExternalFields bool `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
 
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool `envDefault:"false" env:"ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY" yaml:"relax_subgraph_operation_field_selection_merging_nullability"`
+
+	AllowStringLiteralsForEnums bool `envDefault:"false" env:"ENGINE_ALLOW_STRING_LITERALS_FOR_ENUMS" yaml:"allow_string_literals_for_enums"`
+
+	ValidateInlineArguments ValidateInlineArguments `yaml:"validate_inline_arguments" envPrefix:"ENGINE_VALIDATE_INLINE_ARGUMENTS_"`
 }
 
 type BlockOperationConfiguration struct {
@@ -549,6 +610,38 @@ type CostControl struct {
 
 	// ExposeHeaders adds X-WG-Cost-* response headers.
 	ExposeHeaders bool `yaml:"expose_headers,omitempty" envDefault:"false" env:"EXPOSE_HEADERS"`
+
+	// IgnoreImplementingTypeWeights, when true, ignores @cost weights contributed by
+	// implementing types on abstract (interface/union) fields that have no weight of
+	// their own. Emulates Apollo's cost behavior.
+	IgnoreImplementingTypeWeights bool `yaml:"ignore_implementing_type_weights,omitempty" envDefault:"false" env:"IGNORE_IMPLEMENTING_TYPE_WEIGHTS"`
+}
+
+type EnforcementMode string
+
+const (
+	EnforcementModeOff        EnforcementMode = "off"
+	EnforcementModePermissive EnforcementMode = "permissive"
+	EnforcementModeStrict     EnforcementMode = "strict"
+)
+
+type ValidateInlineArguments struct {
+	Mode                       EnforcementMode `yaml:"mode,omitempty" envDefault:"off" env:"MODE"`
+	EnforceHTTPStatusCode      int             `yaml:"enforce_http_status_code,omitempty" envDefault:"400" env:"ENFORCE_HTTP_STATUS_CODE"`
+	ErrorCode                  string          `yaml:"error_code,omitempty" envDefault:"INLINE_ARGUMENT_VALUES_NOT_ALLOWED" env:"ERROR_CODE"`
+	ErrorMessage               string          `yaml:"error_message,omitempty" envDefault:"Inline argument values are not allowed. Use variables instead." env:"ERROR_MESSAGE"`
+	IncludePersistedOperations bool            `yaml:"include_persisted_operations,omitempty" envDefault:"false" env:"INCLUDE_PERSISTED_OPERATIONS"`
+	ReturnInResponseExtensions bool            `yaml:"return_in_response_extensions,omitempty" envDefault:"false" env:"RETURN_IN_RESPONSE_EXTENSIONS"`
+}
+
+// Enabled reports whether the policy is active in any mode.
+func (d ValidateInlineArguments) Enabled() bool {
+	return d.Mode == EnforcementModePermissive || d.Mode == EnforcementModeStrict
+}
+
+// Enforcing reports whether the policy rejects offending operations.
+func (d ValidateInlineArguments) Enforcing() bool {
+	return d.Mode == EnforcementModeStrict
 }
 
 type ComplexityLimit struct {
@@ -623,6 +716,11 @@ type AuthorizationConfiguration struct {
 	RequireAuthentication bool `yaml:"require_authentication" envDefault:"false" env:"REQUIRE_AUTHENTICATION"`
 	// RejectOperationIfUnauthorized makes the router reject the whole GraphQL Operation if one field fails to authorize
 	RejectOperationIfUnauthorized bool `yaml:"reject_operation_if_unauthorized" envDefault:"false" env:"REJECT_OPERATION_IF_UNAUTHORIZED"`
+	// EnablePreFetchFieldAuthorization authorizes fields protected by an authorization rule in a single
+	// batch call before any subgraph fetch executes (scope-only, independent of the returned data),
+	// instead of filtering them out of the response after the fetch. This avoids fetching data that the
+	// client is not authorized to see.
+	EnablePreFetchFieldAuthorization bool `yaml:"enable_pre_fetch_field_authorization" envDefault:"false" env:"ENABLE_PRE_FETCH_FIELD_AUTHORIZATION"`
 }
 
 type RateLimitConfiguration struct {
@@ -767,17 +865,31 @@ type EventProviders struct {
 }
 
 type EventsConfiguration struct {
-	Providers EventProviders              `yaml:"providers,omitempty"`
-	Handlers  StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
+	Providers EventProviders `yaml:"providers,omitempty"`
+	// SkipUnavailableProviders allows the router to start even when an event provider
+	// referenced by the execution config is unavailable: either not defined in the router
+	// configuration, or defined but unreachable at startup (e.g. the broker is down).
+	// When enabled, the router logs an error and starts anyway instead of failing. A
+	// provider that is not defined has its data sources skipped; a provider that fails to
+	// connect keeps a resilient client that reconnects in the background, so the affected
+	// fields are only temporarily unavailable and recover without a restart once the broker
+	// becomes reachable again. The rest of the graph keeps serving traffic throughout.
+	SkipUnavailableProviders bool                        `yaml:"skip_unavailable_providers" envDefault:"true" env:"EVENTS_SKIP_UNAVAILABLE_PROVIDERS"`
+	Handlers                 StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
 }
 
 type StreamsHandlerConfiguration struct {
-	OnReceiveEvents OnReceiveEventsConfiguration `yaml:"on_receive_events"`
+	OnReceiveEvents      OnReceiveEventsConfiguration      `yaml:"on_receive_events"`
+	BeforeEventsDispatch BeforeEventsDispatchConfiguration `yaml:"before_events_dispatch"`
 }
 
 type OnReceiveEventsConfiguration struct {
 	MaxConcurrentHandlers int           `yaml:"max_concurrent_handlers" envDefault:"100"`
 	HandlerTimeout        time.Duration `yaml:"handler_timeout" envDefault:"5s"`
+}
+
+type BeforeEventsDispatchConfiguration struct {
+	HandlerTimeout time.Duration `yaml:"handler_timeout" envDefault:"5s"`
 }
 
 type Cluster struct {
@@ -871,9 +983,10 @@ type AnonymizeIpConfiguration struct {
 	Method  string `yaml:"method" envDefault:"redact" env:"SECURITY_ANONYMIZE_IP_METHOD"`
 }
 
-type TLSClientAuthConfiguration struct {
-	CertFile string `yaml:"cert_file,omitempty" env:"TLS_CLIENT_AUTH_CERT_FILE"`
-	Required bool   `yaml:"required" envDefault:"false" env:"TLS_CLIENT_AUTH_REQUIRED"`
+type TLSConfiguration struct {
+	Server     TLSServerConfiguration     `yaml:"server"`
+	Client     HTTPClientTLSConfiguration `yaml:"client"`
+	ClientGRPC GRPCClientTLSConfiguration `yaml:"client_grpc"`
 }
 
 type TLSServerConfiguration struct {
@@ -881,7 +994,73 @@ type TLSServerConfiguration struct {
 	CertFile string `yaml:"cert_file,omitempty" env:"TLS_SERVER_CERT_FILE"`
 	KeyFile  string `yaml:"key_file,omitempty" env:"TLS_SERVER_KEY_FILE"`
 
+	// ClientAuth configures the router to accept or require mTLS from clients.
 	ClientAuth TLSClientAuthConfiguration `yaml:"client_auth,omitempty"`
+}
+
+type TLSClientAuthConfiguration struct {
+	CertFile string `yaml:"cert_file,omitempty" env:"TLS_CLIENT_AUTH_CERT_FILE"`
+	Required bool   `yaml:"required" envDefault:"false" env:"TLS_CLIENT_AUTH_REQUIRED"`
+}
+
+type HTTPClientTLSConfiguration struct {
+	// All applies to all subgraph connections.
+	All HTTPTLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_ALL_"`
+	// Subgraphs overrides per-subgraph TLS config. Key is the subgraph name.
+	Subgraphs map[string]HTTPTLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
+}
+
+func (c *HTTPClientTLSConfiguration) GetAll() HTTPTLSClientCertConfiguration {
+	return c.All
+}
+
+func (c *HTTPClientTLSConfiguration) GetSubgraphs() map[string]HTTPTLSClientCertConfiguration {
+	return c.Subgraphs
+}
+
+// Enabled returns true if anything in c has been configured.
+func (c *HTTPClientTLSConfiguration) Enabled() bool {
+	allConfigured := c.All.InsecureSkipCaVerification ||
+		c.All.CaFile != "" ||
+		c.All.KeyFile != "" ||
+		c.All.CertFile != ""
+
+	return allConfigured || len(c.Subgraphs) > 0
+}
+
+type GRPCClientTLSConfiguration struct {
+	// All applies to all gRPC subgraph connections.
+	All GRPCTLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_GRPC_ALL_"`
+	// Subgraphs overrides per-subgraph gRPC TLS config. Key is the subgraph name.
+	Subgraphs map[string]GRPCTLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
+}
+
+func (c *GRPCClientTLSConfiguration) GetAll() GRPCTLSClientCertConfiguration {
+	return c.All
+}
+
+func (c *GRPCClientTLSConfiguration) GetSubgraphs() map[string]GRPCTLSClientCertConfiguration {
+	return c.Subgraphs
+}
+
+// Enabled returns true if any subgraph or the default settings have TLS enabled.
+func (c *GRPCClientTLSConfiguration) Enabled() bool {
+	for _, v := range c.Subgraphs {
+		if v.Enabled {
+			return true
+		}
+	}
+
+	return c.All.Enabled
+}
+
+type HTTPTLSClientCertConfiguration struct {
+	TLSClientCertConfiguration `yaml:",inline"`
+}
+
+type GRPCTLSClientCertConfiguration struct {
+	TLSClientCertConfiguration `yaml:",inline"`
+	Enabled                    bool `yaml:"enabled" env:"ENABLED"`
 }
 
 type TLSClientCertConfiguration struct {
@@ -889,18 +1068,6 @@ type TLSClientCertConfiguration struct {
 	KeyFile                    string `yaml:"key_file,omitempty" env:"KEY_FILE"`
 	CaFile                     string `yaml:"ca_file,omitempty" env:"CA_FILE"`
 	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
-}
-
-type ClientTLSConfiguration struct {
-	// All applies to all subgraph connections.
-	All TLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_ALL_"`
-	// Subgraphs overrides per-subgraph TLS config. Key is the subgraph name.
-	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
-}
-
-type TLSConfiguration struct {
-	Server TLSServerConfiguration `yaml:"server"`
-	Client ClientTLSConfiguration `yaml:"client"`
 }
 
 type SubgraphErrorPropagationMode string
@@ -922,6 +1089,21 @@ type SubgraphErrorPropagationConfiguration struct {
 	AllowAllExtensionFields bool                         `yaml:"allow_all_extension_fields" envDefault:"false" env:"ALLOW_ALL_EXTENSION_FIELDS"`
 	AllowedExtensionFields  []string                     `yaml:"allowed_extension_fields" envDefault:"code" env:"ALLOWED_EXTENSION_FIELDS"`
 	AllowedFields           []string                     `yaml:"allowed_fields" env:"ALLOWED_FIELDS"`
+}
+
+type SubgraphExtensionPropagationAlgorithm string
+
+const (
+	// SubgraphExtensionPropagationAlgorithmFirstWrite propagates the first extension root field from a subgraph to the client
+	SubgraphExtensionPropagationAlgorithmFirstWrite SubgraphExtensionPropagationAlgorithm = "first_write"
+	// SubgraphExtensionPropagationAlgorithmLastWrite propagates the last extension root field from a subgraph to the client
+	SubgraphExtensionPropagationAlgorithmLastWrite SubgraphExtensionPropagationAlgorithm = "last_write"
+)
+
+type SubgraphExtensionPropagationConfiguration struct {
+	Enabled                bool                                  `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	AllowedExtensionFields []string                              `yaml:"allowed_extension_fields" env:"ALLOWED_EXTENSION_FIELDS"`
+	Algorithm              SubgraphExtensionPropagationAlgorithm `yaml:"algorithm,omitempty" envDefault:"first_write" env:"ALGORITHM"`
 }
 
 type StorageProviders struct {
@@ -988,10 +1170,32 @@ type ExecutionConfigFile struct {
 	WatchInterval time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"EXECUTION_CONFIG_FILE_WATCH_INTERVAL"`
 }
 
+// SplitConfigPollerRules governs the behavior of the split-config polling strategy used to
+// assemble the final router execution config. The split poller fetches the base graph and each
+// feature flag config as separate files from the CDN. These rules apply when individual files
+// are missing or should be excluded entirely.
+type SplitConfigPollerRules struct {
+	// SkipMissingFeatureFlags keeps polling alive when a feature flag listed in the mapper cannot
+	// be fetched. When false (default), a single missing feature flag aborts the poll cycle.
+	SkipMissingFeatureFlags bool `yaml:"skip_missing_feature_flags" envDefault:"false" env:"SKIP_MISSING_FEATURE_FLAGS"`
+	// IgnoredFeatureFlags is the list of feature flag names to skip entirely during polling.
+	// Listed flags are not fetched even when present in the mapper.
+	IgnoredFeatureFlags []string `yaml:"ignored_feature_flags,omitempty" env:"IGNORED_FEATURE_FLAGS"`
+}
+
 type ExecutionConfig struct {
 	File            ExecutionConfigFile            `yaml:"file,omitempty"`
 	Storage         ExecutionConfigStorage         `yaml:"storage,omitempty" envPrefix:"EXECUTION_CONFIG_STORAGE_"`
 	FallbackStorage FallbackExecutionConfigStorage `yaml:"fallback_storage,omitempty" envPrefix:"EXECUTION_CONFIG_FALLBACK_STORAGE_"`
+	Manifest        ExecutionConfigManifest        `yaml:"manifest,omitempty" envPrefix:"EXECUTION_CONFIG_MANIFEST_"`
+}
+
+type ExecutionConfigManifest struct {
+	Path                    string        `yaml:"path,omitempty" env:"PATH"`
+	SkipMissingFeatureFlags bool          `yaml:"skip_missing_feature_flags" envDefault:"false" env:"SKIP_MISSING_FEATURE_FLAGS"`
+	IgnoredFeatureFlags     []string      `yaml:"ignored_feature_flags,omitempty" env:"IGNORED_FEATURE_FLAGS"`
+	Watch                   bool          `yaml:"watch,omitempty" envDefault:"false" env:"WATCH"`
+	WatchInterval           time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"WATCH_INTERVAL"`
 }
 
 type PersistedOperationsCacheConfig struct {
@@ -1102,6 +1306,7 @@ type ApolloCompatibilityFlags struct {
 type ApolloRouterCompatibilityFlags struct {
 	ReplaceInvalidVarErrors ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
 	SubrequestHTTPError     ApolloCompatibilityFlag `yaml:"subrequest_http_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_"`
+	SkipNullVariablesError  ApolloCompatibilityFlag `yaml:"skip_null_variables_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_"`
 }
 
 type ApolloCompatibilityFlag struct {
@@ -1131,6 +1336,7 @@ type CacheWarmupConfiguration struct {
 	Source           CacheWarmupSource `yaml:"source"  env:"CACHE_WARMUP_SOURCE"`
 	Workers          int               `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
 	ItemsPerSecond   int               `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
+	ItemDelay        time.Duration     `yaml:"item_delay" envDefault:"0s" env:"CACHE_WARMUP_ITEM_DELAY"`
 	Timeout          time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 	InMemoryFallback bool              `yaml:"in_memory_fallback" envDefault:"true" env:"CACHE_WARMUP_IN_MEMORY_FALLBACK"`
 }
@@ -1204,6 +1410,26 @@ type MCPStorageConfig struct {
 type MCPServer struct {
 	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5025" env:"MCP_SERVER_LISTEN_ADDR"`
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
+	// Version is reported to MCP clients as the server version in serverInfo.
+	// Defaults to the router release version when unset.
+	Version string `yaml:"version,omitempty" env:"MCP_SERVER_VERSION"`
+	// Title is a human-readable display name for this MCP server, reported in
+	// serverInfo. MCP clients show it in UIs, falling back to the machine name
+	// derived from graph_name when unset.
+	Title string `yaml:"title,omitempty" env:"MCP_SERVER_TITLE"`
+	// Description is a human-readable description of this MCP server, reported
+	// in serverInfo.
+	Description string            `yaml:"description,omitempty" env:"MCP_SERVER_DESCRIPTION"`
+	Discover    MCPDiscoverConfig `yaml:"discover,omitempty" envPrefix:"MCP_SERVER_DISCOVER_"`
+}
+
+// MCPDiscoverConfig configures the server identity exposed via the MCP
+// server/discover method (SEP-2575, protocol version 2026-07-28).
+type MCPDiscoverConfig struct {
+	// Instructions is natural-language guidance for MCP clients on how to use this
+	// server. It is served in the server/discover response and in the legacy
+	// initialize response, so all clients receive it regardless of era.
+	Instructions string `yaml:"instructions,omitempty" env:"INSTRUCTIONS"`
 }
 
 type ConnectRPCConfiguration struct {
@@ -1229,7 +1455,8 @@ type PluginsConfiguration struct {
 }
 
 type PluginRegistryConfiguration struct {
-	URL string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
+	URL      string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
+	Insecure bool   `yaml:"insecure" env:"INSECURE" envDefault:"false"`
 }
 
 type IntrospectionConfiguration struct {
@@ -1243,6 +1470,7 @@ type Config struct {
 	InstanceID     string                  `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
 	Graph          Graph                   `yaml:"graph,omitempty"`
 	Telemetry      Telemetry               `yaml:"telemetry,omitempty"`
+	Pyroscope      Pyroscope               `yaml:"pyroscope,omitempty" envPrefix:"PYROSCOPE_"`
 	GraphqlMetrics GraphqlMetrics          `yaml:"graphql_metrics,omitempty"`
 	CORS           CORS                    `yaml:"cors,omitempty"`
 	Cluster        Cluster                 `yaml:"cluster,omitempty"`
@@ -1303,8 +1531,11 @@ type Config struct {
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation" envPrefix:"SUBGRAPH_ERROR_PROPAGATION_"`
 
+	SubgraphExtensionPropagation SubgraphExtensionPropagationConfiguration `yaml:"subgraph_extension_propagation" envPrefix:"SUBGRAPH_EXTENSION_PROPAGATION_"`
+
 	StorageProviders               StorageProviders                `yaml:"storage_providers" envPrefix:"STORAGE_PROVIDER_"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
+	SplitConfigPoller              SplitConfigPollerRules          `yaml:"split_config_poller" envPrefix:"SPLIT_CONFIG_POLLER_"`
 	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`

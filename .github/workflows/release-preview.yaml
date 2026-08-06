@@ -9,6 +9,7 @@ on:
     paths-ignore:
       - 'docs*/**'
       - '*.md'
+      - '.github/CODEOWNERS'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -23,14 +24,24 @@ jobs:
     timeout-minutes: 5
     runs-on: ubuntu-latest
     steps:
+      - name: Authenticate
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: |
+            cosmo
+          permission-actions: write
+          permission-contents: write
+          permission-workflows: write
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GH_TOKEN_WORKFLOW_PUBLISH }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - uses: ./.github/actions/node
-        with:
-          working-directory: ${{ env.WORKING_DIRECTORY }}
 
       - run: npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
         shell: bash

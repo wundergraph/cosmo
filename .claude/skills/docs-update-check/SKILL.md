@@ -45,7 +45,7 @@ Use this mapping to find which docs might need updating:
 | `cli/src/commands/` | `docs-website/cli/` | One doc page per CLI command, organized by resource |
 | `controlplane/` | `docs-website/control-plane/` | API docs, webhooks, RBAC |
 | `studio/` | `docs-website/studio/` | Feature pages matching UI sections |
-| `composition/` or `composition-go/` | `docs-website/federation/` | Directives, composition rules |
+| `composition/` | `docs-website/federation/` | Directives, composition rules |
 | `helm/` | `docs-website/deployments-and-hosting/kubernetes/` | Helm chart docs |
 | `proto/` | `docs-website/control-plane/` | API reference pages |
 | `aws-lambda-router/` | `docs-website/router/deployment/` | Lambda deployment guide |

@@ -1,10 +1,15 @@
 import { useQuery } from '@connectrpc/connect-query';
+import { create } from '@bufbuild/protobuf';
 import { getWorkspace } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
-import { WorkspaceNamespace } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  type WorkspaceNamespace,
+  WorkspaceNamespaceSchema,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { useRouter } from 'next/router';
 import { useApplyParams } from '@/components/analytics/use-apply-params';
 import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useOnboardingNavigation } from '@/hooks/use-onboarding-navigation';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
 const DEFAULT_NAMESPACE_NAME = 'default';
@@ -69,9 +74,9 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
   const currentNamespace = useMemo(
     () =>
       isLoading
-        ? new WorkspaceNamespace({ id: '', name: namespace, graphs: [] })
+        ? create(WorkspaceNamespaceSchema, { id: '', name: namespace, graphs: [] })
         : (data?.namespaces.find((wns) => wns.name.toLowerCase() === namespace.toLowerCase()) ??
-          new WorkspaceNamespace({
+          create(WorkspaceNamespaceSchema, {
             id: '',
             name: DEFAULT_NAMESPACE_NAME,
             graphs: [],
@@ -102,6 +107,8 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
     },
     [namespace, namespaces, setStoredNamespace, applyParams],
   );
+
+  useOnboardingNavigation();
 
   // Finally, render :)
   return (

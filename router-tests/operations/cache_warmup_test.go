@@ -1,20 +1,30 @@
 package integration
 
 import (
-	"github.com/wundergraph/cosmo/router-tests/testutils"
-
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
 
+	"github.com/wundergraph/cosmo/router-tests/testutils"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -22,11 +32,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.uber.org/zap"
 )
 
 type fakeSelfRegister struct{}
@@ -72,10 +77,13 @@ func TestCacheWarmup(t *testing.T) {
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
 						QueryNormalizationMisses: 3 + employeeWarmedQueryCount + employeeQueryCount,
 						QueryNormalizationHits:   4,
-						ValidationMisses:         3 + employeeWarmedQueryCount,
-						ValidationHits:           4 + employeeQueryCount,
-						PlanMisses:               3 + employeeWarmedQueryCount,
-						PlanHits:                 4 + employeeQueryCount,
+						// Validation is now keyed on the pre-extraction operation, so the two
+						// `employee(id: $id)` / `employee(id: $jensID)` requests validate separately even
+						// though they share a plan. Hence 2 more misses / 2 fewer hits than the plan cache.
+						ValidationMisses: 5 + employeeWarmedQueryCount,
+						ValidationHits:   2 + employeeQueryCount,
+						PlanMisses:       3 + employeeWarmedQueryCount,
+						PlanHits:         4 + employeeQueryCount,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -541,6 +549,55 @@ func TestCacheWarmup(t *testing.T) {
 				require.Equal(t, `{"data":{"a":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 			})
 		})
+		t.Run("cache warmup item delay", func(t *testing.T) {
+			t.Parallel()
+			const itemDelay = 50 * time.Millisecond
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+						Enabled: true,
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testdata/cache_warmup/rate_limit",
+							},
+						},
+						Workers:        4,
+						ItemsPerSecond: 100,
+						ItemDelay:      itemDelay,
+						Timeout:        time.Second * 10,
+					}),
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
+					BaseGraphAssertions: testenv.CacheMetricsAssertion{
+						QueryNormalizationMisses: 10,
+						QueryNormalizationHits:   1,
+						ValidationMisses:         10,
+						ValidationHits:           1,
+						PlanMisses:               10,
+						PlanHits:                 1,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { a: employees { id } }`,
+				})
+				require.Equal(t, `{"data":{"a":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+
+				// The warmup start log records the configured item delay.
+				startLogs := xEnv.Observer().FilterMessage("Warmup started").All()
+				require.NotEmpty(t, startLogs)
+				for _, l := range startLogs {
+					require.Equal(t, itemDelay, l.ContextMap()["item_delay"])
+				}
+
+				// Warmup still completes successfully with the delay applied.
+				require.Equal(t, len(startLogs), len(xEnv.Observer().FilterMessage("Warmup completed").All()))
+			})
+		})
 		t.Run("cache warmup with operation hash cache", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -668,10 +725,13 @@ func TestCacheWarmup(t *testing.T) {
 						QueryNormalizationHits:            3,
 						PersistedQueryNormalizationMisses: cdnPOCount,
 						PersistedQueryNormalizationHits:   0,
-						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
-						ValidationHits:                    3 + employeeQueryCount,
-						PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
-						PlanHits:                          3 + employeeQueryCount,
+						// Validation is keyed on the pre-extraction operation. The 2 request-time
+						// employee queries differ (a `$id` variant and an inline `2` variant) from the warmed
+						// operations, so they now miss validation (+2) instead of hitting it (-2).
+						ValidationMisses: cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount + 2,
+						ValidationHits:   1 + employeeQueryCount,
+						PlanMisses:       cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
+						PlanHits:         3 + employeeQueryCount,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -690,7 +750,8 @@ func TestCacheWarmup(t *testing.T) {
 
 				// For the next 2 queries below we will:
 				// - miss normalization cache
-				// - hit validation cache
+				// - miss validation cache (validation is keyed on the pre-extraction operation,
+				//   and these differ from the warmed operations)
 				// - hit plan cache
 
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -730,10 +791,12 @@ func TestCacheWarmup(t *testing.T) {
 						QueryNormalizationHits:            0,
 						PersistedQueryNormalizationMisses: cdnPOCount + 2,
 						PersistedQueryNormalizationHits:   1, // its 1 because the second query is normalization miss
-						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
-						ValidationHits:                    2,
-						PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
-						PlanHits:                          2,
+						// Validation is keyed on the pre-extraction operation; the second persisted
+						// operation ("A") differs from the warmed operations, so it misses validation (+1) here.
+						ValidationMisses: cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount + 1,
+						ValidationHits:   1,
+						PlanMisses:       cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
+						PlanHits:         2,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -1016,7 +1079,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 			<-pm.ready
 
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
@@ -1061,7 +1124,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 			<-pm.ready
 
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
@@ -1110,7 +1173,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 			<-pm.ready
 
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id customDetails: details { forename } } }`,
@@ -1350,6 +1413,258 @@ engine:
 
 }
 
+func TestCacheWarmupDefer(t *testing.T) {
+	// These tests verify how the cache warmer interacts with @defer queries.
+	t.Parallel()
+
+	deferRequest := func(t *testing.T, xEnv *testenv.Environment, query string, variables string) *http.Response {
+		t.Helper()
+		payload := map[string]any{"query": query}
+		if variables != "" {
+			payload["variables"] = json.RawMessage(variables)
+		}
+		payloadData, err := json.Marshal(payload)
+		require.NoError(t, err)
+
+		req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payloadData))
+		res, err := xEnv.RouterClient.Do(req)
+		require.NoError(t, err)
+		_, err = io.ReadAll(res.Body)
+		require.NoError(t, err)
+		require.NoError(t, res.Body.Close())
+		return res
+	}
+
+	deferWarmup := func() []core.Option {
+		return []core.Option{
+			core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+				Enabled: true,
+				Source: config.CacheWarmupSource{
+					Filesystem: &config.CacheWarmupFileSystemSource{
+						Path: "testdata/cache_warmup/defer",
+					},
+				},
+			}),
+		}
+	}
+	// This query is used for warmup.
+	const queryWithDefer = `query {
+	  employee(id: 1) {
+		id
+		... @defer {
+		  hobbies {
+			__typename
+		  }
+		}
+	  }
+	}`
+	t.Run("warmed defer query hits the plan cache on a live multipart request", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: deferWarmup(),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := deferRequest(t, xEnv, queryWithDefer, "")
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, "HIT", res.Header.Get("x-wg-execution-plan-cache"))
+		})
+	})
+
+	const queryWithoutDefer = `query {
+	  employee(id: 1) {
+		id
+		hobbies {
+		  __typename
+		}
+	  }
+	}`
+	t.Run("@defer changes the plan cache key", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: deferWarmup(),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := deferRequest(t, xEnv, queryWithoutDefer, "")
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, "MISS", res.Header.Get("x-wg-execution-plan-cache"),
+				"the non-defer variant must NOT share a plan cache entry with the warmed @defer query")
+
+			// The exact warmed @defer query, issued as a live multipart request, hits.
+			res = deferRequest(t, xEnv, queryWithoutDefer, "")
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, "HIT", res.Header.Get("x-wg-execution-plan-cache"))
+		})
+	})
+
+	t.Run("warmed simple defer plan survives a config change", func(t *testing.T) {
+		t.Parallel()
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+		testConfig := testenv.Config{
+			NoRetryClient: true,
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.SlowPlanCacheSize = 100
+			},
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled:          true,
+					InMemoryFallback: true,
+					Source: config.CacheWarmupSource{
+						CdnSource: config.CacheWarmupCDNSource{
+							Enabled: true,
+						},
+					},
+				}),
+				core.WithConfigVersionHeader(true),
+			},
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+					pm.initConfig = config
+					return &pm
+				},
+			},
+		}
+		testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
+			res := deferRequest(t, xEnv, queryWithDefer, "")
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Header.Get("x-wg-execution-plan-cache"))
+
+			// Trigger a config change; the new graph is re-warmed from the in-memory fallback.
+			<-pm.ready
+			pm.initConfig.Version = "updated"
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
+
+			res = deferRequest(t, xEnv, queryWithDefer, "")
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, "updated", res.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "HIT", res.Header.Get("x-wg-execution-plan-cache"))
+		})
+	})
+	const deferIfQuery = `query ($shouldDefer: Boolean!) {
+		  employee(id: 1) {
+			id
+			... @defer(if: $shouldDefer) {
+			  hobbies {
+				__typename
+			  }
+			}
+		  }
+		}`
+	t.Run("warmed conditional defer(if:true) plan survives a config change", func(t *testing.T) {
+		t.Parallel()
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+		testConfig := testenv.Config{
+			NoRetryClient: true,
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.SlowPlanCacheSize = 100
+			},
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled:          true,
+					InMemoryFallback: true,
+					Source: config.CacheWarmupSource{
+						CdnSource: config.CacheWarmupCDNSource{
+							Enabled: true,
+						},
+					},
+				}),
+				core.WithConfigVersionHeader(true),
+			},
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+					pm.initConfig = config
+					return &pm
+				},
+			},
+		}
+		testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
+			res := deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": true}`)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Header.Get("x-wg-execution-plan-cache"))
+
+			// Trigger a config change; the new graph is re-warmed from the in-memory fallback.
+			<-pm.ready
+			pm.initConfig.Version = "updated"
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
+
+			res = deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": true}`)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, "updated", res.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "HIT", res.Header.Get("x-wg-execution-plan-cache"))
+
+			res = deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": false}`)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.False(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, "MISS", res.Header.Get("x-wg-execution-plan-cache"))
+		})
+	})
+	t.Run("warmed conditional defer(if:false) plan survives a config change", func(t *testing.T) {
+		t.Parallel()
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+		testConfig := testenv.Config{
+			NoRetryClient: true,
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.SlowPlanCacheSize = 100
+			},
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled:          true,
+					InMemoryFallback: true,
+					Source: config.CacheWarmupSource{
+						CdnSource: config.CacheWarmupCDNSource{
+							Enabled: true,
+						},
+					},
+				}),
+				core.WithConfigVersionHeader(true),
+			},
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+					pm.initConfig = config
+					return &pm
+				},
+			},
+		}
+		testenv.Run(t, &testConfig, func(t *testing.T, xEnv *testenv.Environment) {
+			res := deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": false}`)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.False(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Header.Get("x-wg-execution-plan-cache"))
+
+			// Trigger a config change; the new graph is re-warmed from the in-memory fallback.
+			<-pm.ready
+			pm.initConfig.Version = "updated"
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
+
+			res = deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": false}`)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.False(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, "updated", res.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "HIT", res.Header.Get("x-wg-execution-plan-cache"))
+
+			res = deferRequest(t, xEnv, deferIfQuery, `{"shouldDefer": true}`)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed"))
+			require.Equal(t, "MISS", res.Header.Get("x-wg-execution-plan-cache"))
+		})
+	})
+	// Since the Accept header sent from the client does not affect what server sends in case of defer,
+	// there no tests for that yet.
+}
+
 // findDataPoint finds a data point in a slice of histogram data points by matching
 // the value of WgEnginePlanCacheHit attribute
 func findDataPoint(t *testing.T, dataPoints []metricdata.HistogramDataPoint[float64], cacheHit bool) metricdata.HistogramDataPoint[float64] {
@@ -1412,11 +1727,11 @@ func writeTestConfig(t *testing.T, version string, path string) {
 
 type ConfigPollerMock struct {
 	initConfig   *nodev1.RouterConfig
-	updateConfig func(newConfig *nodev1.RouterConfig, oldVersion string) error
+	updateConfig func(newConfig *routerconfig.Response) error
 	ready        chan struct{}
 }
 
-func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
+func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(_ *routerconfig.Response) error) {
 	c.updateConfig = handler
 	close(c.ready)
 }

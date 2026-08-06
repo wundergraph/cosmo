@@ -83,6 +83,7 @@ func TestRouter_Start_PortBindingError(t *testing.T) {
 
 	// Create a router with static config that uses the already-bound port
 	router, err := NewRouter(
+		t.Context(),
 		WithStaticExecutionConfig(&nodev1.RouterConfig{
 			Version: "1.0.0",
 		}),

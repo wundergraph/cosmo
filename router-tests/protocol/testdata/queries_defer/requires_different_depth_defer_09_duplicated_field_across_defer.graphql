@@ -1,0 +1,12 @@
+query Requires {
+  products {
+    __typename
+    ... on Consultancy {
+      lead { __typename id }
+      ... @defer {
+        lead { derivedMood }
+        isLeadAvailable
+      }
+    }
+  }
+}

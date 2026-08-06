@@ -1,9 +1,13 @@
 import { Warning } from '../../warnings/types';
 import { QUOTATION_JOIN } from '../../utils/string-constants';
 import {
+  type InvalidRepeatedComposedDirectiveWarningParams,
+  type ProvidesOnUnionWarningParams,
+  type ProvidesWithInterfaceFieldSelectionWarningParams,
   type SingleFederatedInputFieldOneOfWarningParams,
   type SingleSubgraphInputFieldOneOfWarningParams,
 } from './params';
+import { type SubgraphName } from '../../types/types';
 
 export function invalidOverrideTargetSubgraphNameWarning(
   targetSubgraphName: string,
@@ -202,6 +206,73 @@ export function singleFederatedInputFieldOneOfWarning({
       ` to a required type, and removing any other remaining optional Input fields instead.`,
     subgraph: {
       name: '',
+    },
+  });
+}
+
+export function composedOneOfDirectiveWarning(subgraphName: SubgraphName): Warning {
+  return new Warning({
+    message:
+      `A "@composeDirective" directive defines the "name" argument value "@oneOf".` +
+      ` The "@oneOf" directive is now considered built-in and will be automatically included in the federated.` +
+      ` schema. Consider removing the inclusion of "@oneOf" within any "@composeDirective" directives.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function invalidRepeatedComposedDirectiveWarning({
+  directiveCoords,
+  directiveName,
+  printedDirective,
+}: InvalidRepeatedComposedDirectiveWarningParams): Warning {
+  return new Warning({
+    message:
+      `The definition for the composed directive "@${directiveName}" is not defined  as repeatable.` +
+      ` However, the directive "@${directiveName}" is declared on "${directiveCoords}" multiple times with` +
+      ` incompatible arguments. The federated graph will only propagate "${printedDirective}".` +
+      ` Consider updating the directive definition for "${directiveName}" to be repeatable.`,
+    subgraph: {
+      name: '',
+    },
+  });
+}
+
+export function providesOnUnionWarning({
+  directiveCoords,
+  fieldSet,
+  namedTypeName,
+  subgraphName,
+}: ProvidesOnUnionWarningParams): Warning {
+  return new Warning({
+    message:
+      `The field "${directiveCoords}" that returns Union "${namedTypeName}" defines a "@provides" directive with the` +
+      ` following field set:\n "${fieldSet}"\n` +
+      `The "@provides" directive defined on a field that returns a Union type is only supported by router version` +
+      ` 0.326.3+. Please note that older router versions do not support this functionality.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function providesWithInterfaceFieldSelectionWarning({
+  directiveCoords,
+  fieldCoords,
+  fieldSet,
+  selection,
+  subgraphName,
+}: ProvidesWithInterfaceFieldSelectionWarningParams): Warning {
+  return new Warning({
+    message:
+      `The field "${directiveCoords}" defines a "@provides" directive with the` +
+      ` following field set:\n "${fieldSet}"\n` +
+      `A "@provides" directive field set with a direct Interface field selection, in this case "${selection}"` +
+      ` corresponding to "${fieldCoords}", is only supported by router version` +
+      ` 0.326.3+. Please note that older router versions do not support this functionality.`,
+    subgraph: {
+      name: subgraphName,
     },
   });
 }

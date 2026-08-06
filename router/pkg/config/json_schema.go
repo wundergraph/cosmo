@@ -5,10 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize"
-	"github.com/goccy/go-yaml"
-	"github.com/santhosh-tekuri/jsonschema/v6"
-	"golang.org/x/text/message"
 	"io/fs"
 	"log"
 	"net"
@@ -19,6 +15,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/dustin/go-humanize"
+	"github.com/goccy/go-yaml"
+	"github.com/santhosh-tekuri/jsonschema/v6"
+	"golang.org/x/text/message"
 )
 
 const (
@@ -329,6 +330,10 @@ func ValidateConfig(yamlData []byte, schema []byte) error {
 		Name:     "hostname-port",
 		Validate: isHostnamePort,
 	})
+	c.RegisterFormat(&jsonschema.Format{
+		Name:     "directory-path",
+		Validate: isDirectoryPath,
+	})
 	c.RegisterVocabulary(goDurationVocab())
 	c.RegisterVocabulary(humanBytesVocab())
 
@@ -504,6 +509,19 @@ func isFilePath(a any) error {
 		}
 	}
 
+	return nil
+}
+
+// isDirectoryPath is the validation function for validating if the current field's value is a valid directory path.
+func isDirectoryPath(a any) error {
+	val, ok := a.(string)
+	if !ok {
+		return errors.New("invalid directory path")
+	}
+
+	if !isDir(val) {
+		return errors.New("invalid directory path")
+	}
 	return nil
 }
 

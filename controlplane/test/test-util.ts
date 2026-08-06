@@ -1,14 +1,15 @@
-import { randomUUID, UUID } from 'node:crypto';
+import { createHash, randomUUID, UUID } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import fs from 'node:fs';
-import { createPromiseClient, PromiseClient } from '@connectrpc/connect';
+import { createClient, Client } from '@connectrpc/connect';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { createConnectTransport } from '@connectrpc/connect-node';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatISO, startOfTomorrow, startOfYear } from 'date-fns';
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import Fastify from 'fastify';
 import { pino } from 'pino';
 import postgres from 'postgres';
@@ -20,8 +21,10 @@ import database from '../src/core/plugins/database.js';
 import fastifyRedis from '../src/core/plugins/redis.js';
 import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
 import { BillingRepository, billingSchema } from '../src/core/repositories/BillingRepository.js';
+import { NamespaceLoginMethodRepository } from '../src/core/repositories/NamespaceLoginMethodRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
+import { RBACEvaluator } from '../src/core/services/RBACEvaluator.js';
 import routes from '../src/core/routes.js';
 import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
 import { Authorization } from '../src/core/services/Authorization.js';
@@ -31,6 +34,7 @@ import {
   createTestAuthenticator,
   createTestContext,
   seedTest,
+  TestAuthenticator,
   TestAuthenticatorOptions,
   UserTestData,
 } from '../src/core/test-util.js';
@@ -38,12 +42,20 @@ import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhook
 import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
 import { DeleteOrganizationQueue } from '../src/core/workers/DeleteOrganizationWorker.js';
 import * as schema from '../src/db/schema.js';
-import { FeatureIds, Label } from '../src/types/index.js';
+import { AuthContext, FeatureIds, Label, LoginMethod } from '../src/types/index.js';
 import { NewBillingPlan, OrganizationRole } from '../src/db/models.js';
 import { DeactivateOrganizationQueue } from '../src/core/workers/DeactivateOrganizationWorker.js';
 import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
 import { DeleteOrganizationAuditLogsQueue } from '../src/core/workers/DeleteOrganizationAuditLogsWorker.js';
+import { retryWithBackoff } from '../src/core/util/timers.js';
+import { DeleteBatchPublishJobDetailsQueue } from '../src/core/workers/DeleteBatchPublishJobDetailsWorker.js';
+import {
+  isAlreadyExistsError,
+  isRealmNotReadyError,
+  keycloakClientOptions,
+  TEST_REALM,
+} from './keycloak-test-utils.js';
 
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
@@ -114,23 +126,12 @@ export const SetupTest = async function ({
     users.adminJimCompanyB = createTestContext('company-b', randomUUID());
   }
 
-  const realm = 'test';
-  const loginRealm = 'master';
-  const apiUrl = process.env.KC_API_URL || 'http://localhost:8080';
-  const clientId = 'studio';
-  const adminUser = 'admin';
-  const adminPassword = 'changeme';
+  const realm = TEST_REALM;
+  const apiUrl = keycloakClientOptions.apiUrl;
   const webBaseUrl = 'http://localhost:3000';
 
   const authenticator = createTestAuthenticator(users, apiUrl, realm);
-  const keycloakClient = new Keycloak({
-    apiUrl,
-    realm: loginRealm,
-    clientId,
-    adminUser,
-    adminPassword,
-    logger: log,
-  });
+  const keycloakClient = new Keycloak({ ...keycloakClientOptions, logger: log });
 
   const platformWebhooks = new MockPlatformWebhookService();
   const mailerClient = new Mailer({
@@ -153,6 +154,7 @@ export const SetupTest = async function ({
   const deactivateOrganizationQueue = new DeactivateOrganizationQueue(log, server.redisForQueue);
   const deleteUserQueue = new DeleteUserQueue(log, server.redisForQueue);
   const reactivateOrganizationQueue = new ReactivateOrganizationQueue(log, server.redisForQueue);
+  const deleteBatchPublishJobDetailsQueue = new DeleteBatchPublishJobDetailsQueue(log, server.redisForQueue);
 
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
@@ -183,7 +185,9 @@ export const SetupTest = async function ({
         deactivateOrganizationQueue,
         reactivateOrganizationQueue,
         deleteUserQueue,
+        deleteBatchPublishJobDetailsQueue,
       },
+      lockAdapter: server.lockAdapter,
     }),
   });
 
@@ -394,8 +398,8 @@ export const SetupTest = async function ({
     ],
   });
 
-  const platformClient = createPromiseClient(PlatformService, transport);
-  const nodeClient = createPromiseClient(NodeService, transport);
+  const platformClient = createClient(PlatformService, transport);
+  const nodeClient = createClient(NodeService, transport);
 
   return {
     client: platformClient,
@@ -415,6 +419,7 @@ export const SetupTest = async function ({
       deactivateOrganizationQueue,
       deleteUserQueue,
       reactivateOrganizationQueue,
+      deleteBatchPublishJobDetailsQueue,
     },
   };
 };
@@ -437,10 +442,11 @@ export const SetupKeycloak = async ({
       displayName: realmName,
       registrationEmailAsUsername: true,
     });
-  } catch (e: any) {
-    if (e.response?.status !== 409) {
-      e.message = `Failed to create keycloak realm: ${realmName}.` + e.message;
-      throw e;
+  } catch (e: unknown) {
+    // Ignore an existing realm (e.g. created by global setup).
+    if (!isAlreadyExistsError(e)) {
+      const message = e instanceof Error ? e.message : String(e);
+      throw new Error(`Failed to create keycloak realm: ${realmName}. ${message}`, { cause: e });
     }
   }
 
@@ -452,7 +458,7 @@ export const SetupKeycloak = async ({
 };
 
 export async function createOrganizationGroup(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   ...rules: { role: OrganizationRole; namespaces?: string[]; resources?: string[] }[]
 ) {
@@ -496,28 +502,54 @@ export const addKeycloakUser = async ({
 }): Promise<[string, string | undefined]> => {
   await keycloakClient.authenticateClient();
 
-  let id = '';
+  let id: string;
   try {
-    id = await keycloakClient.addKeycloakUser({
-      email: userTestData.email,
-      firstName: 'Test',
-      lastName: 'User',
-      realm: realmName,
-      isPasswordTemp: false,
-      password: 'wunder@123',
-      id: userTestData.userId,
-    });
-  } catch (e: any) {
-    if (e.response?.status === 409) {
-      const res = await keycloakClient.client.users.find({
-        realm: realmName,
-        email: userTestData.email,
-      });
-      id = res[0].id!;
-    } else {
-      e.message = `Failed to add keycloak user: ${userTestData.email}.` + e.message;
-      throw e;
-    }
+    // Keycloak's caches can briefly lag behind the realm created in global setup ("Realm not found"),
+    // and the exact-match lookup below can likewise lag behind a conflicting write — both are transient.
+    id = await retryWithBackoff(
+      async () => {
+        try {
+          return await keycloakClient.addKeycloakUser({
+            email: userTestData.email,
+            firstName: 'Test',
+            lastName: 'User',
+            realm: realmName,
+            isPasswordTemp: false,
+            password: 'wunder@123',
+            id: userTestData.userId,
+          });
+        } catch (e: unknown) {
+          if (!isAlreadyExistsError(e)) {
+            throw e;
+          }
+
+          const existingUser = await keycloakClient.findUserByEmail({
+            realm: realmName,
+            email: userTestData.email,
+          });
+
+          if (existingUser?.id) {
+            return existingUser.id;
+          }
+
+          throw new Error(
+            `Keycloak reported a duplicate user for ${userTestData.email}, but no exact match was readable yet`,
+          );
+        }
+      },
+      {
+        attempts: 5,
+        baseInterval: 200,
+        maxInterval: 1000,
+        shouldRetry: (e) => {
+          const message = e instanceof Error ? e.message : String(e);
+          return isRealmNotReadyError(e) || /no exact match was readable/i.test(message);
+        },
+      },
+    );
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    throw new Error(`Failed to add keycloak user: ${userTestData.email}. ${message}`, { cause: e });
   }
 
   let kcRootGroupId: string | undefined;
@@ -529,10 +561,11 @@ export const addKeycloakUser = async ({
     });
 
     kcRootGroupId = rootGroupId;
-  } catch (e: any) {
-    if (e.response?.status !== 409) {
-      e.message = `Failed to seed group: ${userTestData.organizationSlug}.` + e.message;
-      throw e;
+  } catch (e: unknown) {
+    // Ignore an already-seeded group.
+    if (!isAlreadyExistsError(e)) {
+      const message = e instanceof Error ? e.message : String(e);
+      throw new Error(`Failed to seed group: ${userTestData.organizationSlug}. ${message}`, { cause: e });
     }
   }
 
@@ -552,7 +585,7 @@ export const removeKeycloakSetup = async ({
 };
 
 export const createThenPublishSubgraph = async (
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   namespace: string,
   schemaSDL: string,
@@ -577,7 +610,7 @@ export const createThenPublishSubgraph = async (
 };
 
 export const createAndPublishSubgraph = async (
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   namespace: string,
   schemaSDL: string,
@@ -597,7 +630,7 @@ export const createAndPublishSubgraph = async (
 };
 
 export const createThenPublishFeatureSubgraph = async (
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   baseSubgraphName: string,
   namespace: string,
@@ -625,7 +658,7 @@ export const createThenPublishFeatureSubgraph = async (
 };
 
 export const createFederatedGraph = async (
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   namespace: string,
   labelMatchers: string[],
@@ -640,6 +673,37 @@ export const createFederatedGraph = async (
   expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
   return createFedGraphRes;
 };
+
+/**
+ * Simulates authenticating as the given login method for the supplied user.
+ *
+ * The mocked test authenticator returns a static context, so the part of
+ * `Authentication.authenticate()` that derives the IdP gate from the session's
+ * idp_alias never runs. This reproduces exactly that step — resolving the
+ * allowed-namespace set via the same `NamespaceLoginMethodRepository` the real
+ * code uses — and injects the result into the auth context's RBACEvaluator so
+ * every RPC enforces the gate. Pass `base = users.<someUser>` as the identity.
+ */
+export async function loginAs({
+  authenticator,
+  db,
+  base,
+  loginMethod,
+}: {
+  authenticator: TestAuthenticator;
+  db: PostgresJsDatabase<typeof schema>;
+  base: UserTestData & AuthContext;
+  loginMethod: LoginMethod;
+}) {
+  const ssoMappingRepo = new NamespaceLoginMethodRepository(db);
+  const namespaceAccess = await ssoMappingRepo.allowedNamespaces({
+    organizationId: base.organizationId,
+    loginMethod,
+  });
+  const rbac = new RBACEvaluator(base.rbac.groups, base.userId, loginMethod.type === 'api-key', namespaceAccess);
+  authenticator.changeUserWithSuppliedContext({ ...base, loginMethod, rbac });
+  return { namespaceAccess, rbac };
+}
 
 export class InMemoryBlobStorage implements BlobStorage {
   private objects: Map<string, Buffer> = new Map();
@@ -695,7 +759,7 @@ export class InMemoryBlobStorage implements BlobStorage {
   }
 }
 
-export async function createEventDrivenGraph(client: PromiseClient<typeof PlatformService>, name: string) {
+export async function createEventDrivenGraph(client: Client<typeof PlatformService>, name: string) {
   const response = await client.createFederatedSubgraph({
     name,
     namespace: DEFAULT_NAMESPACE,
@@ -706,21 +770,23 @@ export async function createEventDrivenGraph(client: PromiseClient<typeof Platfo
 }
 
 export async function createSubgraph(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   routingUrl: string,
   namespace = DEFAULT_NAMESPACE,
+  labels: Label[] = [],
 ) {
   const response = await client.createFederatedSubgraph({
     name,
     namespace,
     routingUrl,
+    labels,
   });
   expect(response.response?.code).toBe(EnumStatusCode.OK);
 }
 
 export async function createBaseAndFeatureSubgraph(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   baseSubgraphName: string,
   featureSubgraphName: string,
   baseSubgraphRoutingUrl: string,
@@ -769,7 +835,7 @@ type IntegrationSubgraph = {
   hasFeatureSubgraph: boolean;
 };
 export async function featureFlagIntegrationTestSetUp(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   subgraphNames: Array<IntegrationSubgraph>,
   federatedGraphName: string,
   labels: Array<Label> = [],
@@ -812,15 +878,19 @@ export async function featureFlagIntegrationTestSetUp(
   return federatedGraphResponse;
 }
 
-export async function createNamespace(client: PromiseClient<typeof PlatformService>, name: string) {
+export async function createNamespace(client: Client<typeof PlatformService>, name: string) {
+  // The server enforces lowercase namespace names, so normalize once here
+  // and return the normalized name for callers to use in subsequent queries.
+  const normalizedName = name.toLowerCase();
   const createNamespaceResponse = await client.createNamespace({
-    name,
+    name: normalizedName,
   });
   expect(createNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+  return normalizedName;
 }
 
 export async function createFeatureFlag(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   labels: Array<Label>,
   featureSubgraphNames: Array<string>,
@@ -838,7 +908,7 @@ export async function createFeatureFlag(
 }
 
 export async function assertNumberOfCompositions(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   federatedGraphName: string,
   numberOfCompositions: number,
   namespace = DEFAULT_NAMESPACE,
@@ -888,9 +958,63 @@ export async function assertExecutionConfigSubgraphNames(
     expect(subgraphIds.has(subgraph.id)).toBe(true);
   }
 }
+export async function assertMapperContentIsCorrect(
+  blobStorage: InMemoryBlobStorage,
+  expectedMapperKeysCount: number,
+  expectedNumberOfFeatureFlags = 1,
+) {
+  const blobKeys = blobStorage.keys();
+  const existingMappers = blobKeys.filter((key) => key.endsWith('mapper.json'));
+  expect(existingMappers).toHaveLength(expectedMapperKeysCount);
+
+  let numberOfRouterConfigsInBlobStorage = 0;
+  for (const mapperKey of existingMappers) {
+    const mapperBlob = await blobStorage.getObject({ key: mapperKey });
+    const mapper = await mapperBlob.stream
+      .getReader()
+      .read()
+      .then((result) => JSON.parse(result.value.toString()));
+
+    const keyPrefix = mapperKey.split('/').slice(0, -1).join('/');
+    const mapperEntries = Object.entries(mapper);
+
+    /**
+     * The mapper should always contain the number of expected feature flags plus one (the federated graph.
+     *
+     * If the expected number of feature flags is `-1`, we are skipping this check.
+     */
+    if (expectedNumberOfFeatureFlags !== -1) {
+      expect(mapperEntries).toHaveLength(expectedNumberOfFeatureFlags + 1);
+    }
+
+    for (const [featureFlagName, hash] of mapperEntries) {
+      const key =
+        featureFlagName === '' ? `${keyPrefix}/latest.json` : `${keyPrefix}/feature-flags/${featureFlagName}.json`;
+
+      expect(blobKeys).include(key);
+
+      const blob = await blobStorage.getObject({ key });
+      const blobContent = await blob.stream
+        .getReader()
+        .read()
+        .then((result) => result.value.toString());
+
+      const actualHash = createHash('sha256').update(blobContent).digest('hex');
+      expect(hash).toBe(actualHash);
+
+      numberOfRouterConfigsInBlobStorage++;
+    }
+  }
+
+  /**
+   * The number of elements in the blob storage should be the number of expected mappers plus the number
+   * of valid hashes in each mapper file
+   */
+  expect(blobKeys).toHaveLength(numberOfRouterConfigsInBlobStorage + expectedMapperKeysCount);
+}
 
 export async function toggleFeatureFlag(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   enabled: boolean,
   namespace = DEFAULT_NAMESPACE,
@@ -904,7 +1028,7 @@ export async function toggleFeatureFlag(
 }
 
 export async function deleteFeatureFlag(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   namespace = DEFAULT_NAMESPACE,
 ) {

@@ -11,7 +11,7 @@ import { App } from 'octokit';
 import { Worker } from 'bullmq';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
-import fastifyMetrics, { MetricsPluginOptions } from './plugins/metrics.js';
+import fastifyMetrics from './plugins/metrics.js';
 import fastifyDatabase from './plugins/database.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
 import fastifyRedis from './plugins/redis.js';
@@ -46,6 +46,9 @@ import {
   isGoogleCloudStorageUrl,
 } from './util.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
+import { OidcRepository } from './repositories/OidcRepository.js';
+import { NamespaceLoginMethodRepository } from './repositories/NamespaceLoginMethodRepository.js';
+import { OrganizationLoginMethodRepository } from './repositories/OrganizationLoginMethodRepository.js';
 import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 import {
   createDeleteOrganizationAuditLogsWorker,
@@ -60,6 +63,11 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
+import { createNotifyOrganizationDeletionQueuedWorker } from './workers/NotifyOrganizationDeletionQueuedWorker.js';
+import {
+  createDeleteBatchPublishJobDetailsWorker,
+  DeleteBatchPublishJobDetailsQueue,
+} from './workers/DeleteBatchPublishJobDetailsWorker.js';
 import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composition/composeGraphs.pool.js';
 
 export interface BuildConfig {
@@ -287,13 +295,25 @@ export default async function build(opts: BuildConfig) {
   const apiKeyRepository = new ApiKeyRepository(fastify.db);
   const webAuth = new WebSessionAuthenticator(fastify.db, opts.auth.secret, userRepo);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
-  const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
+  const oidcRepository = new OidcRepository(fastify.db);
+  const namespaceLoginMethodRepository = new NamespaceLoginMethodRepository(fastify.db);
+  const organizationLoginMethodRepository = new OrganizationLoginMethodRepository(fastify.db);
+  const accessTokenAuth = new AccessTokenAuthenticator(
+    organizationRepository,
+    authUtils,
+    oidcRepository,
+    namespaceLoginMethodRepository,
+    organizationLoginMethodRepository,
+  );
   const authenticator = new Authentication(
     webAuth,
     apiKeyAuth,
     accessTokenAuth,
     graphKeyAuth,
     organizationRepository,
+    oidcRepository,
+    namespaceLoginMethodRepository,
+    organizationLoginMethodRepository,
     logger,
   );
 
@@ -463,6 +483,25 @@ export default async function build(opts: BuildConfig) {
     }),
   );
 
+  bullWorkers.push(
+    createNotifyOrganizationDeletionQueuedWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      mailer: mailerClient,
+    }),
+  );
+
+  const deleteBatchPublishJobDetailsQueue = new DeleteBatchPublishJobDetailsQueue(logger, fastify.redisForQueue);
+  bullWorkers.push(
+    createDeleteBatchPublishJobDetailsWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      lockAdapter: fastify.lockAdapter,
+      logger,
+    }),
+  );
+
   // required to verify webhook payloads
   await fastify.register(import('fastify-raw-body'), {
     field: 'rawBody',
@@ -578,11 +617,13 @@ export default async function build(opts: BuildConfig) {
         deactivateOrganizationQueue,
         reactivateOrganizationQueue,
         deleteUserQueue,
+        deleteBatchPublishJobDetailsQueue,
       },
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
       webhookProxyUrl: opts.webhook?.proxyUrl,
       cdnBaseUrl: opts.cdnBaseUrl,
+      lockAdapter: fastify.lockAdapter,
     }),
     contextValues(req) {
       const values = createContextValues().set<FastifyBaseLogger>(

@@ -4,6 +4,7 @@ import { checkAuth } from '../auth/utils.js';
 import CheckSubgraph from './commands/check.js';
 import CreateSubgraphCommand from './commands/create.js';
 import PublishSubgraph from './commands/publish.js';
+import BatchPublishSubgraph from './commands/batch-publish.js';
 import DeleteSubgraph from './commands/delete.js';
 import UpdateSubgraph from './commands/update.js';
 import FixSubGraph from './commands/fix.js';
@@ -19,6 +20,7 @@ export default (opts: BaseCommandOptions) => {
   command.description('Provides commands for creating and maintaining subgraphs of a federated graph');
   command.addCommand(CreateSubgraphCommand(opts));
   command.addCommand(PublishSubgraph(opts));
+  command.addCommand(BatchPublishSubgraph(opts));
   command.addCommand(CheckSubgraph(opts));
   command.addCommand(DeleteSubgraph(opts));
   command.addCommand(UpdateSubgraph(opts));

@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"strconv"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -32,6 +30,8 @@ const (
 	SchemaFieldUsageCounter = "router.graphql.schema_field_usage" // Total field usage
 
 	OperationPlanningTime = "router.graphql.operation.planning_time" // Time taken to plan the operation
+
+	ResolverAcquireDurationHistogram = "router.graphql.resolver.acquire_duration" // Time spent waiting to acquire a resolver concurrency slot
 
 	OperationCostEstimatedHistogram = "router.graphql.operation.cost.estimated" // Estimated operation cost
 	OperationCostActualHistogram    = "router.graphql.operation.cost.actual"    // Actual operation cost after execution
@@ -77,6 +77,12 @@ var (
 	OperationPlanningTimeHistogramOptions     = []otelmetric.Float64HistogramOption{
 		otelmetric.WithUnit("ms"),
 		otelmetric.WithDescription(OperationPlanningTimeHistogramDescription),
+	}
+
+	ResolverAcquireDurationHistogramDescription = "Time spent waiting to acquire a GraphQL resolver concurrency slot, in milliseconds"
+	ResolverAcquireDurationHistogramOptions     = []otelmetric.Float64HistogramOption{
+		otelmetric.WithUnit("ms"),
+		otelmetric.WithDescription(ResolverAcquireDurationHistogramDescription),
 	}
 
 	costBucketBounds = []float64{
@@ -141,10 +147,13 @@ type (
 
 		logger               *zap.Logger
 		routerBaseAttributes otelmetric.ObserveOption
+
+		resolverStats bool
 	}
 
 	MetricOpts struct {
 		EnableCircuitBreaker bool
+		ResolverStats        bool
 		CostStats            config.CostStats
 	}
 
@@ -158,6 +167,7 @@ type (
 		MeasureLatency(ctx context.Context, latency float64, opts ...otelmetric.RecordOption)
 		MeasureRequestError(ctx context.Context, opts ...otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime float64, opts ...otelmetric.RecordOption)
+		MeasureResolverAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption)
 		SetCircuitBreakerState(ctx context.Context, status bool, opts ...otelmetric.RecordOption)
 		MeasureCircuitBreakerShortCircuit(ctx context.Context, opts ...otelmetric.AddOption)
@@ -177,6 +187,7 @@ type (
 		MeasureLatency(ctx context.Context, latency time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureRequestError(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
+		MeasureResolverAcquireDuration(ctx context.Context, duration time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		MeasureCircuitBreakerShortCircuit(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
@@ -198,19 +209,16 @@ func NewStore(otlpOpts MetricOpts, promOpts MetricOpts, opts ...Option) (Store, 
 		opt(h)
 	}
 
-	if err := setCardinalityLimit(h.cardinalityLimit); err != nil {
-		h.logger.Warn("Failed to set cardinality limit", zap.Error(err))
-	}
-
 	h.baseAttributesOpt = otelmetric.WithAttributes(h.baseAttributes...)
+	h.resolverStats = otlpOpts.ResolverStats || promOpts.ResolverStats
 
 	// Create OTLP metrics exported to OTEL
-	oltpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider, h.routerBaseAttributes, otlpOpts)
+	otlpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider, h.routerBaseAttributes, otlpOpts)
 	if err != nil {
 		return nil, err
 	}
 
-	h.otlpRequestMetrics = oltpMetrics
+	h.otlpRequestMetrics = otlpMetrics
 
 	// Create prometheus metrics exported to Prometheus scrape endpoint
 	promMetrics, err := NewPromMetricStore(h.logger, h.promMeterProvider, h.routerBaseAttributes, promOpts)
@@ -221,19 +229,6 @@ func NewStore(otlpOpts MetricOpts, promOpts MetricOpts, opts ...Option) (Store, 
 	h.promRequestMetrics = promMetrics
 
 	return h, nil
-}
-
-// setCardinalityLimit sets the cardinality limit for open telemetry.
-// This feature is experimental in otel-go and may be exposed in a different way in the future.
-// In order to avoid creating a large number of metric streams, we set a hard limit that can be collected for a single instrument.
-func setCardinalityLimit(limit int) error {
-	if limit <= 0 {
-		// We set the default limit if the limit is not set or invalid.
-		// A limit of 0 would disable the cardinality limit.
-		limit = DefaultCardinalityLimit
-	}
-
-	return os.Setenv("OTEL_GO_X_CARDINALITY_LIMIT", strconv.Itoa(limit))
 }
 
 func (h *Metrics) MeasureInFlight(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) func() {
@@ -433,6 +428,29 @@ func (h *Metrics) MeasureOperationPlanningTime(ctx context.Context, planningTime
 	h.otlpRequestMetrics.MeasureOperationPlanningTime(ctx, elapsedTime, opts...)
 }
 
+func (h *Metrics) MeasureResolverAcquireDuration(ctx context.Context, duration time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
+	if !h.resolverStats {
+		return
+	}
+
+	opts := []otelmetric.RecordOption{h.baseAttributesOpt, opt}
+
+	elapsedTime := float64(duration) / float64(time.Millisecond)
+
+	if len(sliceAttr) == 0 {
+		h.promRequestMetrics.MeasureResolverAcquireDuration(ctx, elapsedTime, opts...)
+	} else {
+		explodeRecordInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.RecordOption) {
+			newOpts = append(newOpts, opts...)
+			h.promRequestMetrics.MeasureResolverAcquireDuration(ctx, elapsedTime, newOpts...)
+		})
+	}
+
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+
+	h.otlpRequestMetrics.MeasureResolverAcquireDuration(ctx, elapsedTime, opts...)
+}
+
 func (h *Metrics) MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
 	opts := []otelmetric.AddOption{h.baseAttributesOpt, opt}
 
@@ -498,21 +516,16 @@ func (h *Metrics) Flush(ctx context.Context) error {
 	return err
 }
 
-// Shutdown flushes the metrics and stops the runtime metrics.
-func (h *Metrics) Shutdown(ctx context.Context) error {
-
+// Shutdown stops the metric instruments. It does not flush: the shared meter
+// providers are flushed once centrally during graph server shutdown to avoid
+// redundant ForceFlush calls that all compete for a single shutdown deadline.
+func (h *Metrics) Shutdown(_ context.Context) error {
 	var err error
 
-	if errFlush := h.Flush(ctx); errFlush != nil {
-		err = errors.Join(err, fmt.Errorf("failed to flush metrics: %w", errFlush))
-	}
-
-	errProm := h.promRequestMetrics.Shutdown()
-	if err != nil {
+	if errProm := h.promRequestMetrics.Shutdown(); errProm != nil {
 		err = errors.Join(err, fmt.Errorf("failed to shutdown prom metrics: %w", errProm))
 	}
-	errOtlp := h.otlpRequestMetrics.Shutdown()
-	if err != nil {
+	if errOtlp := h.otlpRequestMetrics.Shutdown(); errOtlp != nil {
 		err = errors.Join(err, fmt.Errorf("failed to shutdown otlp metrics: %w", errOtlp))
 	}
 

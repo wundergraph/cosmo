@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -521,7 +520,11 @@ func TestSingleFlight(t *testing.T) {
 			require.Less(t, actualSubgraphRequests, numOfOperations)
 		})
 	})
-	t.Run("subscription deduplication with multiple subgraphs - different headers", func(t *testing.T) {
+	// All subscriptions share a single EDFS trigger regardless of their headers, because the
+	// trigger ID of a pubsub source is derived from the subject and provider only. The nested
+	// fetches each subscription performs to resolve its response are still built from the
+	// per-request propagated headers, so those must not be de-duplicated by single flight.
+	t.Run("subscription with different headers does not deduplicate subgraph fetches", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
@@ -556,24 +559,14 @@ func TestSingleFlight(t *testing.T) {
 			)
 			done.Add(int(numOfOperations))
 
-			// Continuously publish until all consumers have received their message.
-			// NATSPublishUntilMinMessagesSent is insufficient here because cumulative
-			// MessagesSent can reach 10 before all 10 consumers are served (retries
-			// deliver to already-served consumers, inflating the count).
-			publishCtx, publishCancel := context.WithCancel(xEnv.Context)
+			// Wait for all subscriptions to be established before triggering. The differing
+			// Authorization headers do not split the trigger, so a single message fans out
+			// to all subscriptions.
 			go func() {
 				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
-				xEnv.WaitForTriggerCount(uint64(numOfOperations), time.Second*15)
-				for {
-					select {
-					case <-publishCtx.Done():
-						return
-					default:
-					}
-					_ = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-					_ = xEnv.NatsConnectionDefault.Flush()
-					time.Sleep(500 * time.Millisecond)
-				}
+				xEnv.WaitForTriggerCount(1, time.Second*15)
+				// Trigger the subscription via NATS to get updates for all subscriptions
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 			}()
 
 			for i := int64(0); i < numOfOperations; i++ {
@@ -606,29 +599,26 @@ func TestSingleFlight(t *testing.T) {
 					})
 					require.NoError(t, err)
 
-					// Read messages until we get "complete", draining any extra
-					// "next" messages that may arrive from publish retries
-					for {
-						var reply testenv.WebSocketMessage
-						err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-						require.NoError(t, err)
-						err = testenv.WSReadJSON(t, conn, &reply)
-						require.NoError(t, err)
-						if reply.Type == "complete" {
-							require.Equal(t, "1", reply.ID)
-							break
-						}
-					}
+					// Read the complete message
+					var complete testenv.WebSocketMessage
+					err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+					require.NoError(t, err)
+					err = testenv.WSReadJSON(t, conn, &complete)
+					require.NoError(t, err)
+					require.Equal(t, "complete", complete.Type)
+					require.Equal(t, "1", complete.ID)
 				}(i)
 			}
 			done.Wait()
-			publishCancel()
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 
-			// We expect no request de-duplication because different headers must not be de-duplicated
-			// Publish retries may increase the count, so check >= not ==
+			// We expect no request de-duplication because the fetches carry different headers.
+			// The NATS event itself supplies __typename and id — the only fields the pubsub
+			// data source owns — so resolving details.forename and details.surname costs one
+			// entity fetch to the employees subgraph per subscription: 10 in total.
 			actualSubgraphRequests := xEnv.SubgraphRequestCount.Global.Load()
-			require.GreaterOrEqual(t, actualSubgraphRequests, numOfOperations)
+			require.Equal(t, numOfOperations, actualSubgraphRequests)
+			require.Equal(t, numOfOperations, xEnv.SubgraphRequestCount.Employees.Load())
 		})
 	})
 	t.Run("mutation with multiple subgraphs deduplication", func(t *testing.T) {
@@ -958,7 +948,7 @@ func TestSingleFlight(t *testing.T) {
 			}
 		})
 	})
-	t.Run("response header set rule with singleflight followers", func(t *testing.T) {
+	t.Run("response header set rule with singleflight followers is internal only", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -985,8 +975,8 @@ func TestSingleFlight(t *testing.T) {
 			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employee(id: 1) { id } }`, 5)
 			for i, res := range responses {
 				require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
-				require.Equal(t, "test-value", res.Response.Header.Get("X-Custom-Header"),
-					"response %d missing X-Custom-Header", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Custom-Header"),
+					"response %d: set response headers should not be forwarded to the client", i)
 			}
 		})
 	})
@@ -1028,7 +1018,7 @@ func TestSingleFlight(t *testing.T) {
 			}
 		})
 	})
-	t.Run("multiple response set rules with singleflight followers", func(t *testing.T) {
+	t.Run("multiple response set rules with singleflight followers are internal only", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -1057,23 +1047,23 @@ func TestSingleFlight(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Verify single request works
+			// Verify single request works — set headers are internal only
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id } }`,
 			})
-			require.Equal(t, "value-a", res.Response.Header.Get("X-Header-A"), "single request should have X-Header-A")
-			require.Equal(t, "value-b", res.Response.Header.Get("X-Header-B"), "single request should have X-Header-B")
+			require.Equal(t, "", res.Response.Header.Get("X-Header-A"), "set response headers should not be forwarded to the client")
+			require.Equal(t, "", res.Response.Header.Get("X-Header-B"), "set response headers should not be forwarded to the client")
 
 			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employee(id: 1) { id } }`, 5)
 			for i, res := range responses {
-				require.Equal(t, "value-a", res.Response.Header.Get("X-Header-A"),
-					"response %d missing X-Header-A", i)
-				require.Equal(t, "value-b", res.Response.Header.Get("X-Header-B"),
-					"response %d missing X-Header-B", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Header-A"),
+					"response %d: set response headers should not be forwarded to the client", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Header-B"),
+					"response %d: set response headers should not be forwarded to the client", i)
 			}
 		})
 	})
-	t.Run("multi-subgraph response header propagation with singleflight", func(t *testing.T) {
+	t.Run("multi-subgraph response set with singleflight is internal only", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -1103,12 +1093,12 @@ func TestSingleFlight(t *testing.T) {
 			responses := runConcurrentSingleflightRequests(t, xEnv, query, 5)
 			for i, res := range responses {
 				require.Contains(t, res.Body, `"employee"`)
-				require.Equal(t, "multi-subgraph-value", res.Response.Header.Get("X-Custom-Header"),
-					"response %d missing X-Custom-Header from multi-subgraph query", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Custom-Header"),
+					"response %d: set response headers should not be forwarded to the client", i)
 			}
 		})
 	})
-	t.Run("subgraph-specific response header rule with singleflight", func(t *testing.T) {
+	t.Run("subgraph-specific response set rule with singleflight is internal only", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -1138,12 +1128,12 @@ func TestSingleFlight(t *testing.T) {
 			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employees { id } }`, 5)
 			for i, res := range responses {
 				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
-				require.Equal(t, "employees-value", res.Response.Header.Get("X-Subgraph-Header"),
-					"response %d missing subgraph-specific X-Subgraph-Header", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Subgraph-Header"),
+					"response %d: set response headers should not be forwarded to the client", i)
 			}
 		})
 	})
-	t.Run("mixed global and subgraph-specific response header rules with singleflight", func(t *testing.T) {
+	t.Run("mixed global and subgraph-specific response set rules with singleflight are internal only", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -1193,12 +1183,12 @@ func TestSingleFlight(t *testing.T) {
 			responses := runConcurrentSingleflightRequests(t, xEnv, query, 5)
 			for i, res := range responses {
 				require.Contains(t, res.Body, `"employee"`)
-				require.Equal(t, "global-value", res.Response.Header.Get("X-Global-Header"),
-					"response %d missing global X-Global-Header", i)
-				require.Equal(t, "employees-value", res.Response.Header.Get("X-Employees-Header"),
-					"response %d missing subgraph-specific X-Employees-Header", i)
-				require.Equal(t, "family-value", res.Response.Header.Get("X-Family-Header"),
-					"response %d missing subgraph-specific X-Family-Header", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Global-Header"),
+					"response %d: set response headers should not be forwarded to the client", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Employees-Header"),
+					"response %d: set response headers should not be forwarded to the client", i)
+				require.Equal(t, "", res.Response.Header.Get("X-Family-Header"),
+					"response %d: set response headers should not be forwarded to the client", i)
 			}
 		})
 	})

@@ -75,6 +75,12 @@ type TimestampedString {
     "Total number of responses to be sent"
     total: Int!
     initialPayload: Map
+    extensions: Map
+}
+
+type SubscribeMetadata {
+   initialPayload: Map
+   subscribeExtensions: Map
 }
 
 type Subscription {
@@ -84,7 +90,9 @@ type Subscription {
     initPayloadValue(key: String!, repeat: Int): TimestampedString!
     "Returns a stream with the value of the WS initial payload."
     initialPayload(repeat: Int): Map
-    returnsError: String
+    returnsError: String!
+    "Returns a stream with the values of the WS initial payload and subscribe extensions"
+    metadata(repeat: Int! = 1): SubscribeMetadata!
 }
 
 type Employee @key(fields: "id") {

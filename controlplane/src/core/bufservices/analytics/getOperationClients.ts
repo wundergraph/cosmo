@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -9,8 +8,10 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { isoDateRangeToTimestamps, getDateRange } from '../../repositories/analytics/util.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getOperationClients(
   opts: RouterOptions,
@@ -43,6 +44,10 @@ export function getOperationClients(
         },
         clients: [],
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
     }
 
     const analyticsRetention = await orgRepo.getFeature({

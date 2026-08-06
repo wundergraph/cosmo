@@ -45,7 +45,7 @@ func NewTracingHandler(s TracingHandlerOpts) func(next http.Handler) http.Handle
 		// Disable built-in metricStore through NoopMeterProvider
 		otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
 		otelhttp.WithSpanNameFormatter(s.SpanNameFormatter),
-		otelhttp.WithTracerProvider(s.TracerProvider),
+		otelhttp.WithTracerProvider(&FilteringTracerProvider{TracerProvider: s.TracerProvider}),
 	}
 
 	if s.CompositePropagator != nil {

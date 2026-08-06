@@ -1102,46 +1102,6 @@ func (_m *MockSubscriptionEventUpdater) EXPECT() *MockSubscriptionEventUpdater_E
 	return &MockSubscriptionEventUpdater_Expecter{mock: &_m.Mock}
 }
 
-// Close provides a mock function for the type MockSubscriptionEventUpdater
-func (_mock *MockSubscriptionEventUpdater) Close(kind resolve.SubscriptionCloseKind) {
-	_mock.Called(kind)
-	return
-}
-
-// MockSubscriptionEventUpdater_Close_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Close'
-type MockSubscriptionEventUpdater_Close_Call struct {
-	*mock.Call
-}
-
-// Close is a helper method to define mock.On call
-//   - kind resolve.SubscriptionCloseKind
-func (_e *MockSubscriptionEventUpdater_Expecter) Close(kind interface{}) *MockSubscriptionEventUpdater_Close_Call {
-	return &MockSubscriptionEventUpdater_Close_Call{Call: _e.mock.On("Close", kind)}
-}
-
-func (_c *MockSubscriptionEventUpdater_Close_Call) Run(run func(kind resolve.SubscriptionCloseKind)) *MockSubscriptionEventUpdater_Close_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 resolve.SubscriptionCloseKind
-		if args[0] != nil {
-			arg0 = args[0].(resolve.SubscriptionCloseKind)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *MockSubscriptionEventUpdater_Close_Call) Return() *MockSubscriptionEventUpdater_Close_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *MockSubscriptionEventUpdater_Close_Call) RunAndReturn(run func(kind resolve.SubscriptionCloseKind)) *MockSubscriptionEventUpdater_Close_Call {
-	_c.Run(run)
-	return _c
-}
-
 // Complete provides a mock function for the type MockSubscriptionEventUpdater
 func (_mock *MockSubscriptionEventUpdater) Complete() {
 	_mock.Called()
@@ -1171,6 +1131,39 @@ func (_c *MockSubscriptionEventUpdater_Complete_Call) Return() *MockSubscription
 }
 
 func (_c *MockSubscriptionEventUpdater_Complete_Call) RunAndReturn(run func()) *MockSubscriptionEventUpdater_Complete_Call {
+	_c.Run(run)
+	return _c
+}
+
+// Done provides a mock function for the type MockSubscriptionEventUpdater
+func (_mock *MockSubscriptionEventUpdater) Done() {
+	_mock.Called()
+	return
+}
+
+// MockSubscriptionEventUpdater_Done_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Done'
+type MockSubscriptionEventUpdater_Done_Call struct {
+	*mock.Call
+}
+
+// Done is a helper method to define mock.On call
+func (_e *MockSubscriptionEventUpdater_Expecter) Done() *MockSubscriptionEventUpdater_Done_Call {
+	return &MockSubscriptionEventUpdater_Done_Call{Call: _e.mock.On("Done")}
+}
+
+func (_c *MockSubscriptionEventUpdater_Done_Call) Run(run func()) *MockSubscriptionEventUpdater_Done_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockSubscriptionEventUpdater_Done_Call) Return() *MockSubscriptionEventUpdater_Done_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockSubscriptionEventUpdater_Done_Call) RunAndReturn(run func()) *MockSubscriptionEventUpdater_Done_Call {
 	_c.Run(run)
 	return _c
 }

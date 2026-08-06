@@ -3,7 +3,7 @@ import {
   type CompositeOutputData,
   type InterfaceDefinitionData,
   type ObjectDefinitionData,
-} from '../../schema-building/types';
+} from '../../schema-building/types/types';
 import { visit } from 'graphql';
 import { operationTypeNodeToDefaultType } from '../../ast/utils';
 import { renameNamedTypeName } from '../schema-building/type-merging';

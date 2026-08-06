@@ -3,12 +3,14 @@ package datasource
 import (
 	"net/http"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 type SubscriptionDataSource interface {
 	SubscriptionEventConfiguration(input []byte) (SubscriptionEventConfiguration, error)
 	Start(ctx *resolve.Context, header http.Header, input []byte, updater resolve.SubscriptionUpdater) error
+	HashTriggerInput(input []byte, xxh *xxhash.Digest) error
 	SetHooks(hooks Hooks)
 }
 

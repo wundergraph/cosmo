@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -12,7 +11,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { OrganizationGroupDTO } from '../../../types/index.js';
+import { PlainMessage, OrganizationGroupDTO } from '../../../types/index.js';
 
 export function updateOrgMemberGroup(
   opts: RouterOptions,
@@ -60,9 +59,12 @@ export function updateOrgMemberGroup(
         };
       }
 
-      // Ensure that the organization member has not signed in with SSO
-      const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
-      if (provider) {
+      // Ensure that the organization member has not signed in with SSO via any
+      // of the org's configured providers.
+      const providers = await oidcRepo.listOidcProvidersByOrganizationId({
+        organizationId: authContext.organizationId,
+      });
+      for (const provider of providers) {
         // checking if the user has logged in using the sso
         const ssoUser = await opts.keycloakClient.client.users.find({
           realm: opts.keycloakRealm,

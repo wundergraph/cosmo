@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -11,7 +10,9 @@ import { parseTimeFilters } from '../../repositories/analytics/util.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getDashboardAnalyticsView(
   opts: RouterOptions,
@@ -50,6 +51,10 @@ export function getDashboardAnalyticsView(
       };
     }
 
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
+    }
+
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     const analyticsRetention = await orgRepo.getFeature({
@@ -77,15 +82,20 @@ export function getDashboardAnalyticsView(
       published: true,
     });
     const view = await analyticsDashRepo.getView(graph.id, authContext.organizationId, timeFilters, subgraphs);
+    const isStaleData =
+      !view.mostRequestedOperations.ok ||
+      !view.requestSeries.ok ||
+      !view.subgraphMetrics.ok ||
+      !view.federatedGraphMetrics.ok;
 
     return {
       response: {
-        code: EnumStatusCode.OK,
+        code: isStaleData ? EnumStatusCode.WARN_PARTIAL_DATA : EnumStatusCode.OK,
       },
-      mostRequestedOperations: view.mostRequestedOperations,
-      requestSeries: view.requestSeries,
-      subgraphMetrics: view.subgraphMetrics,
-      federatedGraphMetrics: view.federatedGraphMetrics,
+      mostRequestedOperations: view.mostRequestedOperations.operations,
+      requestSeries: view.requestSeries.series,
+      subgraphMetrics: view.subgraphMetrics.metrics,
+      federatedGraphMetrics: view.federatedGraphMetrics.view,
     };
   });
 }

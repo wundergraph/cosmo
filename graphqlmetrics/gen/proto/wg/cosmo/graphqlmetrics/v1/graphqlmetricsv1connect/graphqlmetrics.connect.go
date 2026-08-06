@@ -43,13 +43,6 @@ const (
 	GraphQLMetricsServicePublishAggregatedGraphQLMetricsProcedure = "/wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService/PublishAggregatedGraphQLMetrics"
 )
 
-// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
-var (
-	graphQLMetricsServiceServiceDescriptor                               = v1.File_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto.Services().ByName("GraphQLMetricsService")
-	graphQLMetricsServicePublishGraphQLMetricsMethodDescriptor           = graphQLMetricsServiceServiceDescriptor.Methods().ByName("PublishGraphQLMetrics")
-	graphQLMetricsServicePublishAggregatedGraphQLMetricsMethodDescriptor = graphQLMetricsServiceServiceDescriptor.Methods().ByName("PublishAggregatedGraphQLMetrics")
-)
-
 // GraphQLMetricsServiceClient is a client for the wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService
 // service.
 type GraphQLMetricsServiceClient interface {
@@ -68,17 +61,18 @@ type GraphQLMetricsServiceClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewGraphQLMetricsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) GraphQLMetricsServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
+	graphQLMetricsServiceMethods := v1.File_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto.Services().ByName("GraphQLMetricsService").Methods()
 	return &graphQLMetricsServiceClient{
 		publishGraphQLMetrics: connect.NewClient[v1.PublishGraphQLRequestMetricsRequest, v1.PublishOperationCoverageReportResponse](
 			httpClient,
 			baseURL+GraphQLMetricsServicePublishGraphQLMetricsProcedure,
-			connect.WithSchema(graphQLMetricsServicePublishGraphQLMetricsMethodDescriptor),
+			connect.WithSchema(graphQLMetricsServiceMethods.ByName("PublishGraphQLMetrics")),
 			connect.WithClientOptions(opts...),
 		),
 		publishAggregatedGraphQLMetrics: connect.NewClient[v1.PublishAggregatedGraphQLRequestMetricsRequest, v1.PublishAggregatedGraphQLRequestMetricsResponse](
 			httpClient,
 			baseURL+GraphQLMetricsServicePublishAggregatedGraphQLMetricsProcedure,
-			connect.WithSchema(graphQLMetricsServicePublishAggregatedGraphQLMetricsMethodDescriptor),
+			connect.WithSchema(graphQLMetricsServiceMethods.ByName("PublishAggregatedGraphQLMetrics")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -116,16 +110,17 @@ type GraphQLMetricsServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewGraphQLMetricsServiceHandler(svc GraphQLMetricsServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	graphQLMetricsServiceMethods := v1.File_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto.Services().ByName("GraphQLMetricsService").Methods()
 	graphQLMetricsServicePublishGraphQLMetricsHandler := connect.NewUnaryHandler(
 		GraphQLMetricsServicePublishGraphQLMetricsProcedure,
 		svc.PublishGraphQLMetrics,
-		connect.WithSchema(graphQLMetricsServicePublishGraphQLMetricsMethodDescriptor),
+		connect.WithSchema(graphQLMetricsServiceMethods.ByName("PublishGraphQLMetrics")),
 		connect.WithHandlerOptions(opts...),
 	)
 	graphQLMetricsServicePublishAggregatedGraphQLMetricsHandler := connect.NewUnaryHandler(
 		GraphQLMetricsServicePublishAggregatedGraphQLMetricsProcedure,
 		svc.PublishAggregatedGraphQLMetrics,
-		connect.WithSchema(graphQLMetricsServicePublishAggregatedGraphQLMetricsMethodDescriptor),
+		connect.WithSchema(graphQLMetricsServiceMethods.ByName("PublishAggregatedGraphQLMetrics")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

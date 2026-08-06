@@ -16,6 +16,7 @@ import { useRouter } from 'next/router';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { CopyButton } from '@/components/ui/copy-button';
+import { buildUrl } from '@/lib/build-url';
 
 interface OperationContentModalProps {
   operationHash: string;
@@ -83,9 +84,12 @@ export const OperationContentModal = ({
                   <TooltipTrigger asChild>
                     <Button variant="secondary" size="icon-sm" asChild>
                       <Link
-                        href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
-                          data?.operationContent || '',
-                        )}`}
+                        href={buildUrl('/:organizationSlug/:namespace/graph/:slug/playground', {
+                          organizationSlug,
+                          namespace,
+                          slug,
+                          operation: data?.operationContent,
+                        })}
                       >
                         <PlayIcon />
                       </Link>

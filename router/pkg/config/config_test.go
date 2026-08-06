@@ -124,6 +124,109 @@ poll_interval: 11s
 	require.Equal(t, time.Second*11, cfg.Config.PollInterval)
 }
 
+func TestForceUnauthenticatedRequestTracingConfigLoading(t *testing.T) {
+	t.Run("defaults to false", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.False(t, cfg.Config.EngineExecutionConfiguration.ForceUnauthenticatedRequestTracing)
+	})
+
+	t.Run("can be enabled from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+engine:
+  force_unauthenticated_request_tracing: true
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.True(t, cfg.Config.EngineExecutionConfiguration.ForceUnauthenticatedRequestTracing)
+	})
+
+	t.Run("yaml value takes precedence over env", func(t *testing.T) {
+		t.Setenv("ENGINE_FORCE_UNAUTHENTICATED_REQUEST_TRACING", "false")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+engine:
+  force_unauthenticated_request_tracing: true
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.True(t, cfg.Config.EngineExecutionConfiguration.ForceUnauthenticatedRequestTracing)
+	})
+}
+
+func TestEventsSkipUnavailableProvidersConfigLoading(t *testing.T) {
+	t.Run("defaults to true", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.True(t, cfg.Config.Events.SkipUnavailableProviders)
+	})
+
+	t.Run("can be disabled from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  skip_unavailable_providers: false
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.False(t, cfg.Config.Events.SkipUnavailableProviders)
+	})
+
+	t.Run("can be disabled from env", func(t *testing.T) {
+		t.Setenv("EVENTS_SKIP_UNAVAILABLE_PROVIDERS", "false")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.False(t, cfg.Config.Events.SkipUnavailableProviders)
+	})
+}
+
 // Confirms https://github.com/caarlos0/env/issues/354 is fixed
 func TestConfigSlicesHaveDefaults(t *testing.T) {
 	t.Parallel()
@@ -742,7 +845,7 @@ execution_config:
 		_, err := LoadConfig([]string{f})
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'\n- at '/execution_config': additional properties 'storage' not allowed", js.Causes[0].Error())
+		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'storage' not allowed", js.Causes[0].Error())
 	})
 
 	t.Run("too low watch interval", func(t *testing.T) {
@@ -760,7 +863,7 @@ execution_config:
 		_, err := LoadConfig([]string{f})
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be greater or equal than 100ms\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
+		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be greater or equal than 100ms\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
 	})
 
 	t.Run("watch interval with watch disabled", func(t *testing.T) {
@@ -777,7 +880,7 @@ execution_config:
 		_, err := LoadConfig([]string{f})
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch': value must be true\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
+		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch': value must be true\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
 	})
 }
 
@@ -821,7 +924,11 @@ execution_config:
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
 	require.True(t,
-		js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed" || js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed",
+		js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed" ||
+			js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed" ||
+			js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed" ||
+			js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed",
+		js.Causes[0].Error(),
 	)
 }
 
@@ -995,6 +1102,32 @@ version: "1"
 
 	require.True(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
 	require.True(t, c.Config.Telemetry.Metrics.OTLP.EngineStats.Subscriptions)
+}
+
+func TestPrefixedTelemetryCategoryConfig(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+	c, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.False(t, c.Config.Telemetry.Metrics.Prometheus.Network.Enabled)
+	require.False(t, c.Config.Telemetry.Metrics.Prometheus.Resolver.Enabled)
+	require.False(t, c.Config.Telemetry.Metrics.OTLP.Network.Enabled)
+	require.False(t, c.Config.Telemetry.Metrics.OTLP.Resolver.Enabled)
+
+	t.Setenv("PROMETHEUS_NETWORK_ENABLED", "true")
+	t.Setenv("PROMETHEUS_RESOLVER_ENABLED", "true")
+	t.Setenv("METRICS_OTLP_NETWORK_ENABLED", "true")
+	t.Setenv("METRICS_OTLP_RESOLVER_ENABLED", "true")
+
+	c, err = LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.True(t, c.Config.Telemetry.Metrics.Prometheus.Network.Enabled)
+	require.True(t, c.Config.Telemetry.Metrics.Prometheus.Resolver.Enabled)
+	require.True(t, c.Config.Telemetry.Metrics.OTLP.Network.Enabled)
+	require.True(t, c.Config.Telemetry.Metrics.OTLP.Resolver.Enabled)
 }
 
 func TestMatchAndNegateMatch(t *testing.T) {
@@ -2176,5 +2309,106 @@ persisted_operations:
 		require.ErrorAs(t, err, &js)
 		require.Equal(t, []string{"persisted_operations", "manifest", "poll_jitter"}, js.Causes[0].InstanceLocation)
 		require.Equal(t, "at '/persisted_operations/manifest/poll_jitter': duration must be greater or equal than 1s", js.Causes[0].Error())
+	})
+}
+
+func TestMCPServerConfig(t *testing.T) {
+	t.Run("reads discover instructions from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  server:
+    discover:
+      instructions: "Use the search tools before executing operations."
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, "Use the search tools before executing operations.", cfg.Config.MCP.Server.Discover.Instructions)
+	})
+
+	t.Run("leaves discover instructions empty when unset", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Empty(t, cfg.Config.MCP.Server.Discover.Instructions)
+	})
+
+	t.Run("reads discover instructions from env", func(t *testing.T) {
+		t.Setenv("MCP_SERVER_DISCOVER_INSTRUCTIONS", "Env-provided guidance.")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, "Env-provided guidance.", cfg.Config.MCP.Server.Discover.Instructions)
+	})
+
+	t.Run("reads the server version from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  server:
+    version: "1.4.0"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, "1.4.0", cfg.Config.MCP.Server.Version)
+	})
+
+	t.Run("reads the server title and description from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  server:
+    title: "My Commerce API"
+    description: "Query products, orders and customers."
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, "My Commerce API", cfg.Config.MCP.Server.Title)
+		require.Equal(t, "Query products, orders and customers.", cfg.Config.MCP.Server.Description)
 	})
 }

@@ -102,6 +102,7 @@ type ComplexityRoot struct {
 	Queries struct {
 		FactTypes                func(childComplexity int) int
 		ProductTypes             func(childComplexity int) int
+		SearchThings             func(childComplexity int, input model.ProductSearchInput) int
 		SharedThings             func(childComplexity int, numOfA int, numOfB int) int
 		SlicedThings             func(childComplexity int, first *int, last *int) int
 		TopSecretFederationFacts func(childComplexity int) int
@@ -136,6 +137,7 @@ type QueriesResolver interface {
 	FactTypes(ctx context.Context) ([]model.TopSecretFactType, error)
 	SharedThings(ctx context.Context, numOfA int, numOfB int) ([]*model.Thing, error)
 	SlicedThings(ctx context.Context, first *int, last *int) ([]*model.Thing, error)
+	SearchThings(ctx context.Context, input model.ProductSearchInput) ([]*model.Thing, error)
 }
 
 type executableSchema struct {
@@ -362,6 +364,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Queries.ProductTypes(childComplexity), true
 
+	case "Queries.searchThings":
+		if e.complexity.Queries.SearchThings == nil {
+			break
+		}
+
+		args, err := ec.field_Queries_searchThings_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Queries.SearchThings(childComplexity, args["input"].(model.ProductSearchInput)), true
+
 	case "Queries.sharedThings":
 		if e.complexity.Queries.SharedThings == nil {
 			break
@@ -434,6 +448,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
 	ec := executionContext{opCtx, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputProductSearchInput,
+		ec.unmarshalInputProductSearchPagination,
 		ec.unmarshalInputTopSecretFactInput,
 	)
 	first := true
@@ -561,6 +577,7 @@ type Queries {
   factTypes: [TopSecretFactType!]
   sharedThings(numOfA: Int! numOfB: Int!): [Thing!]! @listSize(slicingArguments: ["numOfA"]) @shareable
   slicedThings(first: Int, last: Int): [Thing] @listSize(slicingArguments: ["first", "last"])
+  searchThings(input: ProductSearchInput!): [Thing!]! @listSize(slicingArguments: ["input.pagination.first"])
 }
 
 type Mutation {
@@ -575,6 +592,16 @@ input TopSecretFactInput {
   title: String!
   description: FactContent!
   factType: TopSecretFactType!
+}
+
+input ProductSearchPagination {
+  first: Int
+  after: String
+}
+
+input ProductSearchInput {
+  pagination: ProductSearchPagination
+  query: String
 }
 
 enum TopSecretFactType @authenticated {
@@ -941,6 +968,34 @@ func (ec *executionContext) field_Queries__entities_argsRepresentations(
 	}
 
 	var zeroVal []map[string]any
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Queries_searchThings_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Queries_searchThings_argsInput(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Queries_searchThings_argsInput(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (model.ProductSearchInput, error) {
+	if _, ok := rawArgs["input"]; !ok {
+		var zeroVal model.ProductSearchInput
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+	if tmp, ok := rawArgs["input"]; ok {
+		return ec.unmarshalNProductSearchInput2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductSearchInput(ctx, tmp)
+	}
+
+	var zeroVal model.ProductSearchInput
 	return zeroVal, nil
 }
 
@@ -2492,6 +2547,65 @@ func (ec *executionContext) fieldContext_Queries_slicedThings(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Queries_slicedThings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Queries_searchThings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Queries_searchThings(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Queries().SearchThings(rctx, fc.Args["input"].(model.ProductSearchInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Thing)
+	fc.Result = res
+	return ec.marshalNThing2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐThingᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Queries_searchThings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Queries",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "a":
+				return ec.fieldContext_Thing_a(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Thing", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Queries_searchThings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -4768,6 +4882,74 @@ func (ec *executionContext) fieldContext___Type_isOneOf(_ context.Context, field
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputProductSearchInput(ctx context.Context, obj any) (model.ProductSearchInput, error) {
+	var it model.ProductSearchInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"pagination", "query"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "pagination":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
+			data, err := ec.unmarshalOProductSearchPagination2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductSearchPagination(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Pagination = data
+		case "query":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Query = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputProductSearchPagination(ctx context.Context, obj any) (model.ProductSearchPagination, error) {
+	var it model.ProductSearchPagination
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"first", "after"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "first":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("first"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.First = data
+		case "after":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("after"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.After = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputTopSecretFactInput(ctx context.Context, obj any) (model.TopSecretFactInput, error) {
 	var it model.TopSecretFactInput
 	asMap := map[string]any{}
@@ -5570,6 +5752,28 @@ func (ec *executionContext) _Queries(ctx context.Context, sel ast.SelectionSet) 
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "searchThings":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Queries_searchThings(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "_entities":
 			field := field
 
@@ -6244,6 +6448,11 @@ func (ec *executionContext) marshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋ
 	}
 
 	return ret
+}
+
+func (ec *executionContext) unmarshalNProductSearchInput2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductSearchInput(ctx context.Context, v any) (model.ProductSearchInput, error) {
+	res, err := ec.unmarshalInputProductSearchInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNProducts2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProducts(ctx context.Context, sel ast.SelectionSet, v model.Products) graphql.Marshaler {
@@ -7014,6 +7223,14 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	_ = ctx
 	res := graphql.MarshalInt(*v)
 	return res
+}
+
+func (ec *executionContext) unmarshalOProductSearchPagination2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductSearchPagination(ctx context.Context, v any) (*model.ProductSearchPagination, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputProductSearchPagination(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v any) (string, error) {

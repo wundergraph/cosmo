@@ -1,6 +1,7 @@
 import {
   AND_UPPER,
   ARGUMENT_DEFINITION_UPPER,
+  AUTHENTICATED,
   BOOLEAN_SCALAR,
   CONNECT_FIELD_RESOLVER,
   CONSUMER_INACTIVE_THRESHOLD,
@@ -21,6 +22,7 @@ import {
   FLOAT_SCALAR,
   ID_SCALAR,
   IN_UPPER,
+  INACCESSIBLE,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
   INT_SCALAR,
@@ -45,6 +47,7 @@ import {
   SUBSCRIPTION_FILTER,
   SUBSCRIPTION_FILTER_CONDITION,
   SUBSCRIPTION_FILTER_VALUE,
+  TAG,
   UNION_UPPER,
 } from '../../utils/string-constants';
 import { type DefinitionNode, Kind } from 'graphql';
@@ -141,8 +144,20 @@ export const IGNORED_FEDERATED_TYPE_NAMES: ReadonlySet<TypeName> = new Set<TypeN
   SUBSCRIPTION_FILTER_VALUE,
 ]);
 
-export const CLIENT_PERSISTED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new Set<DirectiveName>([
+export const ROUTER_FEDERATED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new Set<DirectiveName>([
+  AUTHENTICATED,
+  DEPRECATED,
+  INACCESSIBLE,
+  ONE_OF,
+  REQUIRES_SCOPES,
+  SEMANTIC_NON_NULL,
+  TAG,
+]);
+
+export const CLIENT_FEDERATED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new Set<DirectiveName>([
   DEPRECATED,
   ONE_OF,
   SEMANTIC_NON_NULL,
 ]);
+
+export const IMPORT_VERSION_REGEX = /^v\d+\.\d+$/;

@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -48,8 +49,9 @@ func TestMCP(t *testing.T) {
 						Required:   []string{"operationName"}},
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
-						Title:        "Get GraphQL Operation Info",
-						ReadOnlyHint: mcp.ToBoolPtr(true),
+						Title:          "Get GraphQL Operation Info",
+						ReadOnlyHint:   mcp.ToBoolPtr(true),
+						IdempotentHint: mcp.ToBoolPtr(false),
 					},
 				})
 			})
@@ -82,14 +84,16 @@ func TestMCP(t *testing.T) {
 					},
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
-						Title:        "Get GraphQL Schema",
-						ReadOnlyHint: mcp.ToBoolPtr(true),
+						Title:          "Get GraphQL Schema",
+						ReadOnlyHint:   mcp.ToBoolPtr(true),
+						IdempotentHint: mcp.ToBoolPtr(false),
 					},
 				})
 
 				// Verify execute tool with proper schema
-				// Note: IdempotentHint is a bool (not *bool) in the new SDK, so false + omitempty
-				// means it's omitted from JSON, and the old client deserializes it as nil.
+				// Note: since go-sdk v1.7.0, ReadOnlyHint and IdempotentHint are always
+				// serialized (no omitempty), so the mark3labs client decodes explicit false
+				// values instead of nil.
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "execute_graphql",
 					Description: "Executes a GraphQL query or mutation.",
@@ -111,7 +115,9 @@ func TestMCP(t *testing.T) {
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
 						Title:           "Execute GraphQL Query",
+						ReadOnlyHint:    mcp.ToBoolPtr(false),
 						DestructiveHint: mcp.ToBoolPtr(true),
+						IdempotentHint:  mcp.ToBoolPtr(false),
 						OpenWorldHint:   mcp.ToBoolPtr(true),
 					},
 				})
@@ -138,7 +144,7 @@ func TestMCP(t *testing.T) {
 					Description: "This is a GraphQL query that retrieves a list of employees.",
 					InputSchema: mcp.ToolInputSchema{
 						Type:       "object",
-						Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "nullable": false, "properties": map[string]interface{}{"hasPets": map[string]interface{}{"nullable": true, "type": "boolean"}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "nullable": true, "type": "string"}, "nested": map[string]interface{}{"additionalProperties": false, "nullable": true, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"nullable": true, "type": "boolean"}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED"}, "nullable": true, "type": "string"}}, "type": "object"}}, "type": "object"}},
+						Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "properties": map[string]interface{}{"hasPets": map[string]interface{}{"type": []interface{}{"boolean", "null"}}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN", nil}, "type": []interface{}{"string", "null"}}, "nested": map[string]interface{}{"additionalProperties": false, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"type": []interface{}{"boolean", "null"}}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED", nil}, "type": []interface{}{"string", "null"}}}, "type": []interface{}{"object", "null"}}}, "type": "object"}},
 						Required:   []string(nil)},
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
@@ -150,15 +156,18 @@ func TestMCP(t *testing.T) {
 				})
 
 				// Verify UpdateMood operation
-				// Note: ReadOnlyHint and IdempotentHint are bool (not *bool) in the new SDK,
-				// so false + omitempty means they're omitted from JSON, and the old client gets nil.
+				// Note: since go-sdk v1.7.0, ReadOnlyHint and IdempotentHint are always
+				// serialized (no omitempty), so the mark3labs client decodes explicit false
+				// values instead of nil.
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "execute_operation_update_mood",
 					Description: "This mutation update the mood of an employee.",
 					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"}}, Required: []string{"employeeID", "mood"}}, RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
-						Title:         "Execute operation UpdateMood",
-						OpenWorldHint: mcp.ToBoolPtr(true),
+						Title:          "Execute operation UpdateMood",
+						ReadOnlyHint:   mcp.ToBoolPtr(false),
+						IdempotentHint: mcp.ToBoolPtr(false),
+						OpenWorldHint:  mcp.ToBoolPtr(true),
 					},
 				})
 			})
@@ -298,7 +307,7 @@ Description: This is a GraphQL query that retrieves a list of employees.
 
 Input Schema:
 ` + bt + `json
-{"additionalProperties":false,"description":"This is a GraphQL query that retrieves a list of employees.","nullable":true,"properties":{"criteria":{"additionalProperties":false,"description":"Allows to filter employees by their details.","nullable":false,"properties":{"hasPets":{"nullable":true,"type":"boolean"},"nationality":{"enum":["AMERICAN","DUTCH","ENGLISH","GERMAN","INDIAN","SPANISH","UKRAINIAN"],"nullable":true,"type":"string"},"nested":{"additionalProperties":false,"nullable":true,"properties":{"hasChildren":{"nullable":true,"type":"boolean"},"maritalStatus":{"enum":["ENGAGED","MARRIED"],"nullable":true,"type":"string"}},"type":"object"}},"type":"object"}},"type":"object"}
+{"additionalProperties":false,"description":"This is a GraphQL query that retrieves a list of employees.","properties":{"criteria":{"additionalProperties":false,"description":"Allows to filter employees by their details.","properties":{"hasPets":{"type":["boolean","null"]},"nationality":{"enum":["AMERICAN","DUTCH","ENGLISH","GERMAN","INDIAN","SPANISH","UKRAINIAN",null],"type":["string","null"]},"nested":{"additionalProperties":false,"properties":{"hasChildren":{"type":["boolean","null"]},"maritalStatus":{"enum":["ENGAGED","MARRIED",null],"type":["string","null"]}},"type":["object","null"]}},"type":"object"}},"type":"object"}
 ` + bt + `
 
 GraphQL Query:
@@ -562,7 +571,7 @@ Important Notes:
 				requestBody, err := json.Marshal(mcpRequest)
 				require.NoError(t, err)
 
-				req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+				req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
 				require.NoError(t, err)
 
 				// Add cross-origin headers
@@ -708,6 +717,52 @@ Important Notes:
 				assert.Contains(t, allowedHeaders, "X-Custom-Auth")
 
 				assert.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
+			})
+		})
+	})
+
+	t.Run("Content-Type Handling", func(t *testing.T) {
+		// Regression test: a Content-Type with parameters, such as
+		// "application/json; charset=utf-8", must be accepted. Guards against upstream
+		// MCP go-sdk changes.
+		t.Run("JSON Content-Type with charset parameter is accepted", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				MCP: config.MCPConfiguration{
+					Enabled: true,
+					Session: config.MCPSessionConfig{
+						Stateless: true,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				mcpAddr := xEnv.GetMCPServerAddr()
+
+				mcpRequest := map[string]any{
+					"jsonrpc": "2.0",
+					"id":      1,
+					"method":  "tools/call",
+					"params": map[string]any{
+						"name": "execute_operation_my_employees",
+						"arguments": map[string]any{
+							"criteria": map[string]any{},
+						},
+					},
+				}
+
+				requestBody, err := json.Marshal(mcpRequest)
+				require.NoError(t, err)
+
+				req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
+				require.NoError(t, err)
+				req.Header.Set("Content-Type", "application/json; charset=utf-8")
+				req.Header.Set("Accept", "application/json, text/event-stream")
+
+				resp, err := xEnv.RouterClient.Do(req)
+				require.NoError(t, err)
+				defer resp.Body.Close() //nolint:errcheck
+
+				assert.NotEqual(t, http.StatusUnsupportedMediaType, resp.StatusCode,
+					"router must accept application/json with a charset parameter")
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
 			})
 		})
 	})
@@ -976,7 +1031,7 @@ input UserInput {
 				requestBody, err := json.Marshal(mcpRequest)
 				require.NoError(t, err)
 
-				req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+				req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
 				require.NoError(t, err)
 
 				// Add various headers to test forwarding
@@ -1086,13 +1141,13 @@ input UserInput {
 				requestBody, err := json.Marshal(mcpRequest)
 				require.NoError(t, err)
 
-				req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+				req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
 				require.NoError(t, err)
 
 				// Set headers that should be filtered
 				req.Header.Set("Proxy-Authenticate", "Basic")
 				req.Header.Set("Proxy-Authorization", "Basic YWxhZGRpbjpvcGVuc2VzYW1l")
-				req.Header.Set("Content-Type", "application/json")              // New SDK rejects non-standard content type params
+				req.Header.Set("Content-Type", "application/json")              // base media type must be application/json
 				req.Header.Set("Accept", "application/json, text/event-stream") // Required by Streamable HTTP transport
 				req.Header.Set("Accept-Encoding", "br")                         // Request brotli (which go client doesn't support by default)
 				req.Header.Set("Alt-Svc", "h2=\":443\"; ma=2592000")
@@ -1144,14 +1199,10 @@ input UserInput {
 				assert.Empty(t, capturedSubgraphRequest.Header.Get("Proxy-Connection"))
 			})
 
-			// Breaking change from SDK migration (mark3labs/mcp-go -> modelcontextprotocol/go-sdk):
-			// The old SDK accepted non-standard Content-Type params (e.g., "application/json; foo=bar")
-			// and silently stripped them. The new SDK's StreamableHTTPHandler rejects them with 415
-			// Unsupported Media Type at the transport level before our code runs.
-			//
-			// This is the correct behavior per the MCP spec which requires "application/json".
-			// No legitimate MCP client sends custom content-type params.
-			t.Run("Non-standard Content-Type params are rejected by the SDK", func(t *testing.T) {
+			// Regression test: a Content-Type with extra parameters, such as
+			// "application/json; foo=bar", must be accepted as long as the base media type
+			// is application/json. Guards against upstream MCP go-sdk changes.
+			t.Run("Content-Type params are accepted", func(t *testing.T) {
 				testenv.Run(t, &testenv.Config{
 					MCP: config.MCPConfiguration{
 						Enabled: true,
@@ -1175,7 +1226,7 @@ input UserInput {
 					requestBody, err := json.Marshal(mcpRequest)
 					require.NoError(t, err)
 
-					req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+					req, err := http.NewRequest("POST", mcpAddr, bytes.NewReader(requestBody))
 					require.NoError(t, err)
 					req.Header.Set("Content-Type", "application/json; foo=bar")
 					req.Header.Set("Accept", "application/json, text/event-stream")
@@ -1184,8 +1235,8 @@ input UserInput {
 					require.NoError(t, err)
 					defer resp.Body.Close() //nolint:errcheck
 
-					assert.Equal(t, http.StatusUnsupportedMediaType, resp.StatusCode,
-						"New SDK rejects non-standard Content-Type params with 415")
+					assert.Equal(t, http.StatusOK, resp.StatusCode,
+						"router accepts application/json with media type parameters")
 				})
 			})
 		})

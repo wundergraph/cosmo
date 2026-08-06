@@ -1,8 +1,7 @@
 import { Command } from 'commander';
 import pc from 'picocolors';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
-import { getBaseHeaders } from '../../../../../core/config.js';
+import { createRouterToken } from '../../../../../core/router-token.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
@@ -20,39 +19,34 @@ export default (opts: BaseCommandOptions) => {
     'Prints the token in raw format. This is useful if you want to pipe the token into another command.',
   );
   command.action(async (name, options) => {
-    const resp = await opts.client.platform.createFederatedGraphToken(
-      {
-        tokenName: name,
-        graphName: options.graphName,
-        namespace: options.namespace,
-      },
-      {
-        headers: getBaseHeaders(),
-      },
-    );
+    const result = await createRouterToken({
+      client: opts.client,
+      tokenName: name,
+      graphName: options.graphName,
+      namespace: options.namespace,
+    });
 
-    if (resp.response?.code === EnumStatusCode.OK) {
-      if (options.raw) {
-        console.log(resp.token);
-        return;
-      }
-
-      console.log(`${pc.green(`Successfully created token ${pc.bold(name)} for graph ${pc.bold(options.graphName)}`)}`);
-      console.log('');
-      console.log(`${pc.bold(resp.token)}\n`);
-      console.log(pc.yellow('---'));
-      console.log(pc.yellow(`Please store the token in a secure place. It will not be shown again.`));
-      console.log(pc.yellow(`You can use the token only to authenticate against the Cosmo Platform from the routers.`));
-      console.log(pc.yellow('---'));
-    } else {
+    if (result.error) {
       console.log(`${pc.red('Could not create token for graph')}`);
-      if (resp.response?.details) {
-        console.log(pc.red(pc.bold(resp.response?.details)));
+      if (result.error.message) {
+        console.log(pc.red(pc.bold(result.error.message)));
       }
       process.exitCode = 1;
-      // eslint-disable-next-line no-useless-return
       return;
     }
+
+    if (options.raw) {
+      console.log(result.token);
+      return;
+    }
+
+    console.log(`${pc.green(`Successfully created token ${pc.bold(name)} for graph ${pc.bold(options.graphName)}`)}`);
+    console.log('');
+    console.log(`${pc.bold(result.token)}\n`);
+    console.log(pc.yellow('---'));
+    console.log(pc.yellow(`Please store the token in a secure place. It will not be shown again.`));
+    console.log(pc.yellow(`You can use the token only to authenticate against the Cosmo Platform from the routers.`));
+    console.log(pc.yellow('---'));
   });
 
   return command;

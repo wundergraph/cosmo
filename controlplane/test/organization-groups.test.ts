@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { create } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { GroupMapper } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { GroupMapperSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
 import { OrganizationGroupRepository } from '../src/core/repositories/OrganizationGroupRepository.js';
 import { createOrganizationGroup, SetupTest } from './test-util.js';
@@ -256,7 +257,7 @@ describe('Organization Group tests', () => {
     const createOIDCProviderResponse = await client.createOIDCProvider({
       discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',
-      clientSecrect: 'secret',
+      clientSecret: 'secret',
       mappers: [],
       name: 'okta',
     });
@@ -287,9 +288,9 @@ describe('Organization Group tests', () => {
     const createOIDCProviderResponse = await client.createOIDCProvider({
       discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',
-      clientSecrect: 'secret',
+      clientSecret: 'secret',
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: createGroupResponse.group!.groupId,
           ssoGroup: createGroupResponse.group!.name,
         }),
@@ -328,9 +329,9 @@ describe('Organization Group tests', () => {
     const createOIDCProviderResponse = await client.createOIDCProvider({
       discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',
-      clientSecrect: 'secret',
+      clientSecret: 'secret',
       mappers: [
-        new GroupMapper({
+        create(GroupMapperSchema, {
           groupId: createGroupResponse.group!.groupId,
           ssoGroup: createGroupResponse.group!.name,
         }),
@@ -349,7 +350,12 @@ describe('Organization Group tests', () => {
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Ensure that the mapper was updated
-    const getProviderResponse = await client.getOIDCProvider({});
+    const { providers } = await client.listOIDCProviders({});
+    const provider = providers.find((p) => p.name === oidcName)!;
+    expect(provider).toBeDefined();
+    expect(provider.id).toBeTruthy();
+
+    const getProviderResponse = await client.getOIDCProvider({ id: provider.id });
     expect(getProviderResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const mapper = getProviderResponse.mappers?.find((m) => m.groupId === adminGroup.groupId);

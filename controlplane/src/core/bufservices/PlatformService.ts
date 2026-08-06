@@ -1,5 +1,5 @@
 import { ServiceImpl } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../routes.js';
 import { getAnalyticsView } from './analytics/getAnalyticsView.js';
 import { getDashboardAnalyticsView } from './analytics/getDashboardAnalyticsView.js';
@@ -49,6 +49,7 @@ import { getFeatureFlagsInLatestCompositionByFederatedGraph } from './feature-fl
 import { getFeatureSubgraphs } from './feature-flag/getFeatureSubgraphs.js';
 import { getFeatureSubgraphsByFederatedGraph } from './feature-flag/getFeatureSubgraphsByFederatedGraph.js';
 import { getFeatureSubgraphsByFeatureFlag } from './feature-flag/getFeatureSubgraphsByFeatureFlag.js';
+import { recomposeFeatureFlag } from './feature-flag/recomposeFeatureFlag.js';
 import { updateFeatureFlag } from './feature-flag/updateFeatureFlag.js';
 import { checkFederatedGraph } from './federated-graph/checkFederatedGraph.js';
 import { createFederatedGraph } from './federated-graph/createFederatedGraph.js';
@@ -83,9 +84,16 @@ import { migrateMonograph } from './monograph/migrateMonograph.js';
 import { moveMonograph } from './monograph/moveMonograph.js';
 import { publishMonograph } from './monograph/publishMonograph.js';
 import { updateMonograph } from './monograph/updateMonograph.js';
+import { createOnboarding } from './onboarding/createOnboarding.js';
+import { finishOnboarding } from './onboarding/finishOnboarding.js';
+import { getOnboarding } from './onboarding/getOnboarding.js';
 import { createNamespace } from './namespace/createNamespace.js';
 import { deleteNamespace } from './namespace/deleteNamespace.js';
 import { getNamespace } from './namespace/getNamespace.js';
+import { updateNamespaceLoginMethods } from './namespace/updateNamespaceLoginMethods.js';
+import { listNamespaceLoginMethods } from './namespace/listNamespaceLoginMethods.js';
+import { getOrganizationLoginMethods } from './organization/getOrganizationLoginMethods.js';
+import { updateOrganizationLoginMethods } from './organization/updateOrganizationLoginMethods.js';
 import { getNamespaces } from './namespace/getNamespaces.js';
 import { renameNamespace } from './namespace/renameNamespace.js';
 import { createIntegration } from './notification/createIntegration.js';
@@ -121,6 +129,8 @@ import { getPersistedOperations } from './persisted-operation/getPersistedOperat
 import { publishPersistedOperations } from './persisted-operation/publishPersistedOperations.js';
 import { deletePersistedOperation } from './persisted-operation/deletePersistedOperation.js';
 import { checkPersistedOperationTraffic } from './persisted-operation/check-persisted-operation-traffic.js';
+import { previewDeleteClient } from './persisted-operation/previewDeleteClient.js';
+import { deleteClient } from './persisted-operation/deleteClient.js';
 import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
 import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
 import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
@@ -131,6 +141,7 @@ import { getSdlBySchemaVersion } from './schema-version/getSdlBySchemaVersion.js
 import { createOIDCProvider } from './sso/createOIDCProvider.js';
 import { deleteOIDCProvider } from './sso/deleteOIDCProvider.js';
 import { getOIDCProvider } from './sso/getOIDCProvider.js';
+import { listOIDCProviders } from './sso/listOIDCProviders.js';
 import { updateIDPMappers } from './sso/updateIDPMappers.js';
 import { addReadme } from './subgraph/addReadme.js';
 import { checkSubgraphSchema } from './subgraph/checkSubgraphSchema.js';
@@ -145,6 +156,8 @@ import { getSubgraphSDLFromLatestComposition } from './subgraph/getSubgraphSDLFr
 import { getSubgraphs } from './subgraph/getSubgraphs.js';
 import { moveSubgraph } from './subgraph/moveSubgraph.js';
 import { publishFederatedSubgraph } from './subgraph/publishFederatedSubgraph.js';
+import { publishFederatedSubgraphs } from './subgraph/publishFederatedSubgraphs.js';
+import { getBatchPublishJobStatus } from './subgraph/getBatchPublishJobStatus.js';
 import { updateSubgraph } from './subgraph/updateSubgraph.js';
 import { acceptOrDeclineInvitation } from './user/acceptOrDeclineInvitation.js';
 import { deleteUser } from './user/deleteUser.js';
@@ -152,6 +165,7 @@ import { getInvitations } from './user/getInvitations.js';
 import { getUserAccessiblePermissions } from './user/getUserAccessiblePermissions.js';
 import { getUserAccessibleResources } from './user/getUserAccessibleResources.js';
 import { inviteUser } from './user/inviteUser.js';
+import { inviteUsers } from './user/inviteUsers.js';
 import { removeInvitation } from './user/removeInvitation.js';
 import { removeOrganizationMember } from './user/removeOrganizationMember.js';
 import { updateOrgMemberGroup } from './user/updateOrgMemberGroup.js';
@@ -260,6 +274,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return publishFederatedSubgraph(opts, req, ctx);
     },
 
+    publishFederatedSubgraphs: (req, ctx) => {
+      return publishFederatedSubgraphs(opts, req, ctx);
+    },
+
+    getBatchPublishJobStatus: (req, ctx) => {
+      return getBatchPublishJobStatus(opts, req, ctx);
+    },
+
     forceCheckSuccess: (req, ctx) => {
       return forceCheckSuccess(opts, req, ctx);
     },
@@ -346,6 +368,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     inviteUser: (req, ctx) => {
       return inviteUser(opts, req, ctx);
+    },
+
+    inviteUsers: (req, ctx) => {
+      return inviteUsers(opts, req, ctx);
     },
 
     createAPIKey: (req, ctx) => {
@@ -640,6 +666,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getOIDCProvider(opts, req, ctx);
     },
 
+    listOIDCProviders: (req, ctx) => {
+      return listOIDCProviders(opts, req, ctx);
+    },
+
     getPersistedOperations: (req, ctx) => {
       return getPersistedOperations(opts, req, ctx);
     },
@@ -650,6 +680,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getClients: (req, ctx) => {
       return getClients(opts, req, ctx);
+    },
+
+    previewDeleteClient: (req, ctx) => {
+      return previewDeleteClient(opts, req, ctx);
+    },
+
+    deleteClient: (req, ctx) => {
+      return deleteClient(opts, req, ctx);
     },
 
     getOrganizationRequestsCount: (req, ctx) => {
@@ -881,6 +919,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getNamespaceProposalConfig(opts, req, ctx);
     },
 
+    updateNamespaceLoginMethods: (req, ctx) => {
+      return updateNamespaceLoginMethods(opts, req, ctx);
+    },
+    listNamespaceLoginMethods: (req, ctx) => {
+      return listNamespaceLoginMethods(opts, req, ctx);
+    },
+    getOrganizationLoginMethods: (req, ctx) => {
+      return getOrganizationLoginMethods(opts, req, ctx);
+    },
+    updateOrganizationLoginMethods: (req, ctx) => {
+      return updateOrganizationLoginMethods(opts, req, ctx);
+    },
+
     getOperations: (req, ctx) => {
       return getOperations(opts, req, ctx);
     },
@@ -915,6 +966,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     recomposeGraph: (req, ctx) => {
       return recomposeGraph(opts, req, ctx);
+    },
+
+    recomposeFeatureFlag: (req, ctx) => {
+      return recomposeFeatureFlag(opts, req, ctx);
+    },
+
+    getOnboarding: (req, ctx) => {
+      return getOnboarding(opts, req, ctx);
+    },
+
+    createOnboarding: (req, ctx) => {
+      return createOnboarding(opts, req, ctx);
+    },
+
+    finishOnboarding: (req, ctx) => {
+      return finishOnboarding(opts, req, ctx);
     },
   };
 }

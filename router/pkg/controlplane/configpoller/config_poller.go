@@ -5,23 +5,20 @@ import (
 	"errors"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane"
 	"go.uber.org/zap"
 )
 
 type Option func(cp *configPoller)
 
-var ErrConfigNotModified = errors.New("config not modified")
-var ErrConfigNotFound = errors.New("config not found")
-
 type ConfigPoller interface {
 	// Subscribe subscribes to the config poller with a handler function that will be invoked
-	// with the latest router config and the previous version string. If the handler takes longer than the poll interval
+	// with the latest router config. If the handler takes longer than the poll interval
 	// to execute, the next invocation will be skipped.
-	Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error)
+	Subscribe(ctx context.Context, handler func(response *routerconfig.Response) error)
 	// GetRouterConfig returns the latest router config from the CDN
 	// If the Config is nil, no new config is available and the current config should be used.
 	// and updates the latest router config version. This method is only used for the initial config
@@ -63,13 +60,13 @@ func (c *configPoller) Version() string {
 	return c.latestRouterConfigVersion
 }
 
-func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, _ string) error) {
+func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *routerconfig.Response) error) {
 	c.poller.Subscribe(ctx, func() {
 		start := time.Now()
 
 		cfg, err := c.getRouterConfig(ctx)
 		if err != nil {
-			if errors.Is(err, ErrConfigNotModified) {
+			if errors.Is(err, errs.ErrConfigNotModified) {
 				c.logger.Debug("No new router config available. Trying again ...",
 					zap.String("poll_interval", c.pollInterval.String()),
 					zap.String("fetch_time", time.Since(start).String()),
@@ -99,7 +96,12 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 
 		start = time.Now()
 
-		if err := handler(cfg.Config, c.latestRouterConfigVersion); err != nil {
+		response := &routerconfig.Response{
+			Config:  cfg.Config,
+			Changes: nil, // purposefully leaving this nil to indicate we don't know what changed
+		}
+
+		if err := handler(response); err != nil {
 			c.logger.Error("Error invoking config poll handler", zap.Error(err))
 			return
 		}
@@ -131,11 +133,11 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Respo
 		return config, nil
 	}
 
-	if errors.Is(err, ErrConfigNotModified) {
+	if errors.Is(err, errs.ErrConfigNotModified) {
 		return nil, err
 	}
 
-	if c.demoMode && c.fallbackConfigClient == nil && errors.Is(err, ErrConfigNotFound) {
+	if c.demoMode && c.fallbackConfigClient == nil && errors.Is(err, errs.ErrRouterConfigNotFound) {
 		c.logger.Warn("The router is running in demo mode and no execution config has been found, using a demo execution config for testing purposes.")
 		return &routerconfig.Response{Config: routerconfig.GetDefaultConfig()}, nil
 	}
@@ -147,7 +149,7 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Respo
 	c.logger.Warn("Failed to retrieve execution config. Attempting with fallback storage")
 
 	config, err = (*c.fallbackConfigClient).RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
-	if c.demoMode && errors.Is(err, ErrConfigNotFound) {
+	if c.demoMode && errors.Is(err, errs.ErrRouterConfigNotFound) {
 		return &routerconfig.Response{Config: routerconfig.GetDefaultConfig()}, nil
 	}
 	if err != nil {

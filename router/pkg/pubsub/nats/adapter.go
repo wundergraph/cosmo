@@ -52,6 +52,11 @@ type ProviderAdapter struct {
 	flushTimeout      time.Duration
 	streamMetricStore metric.StreamMetricStore
 	consumerConfig    consumerConfig
+	// skipUnavailable mirrors events.skip_unavailable_providers. When true, the connection
+	// options enable retry-on-failed-connect with unlimited reconnects, and Startup reports
+	// a connection error without aborting so the router can keep running while the client
+	// reconnects in the background.
+	skipUnavailable bool
 }
 
 // getInstanceIdentifier returns an identifier for the current instance.
@@ -111,12 +116,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 			)
 		}
 
-		p.closeWg.Add(1)
-
-		go func() {
-
-			defer p.closeWg.Done()
-
+		p.closeWg.Go(func() {
 			for {
 				select {
 				case <-p.ctx.Done():
@@ -134,6 +134,21 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 					}
 
 					for msg := range msgBatch.Messages() {
+						// The durable consumer is shared across every subscription to these subjects
+						// and outlives any single subscription. A FetchNoWait batch can therefore still
+						// be in flight when this subscription is cancelled (e.g. the client sent
+						// "complete" and immediately re-subscribed). If we delivered and acked here we
+						// would advance the durable's ack floor for a message no live subscriber
+						// received, silently losing it for the next subscriber. Instead, leave the
+						// message pending via Nak so it is redelivered to whichever subscription
+						// consumes the durable next.
+						if ctx.Err() != nil || p.ctx.Err() != nil {
+							if nakErr := msg.Nak(); nakErr != nil {
+								log.Debug("negative-acknowledging message after subscription cancellation", zap.String("message_subject", msg.Subject()), zap.Error(nakErr))
+							}
+							continue
+						}
+
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
 						p.streamMetricStore.Consume(p.ctx, metric.StreamsEvent{
@@ -158,9 +173,8 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 						}
 					}
 				}
-
 			}
-		}()
+		})
 
 		return nil
 	}
@@ -176,11 +190,14 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 		subscriptions[i] = subscription
 	}
 
-	p.closeWg.Add(1)
+	// Flush ensures the SUB commands are delivered to the NATS server before returning,
+	// so that publishers can immediately target these subjects without missing messages.
+	if err := p.client.Flush(); err != nil {
+		log.Error("flushing NATS connection after subscribe", zap.Error(err))
+		return datasource.NewError("failed to flush NATS connection", err)
+	}
 
-	go func() {
-		defer p.closeWg.Done()
-
+	p.closeWg.Go(func() {
 		for {
 			select {
 			case msg := <-msgChan:
@@ -219,7 +236,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 				return
 			}
 		}
-	}()
+	})
 
 	return nil
 }
@@ -358,11 +375,21 @@ func (p *ProviderAdapter) flush(ctx context.Context) error {
 func (p *ProviderAdapter) Startup(ctx context.Context) (err error) {
 	p.client, err = nats.Connect(p.url, p.opts...)
 	if err != nil {
+		// In lenient mode the connection options enable retry-on-failed-connect, so a
+		// connection failure does not surface here; any error returned is a fatal
+		// misconfiguration (e.g. invalid URL/TLS) that cannot recover by retrying.
 		return err
 	}
 	p.js, err = jetstream.New(p.client)
 	if err != nil {
 		return err
+	}
+	// With retry-on-failed-connect (lenient mode) nats.Connect returns a client in the
+	// reconnecting state instead of an error when the broker is unreachable. Report the
+	// connection failure so the caller can log it, but keep the client: it reconnects in
+	// the background and the provider recovers without a restart once the broker is back.
+	if p.skipUnavailable && !p.client.IsConnected() {
+		return datasource.NewError(fmt.Sprintf("nats provider could not connect to %q; it will keep retrying in the background", p.url), nil)
 	}
 	return nil
 }
@@ -382,14 +409,19 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 		p.deleteDurableConsumers(ctx)
 	}
 
-	fErr := p.flush(ctx)
-	if fErr != nil {
-		shutdownErr = errors.Join(shutdownErr, fErr)
-	}
+	// Only flush and drain an established connection. Under skip_unavailable_providers the
+	// client may have never connected (it is still reconnecting in the background), in which
+	// case there is nothing to flush or drain and attempting it only returns spurious errors.
+	if p.client.IsConnected() {
+		fErr := p.flush(ctx)
+		if fErr != nil {
+			shutdownErr = errors.Join(shutdownErr, fErr)
+		}
 
-	drainErr := p.client.Drain()
-	if drainErr != nil {
-		shutdownErr = errors.Join(shutdownErr, drainErr)
+		drainErr := p.client.Drain()
+		if drainErr != nil {
+			shutdownErr = errors.Join(shutdownErr, drainErr)
+		}
 	}
 
 	// Close the client
@@ -501,6 +533,7 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 		consumerConfig: consumerConfig{
 			deleteOnShutdown: deleteConsumersOnShutdown,
 		},
+		skipUnavailable: providerOpts.SkipUnavailableProviders,
 	}, nil
 }
 

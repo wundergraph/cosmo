@@ -7,11 +7,21 @@ import { BlobStorage, BlobNotFoundError, cdn, BlobObject, signatureSha256Header 
 const secretKey = 'hunter2';
 const secretAdmissionKey = 'hunter3';
 
-const generateToken = async (organizationId: string, federatedGraphId: string | undefined, secret: string) => {
+const generateToken = async (
+  organizationId: string,
+  federatedGraphId: string | undefined,
+  secret: string,
+  features?: string[],
+) => {
   const secretKey = new TextEncoder().encode(secret);
-  return await new SignJWT({ organization_id: organizationId, federated_graph_id: federatedGraphId })
-    .setProtectedHeader({ alg: 'HS256' })
-    .sign(secretKey);
+  const payload: Record<string, unknown> = {
+    organization_id: organizationId,
+    federated_graph_id: federatedGraphId,
+  };
+  if (features !== undefined) {
+    payload.features = features;
+  }
+  return await new SignJWT(payload).setProtectedHeader({ alg: 'HS256' }).sign(secretKey);
 };
 
 class InMemoryBlobStorage implements BlobStorage {
@@ -842,6 +852,237 @@ describe('CDN handlers', () => {
         },
       });
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe('Test manifest endpoints (split-config-loading)', async () => {
+    const federatedGraphId = 'federatedGraphId';
+    const organizationId = 'organizationId';
+    const tokenWithFeature = await generateToken(organizationId, federatedGraphId, secretKey, ['split-config-loading']);
+    const tokenNoFeature = await generateToken(organizationId, federatedGraphId, secretKey);
+    const tokenWrongFeature = await generateToken(organizationId, federatedGraphId, secretKey, ['other-feature']);
+    const blobStorage = new InMemoryBlobStorage();
+
+    const mapperContents = JSON.stringify({ graphConfigs: { '': 'hash-base' } });
+    const latestContents = JSON.stringify({ version: 'v1', engineConfig: {} });
+    const featureFlagContents = JSON.stringify({ version: 'v1', engineConfig: { featureFlag: true } });
+
+    blobStorage.objects.set(`${organizationId}/${federatedGraphId}/manifest/mapper.json`, {
+      buffer: Buffer.from(mapperContents),
+      metadata: { version: 'v1', 'signature-sha256': 'sig-mapper' },
+    });
+
+    blobStorage.objects.set(`${organizationId}/${federatedGraphId}/manifest/latest.json`, {
+      buffer: Buffer.from(latestContents),
+      metadata: { version: 'v1' },
+    });
+
+    blobStorage.objects.set(`${organizationId}/${federatedGraphId}/manifest/feature-flags/my-flag.json`, {
+      buffer: Buffer.from(featureFlagContents),
+      metadata: { version: 'v1' },
+    });
+
+    const app = new Hono();
+
+    cdn(app, {
+      authJwtSecret: secretKey,
+      authAdmissionJwtSecret: secretAdmissionKey,
+      blobStorage,
+    });
+
+    describe('feature gate authorization', () => {
+      test('returns 403 when features claim is missing from JWT', async () => {
+        const res = await app.request(`/${organizationId}/${federatedGraphId}/manifest/mapper.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenNoFeature}` },
+          body: JSON.stringify({ version: '' }),
+        });
+        expect(res.status).toBe(403);
+      });
+
+      test('returns 403 when features claim does not include split-config-loading', async () => {
+        const res = await app.request(`/${organizationId}/${federatedGraphId}/manifest/mapper.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenWrongFeature}` },
+          body: JSON.stringify({ version: '' }),
+        });
+        expect(res.status).toBe(403);
+      });
+
+      test('returns 403 for latest.json without feature', async () => {
+        const res = await app.request(`/${organizationId}/${federatedGraphId}/manifest/latest.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenNoFeature}` },
+          body: JSON.stringify({ version: '' }),
+        });
+        expect(res.status).toBe(403);
+      });
+
+      test('returns 403 for feature-flags without feature', async () => {
+        const res = await app.request(`/${organizationId}/${federatedGraphId}/manifest/feature-flags/my-flag.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenNoFeature}` },
+          body: JSON.stringify({ version: '' }),
+        });
+        expect(res.status).toBe(403);
+      });
+    });
+
+    describe('JWT authentication', () => {
+      test('returns 401 with no token', async () => {
+        const res = await app.request(`/${organizationId}/${federatedGraphId}/manifest/mapper.json`, {
+          method: 'POST',
+        });
+        expect(res.status).toBe(401);
+      });
+
+      test('returns 401 with invalid token', async () => {
+        const res = await app.request(`/${organizationId}/${federatedGraphId}/manifest/mapper.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenWithFeature.slice(0, -1)}}` },
+          body: JSON.stringify({ version: '' }),
+        });
+        expect(res.status).toBe(401);
+      });
+
+      test('returns 401 with expired token', async () => {
+        const expiredToken = await new SignJWT({
+          organization_id: organizationId,
+          federated_graph_id: federatedGraphId,
+          features: ['split-config-loading'],
+          exp: Math.floor(Date.now() / 1000) - 60,
+        })
+          .setProtectedHeader({ alg: 'HS256' })
+          .sign(new TextEncoder().encode(secretKey));
+        const res = await app.request(`/${organizationId}/${federatedGraphId}/manifest/mapper.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${expiredToken}` },
+          body: JSON.stringify({ version: '' }),
+        });
+        expect(res.status).toBe(401);
+      });
+    });
+
+    describe('mapper.json', () => {
+      test('returns mapper blob content with correct headers', async () => {
+        const res = await app.request(`/${organizationId}/${federatedGraphId}/manifest/mapper.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenWithFeature}` },
+          body: JSON.stringify({ version: '' }),
+        });
+        expect(res.status).toBe(200);
+        expect(res.headers.get('Content-Type')).toBe('application/json; charset=UTF-8');
+        expect(res.headers.get(signatureSha256Header)).toBe('sig-mapper');
+        expect(await res.text()).toBe(mapperContents);
+      });
+
+      test('returns 304 when version matches', async () => {
+        const res = await app.request(`/${organizationId}/${federatedGraphId}/manifest/mapper.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenWithFeature}` },
+          body: JSON.stringify({ version: 'v1' }),
+        });
+        expect(res.status).toBe(304);
+      });
+
+      test('returns 404 when blob does not exist', async () => {
+        const emptyStorage = new InMemoryBlobStorage();
+        const otherApp = new Hono();
+        cdn(otherApp, {
+          authJwtSecret: secretKey,
+          authAdmissionJwtSecret: secretAdmissionKey,
+          blobStorage: emptyStorage,
+        });
+
+        const res = await otherApp.request(`/${organizationId}/${federatedGraphId}/manifest/mapper.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenWithFeature}` },
+          body: JSON.stringify({ version: '' }),
+        });
+        expect(res.status).toBe(404);
+      });
+
+      test('returns 400 when org/graph ID mismatch', async () => {
+        const res = await app.request(`/wrong-org/${federatedGraphId}/manifest/mapper.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenWithFeature}` },
+          body: JSON.stringify({ version: '' }),
+        });
+        expect(res.status).toBe(400);
+      });
+    });
+
+    describe('latest.json', () => {
+      test('returns latest manifest blob content', async () => {
+        const res = await app.request(`/${organizationId}/${federatedGraphId}/manifest/latest.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenWithFeature}` },
+          body: JSON.stringify({ version: '' }),
+        });
+        expect(res.status).toBe(200);
+        expect(res.headers.get('Content-Type')).toBe('application/json; charset=UTF-8');
+        expect(await res.text()).toBe(latestContents);
+      });
+
+      test('returns 304 when version matches', async () => {
+        const res = await app.request(`/${organizationId}/${federatedGraphId}/manifest/latest.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenWithFeature}` },
+          body: JSON.stringify({ version: 'v1' }),
+        });
+        expect(res.status).toBe(304);
+      });
+
+      test('returns 404 when blob does not exist', async () => {
+        const emptyStorage = new InMemoryBlobStorage();
+        const otherApp = new Hono();
+        cdn(otherApp, {
+          authJwtSecret: secretKey,
+          authAdmissionJwtSecret: secretAdmissionKey,
+          blobStorage: emptyStorage,
+        });
+
+        const res = await otherApp.request(`/${organizationId}/${federatedGraphId}/manifest/latest.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenWithFeature}` },
+          body: JSON.stringify({ version: '' }),
+        });
+        expect(res.status).toBe(404);
+      });
+    });
+
+    describe('feature-flags/:name.json', () => {
+      test('returns feature flag blob content', async () => {
+        const res = await app.request(`/${organizationId}/${federatedGraphId}/manifest/feature-flags/my-flag.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenWithFeature}` },
+          body: JSON.stringify({ version: '' }),
+        });
+        expect(res.status).toBe(200);
+        expect(res.headers.get('Content-Type')).toBe('application/json; charset=UTF-8');
+        expect(await res.text()).toBe(featureFlagContents);
+      });
+
+      test('returns 304 when version matches', async () => {
+        const res = await app.request(`/${organizationId}/${federatedGraphId}/manifest/feature-flags/my-flag.json`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenWithFeature}` },
+          body: JSON.stringify({ version: 'v1' }),
+        });
+        expect(res.status).toBe(304);
+      });
+
+      test('returns 404 when blob does not exist', async () => {
+        const res = await app.request(
+          `/${organizationId}/${federatedGraphId}/manifest/feature-flags/nonexistent.json`,
+          {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${tokenWithFeature}` },
+            body: JSON.stringify({ version: '' }),
+          },
+        );
+        expect(res.status).toBe(404);
+      });
     });
   });
 });

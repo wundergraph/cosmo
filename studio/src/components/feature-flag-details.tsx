@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { buildUrl } from '@/lib/build-url';
 
 const FeatureFlagOverview = ({
   federatedGraphs,
@@ -80,7 +81,11 @@ const FeatureFlagOverview = ({
               This feature flag will be a part of compositions of this federated graph. Once the feature flag is
               composed successfully, you can query the feature flag in the{' '}
               <Link
-                href={`/${currentOrg?.slug}/${namespace}/graph/${slug}/playground`}
+                href={buildUrl('/:organization/:namespace/graph/:slug/playground', {
+                  organization: currentOrg?.slug,
+                  namespace,
+                  slug,
+                })}
                 className="text-sm text-primary"
               >
                 playground

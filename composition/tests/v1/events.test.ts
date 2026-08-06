@@ -18,7 +18,6 @@ import {
   invalidKeyFieldSetsEventDrivenErrorMessage,
   invalidNatsStreamConfigurationDefinitionErrorMessage,
   invalidNatsStreamInputFieldsErrorMessage,
-  type InvalidRootTypeFieldEventsDirectiveData,
   invalidRootTypeFieldEventsDirectivesErrorMessage,
   invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
   noBaseDefinitionForExtensionError,
@@ -60,6 +59,7 @@ import {
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../utils/utils';
+import { type InvalidRootTypeFieldEventsDirectiveData } from '../../src/errors/types/types';
 
 describe('events Configuration tests', () => {
   describe('Normalization tests', () => {

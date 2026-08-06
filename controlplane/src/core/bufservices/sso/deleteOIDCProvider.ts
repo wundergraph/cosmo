@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -11,6 +10,7 @@ import type { RouterOptions } from '../../routes.js';
 import OidcProvider from '../../services/OidcProvider.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function deleteOIDCProvider(
   opts: RouterOptions,
@@ -43,12 +43,15 @@ export function deleteOIDCProvider(
       };
     }
 
-    const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+    const provider = await oidcRepo.getOidcProviderById({
+      id: req.id,
+      organizationId: authContext.organizationId,
+    });
     if (!provider) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Organization ${authContext.organizationSlug} doesn't have an oidc identity provider `,
+          details: 'OIDC provider not found',
         },
       };
     }
@@ -61,7 +64,7 @@ export function deleteOIDCProvider(
       alias: provider.alias,
     });
 
-    await oidcRepo.deleteOidcProvider({ organizationId: authContext.organizationId });
+    await oidcRepo.deleteOidcProviderById({ id: provider.id, organizationId: authContext.organizationId });
 
     return {
       response: {

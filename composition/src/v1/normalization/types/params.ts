@@ -1,0 +1,67 @@
+import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../../../types/types';
+import { type CompositeOutputData, type InputObjectDefinitionData } from '../../../schema-building/types/types';
+import { type ConstDirectiveNode, type DocumentNode } from 'graphql';
+import type { Subgraph } from '../../../subgraph/types';
+import type { CompositionOptions } from '../../../types/params';
+import type { Graph } from '../../../resolvability-graph/graph';
+
+export type ValidateOneOfDirectiveParams = {
+  data: InputObjectDefinitionData;
+  requiredFieldNames: Set<FieldName>;
+};
+
+export type HandleFieldInheritableDirectivesParams = {
+  directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
+  fieldName: FieldName;
+  inheritedDirectiveNames: Set<DirectiveName>;
+  parentData: CompositeOutputData;
+};
+
+export type HandleNonExternalConditionalFieldParams = {
+  currentFieldCoords: string;
+  directiveCoords: string;
+  directiveName: DirectiveName;
+  fieldSet: string;
+  parentData: CompositeOutputData;
+  selection: string;
+};
+
+export type BatchNormalizeParams = {
+  subgraphs: Array<Subgraph>;
+  options?: CompositionOptions;
+};
+
+export type NormalizationFactoryParams = {
+  internalGraph: Graph;
+  options?: CompositionOptions;
+  subgraphName?: SubgraphName;
+};
+
+export type NormalizeSubgraphParams = {
+  document: DocumentNode;
+  internalGraph?: Graph;
+  options?: CompositionOptions;
+  subgraphName?: SubgraphName;
+};
+
+export type NormalizeSubgraphFromStringParams = {
+  noLocation: boolean;
+  sdlString: string;
+  options?: CompositionOptions;
+};
+
+export type GetFieldSetParentParams = {
+  fieldName: FieldName;
+  fieldSet: string;
+  isProvides: boolean;
+  parentData: CompositeOutputData;
+  parentTypeName: TypeName;
+};
+
+export type IsAnyImplementationFieldExternalParams = {
+  fieldCoordsPath: Array<string>;
+  fieldPath: Array<FieldName>;
+  fieldName: FieldName;
+  interfaceTypeName: TypeName;
+  isProvides: boolean;
+};

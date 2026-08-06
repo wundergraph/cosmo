@@ -117,6 +117,52 @@ func TestLoadOperationsForService(t *testing.T) {
 	})
 }
 
+// TestLoadOperationsForServiceStripsDescriptions proves that connectrpc's
+// per-service operation loader also strips September-2025 executable descriptions
+// from the forwarded query, while preserving raw content when none are present.
+func TestLoadOperationsForServiceStripsDescriptions(t *testing.T) {
+	t.Run("strips operation and variable descriptions", func(t *testing.T) {
+		tempDir := t.TempDir()
+		opContent := `"""
+Look up a country.
+"""
+query GetCountry(
+  """
+  The ISO 3166-1 alpha-2 code
+  """
+  $code: ID!
+) {
+  country(code: $code) { name }
+}`
+		opFile := filepath.Join(tempDir, "GetCountry.graphql")
+		require.NoError(t, os.WriteFile(opFile, []byte(opContent), 0644))
+
+		ops, err := LoadOperationsForService("country.v1.CountryService", []string{opFile}, zap.NewNop())
+		require.NoError(t, err)
+
+		op := ops["GetCountry"]
+		require.NotNil(t, op)
+		assert.NotContains(t, op.OperationString, "ISO 3166-1")
+		assert.NotContains(t, op.OperationString, "Look up a country")
+		assert.Contains(t, op.OperationString, "GetCountry")
+	})
+
+	t.Run("preserves raw content when no descriptions are present", func(t *testing.T) {
+		tempDir := t.TempDir()
+		raw := "query GetCountry($code: ID!) {\n  # author comment\n  country(code: $code) { name }\n}\n"
+		opFile := filepath.Join(tempDir, "GetCountry.graphql")
+		require.NoError(t, os.WriteFile(opFile, []byte(raw), 0644))
+
+		ops, err := LoadOperationsForService("country.v1.CountryService", []string{opFile}, zap.NewNop())
+		require.NoError(t, err)
+
+		op := ops["GetCountry"]
+		require.NotNil(t, op)
+		assert.Equal(t, raw, op.OperationString,
+			"operations without descriptions should preserve the raw file content")
+	})
+}
+
 func TestGetOperationForService(t *testing.T) {
 	t.Run("returns operation when found", func(t *testing.T) {
 		tempDir := t.TempDir()

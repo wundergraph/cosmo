@@ -311,6 +311,11 @@ func TestGRPCSubgraph(t *testing.T) {
 				expected: `{"data":{"employee":{"id":1,"taggedProjectSummary":"expertise: Backend Architecture, project tags: [cloud, migration, priority, devops, ci-cd, infrastructure]"}}}`,
 			},
 			{
+				name:     "query employee @requires field resolved with expertise and aliased",
+				query:    `{ employee(id: 1) { id preAlias: taggedProjectSummary taggedProjectSummary aliasedTaggedProjectSummary: taggedProjectSummary } }`,
+				expected: `{"data":{"employee":{"id":1,"preAlias":"expertise: Backend Architecture, project tags: [cloud, migration, priority, devops, ci-cd, infrastructure]","taggedProjectSummary":"expertise: Backend Architecture, project tags: [cloud, migration, priority, devops, ci-cd, infrastructure]","aliasedTaggedProjectSummary":"expertise: Backend Architecture, project tags: [cloud, migration, priority, devops, ci-cd, infrastructure]"}}}`,
+			},
+			{
 				name:     "query employee @requires field resolved with expertise (employee 2)",
 				query:    `{ employee(id: 2) { id taggedProjectSummary } }`,
 				expected: `{"data":{"employee":{"id":2,"taggedProjectSummary":"expertise: Fullstack Development, project tags: [cloud, migration, priority, microservices, architecture, security, zero-trust]"}}}`,
@@ -351,6 +356,11 @@ func TestGRPCSubgraph(t *testing.T) {
 				name:     "query employee @requires flat union (rejection)",
 				query:    `{ employee(id: 2) { id reviewReport } }`,
 				expected: `{"data":{"employee":{"id":2,"reviewReport":"Rejected: Needs more documentation (code: DOC_001)"}}}`,
+			},
+			{
+				name:     "query employee @requires flat union aliased (approval)",
+				query:    `{ employee(id: 1) { id aliasedReviewReport: reviewReport } }`,
+				expected: `{"data":{"employee":{"id":1,"aliasedReviewReport":"Approved: Excellent work on the API at 2024-01-15"}}}`,
 			},
 			// Pattern 3: Concrete wrapping abstract
 			{
@@ -396,10 +406,117 @@ func TestGRPCSubgraph(t *testing.T) {
 				query:    `{ employee(id: 2) { id deepWorkItemInfo } }`,
 				expected: `{"data":{"employee":{"id":2,"deepWorkItemInfo":"ManagementHandler: Bob Lead"}}}`,
 			},
+			{
+				name:     "query employee @requires aliased nested abstract through concrete (management deep)",
+				query:    `{ employee(id: 2) { id aliasedDeepWorkItemInfo: deepWorkItemInfo } }`,
+				expected: `{"data":{"employee":{"id":2,"aliasedDeepWorkItemInfo":"ManagementHandler: Bob Lead"}}}`,
+			},
 			// Non-existent employee with composite @requires fields
 			{
 				name:     "query non-existent employee with @requires composite fields returns null",
 				query:    `{ employee(id: 999) { id workItemInfo reviewReport } }`,
+				expected: `{"data":{"employee":null}}`,
+			},
+			{
+				name:     "query non-existent employee with @requires and aliased fields returns null",
+				query:    `{ employee(id: 999) { id workItemInfo reviewReport aliasedReviewReport: reviewReport } }`,
+				expected: `{"data":{"employee":null}}`,
+			},
+			// Pattern 7: Abstract return type — interface
+			{
+				name:     "query employee @requires field returning an interface (technical)",
+				query:    `{ employee(id: 1) { id recommendedWorkItem { __typename name priority ... on TechnicalWorkItem { codeCount } ... on ManagementWorkItem { teamSize } } } }`,
+				expected: `{"data":{"employee":{"id":1,"recommendedWorkItem":{"__typename":"TechnicalWorkItem","name":"Backend Architecture work item","priority":1,"codeCount":3000}}}}`,
+			},
+			{
+				name:     "query employee @requires field returning an interface (management)",
+				query:    `{ employee(id: 3) { id recommendedWorkItem { __typename name priority ... on TechnicalWorkItem { codeCount } ... on ManagementWorkItem { teamSize } } } }`,
+				expected: `{"data":{"employee":{"id":3,"recommendedWorkItem":{"__typename":"ManagementWorkItem","name":"Growth Marketing work item","priority":1,"teamSize":"team of 3"}}}}`,
+			},
+			{
+				name:     "query employee @requires field returning an interface without inline fragments",
+				query:    `{ employee(id: 1) { id recommendedWorkItem { name priority } } }`,
+				expected: `{"data":{"employee":{"id":1,"recommendedWorkItem":{"name":"Backend Architecture work item","priority":1}}}}`,
+			},
+			{
+				name:     "query employee @requires field returning an interface with a nested interface",
+				query:    `{ employee(id: 1) { id recommendedWorkItem { __typename ... on TechnicalWorkItem { name handler { name assignedItem { __typename ... on ManagementWorkItem { name teamSize } ... on TechnicalWorkItem { name codeCount } } } } } } }`,
+				expected: `{"data":{"employee":{"id":1,"recommendedWorkItem":{"__typename":"TechnicalWorkItem","name":"Backend Architecture work item","handler":{"name":"Handler for Backend Architecture work item","assignedItem":{"__typename":"ManagementWorkItem","name":"Backend Architecture follow-up","teamSize":"team of 6"}}}}}}`,
+			},
+			{
+				name:     "query employee @requires field returning an interface with deeply nested concrete types",
+				query:    `{ employee(id: 1) { id recommendedWorkItem { __typename ... on TechnicalWorkItem { specs { name complexity metrics { score efficiency } } } ... on ManagementWorkItem { specs { name scope metrics { score efficiency } } } } } }`,
+				expected: `{"data":{"employee":{"id":1,"recommendedWorkItem":{"__typename":"TechnicalWorkItem","specs":{"name":"Backend Architecture work item specs","complexity":1.5,"metrics":{"score":95.5,"efficiency":0.9}}}}}}`,
+			},
+			{
+				name:     "query employee @requires field returning an interface aliased",
+				query:    `{ employee(id: 1) { id aliasedRecommendation: recommendedWorkItem { __typename itemName: name } } }`,
+				expected: `{"data":{"employee":{"id":1,"aliasedRecommendation":{"__typename":"TechnicalWorkItem","itemName":"Backend Architecture work item"}}}}`,
+			},
+			// Pattern 8: Abstract return type — list of interface, with an argument
+			{
+				name:     "query employee @requires field returning a list of an interface",
+				query:    `{ employee(id: 1) { id recommendedWorkItems(limit: 5) { __typename name priority ... on TechnicalWorkItem { codeCount } ... on ManagementWorkItem { teamSize } } } }`,
+				expected: `{"data":{"employee":{"id":1,"recommendedWorkItems":[{"__typename":"TechnicalWorkItem","name":"Technical Backend","priority":1,"codeCount":1700},{"__typename":"ManagementWorkItem","name":"Management Architecture","priority":2,"teamSize":"team of 6"}]}}}`,
+			},
+			{
+				name:     "query employee @requires field returning a list of an interface limited by an argument",
+				query:    `{ employee(id: 1) { id recommendedWorkItems(limit: 1) { __typename name } } }`,
+				expected: `{"data":{"employee":{"id":1,"recommendedWorkItems":[{"__typename":"TechnicalWorkItem","name":"Technical Backend"}]}}}`,
+			},
+			{
+				name:     "query employee @requires field returning an empty list of an interface",
+				query:    `{ employee(id: 1) { id recommendedWorkItems(limit: 0) { __typename name } } }`,
+				expected: `{"data":{"employee":{"id":1,"recommendedWorkItems":[]}}}`,
+			},
+			// Pattern 9: Abstract return type — union
+			{
+				name:     "query employee @requires field returning a union (approval)",
+				query:    `{ employee(id: 1) { id latestWorkOperation { __typename ... on WorkApproval { comment approvedAt } ... on WorkRejection { reason rejectionCode } } } }`,
+				expected: `{"data":{"employee":{"id":1,"latestWorkOperation":{"__typename":"WorkApproval","comment":"Approved for Backend Architecture","approvedAt":"2024-01-01T00:00:00Z"}}}}`,
+			},
+			{
+				name:     "query employee @requires field returning a union (rejection)",
+				query:    `{ employee(id: 3) { id latestWorkOperation { __typename ... on WorkApproval { comment approvedAt } ... on WorkRejection { reason rejectionCode } } } }`,
+				expected: `{"data":{"employee":{"id":3,"latestWorkOperation":{"__typename":"WorkRejection","reason":"Rejected for Growth Marketing","rejectionCode":"NON_TECHNICAL"}}}}`,
+			},
+			// Pattern 10: Abstract return type — nullable union
+			{
+				name:     "query employee @requires field returning a nullable union (approval)",
+				query:    `{ employee(id: 1) { id optionalLatestWorkOperation { __typename ... on WorkApproval { comment approvedAt } ... on WorkRejection { reason rejectionCode } } } }`,
+				expected: `{"data":{"employee":{"id":1,"optionalLatestWorkOperation":{"__typename":"WorkApproval","comment":"Latest operation approved for Backend Architecture","approvedAt":"2024-01-02T00:00:00Z"}}}}`,
+			},
+			{
+				name:     "query employee @requires field returning a nullable union (rejection)",
+				query:    `{ employee(id: 3) { id optionalLatestWorkOperation { __typename ... on WorkApproval { comment } ... on WorkRejection { reason rejectionCode } } } }`,
+				expected: `{"data":{"employee":{"id":3,"optionalLatestWorkOperation":{"__typename":"WorkRejection","reason":"Latest operation rejected for Growth Marketing","rejectionCode":"NO_TECHNICAL_OPERATION"}}}}`,
+			},
+			{
+				// An expertise spanning more than two words has no recorded operation, which must surface
+				// as null instead of an empty object.
+				name:     "query employee @requires field returning a nullable union resolves to null",
+				query:    `{ employee(id: 11) { id optionalLatestWorkOperation { __typename ... on WorkApproval { comment } ... on WorkRejection { reason } } } }`,
+				expected: `{"data":{"employee":{"id":11,"optionalLatestWorkOperation":null}}}`,
+			},
+			// Abstract return types resolved for a batch of representations
+			{
+				name:     "query employees with a @requires field returning an interface",
+				query:    `{ employees { id recommendedWorkItem { __typename name } } }`,
+				expected: `{"data":{"employees":[{"id":1,"recommendedWorkItem":{"__typename":"TechnicalWorkItem","name":"Backend Architecture work item"}},{"id":2,"recommendedWorkItem":{"__typename":"TechnicalWorkItem","name":"Fullstack Development work item"}},{"id":3,"recommendedWorkItem":{"__typename":"ManagementWorkItem","name":"Growth Marketing work item"}},{"id":4,"recommendedWorkItem":{"__typename":"ManagementWorkItem","name":"Operations Management work item"}},{"id":5,"recommendedWorkItem":{"__typename":"TechnicalWorkItem","name":"Backend Systems work item"}},{"id":7,"recommendedWorkItem":{"__typename":"TechnicalWorkItem","name":"Fullstack Development work item"}},{"id":8,"recommendedWorkItem":{"__typename":"TechnicalWorkItem","name":"Fullstack Development work item"}},{"id":10,"recommendedWorkItem":{"__typename":"TechnicalWorkItem","name":"Frontend Engineering work item"}},{"id":11,"recommendedWorkItem":{"__typename":"ManagementWorkItem","name":"Finance & Accounting work item"}},{"id":12,"recommendedWorkItem":{"__typename":"TechnicalWorkItem","name":"Fullstack Development work item"}}]}}`,
+			},
+			{
+				name:     "query employees with a @requires field returning a nullable union",
+				query:    `{ employees { id optionalLatestWorkOperation { __typename } } }`,
+				expected: `{"data":{"employees":[{"id":1,"optionalLatestWorkOperation":{"__typename":"WorkApproval"}},{"id":2,"optionalLatestWorkOperation":{"__typename":"WorkApproval"}},{"id":3,"optionalLatestWorkOperation":{"__typename":"WorkRejection"}},{"id":4,"optionalLatestWorkOperation":{"__typename":"WorkRejection"}},{"id":5,"optionalLatestWorkOperation":{"__typename":"WorkApproval"}},{"id":7,"optionalLatestWorkOperation":{"__typename":"WorkApproval"}},{"id":8,"optionalLatestWorkOperation":{"__typename":"WorkApproval"}},{"id":10,"optionalLatestWorkOperation":{"__typename":"WorkApproval"}},{"id":11,"optionalLatestWorkOperation":null},{"id":12,"optionalLatestWorkOperation":{"__typename":"WorkApproval"}}]}}`,
+			},
+			{
+				name:     "query employee @requires fields returning abstract types combined with @requires fields returning scalars",
+				query:    `{ employee(id: 1) { id taggedProjectSummary workItemInfo recommendedWorkItem { __typename name } latestWorkOperation { __typename } } }`,
+				expected: `{"data":{"employee":{"id":1,"taggedProjectSummary":"expertise: Backend Architecture, project tags: [cloud, migration, priority, devops, ci-cd, infrastructure]","workItemInfo":"Technical: API Development (count: 15000)","recommendedWorkItem":{"__typename":"TechnicalWorkItem","name":"Backend Architecture work item"},"latestWorkOperation":{"__typename":"WorkApproval"}}}}`,
+			},
+			{
+				name:     "query non-existent employee with @requires fields returning abstract types returns null",
+				query:    `{ employee(id: 999) { id recommendedWorkItem { __typename } recommendedWorkItems(limit: 5) { __typename } latestWorkOperation { __typename } optionalLatestWorkOperation { __typename } } }`,
 				expected: `{"data":{"employee":null}}`,
 			},
 		}

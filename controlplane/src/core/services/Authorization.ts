@@ -8,6 +8,7 @@ import { FederatedGraphRepository } from '../repositories/FederatedGraphReposito
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { AuthContext } from '../../types/index.js';
+import { isNamespaceAllowed } from '../util.js';
 import { traced } from '../tracing.js';
 
 @traced
@@ -70,14 +71,24 @@ export class Authorization {
      */
     const { rbac } = authContext;
     if (rbac && rbac.groups.length > 0) {
-      if (rbac.isOrganizationAdminOrDeveloper) {
-        // When the client have the organization admin or developer roles, they are allowed to access any organization
-        // resource, we don't need to perform any additional validation
-        return;
-      }
-
+      // Resolve the target's namespace so we can intersect with the IdP gate even
+      // when the org-admin/developer short-circuit would otherwise apply.
+      let targetNamespaceId: string | undefined;
       if (targetType === 'federatedGraph') {
         const federatedGraph = await fedRepo.byTargetId(targetId);
+        targetNamespaceId = federatedGraph?.namespaceId;
+
+        if (rbac.isOrganizationAdminOrDeveloper) {
+          // Admin/developer bypass — still subject to the IdP gate.
+          if (
+            rbac.idpNamespaceAccess.kind === 'all' ||
+            (targetNamespaceId !== undefined && isNamespaceAllowed(rbac.idpNamespaceAccess, targetNamespaceId))
+          ) {
+            return;
+          }
+          throw new UnauthorizedError();
+        }
+
         if (
           federatedGraph &&
           ((isDeleteOperation && rbac.canDeleteFederatedGraph(federatedGraph)) ||
@@ -89,6 +100,18 @@ export class Authorization {
         throw new UnauthorizedError();
       } else if (targetType === 'subgraph') {
         const subgraph = await subgraphRepo.byTargetId(targetId);
+        targetNamespaceId = subgraph?.namespaceId;
+
+        if (rbac.isOrganizationAdminOrDeveloper) {
+          if (
+            rbac.idpNamespaceAccess.kind === 'all' ||
+            (targetNamespaceId !== undefined && isNamespaceAllowed(rbac.idpNamespaceAccess, targetNamespaceId))
+          ) {
+            return;
+          }
+          throw new UnauthorizedError();
+        }
+
         if (
           subgraph &&
           ((isDeleteOperation && rbac.canDeleteSubGraph(subgraph)) ||

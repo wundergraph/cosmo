@@ -399,8 +399,76 @@
               }
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "manifest": {
+              "type": "object",
+              "description": "The configuration for loading the execution config from a manifest directory on the local file system. The manifest describes the base graph and any feature flag execution configs as separate files in a directory.",
+              "additionalProperties": false,
+              "required": ["path"],
+              "dependentSchemas": {
+                "watch_interval": {
+                  "properties": {
+                    "watch": {
+                      "const": true
+                    }
+                  }
+                }
+              },
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "format": "directory-path",
+                  "description": "The path to the manifest directory. The directory contains the manifest file and the individual execution config files referenced by it."
+                },
+                "skip_missing_feature_flags": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Skip feature flags listed in the manifest whose execution config file cannot be loaded, instead of aborting the load. Use this when occasional missing feature flag files should not prevent the router from loading the rest of the manifest."
+                },
+                "ignored_feature_flags": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Feature flag names to skip entirely when loading the manifest. Listed flags are not loaded even when referenced by the manifest."
+                },
+                "watch": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the watch mode. The watch mode is used to watch the manifest directory for changes. If a file changes, the router will reload the execution config without downtime."
+                },
+                "watch_interval": {
+                  "type": "string",
+                  "description": "The interval at which the manifest directory is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                  "default": "1s",
+                  "duration": {
+                    "minimum": "100ms"
+                  }
+                }
+              }
+            }
+          }
         }
       ]
+    },
+    "split_config_poller": {
+      "type": "object",
+      "description": "Behavior overrides for the split-config polling strategy, which assembles the final router execution config by fetching the base graph and each feature flag config as separate files from the CDN. Only applied when the router is enrolled in split-config loading.",
+      "additionalProperties": false,
+      "properties": {
+        "skip_missing_feature_flags": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip feature flags that cannot be fetched instead of aborting the poll cycle. Use this when occasional feature flag fetch failures should not stop the router from picking up changes to other graphs."
+        },
+        "ignored_feature_flags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Feature flag names to skip entirely during config polling. Listed flags are not fetched even when present in the mapper."
+        }
+      }
     },
     "graphql_metrics": {
       "type": "object",
@@ -417,10 +485,108 @@
         }
       }
     },
+    "pyroscope": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for continuous profiling with Grafana Pyroscope. When enabled, the router continuously collects profiles and sends them to the configured Pyroscope server.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable continuous profiling. The default value is false. When enabled, a server address must be configured."
+        },
+        "server_address": {
+          "type": "string",
+          "format": "http-url",
+          "description": "The address of the Pyroscope server to which the profiles are sent, e.g. your own Pyroscope or Grafana Cloud instance. Required when profiling is enabled."
+        },
+        "application_name": {
+          "type": "string",
+          "default": "wundergraph.cosmo.router",
+          "description": "The application name under which the profiles are stored. The default value is 'wundergraph.cosmo.router'."
+        },
+        "basic_auth": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The basic authentication credentials for the Pyroscope server, e.g. for Grafana Cloud. Alternatively, use the headers option to authenticate with a bearer token.",
+          "properties": {
+            "username": {
+              "type": "string",
+              "description": "The username for basic authentication. For Grafana Cloud, this is the stack user ID."
+            },
+            "password": {
+              "type": "string",
+              "description": "The password for basic authentication. For Grafana Cloud, this is an access token with profile write permissions."
+            }
+          }
+        },
+        "headers": {
+          "type": "object",
+          "description": "The headers to send with each profile upload request. Use this to set custom authentication headers.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "tags": {
+          "type": "object",
+          "description": "The static tags to attach to all profiles. The router always attaches the hostname and the router version as tags.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "upload_rate": {
+          "type": "string",
+          "format": "go-duration",
+          "default": "15s",
+          "duration": {
+            "minimum": "1s"
+          },
+          "description": "The interval at which the profiles are uploaded to the Pyroscope server. The period is specified as a string with a number and a unit, e.g. 15s, 1m. The default value is 15s."
+        },
+        "profile_types": {
+          "type": "array",
+          "description": "The profile types to collect. If not specified, the default profile types of the pyroscope client are used: cpu, alloc_objects, alloc_space, inuse_objects, inuse_space.",
+          "default": ["cpu", "alloc_objects", "alloc_space", "inuse_objects", "inuse_space"],
+          "items": {
+            "type": "string",
+            "enum": [
+              "cpu",
+              "alloc_objects",
+              "alloc_space",
+              "inuse_objects",
+              "inuse_space",
+              "goroutines",
+              "mutex_count",
+              "mutex_duration",
+              "block_count",
+              "block_duration",
+              "goroutine_leak"
+            ]
+          }
+        },
+        "disable_gc_runs": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable the automatic runtime.GC runs between collecting the heap profiles. The Go runtime only updates the heap profile data during a garbage collection cycle, so the profiler triggers a GC run before each upload to get accurate memory profiles. Set this to true if the additional GC pauses are a concern, e.g. for routers with a very large heap or strict latency requirements, at the cost of less up-to-date memory profiles. The default value is false."
+        },
+        "mutex_profile_fraction": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 5,
+          "description": "The fraction of mutex contention events that are reported in the mutex profile. On average 1/n events are reported. Set to 0 to disable mutex profiling. The default value is 5."
+        },
+        "block_profile_rate": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 5,
+          "description": "The fraction of goroutine blocking events that are reported in the blocking profile. The profiler aims to sample an average of one blocking event per n nanoseconds spent blocked. Set to 0 to disable block profiling. The default value is 5."
+        }
+      }
+    },
     "dev_mode": {
       "type": "boolean",
       "default": false,
-      "description": "Enable the development mode. The development mode is used to enable the development features like ART (Advanced Request Tracing) and pretty logs."
+      "description": "Enable the development mode. Development mode enables developer-focused behavior (such as pretty logs) and allows ART request options without request-token authentication."
     },
     "tls": {
       "type": "object",
@@ -540,6 +706,88 @@
                     "description": "Skip verification of this subgraph's server certificate. Only use for development or testing."
                   }
                 },
+                "dependencies": {
+                  "cert_file": ["key_file"],
+                  "key_file": ["cert_file"]
+                }
+              }
+            }
+          }
+        },
+        "client_grpc": {
+          "type": "object",
+          "description": "The TLS configuration for outbound gRPC connections from the router to gRPC subgraphs. Enables TLS/mTLS by presenting a client certificate when connecting to gRPC subgraphs.",
+          "additionalProperties": false,
+          "properties": {
+            "all": {
+              "type": "object",
+              "description": "TLS configuration applied to all gRPC subgraph connections.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable TLS for all gRPC subgraph connections."
+                },
+                "cert_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client certificate chain file. Used to authenticate the router to gRPC subgraphs. May include intermediate certificates."
+                },
+                "key_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client private key file."
+                },
+                "ca_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the CA certificate file. Used to verify gRPC subgraph server certificates. If not set, the system's root CAs are used."
+                },
+                "insecure_skip_ca_verification": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Skip verification of the gRPC subgraph server certificate. Only use for development or testing."
+                }
+              },
+              "required": ["enabled"],
+              "dependencies": {
+                "cert_file": ["key_file"],
+                "key_file": ["cert_file"]
+              }
+            },
+            "subgraphs": {
+              "type": "object",
+              "description": "Per-subgraph gRPC TLS configuration overrides. Each key is a subgraph name. Fully overrides the 'all' config for that subgraph.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Enable TLS for this gRPC subgraph connection."
+                  },
+                  "cert_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client certificate chain file for this gRPC subgraph. May include intermediate certificates."
+                  },
+                  "key_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client private key file for this gRPC subgraph."
+                  },
+                  "ca_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the CA certificate file for verifying this gRPC subgraph's server certificate."
+                  },
+                  "insecure_skip_ca_verification": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip verification of this gRPC subgraph's server certificate. Only use for development or testing."
+                  }
+                },
+                "required": ["enabled"],
                 "dependencies": {
                   "cert_file": ["key_file"],
                   "key_file": ["cert_file"]
@@ -1240,6 +1488,30 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
+                "network": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure additional network metrics.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms. The default value is false."
+                    }
+                  }
+                },
+                "resolver": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure additional resolver metrics.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable resolver metrics, including resolver concurrency gauges and resolver acquire duration histograms. The default value is false."
+                    }
+                  }
+                },
                 "streams": {
                   "type": "boolean",
                   "default": false,
@@ -1362,6 +1634,12 @@
                   "not": {
                     "required": ["exclude_metrics", "include_metrics"]
                   }
+                },
+                "exemplar_filter": {
+                  "type": "string",
+                  "default": "always_off",
+                  "enum": ["trace_based", "always_off", "always_on"],
+                  "description": "Controls which metric measurements are eligible to record exemplars. 'always_off' records no exemplars (the default). 'trace_based' only records exemplars for measurements taken within a sampled trace context. 'always_on' records exemplars for all measurements. See https://opentelemetry.io/docs/specs/otel/metrics/sdk/#exemplarfilter."
                 }
               }
             },
@@ -1395,6 +1673,30 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
+                },
+                "network": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure additional network metrics.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms. The default value is false."
+                    }
+                  }
+                },
+                "resolver": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure additional resolver metrics.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable resolver metrics, including resolver concurrency gauges and resolver acquire duration histograms. The default value is false."
+                    }
+                  }
                 },
                 "streams": {
                   "type": "boolean",
@@ -1502,6 +1804,12 @@
                       }
                     }
                   }
+                },
+                "exemplar_filter": {
+                  "type": "string",
+                  "default": "always_off",
+                  "enum": ["trace_based", "always_off", "always_on"],
+                  "description": "Controls which metric measurements are eligible to record exemplars. 'always_off' records no exemplars (the default). 'trace_based' only records exemplars for measurements taken within a sampled trace context. 'always_on' records exemplars for all measurements. See https://opentelemetry.io/docs/specs/otel/metrics/sdk/#exemplarfilter."
                 }
               }
             }
@@ -1843,7 +2151,7 @@
                     "$ref": "#/$defs/traffic_shaping_header_response_rule"
                   },
                   {
-                    "$ref": "#/$defs/set_header_rule"
+                    "$ref": "#/$defs/set_response_header_rule"
                   }
                 ]
               }
@@ -2173,6 +2481,10 @@
         "reject_operation_if_unauthorized": {
           "type": "boolean",
           "description": "Reject the operation if the request is not authorized. If the value is true, the operation is rejected if the request is not authorized."
+        },
+        "enable_pre_fetch_field_authorization": {
+          "type": "boolean",
+          "description": "Authorize fields protected by an authorization rule in a single batch call before any subgraph fetch executes (scope-only, independent of the returned data), instead of filtering them out of the response after the fetch. This avoids fetching data that the client is not authorized to see."
         }
       }
     },
@@ -2364,6 +2676,29 @@
               "type": "string",
               "description": "The base URL of the MCP server used for OAuth 2.0 discovery (RFC 9728). This URL is advertised in the Protected Resource Metadata endpoint and used to construct the resource metadata URL. Required when OAuth is enabled. The URL is specified as a string with the format 'scheme://host:port'.",
               "format": "http-url"
+            },
+            "version": {
+              "type": "string",
+              "description": "The version reported to MCP clients as the server version in serverInfo, alongside the server name derived from graph_name. Use this to expose your own API version to AI agents. Defaults to the router release version when unset."
+            },
+            "title": {
+              "type": "string",
+              "description": "A human-readable display name for this MCP server, reported to MCP clients in serverInfo. Clients show it in UIs, falling back to the machine name derived from graph_name when unset."
+            },
+            "description": {
+              "type": "string",
+              "description": "A human-readable description of this MCP server, reported to MCP clients in serverInfo."
+            },
+            "discover": {
+              "type": "object",
+              "description": "Configuration for the server identity exposed via the MCP server/discover method (protocol version 2026-07-28).",
+              "additionalProperties": false,
+              "properties": {
+                "instructions": {
+                  "type": "string",
+                  "description": "Natural-language guidance for MCP clients (AI agents) on how to use this server effectively. Served in the server/discover response and in the legacy initialize response, so all clients receive it."
+                }
+              }
             }
           }
         },
@@ -2521,11 +2856,7 @@
                     "default": ["sig"],
                     "items": {
                       "type": "string",
-                      "enum": [
-                        "sig",
-                        "enc",
-                        ""
-                      ]
+                      "enum": ["sig", "enc", ""]
                     }
                   },
                   "algorithms": {
@@ -2733,6 +3064,11 @@
       "description": "The configuration for EDFS. See https://cosmo-docs.wundergraph.com/router/event-driven-federated-subscriptions-edfs for more information.",
       "additionalProperties": false,
       "properties": {
+        "skip_unavailable_providers": {
+          "type": "boolean",
+          "default": false,
+          "description": "Start the router even when an event provider referenced by the execution config is unavailable, instead of aborting startup. This covers both a provider that is not defined in this configuration and a provider that is defined but cannot be reached at startup (e.g. the broker is down). The router logs an error and starts anyway, leaving only the fields backed by that provider unavailable; requests to them return an error instead of crashing the router. Defaults to false, in which case an unavailable provider prevents the router from starting."
+        },
         "providers": {
           "type": "object",
           "description": "The provider configuration. The provider configuration is used to configure the event-driven federated subscriptions.",
@@ -2966,7 +3302,7 @@
           "properties": {
             "on_receive_events": {
               "type": "object",
-              "description": "Configuration for the OnReceiveEvents hook that is called when events are received from a broker.",
+              "description": "Configuration for the OnReceiveEvents hook that is called for each subscriber when events are received from a broker.",
               "additionalProperties": false,
               "properties": {
                 "max_concurrent_handlers": {
@@ -2978,6 +3314,18 @@
                 "handler_timeout": {
                   "type": "string",
                   "description": "The amount of time that OnReceiveEvents handlers can run in total for a single batch of events. Specify as a duration string (e.g., '5s', '1m', '500ms').",
+                  "default": "5s"
+                }
+              }
+            },
+            "before_events_dispatch": {
+              "type": "object",
+              "description": "Configuration for the BeforeEventsDispatch hook, that is called once per event batch, before delivering them to subscribers.",
+              "additionalProperties": false,
+              "properties": {
+                "handler_timeout": {
+                  "type": "string",
+                  "description": "The amount of time that BeforeEventsDispatch handlers can run in total for a single batch of events. Specify as a duration string (e.g., '5s', '1m', '500ms').",
                   "default": "5s"
                 }
               }
@@ -3044,6 +3392,11 @@
           "type": "integer",
           "description": "The number of cache warmup items to process per second. Higher numbers decrease the time to warm up the cache but increase the load on the system.",
           "default": 50
+        },
+        "item_delay": {
+          "type": "string",
+          "description": "A fixed delay applied after each cache warmup item is processed, per worker. Use to further smooth load during warmup. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. Defaults to 0s (no delay).",
+          "default": "0s"
         },
         "timeout": {
           "type": "string",
@@ -3368,6 +3721,11 @@
             "expose_headers": {
               "type": "boolean",
               "description": "Enable costs response headers for estimated and actuals operation costs."
+            },
+            "ignore_implementing_type_weights": {
+              "type": "boolean",
+              "default": false,
+              "description": "When enabled, ignores @cost weights from implementing types on abstract (interface/union) fields that have no weight of their own. Emulates Apollo's cost behavior."
             }
           }
         },
@@ -3432,6 +3790,46 @@
       "description": "The configuration for the engine. The engine is used to execute the GraphQL queries, mutations and subscriptions. Only modify this if you know what you are doing.",
       "additionalProperties": false,
       "properties": {
+        "validate_inline_arguments": {
+          "type": "object",
+          "description": "Detects, and optionally rejects, operations that carry hardcoded inline argument values instead of variables.",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["off", "permissive", "strict"],
+              "default": "off",
+              "description": "Controls the policy: 'off' disables it; 'permissive' detects and records inline arguments but still executes the operation; 'strict' rejects operations that use inline argument values."
+            },
+            "enforce_http_status_code": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 599,
+              "default": 400,
+              "description": "HTTP status code returned when an operation is rejected in enforce mode."
+            },
+            "error_code": {
+              "type": "string",
+              "default": "INLINE_ARGUMENT_VALUES_NOT_ALLOWED",
+              "description": "The extensions.code emitted on rejection."
+            },
+            "error_message": {
+              "type": "string",
+              "default": "Inline argument values are not allowed. Use variables instead.",
+              "description": "The human-readable error/hint message surfaced to the client."
+            },
+            "include_persisted_operations": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, applies the policy to persisted operations as well. Persisted operations are exempt by default."
+            },
+            "return_in_response_extensions": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, reports detected inline arguments back to the client under extensions.inlineArguments of the GraphQL response. Applies only in non-enforcing mode."
+            }
+          }
+        },
         "debug": {
           "type": "object",
           "description": "The debug configuration. The debug configuration is used to enable the debug mode for the engine.",
@@ -3511,6 +3909,11 @@
               "type": "boolean",
               "default": false,
               "description": "Always skip the loader. This will return no data but only render response extensions, e.g. to expose the query plan."
+            },
+            "synchronous_cache_writes": {
+              "type": "boolean",
+              "default": false,
+              "description": "Wait for the asynchronous operation-cache writes of a request to be applied before resolving the response, so that subsequent requests deterministically hit the caches. Intended for testing."
             }
           }
         },
@@ -3537,7 +3940,12 @@
         "enable_request_tracing": {
           "type": "boolean",
           "default": true,
-          "description": "Enable the advanced request tracing. See https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art for more information."
+          "description": "Capability gate for Advanced Request Tracing (ART). When false, ART is disabled regardless of headers, query parameters, or authentication."
+        },
+        "force_unauthenticated_request_tracing": {
+          "type": "boolean",
+          "default": false,
+          "description": "UNSAFE — DO NOT ENABLE IN PRODUCTION. Bypasses the authorization gate for Advanced Request Tracing (ART) when dev_mode is false. If false (default), ART request options require a valid WG request token. If true, ART request options are allowed without request-token authentication; this exposes internal subgraph URLs, request and response payloads, propagated headers (which may include auth tokens or API keys), and full query plans to any client that can reach the router. See https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art."
         },
         "enable_execution_plan_cache_response_header": {
           "type": "boolean",
@@ -3555,28 +3963,34 @@
           "description": "Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
           "default": true
         },
-        "websocket_client_poll_timeout": {
-          "type": "string",
-          "format": "go-duration",
-          "default": "1s",
-          "description": "The timeout for the poll loop of the WebSocket client implementation. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-        },
-        "websocket_client_conn_buffer_size": {
-          "type": "integer",
-          "default": 128,
-          "description": "The buffer size for the poll buffer of the WebSocket client implementation. The buffer size determines how many connections can be handled in one loop."
-        },
-        "websocket_client_read_timeout": {
-          "type": "string",
-          "format": "go-duration",
-          "default": "5s",
-          "description": "Defines the timeout for the websocket read of the WebSocket client implementation. This is used to set the read deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-        },
         "websocket_client_write_timeout": {
           "type": "string",
           "format": "go-duration",
           "default": "10s",
-          "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "description": "The write timeout for WebSocket operations when the router connects to subgraphs (subscribe, unsubscribe, ping, pong). The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "websocket_server_read_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The read timeout for the server-side WebSocket handler. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "5s"
+        },
+        "websocket_server_write_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The write timeout for the server-side WebSocket handler. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "10s"
+        },
+        "websocket_server_poll_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The poll timeout for the server-side WebSocket net poller. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "1s"
+        },
+        "websocket_server_conn_buffer_size": {
+          "type": "integer",
+          "default": 128,
+          "description": "The buffer size for the server-side WebSocket net poller. Determines how many connections can be handled in one poll loop."
         },
         "websocket_client_ping_interval": {
           "type": "string",
@@ -3596,13 +4010,22 @@
             "minimum": "5s"
           }
         },
-        "websocket_client_frame_timeout": {
+        "websocket_client_ack_timeout": {
           "type": "string",
           "format": "go-duration",
-          "description": "The Websocket client frame timeout to the subgraph. Defines how long the router will wait for a frame response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
-          "default": "100ms",
+          "description": "The maximum time to wait for a connection_ack message after sending connection_init to a subgraph WebSocket. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "30s",
           "duration": {
-            "minimum": "10ms"
+            "minimum": "1s"
+          }
+        },
+        "websocket_client_read_limit": {
+          "type": "string",
+          "format": "bytes-string",
+          "description": "The maximum size of an incoming WebSocket message from a subgraph. The size is specified as a string with a number and a unit, e.g. 1KB, 1MB, 10MB. The supported units are 'KB', 'MB', 'GB'.",
+          "default": "1MB",
+          "bytes": {
+            "minimum": "1KB"
           }
         },
         "execution_plan_cache_size": {
@@ -3696,6 +4119,11 @@
           "default": "30s",
           "description": "The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
+        "enable_defer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enables support for the @defer directive, allowing clients to defer parts of a query so that the initial response is returned faster and deferred fields are streamed incrementally."
+        },
         "validate_required_external_fields": {
           "type": "boolean",
           "default": false,
@@ -3705,6 +4133,11 @@
           "type": "boolean",
           "default": false,
           "description": "Relaxes nullability validation for field selection merging when enclosing types are non-overlapping concrete object types. When enabled, fields with differing nullability (e.g. String! vs String) in inline fragments on different union member types will not cause validation errors."
+        },
+        "allow_string_literals_for_enums": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enables a deliberate deviation from the GraphQL specification that accepts a string literal where an enum value is expected, as long as the string content matches one of the enum's values (e.g. f(arg: \"VALUE1\") for enum SomeEnum { VALUE1 }). When disabled, only enum literals are valid inline values for enum types."
         }
       }
     },
@@ -3776,6 +4209,31 @@
           "type": "boolean",
           "default": false,
           "description": "Propagate Subgraph HTTP status codes. If the value is true (default: false), Subgraph HTTP response status codes will be propagated to the client in the extensions statusCode field."
+        }
+      }
+    },
+    "subgraph_extension_propagation": {
+      "type": "object",
+      "description": "Configuration for forwarding the response 'extensions' object from subgraphs to the client. Allows controlling which extension fields are propagated and how conflicts between subgraphs are resolved.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable forwarding of subgraph response extensions to the client."
+        },
+        "allowed_extension_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The extension fields that are allowed to be propagated from subgraphs to the client. If left empty, all extension fields will be forwarded."
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": ["first_write", "last_write"],
+          "default": "first_write",
+          "description": "The conflict resolution algorithm when multiple subgraphs return the same extension field. 'first_write' propagates the first response that wrote the field; 'last_write' propagates the last."
         }
       }
     },
@@ -3905,6 +4363,11 @@
               "type": "string",
               "default": "cosmo-registry.wundergraph.com",
               "description": "The URL of the plugin registry."
+            },
+            "insecure": {
+              "type": "boolean",
+              "default": false,
+              "description": "If true, the plugin registry is accessed over plaintext HTTP without authentication. Intended for local development against an unauthenticated registry; never enable in production."
             }
           }
         }
@@ -3929,6 +4392,17 @@
         "subrequest_http_error": {
           "type": "object",
           "description": "Prepends an additional error when subgraph HTTP response code is non-2XX, similar to Apollo Router.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "skip_null_variables_error": {
+          "type": "object",
+          "description": "Skips the error when a null variable is supplied, similar to Apollo Router.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -4421,6 +4895,82 @@
         "name": {
           "type": "string",
           "examples": ["X-API-Key"],
+          "description": "The name of the header to set."
+        },
+        "value": {
+          "type": "string",
+          "examples": ["My-Secret-Value"],
+          "description": "The value to set for the header. This can include environment variables."
+        },
+        "expression": {
+          "type": "string",
+          "description": "The template expression to evaluate. The expression must return a string value."
+        },
+        "value_from": {
+          "type": "object",
+          "description": "DEPRECATED: Use expression instead. The configuration for the value from. The value from is used to extract a value from a request context and propagate it to subgraphs. This is currently only valid in requests",
+          "additionalProperties": false,
+          "required": ["context_field"],
+          "properties": {
+            "context_field": {
+              "type": "string",
+              "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
+              "enum": ["operation_name"]
+            }
+          }
+        },
+        "from_file": {
+          "type": "object",
+          "description": "Source the header value from a file's contents. The file is loaded into memory and refreshed at refresh_interval, so request-time reads do not touch disk. Currently only valid in requests.",
+          "additionalProperties": false,
+          "required": ["path", "refresh_interval"],
+          "properties": {
+            "path": {
+              "type": "string",
+              "examples": ["/etc/secrets/api.key"],
+              "description": "Absolute path to the file whose contents become the header value. Trailing whitespace is trimmed."
+            },
+            "refresh_interval": {
+              "type": "string",
+              "format": "go-duration",
+              "duration": {
+                "minimum": "100ms"
+              },
+              "default": "1m",
+              "description": "Determines how often the file is checked for changes and re-read into memory. The minimum value is 100ms."
+            }
+          }
+        }
+      },
+      "required": ["op", "name"],
+      "oneOf": [
+        {
+          "required": ["value"]
+        },
+        {
+          "required": ["expression"]
+        },
+        {
+          "required": ["value_from"]
+        },
+        {
+          "required": ["from_file"]
+        }
+      ]
+    },
+    "set_response_header_rule": {
+      "type": "object",
+      "description": "The configuration for setting response headers. This is used to set specific headers in responses. Unlike the request variant, 'from_file' is not allowed here.",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string",
+          "const": "set",
+          "description": "The 'set' operation is used to set a specific header value."
+        },
+        "name": {
+          "type": "string",
+          "examples": ["X-Custom-Header"],
           "description": "The name of the header to set."
         },
         "value": {

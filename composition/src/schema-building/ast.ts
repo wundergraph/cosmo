@@ -15,9 +15,20 @@ import {
   type StringValueNode,
   type TypeNode,
 } from 'graphql';
-import { formatDescription, stringToNameNode } from '../ast/utils';
-import { maximumTypeNestingExceededError, unexpectedTypeNodeKindFatalError } from '../errors/errors';
+import { extractExecutableDirectiveLocations, formatDescription, stringToNameNode } from '../ast/utils';
+import {
+  duplicateDirectiveDefinitionLocationError,
+  duplicateDirectiveDefinitionLocationErrorMessage,
+  invalidDirectiveDefinitionLocationError,
+  invalidDirectiveDefinitionLocationErrorMessage,
+  maximumTypeNestingExceededError,
+  unexpectedTypeNodeKindFatalError,
+} from '../errors/errors';
 import { MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
+import { EXECUTABLE_DIRECTIVE_LOCATIONS } from '../utils/string-constants';
+import { TYPE_SYSTEM_DIRECTIVE_LOCATIONS } from '../v1/constants/strings';
+import { type DirectiveLocation } from '../types/types';
+import { type ExtractDirectiveLocationsResult } from './types/results';
 
 export type MutableDirectiveDefinitionNode = {
   arguments: MutableInputValueNode[];
@@ -27,17 +38,6 @@ export type MutableDirectiveDefinitionNode = {
   repeatable: boolean;
   description?: StringValueNode;
 };
-
-export function getMutableDirectiveDefinitionNode(node: DirectiveDefinitionNode): MutableDirectiveDefinitionNode {
-  return {
-    arguments: [],
-    kind: node.kind,
-    locations: [],
-    name: { ...node.name },
-    repeatable: node.repeatable,
-    description: formatDescription(node.description),
-  };
-}
 
 export type MutableEnumNode = {
   kind: Kind.ENUM_TYPE_DEFINITION;
@@ -161,26 +161,6 @@ export function getMutableObjectNode(nameNode: NameNode): MutableObjectNode {
   };
 }
 
-export type MutableObjectExtensionNode = {
-  kind: Kind.OBJECT_TYPE_EXTENSION;
-  name: NameNode;
-  description?: StringValueNode; // @extends directive would allow for a description
-  directives?: ConstDirectiveNode[];
-  fields?: FieldDefinitionNode[];
-  interfaces?: NamedTypeNode[];
-};
-
-export function getMutableObjectExtensionNode(
-  node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
-): MutableObjectExtensionNode {
-  const description = node.kind === Kind.OBJECT_TYPE_DEFINITION ? node.description : undefined;
-  return {
-    kind: Kind.OBJECT_TYPE_EXTENSION,
-    name: { ...node.name },
-    description: formatDescription(description),
-  };
-}
-
 export type MutableScalarNode = {
   kind: Kind.SCALAR_TYPE_DEFINITION;
   name: NameNode;
@@ -279,21 +259,42 @@ export type CompositeOutputNode =
   | ObjectTypeExtensionNode;
 
 export function getTypeNodeNamedTypeName(typeNode: TypeNode): string {
-  switch (typeNode.kind) {
-    case Kind.NAMED_TYPE:
-      return typeNode.name.value;
-    case Kind.LIST_TYPE:
-    // intentional fallthrough
-    case Kind.NON_NULL_TYPE:
-      return getTypeNodeNamedTypeName(typeNode.type);
+  if (typeNode.kind === Kind.NAMED_TYPE) {
+    return typeNode.name.value;
   }
+  return getTypeNodeNamedTypeName(typeNode.type);
 }
 
 export function getNamedTypeNode(typeNode: TypeNode): TypeNode {
-  switch (typeNode.kind) {
-    case Kind.NAMED_TYPE:
-      return typeNode;
-    default:
-      return getNamedTypeNode(typeNode.type);
+  if (typeNode.kind === Kind.NAMED_TYPE) {
+    return typeNode;
   }
+  return getNamedTypeNode(typeNode.type);
+}
+
+export function extractDirectiveLocations(node: DirectiveDefinitionNode): ExtractDirectiveLocationsResult {
+  const errors: Array<Error> = [];
+  const locations = new Set<DirectiveLocation>();
+  const handledLocations = new Set<DirectiveLocation>();
+  for (const locationNode of node.locations) {
+    const locationName = locationNode.value;
+    if (handledLocations.has(locationName)) {
+      continue;
+    }
+    if (!EXECUTABLE_DIRECTIVE_LOCATIONS.has(locationName) && !TYPE_SYSTEM_DIRECTIVE_LOCATIONS.has(locationName)) {
+      errors.push(invalidDirectiveDefinitionLocationError(locationName));
+      handledLocations.add(locationName);
+      continue;
+    }
+    if (locations.has(locationName)) {
+      errors.push(duplicateDirectiveDefinitionLocationError(locationName));
+      handledLocations.add(locationName);
+      continue;
+    }
+    locations.add(locationName);
+  }
+  return {
+    errors,
+    locations,
+  };
 }
