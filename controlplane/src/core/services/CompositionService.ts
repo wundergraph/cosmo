@@ -55,11 +55,14 @@ import { ContractRepository } from './../repositories/ContractRepository.js';
 import { FeatureFlagRepository, SubgraphsToCompose } from './../repositories/FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './../repositories/GraphCompositionRepository.js';
 import { SubgraphRepository } from './../repositories/SubgraphRepository.js';
+import { PromptToQueryService } from './PromptToQueryService.js';
 
 const COMPOSITION_DEPLOY_CONCURRENCY = 5;
 
 @traced
 export class CompositionService {
+  #ptqService: PromptToQueryService;
+
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
     private organizationId: string,
@@ -72,7 +75,17 @@ export class CompositionService {
     private chClient: ClickHouseClient | undefined,
     private webhookProxyUrl: string | undefined,
     private disableResolvabilityValidation: boolean | undefined,
-  ) {}
+    private promptToQueryServiceAddress: string | undefined,
+    private defaultBillingPlanId: string | undefined,
+  ) {
+    this.#ptqService = new PromptToQueryService(
+      this.db,
+      this.logger,
+      this.promptToQueryServiceAddress,
+      this.organizationId,
+      this.defaultBillingPlanId,
+    );
+  }
 
   public async composeAndDeployFederatedGraph({
     actorId,
@@ -721,6 +734,7 @@ export class CompositionService {
             routerExecutionConfig: contractRouterExecutionConfig,
             featureFlagId: compositionResult.featureFlagId,
             splitConfigEnabled: true,
+            promptToQueryService: this.#ptqService,
           });
 
           if (!artifact.success || !contractComposition.schemaVersionId) {
@@ -1255,6 +1269,7 @@ export class CompositionService {
       routerExecutionConfig,
       featureFlagId: compositionResult.featureFlagId,
       splitConfigEnabled,
+      promptToQueryService: this.#ptqService,
     });
 
     if (!compositionResult.base.success || !baseComposition.schemaVersionId) {
@@ -1424,6 +1439,7 @@ export class CompositionService {
             routerExecutionConfig: contractRouterExecutionConfig,
             featureFlagId: compositionResult.featureFlagId,
             splitConfigEnabled,
+            promptToQueryService: this.#ptqService,
           });
 
           if (!artifact.success || !contractComposition.schemaVersionId) {

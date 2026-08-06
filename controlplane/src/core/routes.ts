@@ -56,6 +56,7 @@ export interface RouterOptions {
   stripeSecretKey?: string;
   cdnBaseUrl: string;
   lockAdapter: Redlock;
+  promptToQueryServiceAddress?: string;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 80_000,

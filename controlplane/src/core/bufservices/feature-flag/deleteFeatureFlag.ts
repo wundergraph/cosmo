@@ -68,7 +68,6 @@ export function deleteFeatureFlag(
 
     const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction(async (tx) => {
       const auditLogRepo = new AuditLogRepository(tx);
-      const featureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
       const compositionService = new CompositionService(
         tx,
         authContext.organizationId,
@@ -78,6 +77,8 @@ export function deleteFeatureFlag(
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
+        opts.promptToQueryServiceAddress,
+        opts.billingDefaultPlanId,
       );
 
       const result = await compositionService.deleteFeatureFlag({

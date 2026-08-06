@@ -1438,6 +1438,7 @@ export class OrganizationRepository {
       support: false,
       'split-config-loading': false,
       'login-method-restrictions': false,
+      'prompt-to-query': false,
     };
 
     for (const feature of features) {
