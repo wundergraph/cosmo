@@ -20,6 +20,9 @@ type Client interface {
 	IsDistributed() bool
 	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error)
 	SaveOperation(ctx context.Context, clientName, sha256Hash string, operationBody []byte) error
+	// RenewTTL refreshes the store TTL of an existing APQ entry without altering
+	// its stored body. It is a no-op if the entry is absent.
+	RenewTTL(ctx context.Context, clientName, sha256Hash string) error
 	Close()
 }
 
@@ -91,6 +94,31 @@ func (c *client) SaveOperation(ctx context.Context, clientName, sha256Hash strin
 
 	// we don't use the client name in the APQ cache, because operations should be persisted across all clients
 	c.cache.Set("", sha256Hash, operationBody, c.ttl)
+	return nil
+}
+
+// RenewTTL refreshes the store TTL of an existing APQ entry by re-writing the
+// body already present in the store. APQ operations are content-addressed by
+// sha256(rawQuery), so the stored body is invariant and re-writing it is safe.
+// This must not be given the normalized representation, which has @skip/@include
+// directives evaluated for the current request's variables (see issue #3062).
+func (c *client) RenewTTL(ctx context.Context, _, sha256Hash string) error {
+	if c.kvClient != nil {
+		body, err := c.kvClient.Get(ctx, sha256Hash)
+		if err != nil {
+			return err
+		}
+		if len(body) == 0 {
+			// Nothing stored (e.g. evicted); nothing to renew.
+			return nil
+		}
+		return c.kvClient.Set(ctx, sha256Hash, body, c.ttl)
+	}
+
+	// in-memory APQ (clientName intentionally unused; APQ keys on hash only)
+	if body := c.cache.Get("", sha256Hash); len(body) > 0 {
+		c.cache.Set("", sha256Hash, body, c.ttl)
+	}
 	return nil
 }
 

@@ -130,6 +130,25 @@ func (c *Client) SaveOperation(ctx context.Context, clientName, sha256Hash, oper
 	return nil
 }
 
+// RenewOperationTTL renews the APQ store TTL for a cached persisted operation
+// without rewriting its body. This preserves the raw registered query, unlike a
+// SaveOperation of the normalized representation (which would corrupt the stored
+// query because @skip/@include are evaluated per request). See issue #3062.
+func (c *Client) RenewOperationTTL(ctx context.Context, clientName, sha256Hash string) error {
+	if c.apqClient == nil || !c.apqClient.Enabled() {
+		return nil
+	}
+	// Mirror SaveOperation's manifest guard: the manifest is authoritative for
+	// in-memory APQ, so manifest-owned operations are not tracked in the APQ store.
+	// Distributed APQ (Redis) still renews so all router instances retain the entry.
+	if !c.apqClient.IsDistributed() && c.ManifestEnabled() {
+		if _, found := c.pqlStore.LookupByHash(sha256Hash); found {
+			return nil
+		}
+	}
+	return c.apqClient.RenewTTL(ctx, clientName, sha256Hash)
+}
+
 func (c *Client) APQEnabled() bool {
 	return c.apqClient != nil && c.apqClient.Enabled()
 }
