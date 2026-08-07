@@ -497,6 +497,14 @@ export class FeatureFlagRepository {
       conditions.push(isValidUuid(query) ? eq(subgraphs.id, query) : like(targets.name, `%${query}%`));
     }
 
+    if (
+      rbac &&
+      (!applyIdpNamespaceGate(rbac, targets.namespaceId, conditions) ||
+        !this.applyRbacConditionsToQuery(rbac, conditions))
+    ) {
+      return { featureSubgraphs: [], totalCount: 0 };
+    }
+
     const baseSubgraphs = alias(subgraphs, 'base_subgraphs');
     const baseTargets = alias(targets, 'base_targets');
     const baseQuery = this.db
