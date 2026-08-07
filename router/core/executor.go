@@ -18,6 +18,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/introspection_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
@@ -49,6 +50,9 @@ type Executor struct {
 	Resolver        *resolve.Resolver
 	RenameTypeNames []resolve.RenameTypeName
 	TrackUsageInfo  bool
+	// PostprocessorOptions configure the plan postprocessor from the engine
+	// execution configuration (multi-fetch merging, fetch scheduling).
+	PostprocessorOptions []postprocess.ProcessorOption
 }
 
 type ExecutorBuildOptions struct {
@@ -209,13 +213,22 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		}
 	}
 
+	var postprocessorOptions []postprocess.ProcessorOption
+	if !opts.RouterEngineConfig.Execution.DisableMultiFetch {
+		postprocessorOptions = append(postprocessorOptions, postprocess.EnableMultiFetch())
+	}
+	if opts.RouterEngineConfig.Execution.DisableScheduleFetches {
+		postprocessorOptions = append(postprocessorOptions, postprocess.DisableScheduleFetches())
+	}
+
 	return &Executor{
-		PlanConfig:      *planConfig,
-		ClientSchema:    clientSchemaDefinition,
-		RouterSchema:    &routerSchemaDefinition,
-		Resolver:        resolver,
-		RenameTypeNames: renameTypeNames,
-		TrackUsageInfo:  b.trackUsageInfo,
+		PlanConfig:           *planConfig,
+		ClientSchema:         clientSchemaDefinition,
+		RouterSchema:         &routerSchemaDefinition,
+		Resolver:             resolver,
+		RenameTypeNames:      renameTypeNames,
+		TrackUsageInfo:       b.trackUsageInfo,
+		PostprocessorOptions: postprocessorOptions,
 	}, providers, nil
 }
 

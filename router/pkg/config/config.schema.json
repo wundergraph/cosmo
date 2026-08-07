@@ -3963,6 +3963,16 @@
           "description": "Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
           "default": true
         },
+        "disable_multi_fetch": {
+          "type": "boolean",
+          "description": "Disables merging entity fetches to the same subgraph that execute in the same wave into a single batched request with aliased _entities fields. Merging reduces the number of subgraph requests; disable only as an escape hatch.",
+          "default": false
+        },
+        "disable_schedule_fetches": {
+          "type": "boolean",
+          "description": "Replaces the dependency-aware fetch scheduler with the legacy wave-based fetch organizers. Escape hatch; only use when the scheduler misbehaves.",
+          "default": false
+        },
         "websocket_client_write_timeout": {
           "type": "string",
           "format": "go-duration",

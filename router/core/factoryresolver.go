@@ -311,6 +311,9 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	var outConfig plan.Configuration
 	// attach field usage information to the plan
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
+	// EnableMultiFetch makes the planner record the subgraph operation artifacts
+	// the postprocessor's multi-fetch merge stage consumes.
+	outConfig.EnableMultiFetch = !routerEngineConfig.Execution.DisableMultiFetch
 	for _, configuration := range engineConfig.FieldConfigurations {
 		var args []plan.ArgumentConfiguration
 		for _, argumentConfiguration := range configuration.ArgumentsConfiguration {
