@@ -1200,6 +1200,7 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
 		mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
 		mcpserver.WithOmitToolNamePrefix(r.mcp.OmitToolNamePrefix),
+		mcpserver.WithScalarMappings(r.mcp.ScalarMappings),
 		mcpserver.WithStateless(r.mcp.Session.Stateless),
 	}
 

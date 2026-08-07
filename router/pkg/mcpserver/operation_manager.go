@@ -9,6 +9,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/jsonschema"
 )
 
 // OperationsManager handles the loading and preparation of GraphQL operations
@@ -17,10 +18,13 @@ type OperationsManager struct {
 	operations       []schemaloader.Operation
 	logger           *zap.Logger
 	excludeMutations bool
+	// scalarSchemas overrides the JSON schema emitted for custom scalar types
+	// in generated tool input schemas, keyed by scalar type name.
+	scalarSchemas map[string]*jsonschema.JsonSchema
 }
 
 // NewOperationsManager creates a new operations manager
-func NewOperationsManager(schemaDoc *ast.Document, logger *zap.Logger, excludeMutations bool) *OperationsManager {
+func NewOperationsManager(schemaDoc *ast.Document, logger *zap.Logger, excludeMutations bool, scalarSchemas map[string]*jsonschema.JsonSchema) *OperationsManager {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -29,6 +33,7 @@ func NewOperationsManager(schemaDoc *ast.Document, logger *zap.Logger, excludeMu
 		schemaDoc:        schemaDoc,
 		logger:           logger,
 		excludeMutations: excludeMutations,
+		scalarSchemas:    scalarSchemas,
 	}
 }
 
@@ -42,10 +47,15 @@ func (om *OperationsManager) LoadOperationsFromDirectory(operationsDir string) e
 	}
 
 	// Build schemas for operations
-	builder := schemaloader.NewSchemaBuilder(om.schemaDoc)
+	builder := schemaloader.NewSchemaBuilder(om.schemaDoc, schemaloader.WithScalarSchemas(om.scalarSchemas))
 	err = builder.BuildSchemasForOperations(operations)
 	if err != nil {
 		return fmt.Errorf("failed to build schemas: %w", err)
+	}
+
+	if defaulted := builder.DefaultedScalars(); len(defaulted) > 0 {
+		om.logger.Warn("custom scalars defaulted to type \"string\" in MCP tool input schemas; non-string arguments for these scalars will be rejected by input validation — add mcp.scalar_mappings entries to override",
+			zap.Strings("scalars", defaulted))
 	}
 
 	om.operations = operations

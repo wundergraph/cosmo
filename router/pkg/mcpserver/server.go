@@ -27,6 +27,7 @@ import (
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
+	enginejsonschema "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/jsonschema"
 )
 
 // reservedToolNames contains tool names that are internally registered by the MCP server
@@ -83,6 +84,9 @@ type Options struct {
 	ExposeSchema bool
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names
 	OmitToolNamePrefix bool
+	// ScalarMappings overrides the JSON schema type advertised for custom scalar
+	// variables in MCP tool input schemas, keyed by scalar type name.
+	ScalarMappings map[string]string
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
 	// CorsConfig is the CORS configuration for the MCP server
@@ -110,6 +114,7 @@ type GraphQLSchemaServer struct {
 	enableArbitraryOperations bool
 	exposeSchema              bool
 	omitToolNamePrefix        bool
+	scalarSchemas             map[string]*enginejsonschema.JsonSchema
 	stateless                 bool
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
@@ -218,6 +223,13 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		opt(options)
 	}
 
+	// Translate scalar mappings once at startup; an invalid mapping is a
+	// config error and must abort server start, not merely warn.
+	scalarSchemas, err := scalarSchemasFromMappings(options.ScalarMappings)
+	if err != nil {
+		return nil, fmt.Errorf("invalid mcp scalar mappings: %w", err)
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 
 	var authMiddleware *MCPAuthMiddleware
@@ -312,6 +324,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
 		omitToolNamePrefix:        options.OmitToolNamePrefix,
+		scalarSchemas:             scalarSchemas,
 		stateless:                 options.Stateless,
 		corsConfig:                options.CorsConfig,
 		cancel:                    cancel,
@@ -388,6 +401,14 @@ func WithStateless(stateless bool) func(*Options) {
 func WithOmitToolNamePrefix(omitToolNamePrefix bool) func(*Options) {
 	return func(o *Options) {
 		o.OmitToolNamePrefix = omitToolNamePrefix
+	}
+}
+
+// WithScalarMappings sets the custom scalar to JSON schema type mappings
+// used when generating MCP tool input schemas.
+func WithScalarMappings(scalarMappings map[string]string) func(*Options) {
+	return func(o *Options) {
+		o.ScalarMappings = scalarMappings
 	}
 }
 
@@ -520,7 +541,7 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 	}
 
 	s.schemaCompiler = NewSchemaCompiler(s.logger)
-	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations)
+	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations, s.scalarSchemas)
 
 	if s.operationsDir != "" {
 		if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
