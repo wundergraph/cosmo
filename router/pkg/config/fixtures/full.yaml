@@ -464,6 +464,7 @@ engine:
 rate_limit:
   enabled: true
   strategy: 'simple'
+  exclude_subscriptions: true
   storage:
     cluster_enabled: true
     urls:
