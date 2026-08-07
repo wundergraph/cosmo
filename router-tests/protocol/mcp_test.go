@@ -242,6 +242,72 @@ func TestMCP(t *testing.T) {
 				})
 			})
 
+			t.Run("Custom scalar variables carry a JSON Schema type in tool input schemas", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					MCPOperationsPath: "testdata/mcp_operations_custom_scalar",
+					MCP: config.MCPConfiguration{
+						Enabled: true,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+
+					toolsRequest := mcp.ListToolsRequest{}
+					resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
+					require.NoError(t, err)
+					require.NotNil(t, resp)
+
+					var tool *mcp.Tool
+					for i := range resp.Tools {
+						if resp.Tools[i].Name == "execute_operation_upload_file" {
+							tool = &resp.Tools[i]
+							break
+						}
+					}
+					require.NotNil(t, tool, "expected the UploadFile operation to be registered as a tool")
+
+					fileSchema, ok := tool.InputSchema.Properties["file"].(map[string]any)
+					require.True(t, ok, "expected a schema object for the 'file' variable, got: %#v", tool.InputSchema.Properties)
+
+					actual, err := json.Marshal(fileSchema)
+					require.NoError(t, err)
+
+					// Custom scalars are opaque to JSON Schema, but MCP tool consumers
+					// (Anthropic directory validation, OpenAI strict mode) reject input
+					// schema properties that declare no "type". Opaque scalars must carry
+					// a best-effort primitive type: string.
+					require.Contains(t, fileSchema, "type", "custom scalar variable 'file' must declare a JSON Schema type, got: %s", actual)
+					assert.Equal(t, "string", fileSchema["type"], "custom scalar variable 'file' should be typed as a string, got: %s", actual)
+				})
+			})
+
+			t.Run("scalar mapping overrides the string default for a mapped custom scalar", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					MCPOperationsPath: "testdata/mcp_operations_custom_scalar",
+					MCP: config.MCPConfiguration{
+						Enabled:        true,
+						ScalarMappings: map[string]string{"Upload": "object"},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					toolsRequest := mcp.ListToolsRequest{}
+					resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
+					require.NoError(t, err)
+
+					var tool *mcp.Tool
+					for i := range resp.Tools {
+						if resp.Tools[i].Name == "execute_operation_upload_file" {
+							tool = &resp.Tools[i]
+							break
+						}
+					}
+					require.NotNil(t, tool, "expected the UploadFile operation to be registered as a tool")
+
+					fileSchema, ok := tool.InputSchema.Properties["file"].(map[string]any)
+					require.True(t, ok, "expected a schema object for the 'file' variable")
+
+					// The mapping replaces the string default; Upload! is non-null so no null union.
+					require.Equal(t, "object", fileSchema["type"], "mapped custom scalar should carry the configured type")
+				})
+			})
+
 			t.Run("List user Operations / Static operations of type mutation aren't exposed when excludeMutations is set", func(t *testing.T) {
 				testenv.Run(t, &testenv.Config{
 					MCP: config.MCPConfiguration{

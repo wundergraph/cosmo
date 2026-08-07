@@ -1,0 +1,4 @@
+# This mutation uploads a single file.
+mutation UploadFile($file: Upload!) {
+  singleUpload(file: $file)
+}
