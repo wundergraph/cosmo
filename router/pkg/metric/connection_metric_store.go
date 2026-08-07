@@ -23,16 +23,10 @@ type ConnectionMetricProvider interface {
 	MeasureTCPConnectDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
-	MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
-	Shutdown() error
-}
-
-// lastByteMetricProvider is an optional extension implemented by the built-in
-// OTLP and Prometheus providers. Keeping it separate avoids adding required
-// methods to the exported ConnectionMetricProvider interface.
-type lastByteMetricProvider interface {
 	MeasureTimeToLastRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
+	MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTimeToLastByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
+	Shutdown() error
 }
 
 // ConnectionMetricStore is the interface for connection and pool metrics only.
@@ -42,16 +36,10 @@ type ConnectionMetricStore interface {
 	MeasureTCPConnectDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-	MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-	Shutdown(ctx context.Context) error
-}
-
-// LastByteMetricStore is an optional extension for first-to-last-byte transfer
-// metrics. Implementations of ConnectionMetricStore that predate these metrics
-// remain source-compatible.
-type LastByteMetricStore interface {
 	MeasureTimeToLastRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
+	MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTimeToLastByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
+	Shutdown(ctx context.Context) error
 }
 
 type ConnectionMetrics struct {
@@ -141,12 +129,8 @@ func (c *ConnectionMetrics) MeasureTimeToFirstRequestByte(ctx context.Context, d
 
 func (c *ConnectionMetrics) MeasureTimeToLastRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
 	opts := c.recordOpts(attrs)
-	if provider, ok := c.otlpConnectionMetrics.(lastByteMetricProvider); ok {
-		provider.MeasureTimeToLastRequestByte(ctx, duration, opts)
-	}
-	if provider, ok := c.promConnectionMetrics.(lastByteMetricProvider); ok {
-		provider.MeasureTimeToLastRequestByte(ctx, duration, opts)
-	}
+	c.otlpConnectionMetrics.MeasureTimeToLastRequestByte(ctx, duration, opts)
+	c.promConnectionMetrics.MeasureTimeToLastRequestByte(ctx, duration, opts)
 }
 
 func (c *ConnectionMetrics) MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
@@ -157,12 +141,8 @@ func (c *ConnectionMetrics) MeasureTimeToFirstByte(ctx context.Context, duration
 
 func (c *ConnectionMetrics) MeasureTimeToLastByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
 	opts := c.recordOpts(attrs)
-	if provider, ok := c.otlpConnectionMetrics.(lastByteMetricProvider); ok {
-		provider.MeasureTimeToLastByte(ctx, duration, opts)
-	}
-	if provider, ok := c.promConnectionMetrics.(lastByteMetricProvider); ok {
-		provider.MeasureTimeToLastByte(ctx, duration, opts)
-	}
+	c.otlpConnectionMetrics.MeasureTimeToLastByte(ctx, duration, opts)
+	c.promConnectionMetrics.MeasureTimeToLastByte(ctx, duration, opts)
 }
 
 func (c *ConnectionMetrics) recordOpts(attrs []attribute.KeyValue) otelmetric.RecordOption {

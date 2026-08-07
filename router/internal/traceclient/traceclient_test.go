@@ -754,7 +754,7 @@ func TestTraceInjectingRoundTripper(t *testing.T) {
 				name:          "HEAD with representation length",
 				method:        http.MethodHead,
 				statusCode:    http.StatusOK,
-				body:          &pacedBody{},
+				body:          http.NoBody,
 				contentLength: 128,
 			},
 			{

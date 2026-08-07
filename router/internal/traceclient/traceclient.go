@@ -257,6 +257,9 @@ func (t *TraceInjectingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 	trip, err := t.base.RoundTrip(req)
 
 	recorder := t.processConnectionMetrics(req.Context(), req, ec)
+	if recorder == nil {
+		return trip, err
+	}
 
 	// httptrace has no "last response byte" callback: the last byte is only
 	// observable once the caller has fully consumed the response body. Wrap
@@ -265,24 +268,22 @@ func (t *TraceInjectingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 	// This is always before the subgraph access log is written, because the
 	// engine fully reads and closes the body during the fetch load phase, which
 	// completes before the log is emitted.
-	if recorder != nil {
-		switch {
-		case err != nil || !shouldMeasureResponseTransfer(trip):
-			// Upgraded and streaming responses are intentionally excluded. In
-			// particular, leaving HTTP 101 bodies untouched preserves their
-			// io.ReadWriteCloser contract for WebSocket clients.
-			recorder.cancel()
-		case responseHasNoBody(req, trip):
-			// RoundTrip returns after the response headers are read. For HEAD
-			// and other responses that cannot carry a body, that is also the
-			// point at which the last response byte has been consumed.
-			recorder.fire()
-		default:
-			trip.Body = &timedResponseBody{
-				ReadCloser:    trip.Body,
-				recorder:      recorder,
-				contentLength: trip.ContentLength,
-			}
+	switch {
+	case err != nil || !shouldMeasureResponseTransfer(trip):
+		// Upgraded and streaming responses are intentionally excluded. In
+		// particular, leaving HTTP 101 bodies untouched preserves their
+		// io.ReadWriteCloser contract for WebSocket clients.
+		recorder.cancel()
+	case responseHasNoBody(trip):
+		// RoundTrip returns after the response headers are read. For responses
+		// that cannot carry a body, that is also the point at which the last
+		// response byte has been consumed.
+		recorder.fire()
+	default:
+		trip.Body = &timedResponseBody{
+			ReadCloser:    trip.Body,
+			recorder:      recorder,
+			contentLength: trip.ContentLength,
 		}
 	}
 
@@ -300,8 +301,8 @@ func shouldMeasureResponseTransfer(resp *http.Response) bool {
 	return true
 }
 
-func responseHasNoBody(req *http.Request, resp *http.Response) bool {
-	if req.Method == http.MethodHead || resp.Body == http.NoBody || resp.ContentLength == 0 {
+func responseHasNoBody(resp *http.Response) bool {
+	if resp.Body == http.NoBody || resp.ContentLength == 0 {
 		return true
 	}
 	return resp.StatusCode >= 100 && resp.StatusCode <= 199 ||
@@ -544,18 +545,15 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		)
 	}
 
-	lastByteMetricStore, _ := t.connectionMetricStore.(metric.LastByteMetricStore)
 	requestRecorder := &requestByteRecorder{
 		resultsOpen: true,
 		results:     results,
 		recordMetric: func(duration time.Duration) {
-			if lastByteMetricStore != nil {
-				lastByteMetricStore.MeasureTimeToLastRequestByte(
-					ctx,
-					msFromDuration(duration),
-					serverAttributes...,
-				)
-			}
+			t.connectionMetricStore.MeasureTimeToLastRequestByte(
+				ctx,
+				msFromDuration(duration),
+				serverAttributes...,
+			)
 		},
 	}
 	recorder := &lastByteRecorder{
@@ -563,13 +561,11 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		request: requestRecorder,
 		recordResponse: func(duration time.Duration) {
 			results.TimeToLastByte = duration
-			if lastByteMetricStore != nil {
-				lastByteMetricStore.MeasureTimeToLastByte(
-					ctx,
-					msFromDuration(duration),
-					serverAttributes...,
-				)
-			}
+			t.connectionMetricStore.MeasureTimeToLastByte(
+				ctx,
+				msFromDuration(duration),
+				serverAttributes...,
+			)
 		},
 	}
 
