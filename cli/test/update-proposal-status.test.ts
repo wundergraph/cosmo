@@ -8,7 +8,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Command } from 'commander';
 import { afterEach, beforeEach, describe, expect, test, vi, type MockInstance } from 'vitest';
-import ApproveProposalCommand from '../src/commands/proposal/commands/approve.js';
+import UpdateProposalStatusCommand from '../src/commands/proposal/commands/update-status.js';
 import { Client } from '../src/core/client/client.js';
 
 function createMockTransport(
@@ -25,7 +25,7 @@ function createMockTransport(
   });
 }
 
-async function runApprove(
+async function runUpdateStatus(
   response: MessageInitShape<typeof UpdateProposalResponseSchema>,
   args: string[] = [],
   onUpdateProposal?: (req: UpdateProposalRequest) => void,
@@ -35,11 +35,16 @@ async function runApprove(
   };
   const program = new Command();
   program.exitOverride();
-  program.addCommand(ApproveProposalCommand({ client }));
-  await program.parseAsync(['approve', 'my-proposal', '--federation-graph', 'my-graph', ...args], { from: 'user' });
+  const command = UpdateProposalStatusCommand({ client });
+  command.exitOverride();
+  program.addCommand(command);
+  await program.parseAsync(
+    ['update-status', 'my-proposal', '--federation-graph', 'my-graph', '--status', 'approved', ...args],
+    { from: 'user' },
+  );
 }
 
-describe('approve proposal', () => {
+describe('update proposal status', () => {
   let logSpy: MockInstance<typeof console.log>;
   let errorSpy: MockInstance<typeof console.error>;
 
@@ -56,7 +61,7 @@ describe('approve proposal', () => {
   test('approves a proposal in the default namespace', async () => {
     let request: UpdateProposalRequest | undefined;
 
-    await runApprove({ response: { code: EnumStatusCode.OK } }, [], (req) => {
+    await runUpdateStatus({ response: { code: EnumStatusCode.OK } }, [], (req) => {
       request = req;
     });
 
@@ -69,23 +74,47 @@ describe('approve proposal', () => {
         value: 'APPROVED',
       },
     });
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Proposal 'my-proposal' was approved successfully."));
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Proposal 'my-proposal' status was updated to APPROVED successfully."),
+    );
     expect(errorSpy).not.toHaveBeenCalled();
     expect(process.exitCode).toBeUndefined();
   });
 
-  test('approves a proposal in an explicitly provided namespace', async () => {
-    let namespace = '';
+  test('closes a proposal in an explicitly provided namespace', async () => {
+    let request: UpdateProposalRequest | undefined;
 
-    await runApprove({ response: { code: EnumStatusCode.OK } }, ['--namespace', 'production'], (req) => {
-      namespace = req.namespace;
+    await runUpdateStatus(
+      { response: { code: EnumStatusCode.OK } },
+      ['--status', 'CLOSED', '--namespace', 'production'],
+      (req) => {
+        request = req;
+      },
+    );
+
+    expect(request).toMatchObject({
+      namespace: 'production',
+      updateAction: {
+        case: 'state',
+        value: 'CLOSED',
+      },
     });
+  });
 
-    expect(namespace).toBe('production');
+  test('rejects statuses that cannot be set manually', async () => {
+    let updateCalled = false;
+
+    await expect(
+      runUpdateStatus({ response: { code: EnumStatusCode.OK } }, ['--status', 'published'], () => {
+        updateCalled = true;
+      }),
+    ).rejects.toThrow('Allowed values are approved and closed.');
+
+    expect(updateCalled).toBe(false);
   });
 
   test('prints the control-plane error and sets a non-zero exit code', async () => {
-    await runApprove({
+    await runUpdateStatus({
       response: {
         code: EnumStatusCode.ERR_NOT_FOUND,
         details: 'Proposal my-proposal not found',
