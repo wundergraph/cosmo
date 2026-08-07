@@ -72,6 +72,14 @@ npx wgc proposal update <name> --federation-graph <federated-graph-name> (--subg
 
 **Note**: When updating a proposal, any subgraphs you specify will completely replace the corresponding subgraphs in the existing proposal. The update is not incremental.
 
+### Approving a Proposal
+
+Use the [`wgc proposal approve`](/cli/proposal/approve) command to approve an existing proposal. The command is non-interactive and can be used in CI with a `COSMO_API_KEY` that has write access to the federated graph:
+
+```bash
+npx wgc proposal approve <name> --federation-graph <federated-graph-name> [--namespace <namespace>]
+```
+
 ## Configuring Proposals
 
 <Frame>
