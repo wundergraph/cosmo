@@ -54,7 +54,7 @@ func (om *OperationsManager) LoadOperationsFromDirectory(operationsDir string) e
 	}
 
 	if defaulted := builder.DefaultedScalars(); len(defaulted) > 0 {
-		om.logger.Warn("custom scalars defaulted to type \"string\" in MCP tool input schemas; non-string arguments for these scalars will be rejected by input validation — add mcp.scalar_mappings entries to override",
+		om.logger.Warn("custom scalars defaulted to type \"string\" in MCP tool input schemas; non-string arguments for these scalars will be rejected by input validation - add mcp.scalar_mappings entries to override",
 			zap.Strings("scalars", defaulted))
 	}
 
