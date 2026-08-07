@@ -279,7 +279,7 @@ func TestMCP(t *testing.T) {
 				})
 			})
 
-			t.Run("scalar mapping overrides the string default for a mapped custom scalar", func(t *testing.T) {
+			t.Run("Scalar mapping overrides the string default for a mapped custom scalar", func(t *testing.T) {
 				testenv.Run(t, &testenv.Config{
 					MCPOperationsPath: "testdata/mcp_operations_custom_scalar",
 					MCP: config.MCPConfiguration{

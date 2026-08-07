@@ -18,8 +18,10 @@ var allowedScalarMappingTypes = map[string]jsonschema.SchemaType{
 }
 
 // scalarSchemasFromMappings translates config scalar mappings (scalar name ->
-// JSON schema type name) into schema overrides. The config JSON schema already
-// restricts values via enum; this guards programmatic callers.
+// JSON schema type name) into schema overrides.
+// YAML config is enum-checked by the config JSON schema, but env-sourced
+// config (MCP_SCALAR_MAPPINGS) bypasses schema validation entirely — this
+// runtime check is the only guard on that path.
 func scalarSchemasFromMappings(mappings map[string]string) (map[string]*jsonschema.JsonSchema, error) {
 	if len(mappings) == 0 {
 		return nil, nil
