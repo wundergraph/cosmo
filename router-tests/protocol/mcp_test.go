@@ -25,6 +25,28 @@ import (
 	"go.uber.org/zap"
 )
 
+// requireStructuredContentMatchesText asserts that a successful tool result also
+// exposes its text content as equivalent structured content.
+func requireStructuredContentMatchesText(t *testing.T, resp *mcp.CallToolResult, text string) {
+	t.Helper()
+	require.NotNil(t, resp.StructuredContent)
+	var expectedStructured map[string]interface{}
+	require.NoError(t, json.Unmarshal([]byte(text), &expectedStructured))
+	assert.Equal(t, expectedStructured, resp.StructuredContent)
+}
+
+// toolByName returns the tool with the given name from a tools/list response
+func toolByName(t *testing.T, tools []mcp.Tool, name string) mcp.Tool {
+	t.Helper()
+	for _, tool := range tools {
+		if tool.Name == name {
+			return tool
+		}
+	}
+	t.Fatalf("tool %q not found", name)
+	return mcp.Tool{}
+}
+
 func TestMCP(t *testing.T) {
 
 	t.Run("Discovery", func(t *testing.T) {
@@ -499,6 +521,200 @@ Important Notes:
 				})
 			})
 
+		})
+	})
+
+	t.Run("Structured Tool Output", func(t *testing.T) {
+		outputSchemaEnabled := config.MCPConfiguration{
+			Enabled:      true,
+			OutputSchema: config.MCPOutputSchemaConfiguration{Enabled: true},
+		}
+
+		t.Run("Tools declare an output schema when enabled", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				MCP: outputSchemaEnabled,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				resp, err := xEnv.MCPClient.ListTools(xEnv.Context, mcp.ListToolsRequest{})
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+
+				myEmployees := toolByName(t, resp.Tools, "execute_operation_my_employees")
+				assert.Equal(t, mcp.ToolOutputSchema{
+					Type: "object",
+					Properties: map[string]interface{}{
+						"data": map[string]interface{}{
+							"type": []interface{}{"object", "null"},
+							"properties": map[string]interface{}{
+								"findEmployees": map[string]interface{}{
+									"description": "This is a GraphQL query that retrieves a list of employees.",
+									"type":        "array",
+									"items": map[string]interface{}{
+										"type": "object",
+										"properties": map[string]interface{}{
+											"currentMood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"},
+											"details": map[string]interface{}{
+												"type": []interface{}{"object", "null"},
+												"properties": map[string]interface{}{
+													"forename":    map[string]interface{}{"type": "string"},
+													"nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "type": "string"},
+												},
+												"required": []interface{}{"forename", "nationality"},
+											},
+											"id":          map[string]interface{}{"type": "integer"},
+											"isAvailable": map[string]interface{}{"type": []interface{}{"boolean", "null"}},
+											"products": map[string]interface{}{
+												"type":  "array",
+												"items": map[string]interface{}{"enum": []interface{}{"CONSULTANCY", "COSMO", "ENGINE", "FINANCE", "HUMAN_RESOURCES", "MARKETING", "SDK"}, "type": "string"},
+											},
+										},
+										"required": []interface{}{"currentMood", "details", "id", "isAvailable", "products"},
+									},
+								},
+							},
+							"required": []interface{}{"findEmployees"},
+						},
+					},
+				}, myEmployees.OutputSchema)
+
+				updateMood := toolByName(t, resp.Tools, "execute_operation_update_mood")
+				assert.Equal(t, mcp.ToolOutputSchema{
+					Type: "object",
+					Properties: map[string]interface{}{
+						"data": map[string]interface{}{
+							"type": []interface{}{"object", "null"},
+							"properties": map[string]interface{}{
+								"updateMood": map[string]interface{}{
+									"description": "This mutation update the mood of an employee.",
+									"type":        "object",
+									"properties": map[string]interface{}{
+										"currentMood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"},
+										"details": map[string]interface{}{
+											"type":       []interface{}{"object", "null"},
+											"properties": map[string]interface{}{"forename": map[string]interface{}{"type": "string"}},
+											"required":   []interface{}{"forename"},
+										},
+										"id": map[string]interface{}{"type": "integer"},
+									},
+									"required": []interface{}{"currentMood", "details", "id"},
+								},
+							},
+							"required": []interface{}{"updateMood"},
+						},
+					},
+				}, updateMood.OutputSchema)
+			})
+		})
+
+		t.Run("Tools declare no output schema when disabled", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				MCP: config.MCPConfiguration{
+					Enabled: true,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				resp, err := xEnv.MCPClient.ListTools(xEnv.Context, mcp.ListToolsRequest{})
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+
+				for _, tool := range resp.Tools {
+					assert.Equal(t, mcp.ToolOutputSchema{}, tool.OutputSchema,
+						"tool %q must not declare an output schema when the flag is disabled", tool.Name)
+				}
+			})
+		})
+
+		t.Run("Successful results carry structured content matching the text content", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				MCP: outputSchemaEnabled,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				req := mcp.CallToolRequest{}
+				req.Params.Name = "execute_operation_my_employees"
+				req.Params.Arguments = map[string]interface{}{
+					"criteria": map[string]interface{}{},
+				}
+
+				resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.False(t, resp.IsError)
+
+				content, ok := resp.Content[0].(mcp.TextContent)
+				require.True(t, ok)
+
+				requireStructuredContentMatchesText(t, resp, content.Text)
+			})
+		})
+
+		t.Run("Structured content is returned for execute_graphql without a declared output schema", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				MCP: config.MCPConfiguration{
+					Enabled:                   true,
+					EnableArbitraryOperations: true,
+					OutputSchema:              config.MCPOutputSchemaConfiguration{Enabled: true},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				req := mcp.CallToolRequest{}
+				req.Params.Name = "execute_graphql"
+				req.Params.Arguments = map[string]interface{}{
+					"query": `query { employees { id } }`,
+				}
+
+				resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.False(t, resp.IsError)
+
+				content, ok := resp.Content[0].(mcp.TextContent)
+				require.True(t, ok)
+
+				// The MCP specification permits structured content on tools
+				// that declare no output schema
+				requireStructuredContentMatchesText(t, resp, content.Text)
+			})
+		})
+
+		t.Run("No structured content when disabled", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				MCP: config.MCPConfiguration{
+					Enabled: true,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				req := mcp.CallToolRequest{}
+				req.Params.Name = "execute_operation_my_employees"
+				req.Params.Arguments = map[string]interface{}{
+					"criteria": map[string]interface{}{},
+				}
+
+				resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.False(t, resp.IsError)
+
+				assert.Nil(t, resp.StructuredContent)
+			})
+		})
+
+		t.Run("Error results carry no structured content", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				MCP: outputSchemaEnabled,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				req := mcp.CallToolRequest{}
+				req.Params.Name = "execute_operation_my_employees"
+				req.Params.Arguments = map[string]interface{}{
+					"criteria": nil,
+				}
+
+				resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+				require.NoError(t, err)
+				require.True(t, resp.IsError)
+
+				assert.Nil(t, resp.StructuredContent)
+			})
 		})
 	})
 

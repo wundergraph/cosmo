@@ -43,6 +43,7 @@ storage_providers:
 | `enable_arbitrary_operations` | Enables the `execute_graphql` built-in tool, allowing clients to run arbitrary GraphQL operations beyond the pre-defined operation set.                                                                                                                                      | `false`          |
 | `expose_schema`               | Enables the `get_schema` built-in tool, exposing the full GraphQL schema to MCP clients.                                                                                                                                                                                     | `false`          |
 | `omit_tool_name_prefix`       | When enabled, MCP tool names omit the `execute_operation_` prefix. For example, `GetUser` becomes `get_user` instead of `execute_operation_get_user`. See [Tools - Omitting the Tool Name Prefix](/router/mcp/tools#omitting-the-tool-name-prefix).                | `false`          |
+| `output_schema.enabled`       | When enabled, every operation tool declares an output schema derived from its selection set, and successful tool results additionally carry the response as structured content. Increases `tools/list` and result payload sizes. See [Tools - Structured Tool Output](/router/mcp/tools#structured-tool-output). | `false`          |
 
 For OAuth-specific configuration, see [OAuth 2.1 Authorization](/router/mcp/oauth/overview).
 
@@ -67,6 +68,7 @@ All MCP options can also be set via environment variables:
 | `MCP_ENABLE_ARBITRARY_OPERATIONS` | `mcp.enable_arbitrary_operations` |
 | `MCP_EXPOSE_SCHEMA`               | `mcp.expose_schema`               |
 | `MCP_OMIT_TOOL_NAME_PREFIX`       | `mcp.omit_tool_name_prefix`       |
+| `MCP_OUTPUT_SCHEMA_ENABLED`       | `mcp.output_schema.enabled`       |
 
 For OAuth-related environment variables, see [OAuth Configuration Reference](/router/mcp/oauth/configuration#environment-variables).
 
@@ -140,6 +142,8 @@ mcp:
   enable_arbitrary_operations: false
   expose_schema: false
   omit_tool_name_prefix: false
+  output_schema:
+    enabled: false
   storage:
     provider_id: 'mcp'
 
