@@ -481,6 +481,12 @@ type EngineExecutionConfiguration struct {
 
 	MaxConcurrentResolvers                           int           `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
 	EnableNetPoll                                    bool          `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
+	// DisableMultiFetch disables merging entity fetches to the same subgraph that execute
+	// in the same wave into a single batched request with aliased _entities fields.
+	DisableMultiFetch bool `envDefault:"false" env:"ENGINE_DISABLE_MULTI_FETCH" yaml:"disable_multi_fetch"`
+	// DisableScheduleFetches replaces the dependency-aware fetch scheduler with the
+	// legacy wave-based fetch organizers (escape hatch).
+	DisableScheduleFetches bool `envDefault:"false" env:"ENGINE_DISABLE_SCHEDULE_FETCHES" yaml:"disable_schedule_fetches"`
 	ExecutionPlanCacheSize                           int64         `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	SlowPlanCacheSize                                int64         `envDefault:"300" env:"ENGINE_SLOW_PLAN_CACHE_SIZE" yaml:"slow_plan_cache_size,omitempty"`
 	SlowPlanCacheThreshold                           time.Duration `envDefault:"100ms" env:"ENGINE_SLOW_PLAN_CACHE_THRESHOLD" yaml:"slow_plan_cache_threshold,omitempty"`

@@ -168,7 +168,9 @@ func TestCustomModuleQueryStats(t *testing.T) {
 
 				assert.Equal(t, expectedSubgraphFetches, qps.SubgraphFetches)
 
-				assert.Equal(t, []core.SubgraphRootField{
+				// The list is deduplicated in fetch-tree traversal order, which is
+				// an implementation detail of the schedule tree shape: assert as a set.
+				assert.ElementsMatch(t, []core.SubgraphRootField{
 					{
 						SubgraphName: "employees",
 						TypeName:     "Query",
