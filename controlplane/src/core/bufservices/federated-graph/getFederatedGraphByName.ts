@@ -7,12 +7,13 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PlainMessage } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { AnalyticsDashboardViewRepository } from '../../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
+import { convertToSubgraphProto, enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function getFederatedGraphByName(
   opts: RouterOptions,
@@ -27,6 +28,7 @@ export function getFederatedGraphByName(
 
     const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
+    const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
 
     req.namespace = req.namespace || DefaultNamespace;
 
@@ -34,6 +36,7 @@ export function getFederatedGraphByName(
     if (!federatedGraph) {
       return {
         subgraphs: [],
+        featureSubgraphs: [],
         graphRequestToken: '',
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
@@ -58,6 +61,16 @@ export function getFederatedGraphByName(
       rbac: authContext.rbac,
     });
 
+    // Feature subgraphs of the feature flags that match this federated graph
+    const { featureSubgraphs } = await featureFlagRepo.getFeatureSubgraphsByFederatedGraph({
+      federatedGraphId: federatedGraph.id,
+      namespaceId: federatedGraph.namespaceId,
+      fedGraphLabelMatchers: federatedGraph.labelMatchers,
+      limit: 0,
+      offset: 0,
+      rbac: authContext.rbac,
+    });
+
     const routerRequestToken = await fedRepo.getGraphSignedToken({
       federatedGraphId: federatedGraph.id,
       organizationId: authContext.organizationId,
@@ -66,6 +79,7 @@ export function getFederatedGraphByName(
     if (!routerRequestToken) {
       return {
         subgraphs: [],
+        featureSubgraphs: [],
         graphRequestToken: '',
         response: {
           code: EnumStatusCode.ERR,
@@ -94,22 +108,8 @@ export function getFederatedGraphByName(
         admissionWebhookUrl: federatedGraph.admissionWebhookURL,
         routerCompatibilityVersion: federatedGraph.routerCompatibilityVersion,
       },
-      subgraphs: list.map((g) => ({
-        id: g.id,
-        name: g.name,
-        routingURL: g.routingUrl,
-        lastUpdatedAt: g.lastUpdatedAt,
-        labels: g.labels,
-        targetId: g.targetId,
-        subscriptionUrl: g.subscriptionUrl,
-        namespace: g.namespace,
-        subscriptionProtocol: g.subscriptionProtocol,
-        isEventDrivenGraph: g.isEventDrivenGraph,
-        isV2Graph: g.isV2Graph,
-        websocketSubprotocol: g.websocketSubprotocol || '',
-        isFeatureSubgraph: g.isFeatureSubgraph,
-        type: convertToSubgraphType(g.type),
-      })),
+      subgraphs: list.map((g) => convertToSubgraphProto(g)),
+      featureSubgraphs: featureSubgraphs.map((g) => convertToSubgraphProto(g)),
       graphRequestToken: routerRequestToken,
       response: {
         code: EnumStatusCode.OK,

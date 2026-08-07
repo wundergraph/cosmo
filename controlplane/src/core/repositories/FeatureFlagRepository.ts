@@ -461,6 +461,7 @@ export class FeatureFlagRepository {
     limit,
     offset,
     query,
+    rbac,
   }: {
     federatedGraphId: string;
     namespaceId: string;
@@ -468,6 +469,7 @@ export class FeatureFlagRepository {
     limit: number;
     offset: number;
     query?: string;
+    rbac?: RBACEvaluator;
   }): Promise<{ featureSubgraphs: FeatureSubgraphDTO[]; totalCount: number }> {
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
 
@@ -552,7 +554,7 @@ export class FeatureFlagRepository {
     const pendingFeatureSubgraphs = featureSubgraphTargets.map((target) => target.targetId);
     while (pendingFeatureSubgraphs.length > 0) {
       const chunkOfIdsToFetch = pendingFeatureSubgraphs.splice(0, 100);
-      const chunkOfSubgraphs = await subgraphRepo.getSubgraphsByTargetIds(chunkOfIdsToFetch);
+      const chunkOfSubgraphs = await subgraphRepo.getSubgraphsByTargetIds(chunkOfIdsToFetch, rbac);
       a.push(...chunkOfSubgraphs);
     }
 
