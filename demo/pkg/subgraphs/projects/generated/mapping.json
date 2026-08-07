@@ -253,6 +253,48 @@
           "rpc": "RequireEmployeeDeepWorkItemInfoById",
           "request": "RequireEmployeeDeepWorkItemInfoByIdRequest",
           "response": "RequireEmployeeDeepWorkItemInfoByIdResponse"
+        },
+        {
+          "fieldMapping": {
+            "original": "recommendedWorkItem",
+            "mapped": "recommended_work_item"
+          },
+          "rpc": "RequireEmployeeRecommendedWorkItemById",
+          "request": "RequireEmployeeRecommendedWorkItemByIdRequest",
+          "response": "RequireEmployeeRecommendedWorkItemByIdResponse"
+        },
+        {
+          "fieldMapping": {
+            "original": "recommendedWorkItems",
+            "mapped": "recommended_work_items",
+            "argumentMappings": [
+              {
+                "original": "limit",
+                "mapped": "limit"
+              }
+            ]
+          },
+          "rpc": "RequireEmployeeRecommendedWorkItemsById",
+          "request": "RequireEmployeeRecommendedWorkItemsByIdRequest",
+          "response": "RequireEmployeeRecommendedWorkItemsByIdResponse"
+        },
+        {
+          "fieldMapping": {
+            "original": "latestWorkOperation",
+            "mapped": "latest_work_operation"
+          },
+          "rpc": "RequireEmployeeLatestWorkOperationById",
+          "request": "RequireEmployeeLatestWorkOperationByIdRequest",
+          "response": "RequireEmployeeLatestWorkOperationByIdResponse"
+        },
+        {
+          "fieldMapping": {
+            "original": "optionalLatestWorkOperation",
+            "mapped": "optional_latest_work_operation"
+          },
+          "rpc": "RequireEmployeeOptionalLatestWorkOperationById",
+          "request": "RequireEmployeeOptionalLatestWorkOperationByIdRequest",
+          "response": "RequireEmployeeOptionalLatestWorkOperationByIdResponse"
         }
       ]
     },
@@ -1112,6 +1154,28 @@
         {
           "original": "deepWorkItemInfo",
           "mapped": "deep_work_item_info"
+        },
+        {
+          "original": "recommendedWorkItem",
+          "mapped": "recommended_work_item"
+        },
+        {
+          "original": "recommendedWorkItems",
+          "mapped": "recommended_work_items",
+          "argumentMappings": [
+            {
+              "original": "limit",
+              "mapped": "limit"
+            }
+          ]
+        },
+        {
+          "original": "latestWorkOperation",
+          "mapped": "latest_work_operation"
+        },
+        {
+          "original": "optionalLatestWorkOperation",
+          "mapped": "optional_latest_work_operation"
         },
         {
           "original": "currentWorkload",

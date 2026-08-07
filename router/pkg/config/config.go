@@ -865,17 +865,31 @@ type EventProviders struct {
 }
 
 type EventsConfiguration struct {
-	Providers EventProviders              `yaml:"providers,omitempty"`
-	Handlers  StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
+	Providers EventProviders `yaml:"providers,omitempty"`
+	// SkipUnavailableProviders allows the router to start even when an event provider
+	// referenced by the execution config is unavailable: either not defined in the router
+	// configuration, or defined but unreachable at startup (e.g. the broker is down).
+	// When enabled, the router logs an error and starts anyway instead of failing. A
+	// provider that is not defined has its data sources skipped; a provider that fails to
+	// connect keeps a resilient client that reconnects in the background, so the affected
+	// fields are only temporarily unavailable and recover without a restart once the broker
+	// becomes reachable again. The rest of the graph keeps serving traffic throughout.
+	SkipUnavailableProviders bool                        `yaml:"skip_unavailable_providers" envDefault:"true" env:"EVENTS_SKIP_UNAVAILABLE_PROVIDERS"`
+	Handlers                 StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
 }
 
 type StreamsHandlerConfiguration struct {
-	OnReceiveEvents OnReceiveEventsConfiguration `yaml:"on_receive_events"`
+	OnReceiveEvents      OnReceiveEventsConfiguration      `yaml:"on_receive_events"`
+	BeforeEventsDispatch BeforeEventsDispatchConfiguration `yaml:"before_events_dispatch"`
 }
 
 type OnReceiveEventsConfiguration struct {
 	MaxConcurrentHandlers int           `yaml:"max_concurrent_handlers" envDefault:"100"`
 	HandlerTimeout        time.Duration `yaml:"handler_timeout" envDefault:"5s"`
+}
+
+type BeforeEventsDispatchConfiguration struct {
+	HandlerTimeout time.Duration `yaml:"handler_timeout" envDefault:"5s"`
 }
 
 type Cluster struct {
@@ -1396,6 +1410,26 @@ type MCPStorageConfig struct {
 type MCPServer struct {
 	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5025" env:"MCP_SERVER_LISTEN_ADDR"`
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
+	// Version is reported to MCP clients as the server version in serverInfo.
+	// Defaults to the router release version when unset.
+	Version string `yaml:"version,omitempty" env:"MCP_SERVER_VERSION"`
+	// Title is a human-readable display name for this MCP server, reported in
+	// serverInfo. MCP clients show it in UIs, falling back to the machine name
+	// derived from graph_name when unset.
+	Title string `yaml:"title,omitempty" env:"MCP_SERVER_TITLE"`
+	// Description is a human-readable description of this MCP server, reported
+	// in serverInfo.
+	Description string            `yaml:"description,omitempty" env:"MCP_SERVER_DESCRIPTION"`
+	Discover    MCPDiscoverConfig `yaml:"discover,omitempty" envPrefix:"MCP_SERVER_DISCOVER_"`
+}
+
+// MCPDiscoverConfig configures the server identity exposed via the MCP
+// server/discover method (SEP-2575, protocol version 2026-07-28).
+type MCPDiscoverConfig struct {
+	// Instructions is natural-language guidance for MCP clients on how to use this
+	// server. It is served in the server/discover response and in the legacy
+	// initialize response, so all clients receive it regardless of era.
+	Instructions string `yaml:"instructions,omitempty" env:"INSTRUCTIONS"`
 }
 
 type ConnectRPCConfiguration struct {
