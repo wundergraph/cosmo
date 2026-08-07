@@ -102,6 +102,8 @@ Operations are converted to `snake_case` for tool naming consistency.
 
 The tool's input schema is automatically generated from your GraphQL operation's variables, ensuring type safety. AI models use this schema to understand what parameters are required and their types.
 
+Custom scalar variables are advertised as `string` by default. See [Custom Scalar Mappings](/router/mcp/configuration#custom-scalar-mappings) to map scalars with a different wire format.
+
 ### Omitting the Tool Name Prefix
 
 By default, all operation tools include the `execute_operation_` prefix. You can enable `omit_tool_name_prefix` to generate shorter tool names:
