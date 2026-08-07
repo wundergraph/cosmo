@@ -2733,6 +2733,14 @@
           "default": false,
           "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
         },
+        "scalar_mappings": {
+          "type": "object",
+          "description": "Overrides the JSON Schema type advertised for custom scalar variables in MCP tool input schemas, keyed by scalar type name (e.g. JSON: object). Unmapped custom scalars default to string.",
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["string", "integer", "number", "boolean", "object", "array"]
+          }
+        },
         "resource_documentation": {
           "type": "string",
           "description": "A URL to a human-readable page describing this MCP resource, its access policies, and how to get started. Included in the RFC 9728 Protected Resource Metadata response if set.",
