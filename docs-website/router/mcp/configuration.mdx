@@ -70,7 +70,7 @@ All MCP options can also be set via environment variables:
 | `MCP_OMIT_TOOL_NAME_PREFIX`       | `mcp.omit_tool_name_prefix`       |
 | `MCP_SCALAR_MAPPINGS`             | `mcp.scalar_mappings`             |
 
-Map-valued options use comma-separated `key:value` pairs. For example: `MCP_SCALAR_MAPPINGS=JSON:object,BigInt:integer`.
+Map-valued options use comma-separated `key:value` pairs. For example: `MCP_SCALAR_MAPPINGS=Foo:object,BigInt:integer`.
 
 For OAuth-related environment variables, see [OAuth Configuration Reference](/router/mcp/oauth/configuration#environment-variables).
 
@@ -78,17 +78,19 @@ For OAuth-related environment variables, see [OAuth Configuration Reference](/ro
 
 The router generates each tool's input schema from the variables of the GraphQL operation. Custom scalars are opaque to JSON Schema, but MCP clients require every property to declare a type. The router therefore advertises custom scalar variables as `string` by default. This matches the wire format of most opaque scalars, such as cursors, IDs, and timestamps.
 
+GraphQL has five built-in scalars: `Int`, `Float`, `String`, `Boolean`, and `ID`. Every other scalar in your schema is a custom scalar. The examples below use two custom scalars: `scalar Foo`, whose wire format is an object, and `scalar BigInt`, whose wire format is an integer.
+
 Use `scalar_mappings` for custom scalars whose wire format is not a string:
 
 ```yaml
 mcp:
   enabled: true
   scalar_mappings:
-    JSON: object
+    Foo: object
     BigInt: integer
 ```
 
-A mapped scalar's schema states its GraphQL nullability. A non-nullable variable, such as `$filter: JSON!`, emits the mapped type alone: `"type": "object"`. A nullable variable, such as `$filter: JSON`, emits the type with `"null"`: `"type": ["object", "null"]`.
+A mapped scalar's schema states its GraphQL nullability. A non-nullable variable, such as `$filter: Foo!`, emits the mapped type alone: `"type": "object"`. A nullable variable, such as `$filter: Foo`, emits the type with `"null"`: `"type": ["object", "null"]`.
 
 Two behaviors help you keep mappings correct:
 
@@ -170,7 +172,7 @@ mcp:
   expose_schema: false
   omit_tool_name_prefix: false
   scalar_mappings:
-    JSON: object
+    Foo: object
     BigInt: integer
   storage:
     provider_id: 'mcp'
