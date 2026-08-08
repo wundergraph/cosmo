@@ -3,10 +3,10 @@ package mcpserver
 import (
 	"fmt"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"go.uber.org/zap"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/jsonschema"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -20,11 +20,11 @@ type OperationsManager struct {
 	excludeMutations bool
 	// scalarSchemas overrides the JSON schema emitted for custom scalar types
 	// in generated tool input schemas, keyed by scalar type name.
-	scalarSchemas map[string]*jsonschema.JsonSchema
+	scalarSchemas map[string]*jsonschema.Schema
 }
 
 // NewOperationsManager creates a new operations manager
-func NewOperationsManager(schemaDoc *ast.Document, logger *zap.Logger, excludeMutations bool, scalarSchemas map[string]*jsonschema.JsonSchema) *OperationsManager {
+func NewOperationsManager(schemaDoc *ast.Document, logger *zap.Logger, excludeMutations bool, scalarSchemas map[string]*jsonschema.Schema) *OperationsManager {
 	if logger == nil {
 		logger = zap.NewNop()
 	}

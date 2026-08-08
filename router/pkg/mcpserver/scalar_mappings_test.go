@@ -3,10 +3,9 @@ package mcpserver
 import (
 	"testing"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/wundergraph/cosmo/router/internal/jsonschema"
 )
 
 func TestScalarMappingsTranslateToSchemas(t *testing.T) {
@@ -16,9 +15,9 @@ func TestScalarMappingsTranslateToSchemas(t *testing.T) {
 			"BigInt": "integer",
 		})
 		require.NoError(t, err)
-		assert.Equal(t, map[string]*jsonschema.JsonSchema{
-			"JSON":   {Type: jsonschema.TypeObject},
-			"BigInt": {Type: jsonschema.TypeInteger},
+		assert.Equal(t, map[string]*jsonschema.Schema{
+			"JSON":   {Type: "object"},
+			"BigInt": {Type: "integer"},
 		}, schemas)
 	})
 

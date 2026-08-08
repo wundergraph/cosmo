@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -1826,8 +1827,8 @@ func TestBuildJsonSchema(t *testing.T) {
 		operationDoc, report := astparser.ParseGraphqlDocumentString(operation)
 		require.False(t, report.HasErrors(), "operation parsing failed")
 
-		overrides := map[string]*JsonSchema{
-			"JSON": {Type: TypeObject, Description: "Arbitrary JSON object"},
+		overrides := map[string]*jsonschema.Schema{
+			"JSON": {Type: "object", Description: "Arbitrary JSON object"},
 		}
 
 		schema, err := BuildJsonSchema(&operationDoc, &definitionDoc, WithScalarSchemas(overrides))
@@ -1837,7 +1838,7 @@ func TestBuildJsonSchema(t *testing.T) {
 		require.NoError(t, err)
 
 		// - JSON! is mapped to object and non-null context strips the null union
-		// - after/cursor prove per-use cloning: same scalar, different nullability
+		// - after/cursor prove per-use nullability: same scalar, different nullability
 		expectedJSON := `{
   "additionalProperties": false,
   "properties": {
@@ -1864,9 +1865,11 @@ func TestBuildJsonSchema(t *testing.T) {
 		assert.JSONEq(t, expectedJSON, string(actualJSON))
 	})
 
-	// Guards the Clone-per-use invariant: if the override branch stops cloning,
-	// both variables below alias one *JsonSchema and the last-processed
-	// variable's nullability overwrites the first, failing this test.
+	// Guards the immutability invariant at the override-sharing site: if the
+	// nullable use of an override ever wrote nullability into the shared node
+	// instead of building a fresh one, both variables below would alias one
+	// *jsonschema.Schema and the last-processed variable's nullability would
+	// overwrite the first, failing this test.
 	t.Run("same overridden scalar at two nullabilities yields independent schemas", func(t *testing.T) {
 		// The override type is deliberately non-object: object-typed top-level
 		// variables are unconditionally forced non-nullable elsewhere (see
@@ -1894,8 +1897,8 @@ func TestBuildJsonSchema(t *testing.T) {
 		operationDoc, report := astparser.ParseGraphqlDocumentString(operation)
 		require.False(t, report.HasErrors(), "operation parsing failed")
 
-		overrides := map[string]*JsonSchema{
-			"BigInt": {Type: TypeInteger},
+		overrides := map[string]*jsonschema.Schema{
+			"BigInt": {Type: "integer"},
 		}
 
 		schema, err := BuildJsonSchema(&operationDoc, &definitionDoc, WithScalarSchemas(overrides))
@@ -1904,9 +1907,8 @@ func TestBuildJsonSchema(t *testing.T) {
 		actualJSON, err := json.Marshal(schema)
 		require.NoError(t, err)
 
-		// Both variables resolve the same override map entry. Without cloning
-		// per use, the second-processed variable's Nullable mutation would leak
-		// into the first via the shared *JsonSchema pointer.
+		// Both variables resolve the same override map entry. Nullability must
+		// land on a per-use node, never on the shared override.
 		expectedJSON := `{
   "additionalProperties": false,
   "properties": {
@@ -1953,8 +1955,8 @@ func TestBuildJsonSchema(t *testing.T) {
 		operationDoc, report := astparser.ParseGraphqlDocumentString(operation)
 		require.False(t, report.HasErrors(), "operation parsing failed")
 
-		builder := NewVariablesSchemaBuilder(&operationDoc, &definitionDoc, WithScalarSchemas(map[string]*JsonSchema{
-			"JSON": {Type: TypeObject},
+		builder := NewVariablesSchemaBuilder(&operationDoc, &definitionDoc, WithScalarSchemas(map[string]*jsonschema.Schema{
+			"JSON": {Type: "object"},
 		}))
 		_, err := builder.Build()
 		require.NoError(t, err)

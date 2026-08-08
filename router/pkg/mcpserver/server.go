@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	googlejsonschema "github.com/google/jsonschema-go/jsonschema"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/iancoleman/strcase"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -21,7 +22,6 @@ import (
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/headers"
-	internaljsonschema "github.com/wundergraph/cosmo/router/internal/jsonschema"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
@@ -131,7 +131,7 @@ type GraphQLSchemaServer struct {
 	enableArbitraryOperations bool
 	exposeSchema              bool
 	omitToolNamePrefix        bool
-	scalarSchemas             map[string]*internaljsonschema.JsonSchema
+	scalarSchemas             map[string]*googlejsonschema.Schema
 	stateless                 bool
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler

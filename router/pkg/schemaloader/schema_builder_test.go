@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/require"
 
-	"github.com/wundergraph/cosmo/router/internal/jsonschema"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 )
@@ -33,8 +33,8 @@ type Query {
 
 		ops := []Operation{{Name: "Items", Document: opDoc}}
 
-		builder := NewSchemaBuilder(&schemaDoc, WithScalarSchemas(map[string]*jsonschema.JsonSchema{
-			"JSON": {Type: jsonschema.TypeObject},
+		builder := NewSchemaBuilder(&schemaDoc, WithScalarSchemas(map[string]*jsonschema.Schema{
+			"JSON": {Type: "object"},
 		}))
 		require.NoError(t, builder.BuildSchemasForOperations(ops))
 
@@ -81,8 +81,8 @@ type Query {
 			{Name: "MoreItems", Document: op2Doc},
 		}
 
-		builder := NewSchemaBuilder(&schemaDoc, WithScalarSchemas(map[string]*jsonschema.JsonSchema{
-			"JSON": {Type: jsonschema.TypeObject},
+		builder := NewSchemaBuilder(&schemaDoc, WithScalarSchemas(map[string]*jsonschema.Schema{
+			"JSON": {Type: "object"},
 		}))
 		require.NoError(t, builder.BuildSchemasForOperations(ops))
 

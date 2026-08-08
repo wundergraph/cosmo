@@ -1,8 +1,20 @@
+// Package jsonschema generates a JSON Schema (2020-12) for the variables of a
+// GraphQL operation, emitting nodes of github.com/google/jsonschema-go.
+//
+// Invariant: no schema node is modified after its construction completes.
+// Nullability is decided before a node is built and baked in at construction;
+// use-site adornments (description, default) are applied by building a fresh
+// copy. Because nothing mutates finished nodes, sharing them (scalar override
+// map values, "$defs" bodies) is safe without copying.
 package jsonschema
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
+
+	"github.com/google/jsonschema-go/jsonschema"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvisitor"
@@ -13,7 +25,7 @@ import (
 type VariablesSchemaBuilder struct {
 	operationDocument  *ast.Document
 	definitionDocument *ast.Document
-	schema             *JsonSchema
+	schema             *jsonschema.Schema
 	report             *operationreport.Report
 	// recursiveTypes holds the names of input types that are self- or mutually
 	// recursive. They are emitted once under the root "$defs" and referenced via
@@ -21,9 +33,9 @@ type VariablesSchemaBuilder struct {
 	recursiveTypes map[string]bool
 	// defs accumulates schemas for recursive input types; attached to the root
 	// schema as "$defs".
-	defs map[string]*JsonSchema
+	defs map[string]*jsonschema.Schema
 	// scalarSchemas overrides the schema emitted per custom scalar type name.
-	scalarSchemas map[string]*JsonSchema
+	scalarSchemas map[string]*jsonschema.Schema
 	// defaultedScalars records custom scalars that fell back to the string
 	// default, so callers can surface missing mappings.
 	defaultedScalars map[string]bool
@@ -35,7 +47,9 @@ type VariablesSchemaOption func(*VariablesSchemaBuilder)
 // WithScalarSchemas overrides the JSON schema emitted for custom scalar types,
 // keyed by scalar type name. Unmapped custom scalars default to "string".
 // Built-in scalars (String, ID, Int, Float, Boolean) cannot be overridden.
-func WithScalarSchemas(schemas map[string]*JsonSchema) VariablesSchemaOption {
+// Each override must set Type (a single JSON type name), never Types: the
+// builder derives the nullable form from Type per use site.
+func WithScalarSchemas(schemas map[string]*jsonschema.Schema) VariablesSchemaOption {
 	return func(v *VariablesSchemaBuilder) {
 		v.scalarSchemas = schemas
 	}
@@ -52,10 +66,10 @@ func NewVariablesSchemaBuilder(operationDocument, definitionDocument *ast.Docume
 	v := &VariablesSchemaBuilder{
 		operationDocument:  operationDocument,
 		definitionDocument: definitionDocument,
-		schema:             NewObjectSchema(),
+		schema:             newRootSchema(),
 		report:             &operationreport.Report{},
 		recursiveTypes:     make(map[string]bool),
-		defs:               make(map[string]*JsonSchema),
+		defs:               make(map[string]*jsonschema.Schema),
 		defaultedScalars:   make(map[string]bool),
 	}
 
@@ -72,8 +86,8 @@ func (v *VariablesSchemaBuilder) EnterDocument(operation, definition *ast.Docume
 		return
 	}
 
-	v.schema = NewObjectSchema()
-	v.defs = make(map[string]*JsonSchema)             // Reset defs for each build
+	v.schema = newRootSchema()
+	v.defs = make(map[string]*jsonschema.Schema)      // Reset defs for each build
 	v.defaultedScalars = make(map[string]bool)        // Reset defaulted scalars for each build
 	v.recursiveTypes = v.computeRecursiveInputTypes() // Identify recursive input types
 
@@ -129,13 +143,7 @@ func (v *VariablesSchemaBuilder) EnterDocument(operation, definition *ast.Docume
 
 	// Set concatenated descriptions on root schema if any were found
 	if len(descriptions) > 0 {
-		v.schema.Description = ""
-		for i, desc := range descriptions {
-			if i > 0 {
-				v.schema.Description += " "
-			}
-			v.schema.Description += desc
-		}
+		v.schema.Description = strings.Join(descriptions, " ")
 	}
 }
 
@@ -145,7 +153,7 @@ func (v *VariablesSchemaBuilder) EnterVariableDefinition(ref int) {
 	typeRef := v.operationDocument.VariableDefinitions[ref].Type
 
 	// Convert type to schema starting from the operation document
-	varSchema := v.processOperationTypeRef(typeRef)
+	varSchema := v.typeRefSchema(v.operationDocument, typeRef)
 
 	// Skip this variable if its type could not be resolved to a schema
 	if varSchema == nil {
@@ -157,38 +165,37 @@ func (v *VariablesSchemaBuilder) EnterVariableDefinition(ref int) {
 		v.schema.Required = append(v.schema.Required, varName)
 	}
 
+	var description string
 	if v.operationDocument.VariableDefinitions[ref].Description.IsDefined {
-		varSchema.Description = v.operationDocument.VariableDefinitionDescriptionString(ref)
+		description = v.operationDocument.VariableDefinitionDescriptionString(ref)
 	}
 
-	// Set default value if exists
+	var defaultValue any
 	if v.operationDocument.VariableDefinitionHasDefaultValue(ref) {
-		defaultValue := v.operationDocument.VariableDefinitionDefaultValue(ref)
-		varSchema.Default = v.convertOperationValueToNative(defaultValue)
+		defaultValue = v.convertOperationValueToNative(v.operationDocument.VariableDefinitionDefaultValue(ref))
 	}
 
-	// Force top-level object fields to be not nullable (Nullable=false) so they can't be null
-	// This ensures they appear as empty objects at minimum
-	if varSchema.Type == TypeObject {
-		// Setting Nullable to false means the field can't be null
-		// Since the nullable field is only included when true, this effectively removes it
-		// from the output JSON, which is what we want
-		varSchema.Nullable = false
+	varSchema = v.adorned(varSchema, description, defaultValue)
+
+	// Top-level object-typed variable schemas are always non-nullable: strict
+	// consumers reject tool inputs whose top-level objects admit null, and an
+	// omitted variable is expressed by leaving it out, not by passing null.
+	if len(varSchema.Types) > 0 && varSchema.Types[0] == "object" {
+		nonNull := *varSchema
+		nonNull.Type = "object"
+		nonNull.Types = nil
+		varSchema = &nonNull
 	}
 
 	// Add variable to schema
+	if v.schema.Properties == nil {
+		v.schema.Properties = make(map[string]*jsonschema.Schema)
+	}
 	v.schema.Properties[varName] = varSchema
 }
 
-// GetSchema returns the built schema
-func (v *VariablesSchemaBuilder) GetSchema() *JsonSchema {
-	// The root variables object is always a concrete object and must never be
-	// nullable: the variables container is either present or omitted, never the
-	// JSON literal null. Emitting a nullable root (type ["object","null"] under
-	// JSON Schema 2020-12) breaks strict consumers such as the MCP SDK, which
-	// require the input schema's type to be exactly "object".
-	v.schema.Nullable = false
-	// Attach definitions for any recursive input types referenced via "$ref"
+// GetSchema attaches the accumulated "$defs" to the root schema and returns it.
+func (v *VariablesSchemaBuilder) GetSchema() *jsonschema.Schema {
 	if len(v.defs) > 0 {
 		v.schema.Defs = v.defs
 	}
@@ -212,7 +219,7 @@ func (v *VariablesSchemaBuilder) DefaultedScalars() []string {
 }
 
 // Build traverses the operation and builds a unified JSON schema for its variables
-func (v *VariablesSchemaBuilder) Build() (*JsonSchema, error) {
+func (v *VariablesSchemaBuilder) Build() (*jsonschema.Schema, error) {
 	// Create a new walker for AST traversal
 	walker := astvisitor.NewDefaultWalker()
 
@@ -230,104 +237,224 @@ func (v *VariablesSchemaBuilder) Build() (*JsonSchema, error) {
 	return v.GetSchema(), nil
 }
 
-// processOperationTypeRef processes a type reference from the operation document
-func (v *VariablesSchemaBuilder) processOperationTypeRef(typeRef int) *JsonSchema {
-	switch v.operationDocument.Types[typeRef].TypeKind {
-	case ast.TypeKindNonNull:
-		ofType := v.operationDocument.Types[typeRef].OfType
-		schema := v.processOperationTypeRef(ofType)
-		if schema == nil {
-			return nil
-		}
-		// Non-null types are not nullable
-		schema.Nullable = false
-		return schema
+// typeRefSchema builds the schema node for a type reference in doc. The
+// nullability of the node is computed from the NonNull wrapper before the node
+// is built, so it is baked in at construction.
+func (v *VariablesSchemaBuilder) typeRefSchema(doc *ast.Document, typeRef int) *jsonschema.Schema {
+	nullable := true
+	for doc.Types[typeRef].TypeKind == ast.TypeKindNonNull {
+		nullable = false
+		typeRef = doc.Types[typeRef].OfType
+	}
 
+	switch doc.Types[typeRef].TypeKind {
 	case ast.TypeKindList:
-		ofType := v.operationDocument.Types[typeRef].OfType
-		itemSchema := v.processOperationTypeRef(ofType)
+		itemSchema := v.typeRefSchema(doc, doc.Types[typeRef].OfType)
 		if itemSchema == nil {
 			return nil
 		}
-		// If we're not in a non-null context, list is nullable
-		schema := NewArraySchema(itemSchema)
-		schema.Nullable = true
-		return schema
+		return newArraySchema(itemSchema, nullable)
 
 	case ast.TypeKindNamed:
-		typeName := v.operationDocument.TypeNameString(typeRef)
-		schema := v.processTypeByName(typeName)
-		if schema != nil {
-			// If we're not in a non-null context, named type is nullable
-			schema.Nullable = true
-		}
-		return schema
-	}
+		return v.namedTypeSchema(doc.TypeNameString(typeRef), nullable)
 
-	return nil
+	default:
+		return nil
+	}
 }
 
-// processTypeByName processes a type by its name, looking it up in the definition document
-func (v *VariablesSchemaBuilder) processTypeByName(typeName string) *JsonSchema {
+// namedTypeSchema builds the schema node for a named type, looking it up in
+// the definition document.
+func (v *VariablesSchemaBuilder) namedTypeSchema(typeName string, nullable bool) *jsonschema.Schema {
 	// Handle built-in scalars
 	switch typeName {
 	case "String", "ID":
-		return NewStringSchema()
+		return newTypedSchema("string", nullable)
 	case "Int":
-		return NewIntegerSchema()
+		return newTypedSchema("integer", nullable)
 	case "Float":
-		return NewNumberSchema()
+		return newTypedSchema("number", nullable)
 	case "Boolean":
-		return NewBooleanSchema()
+		return newTypedSchema("boolean", nullable)
 	}
 
 	// For custom types, look up in the definition document
 	node, exists := v.definitionDocument.Index.FirstNodeByNameStr(typeName)
 	if !exists {
 		v.report.AddInternalError(fmt.Errorf("type %s is not defined", typeName))
-		return NewObjectSchema()
+		return newObjectSchema(nullable)
 	}
 
 	// Recursive input types are emitted once under "$defs" and referenced via
 	// "$ref" so that nesting is permitted to any depth.
 	if node.Kind == ast.NodeKindInputObjectTypeDefinition && v.recursiveTypes[typeName] {
 		v.ensureDef(typeName, node)
-		return NewRefSchema(typeName)
+		return newRefSchema(typeName, nullable)
 	}
 
 	// Process the type based on its kind
 	switch node.Kind {
 	case ast.NodeKindEnumTypeDefinition:
-		return v.processEnumType(node)
+		return v.enumTypeSchema(node, nullable)
 
 	case ast.NodeKindInputObjectTypeDefinition:
-		return v.processInputObjectType(node)
+		return v.inputObjectTypeSchema(node, nullable)
 
 	case ast.NodeKindScalarTypeDefinition:
-		if override, ok := v.scalarSchemas[typeName]; ok {
-			// Clone per use: the builder mutates Nullable on returned schemas
-			// depending on each variable's non-null context.
-			schema := override.Clone()
-			if schema.Description == "" && v.definitionDocument.ScalarTypeDefinitions[node.Ref].Description.IsDefined {
-				schema.Description = v.definitionDocument.ScalarTypeDefinitionDescriptionString(node.Ref)
-			}
-			return schema
-		}
+		return v.scalarTypeSchema(typeName, node, nullable)
+
+	default:
+		// If we can't determine the type, emit the empty schema, which accepts
+		// any value.
+		return &jsonschema.Schema{}
+	}
+}
+
+// scalarTypeSchema builds the schema node for a custom scalar, honoring the
+// configured override if one exists.
+func (v *VariablesSchemaBuilder) scalarTypeSchema(typeName string, node ast.Node, nullable bool) *jsonschema.Schema {
+	var sdlDescription string
+	if v.definitionDocument.ScalarTypeDefinitions[node.Ref].Description.IsDefined {
+		sdlDescription = v.definitionDocument.ScalarTypeDefinitionDescriptionString(node.Ref)
+	}
+
+	override, ok := v.scalarSchemas[typeName]
+	if !ok {
 		// Custom scalars are opaque to JSON Schema. Emit a best-effort "string"
 		// type: MCP/LLM tool consumers reject or degrade on untyped properties,
 		// and opaque scalars are overwhelmingly strings on the wire. Callers can
 		// override per scalar via WithScalarSchemas.
 		v.defaultedScalars[typeName] = true
-		schema := NewStringSchema()
-		if v.definitionDocument.ScalarTypeDefinitions[node.Ref].Description.IsDefined {
-			schema.Description = v.definitionDocument.ScalarTypeDefinitionDescriptionString(node.Ref)
-		}
+		schema := newTypedSchema("string", nullable)
+		schema.Description = sdlDescription
 		return schema
-
-	default:
-		// If we can't determine the type, default to any
-		return NewAnySchema()
 	}
+
+	if override.Description != "" {
+		sdlDescription = "" // the override's own description wins
+	}
+
+	if !nullable && sdlDescription == "" {
+		// Nothing to change for this use site: share the override node itself.
+		// Safe because no node is ever modified after construction.
+		return override
+	}
+
+	schema := *override
+	if nullable {
+		schema.Type = ""
+		schema.Types = []string{override.Type, "null"}
+	}
+	if sdlDescription != "" {
+		schema.Description = sdlDescription
+	}
+	return &schema
+}
+
+// enumTypeSchema builds the schema node for an enum type definition.
+func (v *VariablesSchemaBuilder) enumTypeSchema(node ast.Node, nullable bool) *jsonschema.Schema {
+	enumDef := v.definitionDocument.EnumTypeDefinitions[node.Ref]
+
+	values := make([]string, 0, len(enumDef.EnumValuesDefinition.Refs))
+	for _, valueRef := range enumDef.EnumValuesDefinition.Refs {
+		values = append(values, v.definitionDocument.EnumValueDefinitionNameString(valueRef))
+	}
+
+	schema := newEnumSchema(values, nullable)
+
+	// Add description if available
+	if enumDef.Description.IsDefined {
+		schema.Description = v.definitionDocument.EnumTypeDefinitionDescriptionString(node.Ref)
+	}
+
+	return schema
+}
+
+// inputObjectTypeSchema builds the schema node for an input object type
+// definition, including its fields.
+func (v *VariablesSchemaBuilder) inputObjectTypeSchema(node ast.Node, nullable bool) *jsonschema.Schema {
+	schema := newObjectSchema(nullable)
+	inputDef := v.definitionDocument.InputObjectTypeDefinitions[node.Ref]
+
+	// Set description if available
+	if inputDef.Description.IsDefined {
+		schema.Description = v.definitionDocument.InputObjectTypeDefinitionDescriptionString(node.Ref)
+	}
+
+	if !inputDef.HasInputFieldsDefinition {
+		return schema
+	}
+
+	// Process each input field
+	for _, fieldRef := range inputDef.InputFieldsDefinition.Refs {
+		v.processInputField(fieldRef, schema)
+	}
+
+	return schema
+}
+
+// processInputField adds a single input field to the parent object schema,
+// which is still under construction.
+func (v *VariablesSchemaBuilder) processInputField(fieldRef int, parent *jsonschema.Schema) {
+	fieldName := v.definitionDocument.InputValueDefinitionNameString(fieldRef)
+	fieldTypeRef := v.definitionDocument.InputValueDefinitionType(fieldRef)
+
+	// Process the field type starting from the definition document
+	fieldSchema := v.typeRefSchema(v.definitionDocument, fieldTypeRef)
+
+	// Skip this field if its type could not be resolved to a schema
+	if fieldSchema == nil {
+		return
+	}
+
+	// Add to required list if non-nullable
+	if v.definitionDocument.TypeIsNonNull(fieldTypeRef) {
+		parent.Required = append(parent.Required, fieldName)
+	}
+
+	var description string
+	if v.definitionDocument.InputValueDefinitions[fieldRef].Description.IsDefined {
+		description = v.definitionDocument.InputValueDefinitionDescriptionString(fieldRef)
+	}
+
+	var defaultValue any
+	if v.definitionDocument.InputValueDefinitionHasDefaultValue(fieldRef) {
+		defaultValue = v.convertDefinitionValueToNative(v.definitionDocument.InputValueDefinitionDefaultValue(fieldRef))
+	}
+
+	// Add field to schema
+	if parent.Properties == nil {
+		parent.Properties = make(map[string]*jsonschema.Schema)
+	}
+	parent.Properties[fieldName] = v.adorned(fieldSchema, description, defaultValue)
+}
+
+// adorned returns schema with the given use-site description and default
+// applied. Adornments go onto a fresh shallow copy: the input node may be
+// shared (a scalar override) and is never modified.
+func (v *VariablesSchemaBuilder) adorned(schema *jsonschema.Schema, description string, defaultValue any) *jsonschema.Schema {
+	if description == "" && defaultValue == nil {
+		return schema
+	}
+	adorned := *schema
+	if description != "" {
+		adorned.Description = description
+	}
+	if defaultValue != nil {
+		adorned.Default = v.rawDefault(defaultValue)
+	}
+	return &adorned
+}
+
+// rawDefault marshals a native Go default value for embedding in a node at
+// construction time.
+func (v *VariablesSchemaBuilder) rawDefault(value any) json.RawMessage {
+	data, err := json.Marshal(value)
+	if err != nil {
+		v.report.AddInternalError(fmt.Errorf("failed to marshal default value: %w", err))
+		return nil
+	}
+	return data
 }
 
 // computeRecursiveInputTypes returns the set of input object type names that are
@@ -384,131 +511,15 @@ func reachableFromSelf(start string, dependencies map[string][]string) bool {
 // ensureDef generates the schema for a recursive input type once and stores it
 // under "$defs". A placeholder is registered before the body is generated so that
 // self-references encountered during generation resolve to a "$ref" rather than
-// recursing infinitely.
+// recursing infinitely; the map entry is then replaced with the real body.
 func (v *VariablesSchemaBuilder) ensureDef(typeName string, node ast.Node) {
 	if _, ok := v.defs[typeName]; ok {
 		return
 	}
-	v.defs[typeName] = NewObjectSchema() // placeholder to break the recursion
-	body := v.processInputObjectType(node)
-	// The definition body is the type itself, not nullable; nullability is
-	// applied per use-site via the "$ref" (rewritten as anyOf-with-null when
-	// the referencing context is nullable).
-	body.Nullable = false
-	v.defs[typeName] = body
-}
-
-// processEnumType processes an enum type definition
-func (v *VariablesSchemaBuilder) processEnumType(node ast.Node) *JsonSchema {
-	values := make([]string, 0)
-	enumDef := v.definitionDocument.EnumTypeDefinitions[node.Ref]
-
-	for _, valueRef := range enumDef.EnumValuesDefinition.Refs {
-		valueName := v.definitionDocument.EnumValueDefinitionNameString(valueRef)
-		values = append(values, valueName)
-	}
-
-	schema := NewEnumSchema(values)
-
-	// Add description if available
-	if enumDef.Description.IsDefined {
-		schema.Description = v.definitionDocument.EnumTypeDefinitionDescriptionString(node.Ref)
-	}
-
-	return schema
-}
-
-// processInputObjectType processes an input object type definition
-func (v *VariablesSchemaBuilder) processInputObjectType(node ast.Node) *JsonSchema {
-	schema := NewObjectSchema()
-	inputDef := v.definitionDocument.InputObjectTypeDefinitions[node.Ref]
-
-	// Set description if available
-	if inputDef.Description.IsDefined {
-		schema.Description = v.definitionDocument.InputObjectTypeDefinitionDescriptionString(node.Ref)
-	}
-
-	if !inputDef.HasInputFieldsDefinition {
-		return schema
-	}
-
-	// Process each input field
-	for _, fieldRef := range inputDef.InputFieldsDefinition.Refs {
-		v.processInputField(fieldRef, schema)
-	}
-
-	return schema
-}
-
-// processInputField processes a single input field
-func (v *VariablesSchemaBuilder) processInputField(fieldRef int, schema *JsonSchema) {
-	fieldName := v.definitionDocument.InputValueDefinitionNameString(fieldRef)
-	fieldTypeRef := v.definitionDocument.InputValueDefinitionType(fieldRef)
-
-	// Process the field type starting from the definition document
-	fieldSchema := v.processDefinitionTypeRef(fieldTypeRef)
-
-	// Skip this field if its type could not be resolved to a schema
-	if fieldSchema == nil {
-		return
-	}
-
-	// Add to required list if non-nullable
-	if v.definitionDocument.TypeIsNonNull(fieldTypeRef) {
-		schema.Required = append(schema.Required, fieldName)
-	}
-
-	// Set field description if exists
-	if v.definitionDocument.InputValueDefinitions[fieldRef].Description.IsDefined {
-		description := v.definitionDocument.InputValueDefinitionDescriptionString(fieldRef)
-		fieldSchema.Description = description
-	}
-
-	// Set default value if exists
-	if v.definitionDocument.InputValueDefinitionHasDefaultValue(fieldRef) {
-		defaultValue := v.definitionDocument.InputValueDefinitionDefaultValue(fieldRef)
-		fieldSchema.Default = v.convertDefinitionValueToNative(defaultValue)
-	}
-
-	// Add field to schema
-	schema.Properties[fieldName] = fieldSchema
-}
-
-// processDefinitionTypeRef processes a type reference from the definition document
-func (v *VariablesSchemaBuilder) processDefinitionTypeRef(typeRef int) *JsonSchema {
-	switch v.definitionDocument.Types[typeRef].TypeKind {
-	case ast.TypeKindNonNull:
-		ofType := v.definitionDocument.Types[typeRef].OfType
-		schema := v.processDefinitionTypeRef(ofType)
-		if schema == nil {
-			return nil
-		}
-		// Non-null types are not nullable
-		schema.Nullable = false
-		return schema
-
-	case ast.TypeKindList:
-		ofType := v.definitionDocument.Types[typeRef].OfType
-		itemSchema := v.processDefinitionTypeRef(ofType)
-		if itemSchema == nil {
-			return nil
-		}
-		// If we're not in a non-null context, list is nullable
-		schema := NewArraySchema(itemSchema)
-		schema.Nullable = true
-		return schema
-
-	case ast.TypeKindNamed:
-		typeName := v.definitionDocument.TypeNameString(typeRef)
-		schema := v.processTypeByName(typeName)
-		if schema != nil {
-			// If we're not in a non-null context, named type is nullable
-			schema.Nullable = true
-		}
-		return schema
-	}
-
-	return nil
+	v.defs[typeName] = newObjectSchema(false) // placeholder to break the recursion
+	// The definition body is canonical (non-null); nullability is applied per
+	// use site on the "$ref" node (an anyOf-with-null wrapper when nullable).
+	v.defs[typeName] = v.inputObjectTypeSchema(node, false)
 }
 
 // convertOperationValueToNative converts a GraphQL AST value from the operation document to a native Go value
@@ -581,10 +592,88 @@ func (v *VariablesSchemaBuilder) convertDefinitionValueToNative(value ast.Value)
 	return nil
 }
 
+// newRootSchema returns the root variables object. The root is always a
+// non-nullable "object": the variables container is either present or omitted,
+// never the JSON literal null, and strict consumers such as the MCP SDK
+// require the input schema's root type to be exactly "object".
+func newRootSchema() *jsonschema.Schema {
+	return newObjectSchema(false)
+}
+
+// newTypedSchema returns a node for a single JSON type. Nullable use sites get
+// the JSON Schema 2020-12 type union [<type>, "null"] instead of the OpenAPI
+// 3.0 "nullable" keyword, which standard validators ignore.
+func newTypedSchema(typeName string, nullable bool) *jsonschema.Schema {
+	if nullable {
+		return &jsonschema.Schema{Types: []string{typeName, "null"}}
+	}
+	return &jsonschema.Schema{Type: typeName}
+}
+
+// newObjectSchema returns an object node that disallows unknown properties.
+// Properties stays nil until the first property is added, so that objects
+// without properties marshal without a "properties" key.
+func newObjectSchema(nullable bool) *jsonschema.Schema {
+	schema := newTypedSchema("object", nullable)
+	schema.AdditionalProperties = falseSchema()
+	return schema
+}
+
+// falseSchema returns the schema that rejects every value;
+// github.com/google/jsonschema-go marshals it as the literal false.
+func falseSchema() *jsonschema.Schema {
+	return &jsonschema.Schema{Not: &jsonschema.Schema{}}
+}
+
+// newArraySchema returns an array node with the given item schema.
+func newArraySchema(items *jsonschema.Schema, nullable bool) *jsonschema.Schema {
+	schema := newTypedSchema("array", nullable)
+	schema.Items = items
+	return schema
+}
+
+// newEnumSchema returns a string-typed enum node. A nullable enum additionally
+// appends null to the value list, since the type union alone does not extend
+// the allowed enum values.
+func newEnumSchema(values []string, nullable bool) *jsonschema.Schema {
+	schema := newTypedSchema("string", nullable)
+	if len(values) == 0 {
+		return schema
+	}
+	enum := make([]any, 0, len(values)+1)
+	for _, value := range values {
+		enum = append(enum, value)
+	}
+	if nullable {
+		enum = append(enum, nil)
+	}
+	schema.Enum = enum
+	return schema
+}
+
+// newRefSchema returns a node referencing a definition under the root "$defs".
+// A nullable use site wraps the reference in anyOf with the null type, the
+// 2020-12 form for a nullable "$ref"; the definition body itself stays
+// canonical (non-null).
+func newRefSchema(typeName string, nullable bool) *jsonschema.Schema {
+	ref := &jsonschema.Schema{Ref: defsRef(typeName)}
+	if nullable {
+		return &jsonschema.Schema{
+			AnyOf: []*jsonschema.Schema{ref, {Type: "null"}},
+		}
+	}
+	return ref
+}
+
+// defsRef returns the JSON Pointer to a definition under the root "$defs".
+func defsRef(typeName string) string {
+	return "#/$defs/" + typeName
+}
+
 // BuildJsonSchema builds a JSON schema for the variables of the given operation.
 // Recursive input types are represented via "$ref"/"$defs" and support arbitrary
 // nesting depth.
-func BuildJsonSchema(operationDocument, definitionDocument *ast.Document, opts ...VariablesSchemaOption) (*JsonSchema, error) {
+func BuildJsonSchema(operationDocument, definitionDocument *ast.Document, opts ...VariablesSchemaOption) (*jsonschema.Schema, error) {
 	if len(operationDocument.OperationDefinitions) == 0 {
 		return nil, fmt.Errorf("no operations found in document")
 	}
