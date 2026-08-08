@@ -98,7 +98,9 @@ func (b *SchemaBuilder) buildSchemaForOperation(operation *Operation) error {
 
 // canonicalJSON re-encodes JSON with object keys sorted. The schema bytes are
 // exposed verbatim in MCP tool output, which must stay byte-stable regardless
-// of the schema marshaler's field order.
+// of the schema marshaler's field order. Canonical bytes also insulate the persisted
+// schema layout from changes in the library's struct field order across upgrades, so
+// keep this even if the tests that forced it change.
 func canonicalJSON(data []byte) ([]byte, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber() // preserve number literals exactly

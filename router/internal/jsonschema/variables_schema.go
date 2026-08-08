@@ -305,7 +305,7 @@ func (v *VariablesSchemaBuilder) namedTypeSchema(typeName string, nullable bool)
 
 	default:
 		// If we can't determine the type, emit the empty schema, which accepts
-		// any value.
+		// any value. The zero-value Schema marshals as the boolean schema true, not {}.
 		return &jsonschema.Schema{}
 	}
 }
