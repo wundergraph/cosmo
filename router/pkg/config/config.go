@@ -1363,8 +1363,9 @@ type MCPConfiguration struct {
 }
 
 // MCPOutputSchemaConfiguration configures MCP structured tool output (spec revision 2025-06-18):
-// an output schema declared on each operation tool and structured content on successful
-// tool results. Disabled by default because it increases tools/list and result payload sizes.
+// an output schema declared on operation tools and structured content on successful tool
+// results. A tool whose schema cannot be derived stays registered without an output schema.
+// Disabled by default because it increases tools/list and result payload sizes.
 type MCPOutputSchemaConfiguration struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"MCP_OUTPUT_SCHEMA_ENABLED"`
 }
