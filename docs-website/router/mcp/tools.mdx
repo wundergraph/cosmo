@@ -156,6 +156,10 @@ The tool's input schema is automatically generated from your GraphQL operation's
 
 Custom scalar variables are advertised as `string` by default. A non-nullable custom scalar variable emits `"type": "string"`. A nullable one emits `"type": ["string", "null"]`. See [Custom Scalar Mappings](/router/mcp/configuration#custom-scalar-mappings) to map scalars with a different wire format.
 
+<Note>
+  OpenAI strict mode (`strict: true` in function calling) uses a different schema contract: every property must appear in `required`, and optionality is modeled with null types. The router does not generate this shape. Tools work with OpenAI models without strict mode.
+</Note>
+
 The generated schema reflects your operation and graph schema:
 
 - Non-nullable variables are listed as `required`.
