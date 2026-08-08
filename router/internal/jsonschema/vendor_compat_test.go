@@ -109,6 +109,9 @@ func anthropicProbe(t *testing.T, key string, strict bool, inputSchema json.RawM
 		"description":  "list events",
 		"input_schema": inputSchema,
 	}
+	// anthropic-version pins the API wire format. 2023-06-01 is the current
+	// stable version; Anthropic ships new capabilities as anthropic-beta
+	// flags on top of it, not as new version dates.
 	headers := map[string]string{
 		"x-api-key":         key,
 		"anthropic-version": "2023-06-01",
