@@ -1,10 +1,11 @@
 package jsonschema
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 
-	"github.com/santhosh-tekuri/jsonschema/v5"
+	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -65,7 +66,11 @@ func TestNullableFieldsAreJSONSchema2020_12(t *testing.T) {
 	schemaJSON, err := json.Marshal(schema)
 	require.NoError(t, err)
 
-	compiled, err := jsonschema.CompileString("schema.json", string(schemaJSON))
+	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(schemaJSON))
+	require.NoError(t, err, "generated JSON schema should parse")
+	compiler := jsonschema.NewCompiler()
+	require.NoError(t, compiler.AddResource("schema.json", schemaDoc))
+	compiled, err := compiler.Compile("schema.json")
 	require.NoError(t, err, "generated JSON schema should compile")
 
 	// Nullable scalars and enum: explicit null values must be accepted.

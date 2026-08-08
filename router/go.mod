@@ -80,7 +80,6 @@ require (
 	github.com/posthog/posthog-go v1.5.5
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/otlptranslator v1.0.0
-	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
 	github.com/wundergraph/astjson v1.1.0
