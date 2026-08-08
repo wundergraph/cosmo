@@ -32,6 +32,8 @@ import (
 //   - OpenAI strict mode requires every property in "required" and documents
 //     type unions with null as the optionality mechanism
 //     (developers.openai.com/api/docs/guides/structured-outputs).
+//
+// All subtests were verified against the live vendor APIs on 2026-08-08.
 
 func requireLiveTest(t *testing.T, keyEnv string) string {
 	t.Helper()
@@ -186,6 +188,7 @@ func TestOpenAISchemaAcceptance(t *testing.T) {
 		// optionality (nullable properties stay out of "required"), so strict
 		// mode rejects the schema today. This subtest documents that gap. An
 		// all-required emit mode is future emit-profile work (ENG-9929).
+		// Verified live 2026-08-08: 400 with "required" in the error message.
 		status, body := openAIProbe(t, key, true, generated)
 		require.Equal(t, http.StatusBadRequest, status, "body: %s", body)
 		require.Contains(t, body, "required", "body: %s", body)
