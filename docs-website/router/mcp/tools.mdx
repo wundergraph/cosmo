@@ -154,7 +154,7 @@ If no description is provided, the description of the queried root field from yo
 
 The tool's input schema is automatically generated from your GraphQL operation's variables, ensuring type safety. AI models use this schema to understand what parameters are required and their types.
 
-Custom scalar variables are advertised as `string` by default. See [Custom Scalar Mappings](/router/mcp/configuration#custom-scalar-mappings) to map scalars with a different wire format.
+Custom scalar variables are advertised as `string` by default. A non-nullable custom scalar variable emits `"type": "string"`. A nullable one emits `"type": ["string", "null"]`. See [Custom Scalar Mappings](/router/mcp/configuration#custom-scalar-mappings) to map scalars with a different wire format.
 
 The generated schema reflects your operation and graph schema:
 
