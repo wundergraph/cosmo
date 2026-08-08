@@ -20,7 +20,7 @@ import (
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/headers"
-	enginejsonschema "github.com/wundergraph/cosmo/router/internal/jsonschema"
+	internaljsonschema "github.com/wundergraph/cosmo/router/internal/jsonschema"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
@@ -114,7 +114,7 @@ type GraphQLSchemaServer struct {
 	enableArbitraryOperations bool
 	exposeSchema              bool
 	omitToolNamePrefix        bool
-	scalarSchemas             map[string]*enginejsonschema.JsonSchema
+	scalarSchemas             map[string]*internaljsonschema.JsonSchema
 	stateless                 bool
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
