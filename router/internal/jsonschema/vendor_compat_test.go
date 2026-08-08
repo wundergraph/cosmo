@@ -19,9 +19,9 @@ import (
 // The vendors validate tool schemas before inference, so each probe uses
 // max_tokens=1 and costs a fraction of a cent.
 //
-// The tests are skipped unless BOTH conditions hold:
-//   - SCHEMA_VENDOR_LIVE_TEST=1 is set (explicit opt-in, never set in CI)
-//   - the vendor API key is present (ANTHROPIC_API_KEY / OPENAI_API_KEY)
+// The tests are always skipped. No automated run (CI or local) makes network
+// calls or spends API credits. To run one locally, remove the Skip line in
+// requireLiveTest and set the vendor API key (ANTHROPIC_API_KEY / OPENAI_API_KEY).
 //
 // Rule sources:
 //   - Anthropic rejects oneOf/allOf/anyOf at the schema root (400, enforced by
@@ -33,16 +33,13 @@ import (
 //     type unions with null as the optionality mechanism
 //     (developers.openai.com/api/docs/guides/structured-outputs).
 
-const liveTestEnv = "SCHEMA_VENDOR_LIVE_TEST"
-
 func requireLiveTest(t *testing.T, keyEnv string) string {
 	t.Helper()
-	if testing.Short() {
-		t.Skip("skipped in -short mode")
-	}
-	if os.Getenv(liveTestEnv) != "1" {
-		t.Skipf("set %s=1 to run live vendor API tests", liveTestEnv)
-	}
+	// Always skipped: these tests call the live vendor APIs, and no automated
+	// run may make network calls or spend API credits by accident. To run
+	// locally, remove the next line and set the vendor API key.
+	t.Skip("live vendor API test; remove this Skip line to run locally")
+
 	key := os.Getenv(keyEnv)
 	if key == "" {
 		t.Skipf("%s is not set", keyEnv)
