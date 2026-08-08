@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.337.1](https://github.com/wundergraph/cosmo/compare/router@0.337.0...router@0.337.1) (2026-08-05)
+
+### Bug Fixes
+
+* **router:** ignore header rules for pubsub trigger sources ([#3135](https://github.com/wundergraph/cosmo/issues/3135)) ([64eaf60](https://github.com/wundergraph/cosmo/commit/64eaf607b292b6f632982b7862dd20a8466aa0af)) (@dkorittki)
+
+# [0.337.0](https://github.com/wundergraph/cosmo/compare/router@0.336.0...router@0.337.0) (2026-07-31)
+
+### Bug Fixes
+
+* incorrect behavior for abstract types on required fields ([#3130](https://github.com/wundergraph/cosmo/issues/3130)) ([a552348](https://github.com/wundergraph/cosmo/commit/a5523489a182a49090575b597bae82b07e7248e7)) (@Noroth)
+* incorrect metrics for active connections ([#3122](https://github.com/wundergraph/cosmo/issues/3122)) ([e7d6208](https://github.com/wundergraph/cosmo/commit/e7d62087d8470bb06980c7e67dcd3b63fcf72cab)) (@Noroth)
+
+### Features
+
+* **mcp:** add server/discover support with configurable instructions ([#3111](https://github.com/wundergraph/cosmo/issues/3111)) ([56f7ee1](https://github.com/wundergraph/cosmo/commit/56f7ee125cbc82746cb09524561f984f500976d8)) (@asoorm)
+
+# [0.336.0](https://github.com/wundergraph/cosmo/compare/router@0.335.0...router@0.336.0) (2026-07-28)
+
+### Features
+
+* **router:** add `BeforeEventsDispatch` Custom Module ([#3102](https://github.com/wundergraph/cosmo/issues/3102)) ([d66f503](https://github.com/wundergraph/cosmo/commit/d66f5037ba6e44d160903929a3574fb0351d635e)) (@dkorittki)
+
 # [0.335.0](https://github.com/wundergraph/cosmo/compare/router@0.334.0...router@0.335.0) (2026-07-27)
 
 ### Features

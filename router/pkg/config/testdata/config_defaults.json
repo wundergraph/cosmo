@@ -191,7 +191,13 @@
     "Enabled": false,
     "Server": {
       "ListenAddr": "localhost:5025",
-      "BaseURL": ""
+      "BaseURL": "",
+      "Version": "",
+      "Title": "",
+      "Description": "",
+      "Discover": {
+        "Instructions": ""
+      }
     },
     "Storage": {
       "ProviderID": ""
@@ -407,6 +413,9 @@
     "Handlers": {
       "OnReceiveEvents": {
         "MaxConcurrentHandlers": 100,
+        "HandlerTimeout": 5000000000
+      },
+      "BeforeEventsDispatch": {
         "HandlerTimeout": 5000000000
       }
     }

@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -97,6 +98,22 @@ type Options struct {
 	ServerBaseURL string
 	// ResourceDocumentation is a URL to a human-readable page describing this resource
 	ResourceDocumentation string
+	// Instructions is natural-language guidance for MCP clients on how to use
+	// this server. Served in the server/discover response and in the legacy
+	// initialize response, so all clients receive it regardless of era.
+	Instructions string
+	// ServerVersion is reported as the server version in the MCP serverInfo
+	// (self-reported identity, surfaced in server/discover and initialize).
+	// Callers typically pass the user-configured version, falling back to the
+	// router release version.
+	ServerVersion string
+	// ServerTitle is a human-readable display name reported in the MCP
+	// serverInfo. MCP clients show it in UIs, falling back to the machine name
+	// derived from the graph name when unset.
+	ServerTitle string
+	// ServerDescription is a human-readable description reported in the MCP
+	// serverInfo.
+	ServerDescription string
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -216,6 +233,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		RequestTimeout: 30 * time.Second,
 		ExposeSchema:   true,
 		Stateless:      true,
+		ServerVersion:  "dev",
 	}
 
 	// Apply all option functions
@@ -293,11 +311,18 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 	// Create the MCP server with all options
 	mcpServer := mcp.NewServer(
 		&mcp.Implementation{
-			Name:    "wundergraph-cosmo-" + strcase.ToKebab(options.GraphName),
-			Version: "0.0.1",
+			Name:        "wundergraph-cosmo-" + strcase.ToKebab(options.GraphName),
+			Title:       options.ServerTitle,
+			Description: options.ServerDescription,
+			Version:     options.ServerVersion,
 		},
 		&mcp.ServerOptions{
-			PageSize: 100,
+			Instructions: options.Instructions,
+			PageSize:     100,
+			// ttlMs and cacheScope use the SDK defaults (0 / "public"). They
+			// become configurable under mcp.server.discover once the SDK adds a
+			// DiscoverHandler hook: modelcontextprotocol/go-sdk#1092.
+			//
 			// Override default capabilities to disable the "logging" capability
 			// that the SDK advertises by default (for historical reasons).
 			// We don't implement logging/setLevel, so advertising it causes
@@ -342,10 +367,39 @@ func (s *GraphQLSchemaServer) SetHTTPClient(client *http.Client) {
 	s.httpClient = client
 }
 
-// WithGraphName sets the graph name
+// WithInstructions sets the server instructions returned to MCP clients
+func WithInstructions(instructions string) func(*Options) {
+	return func(o *Options) {
+		o.Instructions = instructions
+	}
+}
+
+// WithServerVersion sets the version reported in the MCP serverInfo.
+// An empty version keeps the default.
+func WithServerVersion(version string) func(*Options) {
+	return func(o *Options) {
+		o.ServerVersion = cmp.Or(version, o.ServerVersion)
+	}
+}
+
+// WithServerTitle sets the human-readable display name reported in the MCP serverInfo
+func WithServerTitle(title string) func(*Options) {
+	return func(o *Options) {
+		o.ServerTitle = title
+	}
+}
+
+// WithServerDescription sets the human-readable description reported in the MCP serverInfo
+func WithServerDescription(description string) func(*Options) {
+	return func(o *Options) {
+		o.ServerDescription = description
+	}
+}
+
+// WithGraphName sets the graph name. An empty name keeps the default.
 func WithGraphName(graphName string) func(*Options) {
 	return func(o *Options) {
-		o.GraphName = graphName
+		o.GraphName = cmp.Or(graphName, o.GraphName)
 	}
 }
 

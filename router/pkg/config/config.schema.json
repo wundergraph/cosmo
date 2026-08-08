@@ -2676,6 +2676,29 @@
               "type": "string",
               "description": "The base URL of the MCP server used for OAuth 2.0 discovery (RFC 9728). This URL is advertised in the Protected Resource Metadata endpoint and used to construct the resource metadata URL. Required when OAuth is enabled. The URL is specified as a string with the format 'scheme://host:port'.",
               "format": "http-url"
+            },
+            "version": {
+              "type": "string",
+              "description": "The version reported to MCP clients as the server version in serverInfo, alongside the server name derived from graph_name. Use this to expose your own API version to AI agents. Defaults to the router release version when unset."
+            },
+            "title": {
+              "type": "string",
+              "description": "A human-readable display name for this MCP server, reported to MCP clients in serverInfo. Clients show it in UIs, falling back to the machine name derived from graph_name when unset."
+            },
+            "description": {
+              "type": "string",
+              "description": "A human-readable description of this MCP server, reported to MCP clients in serverInfo."
+            },
+            "discover": {
+              "type": "object",
+              "description": "Configuration for the server identity exposed via the MCP server/discover method (protocol version 2026-07-28).",
+              "additionalProperties": false,
+              "properties": {
+                "instructions": {
+                  "type": "string",
+                  "description": "Natural-language guidance for MCP clients (AI agents) on how to use this server effectively. Served in the server/discover response and in the legacy initialize response, so all clients receive it."
+                }
+              }
             }
           }
         },
@@ -3287,7 +3310,7 @@
           "properties": {
             "on_receive_events": {
               "type": "object",
-              "description": "Configuration for the OnReceiveEvents hook that is called when events are received from a broker.",
+              "description": "Configuration for the OnReceiveEvents hook that is called for each subscriber when events are received from a broker.",
               "additionalProperties": false,
               "properties": {
                 "max_concurrent_handlers": {
@@ -3299,6 +3322,18 @@
                 "handler_timeout": {
                   "type": "string",
                   "description": "The amount of time that OnReceiveEvents handlers can run in total for a single batch of events. Specify as a duration string (e.g., '5s', '1m', '500ms').",
+                  "default": "5s"
+                }
+              }
+            },
+            "before_events_dispatch": {
+              "type": "object",
+              "description": "Configuration for the BeforeEventsDispatch hook, that is called once per event batch, before delivering them to subscribers.",
+              "additionalProperties": false,
+              "properties": {
+                "handler_timeout": {
+                  "type": "string",
+                  "description": "The amount of time that BeforeEventsDispatch handlers can run in total for a single batch of events. Specify as a duration string (e.g., '5s', '1m', '500ms').",
                   "default": "5s"
                 }
               }
