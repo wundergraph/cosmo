@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/google/jsonschema-go/jsonschema"
 )
@@ -35,7 +36,14 @@ func validateInput(data []byte, resolved *jsonschema.Resolved) error {
 	}
 
 	if err := resolved.Validate(v); err != nil {
-		return fmt.Errorf("validation error: %s", err)
+		// The error text is read by AI tool-callers. The upstream validator
+		// formats a JSON null instance as the Go artifact
+		// "<invalid reflect.Value>" (a zero reflect.Value printed with %v);
+		// the substitution excises that Go-internals leak. It is a no-op when
+		// the substring is absent, so upstream wording changes degrade
+		// gracefully.
+		msg := strings.ReplaceAll(err.Error(), "<invalid reflect.Value>", "null")
+		return fmt.Errorf("validation error: %s", msg)
 	}
 
 	return nil

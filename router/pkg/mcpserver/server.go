@@ -757,9 +757,12 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			continue
 		}
 		// Hand the SDK the schema value; the SDK accepts *jsonschema.Schema
-		// directly and marshals it for tools/list. The nil check must stay a
-		// typed branch: a nil *Schema stored in the any field would panic in
-		// AddTool.
+		// directly and marshals it for tools/list. Key order in that output is
+		// not guaranteed and intentionally differs from get_operation_info's
+		// canonical bytes; do not restore it by unmarshaling op.JSONSchema,
+		// which would reintroduce the bytes round trip this design removed.
+		// The nil check must stay a typed branch: a nil *Schema stored in the
+		// any field would panic in AddTool.
 		var inputSchema any
 		if op.Schema != nil {
 			inputSchema = op.Schema
