@@ -464,7 +464,7 @@ Important Notes:
 						assert.True(t, ok)
 
 						assert.Equal(t, content.Type, "text")
-						assert.Equal(t, content.Text, "Input validation error: validation error: at '/criteria': got null, want object")
+						assert.Equal(t, content.Text, "Input validation error: validation error: validating root: validating /properties/criteria: type: <invalid reflect.Value> has type \"null\", want \"object\"")
 					})
 				})
 			})

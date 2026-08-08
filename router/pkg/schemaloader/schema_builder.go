@@ -83,6 +83,10 @@ func (b *SchemaBuilder) buildSchemaForOperation(operation *Operation) error {
 		if err != nil {
 			return fmt.Errorf("failed to canonicalize schema: %w", err)
 		}
+		// The schema value and its canonical bytes are populated together:
+		// consumers pass the value to the MCP SDK and the validator, and print
+		// the bytes verbatim in tool output.
+		operation.Schema = schema
 		operation.JSONSchema = s
 
 		// Use operation description if provided, otherwise fall back to schema description
