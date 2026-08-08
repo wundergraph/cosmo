@@ -152,8 +152,10 @@ func (v *VariablesSchemaBuilder) EnterVariableDefinition(ref int) {
 	varName := v.operationDocument.VariableDefinitionNameString(ref)
 	typeRef := v.operationDocument.VariableDefinitions[ref].Type
 
-	// Convert type to schema starting from the operation document
-	varSchema := v.typeRefSchema(v.operationDocument, typeRef)
+	// Convert type to schema starting from the operation document. topLevel
+	// forces GraphQL input object types to non-null; a scalar mapped to
+	// "object" keeps its own declared nullability (see topLevelTypeRefSchema).
+	varSchema := v.topLevelTypeRefSchema(v.operationDocument, typeRef)
 
 	// Skip this variable if its type could not be resolved to a schema
 	if varSchema == nil {
@@ -176,16 +178,6 @@ func (v *VariablesSchemaBuilder) EnterVariableDefinition(ref int) {
 	}
 
 	varSchema = v.adorned(varSchema, description, defaultValue)
-
-	// Top-level object-typed variable schemas are always non-nullable: strict
-	// consumers reject tool inputs whose top-level objects admit null, and an
-	// omitted variable is expressed by leaving it out, not by passing null.
-	if len(varSchema.Types) > 0 && varSchema.Types[0] == "object" {
-		nonNull := *varSchema
-		nonNull.Type = "object"
-		nonNull.Types = nil
-		varSchema = &nonNull
-	}
 
 	// Add variable to schema
 	if v.schema.Properties == nil {
@@ -241,6 +233,26 @@ func (v *VariablesSchemaBuilder) Build() (*jsonschema.Schema, error) {
 // nullability of the node is computed from the NonNull wrapper before the node
 // is built, so it is baked in at construction.
 func (v *VariablesSchemaBuilder) typeRefSchema(doc *ast.Document, typeRef int) *jsonschema.Schema {
+	return v.typeRefSchemaProvenance(doc, typeRef, false)
+}
+
+// topLevelTypeRefSchema builds the schema node for a variable definition's
+// declared type, the sole entry point where topLevel is true. A variable's
+// declared type is top-level provenance for a GraphQL input object; a list of
+// input objects, or an input object nested inside one, is not, so topLevel
+// never propagates into list items or field types (see
+// typeRefSchemaProvenance and processInputField).
+func (v *VariablesSchemaBuilder) topLevelTypeRefSchema(doc *ast.Document, typeRef int) *jsonschema.Schema {
+	return v.typeRefSchemaProvenance(doc, typeRef, true)
+}
+
+// typeRefSchemaProvenance builds the schema node for a type reference in doc.
+// The nullability of the node is computed from the NonNull wrapper before the
+// node is built, so it is baked in at construction. topLevel is true only for
+// the direct, non-list type of a variable definition; namedTypeSchema uses it
+// to force non-null on GraphQL input object types (never on mapped scalars),
+// so a custom scalar mapped to "object" keeps its own GraphQL nullability.
+func (v *VariablesSchemaBuilder) typeRefSchemaProvenance(doc *ast.Document, typeRef int, topLevel bool) *jsonschema.Schema {
 	nullable := true
 	for doc.Types[typeRef].TypeKind == ast.TypeKindNonNull {
 		nullable = false
@@ -249,6 +261,8 @@ func (v *VariablesSchemaBuilder) typeRefSchema(doc *ast.Document, typeRef int) *
 
 	switch doc.Types[typeRef].TypeKind {
 	case ast.TypeKindList:
+		// List items are never top-level: "top-level" only forces the
+		// non-null-object rule for the variable's own direct type.
 		itemSchema := v.typeRefSchema(doc, doc.Types[typeRef].OfType)
 		if itemSchema == nil {
 			return nil
@@ -256,7 +270,7 @@ func (v *VariablesSchemaBuilder) typeRefSchema(doc *ast.Document, typeRef int) *
 		return newArraySchema(itemSchema, nullable)
 
 	case ast.TypeKindNamed:
-		return v.namedTypeSchema(doc.TypeNameString(typeRef), nullable)
+		return v.namedTypeSchema(doc.TypeNameString(typeRef), nullable, topLevel)
 
 	default:
 		return nil
@@ -264,8 +278,11 @@ func (v *VariablesSchemaBuilder) typeRefSchema(doc *ast.Document, typeRef int) *
 }
 
 // namedTypeSchema builds the schema node for a named type, looking it up in
-// the definition document.
-func (v *VariablesSchemaBuilder) namedTypeSchema(typeName string, nullable bool) *jsonschema.Schema {
+// the definition document. topLevel forces non-null only on GraphQL input
+// object types (an at-least-empty object is required at the tool boundary);
+// a custom scalar mapped to "object" via WithScalarSchemas is not a GraphQL
+// input object and so keeps its declared nullability.
+func (v *VariablesSchemaBuilder) namedTypeSchema(typeName string, nullable bool, topLevel bool) *jsonschema.Schema {
 	// Handle built-in scalars
 	switch typeName {
 	case "String", "ID":
@@ -283,6 +300,15 @@ func (v *VariablesSchemaBuilder) namedTypeSchema(typeName string, nullable bool)
 	if !exists {
 		v.report.AddInternalError(fmt.Errorf("type %s is not defined", typeName))
 		return newObjectSchema(nullable)
+	}
+
+	// A top-level GraphQL input object is always non-null in the emitted
+	// schema: an at-least-empty object is expected by strict tool-input
+	// consumers, and an omitted variable already expresses "no value" without
+	// needing null too. This does not apply to mapped scalars (handled in
+	// scalarTypeSchema below), which keep their declared GraphQL nullability.
+	if topLevel && node.Kind == ast.NodeKindInputObjectTypeDefinition {
+		nullable = false
 	}
 
 	// Recursive input types are emitted once under "$defs" and referenced via
@@ -319,7 +345,10 @@ func (v *VariablesSchemaBuilder) scalarTypeSchema(typeName string, node ast.Node
 	}
 
 	override, ok := v.scalarSchemas[typeName]
-	if !ok {
+	if !ok || override == nil {
+		// A nil map value is treated the same as no entry: WithScalarSchemas
+		// takes a map of pointers, and a nil pointer here must not be
+		// dereferenced below.
 		// Custom scalars are opaque to JSON Schema. Emit a best-effort "string"
 		// type: MCP/LLM tool consumers reject or degrade on untyped properties,
 		// and opaque scalars are overwhelmingly strings on the wire. Callers can

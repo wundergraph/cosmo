@@ -1964,4 +1964,153 @@ func TestBuildJsonSchema(t *testing.T) {
 		// JSON is mapped -> not reported; Cursor used twice -> reported once
 		assert.Equal(t, []string{"BigInt", "Cursor"}, builder.DefaultedScalars())
 	})
+
+	t.Run("nullable object-mapped scalar at top level keeps its null union", func(t *testing.T) {
+		// The top-level non-null-object rule exists for GraphQL INPUT OBJECTs,
+		// not for scalars mapped to "object": a nullable $filter must still
+		// admit null.
+		schemaSDL := scalarDefinitions + `
+			schema {
+				query: Query
+			}
+
+			scalar JSON
+
+			type Query {
+				search(filter: JSON): String
+			}
+		`
+		operation := `
+			query Search($filter: JSON) {
+				search(filter: $filter)
+			}
+		`
+		definitionDoc, report := astparser.ParseGraphqlDocumentString(schemaSDL)
+		require.False(t, report.HasErrors(), "schema parsing failed")
+
+		operationDoc, report := astparser.ParseGraphqlDocumentString(operation)
+		require.False(t, report.HasErrors(), "operation parsing failed")
+
+		overrides := map[string]*jsonschema.Schema{
+			"JSON": {Type: "object"},
+		}
+
+		schema, err := BuildJsonSchema(&operationDoc, &definitionDoc, WithScalarSchemas(overrides))
+		require.NoError(t, err)
+
+		actualJSON, err := json.Marshal(schema)
+		require.NoError(t, err)
+
+		expectedJSON := `{
+  "additionalProperties": false,
+  "properties": {
+    "filter": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "type": "object"
+}`
+		assert.JSONEq(t, expectedJSON, string(actualJSON))
+	})
+
+	t.Run("non-null object-mapped scalar at top level emits bare object type", func(t *testing.T) {
+		schemaSDL := scalarDefinitions + `
+			schema {
+				query: Query
+			}
+
+			scalar JSON
+
+			type Query {
+				search(filter: JSON!): String
+			}
+		`
+		operation := `
+			query Search($filter: JSON!) {
+				search(filter: $filter)
+			}
+		`
+		definitionDoc, report := astparser.ParseGraphqlDocumentString(schemaSDL)
+		require.False(t, report.HasErrors(), "schema parsing failed")
+
+		operationDoc, report := astparser.ParseGraphqlDocumentString(operation)
+		require.False(t, report.HasErrors(), "operation parsing failed")
+
+		overrides := map[string]*jsonschema.Schema{
+			"JSON": {Type: "object"},
+		}
+
+		schema, err := BuildJsonSchema(&operationDoc, &definitionDoc, WithScalarSchemas(overrides))
+		require.NoError(t, err)
+
+		actualJSON, err := json.Marshal(schema)
+		require.NoError(t, err)
+
+		expectedJSON := `{
+  "additionalProperties": false,
+  "properties": {
+    "filter": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "filter"
+  ],
+  "type": "object"
+}`
+		assert.JSONEq(t, expectedJSON, string(actualJSON))
+	})
+
+	t.Run("nil override value falls back to the string default", func(t *testing.T) {
+		// WithScalarSchemas(map[string]*jsonschema.Schema{"JSON": nil}) must not
+		// dereference the nil override: it is treated as unmapped.
+		schemaSDL := scalarDefinitions + `
+			schema {
+				query: Query
+			}
+
+			scalar JSON
+
+			type Query {
+				search(filter: JSON): String
+			}
+		`
+		operation := `
+			query Search($filter: JSON) {
+				search(filter: $filter)
+			}
+		`
+		definitionDoc, report := astparser.ParseGraphqlDocumentString(schemaSDL)
+		require.False(t, report.HasErrors(), "schema parsing failed")
+
+		operationDoc, report := astparser.ParseGraphqlDocumentString(operation)
+		require.False(t, report.HasErrors(), "operation parsing failed")
+
+		builder := NewVariablesSchemaBuilder(&operationDoc, &definitionDoc, WithScalarSchemas(map[string]*jsonschema.Schema{
+			"JSON": nil,
+		}))
+		schema, err := builder.Build()
+		require.NoError(t, err)
+
+		actualJSON, err := json.Marshal(schema)
+		require.NoError(t, err)
+
+		expectedJSON := `{
+  "additionalProperties": false,
+  "properties": {
+    "filter": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "type": "object"
+}`
+		assert.JSONEq(t, expectedJSON, string(actualJSON))
+		assert.Equal(t, []string{"JSON"}, builder.DefaultedScalars())
+	})
 }
