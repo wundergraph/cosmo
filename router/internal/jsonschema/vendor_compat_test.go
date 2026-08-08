@@ -160,12 +160,14 @@ func TestAnthropicSchemaAcceptance(t *testing.T) {
 		require.Equal(t, http.StatusOK, status, "body: %s", body)
 	})
 
-	t.Run("schema with root anyOf is rejected", func(t *testing.T) {
+	t.Run("schema without a root type is rejected", func(t *testing.T) {
 		// Negative control: proves these probes detect invalid schemas.
+		// Verified live 2026-08-08: the API requires a root "type" field and
+		// rejects a root-anyOf schema with "input_schema.type: Field required".
 		bad := json.RawMessage(`{"anyOf":[{"type":"object"},{"type":"string"}]}`)
 		status, body := anthropicProbe(t, key, false, bad)
 		require.Equal(t, http.StatusBadRequest, status, "body: %s", body)
-		require.Contains(t, body, "anyOf", "body: %s", body)
+		require.Contains(t, body, "input_schema.type", "body: %s", body)
 	})
 }
 
