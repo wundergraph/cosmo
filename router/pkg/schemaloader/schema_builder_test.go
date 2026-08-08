@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/wundergraph/cosmo/router/internal/jsonschema"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/jsonschema"
 )
 
 func TestSchemaBuilderScalarOverrides(t *testing.T) {

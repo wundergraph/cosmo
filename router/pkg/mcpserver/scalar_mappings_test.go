@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/jsonschema"
+	"github.com/wundergraph/cosmo/router/internal/jsonschema"
 )
 
 func TestScalarMappingsTranslateToSchemas(t *testing.T) {

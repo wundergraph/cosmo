@@ -3,7 +3,7 @@ package mcpserver
 import (
 	"fmt"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/jsonschema"
+	"github.com/wundergraph/cosmo/router/internal/jsonschema"
 )
 
 // allowedScalarMappingTypes are the JSON schema type names an mcp.scalar_mappings

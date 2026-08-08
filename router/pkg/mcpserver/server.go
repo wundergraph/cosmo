@@ -20,6 +20,7 @@ import (
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/headers"
+	enginejsonschema "github.com/wundergraph/cosmo/router/internal/jsonschema"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
@@ -27,7 +28,6 @@ import (
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
-	enginejsonschema "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/jsonschema"
 )
 
 // reservedToolNames contains tool names that are internally registered by the MCP server

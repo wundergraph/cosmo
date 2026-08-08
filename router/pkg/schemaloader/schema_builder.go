@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/wundergraph/cosmo/router/internal/jsonschema"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/jsonschema"
 )
 
 // SchemaBuilder builds JSON schema from GraphQL operations
