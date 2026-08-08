@@ -280,6 +280,10 @@
     "ExposeSchema": false,
     "RouterURL": "https://cosmo-router.wundergraph.com",
     "OmitToolNamePrefix": false,
+    "ScalarMappings": {
+      "BigInt": "integer",
+      "JSON": "object"
+    },
     "OAuth": {
       "Enabled": false,
       "JWKS": null,

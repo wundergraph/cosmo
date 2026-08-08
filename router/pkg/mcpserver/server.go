@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
+	googlejsonschema "github.com/google/jsonschema-go/jsonschema"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/iancoleman/strcase"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/santhosh-tekuri/jsonschema/v6"
 	"go.uber.org/zap"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -84,6 +84,9 @@ type Options struct {
 	ExposeSchema bool
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names
 	OmitToolNamePrefix bool
+	// ScalarMappings overrides the JSON schema type advertised for custom scalar
+	// variables in MCP tool input schemas, keyed by scalar type name.
+	ScalarMappings map[string]string
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
 	// CorsConfig is the CORS configuration for the MCP server
@@ -127,9 +130,9 @@ type GraphQLSchemaServer struct {
 	enableArbitraryOperations bool
 	exposeSchema              bool
 	omitToolNamePrefix        bool
+	scalarSchemas             map[string]*googlejsonschema.Schema
 	stateless                 bool
 	operationsManager         *OperationsManager
-	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
 	corsConfig                cors.Config
 	cancel                    context.CancelFunc
@@ -150,10 +153,10 @@ type ExecuteGraphQLInput struct {
 	Variables json.RawMessage `json:"variables,omitempty"`
 }
 
-// operationHandler holds an operation and its compiled JSON schema
+// operationHandler holds an operation and its resolved variables schema
 type operationHandler struct {
 	operation      schemaloader.Operation
-	compiledSchema *jsonschema.Schema
+	resolvedSchema *googlejsonschema.Resolved
 }
 
 // OperationInfo contains metadata about a GraphQL operation
@@ -234,6 +237,13 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 	// Apply all option functions
 	for _, opt := range opts {
 		opt(options)
+	}
+
+	// Translate scalar mappings once at startup; an invalid mapping is a
+	// config error and must abort server start, not merely warn.
+	scalarSchemas, err := scalarSchemasFromMappings(options.ScalarMappings)
+	if err != nil {
+		return nil, fmt.Errorf("invalid mcp scalar mappings: %w", err)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -337,6 +347,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
 		omitToolNamePrefix:        options.OmitToolNamePrefix,
+		scalarSchemas:             scalarSchemas,
 		stateless:                 options.Stateless,
 		corsConfig:                options.CorsConfig,
 		cancel:                    cancel,
@@ -442,6 +453,14 @@ func WithStateless(stateless bool) func(*Options) {
 func WithOmitToolNamePrefix(omitToolNamePrefix bool) func(*Options) {
 	return func(o *Options) {
 		o.OmitToolNamePrefix = omitToolNamePrefix
+	}
+}
+
+// WithScalarMappings sets the custom scalar to JSON schema type mappings
+// used when generating MCP tool input schemas.
+func WithScalarMappings(scalarMappings map[string]string) func(*Options) {
+	return func(o *Options) {
+		o.ScalarMappings = scalarMappings
 	}
 }
 
@@ -573,8 +592,7 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 		return fmt.Errorf("server is not started")
 	}
 
-	s.schemaCompiler = NewSchemaCompiler(s.logger)
-	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations)
+	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations, s.scalarSchemas)
 
 	if s.operationsDir != "" {
 		if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
@@ -699,35 +717,22 @@ func (s *GraphQLSchemaServer) registerTools() error {
 	toolScopes := make(map[string][][]string)
 
 	for _, op := range operations {
-		var compiledSchema *jsonschema.Schema
-		var err error
-
 		graphqlOperationNames = append(graphqlOperationNames, op.Name)
 
-		if len(op.JSONSchema) > 0 {
-			// Validate the JSON schema before compiling it
-			if err := s.schemaCompiler.ValidateJSONSchema(op.JSONSchema); err != nil {
-				s.logger.Error("invalid schema for operation",
-					zap.String("operation", op.Name),
-					zap.Error(err))
-				continue
-			}
-
-			// Now compile the validated schema
-			schemaName := fmt.Sprintf("schema-%s.json", op.Name)
-			compiledSchema, err = s.schemaCompiler.CompileJSONSchema(op.JSONSchema, schemaName)
-			if err != nil {
-				s.logger.Error("failed to compile schema for operation",
-					zap.String("operation", op.Name),
-					zap.Error(err))
-				continue
-			}
+		// Resolve the built schema value once at registration; a schema that
+		// fails to resolve is a registration error and the tool is skipped.
+		resolvedSchema, err := resolveSchema(op.Schema)
+		if err != nil {
+			s.logger.Error("invalid schema for operation",
+				zap.String("operation", op.Name),
+				zap.Error(err))
+			continue
 		}
 
-		// Create handler with pre-compiled schema
+		// Create handler with the pre-resolved schema
 		handler := &operationHandler{
 			operation:      op,
-			compiledSchema: compiledSchema,
+			resolvedSchema: resolvedSchema,
 		}
 
 		// Convert the operation name to snake_case for consistent tool naming
@@ -751,15 +756,16 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			)
 			continue
 		}
-		// Parse JSON schema into map for the official SDK
+		// Hand the SDK the schema value; the SDK accepts *jsonschema.Schema
+		// directly and marshals it for tools/list. Key order in that output is
+		// not guaranteed and intentionally differs from get_operation_info's
+		// canonical bytes; do not restore it by unmarshaling op.JSONSchema,
+		// which would reintroduce the bytes round trip this design removed.
+		// The nil check must stay a typed branch: a nil *Schema stored in the
+		// any field would panic in AddTool.
 		var inputSchema any
-		if len(op.JSONSchema) > 0 {
-			if err := json.Unmarshal(op.JSONSchema, &inputSchema); err != nil {
-				s.logger.Error("failed to parse JSON schema for operation",
-					zap.String("operation", op.Name),
-					zap.Error(err))
-				continue
-			}
+		if op.Schema != nil {
+			inputSchema = op.Schema
 		} else {
 			inputSchema = map[string]any{"type": "object", "properties": map[string]any{}}
 		}
@@ -832,9 +838,9 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 
 		jsonBytes := request.Params.Arguments
 
-		// Validate the JSON input against the pre-compiled schema derived from the operation input type
-		if handler.compiledSchema != nil {
-			if err := s.schemaCompiler.ValidateInput(jsonBytes, handler.compiledSchema); err != nil {
+		// Validate the JSON input against the pre-resolved schema derived from the operation input type
+		if handler.resolvedSchema != nil {
+			if err := validateInput(jsonBytes, handler.resolvedSchema); err != nil {
 				return &mcp.CallToolResult{
 					Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Input validation error: %v", err)}},
 					IsError: true,

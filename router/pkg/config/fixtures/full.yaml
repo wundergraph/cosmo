@@ -106,6 +106,9 @@ mcp:
   enable_arbitrary_operations: false
   exclude_mutations: false
   omit_tool_name_prefix: false
+  scalar_mappings:
+    JSON: object
+    BigInt: integer
   graph_name: cosmo
   router_url: https://cosmo-router.wundergraph.com
   server:

@@ -43,6 +43,7 @@ storage_providers:
 | `enable_arbitrary_operations` | Enables the `execute_graphql` built-in tool, allowing clients to run arbitrary GraphQL operations beyond the pre-defined operation set.                                                                                                                                      | `false`          |
 | `expose_schema`               | Enables the `get_schema` built-in tool, exposing the full GraphQL schema to MCP clients.                                                                                                                                                                                     | `false`          |
 | `omit_tool_name_prefix`       | When enabled, MCP tool names omit the `execute_operation_` prefix. For example, `GetUser` becomes `get_user` instead of `execute_operation_get_user`. See [Tools - Omitting the Tool Name Prefix](/router/mcp/tools#omitting-the-tool-name-prefix).                | `false`          |
+| `scalar_mappings`             | Maps custom scalar type names to the JSON Schema type advertised in MCP tool input schemas. Allowed values: `string`, `integer`, `number`, `boolean`, `object`, `array`. Custom scalars without a mapping default to `string`. A non-nullable variable uses the mapped type alone, for example `"object"`. A nullable variable adds `"null"`, for example `["object", "null"]`. See [Custom Scalar Mappings](#custom-scalar-mappings). | -                |
 
 For OAuth-specific configuration, see [OAuth 2.1 Authorization](/router/mcp/oauth/overview).
 
@@ -67,8 +68,36 @@ All MCP options can also be set via environment variables:
 | `MCP_ENABLE_ARBITRARY_OPERATIONS` | `mcp.enable_arbitrary_operations` |
 | `MCP_EXPOSE_SCHEMA`               | `mcp.expose_schema`               |
 | `MCP_OMIT_TOOL_NAME_PREFIX`       | `mcp.omit_tool_name_prefix`       |
+| `MCP_SCALAR_MAPPINGS`             | `mcp.scalar_mappings`             |
+
+Map-valued options use comma-separated `key:value` pairs. For example: `MCP_SCALAR_MAPPINGS=JSON:object,BigInt:integer`.
 
 For OAuth-related environment variables, see [OAuth Configuration Reference](/router/mcp/oauth/configuration#environment-variables).
+
+## Custom Scalar Mappings
+
+The router generates each tool's input schema from the variables of the GraphQL operation. Custom scalars are opaque to JSON Schema, but MCP clients require every property to declare a type. The router therefore advertises custom scalar variables as `string` by default. This matches the wire format of most opaque scalars, such as cursors, IDs, and timestamps.
+
+Use `scalar_mappings` for custom scalars whose wire format is not a string:
+
+```yaml
+mcp:
+  enabled: true
+  scalar_mappings:
+    JSON: object
+    BigInt: integer
+```
+
+A mapped scalar's schema states its GraphQL nullability. A non-nullable variable, such as `$filter: JSON!`, emits the mapped type alone: `"type": "object"`. A nullable variable, such as `$filter: JSON`, emits the type with `"null"`: `"type": ["object", "null"]`.
+
+Two behaviors help you keep mappings correct:
+
+- On startup, the router logs a warning that lists every custom scalar that fell back to the `string` default. Non-string arguments for these scalars are rejected by input validation, so add a mapping for any scalar with a different wire format.
+- A mapping with a value outside the allowed set fails router startup. A wrong schema contract is a configuration error, not a warning.
+
+<Note>
+  The router forces only GraphQL input object variables to a non-nullable `object` type at the top level. A scalar mapped to `object` is not a GraphQL input object, so it keeps its own declared nullability.
+</Note>
 
 ## Storage Providers
 
@@ -140,6 +169,9 @@ mcp:
   enable_arbitrary_operations: false
   expose_schema: false
   omit_tool_name_prefix: false
+  scalar_mappings:
+    JSON: object
+    BigInt: integer
   storage:
     provider_id: 'mcp'
 
