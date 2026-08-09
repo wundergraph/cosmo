@@ -9,8 +9,8 @@ icon: 'sliders-up'
 | Option                                       | Description                                                                                                                                                                                                                   | Default |
 | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | `oauth.enabled`                              | Enable OAuth 2.1 / JWKS-based authentication for the MCP server                                                                                                                                                               | `false` |
-| `oauth.authorization_server_url`             | Base URL of the OAuth 2.0 authorization server. Advertised via the [RFC 9728 metadata endpoint](#rfc-9728-protected-resource-metadata) so clients can discover authorization endpoints.                                       | -       |
-| `oauth.authorization_server_urls`            | List of base URLs of OAuth 2.0 authorization servers. Use this option to trust more than one authorization server. See [Multiple Authorization Servers](#multiple-authorization-servers).                                     | `[]`    |
+| `oauth.authorization_server_urls`            | List of base URLs of OAuth 2.0 authorization servers. Advertised via the [RFC 9728 metadata endpoint](#rfc-9728-protected-resource-metadata) so clients can discover authorization endpoints. See [Multiple Authorization Servers](#multiple-authorization-servers). | `[]`    |
+| `oauth.authorization_server_url`             | **Deprecated.** Use `authorization_server_urls` instead. Base URL of a single OAuth 2.0 authorization server. The router merges this value into `authorization_server_urls`.                                                  | -       |
 | `oauth.scope_challenge_include_token_scopes` | When `true`, includes the token's existing scopes in the `scope` parameter of 403 responses. Works around MCP SDK scope accumulation bugs. See [Scope Challenge Behavior](/router/mcp/oauth/scopes#scope-challenge-behavior). | `false` |
 | `oauth.max_scope_combinations`               | Maximum scope combinations computed per operation. Raise for schemas with many overlapping `@requiresScopes`.                                                                                                                 | `2048`  |
 | `oauth.scopes.initialize`                    | Scopes required for **all** HTTP requests (checked before JSON-RPC parsing). This is the baseline scope needed to establish an MCP connection.                                                                                | `[]`    |
@@ -79,15 +79,15 @@ The router validates an incoming token against every configured JWKS provider. A
 
 All configured servers are advertised in the `authorization_servers` field of the [RFC 9728 metadata endpoint](#rfc-9728-protected-resource-metadata). MCP clients pick one of the advertised servers for authorization.
 
-You can combine `authorization_server_url` and `authorization_server_urls`. The router merges both into one list, with the single URL first, and removes duplicates. Existing configurations with only `authorization_server_url` continue to work unchanged.
+The option `authorization_server_url` is deprecated. Use `authorization_server_urls` for new configurations. Existing configurations with `authorization_server_url` continue to work. When both options are set, the router merges them into one list, with the single URL first, and removes duplicates.
 
 ## Environment Variables
 
 | Environment Variable                             | Configuration Path                               |
 | ------------------------------------------------ | ------------------------------------------------ |
 | `MCP_OAUTH_ENABLED`                              | `mcp.oauth.enabled`                              |
-| `MCP_OAUTH_AUTHORIZATION_SERVER_URL`             | `mcp.oauth.authorization_server_url`             |
 | `MCP_OAUTH_AUTHORIZATION_SERVER_URLS`            | `mcp.oauth.authorization_server_urls` (comma-separated) |
+| `MCP_OAUTH_AUTHORIZATION_SERVER_URL`             | `mcp.oauth.authorization_server_url` (deprecated) |
 | `MCP_OAUTH_SCOPE_CHALLENGE_INCLUDE_TOKEN_SCOPES` | `mcp.oauth.scope_challenge_include_token_scopes` |
 | `MCP_OAUTH_MAX_SCOPE_COMBINATIONS`               | `mcp.oauth.max_scope_combinations`               |
 
@@ -193,7 +193,8 @@ mcp:
   expose_schema: true # Enables get_schema tool
   oauth:
     enabled: true
-    authorization_server_url: 'https://auth.example.com'
+    authorization_server_urls:
+      - 'https://auth.example.com'
     scope_challenge_include_token_scopes: false # Set to true for MCP clients with scope accumulation bugs
     scopes:
       initialize:

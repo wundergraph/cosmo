@@ -1361,9 +1361,10 @@ type MCPConfiguration struct {
 }
 
 type MCPOAuthConfiguration struct {
-	Enabled                bool                `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	JWKS                   []JWKSConfiguration `yaml:"jwks"`
-	AuthorizationServerURL string              `yaml:"authorization_server_url,omitempty" env:"AUTHORIZATION_SERVER_URL"`
+	Enabled bool                `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	JWKS    []JWKSConfiguration `yaml:"jwks"`
+	// Deprecated: AuthorizationServerURL is deprecated, use AuthorizationServerURLs instead.
+	AuthorizationServerURL string `yaml:"authorization_server_url,omitempty" env:"AUTHORIZATION_SERVER_URL"`
 	// AuthorizationServerURLs configures multiple OAuth 2.0 authorization servers.
 	// All entries are advertised in the RFC 9728 Protected Resource Metadata.
 	// Use AuthorizationServers to read the merged list of both fields.

@@ -2774,7 +2774,9 @@
             "authorization_server_url": {
               "type": "string",
               "description": "The base URL of the OAuth 2.0 authorization server. This URL is advertised to MCP clients via the Protected Resource Metadata endpoint (RFC 9728) to enable automatic discovery of OAuth endpoints. Clients will append '/.well-known/oauth-authorization-server' to this URL to discover token, authorization, and registration endpoints. Example: 'https://auth.example.com'",
-              "format": "http-url"
+              "format": "http-url",
+              "deprecated": true,
+              "deprecationMessage": "The authorization_server_url is deprecated. Please use the authorization_server_urls configuration instead."
             },
             "authorization_server_urls": {
               "type": "array",
