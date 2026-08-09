@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math"
 	"sync"
 
 	"github.com/dgraph-io/ristretto/v2"
@@ -12,7 +11,7 @@ import (
 )
 
 const entryCost = 1
-const maxSize = math.MaxInt32
+const maxSize = 100_000
 
 type InMemoryCache struct {
 	cache *ristretto.Cache[string, []byte]
@@ -44,7 +43,7 @@ func NewInMemoryCache(maxEntries int64) (*InMemoryCache, error) {
 	return &InMemoryCache{cache: cache}, nil
 }
 
-// GetMany returns the entries it found, keyed by the key they were asked for.
+// GetMany implements enginecache.GetMany.
 func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) (map[string]enginecache.Item, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -78,9 +77,7 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) (map[string]
 	return results, nil
 }
 
-// SetMany stores every item, all of which must carry a positive TTL. A single
-// item without one fails the whole batch with an ErrMissingTTL and nothing is
-// stored. It otherwise only fails on a cancelled context.
+// SetMany implements enginecache.SetMany.
 func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -109,8 +106,7 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	return nil
 }
 
-// Close stops the goroutines ristretto runs behind the cache. It is safe to
-// call more than once, but not while a GetMany or a SetMany is in flight.
+// Close closes the in memory cache
 func (c *InMemoryCache) Close() {
 	c.closeOnce.Do(c.cache.Close)
 }
