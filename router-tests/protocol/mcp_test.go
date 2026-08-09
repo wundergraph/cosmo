@@ -30,7 +30,7 @@ import (
 func requireStructuredContentMatchesText(t *testing.T, resp *mcp.CallToolResult, text string) {
 	t.Helper()
 	require.NotNil(t, resp.StructuredContent)
-	var expectedStructured map[string]interface{}
+	var expectedStructured map[string]any
 	require.NoError(t, json.Unmarshal([]byte(text), &expectedStructured))
 	assert.Equal(t, expectedStructured, resp.StructuredContent)
 }
@@ -542,37 +542,37 @@ Important Notes:
 				myEmployees := toolByName(t, resp.Tools, "execute_operation_my_employees")
 				assert.Equal(t, mcp.ToolOutputSchema{
 					Type: "object",
-					Properties: map[string]interface{}{
-						"data": map[string]interface{}{
-							"type": []interface{}{"object", "null"},
-							"properties": map[string]interface{}{
-								"findEmployees": map[string]interface{}{
+					Properties: map[string]any{
+						"data": map[string]any{
+							"type": []any{"object", "null"},
+							"properties": map[string]any{
+								"findEmployees": map[string]any{
 									"description": "This is a GraphQL query that retrieves a list of employees.",
 									"type":        "array",
-									"items": map[string]interface{}{
+									"items": map[string]any{
 										"type": "object",
-										"properties": map[string]interface{}{
-											"currentMood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"},
-											"details": map[string]interface{}{
-												"type": []interface{}{"object", "null"},
-												"properties": map[string]interface{}{
-													"forename":    map[string]interface{}{"type": "string"},
-													"nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "type": "string"},
+										"properties": map[string]any{
+											"currentMood": map[string]any{"enum": []any{"HAPPY", "SAD"}, "type": "string"},
+											"details": map[string]any{
+												"type": []any{"object", "null"},
+												"properties": map[string]any{
+													"forename":    map[string]any{"type": "string"},
+													"nationality": map[string]any{"enum": []any{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "type": "string"},
 												},
-												"required": []interface{}{"forename", "nationality"},
+												"required": []any{"forename", "nationality"},
 											},
-											"id":          map[string]interface{}{"type": "integer"},
-											"isAvailable": map[string]interface{}{"type": []interface{}{"boolean", "null"}},
-											"products": map[string]interface{}{
+											"id":          map[string]any{"type": "integer"},
+											"isAvailable": map[string]any{"type": []any{"boolean", "null"}},
+											"products": map[string]any{
 												"type":  "array",
-												"items": map[string]interface{}{"enum": []interface{}{"CONSULTANCY", "COSMO", "ENGINE", "FINANCE", "HUMAN_RESOURCES", "MARKETING", "SDK"}, "type": "string"},
+												"items": map[string]any{"enum": []any{"CONSULTANCY", "COSMO", "ENGINE", "FINANCE", "HUMAN_RESOURCES", "MARKETING", "SDK"}, "type": "string"},
 											},
 										},
-										"required": []interface{}{"currentMood", "details", "id", "isAvailable", "products"},
+										"required": []any{"currentMood", "details", "id", "isAvailable", "products"},
 									},
 								},
 							},
-							"required": []interface{}{"findEmployees"},
+							"required": []any{"findEmployees"},
 						},
 					},
 				}, myEmployees.OutputSchema)
@@ -580,26 +580,26 @@ Important Notes:
 				updateMood := toolByName(t, resp.Tools, "execute_operation_update_mood")
 				assert.Equal(t, mcp.ToolOutputSchema{
 					Type: "object",
-					Properties: map[string]interface{}{
-						"data": map[string]interface{}{
-							"type": []interface{}{"object", "null"},
-							"properties": map[string]interface{}{
-								"updateMood": map[string]interface{}{
+					Properties: map[string]any{
+						"data": map[string]any{
+							"type": []any{"object", "null"},
+							"properties": map[string]any{
+								"updateMood": map[string]any{
 									"description": "This mutation update the mood of an employee.",
 									"type":        "object",
-									"properties": map[string]interface{}{
-										"currentMood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"},
-										"details": map[string]interface{}{
-											"type":       []interface{}{"object", "null"},
-											"properties": map[string]interface{}{"forename": map[string]interface{}{"type": "string"}},
-											"required":   []interface{}{"forename"},
+									"properties": map[string]any{
+										"currentMood": map[string]any{"enum": []any{"HAPPY", "SAD"}, "type": "string"},
+										"details": map[string]any{
+											"type":       []any{"object", "null"},
+											"properties": map[string]any{"forename": map[string]any{"type": "string"}},
+											"required":   []any{"forename"},
 										},
-										"id": map[string]interface{}{"type": "integer"},
+										"id": map[string]any{"type": "integer"},
 									},
-									"required": []interface{}{"currentMood", "details", "id"},
+									"required": []any{"currentMood", "details", "id"},
 								},
 							},
-							"required": []interface{}{"updateMood"},
+							"required": []any{"updateMood"},
 						},
 					},
 				}, updateMood.OutputSchema)
@@ -631,8 +631,8 @@ Important Notes:
 
 				req := mcp.CallToolRequest{}
 				req.Params.Name = "execute_operation_my_employees"
-				req.Params.Arguments = map[string]interface{}{
-					"criteria": map[string]interface{}{},
+				req.Params.Arguments = map[string]any{
+					"criteria": map[string]any{},
 				}
 
 				resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
@@ -658,7 +658,7 @@ Important Notes:
 
 				req := mcp.CallToolRequest{}
 				req.Params.Name = "execute_graphql"
-				req.Params.Arguments = map[string]interface{}{
+				req.Params.Arguments = map[string]any{
 					"query": `query { employees { id } }`,
 				}
 
@@ -685,8 +685,8 @@ Important Notes:
 
 				req := mcp.CallToolRequest{}
 				req.Params.Name = "execute_operation_my_employees"
-				req.Params.Arguments = map[string]interface{}{
-					"criteria": map[string]interface{}{},
+				req.Params.Arguments = map[string]any{
+					"criteria": map[string]any{},
 				}
 
 				resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
@@ -705,7 +705,7 @@ Important Notes:
 
 				req := mcp.CallToolRequest{}
 				req.Params.Name = "execute_operation_my_employees"
-				req.Params.Arguments = map[string]interface{}{
+				req.Params.Arguments = map[string]any{
 					"criteria": nil,
 				}
 
