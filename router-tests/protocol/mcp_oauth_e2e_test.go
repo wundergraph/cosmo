@@ -266,6 +266,9 @@ func TestMCPOAuthMultipleAuthorizationServers(t *testing.T) {
 		})
 
 		t.Run("rejects tokens from an unknown authorization server", func(t *testing.T) {
+			// Trust is anchored in the configured JWKS signing keys, not in the
+			// token's iss claim. The unknown server signs with a key that is in
+			// no configured JWKS, so signature verification fails with 401.
 			tokenFromUnknown, err := oauthServerUnknown.CreateTokenWithScopes("test-user", []string{"mcp:tools:read"})
 			require.NoError(t, err, "failed to create token on unknown server")
 
