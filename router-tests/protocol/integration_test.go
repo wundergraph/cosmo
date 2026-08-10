@@ -689,7 +689,7 @@ func TestPropagateOperationName(t *testing.T) {
 							}
 							mut.Unlock()
 							assert.True(t, matched,
-								"op \"%s\" was not found in expected operations %s",
+								"op \"%s\" was not found in expected operations %v",
 								req.Query, expectEmployeeOps)
 
 							r.Body = io.NopCloser(bytes.NewReader(body))
