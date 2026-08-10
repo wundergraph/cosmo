@@ -68,6 +68,11 @@ func (p *PubSubProvider) Startup(ctx context.Context) error {
 }
 
 func (p *PubSubProvider) Shutdown(ctx context.Context) error {
+	// The adapter is always torn down, including when the provider could not connect at
+	// startup under events.skip_unavailable_providers: in that case the adapter still holds
+	// a resilient client that is reconnecting in the background, and it must be closed to
+	// avoid leaking that goroutine. Adapters guard their (possibly nil) connection fields,
+	// so this is safe even if startup never established a connection.
 	if err := p.Adapter.Shutdown(ctx); err != nil {
 		return err
 	}

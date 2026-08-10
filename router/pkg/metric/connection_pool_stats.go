@@ -1,15 +1,18 @@
 package metric
 
 import (
+	"maps"
 	"sync"
 	"sync/atomic"
 )
 
+// ConnectionPoolStats tracks active connections per subgraph host. One instance
+// is shared by every subgraph transport of a router, so all state is guarded.
 type ConnectionPoolStats struct {
 	mu           sync.RWMutex
 	connsPerHost map[SubgraphHostKey]*atomic.Int64
 
-	MaxConnsPerSubgraph map[string]int64
+	maxConnsPerSubgraph map[string]int64
 }
 
 type SubgraphHostKey struct {
@@ -20,12 +23,21 @@ type SubgraphHostKey struct {
 func NewConnectionPoolStats() *ConnectionPoolStats {
 	return &ConnectionPoolStats{
 		connsPerHost:        make(map[SubgraphHostKey]*atomic.Int64),
-		MaxConnsPerSubgraph: make(map[string]int64),
+		maxConnsPerSubgraph: make(map[string]int64),
 	}
 }
 
 func (t *ConnectionPoolStats) AddSubgraphHostCount(subgraph string, maxHostCount int64) {
-	t.MaxConnsPerSubgraph[subgraph] = maxHostCount
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.maxConnsPerSubgraph[subgraph] = maxHostCount
+}
+
+// GetMaxConnsPerSubgraph returns a snapshot of the configured per-subgraph max.
+func (t *ConnectionPoolStats) GetMaxConnsPerSubgraph() map[string]int64 {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return maps.Clone(t.maxConnsPerSubgraph)
 }
 
 func (t *ConnectionPoolStats) GetCounter(key SubgraphHostKey) *atomic.Int64 {

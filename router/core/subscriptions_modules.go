@@ -442,6 +442,86 @@ func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, 
 	}
 }
 
+type StreamBeforeEventsDispatchHandlerContext interface {
+	// Context is a context for handlers. If it is cancelled, the handler should stop processing.
+	Context() context.Context
+	// Logger is the logger for the handler
+	Logger() *zap.Logger
+	// SubscriptionEventConfiguration the subscription event configuration
+	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
+	// NewEvent creates a new event that can be used in the subscription.
+	//
+	// The data parameter must contain valid JSON bytes representing the raw event payload
+	// from your message broker (Kafka, NATS, etc.). The JSON must have properly quoted
+	// property names and must include the __typename field required by GraphQL.
+	NewEvent(data []byte) datasource.MutableStreamEvent
+}
+
+type StreamBeforeEventsDispatchHandler interface {
+	// BeforeEventsDispatch is called once whenever a batch of events is received from a provider,
+	// before delivering them to clients. Unlike OnReceiveEvents it is called ONCE per batch (not
+	// once per active subscriber), and it runs on the concurrent broadcast delivery path — it
+	// does not force the serial per-subscriber path. There is therefore no per-subscriber client
+	// request available on the context. The returned events replace the batch for all subscribers.
+	// Use events.All() to iterate through them and event.Clone() to create mutable copies, when needed.
+	// Returning an error drops the batch and logs the error.
+	BeforeEventsDispatch(ctx StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+}
+
+type pubSubStreamBeforeEventsDispatchHookContext struct {
+	logger                         *zap.Logger
+	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
+	eventBuilder                   datasource.EventBuilderFn
+	context                        context.Context
+}
+
+func (c *pubSubStreamBeforeEventsDispatchHookContext) Context() context.Context {
+	return c.context
+}
+
+func (c *pubSubStreamBeforeEventsDispatchHookContext) Logger() *zap.Logger {
+	return c.logger
+}
+
+func (c *pubSubStreamBeforeEventsDispatchHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
+	return c.subscriptionEventConfiguration
+}
+
+func (c *pubSubStreamBeforeEventsDispatchHookContext) NewEvent(data []byte) datasource.MutableStreamEvent {
+	return c.eventBuilder(data)
+}
+
+func NewPubSubBeforeEventsDispatchHook(fn func(ctx StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error), baseLogger *zap.Logger) datasource.BeforeEventsDispatchFn {
+	if fn == nil {
+		return nil
+	}
+
+	return func(ctx context.Context, subConf datasource.SubscriptionEventConfiguration, eventBuilder datasource.EventBuilderFn, evts []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+		// The broadcast path has no per-subscriber client request, so we use the router base
+		// logger rather than a request-scoped one.
+		logger := baseLogger
+		if logger != nil {
+			logger = logger.With(zap.String("component", "before_events_dispatch_hook"))
+			if subConf != nil {
+				logger = logger.With(
+					zap.String("provider_id", subConf.ProviderID()),
+					zap.String("provider_type", string(subConf.ProviderType())),
+					zap.String("field_name", subConf.RootFieldName()),
+				)
+			}
+		}
+
+		hookCtx := &pubSubStreamBeforeEventsDispatchHookContext{
+			logger:                         logger,
+			subscriptionEventConfiguration: subConf,
+			eventBuilder:                   eventBuilder,
+			context:                        ctx,
+		}
+		newEvts, err := fn(hookCtx, datasource.NewStreamEvents(evts))
+		return newEvts.Unsafe(), err
+	}
+}
+
 // StreamHandlerError writes an error event with Reason to a subscription client and closes the
 // websocket connection with code 1000 (Normal closure).
 // It can returned from methods of the core.SubscriptionOnStartHandler interface.
