@@ -1193,7 +1193,9 @@ type mcpHostDeps struct {
 // existing config keeps working.
 func buildMCPHost(ctx context.Context, deps mcpHostDeps) (*mcpserver.Host, error) {
 	entries := deps.cfg.Servers
-	if len(entries) == 0 {
+	usingDeprecatedOptions := len(entries) == 0
+
+	if usingDeprecatedOptions {
 		deps.logger.Warn("The top-level mcp options are deprecated. Use the mcp.servers map instead.")
 		entries = map[string]config.MCPServerEntry{
 			deprecatedServerName(deps.cfg): deprecatedServerEntry(deps.cfg),
@@ -1201,6 +1203,11 @@ func buildMCPHost(ctx context.Context, deps mcpHostDeps) (*mcpserver.Host, error
 	} else {
 		warnIgnoredDeprecatedMCPOptions(deps.cfg, deps.logger)
 	}
+
+	// mcp.router_url only applies on the deprecated path. deps is a value
+	// receiver, so this reassignment is local to this call and does not
+	// leak back to the caller.
+	deps.graphqlEndpoint = mcpGraphQLEndpoint(deps.cfg, deps.graphqlEndpoint, usingDeprecatedOptions)
 
 	if err := mcpserver.ValidateServers(entries); err != nil {
 		return nil, err
@@ -1211,6 +1218,16 @@ func buildMCPHost(ctx context.Context, deps mcpHostDeps) (*mcpserver.Host, error
 		Logger:     deps.logger,
 		CorsConfig: corsConfigOrZero(deps.corsOptions),
 	})
+
+	// Guarantee every server registered before an early return is closed.
+	// Host.Stop closes every registered server; it is a no-op beyond that
+	// when Start has not been called yet, since h.httpServer is still nil.
+	success := false
+	defer func() {
+		if !success {
+			_ = host.Stop(ctx)
+		}
+	}()
 
 	names := slices.Sorted(maps.Keys(entries))
 
@@ -1226,15 +1243,32 @@ func buildMCPHost(ctx context.Context, deps mcpHostDeps) (*mcpserver.Host, error
 		}
 
 		if err := host.Register(srv); err != nil {
-			// Register did not take ownership of srv, so it will never be
-			// closed by host.Stop. Close it here to avoid leaking its
-			// background context, which drives JWKS key refresh.
+			// Register did not take ownership of srv, so host.Stop will
+			// never see it. Close it here to avoid leaking its background
+			// context, which drives JWKS key refresh.
 			srv.Close()
 			return nil, fmt.Errorf("mcp server %q: %w", name, err)
 		}
 	}
 
+	success = true
+
 	return host, nil
+}
+
+// mcpGraphQLEndpoint resolves the GraphQL endpoint used to build MCP servers.
+//
+// mcp.router_url is a deprecated top-level option. It must apply only when
+// the deprecated top-level mcp options build the single server. When
+// mcp.servers has entries, the router's own GraphQL endpoint is used
+// unconditionally, otherwise a router_url set alongside mcp.servers would
+// silently redirect every map-based server while warnIgnoredDeprecatedMCPOptions
+// simultaneously reports it as ignored.
+func mcpGraphQLEndpoint(cfg config.MCPConfiguration, routerEndpoint string, usingDeprecatedOptions bool) string {
+	if usingDeprecatedOptions {
+		return cmp.Or(cfg.RouterURL, routerEndpoint)
+	}
+	return routerEndpoint
 }
 
 // newMCPServerFromEntry builds one MCP server from its config entry.
@@ -1292,10 +1326,17 @@ func newMCPServerFromEntry(ctx context.Context, name string, entry config.MCPSer
 	return mcpserver.NewGraphQLSchemaServer(ctx, deps.graphqlEndpoint, opts...)
 }
 
+// defaultMCPGraphName mirrors config.MCPConfiguration.GraphName's
+// envDefault:"mygraph". LoadConfig runs env.Parse before the YAML merge, so
+// GraphName is never empty in a real deployment, whether or not the user
+// set mcp.graph_name. Compare against this constant, not against "", or
+// every mcp.servers deployment gets a spurious ignored-options warning.
+const defaultMCPGraphName = "mygraph"
+
 // deprecatedServerName names the single server built from the deprecated
 // top-level options. It keeps the previously advertised serverInfo name.
 func deprecatedServerName(cfg config.MCPConfiguration) string {
-	return cmp.Or(cfg.GraphName, "mygraph")
+	return cmp.Or(cfg.GraphName, defaultMCPGraphName)
 }
 
 // deprecatedServerEntry maps the deprecated top-level options onto one entry.
@@ -1325,7 +1366,10 @@ func deprecatedServerEntry(cfg config.MCPConfiguration) config.MCPServerEntry {
 func warnIgnoredDeprecatedMCPOptions(cfg config.MCPConfiguration, logger *zap.Logger) {
 	var ignored []string
 
-	if cfg.GraphName != "" {
+	// GraphName carries envDefault:"mygraph" (see defaultMCPGraphName), so it
+	// is never empty in a real deployment. Compare against the default, not
+	// against "", or every mcp.servers user gets a spurious warning.
+	if cfg.GraphName != "" && cfg.GraphName != defaultMCPGraphName {
 		ignored = append(ignored, "mcp.graph_name")
 	}
 	if cfg.Storage.ProviderID != "" {
@@ -1351,6 +1395,23 @@ func warnIgnoredDeprecatedMCPOptions(cfg config.MCPConfiguration, logger *zap.Lo
 	}
 	if cfg.ResourceDocumentation != "" {
 		ignored = append(ignored, "mcp.resource_documentation")
+	}
+	// mcp.session is deliberately not checked here: MCPSessionConfig.Stateless
+	// carries envDefault:"true", so like GraphName it is never at its zero
+	// value in a real deployment, and true is also a legitimate explicit
+	// setting. Distinguishing "set to the default" from "never touched"
+	// would need the same value the config loader already discards.
+	if cfg.Server.Title != "" {
+		ignored = append(ignored, "mcp.server.title")
+	}
+	if cfg.Server.Description != "" {
+		ignored = append(ignored, "mcp.server.description")
+	}
+	if cfg.Server.Version != "" {
+		ignored = append(ignored, "mcp.server.version")
+	}
+	if cfg.Server.Discover.Instructions != "" {
+		ignored = append(ignored, "mcp.server.discover.instructions")
 	}
 
 	if len(ignored) == 0 {
@@ -1379,7 +1440,7 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 	host, err := buildMCPHost(ctx, mcpHostDeps{
 		cfg:              r.mcp,
 		logger:           r.logger,
-		graphqlEndpoint:  cmp.Or(r.mcp.RouterURL, r.graphqlEndpointURL),
+		graphqlEndpoint:  r.graphqlEndpointURL,
 		routerVersion:    Version,
 		corsOptions:      r.corsOptions,
 		providerRegistry: r.providerRegistry,
