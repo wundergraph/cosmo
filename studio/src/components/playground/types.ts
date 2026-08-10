@@ -39,6 +39,7 @@ export const PlaygroundContext = createContext<PlaygroundContextType>({
   graphId: '',
   tabsState: { tabs: [], activeTabIndex: 0 },
   routingUrl: '',
+  featureFlagName: undefined,
   view: 'response',
   setView: () => {},
   isHydrated: false,
