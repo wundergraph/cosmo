@@ -723,6 +723,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 	// the engine is smart enough to first do normalization and then hash the input
 	// this means that we can cache the normalized input and don't have to worry about
 	// different inputs that would generate the same execution plan
+	// there
 
 	if srv.engineExecutionConfiguration.ExecutionPlanCacheSize > 0 {
 		planCacheConfig := &ristretto.Config[uint64, *planWithMetaData]{
