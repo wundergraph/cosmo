@@ -1175,90 +1175,228 @@ func (r *Router) setupTelemetry(ctx context.Context) error {
 	return nil
 }
 
-// startMCPServer initializes and starts the MCP server if enabled.
+// mcpHostDeps carries everything buildMCPHost needs, so the builder can be
+// tested without a running router.
+type mcpHostDeps struct {
+	cfg              config.MCPConfiguration
+	logger           *zap.Logger
+	graphqlEndpoint  string
+	routerVersion    string
+	corsOptions      *cors.Config
+	providerRegistry *ProviderRegistry
+}
+
+// buildMCPHost creates the shared MCP listener and one server per enabled entry.
+//
+// When mcp.servers has entries the deprecated top-level options are ignored.
+// When it has none, the deprecated options build a single server, so an
+// existing config keeps working.
+func buildMCPHost(ctx context.Context, deps mcpHostDeps) (*mcpserver.Host, error) {
+	entries := deps.cfg.Servers
+	if len(entries) == 0 {
+		deps.logger.Warn("The top-level mcp options are deprecated. Use the mcp.servers map instead.")
+		entries = map[string]config.MCPServerEntry{
+			deprecatedServerName(deps.cfg): deprecatedServerEntry(deps.cfg),
+		}
+	} else {
+		warnIgnoredDeprecatedMCPOptions(deps.cfg, deps.logger)
+	}
+
+	if err := mcpserver.ValidateServers(entries); err != nil {
+		return nil, err
+	}
+
+	host := mcpserver.NewHost(mcpserver.HostOptions{
+		ListenAddr: deps.cfg.Server.ListenAddr,
+		Logger:     deps.logger,
+		CorsConfig: corsConfigOrZero(deps.corsOptions),
+	})
+
+	names := slices.Sorted(maps.Keys(entries))
+
+	for _, name := range names {
+		entry := entries[name]
+		if !entry.Enabled {
+			continue
+		}
+
+		srv, err := newMCPServerFromEntry(ctx, name, entry, deps)
+		if err != nil {
+			return nil, fmt.Errorf("mcp server %q: %w", name, err)
+		}
+
+		if err := host.Register(srv); err != nil {
+			// Register did not take ownership of srv, so it will never be
+			// closed by host.Stop. Close it here to avoid leaking its
+			// background context, which drives JWKS key refresh.
+			srv.Close()
+			return nil, fmt.Errorf("mcp server %q: %w", name, err)
+		}
+	}
+
+	return host, nil
+}
+
+// newMCPServerFromEntry builds one MCP server from its config entry.
+func newMCPServerFromEntry(ctx context.Context, name string, entry config.MCPServerEntry, deps mcpHostDeps) (*mcpserver.GraphQLSchemaServer, error) {
+	var operationsDir string
+
+	if entry.Storage.ProviderID != "" {
+		fsProvider, ok := deps.providerRegistry.FileSystem(entry.Storage.ProviderID)
+		if !ok {
+			return nil, fmt.Errorf("storage provider with id '%s' not found", entry.Storage.ProviderID)
+		}
+		operationsDir = fsProvider.Path
+	}
+
+	logger := deps.logger.With(
+		zap.String("mcp_server", name),
+		zap.String("storage_provider_id", entry.Storage.ProviderID),
+	)
+
+	// graph_name defaults to the map key so that every server advertises a
+	// distinct name in serverInfo.
+	graphName := cmp.Or(entry.GraphName, name)
+
+	baseURL := cmp.Or(entry.BaseURL, deps.cfg.Server.BaseURL)
+
+	opts := []func(*mcpserver.Options){
+		mcpserver.WithGraphName(graphName),
+		mcpserver.WithMountPath(entry.Path),
+		mcpserver.WithOperationsDir(operationsDir),
+		mcpserver.WithLogger(logger),
+		mcpserver.WithExcludeMutations(entry.ExcludeMutations),
+		mcpserver.WithEnableArbitraryOperations(entry.EnableArbitraryOperations),
+		mcpserver.WithExposeSchema(entry.ExposeSchema),
+		mcpserver.WithOmitToolNamePrefix(entry.OmitToolNamePrefix),
+		mcpserver.WithStateless(entry.Session.Stateless),
+		mcpserver.WithInstructions(entry.Discover.Instructions),
+		mcpserver.WithServerVersion(cmp.Or(entry.Version, deps.routerVersion)),
+		mcpserver.WithServerTitle(entry.Title),
+		mcpserver.WithServerDescription(entry.Description),
+	}
+
+	if entry.OAuth.Enabled {
+		oauth := entry.OAuth
+		opts = append(opts, mcpserver.WithOAuth(&oauth))
+	}
+
+	if baseURL != "" {
+		opts = append(opts, mcpserver.WithServerBaseURL(baseURL))
+	}
+
+	if entry.ResourceDocumentation != "" {
+		opts = append(opts, mcpserver.WithResourceDocumentation(entry.ResourceDocumentation))
+	}
+
+	return mcpserver.NewGraphQLSchemaServer(ctx, deps.graphqlEndpoint, opts...)
+}
+
+// deprecatedServerName names the single server built from the deprecated
+// top-level options. It keeps the previously advertised serverInfo name.
+func deprecatedServerName(cfg config.MCPConfiguration) string {
+	return cmp.Or(cfg.GraphName, "mygraph")
+}
+
+// deprecatedServerEntry maps the deprecated top-level options onto one entry.
+func deprecatedServerEntry(cfg config.MCPConfiguration) config.MCPServerEntry {
+	return config.MCPServerEntry{
+		Enabled:                   true,
+		Path:                      mcpserver.DefaultMountPath,
+		BaseURL:                   cfg.Server.BaseURL,
+		Storage:                   cfg.Storage,
+		GraphName:                 cfg.GraphName,
+		ExcludeMutations:          cfg.ExcludeMutations,
+		EnableArbitraryOperations: cfg.EnableArbitraryOperations,
+		ExposeSchema:              cfg.ExposeSchema,
+		OmitToolNamePrefix:        cfg.OmitToolNamePrefix,
+		Session:                   cfg.Session,
+		OAuth:                     cfg.OAuth,
+		ResourceDocumentation:     cfg.ResourceDocumentation,
+		Title:                     cfg.Server.Title,
+		Description:               cfg.Server.Description,
+		Version:                   cfg.Server.Version,
+		Discover:                  cfg.Server.Discover,
+	}
+}
+
+// warnIgnoredDeprecatedMCPOptions names every deprecated option the user set
+// while mcp.servers has entries, because the router ignores all of them.
+func warnIgnoredDeprecatedMCPOptions(cfg config.MCPConfiguration, logger *zap.Logger) {
+	var ignored []string
+
+	if cfg.GraphName != "" {
+		ignored = append(ignored, "mcp.graph_name")
+	}
+	if cfg.Storage.ProviderID != "" {
+		ignored = append(ignored, "mcp.storage")
+	}
+	if cfg.ExcludeMutations {
+		ignored = append(ignored, "mcp.exclude_mutations")
+	}
+	if cfg.EnableArbitraryOperations {
+		ignored = append(ignored, "mcp.enable_arbitrary_operations")
+	}
+	if cfg.ExposeSchema {
+		ignored = append(ignored, "mcp.expose_schema")
+	}
+	if cfg.OmitToolNamePrefix {
+		ignored = append(ignored, "mcp.omit_tool_name_prefix")
+	}
+	if cfg.OAuth.Enabled {
+		ignored = append(ignored, "mcp.oauth")
+	}
+	if cfg.RouterURL != "" {
+		ignored = append(ignored, "mcp.router_url")
+	}
+	if cfg.ResourceDocumentation != "" {
+		ignored = append(ignored, "mcp.resource_documentation")
+	}
+
+	if len(ignored) == 0 {
+		return
+	}
+
+	logger.Warn("Ignoring deprecated top-level mcp options because mcp.servers is set",
+		zap.Strings("ignored_options", ignored),
+	)
+}
+
+// corsConfigOrZero dereferences the router CORS options, which may be nil.
+func corsConfigOrZero(c *cors.Config) cors.Config {
+	if c == nil {
+		return cors.Config{}
+	}
+	return *c
+}
+
+// startMCPServer initializes and starts the MCP servers if enabled.
 func (r *Router) startMCPServer(ctx context.Context) error {
 	if !r.mcp.Enabled {
 		return nil
 	}
 
-	var operationsDir string
-
-	// If storage provider ID is set, resolve it to a directory path
-	if r.mcp.Storage.ProviderID != "" {
-		r.logger.Debug("Resolving storage provider for MCP operations",
-			zap.String("provider_id", r.mcp.Storage.ProviderID))
-
-		provider, ok := r.providerRegistry.FileSystem(r.mcp.Storage.ProviderID)
-		if !ok {
-			return fmt.Errorf("storage provider with id '%s' for mcp server not found", r.mcp.Storage.ProviderID)
-		}
-		r.logger.Debug("Found file_system storage provider for MCP",
-			zap.String("id", provider.ID),
-			zap.String("path", provider.Path))
-		operationsDir = provider.Path
-	}
-
-	logFields := []zap.Field{
-		zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
-	}
-
-	// Initialize the MCP server with the resolved operations directory
-	mcpOpts := []func(*mcpserver.Options){
-		mcpserver.WithGraphName(r.mcp.GraphName),
-		mcpserver.WithOperationsDir(operationsDir),
-		mcpserver.WithListenAddr(r.mcp.Server.ListenAddr),
-		mcpserver.WithLogger(r.logger.With(logFields...)),
-		mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
-		mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
-		mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
-		mcpserver.WithOmitToolNamePrefix(r.mcp.OmitToolNamePrefix),
-		mcpserver.WithStateless(r.mcp.Session.Stateless),
-		mcpserver.WithInstructions(r.mcp.Server.Discover.Instructions),
-		mcpserver.WithServerVersion(cmp.Or(r.mcp.Server.Version, Version)),
-		mcpserver.WithServerTitle(r.mcp.Server.Title),
-		mcpserver.WithServerDescription(r.mcp.Server.Description),
-	}
-
-	if r.corsOptions != nil {
-		mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
-	}
-
-	// Add OAuth configuration if enabled
-	if r.mcp.OAuth.Enabled {
-		mcpOpts = append(mcpOpts, mcpserver.WithOAuth(&r.mcp.OAuth))
-
-		if r.mcp.Server.BaseURL != "" {
-			mcpOpts = append(mcpOpts, mcpserver.WithServerBaseURL(r.mcp.Server.BaseURL))
-		}
-	}
-
-	if r.mcp.ResourceDocumentation != "" {
-		mcpOpts = append(mcpOpts, mcpserver.WithResourceDocumentation(r.mcp.ResourceDocumentation))
-	}
-
-	mcpGraphQLEndpoint := r.graphqlEndpointURL
-	if r.mcp.RouterURL != "" {
-		mcpGraphQLEndpoint = r.mcp.RouterURL
-	}
-
-	mcpss, err := mcpserver.NewGraphQLSchemaServer(
-		ctx,
-		mcpGraphQLEndpoint,
-		mcpOpts...,
-	)
+	host, err := buildMCPHost(ctx, mcpHostDeps{
+		cfg:              r.mcp,
+		logger:           r.logger,
+		graphqlEndpoint:  cmp.Or(r.mcp.RouterURL, r.graphqlEndpointURL),
+		routerVersion:    Version,
+		corsOptions:      r.corsOptions,
+		providerRegistry: r.providerRegistry,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to create mcp server: %w", err)
+		return fmt.Errorf("failed to create mcp servers: %w", err)
 	}
 
-	if err := mcpss.Start(); err != nil {
-		// Cleanup the server if Start() fails to prevent resource leaks
-		if stopErr := mcpss.Stop(ctx); stopErr != nil {
-			r.logger.Warn("Failed to stop MCP server during error cleanup", zap.Error(stopErr))
+	if err := host.Start(); err != nil {
+		if stopErr := host.Stop(ctx); stopErr != nil {
+			r.logger.Warn("Failed to stop MCP host during error cleanup", zap.Error(stopErr))
 		}
-		return fmt.Errorf("failed to start MCP server: %w", err)
+		return fmt.Errorf("failed to start MCP servers: %w", err)
 	}
 
-	r.mcpServer = mcpss
+	r.mcpHost = host
+
 	return nil
 }
 
@@ -1900,9 +2038,9 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		})
 	}
 
-	if r.mcpServer != nil {
+	if r.mcpHost != nil {
 		wg.Go(func() {
-			if subErr := r.mcpServer.Stop(ctx); subErr != nil {
+			if subErr := r.mcpHost.Stop(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown mcp server: %w", subErr))
 			}
 		})

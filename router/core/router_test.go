@@ -1,14 +1,18 @@
 package core
 
 import (
+	"context"
 	"net/url"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"go.uber.org/zap"
 )
 
 func TestOverrideURLConfig(t *testing.T) {
@@ -406,4 +410,53 @@ func TestNewTransportRequestOptions(t *testing.T) {
 	// The rest of the values are set to the defaults
 	assert.Equal(t, defaults.MaxIdleConns, transportCfg.MaxIdleConns)
 	assert.Equal(t, defaults.MaxIdleConnsPerHost, transportCfg.MaxIdleConnsPerHost)
+}
+
+func TestMCPServersMapMountsEachServerOnItsPath(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.MCPConfiguration{
+		Enabled: true,
+		Servers: map[string]config.MCPServerEntry{
+			"support": {Enabled: true, Path: "/mcp/support"},
+			"billing": {Enabled: true, Path: "/billing/mcp"},
+		},
+	}
+
+	host, err := buildMCPHost(context.Background(), mcpHostDeps{
+		cfg:             cfg,
+		logger:          zap.NewNop(),
+		graphqlEndpoint: "http://localhost:3002/graphql",
+		routerVersion:   "test",
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = host.Stop(context.Background()) })
+
+	paths := make([]string, 0, len(host.Servers()))
+	for _, s := range host.Servers() {
+		paths = append(paths, s.MountPath())
+	}
+	slices.Sort(paths)
+
+	require.Equal(t, []string{"/billing/mcp", "/mcp/support"}, paths)
+}
+
+func TestMCPServersMapRejectsDuplicatePaths(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.MCPConfiguration{
+		Enabled: true,
+		Servers: map[string]config.MCPServerEntry{
+			"support": {Enabled: true, Path: "/mcp"},
+			"billing": {Enabled: true, Path: "/mcp"},
+		},
+	}
+
+	_, err := buildMCPHost(context.Background(), mcpHostDeps{
+		cfg:             cfg,
+		logger:          zap.NewNop(),
+		graphqlEndpoint: "http://localhost:3002/graphql",
+		routerVersion:   "test",
+	})
+	require.ErrorContains(t, err, "use the same path")
 }
