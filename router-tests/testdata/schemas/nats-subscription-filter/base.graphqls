@@ -1,0 +1,18 @@
+extend schema
+@link(
+  url: "https://specs.apollo.dev/federation/v2.5",
+  import: [
+    "@key",
+    "@inaccessible"
+  ]
+)
+
+type Query {
+  employees: [Employee!]!
+}
+
+type Employee @key(fields: "id tag") {
+  id: Int!
+  name: String!
+  tag: String! @inaccessible
+}

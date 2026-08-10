@@ -417,6 +417,72 @@ func TestNatsEvents(t *testing.T) {
 			})
 		})
 
+		t.Run("subscription receive subscription when using inaccessible field as filter", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.NatsSubscriptionFilterJSONTemplate,
+				EnableNats:               true,
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				var subscriptionPayload struct {
+					employeeUpdated struct {
+						ID float64 `graphql:"id"`
+					} `graphql:"employeeUpdated(tag: \"test\")"`
+				}
+
+				surl := xEnv.GraphQLWebSocketSubscriptionURL()
+				client := graphql.NewSubscriptionClient(surl)
+
+				subscriptionArgsCh := make(chan natsSubscriptionArgs)
+				subscriptionID, err := client.Subscribe(&subscriptionPayload, nil, func(dataValue []byte, errValue error) error {
+					subscriptionArgsCh <- natsSubscriptionArgs{
+						dataValue: dataValue,
+						errValue:  errValue,
+					}
+					return nil
+				})
+				require.NoError(t, err)
+				require.NotEqual(t, "", subscriptionID)
+
+				clientRunErrCh := make(chan error)
+				go func() {
+					clientErr := client.Run()
+					clientRunErrCh <- clientErr
+				}()
+
+				xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+				xEnv.WaitForTriggerCount(1, EventWaitTimeout)
+
+				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employee-updated.test"), []byte(`{"id":3,"__typename": "Employee","tag": "test"}`))
+				require.NoError(t, err)
+
+				err = xEnv.NatsConnectionDefault.Flush()
+				require.NoError(t, err)
+
+				testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
+					require.NoError(t, args.errValue)
+					require.JSONEq(t, `{"employeeUpdated":{"id":3}}`, string(args.dataValue))
+				})
+
+				require.NoError(t, client.Close())
+				testenv.AwaitChannelWithT(t, EventWaitTimeout, clientRunErrCh, func(t *testing.T, err error) {
+					require.NoError(t, err)
+				}, "unable to close client before timeout")
+
+				xEnv.WaitForSubscriptionCount(0, EventWaitTimeout)
+				xEnv.WaitForConnectionCount(0, EventWaitTimeout)
+
+				natsLogs := xEnv.Observer().FilterMessageSnippet("Nats").All()
+				require.Len(t, natsLogs, 2)
+				providerIDFields := xEnv.Observer().FilterField(zap.String("provider_id", "my-nats")).All()
+				require.Len(t, providerIDFields, 2)
+			})
+		})
+
 		t.Run("multipart format related new line returns should have a preceding carriage return", func(t *testing.T) {
 			t.Parallel()
 

@@ -1,0 +1,37 @@
+extend schema
+@link(
+  url: "https://specs.apollo.dev/federation/v2.5",
+  import: [
+    "@key",
+    "@external"
+  ]
+)
+
+directive @edfs__natsSubscribe(subjects: [String!]!, providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
+directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
+
+scalar openfed__SubscriptionFilterValue
+
+input openfed__SubscriptionFieldCondition {
+    fieldPath: String!
+    values: [openfed__SubscriptionFilterValue]!
+}
+
+input openfed__SubscriptionFilterCondition {
+  AND: [openfed__SubscriptionFilterCondition!]
+  IN: openfed__SubscriptionFieldCondition
+  NOT: openfed__SubscriptionFilterCondition
+  OR: [openfed__SubscriptionFilterCondition!]
+}
+
+type Subscription {
+  employeeUpdated(tag: String!): Employee!
+    @edfs__natsSubscribe(subjects: ["employee-updated.{{ args.tag }}"], providerId: "my-nats")
+    @openfed__subscriptionFilter(condition: { IN: { fieldPath: "tag", values: ["{{ args.tag }}"] } })
+}
+
+type Employee @key(fields: "id name tag", resolvable: false) {
+    id: Int! @external
+    name: String! @external
+    tag: String! @external
+}
