@@ -540,69 +540,73 @@ Important Notes:
 				require.NotNil(t, resp)
 
 				myEmployees := toolByName(t, resp.Tools, "execute_operation_my_employees")
-				assert.Equal(t, mcp.ToolOutputSchema{
-					Type: "object",
-					Properties: map[string]any{
-						"data": map[string]any{
-							"type": []any{"object", "null"},
-							"properties": map[string]any{
-								"findEmployees": map[string]any{
+				myEmployeesSchema, err := json.Marshal(myEmployees.OutputSchema)
+				require.NoError(t, err)
+				assert.JSONEq(t, `{
+					"type": "object",
+					"properties": {
+						"data": {
+							"type": ["object", "null"],
+							"properties": {
+								"findEmployees": {
 									"description": "This is a GraphQL query that retrieves a list of employees.",
-									"type":        "array",
-									"items": map[string]any{
+									"type": "array",
+									"items": {
 										"type": "object",
-										"properties": map[string]any{
-											"currentMood": map[string]any{"enum": []any{"HAPPY", "SAD"}, "type": "string"},
-											"details": map[string]any{
-												"type": []any{"object", "null"},
-												"properties": map[string]any{
-													"forename":    map[string]any{"type": "string"},
-													"nationality": map[string]any{"enum": []any{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "type": "string"},
+										"properties": {
+											"currentMood": {"enum": ["HAPPY", "SAD"], "type": "string"},
+											"details": {
+												"type": ["object", "null"],
+												"properties": {
+													"forename": {"type": "string"},
+													"nationality": {"enum": ["AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"], "type": "string"}
 												},
-												"required": []any{"forename", "nationality"},
+												"required": ["forename", "nationality"]
 											},
-											"id":          map[string]any{"type": "integer"},
-											"isAvailable": map[string]any{"type": []any{"boolean", "null"}},
-											"products": map[string]any{
-												"type":  "array",
-												"items": map[string]any{"enum": []any{"CONSULTANCY", "COSMO", "ENGINE", "FINANCE", "HUMAN_RESOURCES", "MARKETING", "SDK"}, "type": "string"},
-											},
+											"id": {"type": "integer"},
+											"isAvailable": {"type": ["boolean", "null"]},
+											"products": {
+												"type": "array",
+												"items": {"enum": ["CONSULTANCY", "COSMO", "ENGINE", "FINANCE", "HUMAN_RESOURCES", "MARKETING", "SDK"], "type": "string"}
+											}
 										},
-										"required": []any{"currentMood", "details", "id", "isAvailable", "products"},
-									},
-								},
+										"required": ["currentMood", "details", "id", "isAvailable", "products"]
+									}
+								}
 							},
-							"required": []any{"findEmployees"},
-						},
-					},
-				}, myEmployees.OutputSchema)
+							"required": ["findEmployees"]
+						}
+					}
+				}`, string(myEmployeesSchema))
 
 				updateMood := toolByName(t, resp.Tools, "execute_operation_update_mood")
-				assert.Equal(t, mcp.ToolOutputSchema{
-					Type: "object",
-					Properties: map[string]any{
-						"data": map[string]any{
-							"type": []any{"object", "null"},
-							"properties": map[string]any{
-								"updateMood": map[string]any{
+				updateMoodSchema, err := json.Marshal(updateMood.OutputSchema)
+				require.NoError(t, err)
+				assert.JSONEq(t, `{
+					"type": "object",
+					"properties": {
+						"data": {
+							"type": ["object", "null"],
+							"properties": {
+								"updateMood": {
 									"description": "This mutation update the mood of an employee.",
-									"type":        "object",
-									"properties": map[string]any{
-										"currentMood": map[string]any{"enum": []any{"HAPPY", "SAD"}, "type": "string"},
-										"details": map[string]any{
-											"type":       []any{"object", "null"},
-											"properties": map[string]any{"forename": map[string]any{"type": "string"}},
-											"required":   []any{"forename"},
+									"type": "object",
+									"properties": {
+										"currentMood": {"enum": ["HAPPY", "SAD"], "type": "string"},
+										"details": {
+											"type": ["object", "null"],
+											"properties": {"forename": {"type": "string"}},
+											"required": ["forename"]
 										},
-										"id": map[string]any{"type": "integer"},
+										"id": {"type": "integer"}
 									},
-									"required": []any{"currentMood", "details", "id"},
-								},
+									"required": ["currentMood", "details", "id"]
+								}
 							},
-							"required": []any{"updateMood"},
-						},
-					},
-				}, updateMood.OutputSchema)
+							"required": ["updateMood"]
+						}
+					}
+				}`, string(updateMoodSchema))
 			})
 		})
 
