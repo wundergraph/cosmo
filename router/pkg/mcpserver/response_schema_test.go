@@ -25,7 +25,14 @@ func buildTestResponseSchema(t *testing.T, schemaStr, operationStr string) (json
 	opDoc, report := astparser.ParseGraphqlDocumentString(operationStr)
 	require.False(t, report.HasErrors(), "failed to parse operation")
 
-	return buildResponseSchema(&opDoc, &schemaDoc)
+	schema, err := buildResponseSchema(&opDoc, &schemaDoc)
+	if err != nil {
+		return nil, err
+	}
+
+	raw, err := json.Marshal(schema)
+	require.NoError(t, err)
+	return raw, nil
 }
 
 // mustBuildTestResponseSchema builds the response schema and fails the test on error
@@ -315,7 +322,8 @@ type Bot { label: String! }
 `, `query Search { search { ... on User { x: age } ... on Bot { x: label } } }`)
 
 		search := schemaAt(t, schema, "data", "search")
-		assert.Equal(t, map[string]any{}, search["properties"].(map[string]any)["x"])
+		// The accept-anything schema marshals as the boolean schema "true"
+		assert.Equal(t, true, search["properties"].(map[string]any)["x"])
 		assert.NotContains(t, search, "required")
 	})
 
