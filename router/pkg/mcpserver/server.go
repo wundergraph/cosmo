@@ -70,6 +70,8 @@ type Options struct {
 	OperationsDir string
 	// ListenAddr is the address where the server should listen to
 	ListenAddr string
+	// MountPath is the HTTP path this server answers on.
+	MountPath string
 	// Enabled determines whether the MCP server should be started
 	Enabled bool
 	// Logger is the logger to be used
@@ -118,6 +120,7 @@ type GraphQLSchemaServer struct {
 	graphName                 string
 	operationsDir             string
 	listenAddr                string
+	mountPath                 string
 	logger                    *zap.Logger
 	httpClient                *http.Client
 	requestTimeout            time.Duration
@@ -223,6 +226,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		GraphName:      "graph",
 		OperationsDir:  "operations",
 		ListenAddr:     "0.0.0.0:5025",
+		MountPath:      DefaultMountPath,
 		Enabled:        false,
 		Logger:         zap.NewNop(),
 		RequestTimeout: 30 * time.Second,
@@ -237,6 +241,11 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
+
+	if err := ValidateMountPath(options.MountPath); err != nil {
+		cancel()
+		return nil, fmt.Errorf("invalid mcp mount path: %w", err)
+	}
 
 	var authMiddleware *MCPAuthMiddleware
 	if options.OAuthConfig != nil && options.OAuthConfig.Enabled {
@@ -329,6 +338,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		graphName:                 options.GraphName,
 		operationsDir:             options.OperationsDir,
 		listenAddr:                options.ListenAddr,
+		mountPath:                 options.MountPath,
 		logger:                    options.Logger,
 		httpClient:                httpClient,
 		requestTimeout:            options.RequestTimeout,
@@ -401,6 +411,13 @@ func WithOperationsDir(operationsDir string) func(*Options) {
 func WithListenAddr(listenAddr string) func(*Options) {
 	return func(o *Options) {
 		o.ListenAddr = listenAddr
+	}
+}
+
+// WithMountPath sets the HTTP path this MCP server answers on.
+func WithMountPath(p string) func(*Options) {
+	return func(o *Options) {
+		o.MountPath = p
 	}
 }
 
@@ -480,18 +497,14 @@ func WithResourceDocumentation(url string) func(*Options) {
 	}
 }
 
-// Serve starts the server with the configured options and returns the HTTP server.
-func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
-	// Create custom HTTP server
-	httpServer := &http.Server{
-		Addr:         s.listenAddr,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
+// MountPath returns the HTTP path this server answers on.
+func (s *GraphQLSchemaServer) MountPath() string {
+	return s.mountPath
+}
 
-	// Create MCP streamable HTTP handler
-	// The getServer function returns our MCP server instance for each request
+// RegisterRoutes mounts this server's handlers on mux. The caller supplies the
+// middleware (CORS) so that every server on a shared mux is wrapped the same way.
+func (s *GraphQLSchemaServer) RegisterRoutes(mux *http.ServeMux, middleware func(http.Handler) http.Handler) {
 	// Disable the SDK's built-in cross-origin protection (Sec-Fetch-Site check)
 	// because the router already applies its own CORS middleware around the handler.
 	cop := http.NewCrossOriginProtection()
@@ -507,13 +520,9 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 		},
 	)
 
-	middleware := cors.New(s.corsConfig)
-
-	mux := http.NewServeMux()
-
-	// OAuth 2.0 Protected Resource Metadata (RFC 9728) — public discovery endpoint
+	// OAuth 2.0 Protected Resource Metadata (RFC 9728), public discovery endpoint.
 	if s.oauthConfig != nil && s.oauthConfig.Enabled && s.oauthConfig.AuthorizationServerURL != "" {
-		mux.Handle("/.well-known/oauth-protected-resource/mcp", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
+		mux.Handle(MetadataPath(s.mountPath), middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
 	}
 
 	// Inject request headers into context so tool handlers can forward them
@@ -523,24 +532,42 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 		streamableHTTPHandler.ServeHTTP(w, r)
 	})
 	if s.authMiddleware != nil {
-		mux.Handle("/mcp", middleware(s.authMiddleware.HTTPMiddleware(mcpHandler)))
+		mux.Handle(s.mountPath, middleware(s.authMiddleware.HTTPMiddleware(mcpHandler)))
 	} else {
-		mux.Handle("/mcp", middleware(mcpHandler))
+		mux.Handle(s.mountPath, middleware(mcpHandler))
+	}
+}
+
+// Close releases the background context of this server, stopping work such as
+// JWKS key refresh. It does not touch any HTTP listener.
+func (s *GraphQLSchemaServer) Close() {
+	if s.cancel != nil {
+		s.cancel()
+	}
+}
+
+// Serve starts the server with the configured options and returns the HTTP server.
+func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
+	httpServer := &http.Server{
+		Addr:         s.listenAddr,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
+	mux := http.NewServeMux()
+	s.RegisterRoutes(mux, cors.New(s.corsConfig))
 	httpServer.Handler = mux
 
-	logger := []zap.Field{
+	s.logger.Info("MCP server started",
 		zap.String("listen_addr", s.listenAddr),
-		zap.String("path", "/mcp"),
+		zap.String("path", s.mountPath),
 		zap.String("operations_dir", s.operationsDir),
 		zap.String("graph_name", s.graphName),
 		zap.Bool("exclude_mutations", s.excludeMutations),
 		zap.Bool("enable_arbitrary_operations", s.enableArbitraryOperations),
 		zap.Bool("expose_schema", s.exposeSchema),
-	}
-
-	s.logger.Info("MCP server started", logger...)
+	)
 
 	go func() {
 		defer s.logger.Info("MCP server stopped")

@@ -1,6 +1,9 @@
 package mcpserver
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -194,4 +197,44 @@ func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 		"execute_operation_list_employees",
 		"get_operation_info",
 	}, srv.registeredTools)
+}
+
+func TestRegisterRoutesUsesMountPath(t *testing.T) {
+	t.Parallel()
+
+	srv, err := NewGraphQLSchemaServer(
+		context.Background(),
+		"http://localhost:3002/graphql",
+		WithMountPath("/billing/mcp"),
+		WithLogger(zap.NewNop()),
+	)
+	require.NoError(t, err)
+	t.Cleanup(srv.Close)
+
+	require.Equal(t, "/billing/mcp", srv.MountPath())
+
+	mux := http.NewServeMux()
+	srv.RegisterRoutes(mux, func(h http.Handler) http.Handler { return h })
+
+	// The MCP endpoint answers on the mount path.
+	_, pattern := mux.Handler(httptest.NewRequest(http.MethodPost, "/billing/mcp", nil))
+	require.Equal(t, "/billing/mcp", pattern)
+
+	// The default path is not registered.
+	_, pattern = mux.Handler(httptest.NewRequest(http.MethodPost, "/mcp", nil))
+	require.Empty(t, pattern)
+}
+
+func TestMountPathDefaultsToMcp(t *testing.T) {
+	t.Parallel()
+
+	srv, err := NewGraphQLSchemaServer(
+		context.Background(),
+		"http://localhost:3002/graphql",
+		WithLogger(zap.NewNop()),
+	)
+	require.NoError(t, err)
+	t.Cleanup(srv.Close)
+
+	require.Equal(t, DefaultMountPath, srv.MountPath())
 }
