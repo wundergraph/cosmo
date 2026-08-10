@@ -516,7 +516,7 @@ func TestNatsEvents(t *testing.T) {
 				require.JSONEq(t, `{"employeeUpdated":{"id":3}}`, string(args.dataValue))
 			})
 
-			// Should not receive the second message because the subject is different
+			// Should not receive the message because it should be successfully filtered
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employee-updated.test2"), []byte(`{"id":3,"__typename": "Employee","tag": "test2"}`))
 			require.NoError(t, err)
 
