@@ -258,39 +258,22 @@ func TestRedisCache(t *testing.T) {
 			require.Empty(t, mr.Keys())
 		})
 
-		t.Run("one bad item rejects the whole batch", func(t *testing.T) {
+		t.Run("one item with an invalid TTL rejects the whole batch", func(t *testing.T) {
 			t.Parallel()
 
 			c, mr := newTestRedisCache(t)
 
-			// The valid items sit on both sides of the bad one, so an
-			// implementation that queued as it went would leave traces.
+			// The items with a valid TTL sit on both sides of the invalid one,
+			// so an implementation that queued as it went would leave traces.
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "before", Value: []byte("1"), TTL: time.Minute},
-				{Key: "no-ttl", Value: []byte("2")},
+				{Key: "invalid-ttl", Value: []byte("2")},
 				{Key: "after", Value: []byte("3"), TTL: time.Minute},
 			})
 			require.ErrorIs(t, err, enginecache.ErrMissingTTL)
-			require.ErrorContains(t, err, "no-ttl")
+			require.ErrorContains(t, err, "invalid-ttl")
 
 			require.Empty(t, mr.Keys())
-		})
-
-		t.Run("cache tags are accepted and ignored", func(t *testing.T) {
-			t.Parallel()
-
-			c, mr := newTestRedisCache(t)
-
-			err := c.SetMany(ctx, []enginecache.Item{
-				{
-					Key:   "a",
-					Value: []byte("value"),
-					TTL:   time.Minute,
-				},
-			})
-			require.NoError(t, err)
-
-			require.Equal(t, []string{testPrefix + "a"}, mr.Keys())
 		})
 
 		t.Run("reports a failure to reach redis", func(t *testing.T) {
@@ -302,7 +285,7 @@ func TestRedisCache(t *testing.T) {
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Minute},
 			})
-			require.Error(t, err)
+			require.ErrorContains(t, err, "connection refused")
 		})
 
 		t.Run("a batch cut short names the keys redis confirmed", func(t *testing.T) {
@@ -366,7 +349,7 @@ func TestRedisCache(t *testing.T) {
 			require.ErrorContains(t, err, "1 keys were known to be written")
 		})
 
-		t.Run("a rejected TTL is not a partial write", func(t *testing.T) {
+		t.Run("an invalid TTL is not a partial write", func(t *testing.T) {
 			t.Parallel()
 
 			c, mr := newTestRedisCache(t)
@@ -375,7 +358,7 @@ func TestRedisCache(t *testing.T) {
 			// failure it really does mean nothing was written.
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("1"), TTL: time.Minute},
-				{Key: "no-ttl", Value: []byte("2")},
+				{Key: "invalid-ttl", Value: []byte("2")},
 			})
 			require.ErrorIs(t, err, enginecache.ErrMissingTTL)
 
@@ -544,7 +527,7 @@ func TestRedisCache(t *testing.T) {
 			mr.Close()
 
 			results, err := c.GetMany(ctx, []string{"a"})
-			require.Error(t, err)
+			require.ErrorContains(t, err, "connection refused")
 			// There is no partial read to salvage.
 			require.Nil(t, results)
 		})

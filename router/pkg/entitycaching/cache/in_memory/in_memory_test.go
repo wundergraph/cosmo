@@ -293,22 +293,22 @@ func TestInMemoryCache(t *testing.T) {
 			require.Empty(t, results)
 		})
 
-		t.Run("one bad item rejects the whole batch", func(t *testing.T) {
+		t.Run("one item with an invalid TTL rejects the whole batch", func(t *testing.T) {
 			t.Parallel()
 
 			c := newTestCache(t)
 
-			// The valid items sit on both sides of the bad one, so an
-			// implementation that wrote as it went would leave traces.
+			// The items with a valid TTL sit on both sides of the invalid one,
+			// so an implementation that wrote as it went would leave traces.
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "before", Value: []byte("1"), TTL: time.Minute},
-				{Key: "no-ttl", Value: []byte("2")},
+				{Key: "invalid-ttl", Value: []byte("2")},
 				{Key: "after", Value: []byte("3"), TTL: time.Minute},
 			})
 			require.ErrorIs(t, err, enginecache.ErrMissingTTL)
-			require.ErrorContains(t, err, "no-ttl")
+			require.ErrorContains(t, err, "invalid-ttl")
 
-			results, err := c.GetMany(ctx, []string{"before", "no-ttl", "after"})
+			results, err := c.GetMany(ctx, []string{"before", "invalid-ttl", "after"})
 			require.NoError(t, err)
 			require.Empty(t, results)
 		})
