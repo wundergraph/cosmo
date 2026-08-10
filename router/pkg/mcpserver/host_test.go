@@ -96,7 +96,12 @@ func TestHostRejectsDuplicatePaths(t *testing.T) {
 func TestHostReloadIsolatesAnUnreadableCollection(t *testing.T) {
 	t.Parallel()
 
-	good := newTestServerWithOperationsDir(t, "/mcp/support", t.TempDir())
+	goodDir := t.TempDir()
+	writeOperationFiles(t, goodDir, map[string]string{
+		"FindEmployee.graphql": findEmployeeOp,
+	})
+
+	good := newTestServerWithOperationsDir(t, "/mcp/support", goodDir)
 	bad := newTestServerWithOperationsDir(t, "/billing/mcp", filepath.Join(t.TempDir(), "does-not-exist"))
 
 	h := NewHost(HostOptions{ListenAddr: "localhost:0", Logger: zap.NewNop()})
@@ -106,6 +111,20 @@ func TestHostReloadIsolatesAnUnreadableCollection(t *testing.T) {
 	// The broken collection must not fail the reload of the whole host.
 	require.NoError(t, h.Reload(testSchemaDocument(t), nil))
 
-	// The healthy server still built its tool registry.
-	require.NotNil(t, good.operationsManager)
+	// The healthy server actually registered its operation tool, not merely
+	// a non-nil operationsManager pointer: that field is assigned before the
+	// operations directory is even read, so a nil check alone proves nothing.
+	require.Contains(t, good.registeredTools, "execute_operation_find_employee")
+
+	// The broken collection registers no operation tools, but Reload no
+	// longer aborts before registerTools runs: the built-in tools are still
+	// present.
+	require.Contains(t, bad.registeredTools, "get_schema")
+	require.Contains(t, bad.registeredTools, "get_operation_info")
+	require.NotContains(t, bad.registeredTools, "execute_operation_find_employee")
+
+	// Calling Reload directly on the broken server, not only through the
+	// host, must return nil. Before this fix it returned an error and
+	// aborted before registerTools ran.
+	require.NoError(t, bad.Reload(testSchemaDocument(t), nil))
 }
