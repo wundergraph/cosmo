@@ -171,9 +171,9 @@ Each server's `path` must follow these rules:
 
 - It must start with `/`.
 - It must not start with `//`.
-- It must not be `/` alone. Every `mcp.servers` entry shares one listener, and Go's router treats `/` as a
-  catch-all that matches every request, including requests meant for another server. A future release that gives
-  each server its own listener can lift this restriction.
+- It must not be `/` alone. Every `mcp.servers` entry shares one listener. Go's router treats `/` as a catch-all
+  that matches every request, including requests meant for another server. A future release that gives each server
+  its own listener can lift this restriction.
 - It must not end with `/`.
 - It must not contain a wildcard character (`{`, `}`, or `*`).
 - It must not start with `/.well-known/oauth-protected-resource`. The router reserves this prefix for OAuth
@@ -201,9 +201,9 @@ built-in tools, and serves no operation tools. The router logs an error naming t
 
 When the router reloads its configuration, it also reloads every server in `mcp.servers`. A server whose scope
 computation fails during reload keeps its previous tools. The router removes a server's old tools before it
-registers the new ones, so a tool registration failure during reload can leave that server with fewer tools than
-before. Both failures log an error naming the server. The router reload itself always succeeds, whatever happens to
-any one MCP server.
+registers the new ones. A tool registration failure during reload can therefore leave that server with fewer tools
+than before. Both failures log an error naming the server. The router reload always succeeds, even when one MCP
+server fails to reload.
 
 ### Multiple Servers with OAuth Behind a Load Balancer
 
