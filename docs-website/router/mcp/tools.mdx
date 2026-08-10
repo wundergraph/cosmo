@@ -318,7 +318,7 @@ mcp:
   default) unless your MCP clients consume output schemas or structured content.
 </Warning>
 
-The generated schemas are intentionally permissive: they describe what the router returns without over-constraining it, so a valid GraphQL response is never rejected by a client validating against the schema. Fields behind `@skip`, `@include`, or `@defer` directives and fragments on abstract types are marked optional, and custom scalars accept any JSON value. If a schema cannot be derived for an operation, the tool is still registered, just without an output schema.
+The generated schemas are intentionally permissive: they describe what the router returns without over-constraining it, so a valid GraphQL response is never rejected by a client validating against the schema. Fields behind `@skip`, `@include`, or `@defer` directives and fragments on abstract types are marked optional, and custom scalars accept any JSON value. If a schema cannot be derived for an operation, the tool is still registered without an output schema.
 
 ### Results carry the response twice
 
