@@ -1358,6 +1358,33 @@ type MCPConfiguration struct {
 	// ResourceDocumentation is a URL to a human-readable page describing this MCP resource,
 	// its access policies, and how to get started. Included in RFC 9728 Protected Resource Metadata if set.
 	ResourceDocumentation string `yaml:"resource_documentation,omitempty" env:"MCP_RESOURCE_DOCUMENTATION"`
+	// Servers maps a server name to one MCP server. When this map has entries,
+	// the router ignores the deprecated top-level options.
+	Servers map[string]MCPServerEntry `yaml:"servers,omitempty"`
+}
+
+// MCPServerEntry configures one MCP server mounted on the shared MCP listener.
+// The map key in mcp.servers is the server name.
+//
+// This type carries no env tags: the servers map is YAML-only, because env-var
+// overrides cannot address map entries.
+type MCPServerEntry struct {
+	Enabled                   bool                  `yaml:"enabled"`
+	Path                      string                `yaml:"path"`
+	BaseURL                   string                `yaml:"base_url,omitempty"`
+	Storage                   MCPStorageConfig      `yaml:"storage,omitempty"`
+	GraphName                 string                `yaml:"graph_name,omitempty"`
+	ExcludeMutations          bool                  `yaml:"exclude_mutations"`
+	EnableArbitraryOperations bool                  `yaml:"enable_arbitrary_operations"`
+	ExposeSchema              bool                  `yaml:"expose_schema"`
+	OmitToolNamePrefix        bool                  `yaml:"omit_tool_name_prefix"`
+	Session                   MCPSessionConfig      `yaml:"session,omitempty"`
+	OAuth                     MCPOAuthConfiguration `yaml:"oauth,omitempty"`
+	ResourceDocumentation     string                `yaml:"resource_documentation,omitempty"`
+	Title                     string                `yaml:"title,omitempty"`
+	Description               string                `yaml:"description,omitempty"`
+	Version                   string                `yaml:"version,omitempty"`
+	Discover                  MCPDiscoverConfig     `yaml:"discover,omitempty"`
 }
 
 type MCPOAuthConfiguration struct {

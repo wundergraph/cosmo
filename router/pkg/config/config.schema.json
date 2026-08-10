@@ -2690,15 +2690,7 @@
               "description": "A human-readable description of this MCP server, reported to MCP clients in serverInfo."
             },
             "discover": {
-              "type": "object",
-              "description": "Configuration for the server identity exposed via the MCP server/discover method (protocol version 2026-07-28).",
-              "additionalProperties": false,
-              "properties": {
-                "instructions": {
-                  "type": "string",
-                  "description": "Natural-language guidance for MCP clients (AI agents) on how to use this server effectively. Served in the server/discover response and in the legacy initialize response, so all clients receive it."
-                }
-              }
+              "$ref": "#/$defs/mcp_discover"
             }
           }
         },
@@ -2708,28 +2700,10 @@
           "format": "url"
         },
         "storage": {
-          "type": "object",
-          "description": "Storage provider configuration for the MCP server. This specifies where GraphQL operations are loaded from.",
-          "additionalProperties": false,
-          "properties": {
-            "provider_id": {
-              "type": "string",
-              "description": "The ID of the storage provider to use for loading GraphQL operations. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section."
-            }
-          },
-          "required": ["provider_id"]
+          "$ref": "#/$defs/mcp_storage"
         },
         "session": {
-          "type": "object",
-          "description": "Session configuration for the MCP server. This controls how the MCP server handles client sessions.",
-          "additionalProperties": false,
-          "properties": {
-            "stateless": {
-              "type": "boolean",
-              "default": true,
-              "description": "Whether the MCP server should operate in stateless mode. When true, the server does not maintain session state between requests. When false, the server maintains session state, which can be useful for certain AI model integrations."
-            }
-          }
+          "$ref": "#/$defs/mcp_session"
         },
         "graph_name": {
           "type": "string",
@@ -2762,207 +2736,38 @@
           "format": "http-url"
         },
         "oauth": {
+          "$ref": "#/$defs/mcp_oauth"
+        },
+        "servers": {
           "type": "object",
-          "description": "OAuth/JWKS authentication configuration for the MCP server. When enabled, MCP tool calls require valid JWT authentication and the server implements OAuth 2.0 discovery mechanisms (RFC 8414, RFC 9728).",
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "default": false,
-              "description": "Enable OAuth/JWKS authentication for the MCP server. When true, all MCP tool calls must include a valid JWT token."
+          "description": "Maps a server name to one MCP server mounted on the shared MCP listener. When this object has entries, the deprecated top-level MCP options are ignored. This object is YAML-only; environment variables cannot address its entries.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": { "type": "boolean", "default": false },
+              "path": {
+                "type": "string",
+                "description": "The HTTP path this MCP server is mounted on. Must start with a single slash, must not end with a slash, and must not contain '{', '}', or '*'. Must not be the reserved OAuth protected resource metadata path.",
+                "pattern": "^/([^/{}*][^{}*]*[^/{}*])?$",
+                "not": { "pattern": "^/\\.well-known/oauth-protected-resource(/|$)" }
+              },
+              "base_url": { "type": "string", "format": "http-url" },
+              "storage": { "$ref": "#/$defs/mcp_storage" },
+              "graph_name": { "type": "string" },
+              "exclude_mutations": { "type": "boolean", "default": false },
+              "enable_arbitrary_operations": { "type": "boolean", "default": false },
+              "expose_schema": { "type": "boolean", "default": false },
+              "omit_tool_name_prefix": { "type": "boolean", "default": false },
+              "session": { "$ref": "#/$defs/mcp_session" },
+              "oauth": { "$ref": "#/$defs/mcp_oauth" },
+              "resource_documentation": { "type": "string", "format": "http-url" },
+              "title": { "type": "string" },
+              "description": { "type": "string" },
+              "version": { "type": "string" },
+              "discover": { "$ref": "#/$defs/mcp_discover" }
             },
-            "authorization_server_url": {
-              "type": "string",
-              "description": "The base URL of the OAuth 2.0 authorization server. This URL is advertised to MCP clients via the Protected Resource Metadata endpoint (RFC 9728) to enable automatic discovery of OAuth endpoints. Clients will append '/.well-known/oauth-authorization-server' to this URL to discover token, authorization, and registration endpoints. Example: 'https://auth.example.com'",
-              "format": "http-url"
-            },
-            "scopes": {
-              "type": "object",
-              "description": "Configures which OAuth scopes are required for different MCP operations. All configured scopes are automatically unioned into 'scopes_supported' for OAuth metadata discovery.",
-              "additionalProperties": false,
-              "properties": {
-                "initialize": {
-                  "type": "array",
-                  "description": "Scopes required for ALL HTTP requests (checked before JSON-RPC parsing). This is the baseline scope needed to establish an MCP connection.",
-                  "items": { "type": "string" }
-                },
-                "tools_list": {
-                  "type": "array",
-                  "description": "Scopes required for the tools/list MCP method.",
-                  "items": { "type": "string" }
-                },
-                "tools_call": {
-                  "type": "array",
-                  "description": "Scopes required for the tools/call MCP method (any tool).",
-                  "items": { "type": "string" }
-                },
-                "execute_graphql": {
-                  "type": "array",
-                  "description": "Scopes required to call the execute_graphql built-in tool. Additive to tools_call scopes. Only relevant when enable_arbitrary_operations is true.",
-                  "items": { "type": "string" }
-                },
-                "get_operation_info": {
-                  "type": "array",
-                  "description": "Scopes required to call the get_operation_info built-in tool. Additive to tools_call scopes.",
-                  "items": { "type": "string" }
-                },
-                "get_schema": {
-                  "type": "array",
-                  "description": "Scopes required to call the get_schema built-in tool. Additive to tools_call scopes. Only relevant when expose_schema is true.",
-                  "items": { "type": "string" }
-                }
-              }
-            },
-            "scope_challenge_include_token_scopes": {
-              "type": "boolean",
-              "default": false,
-              "description": "When true, includes the token's existing scopes in the scope parameter of 403 insufficient_scope responses (workaround for MCP client SDKs that replace rather than accumulate scopes). When false (default), only the scopes required for the operation are returned (RFC 6750 strict)."
-            },
-            "jwks": {
-              "type": "array",
-              "description": "List of JWKS (JSON Web Key Set) configurations for JWT token verification. Multiple JWKS providers can be configured for different authentication sources.",
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "url": {
-                    "type": "string",
-                    "description": "The URL of the JWKs. The JWKs are used to verify the JWT (JSON Web Token). The URL is specified as a string with the format 'scheme://host:port'.",
-                    "format": "http-url"
-                  },
-                  "audiences": {
-                    "type": "array",
-                    "description": "The audiences of the JWKs. The audiences are used to verify the JWT (JSON Web Token). The audiences are specified as a list of strings.",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "secret": {
-                    "type": "string",
-                    "description": "The secret of the JWKs"
-                  },
-                  "symmetric_algorithm": {
-                    "type": "string",
-                    "description": "The symmetric algorithm used",
-                    "enum": ["HS256", "HS384", "HS512"]
-                  },
-                  "header_key_id": {
-                    "type": "string",
-                    "description": "The KID header of the JWK token created using the secret"
-                  },
-                  "allowed_use": {
-                    "type": "array",
-                    "description": "The allowed value of the use parameter for the JWKs. If not specified, only keys with use set to 'sig' will be used. If your server provides no use, you can add an empty value to allow those keys.",
-                    "default": ["sig"],
-                    "items": {
-                      "type": "string",
-                      "enum": ["sig", "enc", ""]
-                    }
-                  },
-                  "algorithms": {
-                    "type": "array",
-                    "description": "The allowed algorithms for the keys that are retrieved from the JWKs. An empty list means that all algorithms are allowed.",
-                    "items": {
-                      "type": "string",
-                      "enum": [
-                        "HS256",
-                        "HS384",
-                        "HS512",
-                        "RS256",
-                        "RS384",
-                        "RS512",
-                        "ES256",
-                        "ES384",
-                        "ES512",
-                        "PS256",
-                        "PS384",
-                        "PS512",
-                        "EdDSA"
-                      ]
-                    }
-                  },
-                  "refresh_interval": {
-                    "type": "string",
-                    "duration": {
-                      "minimum": "5s"
-                    },
-                    "description": "The interval at which the JWKs are refreshed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
-                    "default": "1m"
-                  },
-                  "refresh_unknown_kid": {
-                    "type": "object",
-                    "description": "Controls rate-limited refresh behavior when a JWT KID is unknown.",
-                    "additionalProperties": false,
-                    "properties": {
-                      "enabled": {
-                        "type": "boolean",
-                        "description": "Enable refresh attempts on unknown KID.",
-                        "default": false
-                      },
-                      "max_wait": {
-                        "type": "string",
-                        "description": "Maximum time to wait for a refresh permit before giving up.",
-                        "default": "2m",
-                        "duration": {
-                          "minimum": "0s"
-                        }
-                      },
-                      "interval": {
-                        "type": "string",
-                        "description": "Token refill interval for the rate limiter.",
-                        "default": "30s",
-                        "duration": {
-                          "minimum": "1s"
-                        }
-                      },
-                      "burst": {
-                        "type": "integer",
-                        "description": "Burst size for the rate limiter.",
-                        "default": 2,
-                        "minimum": 1
-                      }
-                    }
-                  }
-                },
-                "oneOf": [
-                  {
-                    "required": ["url"],
-                    "not": {
-                      "anyOf": [
-                        {
-                          "required": ["secret"]
-                        },
-                        {
-                          "required": ["symmetric_algorithm"]
-                        },
-                        {
-                          "required": ["header_key_id"]
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "required": ["secret", "symmetric_algorithm", "header_key_id"],
-                    "not": {
-                      "anyOf": [
-                        {
-                          "required": ["url"]
-                        },
-                        {
-                          "required": ["algorithms"]
-                        },
-                        {
-                          "required": ["refresh_interval"]
-                        },
-                        {
-                          "required": ["refresh_unknown_kid"]
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            }
+            "required": ["path"]
           }
         }
       },
@@ -4470,6 +4275,245 @@
     }
   },
   "$defs": {
+    "mcp_storage": {
+      "type": "object",
+      "description": "Storage provider configuration for the MCP server. This specifies where GraphQL operations are loaded from.",
+      "additionalProperties": false,
+      "properties": {
+        "provider_id": {
+          "type": "string",
+          "description": "The ID of the storage provider to use for loading GraphQL operations. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section."
+        }
+      },
+      "required": ["provider_id"]
+    },
+    "mcp_session": {
+      "type": "object",
+      "description": "Session configuration for the MCP server. This controls how the MCP server handles client sessions.",
+      "additionalProperties": false,
+      "properties": {
+        "stateless": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the MCP server should operate in stateless mode. When true, the server does not maintain session state between requests. When false, the server maintains session state, which can be useful for certain AI model integrations."
+        }
+      }
+    },
+    "mcp_discover": {
+      "type": "object",
+      "description": "Configuration for the server identity exposed via the MCP server/discover method (protocol version 2026-07-28).",
+      "additionalProperties": false,
+      "properties": {
+        "instructions": {
+          "type": "string",
+          "description": "Natural-language guidance for MCP clients (AI agents) on how to use this server effectively. Served in the server/discover response and in the legacy initialize response, so all clients receive it."
+        }
+      }
+    },
+    "mcp_oauth": {
+      "type": "object",
+      "description": "OAuth/JWKS authentication configuration for the MCP server. When enabled, MCP tool calls require valid JWT authentication and the server implements OAuth 2.0 discovery mechanisms (RFC 8414, RFC 9728).",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable OAuth/JWKS authentication for the MCP server. When true, all MCP tool calls must include a valid JWT token."
+        },
+        "authorization_server_url": {
+          "type": "string",
+          "description": "The base URL of the OAuth 2.0 authorization server. This URL is advertised to MCP clients via the Protected Resource Metadata endpoint (RFC 9728) to enable automatic discovery of OAuth endpoints. Clients will append '/.well-known/oauth-authorization-server' to this URL to discover token, authorization, and registration endpoints. Example: 'https://auth.example.com'",
+          "format": "http-url"
+        },
+        "scopes": {
+          "type": "object",
+          "description": "Configures which OAuth scopes are required for different MCP operations. All configured scopes are automatically unioned into 'scopes_supported' for OAuth metadata discovery.",
+          "additionalProperties": false,
+          "properties": {
+            "initialize": {
+              "type": "array",
+              "description": "Scopes required for ALL HTTP requests (checked before JSON-RPC parsing). This is the baseline scope needed to establish an MCP connection.",
+              "items": { "type": "string" }
+            },
+            "tools_list": {
+              "type": "array",
+              "description": "Scopes required for the tools/list MCP method.",
+              "items": { "type": "string" }
+            },
+            "tools_call": {
+              "type": "array",
+              "description": "Scopes required for the tools/call MCP method (any tool).",
+              "items": { "type": "string" }
+            },
+            "execute_graphql": {
+              "type": "array",
+              "description": "Scopes required to call the execute_graphql built-in tool. Additive to tools_call scopes. Only relevant when enable_arbitrary_operations is true.",
+              "items": { "type": "string" }
+            },
+            "get_operation_info": {
+              "type": "array",
+              "description": "Scopes required to call the get_operation_info built-in tool. Additive to tools_call scopes.",
+              "items": { "type": "string" }
+            },
+            "get_schema": {
+              "type": "array",
+              "description": "Scopes required to call the get_schema built-in tool. Additive to tools_call scopes. Only relevant when expose_schema is true.",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "scope_challenge_include_token_scopes": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, includes the token's existing scopes in the scope parameter of 403 insufficient_scope responses (workaround for MCP client SDKs that replace rather than accumulate scopes). When false (default), only the scopes required for the operation are returned (RFC 6750 strict)."
+        },
+        "jwks": {
+          "type": "array",
+          "description": "List of JWKS (JSON Web Key Set) configurations for JWT token verification. Multiple JWKS providers can be configured for different authentication sources.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "The URL of the JWKs. The JWKs are used to verify the JWT (JSON Web Token). The URL is specified as a string with the format 'scheme://host:port'.",
+                "format": "http-url"
+              },
+              "audiences": {
+                "type": "array",
+                "description": "The audiences of the JWKs. The audiences are used to verify the JWT (JSON Web Token). The audiences are specified as a list of strings.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "secret": {
+                "type": "string",
+                "description": "The secret of the JWKs"
+              },
+              "symmetric_algorithm": {
+                "type": "string",
+                "description": "The symmetric algorithm used",
+                "enum": ["HS256", "HS384", "HS512"]
+              },
+              "header_key_id": {
+                "type": "string",
+                "description": "The KID header of the JWK token created using the secret"
+              },
+              "allowed_use": {
+                "type": "array",
+                "description": "The allowed value of the use parameter for the JWKs. If not specified, only keys with use set to 'sig' will be used. If your server provides no use, you can add an empty value to allow those keys.",
+                "default": ["sig"],
+                "items": {
+                  "type": "string",
+                  "enum": ["sig", "enc", ""]
+                }
+              },
+              "algorithms": {
+                "type": "array",
+                "description": "The allowed algorithms for the keys that are retrieved from the JWKs. An empty list means that all algorithms are allowed.",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "HS256",
+                    "HS384",
+                    "HS512",
+                    "RS256",
+                    "RS384",
+                    "RS512",
+                    "ES256",
+                    "ES384",
+                    "ES512",
+                    "PS256",
+                    "PS384",
+                    "PS512",
+                    "EdDSA"
+                  ]
+                }
+              },
+              "refresh_interval": {
+                "type": "string",
+                "duration": {
+                  "minimum": "5s"
+                },
+                "description": "The interval at which the JWKs are refreshed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                "default": "1m"
+              },
+              "refresh_unknown_kid": {
+                "type": "object",
+                "description": "Controls rate-limited refresh behavior when a JWT KID is unknown.",
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Enable refresh attempts on unknown KID.",
+                    "default": false
+                  },
+                  "max_wait": {
+                    "type": "string",
+                    "description": "Maximum time to wait for a refresh permit before giving up.",
+                    "default": "2m",
+                    "duration": {
+                      "minimum": "0s"
+                    }
+                  },
+                  "interval": {
+                    "type": "string",
+                    "description": "Token refill interval for the rate limiter.",
+                    "default": "30s",
+                    "duration": {
+                      "minimum": "1s"
+                    }
+                  },
+                  "burst": {
+                    "type": "integer",
+                    "description": "Burst size for the rate limiter.",
+                    "default": 2,
+                    "minimum": 1
+                  }
+                }
+              }
+            },
+            "oneOf": [
+              {
+                "required": ["url"],
+                "not": {
+                  "anyOf": [
+                    {
+                      "required": ["secret"]
+                    },
+                    {
+                      "required": ["symmetric_algorithm"]
+                    },
+                    {
+                      "required": ["header_key_id"]
+                    }
+                  ]
+                }
+              },
+              {
+                "required": ["secret", "symmetric_algorithm", "header_key_id"],
+                "not": {
+                  "anyOf": [
+                    {
+                      "required": ["url"]
+                    },
+                    {
+                      "required": ["algorithms"]
+                    },
+                    {
+                      "required": ["refresh_interval"]
+                    },
+                    {
+                      "required": ["refresh_unknown_kid"]
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
     "jwks_configuration": {
       "type": "object",
       "additionalProperties": false,

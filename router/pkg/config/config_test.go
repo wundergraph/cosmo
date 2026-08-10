@@ -2412,3 +2412,40 @@ mcp:
 		require.Equal(t, "Query products, orders and customers.", cfg.Config.MCP.Server.Description)
 	})
 }
+
+func TestLoadMCPServersMap(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+mcp:
+  enabled: true
+  servers:
+    support:
+      enabled: true
+      path: /mcp/support
+      exclude_mutations: true
+      storage:
+        provider_id: support-ops
+    billing:
+      enabled: true
+      path: /billing/mcp
+      base_url: https://billing.example.com
+      storage:
+        provider_id: billing-ops
+`)
+
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.Len(t, cfg.Config.MCP.Servers, 2)
+
+	support := cfg.Config.MCP.Servers["support"]
+	require.True(t, support.Enabled)
+	require.Equal(t, "/mcp/support", support.Path)
+	require.True(t, support.ExcludeMutations)
+	require.Equal(t, "support-ops", support.Storage.ProviderID)
+
+	billing := cfg.Config.MCP.Servers["billing"]
+	require.Equal(t, "https://billing.example.com", billing.BaseURL)
+}
