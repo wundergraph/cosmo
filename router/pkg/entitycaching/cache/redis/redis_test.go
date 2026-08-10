@@ -104,7 +104,7 @@ func (c cutRepliesAfter) ProcessPipelineHook(next redis.ProcessPipelineHook) red
 func TestRedisCache(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("NewRedisCache", func(t *testing.T) {
 		t.Parallel()

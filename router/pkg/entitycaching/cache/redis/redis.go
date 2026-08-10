@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,10 +10,17 @@ import (
 	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
 )
 
-// RedisCache stores entries in Redis. Redis owns expiry, so unlike
-// InMemoryCache there is nothing to sweep here.
+// RedisCache stores entries in Redis.
 type RedisCache struct {
+	// client is owned by the caller, not this cache, so it is never closed
+	// here. It is a UniversalClient so a single, cluster or sentinel client all
+	// fit without this cache having to know which one it got.
 	client redis.UniversalClient
+	// prefix is prepended to every key before it reaches redis, so entity cache
+	// entries stay in their own namespace and cannot collide with anything else
+	// sharing the instance. It is applied on the way in and stripped back off on
+	// the way out, so callers only ever see the keys they asked with. An empty
+	// prefix is valid and means the keys are used as they are.
 	prefix string
 }
 
@@ -57,7 +65,8 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]eng
 	// A miss surfaces as redis.Nil, which is not a failure of the batch. A PTTL
 	// never reports a missing key that way, it answers with a negative
 	// duration, so every redis.Nil in here came from a GET.
-	if _, err := pipe.Exec(ctx); err != nil && !errors.Is(err, redis.Nil) {
+	_, err := pipe.Exec(ctx)
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return nil, err
 	}
 
@@ -85,7 +94,7 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]eng
 
 		// Keyed by what the caller asked with, not the prefixed key it was
 		// stored under: the namespace is this cache's business, not theirs.
-		results[key] = enginecache.Item{Key: key, Value: value, TTL: ttl}
+		results[key] = enginecache.Item{Key: key, Value: bytes.Clone(value), TTL: ttl}
 	}
 
 	return results, nil
