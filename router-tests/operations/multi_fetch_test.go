@@ -9,7 +9,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-
 func TestMultiFetch(t *testing.T) {
 	t.Parallel()
 
