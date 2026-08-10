@@ -124,6 +124,17 @@ GET /.well-known/oauth-protected-resource/mcp
 
 This follows the [RFC 9728](https://datatracker.ietf.org/doc/rfc9728/) path-aware format. MCP clients use this endpoint to automatically discover the authorization server and all supported scopes.
 
+<Info>
+  This example uses `mcp.server.base_url` and the default `/mcp` path from the deprecated single-server form. With
+  `mcp.servers`, each server publishes its own metadata at its own `base_url` and `path`. See
+  [Multiple Servers with OAuth Behind a Load Balancer](/router/mcp/configuration#multiple-servers-with-oauth-behind-a-load-balancer).
+</Info>
+
+<Warning>
+  When you run more than one MCP server with OAuth, set `oauth.jwks[].audiences` on each server to that server's
+  resource identifier. Without it, the router accepts a token minted for one server on every other server.
+</Warning>
+
 **Example response:**
 
 ```json
