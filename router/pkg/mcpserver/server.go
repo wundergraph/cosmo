@@ -5,7 +5,6 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,7 +22,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/headers"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -68,8 +66,6 @@ type Options struct {
 	GraphName string
 	// OperationsDir is the directory where GraphQL operations are stored
 	OperationsDir string
-	// ListenAddr is the address where the server should listen to
-	ListenAddr string
 	// MountPath is the HTTP path this server answers on.
 	MountPath string
 	// Enabled determines whether the MCP server should be started
@@ -88,8 +84,6 @@ type Options struct {
 	OmitToolNamePrefix bool
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
-	// CorsConfig is the CORS configuration for the MCP server
-	CorsConfig cors.Config
 	// OAuthConfig is the OAuth/JWKS configuration for authentication
 	OAuthConfig *config.MCPOAuthConfiguration
 	// ServerBaseURL is the base URL of this MCP server (for resource metadata)
@@ -119,13 +113,11 @@ type GraphQLSchemaServer struct {
 	server                    *mcp.Server
 	graphName                 string
 	operationsDir             string
-	listenAddr                string
 	mountPath                 string
 	logger                    *zap.Logger
 	httpClient                *http.Client
 	requestTimeout            time.Duration
 	routerGraphQLEndpoint     string
-	httpServer                *http.Server
 	excludeMutations          bool
 	enableArbitraryOperations bool
 	exposeSchema              bool
@@ -134,7 +126,6 @@ type GraphQLSchemaServer struct {
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
-	corsConfig                cors.Config
 	cancel                    context.CancelFunc
 	oauthConfig               *config.MCPOAuthConfiguration
 	serverBaseURL             string
@@ -225,7 +216,6 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 	options := &Options{
 		GraphName:      "graph",
 		OperationsDir:  "operations",
-		ListenAddr:     "0.0.0.0:5025",
 		MountPath:      DefaultMountPath,
 		Enabled:        false,
 		Logger:         zap.NewNop(),
@@ -337,7 +327,6 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		server:                    mcpServer,
 		graphName:                 options.GraphName,
 		operationsDir:             options.OperationsDir,
-		listenAddr:                options.ListenAddr,
 		mountPath:                 options.MountPath,
 		logger:                    options.Logger,
 		httpClient:                httpClient,
@@ -348,7 +337,6 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		exposeSchema:              options.ExposeSchema,
 		omitToolNamePrefix:        options.OmitToolNamePrefix,
 		stateless:                 options.Stateless,
-		corsConfig:                options.CorsConfig,
 		cancel:                    cancel,
 		oauthConfig:               options.OAuthConfig,
 		serverBaseURL:             options.ServerBaseURL,
@@ -407,13 +395,6 @@ func WithOperationsDir(operationsDir string) func(*Options) {
 	}
 }
 
-// WithListenAddr sets the listen address
-func WithListenAddr(listenAddr string) func(*Options) {
-	return func(o *Options) {
-		o.ListenAddr = listenAddr
-	}
-}
-
 // WithMountPath sets the HTTP path this MCP server answers on.
 func WithMountPath(p string) func(*Options) {
 	return func(o *Options) {
@@ -459,20 +440,6 @@ func WithStateless(stateless bool) func(*Options) {
 func WithOmitToolNamePrefix(omitToolNamePrefix bool) func(*Options) {
 	return func(o *Options) {
 		o.OmitToolNamePrefix = omitToolNamePrefix
-	}
-}
-
-func WithCORS(corsCfg cors.Config) func(*Options) {
-	return func(o *Options) {
-		// Force specific CORS settings for MCP server
-		corsCfg.AllowOrigins = []string{"*"}
-		corsCfg.AllowMethods = []string{"GET", "PUT", "POST", "DELETE", "OPTIONS"}
-		corsCfg.AllowHeaders = append(corsCfg.AllowHeaders, "Content-Type", "Accept", "Authorization", "Last-Event-ID", "Mcp-Protocol-Version", "Mcp-Session-Id")
-		corsCfg.ExposeHeaders = append(corsCfg.ExposeHeaders, "Mcp-Session-Id", "WWW-Authenticate")
-		if corsCfg.MaxAge <= 0 {
-			corsCfg.MaxAge = 24 * time.Hour
-		}
-		o.CorsConfig = corsCfg
 	}
 }
 
@@ -546,53 +513,6 @@ func (s *GraphQLSchemaServer) Close() {
 	}
 }
 
-// Serve starts the server with the configured options and returns the HTTP server.
-func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
-	httpServer := &http.Server{
-		Addr:         s.listenAddr,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
-
-	mux := http.NewServeMux()
-	s.RegisterRoutes(mux, cors.New(s.corsConfig))
-	httpServer.Handler = mux
-
-	s.logger.Info("MCP server started",
-		zap.String("listen_addr", s.listenAddr),
-		zap.String("path", s.mountPath),
-		zap.String("operations_dir", s.operationsDir),
-		zap.String("graph_name", s.graphName),
-		zap.Bool("exclude_mutations", s.excludeMutations),
-		zap.Bool("enable_arbitrary_operations", s.enableArbitraryOperations),
-		zap.Bool("expose_schema", s.exposeSchema),
-	)
-
-	go func() {
-		defer s.logger.Info("MCP server stopped")
-
-		err := httpServer.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			s.logger.Error("failed to start HTTP server", zap.Error(err))
-		}
-	}()
-
-	return httpServer, nil
-}
-
-// Start loads operations and starts the server
-func (s *GraphQLSchemaServer) Start() error {
-	ss, err := s.Serve()
-	if err != nil {
-		return fmt.Errorf("failed to create HTTP server: %w", err)
-	}
-
-	s.httpServer = ss
-
-	return nil
-}
-
 // Reload reloads the operations and schema, and computes per-tool scope
 // requirements from @requiresScopes directives in the field configurations.
 func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev1.FieldConfiguration) error {
@@ -625,30 +545,6 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 
 	if err := s.registerTools(); err != nil {
 		return fmt.Errorf("failed to register tools: %w", err)
-	}
-
-	return nil
-}
-
-// Stop gracefully shuts down the MCP server
-func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
-	if s.httpServer == nil {
-		return fmt.Errorf("server is not started")
-	}
-
-	s.logger.Debug("shutting down MCP server")
-
-	// Cancel the server's context to stop background operations (e.g., JWKS key refresh)
-	if s.cancel != nil {
-		s.cancel()
-	}
-
-	// Create a shutdown context with timeout
-	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("failed to gracefully shutdown MCP server: %w", err)
 	}
 
 	return nil
