@@ -504,6 +504,7 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
 			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
+			// Receive the first message
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employee-updated.test"), []byte(`{"id":3,"__typename": "Employee","tag": "test"}`))
 			require.NoError(t, err)
 
@@ -515,9 +516,23 @@ func TestNatsEvents(t *testing.T) {
 				require.JSONEq(t, `{"employeeUpdated":{"id":3}}`, string(args.dataValue))
 			})
 
+			// Should not receive the second message because the subject is a different
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employee-updated.test2"), []byte(`{"id":3,"__typename": "Employee","tag": "test2"}`))
+			require.NoError(t, err)
+
+			select {
+			case args := <-subscriptionArgsCh:
+				t.Fatalf("received unexpected additional message: data=%s err=%v", args.dataValue, args.errValue)
+			case <-time.After(5 * time.Second):
+			}
+
+			// Should receive the last message because we are targetting the same subject again
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employee-updated.test"), []byte(`{"id":12,"__typename": "Employee","tag": "test"}`))
+			require.NoError(t, err)
+
 			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
 				require.NoError(t, args.errValue)
-				require.JSONEq(t, `{"employeeUpdated":{"id":3}}`, string(args.dataValue))
+				require.JSONEq(t, `{"employeeUpdated":{"id":12}}`, string(args.dataValue))
 			})
 
 			require.NoError(t, client.Close())
