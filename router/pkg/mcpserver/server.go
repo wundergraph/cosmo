@@ -291,7 +291,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		// Build resource metadata URL for WWW-Authenticate header
 		resourceMetadataURL := ""
 		if options.ServerBaseURL != "" {
-			resourceMetadataURL = fmt.Sprintf("%s/.well-known/oauth-protected-resource/mcp", options.ServerBaseURL)
+			resourceMetadataURL = strings.TrimRight(options.ServerBaseURL, "/") + MetadataPath(options.MountPath)
 		}
 
 		authMiddleware, err = NewMCPAuthMiddleware(tokenDecoder, resourceMetadataURL, options.OAuthConfig.Scopes, options.OAuthConfig.ScopeChallengeIncludeTokenScopes)
@@ -1123,17 +1123,6 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 		return
 	}
 
-	// Determine the resource URL (this MCP server's base URL)
-	resourceURL := s.serverBaseURL
-	if resourceURL == "" {
-		// Fallback: construct from request if not configured
-		scheme := "http"
-		if r.TLS != nil {
-			scheme = "https"
-		}
-		resourceURL = fmt.Sprintf("%s://%s", scheme, r.Host)
-	}
-
 	// Build scopes_supported from all configured scopes (union across all levels)
 	// plus all scopes extracted from @requiresScopes directives on operations
 	scopesSet := make(map[string]bool)
@@ -1179,7 +1168,7 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 		scopes = []string{} // Ensure non-nil for JSON encoding
 	}
 
-	mcpResourceURL := strings.TrimRight(resourceURL, "/") + "/mcp"
+	mcpResourceURL := ResourceIdentifier(s.serverBaseURL, s.mountPath)
 
 	metadata := ProtectedResourceMetadata{
 		Resource:               mcpResourceURL,
@@ -1200,12 +1189,4 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(data)
-}
-
-// GetResourceMetadataURL returns the URL for the OAuth 2.0 Protected Resource Metadata endpoint
-func (s *GraphQLSchemaServer) GetResourceMetadataURL() string {
-	if s.serverBaseURL != "" {
-		return fmt.Sprintf("%s/.well-known/oauth-protected-resource/mcp", s.serverBaseURL)
-	}
-	return ""
 }
