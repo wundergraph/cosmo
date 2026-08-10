@@ -826,6 +826,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 	}
 
 	// Currently, we only support custom attributes from the context for OTLP metrics
+	// there
 	if !computeSha256 && len(srv.metricConfig.Attributes) > 0 {
 		for _, customAttribute := range srv.metricConfig.Attributes {
 			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
