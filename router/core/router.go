@@ -1271,6 +1271,40 @@ func mcpGraphQLEndpoint(cfg config.MCPConfiguration, routerEndpoint string, usin
 	return routerEndpoint
 }
 
+// defaultMCPServerMaxScopeCombinations mirrors
+// MCPOAuthConfiguration.MaxScopeCombinations's envDefault:"2048". mcp.servers
+// entries carry no env tags (env vars cannot address map entries, see
+// MCPServerEntry's doc comment), so env.Parse never applies that envDefault
+// to a map entry: an unset mcp.servers[*].oauth.max_scope_combinations
+// resolves to the Go zero value, 0, not 2048. A limit of 0 makes
+// crossProduct (scope_extractor.go) reject every non-empty cross product,
+// so ComputeToolScopes fails and the server registers zero tools. Applying
+// this fallback in resolveMCPServerMaxScopeCombinations keeps a YAML-only
+// server behaviorally identical to the deprecated top-level path for the
+// same unset intent.
+const defaultMCPServerMaxScopeCombinations = 2048
+
+// resolveMCPServerStateless resolves the Session.Stateless setting for one
+// mcp.servers entry, defaulting to true (stateless) when the user leaves it
+// unset. See MCPServerSessionConfig.Stateless for why this needs a *bool.
+func resolveMCPServerStateless(entry config.MCPServerEntry) bool {
+	if entry.Session.Stateless == nil {
+		return true
+	}
+	return *entry.Session.Stateless
+}
+
+// resolveMCPServerMaxScopeCombinations resolves OAuth.MaxScopeCombinations
+// for one mcp.servers entry, falling back to
+// defaultMCPServerMaxScopeCombinations when the user leaves it unset (or
+// sets it to 0, which is not a meaningful limit either way).
+func resolveMCPServerMaxScopeCombinations(entry config.MCPServerEntry) int {
+	if entry.OAuth.MaxScopeCombinations == 0 {
+		return defaultMCPServerMaxScopeCombinations
+	}
+	return entry.OAuth.MaxScopeCombinations
+}
+
 // newMCPServerFromEntry builds one MCP server from its config entry.
 func newMCPServerFromEntry(ctx context.Context, name string, entry config.MCPServerEntry, deps mcpHostDeps) (*mcpserver.GraphQLSchemaServer, error) {
 	var operationsDir string
@@ -1303,7 +1337,7 @@ func newMCPServerFromEntry(ctx context.Context, name string, entry config.MCPSer
 		mcpserver.WithEnableArbitraryOperations(entry.EnableArbitraryOperations),
 		mcpserver.WithExposeSchema(entry.ExposeSchema),
 		mcpserver.WithOmitToolNamePrefix(entry.OmitToolNamePrefix),
-		mcpserver.WithStateless(entry.Session.Stateless),
+		mcpserver.WithStateless(resolveMCPServerStateless(entry)),
 		mcpserver.WithInstructions(entry.Discover.Instructions),
 		mcpserver.WithServerVersion(cmp.Or(entry.Version, deps.routerVersion)),
 		mcpserver.WithServerTitle(entry.Title),
@@ -1312,6 +1346,7 @@ func newMCPServerFromEntry(ctx context.Context, name string, entry config.MCPSer
 
 	if entry.OAuth.Enabled {
 		oauth := entry.OAuth
+		oauth.MaxScopeCombinations = resolveMCPServerMaxScopeCombinations(entry)
 		opts = append(opts, mcpserver.WithOAuth(&oauth))
 	}
 
@@ -1340,6 +1375,14 @@ func deprecatedServerName(cfg config.MCPConfiguration) string {
 }
 
 // deprecatedServerEntry maps the deprecated top-level options onto one entry.
+//
+// cfg.Session is a top-level config.MCPSessionConfig, populated by env.Parse
+// (envDefault:"true"), so cfg.Session.Stateless always reflects the intended
+// value here. Session on config.MCPServerEntry is a *bool-based
+// MCPServerSessionConfig instead (see its doc comment for why), so this
+// takes the address of cfg.Session.Stateless to carry that already-resolved
+// value across. This does not change MCPSessionConfig itself: the
+// deprecated top-level path keeps using it unchanged.
 func deprecatedServerEntry(cfg config.MCPConfiguration) config.MCPServerEntry {
 	return config.MCPServerEntry{
 		Enabled:                   true,
@@ -1351,7 +1394,7 @@ func deprecatedServerEntry(cfg config.MCPConfiguration) config.MCPServerEntry {
 		EnableArbitraryOperations: cfg.EnableArbitraryOperations,
 		ExposeSchema:              cfg.ExposeSchema,
 		OmitToolNamePrefix:        cfg.OmitToolNamePrefix,
-		Session:                   cfg.Session,
+		Session:                   config.MCPServerSessionConfig{Stateless: &cfg.Session.Stateless},
 		OAuth:                     cfg.OAuth,
 		ResourceDocumentation:     cfg.ResourceDocumentation,
 		Title:                     cfg.Server.Title,

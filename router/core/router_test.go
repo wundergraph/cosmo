@@ -642,3 +642,78 @@ func TestBuildMCPHostClosesAlreadyRegisteredServersOnFailure(t *testing.T) {
 	require.ErrorContains(t, err, "b-second")
 	require.ErrorContains(t, err, "missing-provider")
 }
+
+// TestResolveMCPServerStatelessDefaultsToTrue covers an mcp.servers entry
+// that never sets session.stateless. The deprecated top-level path gets
+// Stateless=true from MCPSessionConfig's envDefault:"true" tag, but env.Parse
+// cannot reach a map entry, so entry.Session.Stateless would be the Go zero
+// value if MCPServerSessionConfig used a plain bool. resolveMCPServerStateless
+// must restore the documented default (true) for the unset case.
+//
+// GraphQLSchemaServer exposes no getter for its internal stateless field, so
+// this asserts the resolution helper directly, per the package's established
+// pattern (see TestBuildMCPHostClosesAlreadyRegisteredServersOnFailure above)
+// for testing what package core can actually observe.
+func TestResolveMCPServerStatelessDefaultsToTrue(t *testing.T) {
+	t.Parallel()
+
+	entry := config.MCPServerEntry{Enabled: true, Path: "/mcp"}
+
+	require.True(t, resolveMCPServerStateless(entry))
+}
+
+// TestResolveMCPServerStatelessRespectsExplicitFalse covers an mcp.servers
+// entry that explicitly sets session.stateless: false. This is the assertion
+// that proves *bool actually distinguishes "unset" from "explicitly false":
+// a plain bool cannot, and a naive "zero value means default" fix would make
+// this case indistinguishable from the unset case in
+// TestResolveMCPServerStatelessDefaultsToTrue above.
+func TestResolveMCPServerStatelessRespectsExplicitFalse(t *testing.T) {
+	t.Parallel()
+
+	stateless := false
+	entry := config.MCPServerEntry{
+		Enabled: true,
+		Path:    "/mcp",
+		Session: config.MCPServerSessionConfig{Stateless: &stateless},
+	}
+
+	require.False(t, resolveMCPServerStateless(entry))
+}
+
+// TestResolveMCPServerMaxScopeCombinationsDefaultsTo2048 covers an
+// mcp.servers entry that never sets oauth.max_scope_combinations. The
+// deprecated top-level path gets 2048 from MCPOAuthConfiguration's
+// envDefault:"2048" tag, but env.Parse cannot reach a map entry, so
+// entry.OAuth.MaxScopeCombinations is 0 unless resolved. A limit of 0 makes
+// crossProduct (scope_extractor.go) reject every non-empty cross product,
+// so ComputeToolScopes fails and the server registers zero tools: any
+// OAuth-enabled map server with @requiresScopes directives would be
+// functionally dead without this fallback.
+func TestResolveMCPServerMaxScopeCombinationsDefaultsTo2048(t *testing.T) {
+	t.Parallel()
+
+	entry := config.MCPServerEntry{
+		Enabled: true,
+		Path:    "/mcp",
+		OAuth:   config.MCPOAuthConfiguration{Enabled: true},
+	}
+
+	require.Equal(t, 2048, resolveMCPServerMaxScopeCombinations(entry))
+}
+
+// TestResolveMCPServerMaxScopeCombinationsRespectsExplicitValue covers an
+// mcp.servers entry that sets its own oauth.max_scope_combinations. The
+// fallback in resolveMCPServerMaxScopeCombinations must not override an
+// explicit user value.
+func TestResolveMCPServerMaxScopeCombinationsRespectsExplicitValue(t *testing.T) {
+	t.Parallel()
+
+	entry := config.MCPServerEntry{
+		Enabled: true,
+		Path:    "/mcp",
+		OAuth:   config.MCPOAuthConfiguration{Enabled: true, MaxScopeCombinations: 64},
+	}
+
+	require.Equal(t, 64, resolveMCPServerMaxScopeCombinations(entry))
+}

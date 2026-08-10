@@ -135,7 +135,7 @@ Every server in `mcp.servers` shares:
 | `enable_arbitrary_operations`  | Enables the `execute_graphql` built-in tool for this server.                                                                                                                              | `false`                   |
 | `expose_schema`                | Enables the `get_schema` built-in tool for this server.                                                                                                                                   | `false`                   |
 | `omit_tool_name_prefix`        | Removes the `execute_operation_` prefix from this server's tool names.                                                                                                                    | `false`                   |
-| `session.stateless`            | Runs this server without server-side session state. See the warning below.                                                                                                               | `false`                   |
+| `session.stateless`            | Runs this server without server-side session state. See the note below.                                                                                                                  | `true`                    |
 | `resource_documentation`       | A URL to a human-readable page describing this server, its access policies, and how to get started. Included in RFC 9728 metadata if set.                                                | -                         |
 | `title`                        | A human-readable display name for this server, reported in `serverInfo`.                                                                                                                  | -                         |
 | `description`                  | A human-readable description of this server, reported in `serverInfo`.                                                                                                                    | -                         |
@@ -143,20 +143,24 @@ Every server in `mcp.servers` shares:
 | `discover.instructions`        | Natural-language guidance for MCP clients on how to use this server. See [Server Discovery](#server-discovery).                                                                          | -                         |
 | `oauth`                        | This server's OAuth configuration. Same fields as the top-level `oauth` block. See [OAuth Configuration Reference](/router/mcp/oauth/configuration).                                     | disabled                  |
 
-<Warning>
-  A field inside an `mcp.servers` entry takes only the value you give it in YAML. It does not inherit the default
-  documented for the matching top-level option elsewhere on this page. An unset field takes its Go zero value:
-  `false` for a boolean, an empty string, `0` for a number, or `0s` for a duration.
+<Note>
+  A field inside an `mcp.servers` entry takes only the value you give it in YAML. It does not read the `MCP_*`
+  environment variables documented for the matching top-level option elsewhere on this page. An unset field
+  normally takes its Go zero value: `false` for a boolean, an empty string, `0` for a number, or `0s` for a
+  duration.
 
-  Three fields commonly need an explicit value for this reason:
+  `session.stateless` and `oauth.max_scope_combinations` are exceptions. The router applies their documented
+  default when you leave them unset in an `mcp.servers` entry, so they match the deprecated top-level default:
 
-  - `session.stateless` defaults to `false` inside `mcp.servers`. The deprecated top-level `mcp.session.stateless`
-    defaults to `true`. Set `session.stateless: true` explicitly if you want a stateless server.
-  - `oauth.max_scope_combinations` defaults to `0` inside `mcp.servers`. The top-level default is `2048`. Set it
-    explicitly on any server that enables OAuth and uses `@requiresScopes` on more than one field per operation.
+  - `session.stateless` defaults to `true` inside `mcp.servers`, the same as the deprecated top-level
+    `mcp.session.stateless`.
+  - `oauth.max_scope_combinations` defaults to `2048` inside `mcp.servers`, the same as the top-level default.
+
+  One field still needs an explicit value:
+
   - `oauth.jwks[].refresh_interval` defaults to `0s` inside `mcp.servers`. The top-level default is `1m`. Set it
     explicitly on any server that enables OAuth with a remote JWKS URL.
-</Warning>
+</Note>
 
 ### Path Rules
 
