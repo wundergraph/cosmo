@@ -2748,8 +2748,8 @@
               "enabled": { "type": "boolean", "default": false },
               "path": {
                 "type": "string",
-                "description": "The HTTP path this MCP server is mounted on. Must start with a single slash, must not end with a slash, and must not contain '{', '}', or '*'. Must not be the reserved OAuth protected resource metadata path.",
-                "pattern": "^/([^/{}*]|[^/{}*][^{}*]*[^/{}*])?$",
+                "description": "The HTTP path this MCP server is mounted on. Must start with a single slash, must not be '/' alone, must not end with a slash, and must not contain '{', '}', or '*'. Must not be the reserved OAuth protected resource metadata path.",
+                "pattern": "^/([^/{}*]|[^/{}*][^{}*]*[^/{}*])$",
                 "not": { "pattern": "^/\\.well-known/oauth-protected-resource(/|$)" }
               },
               "base_url": { "type": "string", "format": "http-url" },
@@ -4366,6 +4366,11 @@
           "type": "boolean",
           "default": false,
           "description": "When true, includes the token's existing scopes in the scope parameter of 403 insufficient_scope responses (workaround for MCP client SDKs that replace rather than accumulate scopes). When false (default), only the scopes required for the operation are returned (RFC 6750 strict)."
+        },
+        "max_scope_combinations": {
+          "type": "integer",
+          "default": 2048,
+          "description": "Sets the upper limit on the number of OR-group combinations produced when computing the Cartesian product of @requiresScopes across fields. Increase for complex RBAC configurations."
         },
         "jwks": {
           "type": "array",

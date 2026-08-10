@@ -16,7 +16,7 @@ func TestValidateMountPath(t *testing.T) {
 	}{
 		{name: "simple", path: "/mcp"},
 		{name: "nested", path: "/billing/mcp"},
-		{name: "root", path: "/"},
+		{name: "root", path: "/", wantErr: "shared listener"},
 		{name: "single character", path: "/a"},
 		{name: "interior double slash", path: "/a//b"},
 		{name: "empty", path: "", wantErr: "path is empty"},
@@ -46,6 +46,11 @@ func TestMetadataPath(t *testing.T) {
 
 	require.Equal(t, "/.well-known/oauth-protected-resource/mcp", MetadataPath("/mcp"))
 	require.Equal(t, "/.well-known/oauth-protected-resource/billing/mcp", MetadataPath("/billing/mcp"))
+
+	// ValidateMountPath now rejects "/", so no real config reaches this case.
+	// Kept because MetadataPath is a pure function with its own "/" branch;
+	// this is the only test covering that branch, ready for a future ticket
+	// that gives each server its own listener and allows "/" again.
 	require.Equal(t, "/.well-known/oauth-protected-resource", MetadataPath("/"))
 }
 
@@ -54,5 +59,8 @@ func TestResourceIdentifier(t *testing.T) {
 
 	require.Equal(t, "https://example.com/mcp", ResourceIdentifier("https://example.com", "/mcp"))
 	require.Equal(t, "https://example.com/billing/mcp", ResourceIdentifier("https://example.com/", "/billing/mcp"))
+
+	// ValidateMountPath now rejects "/", so no real config reaches this case.
+	// Kept for the same reason as the "/" case in TestMetadataPath above.
 	require.Equal(t, "https://example.com/", ResourceIdentifier("https://example.com", "/"))
 }

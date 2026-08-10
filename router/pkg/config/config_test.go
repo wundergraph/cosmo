@@ -2459,6 +2459,7 @@ func TestLoadMCPServersMapPathValidation(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "single character path is valid", path: "/a"},
+		{name: "root alone is rejected", path: "/", wantErr: true},
 		{name: "leading double slash is rejected", path: "//foo", wantErr: true},
 		{name: "trailing slash is rejected", path: "/mcp/", wantErr: true},
 		{name: "wildcard is rejected", path: "/mcp/{id}", wantErr: true},
@@ -2491,4 +2492,57 @@ mcp:
 			require.NoError(t, err)
 		})
 	}
+}
+
+// TestMCPOAuthMaxScopeCombinations guards against $defs/mcp_oauth rejecting
+// max_scope_combinations with "additional properties ... not allowed". That
+// field has no environment variable escape hatch for mcp.servers entries, so
+// a schema gap there made the option completely unreachable for a server
+// configured that way.
+func TestMCPOAuthMaxScopeCombinations(t *testing.T) {
+	t.Parallel()
+
+	t.Run("mcp.servers entry can set it and the value survives parsing", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+mcp:
+  enabled: true
+  servers:
+    support:
+      enabled: true
+      path: /mcp/support
+      storage:
+        provider_id: support-ops
+      oauth:
+        max_scope_combinations: 4096
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, 4096, cfg.Config.MCP.Servers["support"].OAuth.MaxScopeCombinations)
+	})
+
+	t.Run("top-level mcp.oauth can set it and the value survives parsing", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  oauth:
+    max_scope_combinations: 4096
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, 4096, cfg.Config.MCP.OAuth.MaxScopeCombinations)
+	})
 }

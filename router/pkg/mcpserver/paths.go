@@ -19,6 +19,13 @@ const (
 // Mount paths must be exact ServeMux patterns. A trailing slash would make a
 // subtree pattern, and a wildcard would make a conflicting pattern; either can
 // capture the requests of another server sharing the mux.
+//
+// "/" is rejected for the same reason: Go 1.22+ treats it as a subtree
+// pattern too, so it matches every request the shared mux receives, whatever
+// path the client asked for. This makes "/" a catch-all only because every
+// mcp.servers entry shares one listener today. A future ticket that gives
+// each server its own listener removes that sharing, and "/" becomes a
+// normal, exact mount path again; this rule can relax then.
 func ValidateMountPath(p string) error {
 	if p == "" {
 		return fmt.Errorf("path is empty")
@@ -28,6 +35,9 @@ func ValidateMountPath(p string) error {
 	}
 	if strings.HasPrefix(p, "//") {
 		return fmt.Errorf("path %q must not start with //", p)
+	}
+	if p == "/" {
+		return fmt.Errorf("path %q is not allowed: on the shared listener, it is a catch-all that matches every request meant for another server", p)
 	}
 	if len(p) > 1 && strings.HasSuffix(p, "/") {
 		return fmt.Errorf("path %q must not end with /", p)

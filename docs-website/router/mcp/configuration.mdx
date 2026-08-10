@@ -131,7 +131,7 @@ Every server in `mcp.servers` shares:
 | Field                          | Description                                                                                                                                                                            | Default                  |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
 | `enabled`                      | Starts this server. A server with no `enabled: true` never starts, even when `mcp.enabled` is `true`.                                                                                 | `false`                   |
-| `path`                          | The mount path for this server on the shared listener. Required for an enabled server. See [Path Rules](#path-rules).                                                                    | (required)                |
+| `path`                          | The mount path for this server on the shared listener. Required on every entry, enabled or not. See [Path Rules](#path-rules).                                                            | (required)                |
 | `base_url`                     | The public base URL for this server. Overrides `mcp.server.base_url`. When this server's `oauth.enabled` is `true`, one of `base_url` or `mcp.server.base_url` must be set. Used for RFC 9728 metadata and `resource_metadata` headers. | `mcp.server.base_url`     |
 | `graph_name`                   | The name of the graph this server exposes. Feeds the `Name` field of `serverInfo` as `wundergraph-cosmo-<kebab-case graph_name>`.                                                        | the map key               |
 | `storage.provider_id`          | The ID of a `file_system` storage provider that holds this server's GraphQL operations.                                                                                                   | -                         |
@@ -171,7 +171,10 @@ Each server's `path` must follow these rules:
 
 - It must start with `/`.
 - It must not start with `//`.
-- It must not end with `/`, unless the path is exactly `/`.
+- It must not be `/` alone. Every `mcp.servers` entry shares one listener, and Go's router treats `/` as a
+  catch-all that matches every request, including requests meant for another server. A future release that gives
+  each server its own listener can lift this restriction.
+- It must not end with `/`.
 - It must not contain a wildcard character (`{`, `}`, or `*`).
 - It must not start with `/.well-known/oauth-protected-resource`. The router reserves this prefix for OAuth
   metadata.
@@ -188,6 +191,19 @@ Each server's `path` must follow these rules:
 An operations directory that the router cannot read affects only its own server. That server starts, serves the
 built-in tools, and serves no operation tools. The router logs an error naming the server. Every other server in
 `mcp.servers` keeps running.
+
+<Warning>
+  A per-server reload failure never fails the router or the config reload. This applies to every reload error,
+  including an unreadable operations directory, a scope computation failure, and a tool registration failure. Alert
+  on the error log for the affected server. Do not rely on router or config reload failure to detect an MCP
+  problem.
+</Warning>
+
+When the router reloads its configuration, it also reloads every server in `mcp.servers`. A server whose scope
+computation fails during reload keeps its previous tools. The router removes a server's old tools before it
+registers the new ones, so a tool registration failure during reload can leave that server with fewer tools than
+before. Both failures log an error naming the server. The router reload itself always succeeds, whatever happens to
+any one MCP server.
 
 ### Multiple Servers with OAuth Behind a Load Balancer
 
