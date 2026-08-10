@@ -525,7 +525,12 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 
 	if s.operationsDir != "" {
 		if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
-			return fmt.Errorf("failed to load operations: %w", err)
+			// An unreadable collection is an environment fault that belongs to
+			// this server. Serve no tools rather than failing the whole reload.
+			s.logger.Error("Failed to load MCP operations, serving no tools",
+				zap.String("operations_dir", s.operationsDir),
+				zap.Error(err),
+			)
 		}
 	}
 
