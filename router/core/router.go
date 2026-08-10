@@ -1237,7 +1237,7 @@ func buildMCPHost(ctx context.Context, deps mcpHostDeps) (*mcpserver.Host, error
 			continue
 		}
 
-		srv, err := newMCPServerFromEntry(ctx, name, entry, deps)
+		srv, err := newMCPServerFromEntry(ctx, name, entry, deps, !usingDeprecatedOptions)
 		if err != nil {
 			return nil, fmt.Errorf("mcp server %q: %w", name, err)
 		}
@@ -1282,11 +1282,26 @@ func mcpGraphQLEndpoint(cfg config.MCPConfiguration, routerEndpoint string, usin
 // this fallback in resolveMCPServerMaxScopeCombinations keeps a YAML-only
 // server behaviorally identical to the deprecated top-level path for the
 // same unset intent.
+//
+// This fallback must apply only to entries that came from mcp.servers. The
+// deprecated top-level oauth.max_scope_combinations DOES receive its
+// envDefault:"2048" from env.Parse, so a 0 there was never "unset": it is
+// something the operator typed, whether in YAML or via
+// MCP_OAUTH_MAX_SCOPE_COMBINATIONS=0. Coercing that to 2048 would silently
+// override a value the operator explicitly asked for, on a path that is
+// still supported. See newMCPServerFromEntry's fromServersMap parameter.
 const defaultMCPServerMaxScopeCombinations = 2048
 
 // resolveMCPServerStateless resolves the Session.Stateless setting for one
 // mcp.servers entry, defaulting to true (stateless) when the user leaves it
 // unset. See MCPServerSessionConfig.Stateless for why this needs a *bool.
+//
+// Unlike resolveMCPServerMaxScopeCombinations, this is safe to apply
+// unconditionally to both the deprecated top-level path and mcp.servers
+// entries: deprecatedServerEntry always supplies a real, non-nil pointer
+// (taken from the already-env.Parse-resolved MCPSessionConfig.Stateless),
+// so the nil branch here is only ever reached for a genuinely unset
+// mcp.servers entry, never for the deprecated path.
 func resolveMCPServerStateless(entry config.MCPServerEntry) bool {
 	if entry.Session.Stateless == nil {
 		return true
@@ -1296,8 +1311,10 @@ func resolveMCPServerStateless(entry config.MCPServerEntry) bool {
 
 // resolveMCPServerMaxScopeCombinations resolves OAuth.MaxScopeCombinations
 // for one mcp.servers entry, falling back to
-// defaultMCPServerMaxScopeCombinations when the user leaves it unset (or
-// sets it to 0, which is not a meaningful limit either way).
+// defaultMCPServerMaxScopeCombinations when the user leaves it unset. Call
+// this only for entries built from the mcp.servers map; see
+// defaultMCPServerMaxScopeCombinations for why the deprecated top-level
+// path must not go through this fallback.
 func resolveMCPServerMaxScopeCombinations(entry config.MCPServerEntry) int {
 	if entry.OAuth.MaxScopeCombinations == 0 {
 		return defaultMCPServerMaxScopeCombinations
@@ -1305,8 +1322,34 @@ func resolveMCPServerMaxScopeCombinations(entry config.MCPServerEntry) int {
 	return entry.OAuth.MaxScopeCombinations
 }
 
+// resolveMCPServerOAuth resolves the OAuth config to pass to
+// mcpserver.WithOAuth for one entry. fromServersMap gates the
+// MaxScopeCombinations fallback: true for an mcp.servers entry, false for
+// the single synthetic entry built from the deprecated top-level options.
+//
+// A plain bool parameter, not a second entry-adapter function, because the
+// only thing that differs between the two forms here is whether the
+// fallback applies; threading a bool through keeps that one difference
+// visible at the call site instead of hiding it behind two similarly named
+// functions a reader would have to diff against each other.
+func resolveMCPServerOAuth(entry config.MCPServerEntry, fromServersMap bool) config.MCPOAuthConfiguration {
+	oauth := entry.OAuth
+	if fromServersMap {
+		oauth.MaxScopeCombinations = resolveMCPServerMaxScopeCombinations(entry)
+	}
+	return oauth
+}
+
 // newMCPServerFromEntry builds one MCP server from its config entry.
-func newMCPServerFromEntry(ctx context.Context, name string, entry config.MCPServerEntry, deps mcpHostDeps) (*mcpserver.GraphQLSchemaServer, error) {
+//
+// fromServersMap distinguishes an entry that came from mcp.servers from the
+// single synthetic entry deprecatedServerEntry builds for the deprecated
+// top-level options. It gates resolveMCPServerMaxScopeCombinations: that
+// fallback must apply only to mcp.servers entries, never to the deprecated
+// path, which already gets its default from env.Parse and must keep
+// whatever behavior an explicit 0 produced before mcp.servers existed. See
+// defaultMCPServerMaxScopeCombinations for the full reasoning.
+func newMCPServerFromEntry(ctx context.Context, name string, entry config.MCPServerEntry, deps mcpHostDeps, fromServersMap bool) (*mcpserver.GraphQLSchemaServer, error) {
 	var operationsDir string
 
 	if entry.Storage.ProviderID != "" {
@@ -1345,8 +1388,7 @@ func newMCPServerFromEntry(ctx context.Context, name string, entry config.MCPSer
 	}
 
 	if entry.OAuth.Enabled {
-		oauth := entry.OAuth
-		oauth.MaxScopeCombinations = resolveMCPServerMaxScopeCombinations(entry)
+		oauth := resolveMCPServerOAuth(entry, fromServersMap)
 		opts = append(opts, mcpserver.WithOAuth(&oauth))
 	}
 

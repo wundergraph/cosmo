@@ -717,3 +717,46 @@ func TestResolveMCPServerMaxScopeCombinationsRespectsExplicitValue(t *testing.T)
 
 	require.Equal(t, 64, resolveMCPServerMaxScopeCombinations(entry))
 }
+
+// TestResolveMCPServerOAuthAppliesFallbackForServersMap covers an
+// mcp.servers entry (fromServersMap: true) with OAuth enabled and
+// max_scope_combinations unset. The resolved OAuth config handed to
+// mcpserver.WithOAuth must carry 2048, not 0, or the server registers zero
+// tools for any @requiresScopes-protected operation. See
+// defaultMCPServerMaxScopeCombinations.
+func TestResolveMCPServerOAuthAppliesFallbackForServersMap(t *testing.T) {
+	t.Parallel()
+
+	entry := config.MCPServerEntry{
+		Enabled: true,
+		Path:    "/mcp",
+		OAuth:   config.MCPOAuthConfiguration{Enabled: true},
+	}
+
+	oauth := resolveMCPServerOAuth(entry, true)
+
+	require.Equal(t, 2048, oauth.MaxScopeCombinations)
+}
+
+// TestResolveMCPServerOAuthLeavesDeprecatedPathUntouched is the regression
+// test for the finding that the first version of this fix silently
+// coerced an operator-set 0 to 2048 on the deprecated top-level path too.
+// deprecatedServerEntry funnels the top-level options through the same
+// MCPServerEntry shape as mcp.servers, so without gating on fromServersMap,
+// resolveMCPServerOAuth could not tell "unset map entry" (should become
+// 2048) apart from "operator explicitly configured 0 at the top level"
+// (must stay 0, whatever failure that produces downstream). This asserts
+// fromServersMap: false leaves an explicit 0 as 0.
+func TestResolveMCPServerOAuthLeavesDeprecatedPathUntouched(t *testing.T) {
+	t.Parallel()
+
+	entry := config.MCPServerEntry{
+		Enabled: true,
+		Path:    "/mcp",
+		OAuth:   config.MCPOAuthConfiguration{Enabled: true, MaxScopeCombinations: 0},
+	}
+
+	oauth := resolveMCPServerOAuth(entry, false)
+
+	require.Equal(t, 0, oauth.MaxScopeCombinations)
+}
