@@ -516,7 +516,7 @@ func TestNatsEvents(t *testing.T) {
 				require.JSONEq(t, `{"employeeUpdated":{"id":3}}`, string(args.dataValue))
 			})
 
-			// Should not receive the second message because the subject is a different
+			// Should not receive the second message because the subject is different
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employee-updated.test2"), []byte(`{"id":3,"__typename": "Employee","tag": "test2"}`))
 			require.NoError(t, err)
 
@@ -526,7 +526,7 @@ func TestNatsEvents(t *testing.T) {
 			case <-time.After(5 * time.Second):
 			}
 
-			// Should receive the last message because we are targetting the same subject again
+			// Should receive the last message because we are targeting the same subject again
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employee-updated.test"), []byte(`{"id":12,"__typename": "Employee","tag": "test"}`))
 			require.NoError(t, err)
 
