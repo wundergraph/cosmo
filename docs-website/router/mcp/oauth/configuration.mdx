@@ -131,8 +131,9 @@ This follows the [RFC 9728](https://datatracker.ietf.org/doc/rfc9728/) path-awar
 </Info>
 
 <Warning>
-  When you run more than one MCP server with OAuth, set `oauth.jwks[].audiences` on each server to that server's
-  resource identifier. Without it, the router accepts a token minted for one server on every other server.
+  Without a matching audience, the router accepts a token minted for one MCP server on every other server. When
+  you run more than one MCP server with OAuth, set `oauth.jwks[].audiences` on each server to that server's
+  resource identifier.
 </Warning>
 
 **Example response:**

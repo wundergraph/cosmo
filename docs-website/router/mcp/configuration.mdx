@@ -83,8 +83,12 @@ For OAuth-related environment variables, see [OAuth Configuration Reference](/ro
 
 ## Running Multiple MCP Servers
 
-Use `mcp.servers` to run one or more MCP servers from a single router instance. Each server gets its own path, its
-own operations directory, and, optionally, its own OAuth configuration and base URL.
+Use `mcp.servers` to run one or more MCP servers from a single router instance. Each server gets its own:
+
+- Path
+- Operations directory
+- OAuth configuration (optional)
+- Base URL (optional)
 
 `mcp.servers` is a map. Each key names one server. Each value configures that server.
 
@@ -128,7 +132,7 @@ Every server in `mcp.servers` shares:
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
 | `enabled`                      | Starts this server. A server with no `enabled: true` never starts, even when `mcp.enabled` is `true`.                                                                                 | `false`                   |
 | `path`                          | The mount path for this server on the shared listener. Required for an enabled server. See [Path Rules](#path-rules).                                                                    | (required)                |
-| `base_url`                     | The public base URL for this server. Overrides `mcp.server.base_url`. Required when this server's `oauth.enabled` is `true`. Used for RFC 9728 metadata and `resource_metadata` headers. | `mcp.server.base_url`     |
+| `base_url`                     | The public base URL for this server. Overrides `mcp.server.base_url`. When this server's `oauth.enabled` is `true`, one of `base_url` or `mcp.server.base_url` must be set. Used for RFC 9728 metadata and `resource_metadata` headers. | `mcp.server.base_url`     |
 | `graph_name`                   | The name of the graph this server exposes. Feeds the `Name` field of `serverInfo` as `wundergraph-cosmo-<kebab-case graph_name>`.                                                        | the map key               |
 | `storage.provider_id`          | The ID of a `file_system` storage provider that holds this server's GraphQL operations.                                                                                                   | -                         |
 | `exclude_mutations`            | Excludes mutation operations from this server's tools.                                                                                                                                    | `false`                   |
@@ -146,8 +150,12 @@ Every server in `mcp.servers` shares:
 <Note>
   A field inside an `mcp.servers` entry takes only the value you give it in YAML. It does not read the `MCP_*`
   environment variables documented for the matching top-level option elsewhere on this page. An unset field
-  normally takes its Go zero value: `false` for a boolean, an empty string, `0` for a number, or `0s` for a
-  duration.
+  normally takes its Go zero value:
+
+  - `false` for a boolean
+  - An empty string
+  - `0` for a number
+  - `0s` for a duration
 
   `session.stateless` and `oauth.max_scope_combinations` are exceptions. The router applies their documented
   default when you leave them unset in an `mcp.servers` entry, so they match the deprecated top-level default:
@@ -155,11 +163,6 @@ Every server in `mcp.servers` shares:
   - `session.stateless` defaults to `true` inside `mcp.servers`, the same as the deprecated top-level
     `mcp.session.stateless`.
   - `oauth.max_scope_combinations` defaults to `2048` inside `mcp.servers`, the same as the top-level default.
-
-  One field still needs an explicit value:
-
-  - `oauth.jwks[].refresh_interval` defaults to `0s` inside `mcp.servers`. The top-level default is `1m`. Set it
-    explicitly on any server that enables OAuth with a remote JWKS URL.
 </Note>
 
 ### Path Rules
@@ -189,8 +192,8 @@ built-in tools, and serves no operation tools. The router logs an error naming t
 ### Multiple Servers with OAuth Behind a Load Balancer
 
 <Warning>
-  Set `oauth.jwks[].audiences` on every server that enables OAuth. Without a matching audience, the router accepts
-  a token minted for one server on every other server behind the same load balancer.
+  Without a matching audience, the router accepts a token minted for one server on every other server behind the
+  same load balancer. Set `oauth.jwks[].audiences` on every server that enables OAuth to prevent this.
 </Warning>
 
 Each server's `base_url` and `path` together determine the resource identifier it publishes and the URL where its
@@ -218,7 +221,8 @@ This server publishes:
 - RFC 9728 metadata: `https://billing.example.com/.well-known/oauth-protected-resource/billing/mcp`
 
 Set `oauth.jwks[].audiences` to the resource identifier, `https://billing.example.com/billing/mcp` in this example.
-A token whose `aud` claim does not match is rejected, even if it is valid for another server on the same router.
+The router rejects a token whose `aud` claim does not match, even when the token is valid for another server on
+the same router.
 
 A load balancer or reverse proxy in front of the router can change the host in these URLs. It must not change the
 path. The router derives both URLs from `base_url` and `path`. It does not know the load balancer's own hostname.
@@ -254,12 +258,19 @@ The deprecated options are:
 - `mcp.server.description`
 - `mcp.server.version`
 - `mcp.server.discover.instructions`
+- `mcp.session`
+
+The router's warning does not name `mcp.session`. `mcp.session.stateless` carries a default of `true`, so the
+router cannot tell a value you set from the default. The router still ignores it. `mcp.session.stateless: false`
+at the top level has no effect once `mcp.servers` has entries, and the router does not warn you. Set
+`session.stateless` on each entry that needs it.
 
 `mcp.router_url` only applies to the deprecated single-server form. It has no effect once `mcp.servers` has
-entries; the router uses its own GraphQL endpoint for every server in the map.
+entries. The router uses its own GraphQL endpoint for every server in the map.
 
 <Warning>
-  Moving to `mcp.servers` can change the identity your MCP server advertises. `graph_name` feeds the `Name` field of
+  When you do not set `graph_name` explicitly, moving to `mcp.servers` changes the identity your MCP server
+  advertises. `graph_name` feeds the `Name` field of
   MCP `serverInfo` as `wundergraph-cosmo-<kebab-case graph_name>`. In the map form, `graph_name` defaults to the map
   key, not to the old top-level `graph_name` value. Some MCP clients store trust or configuration against this
   name. Set `graph_name` explicitly on the entry to keep the name your clients already trust.
@@ -362,9 +373,9 @@ To configure sticky sessions:
 
 For details, see your load balancer or reverse proxy documentation (e.g., [F5 NGINX Plus - MCP Session Affinity](https://community.f5.com/kb/technicalarticles/mcp-session-affinity-with-f5-nginx-plus/341961)).
 
-In `mcp.servers`, sticky sessions apply per server. Each server keeps its own `Mcp-Session-Id` values; route on the
-`Mcp-Session-Id` header together with the request path so a session for `/mcp/support` never reaches the
-`/billing/mcp` server.
+In `mcp.servers`, sticky sessions apply per server. Each server keeps its own `Mcp-Session-Id` values. Route on
+the `Mcp-Session-Id` header together with the request path. This keeps a session for `/mcp/support` from ever
+reaching the `/billing/mcp` server.
 
 ## CORS
 
