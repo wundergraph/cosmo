@@ -2449,3 +2449,46 @@ mcp:
 	billing := cfg.Config.MCP.Servers["billing"]
 	require.Equal(t, "https://billing.example.com", billing.BaseURL)
 }
+
+func TestLoadMCPServersMapPathValidation(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		path    string
+		wantErr bool
+	}{
+		{name: "single character path is valid", path: "/a"},
+		{name: "leading double slash is rejected", path: "//foo", wantErr: true},
+		{name: "trailing slash is rejected", path: "/mcp/", wantErr: true},
+		{name: "wildcard is rejected", path: "/mcp/{id}", wantErr: true},
+		{name: "reserved oauth metadata prefix is rejected", path: "/.well-known/oauth-protected-resource/x", wantErr: true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			f := createTempFileFromFixture(t, fmt.Sprintf(`
+version: "1"
+mcp:
+  enabled: true
+  servers:
+    support:
+      enabled: true
+      path: "%s"
+      storage:
+        provider_id: support-ops
+`, tc.path))
+
+			_, err := LoadConfig([]string{f})
+
+			if tc.wantErr {
+				var js *jsonschema.ValidationError
+				require.ErrorAs(t, err, &js)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}

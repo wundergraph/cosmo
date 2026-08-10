@@ -26,6 +26,9 @@ func ValidateMountPath(p string) error {
 	if !strings.HasPrefix(p, "/") {
 		return fmt.Errorf("path %q must start with /", p)
 	}
+	if strings.HasPrefix(p, "//") {
+		return fmt.Errorf("path %q must not start with //", p)
+	}
 	if len(p) > 1 && strings.HasSuffix(p, "/") {
 		return fmt.Errorf("path %q must not end with /", p)
 	}

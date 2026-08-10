@@ -2749,7 +2749,7 @@
               "path": {
                 "type": "string",
                 "description": "The HTTP path this MCP server is mounted on. Must start with a single slash, must not end with a slash, and must not contain '{', '}', or '*'. Must not be the reserved OAuth protected resource metadata path.",
-                "pattern": "^/([^/{}*][^{}*]*[^/{}*])?$",
+                "pattern": "^/([^/{}*]|[^/{}*][^{}*]*[^/{}*])?$",
                 "not": { "pattern": "^/\\.well-known/oauth-protected-resource(/|$)" }
               },
               "base_url": { "type": "string", "format": "http-url" },
