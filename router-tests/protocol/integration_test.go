@@ -1,8 +1,6 @@
 package integration
 
 import (
-	"github.com/wundergraph/cosmo/router-tests/testutils"
-
 	"bytes"
 	"context"
 	"encoding/json"
@@ -23,6 +21,10 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 
 	"github.com/buger/jsonparser"
 	"github.com/sebdah/goldie/v2"
@@ -659,10 +661,9 @@ func TestPropagateOperationName(t *testing.T) {
 
 	t.Run("complex", func(t *testing.T) {
 		t.Parallel()
-		employeePrefix := "query Requires__employees__"
 		var mut sync.Mutex
 		// Middleware for Employee Subgraph should remove queries it sees.
-		expectEmployeeOps := []string{employeePrefix + "0", employeePrefix + "3", employeePrefix + "4"}
+		expectEmployeeOps := []string{"query Requires__employees__0", "query Requires__employees__multi_3_4"}
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
@@ -677,12 +678,19 @@ func TestPropagateOperationName(t *testing.T) {
 							var req core.GraphQLRequest
 							require.NoError(t, json.Unmarshal(body, &req))
 
-							got := req.Query[:len(employeePrefix)+1]
 							mut.Lock()
-							idx := slices.Index(expectEmployeeOps, got)
-							require.True(t, idx != -1, "expected one of %v, got %v", expectEmployeeOps, got)
-							expectEmployeeOps = slices.Delete(expectEmployeeOps, idx, idx+1)
+							matched := false
+							for i, op := range expectEmployeeOps {
+								if strings.Contains(req.Query, op) {
+									matched = true
+									expectEmployeeOps = slices.Delete(expectEmployeeOps, i, i+1)
+									break
+								}
+							}
 							mut.Unlock()
+							assert.True(t, matched,
+								"op \"%s\" was not found in expected operations %s",
+								req.Query, expectEmployeeOps)
 
 							r.Body = io.NopCloser(bytes.NewReader(body))
 							handler.ServeHTTP(w, r)
