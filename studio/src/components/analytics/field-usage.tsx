@@ -39,7 +39,9 @@ export const FieldUsage = ({ usageData }: { usageData: GetFieldUsageResponse }) 
   const organizationSlug = useCurrentOrganization()?.slug;
   const slug = router.query.slug;
 
-  const subgraphs = useContext(GraphContext)?.subgraphs ?? [];
+  const graphContext = useContext(GraphContext);
+  const subgraphs = graphContext?.subgraphs ?? [];
+  const featureSubgraphs = graphContext?.featureSubgraphs ?? [];
 
   const { range, dateRange } = useAnalyticsQueryState();
 
@@ -243,8 +245,20 @@ export const FieldUsage = ({ usageData }: { usageData: GetFieldUsageResponse }) 
               <h2 className="text-lg font-semibold">Subgraphs: </h2>
               <div className="mt-[2px] grid w-max grid-cols-3 gap-x-8">
                 {usageData.meta.subgraphIds.map((id) => {
-                  const subgraph = subgraphs.find((s) => s.id === id);
+                  const subgraph = [...subgraphs, ...featureSubgraphs].find((s) => s.id === id);
                   if (!subgraph) return null;
+
+                  const content = (
+                    <div className="flex items-start gap-x-1">
+                      <CubeIcon className="mt-1.5 flex-shrink-0 break-all" />
+                      {subgraph.name}
+                    </div>
+                  );
+
+                  // Feature subgraphs are not part of the federated graph, so there is no page to link to
+                  if (subgraph.isFeatureSubgraph) {
+                    return <div key={id}>{content}</div>;
+                  }
 
                   return (
                     <Link
@@ -257,10 +271,7 @@ export const FieldUsage = ({ usageData }: { usageData: GetFieldUsageResponse }) 
                       })}
                       className="text-primary"
                     >
-                      <div className="flex items-start gap-x-1">
-                        <CubeIcon className="mt-1.5 flex-shrink-0 break-all" />
-                        {subgraph.name}
-                      </div>
+                      {content}
                     </Link>
                   );
                 })}
