@@ -13,6 +13,5 @@ type Query {
 
 type Employee @key(fields: "id tag") {
   id: Int!
-  name: String!
   tag: String! @inaccessible
 }

@@ -30,8 +30,7 @@ type Subscription {
     @openfed__subscriptionFilter(condition: { IN: { fieldPath: "tag", values: ["{{ args.tag }}"] } })
 }
 
-type Employee @key(fields: "id name tag", resolvable: false) {
+type Employee @key(fields: "id tag", resolvable: false) {
     id: Int! @external
-    name: String! @external
     tag: String! @external
 }

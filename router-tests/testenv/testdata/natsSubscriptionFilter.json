@@ -15,7 +15,6 @@
             "typeName": "Employee",
             "fieldNames": [
               "id",
-              "name",
               "tag"
             ]
           }
@@ -41,10 +40,10 @@
           },
           "federation": {
             "enabled": true,
-            "serviceSdl": "extend schema\n@link(\n  url: \"https://specs.apollo.dev/federation/v2.5\",\n  import: [\n    \"@key\",\n    \"@inaccessible\"\n  ]\n)\n\ntype Query {\n  employees: [Employee!]!\n}\n\ntype Employee @key(fields: \"id tag\") {\n  id: Int!\n  name: String!\n  tag: String! @inaccessible\n}"
+            "serviceSdl": "extend schema\n@link(\n  url: \"https://specs.apollo.dev/federation/v2.5\",\n  import: [\n    \"@key\",\n    \"@inaccessible\"\n  ]\n)\n\ntype Query {\n  employees: [Employee!]!\n}\n\ntype Employee @key(fields: \"id tag\") {\n  id: Int!\n  tag: String! @inaccessible\n}"
           },
           "upstreamSchema": {
-            "key": "63a7923d51d6ba49aa8827f95769978b771e3740"
+            "key": "1857abbe55d3622709467786ac865b547600a0af"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -71,12 +70,10 @@
             "typeName": "Employee",
             "fieldNames": [
               "id",
-              "name",
               "tag"
             ],
             "externalFieldNames": [
               "id",
-              "name",
               "tag"
             ]
           }
@@ -87,7 +84,7 @@
         "keys": [
           {
             "typeName": "Employee",
-            "selectionSet": "id name tag",
+            "selectionSet": "id tag",
             "disableEntityResolver": true
           }
         ],
@@ -128,12 +125,12 @@
         }
       }
     ],
-    "graphqlSchema": "schema {\n  query: Query\n  subscription: Subscription\n}\n\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Query {\n  employees: [Employee!]!\n}\n\ntype Employee {\n  id: Int!\n  name: String!\n  tag: String! @inaccessible\n}\n\ntype Subscription {\n  employeeUpdated(tag: String!): Employee!\n}",
+    "graphqlSchema": "schema {\n  query: Query\n  subscription: Subscription\n}\n\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Query {\n  employees: [Employee!]!\n}\n\ntype Employee {\n  id: Int!\n  tag: String! @inaccessible\n}\n\ntype Subscription {\n  employeeUpdated(tag: String!): Employee!\n}",
     "stringStorage": {
-      "63a7923d51d6ba49aa8827f95769978b771e3740": "schema {\n  query: Query\n}\n\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ntype Employee @key(fields: \"id tag\") {\n  id: Int!\n  name: String!\n  tag: String! @inaccessible\n}\n\ntype Query {\n  employees: [Employee!]!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet",
-      "fcb7d724d119d864dbc6356fec3a1a87822cb71a": "schema {\n  subscription: Subscription\n}\n\ndirective @edfs__natsSubscribe(providerId: String! = \"default\", streamConfiguration: edfs__NatsStreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ndirective @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION\n\ntype Employee @key(fields: \"id name tag\", resolvable: false) {\n  id: Int! @external\n  name: String! @external\n  tag: String! @external\n}\n\ntype Subscription {\n  employeeUpdated(tag: String!): Employee! @edfs__natsSubscribe(subjects: [\"employee-updated.{{ args.tag }}\"], providerId: \"my-nats\") @openfed__subscriptionFilter(condition: {IN: {fieldPath: \"tag\", values: [\"{{ args.tag }}\"]}})\n}\n\ninput edfs__NatsStreamConfiguration {\n  consumerInactiveThreshold: Int! = 30\n  consumerName: String!\n  streamName: String!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet\n\ninput openfed__SubscriptionFieldCondition {\n  fieldPath: String!\n  values: [openfed__SubscriptionFilterValue]!\n}\n\ninput openfed__SubscriptionFilterCondition {\n  AND: [openfed__SubscriptionFilterCondition!]\n  IN: openfed__SubscriptionFieldCondition\n  NOT: openfed__SubscriptionFilterCondition\n  OR: [openfed__SubscriptionFilterCondition!]\n}\n\nscalar openfed__SubscriptionFilterValue"
+      "1857abbe55d3622709467786ac865b547600a0af": "schema {\n  query: Query\n}\n\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ntype Employee @key(fields: \"id tag\") {\n  id: Int!\n  tag: String! @inaccessible\n}\n\ntype Query {\n  employees: [Employee!]!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet",
+      "03847ea04927ef650c32666c8f9a976aaf227515": "schema {\n  subscription: Subscription\n}\n\ndirective @edfs__natsSubscribe(providerId: String! = \"default\", streamConfiguration: edfs__NatsStreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ndirective @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION\n\ntype Employee @key(fields: \"id tag\", resolvable: false) {\n  id: Int! @external\n  tag: String! @external\n}\n\ntype Subscription {\n  employeeUpdated(tag: String!): Employee! @edfs__natsSubscribe(subjects: [\"employee-updated.{{ args.tag }}\"], providerId: \"my-nats\") @openfed__subscriptionFilter(condition: {IN: {fieldPath: \"tag\", values: [\"{{ args.tag }}\"]}})\n}\n\ninput edfs__NatsStreamConfiguration {\n  consumerInactiveThreshold: Int! = 30\n  consumerName: String!\n  streamName: String!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet\n\ninput openfed__SubscriptionFieldCondition {\n  fieldPath: String!\n  values: [openfed__SubscriptionFilterValue]!\n}\n\ninput openfed__SubscriptionFilterCondition {\n  AND: [openfed__SubscriptionFilterCondition!]\n  IN: openfed__SubscriptionFieldCondition\n  NOT: openfed__SubscriptionFilterCondition\n  OR: [openfed__SubscriptionFilterCondition!]\n}\n\nscalar openfed__SubscriptionFilterValue"
     },
-    "graphqlClientSchema": "schema {\n  query: Query\n  subscription: Subscription\n}\n\ntype Query {\n  employees: [Employee!]!\n}\n\ntype Employee {\n  id: Int!\n  name: String!\n}\n\ntype Subscription {\n  employeeUpdated(tag: String!): Employee!\n}"
+    "graphqlClientSchema": "schema {\n  query: Query\n  subscription: Subscription\n}\n\ntype Query {\n  employees: [Employee!]!\n}\n\ntype Employee {\n  id: Int!\n}\n\ntype Subscription {\n  employeeUpdated(tag: String!): Employee!\n}"
   },
   "version": "00000000-0000-0000-0000-000000000000",
   "subgraphs": [
