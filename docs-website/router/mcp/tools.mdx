@@ -320,6 +320,110 @@ mcp:
 
 The generated schemas are intentionally permissive: they describe what the router returns without over-constraining it, so a valid GraphQL response is never rejected by a client validating against the schema. Fields behind `@skip`, `@include`, or `@defer` directives and fragments on abstract types are marked optional, and custom scalars accept any JSON value. If a schema cannot be derived for an operation, the tool is still registered, just without an output schema.
 
+### Results carry the response twice
+
+When the flag is on, a successful tool result contains the response in two fields:
+
+- The `content` field carries the response as serialized JSON in a text block.
+- The `structuredContent` field carries the response as a JSON object.
+
+The MCP specification requires this shape. A tool that declares an output schema must return structured results that conform to the schema. For backwards compatibility, the specification also recommends that the tool returns the serialized JSON in a text block. Clients that do not read `structuredContent` still receive the full response as text.
+
+### Example: the same requests with the flag off and on
+
+The example below uses a mutation operation `UpdateMood`. The router exposes it as the tool `execute_operation_update_mood`.
+
+List the tools:
+
+```sh
+curl -s -X POST http://localhost:5025/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+When `output_schema.enabled` is `false` (the default), the tool declares only an input schema:
+
+```json
+{
+  "name": "execute_operation_update_mood",
+  "description": "This mutation update the mood of an employee.",
+  "inputSchema": { "...": "..." }
+}
+```
+
+When `output_schema.enabled` is `true`, the same tool also declares an output schema for the response envelope:
+
+```json
+{
+  "name": "execute_operation_update_mood",
+  "description": "This mutation update the mood of an employee.",
+  "inputSchema": { "...": "..." },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": ["object", "null"],
+        "properties": {
+          "updateMood": {
+            "type": "object",
+            "properties": {
+              "currentMood": { "enum": ["HAPPY", "SAD"], "type": "string" },
+              "details": {
+                "type": ["object", "null"],
+                "properties": { "forename": { "type": "string" } },
+                "required": ["forename"]
+              },
+              "id": { "type": "integer" }
+            },
+            "required": ["currentMood", "details", "id"]
+          }
+        },
+        "required": ["updateMood"]
+      }
+    }
+  }
+}
+```
+
+Call the tool:
+
+```sh
+curl -s -X POST http://localhost:5025/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"execute_operation_update_mood","arguments":{"employeeID":2,"mood":"HAPPY"}}}'
+```
+
+When `output_schema.enabled` is `false`, the result carries the response only as text:
+
+```json
+{
+  "content": [
+    { "type": "text", "text": "{\"data\":{\"updateMood\":{\"id\":2,\"details\":{\"forename\":\"Dustin\"},\"currentMood\":\"HAPPY\"}}}" }
+  ]
+}
+```
+
+When `output_schema.enabled` is `true`, the result also carries the response as structured content:
+
+```json
+{
+  "content": [
+    { "type": "text", "text": "{\"data\":{\"updateMood\":{\"id\":2,\"details\":{\"forename\":\"Dustin\"},\"currentMood\":\"HAPPY\"}}}" }
+  ],
+  "structuredContent": {
+    "data": {
+      "updateMood": {
+        "id": 2,
+        "details": { "forename": "Dustin" },
+        "currentMood": "HAPPY"
+      }
+    }
+  }
+}
+```
+
 ## Best Practices
 
 ### Write Effective Descriptions
