@@ -518,6 +518,8 @@ message GetFederatedGraphByNameResponse {
   FederatedGraph graph = 2;
   repeated Subgraph subgraphs = 3;
   string graphRequestToken = 4;
+  // The feature subgraphs that are part of the feature flags which match this federated graph.
+  repeated Subgraph featureSubgraphs = 5;
 }
 
 message GetFederatedGraphSDLByNameRequest {
