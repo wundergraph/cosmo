@@ -36,7 +36,7 @@ func NewRedisCache(client redis.UniversalClient, prefix string) (*RedisCache, er
 	return &RedisCache{client: client, prefix: prefix}, nil
 }
 
-// GetMany returns one result per key, in the same order as keys.
+// GetMany implements enginecache.GetMany.
 func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]enginecache.Item, error) {
 	if len(keys) == 0 {
 		return nil, nil
@@ -100,13 +100,7 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]eng
 	return results, nil
 }
 
-// SetMany stores every item, all of which must carry a positive TTL. A single
-// item without one fails the whole batch with an ErrMissingTTL and nothing is
-// written.
-//
-// Any other failure can leave the batch applied in part, since redis runs each
-// command in a pipeline as it arrives. When some of it was confirmed written
-// the error is a *SetManyError naming those keys.
+// SetMany implements enginecache.SetMany.
 func (c *RedisCache) SetMany(ctx context.Context, items []enginecache.Item) error {
 	if len(items) == 0 {
 		return nil
