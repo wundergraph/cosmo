@@ -20,11 +20,12 @@ export const CopyOperation = () => {
   const activeTab = useMemo(() => tabsState.tabs[tabsState.activeTabIndex], [tabsState]);
   const query = activeTab?.query ?? '';
 
+  // only one toast is visible at a time, so the callers below report the outcome once, last
   const copyToClipboard = useCallback(
-    async (value: string, description: string) => {
+    async (value: string) => {
       try {
         await navigator.clipboard.writeText(value);
-        toast({ description, duration: 3000 });
+        return true;
       } catch (error) {
         toast({
           variant: 'destructive',
@@ -34,21 +35,24 @@ export const CopyOperation = () => {
         if (process.env.NODE_ENV === 'development') {
           console.error(error);
         }
+        return false;
       }
     },
     [toast],
   );
 
-  const copyQuery = useCallback(() => {
+  const copyQuery = useCallback(async () => {
     if (!query) {
       toast({ description: 'There is no operation to copy', duration: 3000 });
       return;
     }
 
-    copyToClipboard(query, 'Query copied to clipboard');
+    if (await copyToClipboard(query)) {
+      toast({ description: 'Query copied to clipboard', duration: 3000 });
+    }
   }, [copyToClipboard, query, toast]);
 
-  const copyCurl = useCallback(() => {
+  const copyCurl = useCallback(async () => {
     if (!query) {
       toast({ description: 'There is no operation to copy', duration: 3000 });
       return;
@@ -74,10 +78,20 @@ export const CopyOperation = () => {
       extraHeaders: featureFlagName ? { 'X-Feature-Flag': featureFlagName } : undefined,
     });
 
-    copyToClipboard(command, 'cURL request copied to clipboard');
+    if (!(await copyToClipboard(command))) {
+      return;
+    }
 
-    warnings.forEach((warning) => {
-      toast({ variant: 'destructive', title: 'Heads up!', description: warning, duration: 5000 });
+    if (warnings.length === 0) {
+      toast({ description: 'cURL request copied to clipboard', duration: 3000 });
+      return;
+    }
+
+    toast({
+      variant: 'destructive',
+      title: 'cURL request copied with warnings',
+      description: warnings.join(' '),
+      duration: 5000,
     });
   }, [activeTab, copyToClipboard, featureFlagName, graphId, query, routingUrl, toast]);
 
