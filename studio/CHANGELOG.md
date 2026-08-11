@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.180.0](https://github.com/wundergraph/cosmo/compare/studio@0.179.0...studio@0.180.0) (2026-08-11)
+
+### Features
+
+* add copy cURL request option to playground copy button ([#3141](https://github.com/wundergraph/cosmo/issues/3141)) ([6b57d4c](https://github.com/wundergraph/cosmo/commit/6b57d4c4a0a84d8d9eb3e3d543987c4847fa1d8e)) (@JivusAyrus)
+
 # [0.179.0](https://github.com/wundergraph/cosmo/compare/studio@0.178.7...studio@0.179.0) (2026-08-10)
 
 ### Features
