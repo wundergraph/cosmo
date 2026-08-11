@@ -482,7 +482,7 @@ func TestNatsEvents(t *testing.T) {
 			}
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
-			client := graphql.NewSubscriptionClient(surl)
+			client := graphql.NewSubscriptionClient(surl).WithSyncMode(true)
 
 			subscriptionArgsCh := make(chan natsSubscriptionArgs)
 			subscriptionID, err := client.Subscribe(&subscriptionPayload, nil, func(dataValue []byte, errValue error) error {
@@ -504,30 +504,28 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
 			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
-			// Receive the first message
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employee-updated.test"), []byte(`{"id":3,"__typename": "Employee","tag": "test"}`))
-			require.NoError(t, err)
-
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
+			// Receive the first message, which matches the filter
+			subject := xEnv.GetPubSubName("employee-updated.test")
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee","tag": "test"}`), 1, EventWaitTimeout)
 
 			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdated":{"id":3}}`, string(args.dataValue))
 			})
 
-			// Should not receive the message because it should be successfully filtered
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employee-updated.test2"), []byte(`{"id":3,"__typename": "Employee","tag": "test2"}`))
+			// Published on the subject the subscription listens on, but the tag does not match the filter condition,
+			//so the message must be filtered out
+			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":7,"__typename": "Employee","tag": "other"}`))
 			require.NoError(t, err)
 
-			select {
-			case args := <-subscriptionArgsCh:
-				t.Fatalf("received unexpected additional message: data=%s err=%v", args.dataValue, args.errValue)
-			case <-time.After(5 * time.Second):
-			}
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
 
-			// Should receive the last message because we are targeting the same subject again
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employee-updated.test"), []byte(`{"id":12,"__typename": "Employee","tag": "test"}`))
+			// Should receive the last message because it matches the filter again
+			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":12,"__typename": "Employee","tag": "test"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
 			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
