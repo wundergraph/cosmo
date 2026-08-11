@@ -1340,7 +1340,11 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
       >
         {activeFeatureFlagIsStale && (
           <CompositionErrorsBanner
-            viewCompositionsHref={`/${organizationSlug}/${namespace}/graph/${graphName}/compositions`}
+            viewCompositionsHref={buildUrl('/:organizationSlug/:namespace/graph/:graphName/compositions', {
+              organizationSlug,
+              namespace,
+              graphName,
+            })}
             className="mx-4 mt-4"
           />
         )}

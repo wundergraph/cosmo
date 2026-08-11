@@ -24,6 +24,7 @@ import {
 import { Loader } from '@/components/ui/loader';
 import { Separator } from '@/components/ui/separator';
 import useHash from '@/hooks/use-hash';
+import { buildUrl } from '@/lib/build-url';
 import { formatDateTime } from '@/lib/format-date';
 import { NextPageWithLayout } from '@/lib/page';
 import { useQuery } from '@connectrpc/connect-query';
@@ -347,7 +348,11 @@ const SDLPage: NextPageWithLayout = () => {
         )}
         {activeFeatureFlagIsStale && activeFeatureFlag && (
           <CompositionErrorsBanner
-            viewCompositionsHref={`/${organizationSlug}/${namespace}/graph/${graphName}/compositions`}
+            viewCompositionsHref={buildUrl('/:organizationSlug/:namespace/graph/:graphName/compositions', {
+              organizationSlug,
+              namespace,
+              graphName,
+            })}
             className="mx-4 mt-4"
           />
         )}
