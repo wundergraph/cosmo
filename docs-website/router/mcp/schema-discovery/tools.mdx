@@ -1,0 +1,164 @@
+---
+title: 'Tools'
+description: 'Reference for the search_schema, get_symbols and generate_query tools.'
+icon: 'wrench'
+---
+
+The MCP server registers these three tools when `mcp.schema_discovery.enabled` is `true`.
+
+All three tools are read only. None of them changes your data or your schema.
+
+## search_schema
+
+Ranks schema elements against a topic.
+
+### Input
+
+| Field | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `query` | string | yes | | The topic, in your own words. |
+| `kinds` | string[] | no | all | Restrict to these kinds. See [Kinds](#kinds). |
+| `limit` | integer | no | 10 | The number of hits to return. |
+| `parent` | string | no | | Restrict to the members of one coordinate, for example `object:Query`. |
+| `paginated` | boolean | no | | `true` keeps only Relay connection fields. `false` removes them. |
+
+### Kinds
+
+`object`, `interface`, `union`, `enum`, `scalar`, `input`, `field`, `input_field`, `path`.
+
+An unknown kind matches nothing. The tool schema constrains the input to this list.
+
+### Response
+
+```json
+{
+  "hits": [
+    {
+      "coordinate": "field:Employee.details",
+      "score": 0.049,
+      "record": { "Coordinate": "field:Employee.details", "TypeRef": "Details" }
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `hits[].coordinate` | string | The canonical `kind:Type.field` path. |
+| `hits[].score` | number | The relevance rank. |
+| `hits[].record` | object | The full record of the element. |
+
+The `hits` list is absent when nothing matches.
+
+<Note>
+The records are large. Use a low `limit`.
+</Note>
+
+## get_symbols
+
+Reads the full record for each coordinate.
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `coordinates` | string[] | yes | The coordinates to read. At least one. |
+
+Copy each coordinate from a `search_schema` result. A coordinate has one of these forms:
+
+- `field:Type.fieldName`
+- `object:TypeName`
+- `input:TypeName`
+- `enum:TypeName`
+
+### Response
+
+```json
+{
+  "symbols": [
+    { "coordinate": "enum:Mood", "record": { "Values": [{ "Name": "HAPPY" }, { "Name": "SAD" }] } }
+  ]
+}
+```
+
+The response keeps the order of the request. It omits a coordinate that the index does not hold. A short response is not an error.
+
+## generate_query
+
+Makes a GraphQL operation from a prompt.
+
+This tool takes 10 to 30 seconds.
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `prompt` | string | yes | A description of the data that you want, in your own words. |
+
+Write the entities and the fields that you want. Give the filter conditions and the sort order. Do not write GraphQL syntax. Do not guess type names.
+
+### Response
+
+```json
+{
+  "queries": [
+    {
+      "description": "Lists employees with their ids and current moods.",
+      "document": "query Query { employees { id currentMood } }",
+      "operationName": "Query",
+      "operationType": "query",
+      "variablesSchema": { "type": "object", "additionalProperties": false }
+    }
+  ],
+  "unsatisfied": [],
+  "truncated": false,
+  "guidance": {
+    "endpoint": "http://localhost:3002/graphql",
+    "nextSteps": ["Run the operation against the endpoint. ..."]
+  }
+}
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `queries[].document` | string | The operation text. It is valid against your schema. |
+| `queries[].operationName` | string | The name to send with the request. |
+| `queries[].operationType` | string | `query`, `mutation`, or `subscription`. |
+| `queries[].variablesSchema` | object | A JSON Schema for the variables. |
+| `queries[].description` | string | One line that says what the operation does. |
+| `unsatisfied[]` | string[] | What the schema cannot answer, and why. |
+| `truncated` | boolean | `true` if the service stopped early. |
+| `guidance` | object | What to do with the operation. Absent when there is no operation. |
+
+<Note>
+A response with no queries and one `unsatisfied` reason is a normal result. It is not an error. It tells you that your schema cannot answer the request.
+</Note>
+
+### Parameterized operations
+
+A value in your prompt becomes a GraphQL variable. It does not become a literal.
+
+A prompt that asks for "the first 10 employees" returns a variable for the count, with the default from your schema. Your prompt selects the shape of the operation. You supply the values at run time.
+
+One operation thus serves many different inputs. Generate one time, then call many times.
+
+## Errors
+
+Each tool returns a readable message. The tools return no protocol error, because an agent can read a tool result and act on it.
+
+| Message | Cause | What the caller does |
+| --- | --- | --- |
+| The schema index is still building. Retry in a few seconds. | The first build is in flight. | Retry. |
+| The schema index expired. It is being rebuilt. Retry in a few seconds. | The service dropped an unused index. The router rebuilds it. | Retry. |
+| The schema index is not ready. Retry in a few seconds. | The service reports that the index cannot serve yet. | Retry. |
+| Schema discovery is not configured correctly. Contact the router operator. | The token is missing, wrong, or expired. | Do not retry. Tell the operator. |
+| The request is not valid. | The input is wrong, or the prompt asks for no data. | Do not retry. Fix the input. |
+| The schema discovery service is unreachable. | The router cannot reach the service. | Tell the operator. |
+
+The router never puts the token into a message or a log.
+
+## Security
+
+`search_schema` and `generate_query` show the shape of your schema to any caller that reaches the MCP server. This is the same exposure that `get_schema` gives.
+
+These tools carry no `@requiresScopes` directive, so the [scope middleware](/router/mcp/oauth/scopes) derives no per-tool scope for them. Use the `tools_call` scope to gate them.

@@ -24,6 +24,12 @@ The MCP server gives AI models a set of tools they can discover and execute. It 
   intended. Prefer creating focused tools.
 </Warning>
 
+<Note>
+  [Schema discovery](/router/mcp/schema-discovery/overview) adds three more built-in tools: `search_schema`,
+  `get_symbols` and `generate_query`. They let a model search a large schema and generate a valid operation, without
+  the full schema in its context. Use them instead of `get_schema` when your schema is large.
+</Note>
+
 ## Creating Tools
 
 Create a directory for your tools (as specified in your [storage provider configuration](/router/mcp/configuration#storage-providers)) and add `.graphql` or `.gql` files containing GraphQL operations.

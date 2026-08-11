@@ -1236,6 +1236,10 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpOpts = append(mcpOpts, mcpserver.WithResourceDocumentation(r.mcp.ResourceDocumentation))
 	}
 
+	if r.mcp.SchemaDiscovery.Enabled {
+		mcpOpts = append(mcpOpts, mcpserver.WithSchemaDiscovery(&r.mcp.SchemaDiscovery))
+	}
+
 	mcpGraphQLEndpoint := r.graphqlEndpointURL
 	if r.mcp.RouterURL != "" {
 		mcpGraphQLEndpoint = r.mcp.RouterURL

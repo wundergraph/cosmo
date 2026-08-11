@@ -226,7 +226,15 @@
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
     },
-    "ResourceDocumentation": ""
+    "ResourceDocumentation": "",
+    "SchemaDiscovery": {
+      "Enabled": false,
+      "URL": "",
+      "Token": "",
+      "RequestTimeout": 90000000000,
+      "IndexPollInterval": 2000000000,
+      "IndexTimeout": 600000000000
+    }
   },
   "ConnectRPC": {
     "Enabled": false,

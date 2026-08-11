@@ -1,0 +1,157 @@
+---
+title: 'Guides'
+description: 'Solve one task at a time: find duplicate work, curate an operation into a tool, or use an operation in a BFF.'
+icon: 'list-check'
+---
+
+Each guide solves one problem. Read only the guide that you need.
+
+## Find out if a capability already exists
+
+Use this guide before you build a new field, a new resolver, or a new subgraph.
+
+A large organisation runs many teams. Two teams add the same capability under different names. Schema discovery finds the first one before you build the second.
+
+### Step 1 - Search by intent
+
+Describe the capability in your own words. Do not guess field names.
+
+```json
+{ "query": "customer billing address", "kinds": ["field"], "limit": 5 }
+```
+
+The search matches meaning, not text. It finds `Customer.invoiceAddress` and `Account.billingAddr` even though neither name contains your words. A text search over the schema finds neither.
+
+### Step 2 - Ask for the operation you were about to build
+
+```json
+{ "prompt": "get the billing address and payment status for a customer" }
+```
+
+Read the result. It gives you a decision.
+
+| Result | Meaning | What you do |
+| --- | --- | --- |
+| One or more `queries` | The capability exists today. | Use the operation. Do not build it. |
+| Empty `queries` and one `unsatisfied` reason | The schema cannot answer this. | Build the capability. |
+
+### Step 3 - Read the reason
+
+The `unsatisfied` reason names what is missing.
+
+```json
+{
+  "unsatisfied": [
+    "The indexed schema exposes products, employees, and locations, but no invoice entity, billing address, or payment status."
+  ]
+}
+```
+
+Collect these reasons across your teams. They tell you what consumers want and your graph does not have.
+
+### What this guide does not tell you
+
+The index holds the composed schema. It cannot show a subgraph that nobody published yet. Another team can be halfway through the same work.
+
+Check your schema registry as well, before you commit to a build.
+
+## Turn a generated operation into a tool
+
+Use this guide to give an agent a curated tool instead of an open prompt.
+
+The router generates an operation. The router never publishes it. You review the operation first, then publish it yourself. Your production router then exposes it as its own MCP tool.
+
+### Step 1 - Generate in a development router
+
+Run schema discovery in a development router. Send the prompt.
+
+```json
+{ "prompt": "list active employees with their department and current mood" }
+```
+
+### Step 2 - Review the document
+
+Read the `document` field. Check three things:
+
+- The operation reads only the fields that you intend to expose.
+- The operation is a `query` when you expect no side effect.
+- The variables carry the filters that you want the caller to control.
+
+Give the operation a clear name. The name becomes the tool name.
+
+### Step 3 - Save the operation
+
+Write the document to your MCP operations directory.
+
+```graphql operations/ListActiveEmployees.graphql
+query ListActiveEmployees($limit: Int) {
+  employees(limit: $limit) {
+    id
+    details {
+      forename
+      surname
+    }
+    currentMood
+  }
+}
+```
+
+Add a description above the operation. The description becomes the tool description, so write it for the agent.
+
+### Step 4 - Deploy to production
+
+Deploy the operation to your production router. Turn schema discovery off there, and turn arbitrary operations off.
+
+```yaml production.config.yaml
+mcp:
+  enabled: true
+  enable_arbitrary_operations: false
+  expose_schema: false
+  schema_discovery:
+    enabled: false
+```
+
+Your production router now exposes one typed tool. It runs no arbitrary GraphQL, and it sends no schema to an external service.
+
+This is the curated path. Discovery happens in development. Production runs only what you reviewed.
+
+## Use a generated operation in a BFF
+
+Use this guide to put an operation into an application.
+
+### Step 1 - Take both fields
+
+A generated operation gives you two things:
+
+- `document` is the operation text.
+- `variablesSchema` is a JSON Schema for the variables.
+
+### Step 2 - Send the document and the variables
+
+```javascript
+const response = await fetch('https://router.example.com/graphql', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    query: document,
+    variables: { limit: 10 },
+  }),
+});
+```
+
+The operation is parameterized. Your prompt selected the shape. You supply the values at run time, so one operation serves many requests.
+
+### Step 3 - Use the variables schema to type the inputs
+
+The variables schema carries the descriptions and the allowed values from your GraphQL schema. Use it in two ways:
+
+- Generate types for your application.
+- Register the operation as a tool for a language model. The tool name comes from `operationName`, the description from `description`, and the input schema from `variablesSchema`.
+
+A model then fills the variables correctly. It cannot invent a value for an enum, because the schema lists only the allowed names.
+
+### Step 4 - Generate one time
+
+Generation takes 10 to 30 seconds and uses a language model. Do not call it in your request path.
+
+Generate the operation one time. Store the document. Ship it with your application.

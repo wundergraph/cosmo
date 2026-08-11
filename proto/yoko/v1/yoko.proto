@@ -1,0 +1,144 @@
+syntax = "proto3";
+
+package yoko.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/wundergraph/yoko/gen/yoko/v1;yokov1";
+
+service YokoService {
+  // EnsureIndex is the idempotent write path: it creates the index for this
+  // SDL on first sight (building asynchronously), retries a failed build,
+  // schedules an in-place rebuild when the index predates the current
+  // indexer version, and otherwise no-ops. It returns immediately with the
+  // index state; poll GetIndex for readiness.
+  rpc EnsureIndex(EnsureIndexRequest) returns (EnsureIndexResponse);
+  rpc GetIndex(GetIndexRequest) returns (GetIndexResponse);
+  rpc ListIndexes(ListIndexesRequest) returns (ListIndexesResponse);
+  rpc DeleteIndex(DeleteIndexRequest) returns (DeleteIndexResponse);
+
+  rpc SearchSchema(SearchSchemaRequest) returns (SearchSchemaResponse);
+  rpc GetSymbols(GetSymbolsRequest) returns (GetSymbolsResponse);
+
+  rpc GenerateQuery(GenerateQueryRequest) returns (GenerateQueryResponse);
+}
+
+enum IndexStatus {
+  INDEX_STATUS_UNSPECIFIED = 0;
+  // Initial build in flight; not yet servable.
+  INDEX_STATUS_INDEXING = 1;
+  // Servable. A READY index keeps serving through in-place rebuilds and
+  // even after a failed rebuild (see Index.stale / Index.error).
+  INDEX_STATUS_READY = 2;
+  // Initial build failed; no symbols exist. EnsureIndex retries it.
+  INDEX_STATUS_FAILED = 3;
+}
+
+message Index {
+  // Content address: "sha256:" + hex(SHA-256(sdl bytes)).
+  string index_id = 1;
+  IndexStatus status = 2;
+  // Built by an older indexer version; an in-place rebuild is due. Still
+  // servable in the meantime.
+  bool stale = 3;
+  int64 symbol_count = 4;
+  google.protobuf.Timestamp created_at = 5;
+  // When the current symbols finished building.
+  google.protobuf.Timestamp indexed_at = 6;
+  // Failure detail: the initial build's when status is FAILED, or the most
+  // recent rebuild's on a still-READY index.
+  string error = 7;
+}
+
+// SymbolHit is one symbol record. payload carries the full record as a
+// JSON-encoded string; kind, name, and parent live inside it, and kind
+// and name are exactly the two halves of coordinate.
+message SymbolHit {
+  // Canonical "<kind>:<coordinate>" symbol path; the record key.
+  string coordinate = 1;
+  // Relevance rank. Set only by SearchSchema; GetSymbols leaves it 0.
+  double score = 2;
+  string payload = 3;
+}
+
+message EnsureIndexRequest {
+  // Exact SDL bytes; these are what the address hashes. Must not be blank.
+  string sdl = 1 [(buf.validate.field).string.pattern = "\\S"];
+}
+message EnsureIndexResponse {
+  Index index = 1;
+}
+
+message GetIndexRequest {
+  string index_id = 1 [(buf.validate.field).string.pattern = "^sha256:[0-9a-f]{64}$"];
+}
+message GetIndexResponse {
+  Index index = 1;
+}
+
+message ListIndexesRequest {}
+message ListIndexesResponse {
+  repeated Index indexes = 1;
+}
+
+message DeleteIndexRequest {
+  string index_id = 1 [(buf.validate.field).string.pattern = "^sha256:[0-9a-f]{64}$"];
+}
+message DeleteIndexResponse {}
+
+message SearchSchemaRequest {
+  string index_id = 1 [(buf.validate.field).string.pattern = "^sha256:[0-9a-f]{64}$"];
+  string query = 2 [(buf.validate.field).string.pattern = "\\S"];
+  // 0 = backend default.
+  int32 limit = 3 [(buf.validate.field).int32.gte = 0];
+  // Restrict to symbol kinds — the "<kind>:" coordinate prefixes
+  // ("object", "interface", "union", "enum", "scalar", "input", "field",
+  // "input_field", "path"). Unknown kinds match nothing.
+  repeated string kinds = 4;
+  repeated string roots = 5;
+  string parent = 6;
+  // true restricts to Relay connection (paginated) fields, false to
+  // non-paginated fields; unset applies no filter.
+  optional bool paginated = 7;
+}
+message SearchSchemaResponse {
+  repeated SymbolHit hits = 1;
+}
+
+message GetSymbolsRequest {
+  string index_id = 1 [(buf.validate.field).string.pattern = "^sha256:[0-9a-f]{64}$"];
+  repeated string coordinates = 2 [(buf.validate.field).repeated.min_items = 1];
+}
+message GetSymbolsResponse {
+  repeated SymbolHit symbols = 1;
+}
+
+message GenerateQueryRequest {
+  string index_id = 1 [(buf.validate.field).string.pattern = "^sha256:[0-9a-f]{64}$"];
+  string prompt = 2 [(buf.validate.field).string.pattern = "\\S"];
+}
+message GenerateQueryResponse {
+  Resolution resolution = 1;
+}
+
+message Resolution {
+  repeated ResolvedQuery queries = 1;
+  repeated Unsatisfied unsatisfied = 2;
+  bool truncated = 3;
+}
+
+message ResolvedQuery {
+  string description = 1;
+  string document = 2;
+  string operation_name = 3;
+  // The operation keyword as it appears in document: "query", "mutation"
+  // or "subscription".
+  string operation_type = 4;
+  // JSON Schema for the operation's variables, as a JSON-encoded string.
+  string variables_schema = 5;
+}
+
+message Unsatisfied {
+  string reason = 1;
+}

@@ -1,0 +1,63 @@
+# MCP Schema Discovery - Example Config
+# yaml-language-server: $schema=./pkg/config/config.schema.json
+#
+# Example config for running the router MCP server with schema discovery.
+#
+# Schema discovery indexes the client schema in an external service. An agent
+# then searches the schema and generates operations without the schema in its
+# context.
+#
+# Usage (from the router/ directory):
+#   1. Start the schema discovery service on port 3400.
+#   2. Start the router with this config:
+#        go run ./cmd/router -config mcp.schema-discovery.config.yaml
+#   3. Point any MCP client at http://localhost:5035/mcp
+#
+# The router logs "schema index is ready" when the index can serve requests.
+
+version: '1'
+
+dev_mode: true
+
+listen_addr: 'localhost:3012'
+
+# EDIT ME: point this at your own execution config.
+execution_config:
+  file:
+    path: '../router-tests/testenv/testdata/config.json'
+
+telemetry:
+  metrics:
+    otlp:
+      enabled: false
+    prometheus:
+      enabled: false
+  tracing:
+    enabled: false
+
+mcp:
+  enabled: true
+  graph_name: 'my-graph'
+  omit_tool_name_prefix: true
+
+  server:
+    listen_addr: 'localhost:5035'
+
+  session:
+    stateless: true
+
+  # Let the agent run the operation that generate_query returns.
+  enable_arbitrary_operations: true
+
+  # Keep this false. get_schema returns the full SDL, and that is the context
+  # cost that schema discovery removes.
+  expose_schema: false
+
+  schema_discovery:
+    enabled: true
+    url: 'http://localhost:3400'
+    # The service permits an empty token when it runs with authentication off.
+    token: ''
+    request_timeout: 90s
+    index_poll_interval: 2s
+    index_timeout: 10m

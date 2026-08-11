@@ -53,10 +53,11 @@ require (
 	golang.org/x/sync v0.21.0
 	golang.org/x/sys v0.46.0 // indirect
 	google.golang.org/grpc v1.82.1
-	google.golang.org/protobuf v1.36.11
+	google.golang.org/protobuf v1.36.12
 )
 
 require (
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260709200747-435963d16310.1
 	connectrpc.com/vanguard v0.3.0
 	github.com/KimMachineGun/automemlimit v0.6.1
 	github.com/MicahParks/jwkset v0.11.0

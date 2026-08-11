@@ -2761,6 +2761,51 @@
           "description": "A URL to a human-readable page describing this MCP resource, its access policies, and how to get started. Included in the RFC 9728 Protected Resource Metadata response if set.",
           "format": "http-url"
         },
+        "schema_discovery": {
+          "type": "object",
+          "description": "Schema discovery indexes the client schema in an external service and exposes schema search and query generation as MCP tools. An agent then works with a large schema without the schema in its context. Do not set expose_schema to true at the same time, because get_schema returns the full SDL and that is the context cost this feature removes.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable schema discovery. If the value is true, the router indexes the client schema and registers the search_schema, get_symbols and generate_query tools. The url property is required."
+            },
+            "url": {
+              "type": "string",
+              "description": "The base URL of the schema discovery service. The service speaks Connect over HTTP/1.1. The router fails to start when schema discovery is enabled and this value is empty.",
+              "format": "uri"
+            },
+            "token": {
+              "type": "string",
+              "description": "The bearer token for the schema discovery service. An empty token sends no Authorization header, which the service permits when it runs with authentication off."
+            },
+            "request_timeout": {
+              "type": "string",
+              "default": "90s",
+              "duration": {
+                "minimum": "1s"
+              },
+              "description": "The timeout for a single call to the schema discovery service. Query generation takes 10 to 30 seconds, so a value below 60s is too low. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "index_poll_interval": {
+              "type": "string",
+              "default": "2s",
+              "duration": {
+                "minimum": "1s"
+              },
+              "description": "The wait between two index status reads while the router waits for a build to finish. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "index_timeout": {
+              "type": "string",
+              "default": "10m",
+              "duration": {
+                "minimum": "1s"
+              },
+              "description": "The router stops waiting for an index that does not become ready within this time. A schema of 16,000 lines indexes in about 24 seconds. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            }
+          }
+        },
         "oauth": {
           "type": "object",
           "description": "OAuth/JWKS authentication configuration for the MCP server. When enabled, MCP tool calls require valid JWT authentication and the server implements OAuth 2.0 discovery mechanisms (RFC 8414, RFC 9728).",
