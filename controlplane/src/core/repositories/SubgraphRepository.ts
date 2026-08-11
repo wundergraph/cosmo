@@ -145,7 +145,7 @@ export class SubgraphRepository {
    * they were provided.
    */
   public create(
-    data: {
+    newSubgraphs: {
       name: string;
       namespace: string;
       routingUrl: string;
@@ -164,18 +164,17 @@ export class SubgraphRepository {
       type: DBSubgraphType;
     }[],
   ): Promise<SubgraphDTO[]> {
-    if (data.length === 0) {
+    if (newSubgraphs.length === 0) {
       return Promise.resolve([]);
     }
 
-    const entries = data.map((subgraphData) => {
-      const uniqueLabels = normalizeLabels(subgraphData.labels);
-      const routingUrl = normalizeURL(subgraphData.routingUrl);
-      const subscriptionUrl = subgraphData.subscriptionUrl ? normalizeURL(subgraphData.subscriptionUrl) : undefined;
+    const subgraphsToCreate = newSubgraphs.map((newSubgraph) => {
+      const routingUrl = normalizeURL(newSubgraph.routingUrl);
+      const subscriptionUrl = newSubgraph.subscriptionUrl ? normalizeURL(newSubgraph.subscriptionUrl) : undefined;
 
       return {
-        data: subgraphData,
-        uniqueLabels,
+        ...newSubgraph,
+        labels: normalizeLabels(newSubgraph.labels),
         routingUrl,
         subscriptionUrl: subscriptionUrl === routingUrl ? undefined : subscriptionUrl,
       };
@@ -189,22 +188,18 @@ export class SubgraphRepository {
       const insertedTargets = await tx
         .insert(targets)
         .values(
-          entries.map((entry) => ({
-            name: entry.data.name,
-            namespaceId: entry.data.namespaceId,
-            createdBy: entry.data.createdBy,
+          subgraphsToCreate.map((subgraph) => ({
+            name: subgraph.name,
+            namespaceId: subgraph.namespaceId,
+            createdBy: subgraph.createdBy,
             type: 'subgraph' as const,
             organizationId: this.organizationId,
-            labels: entry.uniqueLabels.map((ul) => joinLabel(ul)),
-            readme: sanitizeReadme(entry.data.readme),
+            labels: subgraph.labels.map((label) => joinLabel(label)),
+            readme: sanitizeReadme(subgraph.readme),
           })),
         )
         .returning()
         .execute();
-
-      // Paired by name rather than by position, so the result never depends on
-      // the order postgres returns the inserted rows in.
-      const targetIdByName = new Map(insertedTargets.map((target) => [target.name, target.id]));
 
       /**
        * 2. Create the subgraphs with the initial metadata without a schema version.
@@ -212,94 +207,86 @@ export class SubgraphRepository {
       const insertedSubgraphs = await tx
         .insert(subgraphs)
         .values(
-          entries.map((entry) => ({
-            targetId: targetIdByName.get(entry.data.name)!,
-            routingUrl: entry.routingUrl,
-            subscriptionUrl: entry.subscriptionUrl,
-            isEventDrivenGraph: entry.data.isEventDrivenGraph,
-            subscriptionProtocol: entry.data.subscriptionProtocol ?? ('ws' as const),
-            websocketSubprotocol: entry.data.websocketSubprotocol || ('auto' as const),
-            isFeatureSubgraph: entry.data.featureSubgraphOptions?.isFeatureSubgraph || false,
-            type: entry.data.type,
+          subgraphsToCreate.map((subgraph, index) => ({
+            targetId: insertedTargets[index].id,
+            routingUrl: subgraph.routingUrl,
+            subscriptionUrl: subgraph.subscriptionUrl,
+            isEventDrivenGraph: subgraph.isEventDrivenGraph,
+            subscriptionProtocol: subgraph.subscriptionProtocol ?? ('ws' as const),
+            websocketSubprotocol: subgraph.websocketSubprotocol || ('auto' as const),
+            isFeatureSubgraph: subgraph.featureSubgraphOptions?.isFeatureSubgraph || false,
+            type: subgraph.type,
           })),
         )
         .returning()
         .execute();
 
-      const insertedSubgraphByTargetId = new Map(insertedSubgraphs.map((subgraph) => [subgraph.targetId, subgraph]));
-
       /**
-       * 3. Insert into federatedSubgraphs by matching labels. Subgraphs sharing a
-       * label set within the same namespace resolve their federated graphs once.
+       * 3. Insert into federatedSubgraphs by matching labels
        */
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
-      const labelKeyOf = (entry: (typeof entries)[number]) =>
-        `${entry.data.namespaceId}:${entry.uniqueLabels.map((ul) => joinLabel(ul)).join(',')}`;
-
-      // Feature subgraphs are composed through their feature flag, never by label.
-      const federatedEntries = entries.filter((entry) => !entry.data.featureSubgraphOptions?.isFeatureSubgraph);
-      const entryByLabelKey = new Map(federatedEntries.map((entry) => [labelKeyOf(entry), entry]));
-      const federatedGraphIdsByLabelKey = new Map<string, string[]>();
-
-      // Sequential, because every query here shares the transaction's connection.
-      for (const [labelKey, entry] of entryByLabelKey) {
-        const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
-          labels: entry.uniqueLabels,
-          namespaceId: entry.data.namespaceId,
-        });
-
-        federatedGraphIdsByLabelKey.set(
-          labelKey,
-          federatedGraphs.map((federatedGraph) => federatedGraph.id),
-        );
-      }
-
-      const subgraphsToFederatedGraphValues = federatedEntries.flatMap((entry) =>
-        (federatedGraphIdsByLabelKey.get(labelKeyOf(entry)) ?? []).map((federatedGraphId) => ({
-          federatedGraphId,
-          subgraphId: insertedSubgraphByTargetId.get(targetIdByName.get(entry.data.name)!)!.id,
-        })),
+      const federatedGraphsPerSubgraph = await Promise.all(
+        subgraphsToCreate.map((subgraph) =>
+          fedGraphRepo.bySubgraphLabels({
+            labels: subgraph.labels,
+            namespaceId: subgraph.namespaceId,
+          }),
+        ),
       );
 
-      if (subgraphsToFederatedGraphValues.length > 0) {
-        await tx.insert(subgraphsToFederatedGraph).values(subgraphsToFederatedGraphValues).execute();
+      // Feature subgraphs are composed through their feature flag, not by label.
+      const subgraphsToFederatedGraphRows = subgraphsToCreate.flatMap((subgraph, index) =>
+        subgraph.featureSubgraphOptions?.isFeatureSubgraph
+          ? []
+          : federatedGraphsPerSubgraph[index].map((federatedGraph) => ({
+              federatedGraphId: federatedGraph.id,
+              subgraphId: insertedSubgraphs[index].id,
+            })),
+      );
+
+      if (subgraphsToFederatedGraphRows.length > 0) {
+        await tx.insert(subgraphsToFederatedGraph).values(subgraphsToFederatedGraphRows).execute();
       }
 
       /**
        * 4. Insert into featureFlagsToSubgraph to map the feature flags to their base subgraphs
        */
-      const featureSubgraphValues = entries
-        .filter((entry) => entry.data.featureSubgraphOptions)
-        .map((entry) => ({
-          baseSubgraphId: entry.data.featureSubgraphOptions!.baseSubgraphID,
-          featureSubgraphId: insertedSubgraphByTargetId.get(targetIdByName.get(entry.data.name)!)!.id,
-        }));
+      const featureSubgraphRows = subgraphsToCreate.flatMap((subgraph, index) => {
+        const { featureSubgraphOptions } = subgraph;
 
-      if (featureSubgraphValues.length > 0) {
-        await tx.insert(featureSubgraphsToBaseSubgraphs).values(featureSubgraphValues).execute();
+        return featureSubgraphOptions?.isFeatureSubgraph
+          ? {
+              baseSubgraphId: featureSubgraphOptions.baseSubgraphID,
+              featureSubgraphId: insertedSubgraphs[index].id,
+            }
+          : [];
+      });
+
+      if (featureSubgraphRows.length > 0) {
+        await tx.insert(featureSubgraphsToBaseSubgraphs).values(featureSubgraphRows).execute();
       }
 
-      return entries.map((entry) => {
-        const insertedSubgraph = insertedSubgraphByTargetId.get(targetIdByName.get(entry.data.name)!)!;
+      return subgraphsToCreate.map((subgraph, index) => {
+        const insertedSubgraph = insertedSubgraphs[index];
 
         return {
           id: insertedSubgraph.id,
-          name: entry.data.name,
+          name: subgraph.name,
           targetId: insertedSubgraph.targetId,
-          labels: entry.uniqueLabels,
-          routingUrl: entry.routingUrl,
+          labels: subgraph.labels,
+          routingUrl: subgraph.routingUrl,
           // Populated when first schema is pushed
           schemaSDL: '',
           schemaVersionId: '',
           lastUpdatedAt: '',
-          namespace: entry.data.namespace,
-          namespaceId: entry.data.namespaceId,
+          namespace: subgraph.namespace,
+          namespaceId: subgraph.namespaceId,
           isFeatureSubgraph: insertedSubgraph.isFeatureSubgraph,
-          isEventDrivenGraph: entry.data.isEventDrivenGraph,
-          type: entry.data.type,
-          subscriptionUrl: entry.subscriptionUrl ?? '',
-          subscriptionProtocol: entry.data.subscriptionProtocol ?? 'ws',
-          websocketSubprotocol: entry.data.websocketSubprotocol ?? 'auto',
+          isEventDrivenGraph: subgraph.isEventDrivenGraph,
+          type: subgraph.type,
+          subscriptionUrl: subgraph.subscriptionUrl ?? '',
+          subscriptionProtocol: subgraph.subscriptionProtocol ?? 'ws',
+          websocketSubprotocol: subgraph.websocketSubprotocol ?? 'auto',
         } satisfies SubgraphDTO;
       });
     });

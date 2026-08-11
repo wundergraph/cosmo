@@ -264,29 +264,28 @@ export default class ApolloMigrator {
         throw new Error(`Could not create federated graph ${fedGraph.name}`);
       }
 
-      for (const subgraph of subgraphs) {
-        const [createdSubgraph] = await subgraphRepo.create([
-          {
-            name: subgraph.name,
-            namespace,
-            namespaceId,
-            createdBy: creatorUserId,
-            labels: [
-              { key: 'env', value: 'main' },
-              { key: 'name', value: sanitizedGraphName },
-            ],
-            routingUrl: subgraph.routingURL,
-            isEventDrivenGraph: false,
-            subscriptionProtocol: 'ws',
-            type: 'standard',
-          },
-        ]);
+      const createdSubgraphs = await subgraphRepo.create(
+        subgraphs.map((subgraph) => ({
+          name: subgraph.name,
+          namespace,
+          namespaceId,
+          createdBy: creatorUserId,
+          labels: [
+            { key: 'env', value: 'main' },
+            { key: 'name', value: sanitizedGraphName },
+          ],
+          routingUrl: subgraph.routingURL,
+          isEventDrivenGraph: false,
+          subscriptionProtocol: 'ws' as const,
+          type: 'standard' as const,
+        })),
+      );
 
-        if (!createdSubgraph) {
-          throw new Error(`Could not create subgraph ${subgraph.name}`);
-        }
-
-        await subgraphRepo.addSchemaVersion({ targetId: createdSubgraph.targetId, subgraphSchema: subgraph.schema });
+      for (const [index, subgraph] of subgraphs.entries()) {
+        await subgraphRepo.addSchemaVersion({
+          targetId: createdSubgraphs[index].targetId,
+          subgraphSchema: subgraph.schema,
+        });
       }
 
       await fedGraphRepo.createGraphCryptoKeyPairs({

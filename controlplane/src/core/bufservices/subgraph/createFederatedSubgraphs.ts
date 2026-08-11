@@ -22,7 +22,7 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
 /**
- * CreateFederatedSubgraphs creates multiple subgraphs in a single request. Every entry is validated before anything
+ * CreateFederatedSubgraphs creates multiple subgraphs in a single request. Every subgraph is validated before anything
  * is written, and the writes share one transaction, so the request either creates all of the subgraphs or none of
  * them. Creating a subgraph does not trigger a composition (a subgraph has no schema until it is published), so this
  * is purely a batched write; publish the schemas afterwards with PublishFederatedSubgraphs.
@@ -62,9 +62,9 @@ export function createFederatedSubgraphs(
       throw new UnauthorizedError();
     }
 
-    const requestedEntries = req.subgraphs;
+    const requestedSubgraphs = req.subgraphs;
 
-    if (requestedEntries.length === 0) {
+    if (requestedSubgraphs.length === 0) {
       return {
         response: {
           code: EnumStatusCode.ERR,
@@ -77,11 +77,11 @@ export function createFederatedSubgraphs(
     // Reject duplicate names within the request to avoid ambiguous, non-deterministic writes.
     const seenNames = new Set<string>();
     const duplicateNames = new Set<string>();
-    for (const entry of requestedEntries) {
-      if (seenNames.has(entry.name)) {
-        duplicateNames.add(entry.name);
+    for (const subgraph of requestedSubgraphs) {
+      if (seenNames.has(subgraph.name)) {
+        duplicateNames.add(subgraph.name);
       }
-      seenNames.add(entry.name);
+      seenNames.add(subgraph.name);
     }
     if (duplicateNames.size > 0) {
       return {
@@ -93,66 +93,66 @@ export function createFederatedSubgraphs(
       };
     }
 
-    // Validate every entry before writing any of them, so a bad entry never leaves a partially created batch behind.
-    type ValidatedEntry = {
+    // Validate every subgraph before writing any of them, so a bad one never leaves a partially created batch behind.
+    type ValidatedSubgraph = {
       labelError?: string;
       nameError?: string;
       configError?: string;
-      item?: Parameters<SubgraphRepository['create']>[0][number];
+      subgraphToCreate?: Parameters<SubgraphRepository['create']>[0][number];
     };
 
-    const validatedEntries = requestedEntries.map((entry): ValidatedEntry => {
-      if (!isValidLabels(entry.labels)) {
-        return { labelError: `Subgraph "${entry.name}": one or more labels were found to be invalid` };
+    const validatedSubgraphs = requestedSubgraphs.map((subgraph): ValidatedSubgraph => {
+      if (!isValidLabels(subgraph.labels)) {
+        return { labelError: `Subgraph "${subgraph.name}": one or more labels were found to be invalid` };
       }
 
-      if (!isValidGraphName(entry.name)) {
+      if (!isValidGraphName(subgraph.name)) {
         return {
-          nameError: `Subgraph "${entry.name}": the name is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between and must be between 1 and 100 characters in length.`,
+          nameError: `Subgraph "${subgraph.name}": the name is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between and must be between 1 and 100 characters in length.`,
         };
       }
 
       const routingViolation = validateSubgraphRouting({
-        isEventDrivenGraph: entry.isEventDrivenGraph || false,
-        routingUrl: entry.routingUrl,
-        subscriptionUrl: entry.subscriptionUrl,
-        subscriptionProtocol: entry.subscriptionProtocol,
-        websocketSubprotocol: entry.websocketSubprotocol,
+        isEventDrivenGraph: subgraph.isEventDrivenGraph || false,
+        routingUrl: subgraph.routingUrl,
+        subscriptionUrl: subgraph.subscriptionUrl,
+        subscriptionProtocol: subgraph.subscriptionProtocol,
+        websocketSubprotocol: subgraph.websocketSubprotocol,
         routingUrlRequirement: 'required',
       });
 
       if (routingViolation) {
-        return { configError: `Subgraph "${entry.name}": ${routingViolation}` };
+        return { configError: `Subgraph "${subgraph.name}": ${routingViolation}` };
       }
 
       return {
-        item: {
-          name: entry.name,
+        subgraphToCreate: {
+          name: subgraph.name,
           namespace: req.namespace,
           namespaceId: namespace.id,
           createdBy: authContext.userId,
-          labels: entry.labels,
-          routingUrl: entry.routingUrl || '',
-          isEventDrivenGraph: entry.isEventDrivenGraph || false,
-          readme: entry.readme,
-          subscriptionUrl: entry.subscriptionUrl,
+          labels: subgraph.labels,
+          routingUrl: subgraph.routingUrl || '',
+          isEventDrivenGraph: subgraph.isEventDrivenGraph || false,
+          readme: subgraph.readme,
+          subscriptionUrl: subgraph.subscriptionUrl,
           subscriptionProtocol:
-            entry.subscriptionProtocol === undefined
+            subgraph.subscriptionProtocol === undefined
               ? undefined
-              : formatSubscriptionProtocol(entry.subscriptionProtocol),
+              : formatSubscriptionProtocol(subgraph.subscriptionProtocol),
           websocketSubprotocol:
-            entry.websocketSubprotocol === undefined
+            subgraph.websocketSubprotocol === undefined
               ? undefined
-              : formatWebsocketSubprotocol(entry.websocketSubprotocol),
+              : formatWebsocketSubprotocol(subgraph.websocketSubprotocol),
           type: 'standard',
         },
       };
     });
 
-    const labelErrors = validatedEntries.flatMap((entry) => entry.labelError ?? []);
-    const nameErrors = validatedEntries.flatMap((entry) => entry.nameError ?? []);
-    const configErrors = validatedEntries.flatMap((entry) => entry.configError ?? []);
-    const items = validatedEntries.flatMap((entry) => entry.item ?? []);
+    const labelErrors = validatedSubgraphs.flatMap((validated) => validated.labelError ?? []);
+    const nameErrors = validatedSubgraphs.flatMap((validated) => validated.nameError ?? []);
+    const configErrors = validatedSubgraphs.flatMap((validated) => validated.configError ?? []);
+    const subgraphsToCreate = validatedSubgraphs.flatMap((validated) => validated.subgraphToCreate ?? []);
 
     if (labelErrors.length > 0) {
       return {
@@ -185,7 +185,7 @@ export function createFederatedSubgraphs(
     }
 
     const existingSubgraphs = await subgraphRepo.getSubgraphsByNames(
-      requestedEntries.map((entry) => entry.name),
+      requestedSubgraphs.map((subgraph) => subgraph.name),
       namespace.id,
     );
 
@@ -205,7 +205,7 @@ export function createFederatedSubgraphs(
       const txSubgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
       const txAuditLogRepo = new AuditLogRepository(tx);
 
-      const subgraphs = await txSubgraphRepo.create(items);
+      const subgraphs = await txSubgraphRepo.create(subgraphsToCreate);
 
       await txAuditLogRepo.addAuditLog(
         ...subgraphs.map(
