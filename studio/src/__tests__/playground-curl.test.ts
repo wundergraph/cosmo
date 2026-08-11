@@ -88,7 +88,60 @@ describe('buildCurlCommand', () => {
   test('warns and skips malformed variables and headers', () => {
     const { command, warnings } = buildCurlCommand({ url, query, variables: '{ invalid', headers: '{ invalid' });
 
-    expect(warnings).toHaveLength(2);
+    expect(warnings).toEqual([
+      'Variables were excluded from the cURL command: Invalid JSON.',
+      'Headers were excluded from the cURL command: Invalid JSON.',
+    ]);
+    expect(command).toContain(`--data-raw '${JSON.stringify({ query })}'`);
+  });
+
+  test.each([
+    ['an array', '[1, 2]', 'Variables were excluded from the cURL command: Expected object, received array.'],
+    ['null', 'null', 'Variables were excluded from the cURL command: Expected object, received null.'],
+    ['a scalar', '"nope"', 'Variables were excluded from the cURL command: Expected object, received string.'],
+  ])('warns when variables are valid json but %s rather than an object', (_label, variables, warning) => {
+    const { command, warnings } = buildCurlCommand({ url, query, variables });
+
+    expect(warnings).toEqual([warning]);
+    expect(command).toContain(`--data-raw '${JSON.stringify({ query })}'`);
+  });
+
+  test('keeps nested json values in the variables verbatim', () => {
+    const variables = { filter: { ids: [1, 2], names: ['a'], deleted: null }, limit: 10, exact: true };
+    const { command, warnings } = buildCurlCommand({ url, query, variables: JSON.stringify(variables) });
+
+    expect(warnings).toEqual([]);
+    expect(command).toContain(`--data-raw '${JSON.stringify({ query, variables })}'`);
+  });
+
+  test('coerces number and boolean header values to strings', () => {
+    const { command, warnings } = buildCurlCommand({ url, query, headers: '{ "X-Retries": 3, "X-Trace": true }' });
+
+    expect(warnings).toEqual([]);
+    expect(command).toContain(`-H 'X-Retries: 3'`);
+    expect(command).toContain(`-H 'X-Trace: true'`);
+  });
+
+  test('warns and skips headers whose value is not a scalar', () => {
+    const { command, warnings } = buildCurlCommand({
+      url,
+      query,
+      headers: '{ "X-Object": { "a": 1 }, "X-List": [1], "X-Null": null, "X-Valid": "yes" }',
+    });
+
+    expect(warnings).toEqual([
+      'The following headers do not have a string, number or boolean value and were excluded from the cURL command: X-Object, X-List.',
+    ]);
+    expect(command).not.toContain('X-Object');
+    expect(command).not.toContain('X-List');
+    expect(command).not.toContain('X-Null');
+    expect(command).toContain(`-H 'X-Valid: yes'`);
+  });
+
+  test('treats empty editors as no variables and no headers', () => {
+    const { command, warnings } = buildCurlCommand({ url, query, variables: '   ', headers: '' });
+
+    expect(warnings).toEqual([]);
     expect(command).toContain(`--data-raw '${JSON.stringify({ query })}'`);
   });
 });

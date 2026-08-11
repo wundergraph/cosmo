@@ -1,4 +1,5 @@
 import { isValidHeaderName, substituteHeadersFromEnv } from '@/lib/playground-headers';
+import { z } from 'zod';
 
 interface BuildCurlOptions {
   url: string;
@@ -23,17 +24,74 @@ export interface BuildCurlResult {
  */
 const shellQuote = (value: string) => `'${value.split("'").join(`'\\''`)}'`;
 
-const parseJsonObject = (value: string | null | undefined): Record<string, any> | undefined => {
-  if (!value || !value.trim()) {
+/** Decodes the json typed into an editor, so the schemas below can describe its shape. */
+const jsonText = z.string().transform((value, ctx) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid JSON' });
+    return z.NEVER;
+  }
+});
+
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
+const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(jsonValueSchema),
+    z.record(z.string(), jsonValueSchema),
+  ]),
+);
+
+/** GraphQL variables are an object of arbitrary json values, sent verbatim in the request body. */
+const variablesSchema = jsonText.pipe(z.record(z.string(), jsonValueSchema));
+
+/** Header values reach the wire as strings, so scalars are coerced and anything else is dropped. */
+const headerValueSchema = z.union([z.string(), z.number(), z.boolean()]).transform(String);
+
+const headersSchema = jsonText.pipe(z.record(z.string(), z.unknown())).transform((raw) => {
+  const headers: Record<string, string> = {};
+  const skipped: string[] = [];
+
+  for (const [name, value] of Object.entries(raw)) {
+    const parsed = headerValueSchema.safeParse(value);
+    if (parsed.success) {
+      headers[name] = parsed.data;
+    } else if (value !== null && value !== undefined) {
+      skipped.push(name);
+    }
+  }
+
+  return { headers, skipped };
+});
+
+/**
+ * Parses one of the editors, reporting why it was dropped using zod's own issue messages
+ * rather than throwing, so a malformed editor never blocks copying the rest of the request.
+ */
+const parseEditor = <S extends z.ZodType<unknown, z.ZodTypeDef, string>>(
+  schema: S,
+  value: string | null | undefined,
+  label: string,
+  warnings: string[],
+): z.infer<S> | undefined => {
+  if (!value?.trim()) {
     return undefined;
   }
 
-  const parsed = JSON.parse(value);
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw new TypeError('Expected a JSON object');
+  const result = schema.safeParse(value);
+  if (result.success) {
+    return result.data;
   }
 
-  return parsed;
+  const reasons = result.error.issues.map((issue) => issue.message).join('; ');
+  warnings.push(`${label} were excluded from the cURL command: ${reasons}.`);
+
+  return undefined;
 };
 
 export const buildCurlCommand = ({
@@ -47,28 +105,16 @@ export const buildCurlCommand = ({
 }: BuildCurlOptions): BuildCurlResult => {
   const warnings: string[] = [];
 
-  let parsedVariables: Record<string, any> | undefined;
-  try {
-    parsedVariables = parseJsonObject(variables);
-  } catch {
-    warnings.push('Variables are not valid JSON and were excluded from the cURL command.');
+  const parsedVariables = parseEditor(variablesSchema, variables, 'Variables', warnings);
+  const parsedHeaders = parseEditor(headersSchema, headers, 'Headers', warnings);
+
+  if (parsedHeaders && parsedHeaders.skipped.length > 0) {
+    warnings.push(
+      `The following headers do not have a string, number or boolean value and were excluded from the cURL command: ${parsedHeaders.skipped.join(', ')}.`,
+    );
   }
 
-  let parsedHeaders: Record<string, any> | undefined;
-  try {
-    parsedHeaders = parseJsonObject(headers);
-  } catch {
-    warnings.push('Headers are not valid JSON and were excluded from the cURL command.');
-  }
-
-  let requestHeaders: Record<string, string> = {};
-  for (const [key, value] of Object.entries(parsedHeaders ?? {})) {
-    if (value === null || value === undefined) {
-      continue;
-    }
-
-    requestHeaders[key] = typeof value === 'string' ? value : String(value);
-  }
+  let requestHeaders: Record<string, string> = parsedHeaders?.headers ?? {};
 
   if (graphId) {
     requestHeaders = substituteHeadersFromEnv(requestHeaders, graphId);
@@ -91,7 +137,7 @@ export const buildCurlCommand = ({
 
   const hasContentType = Object.keys(requestHeaders).some((key) => key.toLowerCase() === 'content-type');
 
-  const body: Record<string, any> = { query };
+  const body: { query: string; operationName?: string; variables?: Record<string, JsonValue> } = { query };
   if (operationName) {
     body.operationName = operationName;
   }
@@ -116,3 +162,4 @@ export const buildCurlCommand = ({
     warnings,
   };
 };
+
