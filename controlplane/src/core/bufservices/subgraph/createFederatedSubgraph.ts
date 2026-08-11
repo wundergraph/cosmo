@@ -5,7 +5,6 @@ import {
   CreateFederatedSubgraphResponse,
   SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
@@ -19,8 +18,8 @@ import {
   getLogger,
   handleError,
   isValidGraphName,
-  isValidGrpcNamingScheme,
   isValidLabels,
+  validateSubgraphRouting,
 } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { PluginRepository } from '../../repositories/PluginRepository.js';
@@ -105,91 +104,25 @@ export function createFederatedSubgraph(
      * The routing URL must be defined unless the subgraph is an Event-Driven Graph or a Plugin
      * */
     const routingUrl = req.routingUrl || '';
-    if (req.isEventDrivenGraph) {
-      if (req.routingUrl !== undefined) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `An Event-Driven Graph must not define a routing URL`,
-          },
-          compositionErrors: [],
-          admissionErrors: [],
-        };
-      }
-      if (req.subscriptionUrl !== undefined) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `An Event-Driven Graph must not define a subscription URL`,
-          },
-          compositionErrors: [],
-          admissionErrors: [],
-        };
-      }
-      if (req.subscriptionProtocol !== undefined) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `An Event-Driven Graph must not define a subscription protocol`,
-          },
-          compositionErrors: [],
-          admissionErrors: [],
-        };
-      }
-      if (req.websocketSubprotocol !== undefined) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `An Event-Driven Graph must not define a websocket subprotocol`,
-          },
-          compositionErrors: [],
-          admissionErrors: [],
-        };
-      }
-    } else if (req.type !== SubgraphType.GRPC_PLUGIN) {
-      if (!routingUrl) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `A non-Event-Driven Graph must define a routing URL`,
-          },
-          compositionErrors: [],
-          admissionErrors: [],
-        };
-      }
-      if (!isValidUrl(routingUrl)) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Routing URL "${routingUrl}" is not a valid URL`,
-          },
-          compositionErrors: [],
-          admissionErrors: [],
-        };
-      }
-      // For GRPC_SERVICE subgraphs, validate that routing URL follows gRPC naming scheme
-      if (req.type === SubgraphType.GRPC_SERVICE && !isValidGrpcNamingScheme(routingUrl)) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details:
-              `Routing URL must follow gRPC naming scheme. ` +
-              `See https://grpc.io/docs/guides/custom-name-resolution/ for examples.`,
-          },
-          compositionErrors: [],
-          admissionErrors: [],
-        };
-      }
-      if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Subscription URL "${req.subscriptionUrl}" is not a valid URL`,
-          },
-          compositionErrors: [],
-          admissionErrors: [],
-        };
-      }
+    const routingViolation = validateSubgraphRouting({
+      isEventDrivenGraph: req.isEventDrivenGraph || false,
+      routingUrl: req.routingUrl,
+      subscriptionUrl: req.subscriptionUrl,
+      subscriptionProtocol: req.subscriptionProtocol,
+      websocketSubprotocol: req.websocketSubprotocol,
+      routingUrlRequirement: req.type === SubgraphType.GRPC_PLUGIN ? 'skipped' : 'required',
+      isGrpcService: req.type === SubgraphType.GRPC_SERVICE,
+    });
+
+    if (routingViolation) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: routingViolation,
+        },
+        compositionErrors: [],
+        admissionErrors: [],
+      };
     }
 
     const namespace = await namespaceRepo.byName(req.namespace);
