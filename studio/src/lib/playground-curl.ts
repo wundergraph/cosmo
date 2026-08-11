@@ -162,4 +162,3 @@ export const buildCurlCommand = ({
     warnings,
   };
 };
-
