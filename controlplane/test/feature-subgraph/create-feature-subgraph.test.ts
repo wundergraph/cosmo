@@ -246,7 +246,7 @@ describe('Create feature subgraph tests', () => {
     });
     expect(featureSubgraphResponseOne.response?.code).toBe(EnumStatusCode.ERR);
     expect(featureSubgraphResponseOne.response?.details).toBe(
-      `A valid, non-empty routing URL is required to create and publish a feature subgraph.`,
+      `A valid, non-empty routing URL is required to create and publish a feature subgraph`,
     );
   });
 
