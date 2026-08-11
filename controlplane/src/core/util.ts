@@ -18,7 +18,7 @@ import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
 import DOMPurify from 'isomorphic-dompurify';
 import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
-import { ProposalOrigin, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { ProposalOrigin, Subgraph, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole, ProposalOrigin as ProposalOriginEnum, WebsocketSubprotocol } from '../db/models.js';
 import {
   AuthContext,
@@ -27,10 +27,12 @@ import {
   Label,
   LoginMethod,
   NamespaceAccess,
+  PlainMessage,
   ResponseMessage,
   S3StorageOptions,
   SOCIAL_LOGIN_PROVIDERS,
   SocialLoginProvider,
+  SubgraphDTO,
 } from '../types/index.js';
 import { paginationDefaults } from './constants.js';
 import {
@@ -699,6 +701,28 @@ export const convertToSubgraphType = (type: string) => {
     }
   }
 };
+
+/**
+ * Maps a subgraph (or feature subgraph) DTO to its proto representation.
+ */
+export function convertToSubgraphProto(subgraph: SubgraphDTO): PlainMessage<Subgraph> {
+  return {
+    id: subgraph.id,
+    name: subgraph.name,
+    routingURL: subgraph.routingUrl,
+    lastUpdatedAt: subgraph.lastUpdatedAt,
+    labels: subgraph.labels,
+    targetId: subgraph.targetId,
+    subscriptionUrl: subgraph.subscriptionUrl,
+    namespace: subgraph.namespace,
+    subscriptionProtocol: subgraph.subscriptionProtocol,
+    isEventDrivenGraph: subgraph.isEventDrivenGraph,
+    isV2Graph: subgraph.isV2Graph,
+    websocketSubprotocol: subgraph.websocketSubprotocol || '',
+    isFeatureSubgraph: subgraph.isFeatureSubgraph,
+    type: convertToSubgraphType(subgraph.type),
+  };
+}
 
 export function toProposalOriginEnum(value: ProposalOrigin): ProposalOriginEnum {
   switch (value) {
