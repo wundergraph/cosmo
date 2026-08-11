@@ -4,7 +4,7 @@ import {
   CreateFederatedSubgraphsRequest,
   CreateFederatedSubgraphsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
+import { type AddAuditLogInput, AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
@@ -94,22 +94,22 @@ export function createFederatedSubgraphs(
     }
 
     // Validate every entry before writing any of them, so a bad entry never leaves a partially created batch behind.
-    const labelErrors: string[] = [];
-    const nameErrors: string[] = [];
-    const configErrors: string[] = [];
-    const items: Parameters<SubgraphRepository['create']>[0][] = [];
+    type ValidatedEntry = {
+      labelError?: string;
+      nameError?: string;
+      configError?: string;
+      item?: Parameters<SubgraphRepository['create']>[0][number];
+    };
 
-    for (const entry of requestedEntries) {
+    const validatedEntries = requestedEntries.map((entry): ValidatedEntry => {
       if (!isValidLabels(entry.labels)) {
-        labelErrors.push(`Subgraph "${entry.name}": one or more labels were found to be invalid`);
-        continue;
+        return { labelError: `Subgraph "${entry.name}": one or more labels were found to be invalid` };
       }
 
       if (!isValidGraphName(entry.name)) {
-        nameErrors.push(
-          `Subgraph "${entry.name}": the name is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between and must be between 1 and 100 characters in length.`,
-        );
-        continue;
+        return {
+          nameError: `Subgraph "${entry.name}": the name is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between and must be between 1 and 100 characters in length.`,
+        };
       }
 
       const routingViolation = validateSubgraphRouting({
@@ -122,27 +122,37 @@ export function createFederatedSubgraphs(
       });
 
       if (routingViolation) {
-        configErrors.push(`Subgraph "${entry.name}": ${routingViolation}`);
-        continue;
+        return { configError: `Subgraph "${entry.name}": ${routingViolation}` };
       }
 
-      items.push({
-        name: entry.name,
-        namespace: req.namespace,
-        namespaceId: namespace.id,
-        createdBy: authContext.userId,
-        labels: entry.labels,
-        routingUrl: entry.routingUrl || '',
-        isEventDrivenGraph: entry.isEventDrivenGraph || false,
-        readme: entry.readme,
-        subscriptionUrl: entry.subscriptionUrl,
-        subscriptionProtocol:
-          entry.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(entry.subscriptionProtocol),
-        websocketSubprotocol:
-          entry.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(entry.websocketSubprotocol),
-        type: 'standard',
-      });
-    }
+      return {
+        item: {
+          name: entry.name,
+          namespace: req.namespace,
+          namespaceId: namespace.id,
+          createdBy: authContext.userId,
+          labels: entry.labels,
+          routingUrl: entry.routingUrl || '',
+          isEventDrivenGraph: entry.isEventDrivenGraph || false,
+          readme: entry.readme,
+          subscriptionUrl: entry.subscriptionUrl,
+          subscriptionProtocol:
+            entry.subscriptionProtocol === undefined
+              ? undefined
+              : formatSubscriptionProtocol(entry.subscriptionProtocol),
+          websocketSubprotocol:
+            entry.websocketSubprotocol === undefined
+              ? undefined
+              : formatWebsocketSubprotocol(entry.websocketSubprotocol),
+          type: 'standard',
+        },
+      };
+    });
+
+    const labelErrors = validatedEntries.flatMap((entry) => entry.labelError ?? []);
+    const nameErrors = validatedEntries.flatMap((entry) => entry.nameError ?? []);
+    const configErrors = validatedEntries.flatMap((entry) => entry.configError ?? []);
+    const items = validatedEntries.flatMap((entry) => entry.item ?? []);
 
     if (labelErrors.length > 0) {
       return {
@@ -194,40 +204,36 @@ export function createFederatedSubgraphs(
     const createdSubgraphs = await opts.db.transaction(async (tx) => {
       const txSubgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
       const txAuditLogRepo = new AuditLogRepository(tx);
-      const subgraphNames: string[] = [];
 
-      for (const item of items) {
-        const subgraph = await txSubgraphRepo.create(item);
-        if (!subgraph) {
-          throw new Error(`The subgraph "${item.name}" could not be created.`);
-        }
+      const subgraphs = await txSubgraphRepo.create(items);
 
-        await txAuditLogRepo.addAuditLog({
-          organizationId: authContext.organizationId,
-          organizationSlug: authContext.organizationSlug,
-          auditAction: 'subgraph.created',
-          action: 'created',
-          actorId: authContext.userId,
-          auditableType: 'subgraph',
-          auditableDisplayName: subgraph.name,
-          actorDisplayName: authContext.userDisplayName,
-          apiKeyName: authContext.apiKeyName,
-          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-          targetNamespaceId: subgraph.namespaceId,
-          targetNamespaceDisplayName: subgraph.namespace,
-        });
+      await txAuditLogRepo.addAuditLog(
+        ...subgraphs.map(
+          (subgraph): AddAuditLogInput => ({
+            organizationId: authContext.organizationId,
+            organizationSlug: authContext.organizationSlug,
+            auditAction: 'subgraph.created',
+            action: 'created',
+            actorId: authContext.userId,
+            auditableType: 'subgraph',
+            auditableDisplayName: subgraph.name,
+            actorDisplayName: authContext.userDisplayName,
+            apiKeyName: authContext.apiKeyName,
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+            targetNamespaceId: subgraph.namespaceId,
+            targetNamespaceDisplayName: subgraph.namespace,
+          }),
+        ),
+      );
 
-        subgraphNames.push(subgraph.name);
-      }
-
-      return subgraphNames;
+      return subgraphs;
     });
 
     return {
       response: {
         code: EnumStatusCode.OK,
       },
-      createdSubgraphNames: createdSubgraphs,
+      createdSubgraphNames: createdSubgraphs.map((subgraph) => subgraph.name),
     };
   });
 }

@@ -390,28 +390,30 @@ export function publishFederatedSubgraph(
       }
 
       // Create the subgraph if it doesn't exist
-      subgraph = await subgraphRepo.create({
-        name: req.name,
-        namespace: req.namespace,
-        namespaceId: namespace.id,
-        createdBy: authContext.userId,
-        labels: req.labels,
-        isEventDrivenGraph,
-        routingUrl,
-        subscriptionUrl: req.subscriptionUrl,
-        subscriptionProtocol:
-          req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
-        websocketSubprotocol:
-          req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
-        featureSubgraphOptions:
-          req.isFeatureSubgraph && baseSubgraphID !== ''
-            ? {
-                isFeatureSubgraph: req.isFeatureSubgraph || false,
-                baseSubgraphID,
-              }
-            : undefined,
-        type: formatSubgraphType(req.type),
-      });
+      [subgraph] = await subgraphRepo.create([
+        {
+          name: req.name,
+          namespace: req.namespace,
+          namespaceId: namespace.id,
+          createdBy: authContext.userId,
+          labels: req.labels,
+          isEventDrivenGraph,
+          routingUrl,
+          subscriptionUrl: req.subscriptionUrl,
+          subscriptionProtocol:
+            req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
+          websocketSubprotocol:
+            req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
+          featureSubgraphOptions:
+            req.isFeatureSubgraph && baseSubgraphID !== ''
+              ? {
+                  isFeatureSubgraph: req.isFeatureSubgraph || false,
+                  baseSubgraphID,
+                }
+              : undefined,
+          type: formatSubgraphType(req.type),
+        },
+      ]);
 
       if (!subgraph) {
         throw new Error(`Subgraph '${req.name}' could not be created`);

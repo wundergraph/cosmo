@@ -183,28 +183,30 @@ export function createFederatedSubgraph(
       }
     }
 
-    const subgraph = await subgraphRepo.create({
-      name: req.name,
-      namespace: req.namespace,
-      namespaceId: namespace.id,
-      createdBy: authContext.userId,
-      labels: req.labels,
-      routingUrl,
-      isEventDrivenGraph: req.isEventDrivenGraph || false,
-      readme: req.readme,
-      subscriptionUrl: req.subscriptionUrl,
-      subscriptionProtocol:
-        req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
-      websocketSubprotocol:
-        req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
-      featureSubgraphOptions: req.isFeatureSubgraph
-        ? {
-            isFeatureSubgraph: req.isFeatureSubgraph || false,
-            baseSubgraphID,
-          }
-        : undefined,
-      type: formatSubgraphType(req.type),
-    });
+    const [subgraph] = await subgraphRepo.create([
+      {
+        name: req.name,
+        namespace: req.namespace,
+        namespaceId: namespace.id,
+        createdBy: authContext.userId,
+        labels: req.labels,
+        routingUrl,
+        isEventDrivenGraph: req.isEventDrivenGraph || false,
+        readme: req.readme,
+        subscriptionUrl: req.subscriptionUrl,
+        subscriptionProtocol:
+          req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
+        websocketSubprotocol:
+          req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
+        featureSubgraphOptions: req.isFeatureSubgraph
+          ? {
+              isFeatureSubgraph: req.isFeatureSubgraph || false,
+              baseSubgraphID,
+            }
+          : undefined,
+        type: formatSubgraphType(req.type),
+      },
+    ]);
 
     if (!subgraph) {
       return {

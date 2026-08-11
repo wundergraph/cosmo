@@ -265,20 +265,22 @@ export default class ApolloMigrator {
       }
 
       for (const subgraph of subgraphs) {
-        const createdSubgraph = await subgraphRepo.create({
-          name: subgraph.name,
-          namespace,
-          namespaceId,
-          createdBy: creatorUserId,
-          labels: [
-            { key: 'env', value: 'main' },
-            { key: 'name', value: sanitizedGraphName },
-          ],
-          routingUrl: subgraph.routingURL,
-          isEventDrivenGraph: false,
-          subscriptionProtocol: 'ws',
-          type: 'standard',
-        });
+        const [createdSubgraph] = await subgraphRepo.create([
+          {
+            name: subgraph.name,
+            namespace,
+            namespaceId,
+            createdBy: creatorUserId,
+            labels: [
+              { key: 'env', value: 'main' },
+              { key: 'name', value: sanitizedGraphName },
+            ],
+            routingUrl: subgraph.routingURL,
+            isEventDrivenGraph: false,
+            subscriptionProtocol: 'ws',
+            type: 'standard',
+          },
+        ]);
 
         if (!createdSubgraph) {
           throw new Error(`Could not create subgraph ${subgraph.name}`);
