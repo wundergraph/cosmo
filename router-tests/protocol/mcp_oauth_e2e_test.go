@@ -230,12 +230,16 @@ func TestMCPOAuthMultipleAuthorizationServers(t *testing.T) {
 		MCPAuthToken:      tokenFromA,
 		MCPOperationsPath: "testdata/mcp_operations",
 	}, func(t *testing.T, xEnv *testenv.Environment) {
-		ctx := context.Background()
-
+		// The subtests run sequentially on purpose. Concurrent MCP sessions keep
+		// the MCP HTTP server busy, and its graceful shutdown then exceeds the
+		// 5 second budget. See the flake analysis on PR 3148.
 		t.Run("metadata endpoint advertises all authorization servers", func(t *testing.T) {
 			metadataURL := strings.TrimSuffix(xEnv.GetMCPServerAddr(), "/mcp") + "/.well-known/oauth-protected-resource/mcp"
 
-			resp, err := http.Get(metadataURL)
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, metadataURL, nil)
+			require.NoError(t, err)
+
+			resp, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
 			defer resp.Body.Close() //nolint:errcheck
 
@@ -251,7 +255,7 @@ func TestMCPOAuthMultipleAuthorizationServers(t *testing.T) {
 		t.Run("accepts tokens from the first authorization server", func(t *testing.T) {
 			client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), tokenFromA)
 
-			require.NoError(t, client.Connect(ctx), "should connect with a token from server A")
+			require.NoError(t, client.Connect(t.Context()), "should connect with a token from server A")
 			defer client.Close() //nolint:errcheck
 		})
 
@@ -261,7 +265,7 @@ func TestMCPOAuthMultipleAuthorizationServers(t *testing.T) {
 
 			client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), tokenFromB)
 
-			require.NoError(t, client.Connect(ctx), "should connect with a token from server B")
+			require.NoError(t, client.Connect(t.Context()), "should connect with a token from server B")
 			defer client.Close() //nolint:errcheck
 		})
 
@@ -274,7 +278,7 @@ func TestMCPOAuthMultipleAuthorizationServers(t *testing.T) {
 
 			client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), tokenFromUnknown)
 
-			err = client.Connect(ctx)
+			err = client.Connect(t.Context())
 			require.Error(t, err, "should fail to connect with a token from an unknown issuer")
 
 			authErr, ok := err.(*AuthError)
