@@ -51,18 +51,6 @@ const (
 	YokoServiceGenerateQueryProcedure = "/yoko.v1.YokoService/GenerateQuery"
 )
 
-// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
-var (
-	yokoServiceServiceDescriptor             = v1.File_yoko_v1_yoko_proto.Services().ByName("YokoService")
-	yokoServiceEnsureIndexMethodDescriptor   = yokoServiceServiceDescriptor.Methods().ByName("EnsureIndex")
-	yokoServiceGetIndexMethodDescriptor      = yokoServiceServiceDescriptor.Methods().ByName("GetIndex")
-	yokoServiceListIndexesMethodDescriptor   = yokoServiceServiceDescriptor.Methods().ByName("ListIndexes")
-	yokoServiceDeleteIndexMethodDescriptor   = yokoServiceServiceDescriptor.Methods().ByName("DeleteIndex")
-	yokoServiceSearchSchemaMethodDescriptor  = yokoServiceServiceDescriptor.Methods().ByName("SearchSchema")
-	yokoServiceGetSymbolsMethodDescriptor    = yokoServiceServiceDescriptor.Methods().ByName("GetSymbols")
-	yokoServiceGenerateQueryMethodDescriptor = yokoServiceServiceDescriptor.Methods().ByName("GenerateQuery")
-)
-
 // YokoServiceClient is a client for the yoko.v1.YokoService service.
 type YokoServiceClient interface {
 	// EnsureIndex is the idempotent write path: it creates the index for this
@@ -88,47 +76,48 @@ type YokoServiceClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewYokoServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) YokoServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
+	yokoServiceMethods := v1.File_yoko_v1_yoko_proto.Services().ByName("YokoService").Methods()
 	return &yokoServiceClient{
 		ensureIndex: connect.NewClient[v1.EnsureIndexRequest, v1.EnsureIndexResponse](
 			httpClient,
 			baseURL+YokoServiceEnsureIndexProcedure,
-			connect.WithSchema(yokoServiceEnsureIndexMethodDescriptor),
+			connect.WithSchema(yokoServiceMethods.ByName("EnsureIndex")),
 			connect.WithClientOptions(opts...),
 		),
 		getIndex: connect.NewClient[v1.GetIndexRequest, v1.GetIndexResponse](
 			httpClient,
 			baseURL+YokoServiceGetIndexProcedure,
-			connect.WithSchema(yokoServiceGetIndexMethodDescriptor),
+			connect.WithSchema(yokoServiceMethods.ByName("GetIndex")),
 			connect.WithClientOptions(opts...),
 		),
 		listIndexes: connect.NewClient[v1.ListIndexesRequest, v1.ListIndexesResponse](
 			httpClient,
 			baseURL+YokoServiceListIndexesProcedure,
-			connect.WithSchema(yokoServiceListIndexesMethodDescriptor),
+			connect.WithSchema(yokoServiceMethods.ByName("ListIndexes")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteIndex: connect.NewClient[v1.DeleteIndexRequest, v1.DeleteIndexResponse](
 			httpClient,
 			baseURL+YokoServiceDeleteIndexProcedure,
-			connect.WithSchema(yokoServiceDeleteIndexMethodDescriptor),
+			connect.WithSchema(yokoServiceMethods.ByName("DeleteIndex")),
 			connect.WithClientOptions(opts...),
 		),
 		searchSchema: connect.NewClient[v1.SearchSchemaRequest, v1.SearchSchemaResponse](
 			httpClient,
 			baseURL+YokoServiceSearchSchemaProcedure,
-			connect.WithSchema(yokoServiceSearchSchemaMethodDescriptor),
+			connect.WithSchema(yokoServiceMethods.ByName("SearchSchema")),
 			connect.WithClientOptions(opts...),
 		),
 		getSymbols: connect.NewClient[v1.GetSymbolsRequest, v1.GetSymbolsResponse](
 			httpClient,
 			baseURL+YokoServiceGetSymbolsProcedure,
-			connect.WithSchema(yokoServiceGetSymbolsMethodDescriptor),
+			connect.WithSchema(yokoServiceMethods.ByName("GetSymbols")),
 			connect.WithClientOptions(opts...),
 		),
 		generateQuery: connect.NewClient[v1.GenerateQueryRequest, v1.GenerateQueryResponse](
 			httpClient,
 			baseURL+YokoServiceGenerateQueryProcedure,
-			connect.WithSchema(yokoServiceGenerateQueryMethodDescriptor),
+			connect.WithSchema(yokoServiceMethods.ByName("GenerateQuery")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -202,46 +191,47 @@ type YokoServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewYokoServiceHandler(svc YokoServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	yokoServiceMethods := v1.File_yoko_v1_yoko_proto.Services().ByName("YokoService").Methods()
 	yokoServiceEnsureIndexHandler := connect.NewUnaryHandler(
 		YokoServiceEnsureIndexProcedure,
 		svc.EnsureIndex,
-		connect.WithSchema(yokoServiceEnsureIndexMethodDescriptor),
+		connect.WithSchema(yokoServiceMethods.ByName("EnsureIndex")),
 		connect.WithHandlerOptions(opts...),
 	)
 	yokoServiceGetIndexHandler := connect.NewUnaryHandler(
 		YokoServiceGetIndexProcedure,
 		svc.GetIndex,
-		connect.WithSchema(yokoServiceGetIndexMethodDescriptor),
+		connect.WithSchema(yokoServiceMethods.ByName("GetIndex")),
 		connect.WithHandlerOptions(opts...),
 	)
 	yokoServiceListIndexesHandler := connect.NewUnaryHandler(
 		YokoServiceListIndexesProcedure,
 		svc.ListIndexes,
-		connect.WithSchema(yokoServiceListIndexesMethodDescriptor),
+		connect.WithSchema(yokoServiceMethods.ByName("ListIndexes")),
 		connect.WithHandlerOptions(opts...),
 	)
 	yokoServiceDeleteIndexHandler := connect.NewUnaryHandler(
 		YokoServiceDeleteIndexProcedure,
 		svc.DeleteIndex,
-		connect.WithSchema(yokoServiceDeleteIndexMethodDescriptor),
+		connect.WithSchema(yokoServiceMethods.ByName("DeleteIndex")),
 		connect.WithHandlerOptions(opts...),
 	)
 	yokoServiceSearchSchemaHandler := connect.NewUnaryHandler(
 		YokoServiceSearchSchemaProcedure,
 		svc.SearchSchema,
-		connect.WithSchema(yokoServiceSearchSchemaMethodDescriptor),
+		connect.WithSchema(yokoServiceMethods.ByName("SearchSchema")),
 		connect.WithHandlerOptions(opts...),
 	)
 	yokoServiceGetSymbolsHandler := connect.NewUnaryHandler(
 		YokoServiceGetSymbolsProcedure,
 		svc.GetSymbols,
-		connect.WithSchema(yokoServiceGetSymbolsMethodDescriptor),
+		connect.WithSchema(yokoServiceMethods.ByName("GetSymbols")),
 		connect.WithHandlerOptions(opts...),
 	)
 	yokoServiceGenerateQueryHandler := connect.NewUnaryHandler(
 		YokoServiceGenerateQueryProcedure,
 		svc.GenerateQuery,
-		connect.WithSchema(yokoServiceGenerateQueryMethodDescriptor),
+		connect.WithSchema(yokoServiceMethods.ByName("GenerateQuery")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/yoko.v1.YokoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
