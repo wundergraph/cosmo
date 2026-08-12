@@ -295,7 +295,8 @@
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
     },
-    "ResourceDocumentation": ""
+    "ResourceDocumentation": "",
+    "Servers": null
   },
   "ConnectRPC": {
     "Enabled": false,

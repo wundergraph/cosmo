@@ -127,7 +127,7 @@ type Config struct {
 	accessController                *AccessController
 	retryOptions                    retrytransport.RetryOptions
 	redisClient                     rd.RDCloser
-	mcpServer                       *mcpserver.GraphQLSchemaServer
+	mcpHost                         *mcpserver.Host
 	connectRPCServer                *connectrpc.Server
 	processStartTime                time.Time
 	developmentMode                 bool

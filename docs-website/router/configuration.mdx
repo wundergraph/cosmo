@@ -329,6 +329,12 @@ introspection:
 
 The Model Context Protocol (MCP) server allows AI models to discover and interact with your GraphQL API in a secure way.
 
+<Info>
+  This table documents the deprecated, single-server options. Use `mcp.servers` to run one or more MCP servers from
+  one router. See [MCP Configuration](/router/mcp/configuration#running-multiple-mcp-servers) for the full
+  reference, including the migration path from these options.
+</Info>
+
 | Environment Variable            | YAML                            | Required               | Description                                                                                                                                                  | Default Value  |
 | ------------------------------- | ------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
 | MCP_ENABLED                     | mcp.enabled                     | <Icon icon="square" /> | Enable or disable the MCP server                                                                                                                             | false          |

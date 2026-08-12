@@ -1,6 +1,10 @@
 package mcpserver
 
 import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,6 +16,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
+
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 const testSchema = `
@@ -194,4 +200,81 @@ func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 		"execute_operation_list_employees",
 		"get_operation_info",
 	}, srv.registeredTools)
+}
+
+func TestRegisterRoutesUsesMountPath(t *testing.T) {
+	t.Parallel()
+
+	srv, err := NewGraphQLSchemaServer(
+		context.Background(),
+		"http://localhost:3002/graphql",
+		WithMountPath("/billing/mcp"),
+		WithLogger(zap.NewNop()),
+	)
+	require.NoError(t, err)
+	t.Cleanup(srv.Close)
+
+	require.Equal(t, "/billing/mcp", srv.MountPath())
+
+	mux := http.NewServeMux()
+	srv.RegisterRoutes(mux, func(h http.Handler) http.Handler { return h })
+
+	// The MCP endpoint answers on the mount path.
+	_, pattern := mux.Handler(httptest.NewRequest(http.MethodPost, "/billing/mcp", nil))
+	require.Equal(t, "/billing/mcp", pattern)
+
+	// The default path is not registered.
+	_, pattern = mux.Handler(httptest.NewRequest(http.MethodPost, "/mcp", nil))
+	require.Empty(t, pattern)
+}
+
+func TestMountPathDefaultsToMcp(t *testing.T) {
+	t.Parallel()
+
+	srv, err := NewGraphQLSchemaServer(
+		context.Background(),
+		"http://localhost:3002/graphql",
+		WithLogger(zap.NewNop()),
+	)
+	require.NoError(t, err)
+	t.Cleanup(srv.Close)
+
+	require.Equal(t, DefaultMountPath, srv.MountPath())
+}
+
+func TestProtectedResourceMetadataUsesMountPath(t *testing.T) {
+	t.Parallel()
+
+	oauthCfg := &config.MCPOAuthConfiguration{
+		Enabled:                true,
+		AuthorizationServerURL: "https://auth.example.com",
+		JWKS: []config.JWKSConfiguration{{
+			Secret:    "test-secret-value",
+			Algorithm: "HS256",
+		}},
+	}
+
+	srv, err := NewGraphQLSchemaServer(
+		context.Background(),
+		"http://localhost:3002/graphql",
+		WithMountPath("/billing/mcp"),
+		WithServerBaseURL("https://billing.example.com"),
+		WithOAuth(oauthCfg),
+		WithLogger(zap.NewNop()),
+	)
+	require.NoError(t, err)
+	t.Cleanup(srv.Close)
+
+	mux := http.NewServeMux()
+	srv.RegisterRoutes(mux, func(h http.Handler) http.Handler { return h })
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/.well-known/oauth-protected-resource/billing/mcp", nil)
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var metadata ProtectedResourceMetadata
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &metadata))
+	require.Equal(t, "https://billing.example.com/billing/mcp", metadata.Resource)
 }
