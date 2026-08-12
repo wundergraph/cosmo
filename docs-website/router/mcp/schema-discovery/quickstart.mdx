@@ -4,7 +4,7 @@ description: 'Index your schema and generate your first GraphQL operation from a
 icon: 'rocket'
 ---
 
-This tutorial takes about 10 minutes. Follow every step in order. Each step shows what you must see before you continue.
+This tutorial takes about 10 minutes. At the end you have a GraphQL operation that you wrote as a sentence, and the data it returns from your own graph.
 
 ## Prerequisites
 
@@ -39,7 +39,8 @@ mcp:
 Leave `token` empty if your service runs with authentication off.
 
 <Warning>
-The router does not start when `schema_discovery.enabled` is `true` and `url` is empty. This is deliberate. It stops a server whose tools always fail.
+  The router does not start when `schema_discovery.enabled` is `true` and `url` is empty. This is deliberate. It stops a
+  server whose tools always fail.
 </Warning>
 
 ## Step 2 - Start the router
@@ -71,6 +72,7 @@ The `index_id` is the SHA-256 hash of your schema. Compute it yourself at any ti
 ```bash
 printf 'sha256:%s\n' "$(shasum -a 256 ./schema.graphql | cut -d' ' -f1)"
 ```
+
 </Note>
 
 ## Step 3 - Connect an MCP client
@@ -171,9 +173,7 @@ You now have data.
 ```json
 {
   "data": {
-    "employees": [
-      { "id": 1, "details": { "forename": "Jens", "surname": "Neuse" }, "currentMood": "HAPPY" }
-    ]
+    "employees": [{ "id": 1, "details": { "forename": "Jens", "surname": "Neuse" }, "currentMood": "HAPPY" }]
   }
 }
 ```

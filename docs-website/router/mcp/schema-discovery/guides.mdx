@@ -1,16 +1,14 @@
 ---
 title: 'Guides'
-description: 'Solve one task at a time: find duplicate work, curate an operation into a tool, or use an operation in a BFF.'
+description: 'Find duplicate work before you build it, curate a generated operation into a tool, or ship one in a BFF.'
 icon: 'list-check'
 ---
 
-Each guide solves one problem. Read only the guide that you need.
+These guides assume a router that runs with schema discovery enabled. To set one up, see the [Quickstart](/router/mcp/schema-discovery/quickstart).
 
 ## Find out if a capability already exists
 
-Use this guide before you build a new field, a new resolver, or a new subgraph.
-
-A large organisation runs many teams. Two teams add the same capability under different names. Schema discovery finds the first one before you build the second.
+Two teams in a large organisation often add the same capability under different names. Search before you build a new field, a new resolver, or a new subgraph. Schema discovery finds the first one before you build the second.
 
 ### Step 1 - Search by intent
 
@@ -30,10 +28,10 @@ The search matches meaning, not text. It finds `Customer.invoiceAddress` and `Ac
 
 Read the result. It gives you a decision.
 
-| Result | Meaning | What you do |
-| --- | --- | --- |
-| One or more `queries` | The capability exists today. | Use the operation. Do not build it. |
-| Empty `queries` and one `unsatisfied` reason | The schema cannot answer this. | Build the capability. |
+| Result                                       | Meaning                        | What you do                         |
+| -------------------------------------------- | ------------------------------ | ----------------------------------- |
+| One or more `queries`                        | The capability exists today.   | Use the operation. Do not build it. |
+| Empty `queries` and one `unsatisfied` reason | The schema cannot answer this. | Build the capability.               |
 
 ### Step 3 - Read the reason
 
@@ -49,7 +47,7 @@ The `unsatisfied` reason names what is missing.
 
 Collect these reasons across your teams. They tell you what consumers want and your graph does not have.
 
-### What this guide does not tell you
+### Limits
 
 The index holds the composed schema. It cannot show a subgraph that nobody published yet. Another team can be halfway through the same work.
 
@@ -57,7 +55,7 @@ Check your schema registry as well, before you commit to a build.
 
 ## Turn a generated operation into a tool
 
-Use this guide to give an agent a curated tool instead of an open prompt.
+Give an agent a curated tool instead of an open prompt.
 
 The router generates an operation. The router never publishes it. You review the operation first, then publish it yourself. Your production router then exposes it as its own MCP tool.
 
@@ -117,7 +115,7 @@ This is the curated path. Discovery happens in development. Production runs only
 
 ## Use a generated operation in a BFF
 
-Use this guide to put an operation into an application.
+A generated operation drops straight into an application. The document is the request, and the variables schema types the inputs.
 
 ### Step 1 - Take both fields
 

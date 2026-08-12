@@ -14,13 +14,13 @@ Ranks schema elements against a topic.
 
 ### Input
 
-| Field | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| `query` | string | yes | | The topic, in your own words. |
-| `kinds` | string[] | no | all | Restrict to these kinds. See [Kinds](#kinds). |
-| `limit` | integer | no | 10 | The number of hits to return. |
-| `parent` | string | no | | Restrict to the members of one coordinate, for example `object:Query`. |
-| `paginated` | boolean | no | | `true` keeps only Relay connection fields. `false` removes them. |
+| Field       | Type     | Required | Default | Description                                                            |
+| ----------- | -------- | -------- | ------- | ---------------------------------------------------------------------- |
+| `query`     | string   | yes      |         | The topic, in your own words.                                          |
+| `kinds`     | string[] | no       | all     | Restrict to these kinds. See [Kinds](#kinds).                          |
+| `limit`     | integer  | no       | 10      | The number of hits to return.                                          |
+| `parent`    | string   | no       |         | Restrict to the members of one coordinate, for example `object:Query`. |
+| `paginated` | boolean  | no       |         | `true` keeps only Relay connection fields. `false` removes them.       |
 
 ### Kinds
 
@@ -42,17 +42,15 @@ An unknown kind matches nothing. The tool schema constrains the input to this li
 }
 ```
 
-| Field | Type | Description |
-| --- | --- | --- |
+| Field               | Type   | Description                           |
+| ------------------- | ------ | ------------------------------------- |
 | `hits[].coordinate` | string | The canonical `kind:Type.field` path. |
-| `hits[].score` | number | The relevance rank. |
-| `hits[].record` | object | The full record of the element. |
+| `hits[].score`      | number | The relevance rank.                   |
+| `hits[].record`     | object | The full record of the element.       |
 
 The `hits` list is absent when nothing matches.
 
-<Note>
-The records are large. Use a low `limit`.
-</Note>
+<Note>The records are large. Use a low `limit`.</Note>
 
 ## get_symbols
 
@@ -60,9 +58,9 @@ Reads the full record for each coordinate.
 
 ### Input
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `coordinates` | string[] | yes | The coordinates to read. At least one. |
+| Field         | Type     | Required | Description                            |
+| ------------- | -------- | -------- | -------------------------------------- |
+| `coordinates` | string[] | yes      | The coordinates to read. At least one. |
 
 Copy each coordinate from a `search_schema` result. A coordinate has one of these forms:
 
@@ -75,9 +73,7 @@ Copy each coordinate from a `search_schema` result. A coordinate has one of thes
 
 ```json
 {
-  "symbols": [
-    { "coordinate": "enum:Mood", "record": { "Values": [{ "Name": "HAPPY" }, { "Name": "SAD" }] } }
-  ]
+  "symbols": [{ "coordinate": "enum:Mood", "record": { "Values": [{ "Name": "HAPPY" }, { "Name": "SAD" }] } }]
 }
 ```
 
@@ -91,9 +87,9 @@ This tool takes 10 to 30 seconds.
 
 ### Input
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `prompt` | string | yes | A description of the data that you want, in your own words. |
+| Field    | Type   | Required | Description                                                 |
+| -------- | ------ | -------- | ----------------------------------------------------------- |
+| `prompt` | string | yes      | A description of the data that you want, in your own words. |
 
 Write the entities and the fields that you want. Give the filter conditions and the sort order. Do not write GraphQL syntax. Do not guess type names.
 
@@ -119,19 +115,20 @@ Write the entities and the fields that you want. Give the filter conditions and 
 }
 ```
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `queries[].document` | string | The operation text. It is valid against your schema. |
-| `queries[].operationName` | string | The name to send with the request. |
-| `queries[].operationType` | string | `query`, `mutation`, or `subscription`. |
-| `queries[].variablesSchema` | object | A JSON Schema for the variables. |
-| `queries[].description` | string | One line that says what the operation does. |
-| `unsatisfied[]` | string[] | What the schema cannot answer, and why. |
-| `truncated` | boolean | `true` if the service stopped early. |
-| `guidance` | object | What to do with the operation. Absent when there is no operation. |
+| Field                       | Type     | Description                                                       |
+| --------------------------- | -------- | ----------------------------------------------------------------- |
+| `queries[].document`        | string   | The operation text. It is valid against your schema.              |
+| `queries[].operationName`   | string   | The name to send with the request.                                |
+| `queries[].operationType`   | string   | `query`, `mutation`, or `subscription`.                           |
+| `queries[].variablesSchema` | object   | A JSON Schema for the variables.                                  |
+| `queries[].description`     | string   | One line that says what the operation does.                       |
+| `unsatisfied[]`             | string[] | What the schema cannot answer, and why.                           |
+| `truncated`                 | boolean  | `true` if the service stopped early.                              |
+| `guidance`                  | object   | What to do with the operation. Absent when there is no operation. |
 
 <Note>
-A response with no queries and one `unsatisfied` reason is a normal result. It is not an error. It tells you that your schema cannot answer the request.
+  A response with no queries and one `unsatisfied` reason is a normal result. It is not an error. It tells you that your
+  schema cannot answer the request.
 </Note>
 
 ### Parameterized operations
@@ -146,14 +143,14 @@ One operation thus serves many different inputs. Generate one time, then call ma
 
 Each tool returns a readable message. The tools return no protocol error, because an agent can read a tool result and act on it.
 
-| Message | Cause | What the caller does |
-| --- | --- | --- |
-| The schema index is still building. Retry in a few seconds. | The first build is in flight. | Retry. |
-| The schema index expired. It is being rebuilt. Retry in a few seconds. | The service dropped an unused index. The router rebuilds it. | Retry. |
-| The schema index is not ready. Retry in a few seconds. | The service reports that the index cannot serve yet. | Retry. |
-| Schema discovery is not configured correctly. Contact the router operator. | The token is missing, wrong, or expired. | Do not retry. Tell the operator. |
-| The request is not valid. | The input is wrong, or the prompt asks for no data. | Do not retry. Fix the input. |
-| The schema discovery service is unreachable. | The router cannot reach the service. | Tell the operator. |
+| Message                                                                    | Cause                                                        | What the caller does             |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------ | -------------------------------- |
+| The schema index is still building. Retry in a few seconds.                | The first build is in flight.                                | Retry.                           |
+| The schema index expired. It is being rebuilt. Retry in a few seconds.     | The service dropped an unused index. The router rebuilds it. | Retry.                           |
+| The schema index is not ready. Retry in a few seconds.                     | The service reports that the index cannot serve yet.         | Retry.                           |
+| Schema discovery is not configured correctly. Contact the router operator. | The token is missing, wrong, or expired.                     | Do not retry. Tell the operator. |
+| The request is not valid.                                                  | The input is wrong, or the prompt asks for no data.          | Do not retry. Fix the input.     |
+| The schema discovery service is unreachable.                               | The router cannot reach the service.                         | Tell the operator.               |
 
 The router never puts the token into a message or a log.
 

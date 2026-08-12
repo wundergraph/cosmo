@@ -21,14 +21,14 @@ mcp:
 
 ## Keys
 
-| Key | Type | Default | Environment variable |
-| --- | --- | --- | --- |
-| `enabled` | boolean | `false` | `MCP_SCHEMA_DISCOVERY_ENABLED` |
-| `url` | string | | `MCP_SCHEMA_DISCOVERY_URL` |
-| `token` | string | | `MCP_SCHEMA_DISCOVERY_TOKEN` |
-| `request_timeout` | duration | `90s` | `MCP_SCHEMA_DISCOVERY_REQUEST_TIMEOUT` |
-| `index_poll_interval` | duration | `2s` | `MCP_SCHEMA_DISCOVERY_INDEX_POLL_INTERVAL` |
-| `index_timeout` | duration | `10m` | `MCP_SCHEMA_DISCOVERY_INDEX_TIMEOUT` |
+| Key                   | Type     | Default | Environment variable                       |
+| --------------------- | -------- | ------- | ------------------------------------------ |
+| `enabled`             | boolean  | `false` | `MCP_SCHEMA_DISCOVERY_ENABLED`             |
+| `url`                 | string   |         | `MCP_SCHEMA_DISCOVERY_URL`                 |
+| `token`               | string   |         | `MCP_SCHEMA_DISCOVERY_TOKEN`               |
+| `request_timeout`     | duration | `90s`   | `MCP_SCHEMA_DISCOVERY_REQUEST_TIMEOUT`     |
+| `index_poll_interval` | duration | `2s`    | `MCP_SCHEMA_DISCOVERY_INDEX_POLL_INTERVAL` |
+| `index_timeout`       | duration | `10m`   | `MCP_SCHEMA_DISCOVERY_INDEX_TIMEOUT`       |
 
 ### enabled
 
@@ -41,7 +41,7 @@ The base URL of the schema discovery service. Include the scheme.
 The service speaks Connect over HTTP/1.1.
 
 <Warning>
-The router does not start when `enabled` is `true` and `url` is empty. This stops a server whose tools always fail.
+  The router does not start when `enabled` is `true` and `url` is empty. This stops a server whose tools always fail.
 </Warning>
 
 ### token
@@ -102,11 +102,11 @@ During a rebuild the previous index keeps serving. The router adopts the new ind
 
 ## Failure behaviour
 
-| Condition | Result |
-| --- | --- |
-| The service is unreachable at startup | The router starts. The tools report that the index is not ready. |
-| The build fails | The router logs the reason. The tools report that the index is not ready. |
-| The build exceeds `index_timeout` | The router stops waiting and logs the reason. |
-| The service drops an unused index | The router rebuilds it at the same address on the next tool call. |
+| Condition                             | Result                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------- |
+| The service is unreachable at startup | The router starts. The tools report that the index is not ready.          |
+| The build fails                       | The router logs the reason. The tools report that the index is not ready. |
+| The build exceeds `index_timeout`     | The router stops waiting and logs the reason.                             |
+| The service drops an unused index     | The router rebuilds it at the same address on the next tool call.         |
 
 A fault in the discovery service never stops the router from serving GraphQL.
