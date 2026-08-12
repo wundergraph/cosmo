@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { noBaseDefinitionForExtensionError, noQueryRootTypeError, OBJECT } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel, routerConfigFromJsonString } from '@wundergraph/cosmo-shared';
@@ -217,6 +218,11 @@ describe('Router Config', (ctx) => {
     const config = routerConfigFromJsonString(configJsonString);
 
     expect(config).toBeDefined();
+    expect(config?.engineConfig?.schemaHash).toBe(
+      `sha256:${createHash('sha256')
+        .update(config?.engineConfig?.graphqlSchema || '')
+        .digest('hex')}`,
+    );
   });
 
   test('Should not return routerConfig if an invalid schema version is available', async (testContext) => {

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { type AxiosInstance, create as createHttpClient } from 'axios';
@@ -37,6 +38,10 @@ const ptqResponseSchema = z.object({
 });
 
 type PtQResponse = z.infer<typeof ptqResponseSchema>;
+
+export function getSchemaHash(schema: string): string {
+  return `sha256:${createHash('sha256').update(schema).digest('hex')}`;
+}
 
 @traced
 export class PromptToQueryService {

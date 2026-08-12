@@ -16,6 +16,7 @@ The MCP server gives AI models a set of tools they can discover and execute. It 
 | `get_operation_info` | Returns instructions for executing the operation behind one of your tools directly via HTTP and integrating it into an application. |
 | `get_schema`         | Returns the full GraphQL schema of the API, helping AI models understand the entire API structure.                                  |
 | `execute_graphql`    | Executes an arbitrary GraphQL query or mutation, letting AI models craft operations beyond the tools you have created.              |
+| `generate_query`     | Uses Cosmo Cloud Prompt to Query to generate a GraphQL operation from a natural-language prompt.                                    |
 
 <Warning>
   `get_schema` and `execute_graphql` are disabled by default because they expose your full API surface to AI models.
@@ -23,6 +24,35 @@ The MCP server gives AI models a set of tools they can discover and execute. It 
   [`enable_arbitrary_operations: true`](/router/mcp/configuration) respectively, and only when arbitrary access is
   intended. Prefer creating focused tools.
 </Warning>
+
+### Generate a GraphQL Operation with Cosmo Cloud
+
+The `generate_query` tool is available when the router has a graph token and router registration is enabled. It sends the
+prompt and a hash of the router's active schema to Cosmo Cloud's Prompt to Query service. The generated operation is
+returned to the MCP client but is not executed.
+
+The tool accepts one required field:
+
+```json
+{
+  "prompt": "List the names and email addresses of the five most recently created users"
+}
+```
+
+A successful response contains the GraphQL document and the metadata needed to use it:
+
+```json
+{
+  "description": "Lists the five most recently created users",
+  "document": "query RecentUsers { users(first: 5, orderBy: CREATED_AT_DESC) { name email } }",
+  "operationName": "RecentUsers",
+  "operationType": "query",
+  "variablesSchema": "{\"type\":\"object\"}"
+}
+```
+
+Availability also depends on the Prompt to Query feature being enabled for the Cosmo Cloud organization associated with
+the graph token. Control-plane or entitlement errors are returned as MCP tool errors.
 
 ## Creating Tools
 

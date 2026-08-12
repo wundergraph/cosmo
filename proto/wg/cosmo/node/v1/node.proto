@@ -97,6 +97,8 @@ message EngineConfiguration {
   repeated TypeConfiguration type_configurations = 5;
   map<string, string> string_storage = 6;
   optional string graphql_client_schema = 7;
+  // Content hash of graphqlSchema, formatted as "sha256:<lowercase hex>".
+  string schema_hash = 8;
 }
 
 message DataSourceConfiguration {

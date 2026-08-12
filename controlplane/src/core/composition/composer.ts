@@ -40,7 +40,7 @@ import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { InspectorSchemaChange } from '../services/SchemaUsageTrafficInspector.js';
 import { SchemaCheckChangeAction } from '../../db/models.js';
 import { traced } from '../tracing.js';
-import { PromptToQueryService } from '../services/PromptToQueryService.js';
+import { getSchemaHash, PromptToQueryService } from '../services/PromptToQueryService.js';
 import {
   composeGraphsInWorker,
   DeserializedComposedGraph,
@@ -495,6 +495,11 @@ export class Composer {
         schemaVersionId: updatedFederatedGraph?.composedSchemaVersionId || '',
       };
     }
+
+    if (!composedGraph.composedSchema || !routerExecutionConfig.engineConfig) {
+      throw new Error('A valid composition must include a composed schema and an engine configuration.');
+    }
+    routerExecutionConfig.engineConfig.schemaHash = getSchemaHash(composedGraph.composedSchema);
 
     let schemaChanges: GetDiffBetweenGraphsResult;
 

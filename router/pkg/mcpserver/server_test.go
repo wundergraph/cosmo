@@ -1,18 +1,44 @@
 package mcpserver
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 )
+
+type fakePromptToQueryClient struct {
+	response   *nodev1.GenerateQueryResponse
+	err        error
+	schemaHash string
+	prompt     string
+}
+
+func stringPointer(value string) *string {
+	return &value
+}
+
+func (f *fakePromptToQueryClient) GenerateQuery(_ context.Context, schemaHash, prompt string) (*nodev1.GenerateQueryResponse, error) {
+	f.schemaHash = schemaHash
+	f.prompt = prompt
+	return f.response, f.err
+}
 
 const testSchema = `
 schema {
@@ -90,14 +116,14 @@ func TestReload_NoToolDuplication(t *testing.T) {
 	require.NoError(t, err)
 
 	// First load
-	err = srv.Reload(&schemaDoc, nil)
+	err = srv.Reload(&schemaDoc, nil, "sha256:test")
 	require.NoError(t, err)
 
 	firstLoadTools := make([]string, len(srv.registeredTools))
 	copy(firstLoadTools, srv.registeredTools)
 
 	// Second load (simulates config reload)
-	err = srv.Reload(&schemaDoc, nil)
+	err = srv.Reload(&schemaDoc, nil, "sha256:test")
 	require.NoError(t, err)
 
 	// registeredTools should be identical after reload — no duplicates
@@ -136,7 +162,7 @@ func TestReload_ReservedToolNameCollision(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = srv.Reload(&schemaDoc, nil)
+	err = srv.Reload(&schemaDoc, nil, "sha256:test")
 	require.NoError(t, err)
 
 	// The operation "GetOperationInfo" (snake: "get_operation_info") should be skipped
@@ -180,7 +206,7 @@ func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = srv.Reload(&schemaDoc, nil)
+	err = srv.Reload(&schemaDoc, nil, "sha256:test")
 	require.NoError(t, err)
 
 	// No collisions because the prefix disambiguates from the reserved name
@@ -194,4 +220,144 @@ func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 		"execute_operation_list_employees",
 		"get_operation_info",
 	}, srv.registeredTools)
+}
+
+func TestGenerateQueryTool(t *testing.T) {
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	client := &fakePromptToQueryClient{
+		response: &nodev1.GenerateQueryResponse{
+			Response: &nodev1.Response{Code: common.EnumStatusCode_OK},
+			Query: &nodev1.SatisfiedQuery{
+				Description:     "Lists employees",
+				Document:        "query ListEmployees { employees { id name } }",
+				OperationName:   "ListEmployees",
+				OperationType:   nodev1.SatisfiedOperationType_QUERY,
+				VariablesSchema: `{"type":"object"}`,
+			},
+		},
+	}
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithPromptToQueryClient(client),
+		WithOperationsDir(""),
+	)
+	require.NoError(t, err)
+	require.NoError(t, srv.Reload(&schemaDoc, nil, "sha256:first"))
+	require.Contains(t, srv.registeredTools, "generate_query")
+
+	result, err := srv.handleGenerateQuery()(t.Context(), &mcp.CallToolRequest{
+		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{"prompt":"  List all employees  "}`)},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	require.Equal(t, "sha256:first", client.schemaHash)
+	require.Equal(t, "List all employees", client.prompt)
+	require.Len(t, result.Content, 1)
+	textContent, ok := result.Content[0].(*mcp.TextContent)
+	require.True(t, ok)
+	require.JSONEq(t, `{
+		"description":"Lists employees",
+		"document":"query ListEmployees { employees { id name } }",
+		"operationName":"ListEmployees",
+		"operationType":"query",
+		"variablesSchema":"{\"type\":\"object\"}"
+	}`, textContent.Text)
+
+	require.NoError(t, srv.Reload(&schemaDoc, nil, "sha256:second"))
+	_, err = srv.handleGenerateQuery()(t.Context(), &mcp.CallToolRequest{
+		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{"prompt":"List employees again"}`)},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "sha256:second", client.schemaHash)
+}
+
+func TestGenerateQueryToolErrors(t *testing.T) {
+	tests := []struct {
+		name       string
+		client     *fakePromptToQueryClient
+		schemaHash string
+		arguments  string
+		wantText   string
+	}{
+		{
+			name:       "blank prompt",
+			client:     &fakePromptToQueryClient{},
+			schemaHash: "sha256:test",
+			arguments:  `{"prompt":"   "}`,
+			wantText:   "prompt is required",
+		},
+		{
+			name:      "schema unavailable",
+			client:    &fakePromptToQueryClient{},
+			arguments: `{"prompt":"List employees"}`,
+			wantText:  "schema is not available",
+		},
+		{
+			name: "control plane rejection",
+			client: &fakePromptToQueryClient{response: &nodev1.GenerateQueryResponse{
+				Response: &nodev1.Response{Code: common.EnumStatusCode_ERR_UPGRADE_PLAN, Details: stringPointer("Prompt to Query not available with your current plan")},
+			}},
+			schemaHash: "sha256:test",
+			arguments:  `{"prompt":"List employees"}`,
+			wantText:   "Prompt to Query not available with your current plan",
+		},
+		{
+			name:       "transport failure",
+			client:     &fakePromptToQueryClient{err: errors.New("control plane unavailable")},
+			schemaHash: "sha256:test",
+			arguments:  `{"prompt":"List employees"}`,
+			wantText:   "Failed to generate a GraphQL operation",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv, err := NewGraphQLSchemaServer(
+				t.Context(),
+				"http://localhost:4000/graphql",
+				WithPromptToQueryClient(tt.client),
+			)
+			require.NoError(t, err)
+			srv.setSchemaHash(tt.schemaHash)
+
+			result, err := srv.handleGenerateQuery()(t.Context(), &mcp.CallToolRequest{
+				Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(tt.arguments)},
+			})
+
+			require.NoError(t, err)
+			require.True(t, result.IsError)
+			textContent, ok := result.Content[0].(*mcp.TextContent)
+			require.True(t, ok)
+			require.Contains(t, textContent.Text, tt.wantText)
+		})
+	}
+}
+
+func TestGenerateQueryScopeIncludedInProtectedResourceMetadata(t *testing.T) {
+	srv := &GraphQLSchemaServer{
+		oauthConfig: &config.MCPOAuthConfiguration{
+			AuthorizationServerURL: "https://auth.example.com",
+			Scopes: config.MCPOAuthScopesConfiguration{
+				ToolsCall:     []string{"mcp:tools:call"},
+				GenerateQuery: []string{"mcp:query:generate"},
+			},
+		},
+		promptToQueryClient: &fakePromptToQueryClient{},
+		serverBaseURL:       "https://mcp.example.com",
+		logger:              zap.NewNop(),
+	}
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/.well-known/oauth-protected-resource/mcp", nil)
+	srv.handleProtectedResourceMetadata(recorder, request)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	var metadata ProtectedResourceMetadata
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &metadata))
+	require.Equal(t, []string{"mcp:query:generate", "mcp:tools:call"}, metadata.ScopesSupported)
 }

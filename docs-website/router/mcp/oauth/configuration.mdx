@@ -18,6 +18,7 @@ icon: 'sliders-up'
 | `oauth.scopes.execute_graphql`               | Scopes required to call the `execute_graphql` built-in tool. Additive to `tools_call`. Only relevant when `enable_arbitrary_operations` is `true`.                                                                            | `[]`    |
 | `oauth.scopes.get_operation_info`            | Scopes required to call the `get_operation_info` built-in tool. Additive to `tools_call`.                                                                                                                                     | `[]`    |
 | `oauth.scopes.get_schema`                    | Scopes required to call the `get_schema` built-in tool. Additive to `tools_call`. Only relevant when `expose_schema` is `true`.                                                                                               | `[]`    |
+| `oauth.scopes.generate_query`                | Scopes required to call the `generate_query` built-in tool. Additive to `tools_call`. Only relevant when a graph-token-backed control-plane client is configured.                                                            | `[]`    |
 | `oauth.jwks`                                 | List of JWKS providers for JWT verification. Supports remote JWKS URLs or symmetric secrets.                                                                                                                                  | `[]`    |
 
 ## JWKS Configuration
@@ -67,6 +68,7 @@ oauth:
 | `MCP_OAUTH_AUTHORIZATION_SERVER_URL`             | `mcp.oauth.authorization_server_url`             |
 | `MCP_OAUTH_SCOPE_CHALLENGE_INCLUDE_TOKEN_SCOPES` | `mcp.oauth.scope_challenge_include_token_scopes` |
 | `MCP_OAUTH_MAX_SCOPE_COMBINATIONS`               | `mcp.oauth.max_scope_combinations`               |
+| `MCP_OAUTH_SCOPES_GENERATE_QUERY`                 | `mcp.oauth.scopes.generate_query`                 |
 
 ## HTTP Error Responses
 
