@@ -64,7 +64,7 @@ The router generates an operation. The router never publishes it. You review the
 Run schema discovery in a development router. Send the prompt.
 
 ```json
-{ "prompt": "list active employees with their department and current mood" }
+{ "prompt": "list employees with their id, first name, last name and current mood" }
 ```
 
 ### Step 2 - Review the document
@@ -81,9 +81,12 @@ Give the operation a clear name. The name becomes the tool name.
 
 Write the document to your MCP operations directory.
 
-```graphql operations/ListActiveEmployees.graphql
-query ListActiveEmployees($limit: Int) {
-  employees(limit: $limit) {
+```graphql operations/ListEmployees.graphql
+"""
+Lists every employee with their id, name, and current mood.
+"""
+query ListEmployees {
+  employees {
     id
     details {
       forename
@@ -94,7 +97,7 @@ query ListActiveEmployees($limit: Int) {
 }
 ```
 
-Add a description above the operation. The description becomes the tool description, so write it for the agent.
+The operation name sets the tool name. A file name is used only when the operation has no name. The `"""` docstring above the operation sets the tool description, so write it for the agent. A `#` comment does not work.
 
 ### Step 4 - Deploy to production
 

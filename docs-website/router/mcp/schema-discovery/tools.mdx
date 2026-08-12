@@ -48,7 +48,7 @@ An unknown kind matches nothing. The tool schema constrains the input to this li
 | `hits[].score`      | number | The relevance rank.                   |
 | `hits[].record`     | object | The full record of the element.       |
 
-The `hits` list is absent when nothing matches.
+The `hits` list is always present. It is empty when nothing matches.
 
 <Note>The records are large. Use a low `limit`.</Note>
 
@@ -106,8 +106,6 @@ Write the entities and the fields that you want. Give the filter conditions and 
       "variablesSchema": { "type": "object", "additionalProperties": false }
     }
   ],
-  "unsatisfied": [],
-  "truncated": false,
   "guidance": {
     "endpoint": "http://localhost:3002/graphql",
     "nextSteps": ["Run the operation against the endpoint. ..."]
@@ -125,6 +123,8 @@ Write the entities and the fields that you want. Give the filter conditions and 
 | `unsatisfied[]`             | string[] | What the schema cannot answer, and why.                           |
 | `truncated`                 | boolean  | `true` if the service stopped early.                              |
 | `guidance`                  | object   | What to do with the operation. Absent when there is no operation. |
+
+`queries` is always present. `unsatisfied`, `truncated` and `guidance` are absent when they are empty.
 
 <Note>
   A response with no queries and one `unsatisfied` reason is a normal result. It is not an error. It tells you that your
@@ -158,4 +158,4 @@ The router never puts the token into a message or a log.
 
 `search_schema` and `generate_query` show the shape of your schema to any caller that reaches the MCP server. This is the same exposure that `get_schema` gives.
 
-These tools carry no `@requiresScopes` directive, so the [scope middleware](/router/mcp/oauth/scopes) derives no per-tool scope for them. Use the `tools_call` scope to gate them.
+These tools carry no `@requiresScopes` directive, so the [scope middleware](/router/mcp/oauth/scopes) derives no per-tool scope for them. There is also no `search_schema`, `get_symbols` or `generate_query` key under `mcp.oauth.scopes`, unlike `get_schema`. Use the `tools_call` scope, which applies to every tool call.
