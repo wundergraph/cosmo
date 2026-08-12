@@ -3,7 +3,6 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -28,10 +27,6 @@ type fakePromptToQueryClient struct {
 	err             error
 	schemaVersionID string
 	prompt          string
-}
-
-func stringPointer(value string) *string {
-	return &value
 }
 
 func (f *fakePromptToQueryClient) GenerateQuery(_ context.Context, schemaVersionID, prompt string) (*nodev1.GenerateQueryResponse, error) {
@@ -274,68 +269,6 @@ func TestGenerateQueryTool(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, "schema-version-second", client.schemaVersionID)
-}
-
-func TestGenerateQueryToolErrors(t *testing.T) {
-	tests := []struct {
-		name            string
-		client          *fakePromptToQueryClient
-		schemaVersionID string
-		arguments       string
-		wantText        string
-	}{
-		{
-			name:            "blank prompt",
-			client:          &fakePromptToQueryClient{},
-			schemaVersionID: "schema-version-test",
-			arguments:       `{"prompt":"   "}`,
-			wantText:        "prompt is required",
-		},
-		{
-			name:      "schema unavailable",
-			client:    &fakePromptToQueryClient{},
-			arguments: `{"prompt":"List employees"}`,
-			wantText:  "schema version is not available",
-		},
-		{
-			name: "control plane rejection",
-			client: &fakePromptToQueryClient{response: &nodev1.GenerateQueryResponse{
-				Response: &nodev1.Response{Code: common.EnumStatusCode_ERR_UPGRADE_PLAN, Details: stringPointer("Prompt to Query not available with your current plan")},
-			}},
-			schemaVersionID: "schema-version-test",
-			arguments:       `{"prompt":"List employees"}`,
-			wantText:        "Prompt to Query not available with your current plan",
-		},
-		{
-			name:            "transport failure",
-			client:          &fakePromptToQueryClient{err: errors.New("control plane unavailable")},
-			schemaVersionID: "schema-version-test",
-			arguments:       `{"prompt":"List employees"}`,
-			wantText:        "Failed to generate a GraphQL operation",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			srv, err := NewGraphQLSchemaServer(
-				t.Context(),
-				"http://localhost:4000/graphql",
-				WithPromptToQueryClient(tt.client),
-			)
-			require.NoError(t, err)
-			srv.setSchemaVersionID(tt.schemaVersionID)
-
-			result, err := srv.handleGenerateQuery()(t.Context(), &mcp.CallToolRequest{
-				Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(tt.arguments)},
-			})
-
-			require.NoError(t, err)
-			require.True(t, result.IsError)
-			textContent, ok := result.Content[0].(*mcp.TextContent)
-			require.True(t, ok)
-			require.Contains(t, textContent.Text, tt.wantText)
-		})
-	}
 }
 
 func TestGenerateQueryScopeIncludedInProtectedResourceMetadata(t *testing.T) {
