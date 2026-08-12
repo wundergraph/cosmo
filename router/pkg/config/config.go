@@ -1370,9 +1370,14 @@ type MCPConfiguration struct {
 }
 
 type MCPOAuthConfiguration struct {
-	Enabled                bool                `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	JWKS                   []JWKSConfiguration `yaml:"jwks"`
-	AuthorizationServerURL string              `yaml:"authorization_server_url,omitempty" env:"AUTHORIZATION_SERVER_URL"`
+	Enabled bool                `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	JWKS    []JWKSConfiguration `yaml:"jwks"`
+	// Deprecated: AuthorizationServerURL is deprecated, use AuthorizationServerURLs instead.
+	AuthorizationServerURL string `yaml:"authorization_server_url,omitempty" env:"AUTHORIZATION_SERVER_URL"`
+	// AuthorizationServerURLs configures multiple OAuth 2.0 authorization servers.
+	// All entries are advertised in the RFC 9728 Protected Resource Metadata.
+	// Use AuthorizationServers to read the merged list of both fields.
+	AuthorizationServerURLs []string `yaml:"authorization_server_urls,omitempty" env:"AUTHORIZATION_SERVER_URLS"`
 	// Scopes configures which OAuth scopes are required for different MCP operations.
 	Scopes MCPOAuthScopesConfiguration `yaml:"scopes,omitempty" envPrefix:"SCOPES_"`
 	// ScopeChallengeIncludeTokenScopes controls whether the server includes the token's existing scopes
@@ -1385,6 +1390,25 @@ type MCPOAuthConfiguration struct {
 	// produced when computing the Cartesian product of @requiresScopes across fields.
 	// Increase for complex RBAC configurations.
 	MaxScopeCombinations int `yaml:"max_scope_combinations" envDefault:"2048" env:"MAX_SCOPE_COMBINATIONS"`
+}
+
+// AuthorizationServers returns all configured authorization server URLs.
+// It merges AuthorizationServerURL with AuthorizationServerURLs.
+// The single URL comes first. Empty and duplicate entries are removed.
+func (c MCPOAuthConfiguration) AuthorizationServers() []string {
+	var servers []string
+	seen := make(map[string]struct{}, len(c.AuthorizationServerURLs)+1)
+	for _, url := range append([]string{c.AuthorizationServerURL}, c.AuthorizationServerURLs...) {
+		if url == "" {
+			continue
+		}
+		if _, ok := seen[url]; ok {
+			continue
+		}
+		seen[url] = struct{}{}
+		servers = append(servers, url)
+	}
+	return servers
 }
 
 // MCPOAuthScopesConfiguration defines which scopes are required for different MCP operations.

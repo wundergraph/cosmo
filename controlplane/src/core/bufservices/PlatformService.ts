@@ -146,6 +146,7 @@ import { updateIDPMappers } from './sso/updateIDPMappers.js';
 import { addReadme } from './subgraph/addReadme.js';
 import { checkSubgraphSchema } from './subgraph/checkSubgraphSchema.js';
 import { createFederatedSubgraph } from './subgraph/createFederatedSubgraph.js';
+import { createFederatedSubgraphs } from './subgraph/createFederatedSubgraphs.js';
 import { deleteFederatedSubgraph } from './subgraph/deleteFederatedSubgraph.js';
 import { fixSubgraphSchema } from './subgraph/fixSubgraphSchema.js';
 import { getLatestSubgraphSDL } from './subgraph/getLatestSubgraphSDL.js';
@@ -252,6 +253,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     createFederatedSubgraph: (req, ctx) => {
       return createFederatedSubgraph(opts, req, ctx);
+    },
+
+    createFederatedSubgraphs: (req, ctx) => {
+      return createFederatedSubgraphs(opts, req, ctx);
     },
 
     checkSubgraphSchema: (req, ctx) => {
