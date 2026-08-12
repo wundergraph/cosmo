@@ -1,0 +1,11 @@
+version: 1
+
+subgraphs:
+  - name: base
+    routing_url: http://localhost:4001/graphql
+    schema:
+      file: ./base.graphqls
+  - name: subscriptions
+    routing_url: http://localhost:4002/graphql
+    schema:
+      file: ./subscriptions.graphqls
