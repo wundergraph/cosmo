@@ -118,9 +118,9 @@ type Options struct {
 	PromptToQueryClient PromptToQueryClient
 }
 
-// PromptToQueryClient generates a GraphQL operation for an indexed schema.
+// PromptToQueryClient generates a GraphQL operation for a schema version.
 type PromptToQueryClient interface {
-	GenerateQuery(ctx context.Context, schemaHash, prompt string) (*nodev1.GenerateQueryResponse, error)
+	GenerateQuery(ctx context.Context, schemaVersionID, prompt string) (*nodev1.GenerateQueryResponse, error)
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -149,8 +149,8 @@ type GraphQLSchemaServer struct {
 	resourceDocumentation     string
 	authMiddleware            *MCPAuthMiddleware
 	promptToQueryClient       PromptToQueryClient
-	schemaHashMu              sync.RWMutex
-	schemaHash                string
+	schemaVersionIDMu         sync.RWMutex
+	schemaVersionID           string
 }
 
 type graphqlRequest struct {
@@ -604,14 +604,14 @@ func (s *GraphQLSchemaServer) Start() error {
 
 // Reload reloads the operations and schema, and computes per-tool scope
 // requirements from @requiresScopes directives in the field configurations.
-func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev1.FieldConfiguration, schemaHash string) error {
+func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev1.FieldConfiguration, schemaVersionID string) error {
 	if s.server == nil {
 		return fmt.Errorf("server is not started")
 	}
 
 	s.schemaCompiler = NewSchemaCompiler(s.logger)
 	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations)
-	s.setSchemaHash(schemaHash)
+	s.setSchemaVersionID(schemaVersionID)
 
 	if s.operationsDir != "" {
 		if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
@@ -886,16 +886,16 @@ func (s *GraphQLSchemaServer) registerTools() error {
 	return nil
 }
 
-func (s *GraphQLSchemaServer) setSchemaHash(schemaHash string) {
-	s.schemaHashMu.Lock()
-	defer s.schemaHashMu.Unlock()
-	s.schemaHash = schemaHash
+func (s *GraphQLSchemaServer) setSchemaVersionID(schemaVersionID string) {
+	s.schemaVersionIDMu.Lock()
+	defer s.schemaVersionIDMu.Unlock()
+	s.schemaVersionID = schemaVersionID
 }
 
-func (s *GraphQLSchemaServer) getSchemaHash() string {
-	s.schemaHashMu.RLock()
-	defer s.schemaHashMu.RUnlock()
-	return s.schemaHash
+func (s *GraphQLSchemaServer) getSchemaVersionID() string {
+	s.schemaVersionIDMu.RLock()
+	defer s.schemaVersionIDMu.RUnlock()
+	return s.schemaVersionID
 }
 
 func toolError(message string) *mcp.CallToolResult {
@@ -917,12 +917,12 @@ func (s *GraphQLSchemaServer) handleGenerateQuery() func(ctx context.Context, re
 			return toolError("Input validation failed: prompt is required"), nil
 		}
 
-		schemaHash := s.getSchemaHash()
-		if schemaHash == "" {
-			return toolError("The active GraphQL schema is not available"), nil
+		schemaVersionID := s.getSchemaVersionID()
+		if schemaVersionID == "" {
+			return toolError("The active GraphQL schema version is not available"), nil
 		}
 
-		response, err := s.promptToQueryClient.GenerateQuery(ctx, schemaHash, input.Prompt)
+		response, err := s.promptToQueryClient.GenerateQuery(ctx, schemaVersionID, input.Prompt)
 		if err != nil {
 			s.logger.Error("failed to generate query through the control plane", zap.Error(err))
 			return toolError("Failed to generate a GraphQL operation through the control plane"), nil

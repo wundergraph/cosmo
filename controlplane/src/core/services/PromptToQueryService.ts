@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { type AxiosInstance, create as createHttpClient } from 'axios';
@@ -16,8 +15,15 @@ import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 
 const validationSchema = z.object({
-  schemaSha: z.string().regex(/^sha256:[\da-f]{64}$/i),
+  schemaSDL: z
+    .string()
+    .min(1)
+    .refine((value) => value.trim().length > 0),
   prompt: z.string().trim().min(1),
+});
+
+const ensureIndexResponseSchema = z.object({
+  indexId: z.string().trim().min(1),
 });
 
 const ptqQuerySchema = z.object({
@@ -38,10 +44,6 @@ const ptqResponseSchema = z.object({
 });
 
 type PtQResponse = z.infer<typeof ptqResponseSchema>;
-
-export function getSchemaHash(schema: string): string {
-  return `sha256:${createHash('sha256').update(schema).digest('hex')}`;
-}
 
 @traced
 export class PromptToQueryService {
@@ -70,7 +72,7 @@ export class PromptToQueryService {
     });
   }
 
-  async generateQuery(schemaSha: string, prompt: string): Promise<GenerateQueryResponse> {
+  async generateQuery(schemaSDL: string, prompt: string): Promise<GenerateQueryResponse> {
     if (!this.serviceAddress) {
       // The feature doesn't seem to be configured correctly
       return create(GenerateQueryResponseSchema, {
@@ -82,7 +84,7 @@ export class PromptToQueryService {
     }
 
     // Ensure that the provided parameters are valid
-    const parsed = validationSchema.safeParse({ schemaSha, prompt });
+    const parsed = validationSchema.safeParse({ schemaSDL, prompt });
     if (!parsed.success) {
       return create(GenerateQueryResponseSchema, {
         response: {
@@ -105,11 +107,12 @@ export class PromptToQueryService {
 
     // Invoke the `prompt to query` service
     try {
+      const indexId = await this.ensureIndex(parsed.data.schemaSDL);
       const response = await this.#httpClient('/yoko.v1.YokoService/GenerateQuery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({
-          indexId: parsed.data.schemaSha,
+          indexId,
           prompt: parsed.data.prompt,
         }),
       });
@@ -150,11 +153,21 @@ export class PromptToQueryService {
     }
 
     // Fire and forget the schema indexation
-    this.#httpClient('/yoko.v1.YokoService/EnsureIndex', {
+    this.ensureIndex(schema).catch((e) => this.logger.error(e, 'Failed to index schema due an unexpected error'));
+  }
+
+  private async ensureIndex(schemaSDL: string): Promise<string> {
+    const response = await this.#httpClient('/yoko.v1.YokoService/EnsureIndex', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      data: JSON.stringify({ sdl: schema }),
-    }).catch((e) => this.logger.error(e, 'Failed to index schema due an unexpected error'));
+      data: JSON.stringify({ sdl: schemaSDL }),
+    });
+    const parsed = ensureIndexResponseSchema.safeParse(response.data);
+    if (!parsed.success) {
+      throw new Error('It was not possible to parse the response returned by the Prompt to Query index service');
+    }
+
+    return parsed.data.indexId;
   }
 
   private static getOperationType(type: z.infer<typeof ptqQuerySchema>['operationType']): SatisfiedOperationType {

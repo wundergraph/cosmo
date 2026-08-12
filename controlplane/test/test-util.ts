@@ -86,6 +86,7 @@ export const SetupTest = async function ({
   createScimKey,
   setupBilling,
   organizationId,
+  promptToQueryServiceAddress,
 }: {
   dbname: string;
   chClient?: ClickHouseClient;
@@ -96,6 +97,7 @@ export const SetupTest = async function ({
     plan: 'developer@1' | 'launch@1' | 'scale@1' | 'enterprise';
   };
   organizationId?: UUID;
+  promptToQueryServiceAddress?: string;
 }) {
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -173,6 +175,7 @@ export const SetupTest = async function ({
         clientSecret: 'test',
       },
       cdnBaseUrl: 'http://localhost:11000',
+      promptToQueryServiceAddress,
       admissionWebhookJWTSecret: 'secret',
       keycloakApiUrl: apiUrl,
       blobStorage,

@@ -46,11 +46,11 @@ func TestClientGenerateQuery(t *testing.T) {
 	client, err := New(server.URL, "graph-token")
 	require.NoError(t, err)
 
-	resp, err := client.GenerateQuery(t.Context(), "sha256:abcdef", "List all employees")
+	resp, err := client.GenerateQuery(t.Context(), "14a1d197-7e3a-48df-88d7-a663de90527e", "List all employees")
 
 	require.NoError(t, err)
 	require.Equal(t, "Bearer graph-token", handler.authorizationHeader)
-	require.Equal(t, "sha256:abcdef", handler.generateQueryRequest.GetSchemaHash())
+	require.Equal(t, "14a1d197-7e3a-48df-88d7-a663de90527e", handler.generateQueryRequest.GetSchemaVersionId())
 	require.Equal(t, "List all employees", handler.generateQueryRequest.GetPrompt())
 	require.Equal(t, "GetEmployees", resp.GetQuery().GetOperationName())
 }

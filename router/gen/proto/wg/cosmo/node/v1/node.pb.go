@@ -1010,11 +1010,11 @@ func (x *SelfRegisterResponse) GetRegistrationInfo() *RegistrationInfo {
 }
 
 type GenerateQueryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SchemaHash    string                 `protobuf:"bytes,1,opt,name=schema_hash,json=schemaHash,proto3" json:"schema_hash,omitempty"`
-	Prompt        string                 `protobuf:"bytes,2,opt,name=prompt,proto3" json:"prompt,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	SchemaVersionId string                 `protobuf:"bytes,1,opt,name=schema_version_id,json=schemaVersionId,proto3" json:"schema_version_id,omitempty"`
+	Prompt          string                 `protobuf:"bytes,2,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GenerateQueryRequest) Reset() {
@@ -1047,9 +1047,9 @@ func (*GenerateQueryRequest) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *GenerateQueryRequest) GetSchemaHash() string {
+func (x *GenerateQueryRequest) GetSchemaVersionId() string {
 	if x != nil {
-		return x.SchemaHash
+		return x.SchemaVersionId
 	}
 	return ""
 }
@@ -1198,10 +1198,8 @@ type EngineConfiguration struct {
 	TypeConfigurations       []*TypeConfiguration       `protobuf:"bytes,5,rep,name=type_configurations,json=typeConfigurations,proto3" json:"type_configurations,omitempty"`
 	StringStorage            map[string]string          `protobuf:"bytes,6,rep,name=string_storage,json=stringStorage,proto3" json:"string_storage,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	GraphqlClientSchema      *string                    `protobuf:"bytes,7,opt,name=graphql_client_schema,json=graphqlClientSchema,proto3,oneof" json:"graphql_client_schema,omitempty"`
-	// Content hash of graphqlSchema, formatted as "sha256:<lowercase hex>".
-	SchemaHash    string `protobuf:"bytes,8,opt,name=schema_hash,json=schemaHash,proto3" json:"schema_hash,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *EngineConfiguration) Reset() {
@@ -1279,13 +1277,6 @@ func (x *EngineConfiguration) GetStringStorage() map[string]string {
 func (x *EngineConfiguration) GetGraphqlClientSchema() string {
 	if x != nil && x.GraphqlClientSchema != nil {
 		return *x.GraphqlClientSchema
-	}
-	return ""
-}
-
-func (x *EngineConfiguration) GetSchemaHash() string {
-	if x != nil {
-		return x.SchemaHash
 	}
 	return ""
 }
@@ -5192,10 +5183,9 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\x14SelfRegisterResponse\x126\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1a.wg.cosmo.node.v1.ResponseR\bresponse\x12S\n" +
 	"\x10registrationInfo\x18\x02 \x01(\v2\".wg.cosmo.node.v1.RegistrationInfoH\x00R\x10registrationInfo\x88\x01\x01B\x13\n" +
-	"\x11_registrationInfo\"O\n" +
-	"\x14GenerateQueryRequest\x12\x1f\n" +
-	"\vschema_hash\x18\x01 \x01(\tR\n" +
-	"schemaHash\x12\x16\n" +
+	"\x11_registrationInfo\"Z\n" +
+	"\x14GenerateQueryRequest\x12*\n" +
+	"\x11schema_version_id\x18\x01 \x01(\tR\x0fschemaVersionId\x12\x16\n" +
 	"\x06prompt\x18\x02 \x01(\tR\x06prompt\"\x96\x01\n" +
 	"\x15GenerateQueryResponse\x126\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1a.wg.cosmo.node.v1.ResponseR\bresponse\x12;\n" +
@@ -5206,7 +5196,7 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\bdocument\x18\x02 \x01(\tR\bdocument\x12%\n" +
 	"\x0eoperation_name\x18\x03 \x01(\tR\roperationName\x12O\n" +
 	"\x0eoperation_type\x18\x04 \x01(\x0e2(.wg.cosmo.node.v1.SatisfiedOperationTypeR\roperationType\x12)\n" +
-	"\x10variables_schema\x18\x05 \x01(\tR\x0fvariablesSchema\"\x9d\x05\n" +
+	"\x10variables_schema\x18\x05 \x01(\tR\x0fvariablesSchema\"\xfc\x04\n" +
 	"\x13EngineConfiguration\x122\n" +
 	"\x14defaultFlushInterval\x18\x01 \x01(\x03R\x14defaultFlushInterval\x12f\n" +
 	"\x19datasource_configurations\x18\x02 \x03(\v2).wg.cosmo.node.v1.DataSourceConfigurationR\x18datasourceConfigurations\x12W\n" +
@@ -5214,9 +5204,7 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\rgraphqlSchema\x18\x04 \x01(\tR\rgraphqlSchema\x12T\n" +
 	"\x13type_configurations\x18\x05 \x03(\v2#.wg.cosmo.node.v1.TypeConfigurationR\x12typeConfigurations\x12_\n" +
 	"\x0estring_storage\x18\x06 \x03(\v28.wg.cosmo.node.v1.EngineConfiguration.StringStorageEntryR\rstringStorage\x127\n" +
-	"\x15graphql_client_schema\x18\a \x01(\tH\x00R\x13graphqlClientSchema\x88\x01\x01\x12\x1f\n" +
-	"\vschema_hash\x18\b \x01(\tR\n" +
-	"schemaHash\x1a@\n" +
+	"\x15graphql_client_schema\x18\a \x01(\tH\x00R\x13graphqlClientSchema\x88\x01\x01\x1a@\n" +
 	"\x12StringStorageEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x18\n" +

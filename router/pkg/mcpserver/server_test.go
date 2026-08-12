@@ -24,18 +24,18 @@ import (
 )
 
 type fakePromptToQueryClient struct {
-	response   *nodev1.GenerateQueryResponse
-	err        error
-	schemaHash string
-	prompt     string
+	response        *nodev1.GenerateQueryResponse
+	err             error
+	schemaVersionID string
+	prompt          string
 }
 
 func stringPointer(value string) *string {
 	return &value
 }
 
-func (f *fakePromptToQueryClient) GenerateQuery(_ context.Context, schemaHash, prompt string) (*nodev1.GenerateQueryResponse, error) {
-	f.schemaHash = schemaHash
+func (f *fakePromptToQueryClient) GenerateQuery(_ context.Context, schemaVersionID, prompt string) (*nodev1.GenerateQueryResponse, error) {
+	f.schemaVersionID = schemaVersionID
 	f.prompt = prompt
 	return f.response, f.err
 }
@@ -116,14 +116,14 @@ func TestReload_NoToolDuplication(t *testing.T) {
 	require.NoError(t, err)
 
 	// First load
-	err = srv.Reload(&schemaDoc, nil, "sha256:test")
+	err = srv.Reload(&schemaDoc, nil, "schema-version-test")
 	require.NoError(t, err)
 
 	firstLoadTools := make([]string, len(srv.registeredTools))
 	copy(firstLoadTools, srv.registeredTools)
 
 	// Second load (simulates config reload)
-	err = srv.Reload(&schemaDoc, nil, "sha256:test")
+	err = srv.Reload(&schemaDoc, nil, "schema-version-test")
 	require.NoError(t, err)
 
 	// registeredTools should be identical after reload — no duplicates
@@ -162,7 +162,7 @@ func TestReload_ReservedToolNameCollision(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = srv.Reload(&schemaDoc, nil, "sha256:test")
+	err = srv.Reload(&schemaDoc, nil, "schema-version-test")
 	require.NoError(t, err)
 
 	// The operation "GetOperationInfo" (snake: "get_operation_info") should be skipped
@@ -206,7 +206,7 @@ func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = srv.Reload(&schemaDoc, nil, "sha256:test")
+	err = srv.Reload(&schemaDoc, nil, "schema-version-test")
 	require.NoError(t, err)
 
 	// No collisions because the prefix disambiguates from the reserved name
@@ -246,7 +246,7 @@ func TestGenerateQueryTool(t *testing.T) {
 		WithOperationsDir(""),
 	)
 	require.NoError(t, err)
-	require.NoError(t, srv.Reload(&schemaDoc, nil, "sha256:first"))
+	require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-first"))
 	require.Contains(t, srv.registeredTools, "generate_query")
 
 	result, err := srv.handleGenerateQuery()(t.Context(), &mcp.CallToolRequest{
@@ -255,7 +255,7 @@ func TestGenerateQueryTool(t *testing.T) {
 
 	require.NoError(t, err)
 	require.False(t, result.IsError)
-	require.Equal(t, "sha256:first", client.schemaHash)
+	require.Equal(t, "schema-version-first", client.schemaVersionID)
 	require.Equal(t, "List all employees", client.prompt)
 	require.Len(t, result.Content, 1)
 	textContent, ok := result.Content[0].(*mcp.TextContent)
@@ -268,50 +268,50 @@ func TestGenerateQueryTool(t *testing.T) {
 		"variablesSchema":"{\"type\":\"object\"}"
 	}`, textContent.Text)
 
-	require.NoError(t, srv.Reload(&schemaDoc, nil, "sha256:second"))
+	require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-second"))
 	_, err = srv.handleGenerateQuery()(t.Context(), &mcp.CallToolRequest{
 		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{"prompt":"List employees again"}`)},
 	})
 	require.NoError(t, err)
-	require.Equal(t, "sha256:second", client.schemaHash)
+	require.Equal(t, "schema-version-second", client.schemaVersionID)
 }
 
 func TestGenerateQueryToolErrors(t *testing.T) {
 	tests := []struct {
-		name       string
-		client     *fakePromptToQueryClient
-		schemaHash string
-		arguments  string
-		wantText   string
+		name            string
+		client          *fakePromptToQueryClient
+		schemaVersionID string
+		arguments       string
+		wantText        string
 	}{
 		{
-			name:       "blank prompt",
-			client:     &fakePromptToQueryClient{},
-			schemaHash: "sha256:test",
-			arguments:  `{"prompt":"   "}`,
-			wantText:   "prompt is required",
+			name:            "blank prompt",
+			client:          &fakePromptToQueryClient{},
+			schemaVersionID: "schema-version-test",
+			arguments:       `{"prompt":"   "}`,
+			wantText:        "prompt is required",
 		},
 		{
 			name:      "schema unavailable",
 			client:    &fakePromptToQueryClient{},
 			arguments: `{"prompt":"List employees"}`,
-			wantText:  "schema is not available",
+			wantText:  "schema version is not available",
 		},
 		{
 			name: "control plane rejection",
 			client: &fakePromptToQueryClient{response: &nodev1.GenerateQueryResponse{
 				Response: &nodev1.Response{Code: common.EnumStatusCode_ERR_UPGRADE_PLAN, Details: stringPointer("Prompt to Query not available with your current plan")},
 			}},
-			schemaHash: "sha256:test",
-			arguments:  `{"prompt":"List employees"}`,
-			wantText:   "Prompt to Query not available with your current plan",
+			schemaVersionID: "schema-version-test",
+			arguments:       `{"prompt":"List employees"}`,
+			wantText:        "Prompt to Query not available with your current plan",
 		},
 		{
-			name:       "transport failure",
-			client:     &fakePromptToQueryClient{err: errors.New("control plane unavailable")},
-			schemaHash: "sha256:test",
-			arguments:  `{"prompt":"List employees"}`,
-			wantText:   "Failed to generate a GraphQL operation",
+			name:            "transport failure",
+			client:          &fakePromptToQueryClient{err: errors.New("control plane unavailable")},
+			schemaVersionID: "schema-version-test",
+			arguments:       `{"prompt":"List employees"}`,
+			wantText:        "Failed to generate a GraphQL operation",
 		},
 	}
 
@@ -323,7 +323,7 @@ func TestGenerateQueryToolErrors(t *testing.T) {
 				WithPromptToQueryClient(tt.client),
 			)
 			require.NoError(t, err)
-			srv.setSchemaHash(tt.schemaHash)
+			srv.setSchemaVersionID(tt.schemaVersionID)
 
 			result, err := srv.handleGenerateQuery()(t.Context(), &mcp.CallToolRequest{
 				Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(tt.arguments)},

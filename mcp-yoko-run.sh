@@ -333,7 +333,7 @@ def validate_resolution(value):
 
 
 def generate_query(index_id, prompt):
-    digest = index_id.removeprefix("sha256:")
+    digest = index_id.removeprefix("yoko:")
     schema_file = index_dir / f"{digest}.graphql"
     if not re.fullmatch(r"[0-9a-fA-F]{64}", digest) or not schema_file.is_file():
         return resolution_error(f"No schema is indexed for {index_id}")
@@ -452,7 +452,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(sdl, str) or not sdl.strip():
                     raise ValueError("sdl must be a non-empty string")
                 digest = hashlib.sha256(sdl.encode("utf-8")).hexdigest()
-                index_id = f"sha256:{digest}"
+                index_id = f"yoko:{digest}"
                 (index_dir / f"{digest}.graphql").write_text(sdl, encoding="utf-8")
                 print(f"Indexed {index_id} ({len(sdl)} bytes)", flush=True)
                 self.send_json(200, {"indexId": index_id})
