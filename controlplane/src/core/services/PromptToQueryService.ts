@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { type AxiosInstance, create as createHttpClient } from 'axios';
@@ -20,10 +21,6 @@ const validationSchema = z.object({
   prompt: z.string().trim().min(1),
 });
 
-const ensureIndexResponseSchema = z.object({
-  indexId: z.string().trim().min(1),
-});
-
 const ptqQuerySchema = z.object({
   description: z.string().optional(),
   document: z.string().min(1),
@@ -42,6 +39,11 @@ const ptqResponseSchema = z.object({
 });
 
 type PtQResponse = z.infer<typeof ptqResponseSchema>;
+
+// Yoko generates index IDs from the SHA-256 hash of the schema SDL using this format.
+function getYokoIndexId(schemaSDL: string): string {
+  return `sha256:${createHash('sha256').update(schemaSDL).digest('hex')}`;
+}
 
 @traced
 export class PromptToQueryService {
@@ -129,12 +131,11 @@ export class PromptToQueryService {
 
     // Invoke the `prompt to query` service
     try {
-      const indexId = await this.ensureIndex(schemaVersion.sdl);
       const response = await this.#httpClient('/yoko.v1.YokoService/GenerateQuery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({
-          indexId,
+          indexId: getYokoIndexId(schemaVersion.sdl),
           prompt: parsed.data.prompt,
         }),
       });
@@ -175,21 +176,11 @@ export class PromptToQueryService {
     }
 
     // Fire and forget the schema indexation
-    this.ensureIndex(schema).catch((e) => this.logger.error(e, 'Failed to index schema due an unexpected error'));
-  }
-
-  private async ensureIndex(schemaSDL: string): Promise<string> {
-    const response = await this.#httpClient('/yoko.v1.YokoService/EnsureIndex', {
+    this.#httpClient('/yoko.v1.YokoService/EnsureIndex', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      data: JSON.stringify({ sdl: schemaSDL }),
-    });
-    const parsed = ensureIndexResponseSchema.safeParse(response.data);
-    if (!parsed.success) {
-      throw new Error('It was not possible to parse the response returned by the Prompt to Query index service');
-    }
-
-    return parsed.data.indexId;
+      data: JSON.stringify({ sdl: schema }),
+    }).catch((e) => this.logger.error(e, 'Failed to index schema due an unexpected error'));
   }
 
   private static getOperationType(type: z.infer<typeof ptqQuerySchema>['operationType']): SatisfiedOperationType {
