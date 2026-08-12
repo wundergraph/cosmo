@@ -27,7 +27,7 @@ type Client struct {
 	clientTimeout        time.Duration
 }
 
-func New(endpoint, token string, opts ...Option) (*Client, error) {
+func New(endpoint string, token string, opts ...Option) (*Client, error) {
 	if endpoint == "" {
 		return nil, fmt.Errorf("controlplane endpoint is required for prompt to query")
 	}
@@ -77,7 +77,7 @@ func (c *Client) GenerateQuery(ctx context.Context, schemaVersionID, prompt stri
 		Version: schemaVersionID,
 		Prompt:  prompt,
 	})
-	req.Header().Set("Authorization", fmt.Sprintf("Bearer %s", c.graphAPIToken))
+	req.Header().Set("Authorization", "Bearer "+c.graphAPIToken)
 
 	resp, err := c.nodeServiceClient.GenerateQuery(ctx, req)
 	if err != nil {
