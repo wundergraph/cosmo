@@ -2,7 +2,6 @@ import { ServiceImpl } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { NodeService, RegistrationInfo } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { lru } from 'tiny-lru';
-import { validate as validateUUID } from 'uuid';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import type { PlainMessage } from '../../types/index.js';
@@ -75,39 +74,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        if (!validateUUID(req.version)) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_BAD_REQUEST,
-              details: 'A valid schema version ID is required',
-            },
-          };
-        }
-
-        const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-        const federatedGraph = await fedRepo.byId(authContext.federatedGraphId);
-        if (!federatedGraph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Federated graph not found',
-            },
-          };
-        }
-
-        const schemaVersion = await fedRepo.getSdlBasedOnSchemaVersion({
-          targetId: federatedGraph.targetId,
-          schemaVersionId: req.version,
-        });
-        if (!schemaVersion?.sdl) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Schema version not found for this federated graph',
-            },
-          };
-        }
-
         const ptqService = new PromptToQueryService(
           opts.db,
           logger,
@@ -116,7 +82,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           opts.billingDefaultPlanId,
         );
 
-        return ptqService.generateQuery(schemaVersion.sdl, req.prompt);
+        return ptqService.generateQuery(authContext.federatedGraphId, req.version, req.prompt);
       });
     },
   };

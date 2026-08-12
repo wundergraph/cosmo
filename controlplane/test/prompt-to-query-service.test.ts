@@ -4,9 +4,11 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { FederatedGraphRepository } from '../src/core/repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { PromptToQueryService } from '../src/core/services/PromptToQueryService.js';
 import * as schema from '../src/db/schema.js';
+import type { FederatedGraphDTO } from '../src/types/index.js';
 
 describe('PromptToQueryService', () => {
   const yokoURL = 'http://yoko.test';
@@ -51,6 +53,13 @@ describe('PromptToQueryService', () => {
       id: 'prompt-to-query',
       enabled: true,
     });
+    const byId = vi
+      .spyOn(FederatedGraphRepository.prototype, 'byId')
+      .mockResolvedValue({ targetId: 'target-id' } as FederatedGraphDTO);
+    const getSdl = vi.spyOn(FederatedGraphRepository.prototype, 'getSdlBasedOnSchemaVersion').mockResolvedValue({
+      sdl: schemaSDL,
+      clientSchema: schemaSDL,
+    });
 
     const service = new PromptToQueryService(
       {} as PostgresJsDatabase<typeof schema>,
@@ -59,9 +68,18 @@ describe('PromptToQueryService', () => {
       'organization-id',
       undefined,
     );
-    const response = await service.generateQuery(schemaSDL, 'List all employees');
+    const response = await service.generateQuery(
+      'graph-id',
+      '14a1d197-7e3a-48df-88d7-a663de90527e',
+      'List all employees',
+    );
 
     expect(ensureIndexRequest).toEqual({ sdl: schemaSDL });
+    expect(byId).toHaveBeenCalledWith('graph-id');
+    expect(getSdl).toHaveBeenCalledWith({
+      targetId: 'target-id',
+      schemaVersionId: '14a1d197-7e3a-48df-88d7-a663de90527e',
+    });
     expect(generateQueryRequest).toEqual({
       indexId: 'opaque-yoko-index-id',
       prompt: 'List all employees',

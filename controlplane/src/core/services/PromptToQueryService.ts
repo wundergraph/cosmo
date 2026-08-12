@@ -10,15 +10,14 @@ import {
 import { create } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import * as z from 'zod';
+import { validate as validateUUID } from 'uuid';
 import { traced } from '../tracing.js';
 import * as schema from '../../db/schema.js';
+import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 
 const validationSchema = z.object({
-  schemaSDL: z
-    .string()
-    .min(1)
-    .refine((value) => value.trim().length > 0),
+  version: z.string().refine(validateUUID),
   prompt: z.string().trim().min(1),
 });
 
@@ -72,7 +71,7 @@ export class PromptToQueryService {
     });
   }
 
-  async generateQuery(schemaSDL: string, prompt: string): Promise<GenerateQueryResponse> {
+  async generateQuery(federatedGraphId: string, version: string, prompt: string): Promise<GenerateQueryResponse> {
     if (!this.serviceAddress) {
       // The feature doesn't seem to be configured correctly
       return create(GenerateQueryResponseSchema, {
@@ -84,7 +83,7 @@ export class PromptToQueryService {
     }
 
     // Ensure that the provided parameters are valid
-    const parsed = validationSchema.safeParse({ schemaSDL, prompt });
+    const parsed = validationSchema.safeParse({ version, prompt });
     if (!parsed.success) {
       return create(GenerateQueryResponseSchema, {
         response: {
@@ -105,9 +104,33 @@ export class PromptToQueryService {
       });
     }
 
+    const fedRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+    const federatedGraph = await fedRepo.byId(federatedGraphId);
+    if (!federatedGraph) {
+      return create(GenerateQueryResponseSchema, {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Federated graph not found',
+        },
+      });
+    }
+
+    const schemaVersion = await fedRepo.getSdlBasedOnSchemaVersion({
+      targetId: federatedGraph.targetId,
+      schemaVersionId: parsed.data.version,
+    });
+    if (!schemaVersion?.sdl) {
+      return create(GenerateQueryResponseSchema, {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Schema version not found for this federated graph',
+        },
+      });
+    }
+
     // Invoke the `prompt to query` service
     try {
-      const indexId = await this.ensureIndex(parsed.data.schemaSDL);
+      const indexId = await this.ensureIndex(schemaVersion.sdl);
       const response = await this.#httpClient('/yoko.v1.YokoService/GenerateQuery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
