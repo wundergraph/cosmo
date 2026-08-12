@@ -74,8 +74,8 @@ func New(endpoint, token string, opts ...Option) (*Client, error) {
 
 func (c *Client) GenerateQuery(ctx context.Context, schemaVersionID, prompt string) (*nodev1.GenerateQueryResponse, error) {
 	req := connect.NewRequest(&nodev1.GenerateQueryRequest{
-		SchemaVersionId: schemaVersionID,
-		Prompt:          prompt,
+		Version: schemaVersionID,
+		Prompt:  prompt,
 	})
 	req.Header().Set("Authorization", fmt.Sprintf("Bearer %s", c.graphAPIToken))
 

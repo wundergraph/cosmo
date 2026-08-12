@@ -1010,11 +1010,12 @@ func (x *SelfRegisterResponse) GetRegistrationInfo() *RegistrationInfo {
 }
 
 type GenerateQueryRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	SchemaVersionId string                 `protobuf:"bytes,1,opt,name=schema_version_id,json=schemaVersionId,proto3" json:"schema_version_id,omitempty"`
-	Prompt          string                 `protobuf:"bytes,2,opt,name=prompt,proto3" json:"prompt,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Copied from RouterConfig.version in the active router configuration.
+	Version       string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Prompt        string `protobuf:"bytes,2,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GenerateQueryRequest) Reset() {
@@ -1047,9 +1048,9 @@ func (*GenerateQueryRequest) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *GenerateQueryRequest) GetSchemaVersionId() string {
+func (x *GenerateQueryRequest) GetVersion() string {
 	if x != nil {
-		return x.SchemaVersionId
+		return x.Version
 	}
 	return ""
 }
@@ -5183,9 +5184,9 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\x14SelfRegisterResponse\x126\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1a.wg.cosmo.node.v1.ResponseR\bresponse\x12S\n" +
 	"\x10registrationInfo\x18\x02 \x01(\v2\".wg.cosmo.node.v1.RegistrationInfoH\x00R\x10registrationInfo\x88\x01\x01B\x13\n" +
-	"\x11_registrationInfo\"Z\n" +
-	"\x14GenerateQueryRequest\x12*\n" +
-	"\x11schema_version_id\x18\x01 \x01(\tR\x0fschemaVersionId\x12\x16\n" +
+	"\x11_registrationInfo\"H\n" +
+	"\x14GenerateQueryRequest\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12\x16\n" +
 	"\x06prompt\x18\x02 \x01(\tR\x06prompt\"\x96\x01\n" +
 	"\x15GenerateQueryResponse\x126\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1a.wg.cosmo.node.v1.ResponseR\bresponse\x12;\n" +

@@ -87,7 +87,7 @@ describe('Prompt to Query RPC', () => {
     const config = routerConfigFromJsonString(await new Response(configBlob.stream).text());
     const response = await nodeClient.generateQuery(
       {
-        schemaVersionId: config?.version,
+        version: config?.version,
         prompt: 'Return hello',
       },
       { headers: { Authorization: `Bearer ${tokenResponse.token}` } },

@@ -75,7 +75,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        if (!validateUUID(req.schemaVersionId)) {
+        if (!validateUUID(req.version)) {
           return {
             response: {
               code: EnumStatusCode.ERR_BAD_REQUEST,
@@ -97,7 +97,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
 
         const schemaVersion = await fedRepo.getSdlBasedOnSchemaVersion({
           targetId: federatedGraph.targetId,
-          schemaVersionId: req.schemaVersionId,
+          schemaVersionId: req.version,
         });
         if (!schemaVersion?.sdl) {
           return {

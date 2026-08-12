@@ -50,7 +50,7 @@ func TestClientGenerateQuery(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, "Bearer graph-token", handler.authorizationHeader)
-	require.Equal(t, "14a1d197-7e3a-48df-88d7-a663de90527e", handler.generateQueryRequest.GetSchemaVersionId())
+	require.Equal(t, "14a1d197-7e3a-48df-88d7-a663de90527e", handler.generateQueryRequest.GetVersion())
 	require.Equal(t, "List all employees", handler.generateQueryRequest.GetPrompt())
 	require.Equal(t, "GetEmployees", resp.GetQuery().GetOperationName())
 }
