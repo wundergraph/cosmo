@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.339.0](https://github.com/wundergraph/cosmo/compare/router@0.338.0...router@0.339.0) (2026-08-12)
+
+### Bug Fixes
+
+* **router:** bump go-m1cpu to v0.2.2 ([#3155](https://github.com/wundergraph/cosmo/issues/3155)) ([70cd61d](https://github.com/wundergraph/cosmo/commit/70cd61d800569aaed64f9db3e62095ebd9398353)) (@fiam)
+* **router:** close Kafka consumer client when subscription ends ([#3133](https://github.com/wundergraph/cosmo/issues/3133)) ([b0f5a1b](https://github.com/wundergraph/cosmo/commit/b0f5a1b059152876afb7c223dc67406fa4ee24d4)) (@mwisner)
+
+### Features
+
+* **router:** support multiple OAuth authorization servers for MCP ([#3148](https://github.com/wundergraph/cosmo/issues/3148)) ([cd0da09](https://github.com/wundergraph/cosmo/commit/cd0da09236c28ccec626dc157ca6b0c23a5dc4b2)) (@asoorm)
+
 # [0.338.0](https://github.com/wundergraph/cosmo/compare/router@0.337.1...router@0.338.0) (2026-08-11)
 
 ### Features
