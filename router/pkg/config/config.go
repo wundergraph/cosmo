@@ -502,12 +502,12 @@ type EngineExecutionConfiguration struct {
 	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
 	EnableDefer                                      bool          `envDefault:"false" env:"ENGINE_ENABLE_DEFER" yaml:"enable_defer"`
 
-	// DisableMultiFetch disables merging entity fetches to the same subgraph that execute
+	// EnableMultiFetch merges entity fetches to the same subgraph that execute
 	// in the same wave into a single batched request with aliased _entities fields.
-	DisableMultiFetch bool `envDefault:"false" env:"ENGINE_DISABLE_MULTI_FETCH" yaml:"disable_multi_fetch"`
-	// DisableScheduleFetches replaces the dependency-aware fetch scheduler with the
-	// legacy wave-based fetch organizers (escape hatch).
-	DisableScheduleFetches bool `envDefault:"false" env:"ENGINE_DISABLE_SCHEDULE_FETCHES" yaml:"disable_schedule_fetches"`
+	EnableMultiFetch bool `envDefault:"false" env:"ENGINE_ENABLE_MULTI_FETCH" yaml:"enable_multi_fetch"`
+	// EnableScheduleFetches replaces the legacy wave-based fetch organizers with the
+	// dependency-aware fetch scheduler (component-split, chain-inlined execution trees).
+	EnableScheduleFetches bool `envDefault:"false" env:"ENGINE_ENABLE_SCHEDULE_FETCHES" yaml:"enable_schedule_fetches"`
 
 	// Server-side WebSocket handler options (router accepting client connections)
 	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`

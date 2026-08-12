@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	queryStatsModule "github.com/wundergraph/cosmo/router-tests/modules/custom-query-stats"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/cmd/custom/module"
@@ -157,21 +156,19 @@ func TestCustomModuleQueryStats(t *testing.T) {
 			assert.Equal(t, 200, res.Response.StatusCode)
 
 			testenv.AwaitChannelWithT(t, 10*time.Second, resultsChan, func(t *testing.T, qps core.QueryPlanStats) {
-				assert.Equal(t, 6, qps.TotalSubgraphFetches)
+				assert.Equal(t, 10, qps.TotalSubgraphFetches)
 
 				expectedSubgraphFetches := map[string]int{
-					"availability": 1,
-					"employees":    2,
+					"availability": 2,
+					"employees":    3,
 					"family":       1,
-					"mood":         1,
-					"products":     1,
+					"mood":         2,
+					"products":     2,
 				}
 
 				assert.Equal(t, expectedSubgraphFetches, qps.SubgraphFetches)
 
-				// The list is deduplicated in fetch-tree traversal order, which is
-				// an implementation detail of the schedule tree shape: assert as a set.
-				assert.ElementsMatch(t, []core.SubgraphRootField{
+				assert.Equal(t, []core.SubgraphRootField{
 					{
 						SubgraphName: "employees",
 						TypeName:     "Query",
@@ -182,19 +179,19 @@ func TestCustomModuleQueryStats(t *testing.T) {
 						SubgraphName: "products",
 						TypeName:     "Query",
 						FieldName:    "_entities",
-						Count:        1,
+						Count:        2,
 					},
 					{
 						SubgraphName: "mood",
 						TypeName:     "Query",
 						FieldName:    "_entities",
-						Count:        1,
+						Count:        2,
 					},
 					{
 						SubgraphName: "availability",
 						TypeName:     "Query",
 						FieldName:    "_entities",
-						Count:        1,
+						Count:        2,
 					},
 					{
 						SubgraphName: "family",
@@ -206,7 +203,7 @@ func TestCustomModuleQueryStats(t *testing.T) {
 						SubgraphName: "employees",
 						TypeName:     "Query",
 						FieldName:    "_entities",
-						Count:        1,
+						Count:        2,
 					},
 				}, qps.SubgraphRootFields)
 			})

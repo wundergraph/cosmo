@@ -290,8 +290,8 @@ func (pl *Planner) PlanPreparedOperation(operation *ast.Document) (planNode *Pla
 	}
 
 	// Mirror the router's default engine execution configuration: multi-fetch
-	// merging is enabled unless explicitly disabled (see Executor build).
-	post := postprocess.NewProcessor(postprocess.EnableMultiFetch())
+	// merging and fetch scheduling are opt-in and default off (see Executor build).
+	post := postprocess.NewProcessor()
 	post.Process(preparedPlan)
 	// measure postprocessing time as part of planning time
 	opTimes.PlanTime = time.Since(start)

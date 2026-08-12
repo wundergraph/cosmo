@@ -214,11 +214,11 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	}
 
 	var postprocessorOptions []postprocess.ProcessorOption
-	if !opts.RouterEngineConfig.Execution.DisableMultiFetch {
+	if opts.RouterEngineConfig.Execution.EnableMultiFetch {
 		postprocessorOptions = append(postprocessorOptions, postprocess.EnableMultiFetch())
 	}
-	if opts.RouterEngineConfig.Execution.DisableScheduleFetches {
-		postprocessorOptions = append(postprocessorOptions, postprocess.DisableScheduleFetches())
+	if opts.RouterEngineConfig.Execution.EnableScheduleFetches {
+		postprocessorOptions = append(postprocessorOptions, postprocess.EnableScheduleFetches())
 	}
 
 	return &Executor{
