@@ -10,14 +10,13 @@ import {
 import { create } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import * as z from 'zod';
-import { validate as validateUUID } from 'uuid';
 import { traced } from '../tracing.js';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 
 const validationSchema = z.object({
-  version: z.string().refine(validateUUID),
+  version: z.string().uuid(),
   prompt: z.string().trim().min(1),
 });
 
