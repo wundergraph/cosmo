@@ -293,7 +293,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 
 		options.Logger.Info("MCP OAuth authentication enabled",
 			zap.Int("jwks_providers", len(options.OAuthConfig.JWKS)),
-			zap.String("authorization_server", options.OAuthConfig.AuthorizationServerURL))
+			zap.Strings("authorization_servers", options.OAuthConfig.AuthorizationServers()))
 	}
 
 	// Create the MCP server with all options
@@ -512,7 +512,7 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 	mux := http.NewServeMux()
 
 	// OAuth 2.0 Protected Resource Metadata (RFC 9728) — public discovery endpoint
-	if s.oauthConfig != nil && s.oauthConfig.Enabled && s.oauthConfig.AuthorizationServerURL != "" {
+	if s.oauthConfig != nil && s.oauthConfig.Enabled && len(s.oauthConfig.AuthorizationServers()) > 0 {
 		mux.Handle("/.well-known/oauth-protected-resource/mcp", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
 	}
 
@@ -1156,7 +1156,7 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 
 	metadata := ProtectedResourceMetadata{
 		Resource:               mcpResourceURL,
-		AuthorizationServers:   []string{s.oauthConfig.AuthorizationServerURL},
+		AuthorizationServers:   s.oauthConfig.AuthorizationServers(),
 		BearerMethodsSupported: []string{"header"},
 		ResourceDocumentation:  s.resourceDocumentation,
 		ScopesSupported:        scopes,
