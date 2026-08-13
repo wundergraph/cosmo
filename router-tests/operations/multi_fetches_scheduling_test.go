@@ -69,7 +69,6 @@ func TestMultiFetch(t *testing.T) {
 	})
 }
 
-
 // queryPlanNode is a minimal mirror of the query plan JSON for structural assertions.
 type queryPlanNode struct {
 	Kind     string          `json:"kind"`
