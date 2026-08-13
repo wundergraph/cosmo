@@ -211,6 +211,7 @@
     "ExposeSchema": false,
     "RouterURL": "",
     "OmitToolNamePrefix": false,
+    "ScalarMappings": null,
     "OAuth": {
       "Enabled": false,
       "JWKS": null,

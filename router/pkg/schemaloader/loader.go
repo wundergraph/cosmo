@@ -10,6 +10,8 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/google/jsonschema-go/jsonschema"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
@@ -24,9 +26,14 @@ type Operation struct {
 	Document        ast.Document
 	OperationString string
 	Description     string
-	JSONSchema      json.RawMessage
-	OperationType   string     // "query", "mutation", or "subscription"
-	RequiredScopes  [][]string // OR-of-AND scope groups from @requiresScopes (nil = no scope check)
+	// Schema is the built variables schema value, consumed directly by the MCP
+	// SDK and by input validation. JSONSchema holds its canonical marshaled
+	// bytes, the stable display and persistence format. Both are populated
+	// together by SchemaBuilder; nil/empty means the operation takes no input.
+	Schema         *jsonschema.Schema
+	JSONSchema     json.RawMessage
+	OperationType  string     // "query", "mutation", or "subscription"
+	RequiredScopes [][]string // OR-of-AND scope groups from @requiresScopes (nil = no scope check)
 }
 
 // OperationLoader loads GraphQL operations from files in a directory
