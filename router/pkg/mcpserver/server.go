@@ -24,6 +24,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/querygen"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -110,6 +111,10 @@ type Options struct {
 	// ServerDescription is a human-readable description reported in the MCP
 	// serverInfo.
 	ServerDescription string
+	// SchemaDiscoveryConfig configures the external schema discovery service.
+	// When it is enabled, the server indexes the client schema and registers the
+	// search_schema, get_symbols and generate_query tools.
+	SchemaDiscoveryConfig *config.MCPSchemaDiscoveryConfiguration
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -137,6 +142,14 @@ type GraphQLSchemaServer struct {
 	serverBaseURL             string
 	resourceDocumentation     string
 	authMiddleware            *MCPAuthMiddleware
+	// schemaDiscovery is nil when the feature is disabled.
+	schemaDiscovery *querygen.Service
+	// schemaDiscoveryRequestTimeout is zero when the feature is disabled. It
+	// raises the write timeout of the HTTP server, because query generation
+	// takes longer than a normal tool call.
+	schemaDiscoveryRequestTimeout time.Duration
+	// ctx ends at Stop. It bounds the background index builds.
+	ctx context.Context
 }
 
 type graphqlRequest struct {
@@ -296,6 +309,15 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 			zap.Strings("authorization_servers", options.OAuthConfig.AuthorizationServers()))
 	}
 
+	// Schema discovery works as a three step workflow across three tools, so the
+	// guidance belongs at server level rather than in each tool. The
+	// instructions belong to the operator, so supply this text only when the
+	// operator sets no value of their own.
+	if options.Instructions == "" &&
+		options.SchemaDiscoveryConfig != nil && options.SchemaDiscoveryConfig.Enabled {
+		options.Instructions = schemaDiscoveryInstructions
+	}
+
 	// Create the MCP server with all options
 	mcpServer := mcp.NewServer(
 		&mcp.Implementation{
@@ -324,26 +346,54 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 	httpClient := retryClient.StandardClient()
 	httpClient.Timeout = 60 * time.Second
 
+	// Build the schema discovery client before the server, so a misconfiguration
+	// fails at startup instead of at the first tool call.
+	var schemaDiscovery *querygen.Service
+	var schemaDiscoveryRequestTimeout time.Duration
+	if options.SchemaDiscoveryConfig != nil && options.SchemaDiscoveryConfig.Enabled {
+		sdCfg := querygen.Config{
+			URL:               options.SchemaDiscoveryConfig.URL,
+			Token:             options.SchemaDiscoveryConfig.Token,
+			RequestTimeout:    options.SchemaDiscoveryConfig.RequestTimeout,
+			IndexPollInterval: options.SchemaDiscoveryConfig.IndexPollInterval,
+			IndexTimeout:      options.SchemaDiscoveryConfig.IndexTimeout,
+			Logger:            options.Logger,
+		}
+		if err := sdCfg.Validate(); err != nil {
+			cancel()
+			return nil, fmt.Errorf("failed to configure MCP schema discovery: %w", err)
+		}
+		schemaDiscovery = querygen.NewService(sdCfg, routerGraphQLEndpoint)
+		schemaDiscoveryRequestTimeout = sdCfg.RequestTimeout
+
+		options.Logger.Info("MCP schema discovery enabled",
+			zap.String("url", options.SchemaDiscoveryConfig.URL),
+			zap.Bool("authenticated", options.SchemaDiscoveryConfig.Token != ""))
+	}
+
 	gs := &GraphQLSchemaServer{
-		server:                    mcpServer,
-		graphName:                 options.GraphName,
-		operationsDir:             options.OperationsDir,
-		listenAddr:                options.ListenAddr,
-		logger:                    options.Logger,
-		httpClient:                httpClient,
-		requestTimeout:            options.RequestTimeout,
-		routerGraphQLEndpoint:     routerGraphQLEndpoint,
-		excludeMutations:          options.ExcludeMutations,
-		enableArbitraryOperations: options.EnableArbitraryOperations,
-		exposeSchema:              options.ExposeSchema,
-		omitToolNamePrefix:        options.OmitToolNamePrefix,
-		stateless:                 options.Stateless,
-		corsConfig:                options.CorsConfig,
-		cancel:                    cancel,
-		oauthConfig:               options.OAuthConfig,
-		serverBaseURL:             options.ServerBaseURL,
-		resourceDocumentation:     options.ResourceDocumentation,
-		authMiddleware:            authMiddleware,
+		server:                        mcpServer,
+		schemaDiscovery:               schemaDiscovery,
+		schemaDiscoveryRequestTimeout: schemaDiscoveryRequestTimeout,
+		ctx:                           ctx,
+		graphName:                     options.GraphName,
+		operationsDir:                 options.OperationsDir,
+		listenAddr:                    options.ListenAddr,
+		logger:                        options.Logger,
+		httpClient:                    httpClient,
+		requestTimeout:                options.RequestTimeout,
+		routerGraphQLEndpoint:         routerGraphQLEndpoint,
+		excludeMutations:              options.ExcludeMutations,
+		enableArbitraryOperations:     options.EnableArbitraryOperations,
+		exposeSchema:                  options.ExposeSchema,
+		omitToolNamePrefix:            options.OmitToolNamePrefix,
+		stateless:                     options.Stateless,
+		corsConfig:                    options.CorsConfig,
+		cancel:                        cancel,
+		oauthConfig:                   options.OAuthConfig,
+		serverBaseURL:                 options.ServerBaseURL,
+		resourceDocumentation:         options.ResourceDocumentation,
+		authMiddleware:                authMiddleware,
 	}
 
 	return gs, nil
@@ -480,13 +530,41 @@ func WithResourceDocumentation(url string) func(*Options) {
 	}
 }
 
+// WithSchemaDiscovery sets the schema discovery configuration.
+func WithSchemaDiscovery(cfg *config.MCPSchemaDiscoveryConfiguration) func(*Options) {
+	return func(o *Options) {
+		o.SchemaDiscoveryConfig = cfg
+	}
+}
+
+// defaultWriteTimeout bounds how long a tool has to write its response.
+const defaultWriteTimeout = 30 * time.Second
+
+// writeTimeout returns the write timeout of the MCP HTTP server.
+//
+// A tool call must finish inside this window. Query generation takes 10 to 30
+// seconds, so the default of 30 seconds cuts off the response before the tool
+// answers. Raise the window above the schema discovery request timeout, and add
+// headroom for the router to write the result.
+func (s *GraphQLSchemaServer) writeTimeout() time.Duration {
+	timeout := defaultWriteTimeout
+
+	if s.schemaDiscoveryRequestTimeout > 0 {
+		if needed := s.schemaDiscoveryRequestTimeout + 10*time.Second; needed > timeout {
+			timeout = needed
+		}
+	}
+
+	return timeout
+}
+
 // Serve starts the server with the configured options and returns the HTTP server.
 func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 	// Create custom HTTP server
 	httpServer := &http.Server{
 		Addr:         s.listenAddr,
 		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		WriteTimeout: s.writeTimeout(),
 		IdleTimeout:  60 * time.Second,
 	}
 
@@ -575,6 +653,19 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 
 	s.schemaCompiler = NewSchemaCompiler(s.logger)
 	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations)
+
+	// Index the client schema. Sync never blocks on the network, so a slow or
+	// unreachable discovery service cannot delay a router config reload.
+	if s.schemaDiscovery != nil {
+		sdl, err := astprinter.PrintString(schema)
+		if err != nil {
+			// Do not fail the reload. The router still serves GraphQL, and the
+			// discovery tools report that the index is not ready.
+			s.logger.Error("failed to print the client schema for schema discovery", zap.Error(err))
+		} else {
+			s.schemaDiscovery.Sync(s.ctx, sdl)
+		}
+	}
 
 	if s.operationsDir != "" {
 		if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
@@ -689,6 +780,10 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		s.server.AddTool(tool, s.handleExecuteGraphQL())
 		s.registeredTools = append(s.registeredTools, "execute_graphql")
 	}
+
+	// Register before the operations loop. The collision check below then sees
+	// these names in registeredTools.
+	s.registerSchemaDiscoveryTools()
 
 	// Get operations filtered by the excludeMutations setting
 	operations := s.operationsManager.GetFilteredOperations()

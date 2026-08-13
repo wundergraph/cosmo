@@ -4,6 +4,10 @@ managed:
   disable:
     - file_option: go_package
       module: buf.build/googleapis/googleapis
+    # Keep protovalidate on its published Go module. Without this the build
+    # fails on a missing gen/buf/validate package.
+    - file_option: go_package
+      module: buf.build/bufbuild/protovalidate
   override:
     - file_option: go_package_prefix
       value: github.com/wundergraph/cosmo/router/gen/proto

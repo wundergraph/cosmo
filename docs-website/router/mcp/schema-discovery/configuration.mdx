@@ -1,0 +1,112 @@
+---
+title: 'Configuration'
+description: 'Every configuration key and environment variable for MCP schema discovery.'
+icon: 'sliders'
+---
+
+Schema discovery is configured under `mcp.schema_discovery`.
+
+```yaml router.config.yaml
+mcp:
+  enabled: true
+  expose_schema: false
+  schema_discovery:
+    enabled: true
+    url: 'https://discovery.example.com'
+    token: 'your-token'
+    request_timeout: 90s
+    index_poll_interval: 2s
+    index_timeout: 10m
+```
+
+## Keys
+
+| Key                   | Type     | Default | Environment variable                       |
+| --------------------- | -------- | ------- | ------------------------------------------ |
+| `enabled`             | boolean  | `false` | `MCP_SCHEMA_DISCOVERY_ENABLED`             |
+| `url`                 | string   |         | `MCP_SCHEMA_DISCOVERY_URL`                 |
+| `token`               | string   |         | `MCP_SCHEMA_DISCOVERY_TOKEN`               |
+| `request_timeout`     | duration | `90s`   | `MCP_SCHEMA_DISCOVERY_REQUEST_TIMEOUT`     |
+| `index_poll_interval` | duration | `2s`    | `MCP_SCHEMA_DISCOVERY_INDEX_POLL_INTERVAL` |
+| `index_timeout`       | duration | `10m`   | `MCP_SCHEMA_DISCOVERY_INDEX_TIMEOUT`       |
+
+### enabled
+
+Turns schema discovery on. The router then indexes the client schema and registers the `search_schema`, `get_symbols` and `generate_query` tools.
+
+### url
+
+The base URL of the schema discovery service. Include the scheme.
+
+The service speaks Connect over HTTP/1.1.
+
+<Warning>
+  The router does not start when `enabled` is `true` and `url` is empty. This stops a server whose tools always fail.
+</Warning>
+
+### token
+
+The bearer token for the service. The router sends it as `Authorization: Bearer <token>`.
+
+An empty token sends no `Authorization` header. Use an empty token when your service runs with authentication off.
+
+The router never writes the token to a log or to an error message.
+
+### request_timeout
+
+The timeout for one call to the service.
+
+Query generation takes 10 to 30 seconds. A value below `60s` is too low.
+
+This value also raises the write timeout of the MCP HTTP server, so a slow generation still reaches the caller.
+
+### index_poll_interval
+
+The wait between two index status reads while the router waits for a build.
+
+### index_timeout
+
+The router stops waiting for an index that does not become ready within this time.
+
+A schema of 16,000 lines indexes in about 24 seconds. The default of `10m` only trips on a real fault.
+
+## Interaction with other keys
+
+### expose_schema
+
+Set `expose_schema` to `false`.
+
+`get_schema` returns the full schema. That is the context cost that schema discovery removes. The two settings do not fail together, but they work against each other.
+
+### enable_arbitrary_operations
+
+Set this to `true` when you want the agent to run the operation that `generate_query` returns.
+
+Set it to `false` in production. Use the curated path instead: generate the operation in a development router, review it, publish it as a persisted operation, then deploy that. See [Guides](/router/mcp/schema-discovery/guides).
+
+## Startup behaviour
+
+The router does not wait for the index. It serves GraphQL from the first moment.
+
+Read the log to follow the build.
+
+```
+INFO  MCP schema discovery enabled   url=https://discovery.example.com authenticated=true
+INFO  schema index is building       index_id=sha256:6926769e...
+INFO  schema index is ready          index_id=sha256:6926769e... symbol_count=318
+```
+
+The router reindexes after every schema change. An unchanged schema costs nothing, because the router compares the hash locally and makes no network call.
+
+During a rebuild the previous index keeps serving. The router adopts the new index only when it is ready.
+
+## Failure behaviour
+
+| Condition                             | Result                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------- |
+| The service is unreachable at startup | The router starts. The tools report that the index is not ready.          |
+| The build fails                       | The router logs the reason. The tools report that the index is not ready. |
+| The build exceeds `index_timeout`     | The router stops waiting and logs the reason.                             |
+| The service drops an unused index     | The router rebuilds it at the same address on the next tool call.         |
+
+A fault in the discovery service never stops the router from serving GraphQL.

@@ -1,0 +1,11 @@
+# The schema discovery protos live outside the shared `proto` module on purpose.
+#
+# Workspace-wide commands such as `buf generate --template buf.ts.gen.yaml` run
+# with no path filter. A proto inside the shared module therefore also generates
+# TypeScript into the `connect` package, which does not need a client for this
+# service and cannot resolve the protovalidate import.
+version: v2
+deps:
+  - buf.build/bufbuild/protovalidate
+modules:
+  - path: .

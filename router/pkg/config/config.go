@@ -1358,6 +1358,29 @@ type MCPConfiguration struct {
 	// ResourceDocumentation is a URL to a human-readable page describing this MCP resource,
 	// its access policies, and how to get started. Included in RFC 9728 Protected Resource Metadata if set.
 	ResourceDocumentation string `yaml:"resource_documentation,omitempty" env:"MCP_RESOURCE_DOCUMENTATION"`
+	// SchemaDiscovery indexes the client schema in an external discovery service and
+	// exposes schema search and query generation as MCP tools. It lets an agent work
+	// with a large schema without the schema in its context.
+	SchemaDiscovery MCPSchemaDiscoveryConfiguration `yaml:"schema_discovery,omitempty" envPrefix:"MCP_SCHEMA_DISCOVERY_"`
+}
+
+// MCPSchemaDiscoveryConfiguration configures the connection to the schema discovery service.
+//
+// The service is content addressed. The address of an index is the SHA-256 hash of the
+// exact schema bytes, so the router computes it locally and holds no state in the service.
+type MCPSchemaDiscoveryConfiguration struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	// URL is the base URL of the discovery service. It is required when enabled is true.
+	URL string `yaml:"url,omitempty" env:"URL"`
+	// Token is the bearer token for the discovery service. An empty token sends no
+	// Authorization header, which the service permits when it runs with authentication off.
+	Token string `yaml:"token,omitempty" env:"TOKEN"`
+	// RequestTimeout bounds a single call. Query generation takes 10 to 30 seconds.
+	RequestTimeout time.Duration `yaml:"request_timeout,omitempty" envDefault:"90s" env:"REQUEST_TIMEOUT"`
+	// IndexPollInterval is the wait between two index status reads.
+	IndexPollInterval time.Duration `yaml:"index_poll_interval,omitempty" envDefault:"2s" env:"INDEX_POLL_INTERVAL"`
+	// IndexTimeout stops waiting for an index that never becomes ready.
+	IndexTimeout time.Duration `yaml:"index_timeout,omitempty" envDefault:"10m" env:"INDEX_TIMEOUT"`
 }
 
 type MCPOAuthConfiguration struct {

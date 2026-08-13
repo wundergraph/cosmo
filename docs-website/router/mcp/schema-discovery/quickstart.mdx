@@ -1,0 +1,212 @@
+---
+title: 'Quickstart'
+description: 'Index your schema and generate your first GraphQL operation from a prompt.'
+icon: 'rocket'
+---
+
+This tutorial takes about 10 minutes. At the end you have a GraphQL operation that you wrote as a sentence, and the data it returns from your own graph.
+
+## Prerequisites
+
+- A running Cosmo Router with a composed schema. See [Router Introduction](/router/intro).
+- The base URL of a schema discovery service.
+- A bearer token for that service, if it needs one.
+- An MCP client, such as Claude Code, Claude Desktop, or Cursor.
+
+## Step 1 - Turn on schema discovery
+
+Add this block to your router config file.
+
+```yaml router.config.yaml
+mcp:
+  enabled: true
+  server:
+    listen_addr: 'localhost:5025'
+
+  # Keep this false. get_schema returns the full schema, and that is the
+  # context cost that schema discovery removes.
+  expose_schema: false
+
+  # Let the agent run the operation that generate_query returns.
+  enable_arbitrary_operations: true
+
+  schema_discovery:
+    enabled: true
+    url: 'https://discovery.example.com'
+    token: 'your-token'
+```
+
+Leave `token` empty if your service runs with authentication off.
+
+<Warning>
+  The router does not start when `schema_discovery.enabled` is `true` and `url` is empty. This is deliberate. It stops a
+  server whose tools always fail.
+</Warning>
+
+## Step 2 - Start the router
+
+```bash
+./router --config router.config.yaml
+```
+
+Read the log. You must see two lines.
+
+```
+INFO  MCP schema discovery enabled   url=https://discovery.example.com authenticated=true
+INFO  schema index is building       index_id=sha256:6926769e...
+```
+
+Then, within about a minute:
+
+```
+INFO  schema index is ready          index_id=sha256:6926769e... symbol_count=318
+```
+
+The index now serves requests. A schema of 16,000 lines takes about 24 seconds.
+
+The router does not wait for the index. It serves GraphQL from the first moment.
+
+<Note>
+The `index_id` is the SHA-256 hash of your schema. Compute it yourself at any time:
+
+```bash
+printf 'sha256:%s\n' "$(shasum -a 256 ./schema.graphql | cut -d' ' -f1)"
+```
+
+</Note>
+
+## Step 3 - Connect an MCP client
+
+Point your client at the MCP endpoint.
+
+```json
+{
+  "mcpServers": {
+    "cosmo": {
+      "type": "http",
+      "url": "http://localhost:5025/mcp"
+    }
+  }
+}
+```
+
+List the tools. You must see three new names:
+
+- `search_schema`
+- `get_symbols`
+- `generate_query`
+
+## Step 4 - Find out what the API does
+
+Ask the client to search your schema. Use your own words, not field names.
+
+```json
+{
+  "query": "employee details",
+  "kinds": ["field"],
+  "limit": 3
+}
+```
+
+You get ranked coordinates and their records.
+
+```json
+{
+  "hits": [
+    {
+      "coordinate": "field:Employee.details",
+      "score": 0.049,
+      "record": { "Coordinate": "field:Employee.details", "TypeRef": "Details" }
+    }
+  ]
+}
+```
+
+Keep `limit` low. The records are large.
+
+## Step 5 - Generate an operation
+
+Now ask for the data that you want. Do not write GraphQL.
+
+```json
+{
+  "prompt": "list all employees with their id, first name, last name and current mood"
+}
+```
+
+This call takes 10 to 30 seconds. Wait for it.
+
+```json
+{
+  "queries": [
+    {
+      "description": "Lists employees with their ids, forenames, surnames, and current moods.",
+      "document": "query Query {\n  employees {\n    id\n    details {\n      forename\n      surname\n    }\n    currentMood\n  }\n}",
+      "operationName": "Query",
+      "operationType": "query",
+      "variablesSchema": { "type": "object", "additionalProperties": false }
+    }
+  ],
+  "guidance": {
+    "endpoint": "http://localhost:3002/graphql",
+    "nextSteps": ["Run the operation against the endpoint. ..."]
+  }
+}
+```
+
+The document is valid against your schema. The service checked it before it answered.
+
+## Step 6 - Run the operation
+
+Send the document to your router.
+
+```bash
+curl -sX POST http://localhost:3002/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "query": "query Query { employees { id details { forename surname } currentMood } }"
+      }'
+```
+
+You now have data.
+
+```json
+{
+  "data": {
+    "employees": [{ "id": 1, "details": { "forename": "Jens", "surname": "Neuse" }, "currentMood": "HAPPY" }]
+  }
+}
+```
+
+The tutorial is complete.
+
+## Step 7 - Ask for something that does not exist
+
+Send a prompt that your schema cannot answer.
+
+```json
+{ "prompt": "list the invoices for a customer with their billing address" }
+```
+
+You get no queries and one reason.
+
+```json
+{
+  "unsatisfied": [
+    "The indexed schema exposes products, employees, locations, and work reviews, but no invoice entity, billing address, or payment status."
+  ]
+}
+```
+
+This result is correct. It is not an error. It tells you that the capability does not exist, so you build it instead of searching for it.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Guides" icon="list-check" href="/router/mcp/schema-discovery/guides">
+    Find duplicate work, or turn an operation into a tool.
+  </Card>
+  <Card title="Tools" icon="wrench" href="/router/mcp/schema-discovery/tools">
+    Every input and every response field.
+  </Card>
+</CardGroup>

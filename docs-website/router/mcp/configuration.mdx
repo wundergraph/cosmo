@@ -44,7 +44,11 @@ storage_providers:
 | `expose_schema`               | Enables the `get_schema` built-in tool, exposing the full GraphQL schema to MCP clients.                                                                                                                                                                                     | `false`          |
 | `omit_tool_name_prefix`       | When enabled, MCP tool names omit the `execute_operation_` prefix. For example, `GetUser` becomes `get_user` instead of `execute_operation_get_user`. See [Tools - Omitting the Tool Name Prefix](/router/mcp/tools#omitting-the-tool-name-prefix).                | `false`          |
 
+| `schema_discovery.enabled`    | Enables the `search_schema`, `get_symbols` and `generate_query` built-in tools. They let a model search a large schema and generate a valid operation, without the schema in its context. See [Schema Discovery](/router/mcp/schema-discovery/configuration). | `false`          |
+
 For OAuth-specific configuration, see [OAuth 2.1 Authorization](/router/mcp/oauth/overview).
+
+For schema discovery configuration, see [Schema Discovery - Configuration](/router/mcp/schema-discovery/configuration).
 
 ## Environment Variables
 

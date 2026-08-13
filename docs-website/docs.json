@@ -101,6 +101,17 @@
                   "router/mcp/tools",
                   "router/mcp/configuration",
                   {
+                    "group": "Schema Discovery",
+                    "icon": "compass",
+                    "pages": [
+                      "router/mcp/schema-discovery/overview",
+                      "router/mcp/schema-discovery/quickstart",
+                      "router/mcp/schema-discovery/guides",
+                      "router/mcp/schema-discovery/tools",
+                      "router/mcp/schema-discovery/configuration"
+                    ]
+                  },
+                  {
                     "group": "OAuth 2.1",
                     "icon": "shield-check",
                     "pages": [
