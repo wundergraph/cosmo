@@ -70,6 +70,18 @@ func (n NoopMetrics) MeasureOperationCostEstimated(ctx context.Context, cost int
 func (n NoopMetrics) MeasureOperationCostActual(ctx context.Context, cost int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
 }
 
+func (n NoopMetrics) MeasureSubscriptionHardCancellation(context.Context, []attribute.KeyValue, otelmetric.AddOption) {
+}
+
+func (n NoopMetrics) MeasureSubscriptionAbandonedRequests(context.Context, int64, []attribute.KeyValue, otelmetric.AddOption) {
+}
+
+func (n NoopMetrics) MeasureSubscriptionLateCompletion(context.Context, []attribute.KeyValue, otelmetric.AddOption) {
+}
+
+func (n NoopMetrics) MeasureSubscriptionLimitReached(context.Context, []attribute.KeyValue, otelmetric.AddOption) {
+}
+
 func NewNoopMetrics() Store {
 	return &NoopMetrics{}
 }

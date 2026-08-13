@@ -416,6 +416,28 @@ func findMetricDataPoints(t *testing.T, rm metricdata.ResourceMetrics, name stri
 	return nil
 }
 
+func TestSubscriptionCancellationMetrics(t *testing.T) {
+	metricReader := metric.NewManualReader()
+	store := createTestStore(t, 0, metricReader)
+	ctx := context.Background()
+	attrs := []attribute.KeyValue{attribute.String("wg.subgraph.name", "products")}
+	opt := otelmetric.WithAttributes(attrs...)
+
+	store.MeasureSubscriptionHardCancellation(ctx, nil, opt)
+	store.MeasureSubscriptionAbandonedRequests(ctx, 1, nil, opt)
+	store.MeasureSubscriptionLateCompletion(ctx, nil, opt)
+	store.MeasureSubscriptionAbandonedRequests(ctx, -1, nil, opt)
+	store.MeasureSubscriptionLimitReached(ctx, nil, opt)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, metricReader.Collect(ctx, &rm))
+
+	require.EqualValues(t, 1, findMetricDataPoints(t, rm, SubscriptionHardCancellationsCounter)[0].Value)
+	require.EqualValues(t, 0, findMetricDataPoints(t, rm, SubscriptionAbandonedRequestsCounter)[0].Value)
+	require.EqualValues(t, 1, findMetricDataPoints(t, rm, SubscriptionLateCompletionsCounter)[0].Value)
+	require.EqualValues(t, 1, findMetricDataPoints(t, rm, SubscriptionLimitReachedCounter)[0].Value)
+}
+
 // TestOperationCostMetrics tests that operation cost metrics are recorded correctly
 func TestOperationCostMetrics(t *testing.T) {
 	t.Parallel()

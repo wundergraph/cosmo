@@ -66,21 +66,18 @@ func (m *blockingHydrationModule) OnOriginRequest(req *http.Request, ctx core.Re
 	return req, nil
 }
 
-// TestKafkaSubscriptionStallsWhenHydrationIgnoresCancellation characterizes a
-// trigger-wide stall: one subscription event enters hydration, the
-// hydration operation ignores its canceled context, and the synchronous Kafka
-// poller cannot dispatch a later event or error for the same topic.
-//
-// When the trigger is made resilient to a stuck event, invert these assertions
-// and rename this as a regression test for the desired recovery behavior.
-func TestKafkaSubscriptionStallsWhenHydrationIgnoresCancellation(t *testing.T) {
+// TestKafkaSubscriptionContinuesWhenHydrationIgnoresCancellation verifies that
+// one non-cooperative origin operation cannot stall the shared trigger. The
+// timed-out event emits an inline error and a later Kafka event continues over
+// the same WebSocket subscription.
+func TestKafkaSubscriptionContinuesWhenHydrationIgnoresCancellation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping Kafka integration test in short mode")
 	}
 
 	recovered, receivedError := runKafkaHydrationTimeoutScenario(t, "employeeUpdated-hydration-hang", false)
-	require.False(t, receivedError, "the stuck event unexpectedly emitted an error over the subscription")
-	require.False(t, recovered, "the shared trigger unexpectedly dispatched the later Kafka event")
+	require.True(t, receivedError, "expected the stuck event to emit an error over the subscription")
+	require.True(t, recovered, "expected the shared trigger to dispatch the later Kafka event")
 }
 
 // TestKafkaSubscriptionContinuesAfterHydrationHonorsCancellation is the control

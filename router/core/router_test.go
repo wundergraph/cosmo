@@ -406,4 +406,5 @@ func TestNewTransportRequestOptions(t *testing.T) {
 	// The rest of the values are set to the defaults
 	assert.Equal(t, defaults.MaxIdleConns, transportCfg.MaxIdleConns)
 	assert.Equal(t, defaults.MaxIdleConnsPerHost, transportCfg.MaxIdleConnsPerHost)
+	assert.Equal(t, defaults.MaxConcurrentSubscriptionRequests, transportCfg.MaxConcurrentSubscriptionRequests)
 }

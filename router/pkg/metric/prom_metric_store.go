@@ -90,6 +90,22 @@ func (h *PromMetricStore) MeasureRequestCount(ctx context.Context, opts ...otelm
 	}
 }
 
+func (h *PromMetricStore) MeasureSubscriptionHardCancellation(ctx context.Context, opts ...otelmetric.AddOption) {
+	h.measurements.counters[SubscriptionHardCancellationsCounter].Add(ctx, 1, opts...)
+}
+
+func (h *PromMetricStore) MeasureSubscriptionAbandonedRequests(ctx context.Context, delta int64, opts ...otelmetric.AddOption) {
+	h.measurements.upDownCounters[SubscriptionAbandonedRequestsCounter].Add(ctx, delta, opts...)
+}
+
+func (h *PromMetricStore) MeasureSubscriptionLateCompletion(ctx context.Context, opts ...otelmetric.AddOption) {
+	h.measurements.counters[SubscriptionLateCompletionsCounter].Add(ctx, 1, opts...)
+}
+
+func (h *PromMetricStore) MeasureSubscriptionLimitReached(ctx context.Context, opts ...otelmetric.AddOption) {
+	h.measurements.counters[SubscriptionLimitReachedCounter].Add(ctx, 1, opts...)
+}
+
 func (h *PromMetricStore) MeasureCircuitBreakerShortCircuit(ctx context.Context, opts ...otelmetric.AddOption) {
 	if !h.circuitBreakerEnabled {
 		return
