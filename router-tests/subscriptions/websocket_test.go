@@ -742,6 +742,90 @@ func TestWebSockets(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
+	// Trigger IDs for regular (non-EDFS) subgraph subscriptions include the hash of the
+	// headers built by the SubgraphHeadersBuilder, so clients whose propagated headers
+	// differ must never share an upstream trigger. Upgrade header, query param and initial
+	// payload forwarding are disabled in both subtests so that the trigger input is identical
+	// for both clients and header propagation is the only discriminator.
+	t.Run("subscription trigger deduplication with header propagation", func(t *testing.T) {
+		t.Parallel()
+
+		headerRules := config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "Authorization",
+					},
+				},
+			},
+		}
+
+		websocketConfig := func(cfg *config.WebSocketConfiguration) {
+			cfg.ForwardUpgradeHeaders.Enabled = false
+			cfg.ForwardUpgradeQueryParams.Enabled = false
+			cfg.ForwardInitialPayload = false
+		}
+
+		subscribeCurrentTime := func(t *testing.T, xEnv *testenv.Environment, authorization string) *websocket.Conn {
+			t.Helper()
+
+			conn := xEnv.InitGraphQLWebSocketConnection(http.Header{
+				"Authorization": []string{authorization},
+			}, nil, nil)
+
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+			require.NoError(t, err)
+
+			return conn
+		}
+
+		t.Run("different headers use separate triggers", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				ModifyWebsocketConfiguration: websocketConfig,
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(headerRules),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				connA := subscribeCurrentTime(t, xEnv, "Bearer token-a")
+				defer connA.Close()
+
+				connB := subscribeCurrentTime(t, xEnv, "Bearer token-b")
+				defer connB.Close()
+
+				xEnv.WaitForSubscriptionCount(2, time.Second*15)
+				xEnv.WaitForTriggerCount(2, time.Second*15)
+				xEnv.RequireTriggerCount(2)
+			})
+		})
+
+		t.Run("same headers share one trigger", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				ModifyWebsocketConfiguration: websocketConfig,
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(headerRules),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				connA := subscribeCurrentTime(t, xEnv, "Bearer token-a")
+				defer connA.Close()
+
+				connB := subscribeCurrentTime(t, xEnv, "Bearer token-a")
+				defer connB.Close()
+
+				xEnv.WaitForSubscriptionCount(2, time.Second*15)
+				xEnv.WaitForTriggerCount(1, time.Second*15)
+				xEnv.RequireTriggerCount(1)
+			})
+		})
+	})
 	t.Run("empty allow lists should allow all headers and query args", func(t *testing.T) {
 		t.Parallel()
 

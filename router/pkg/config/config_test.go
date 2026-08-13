@@ -2412,3 +2412,131 @@ mcp:
 		require.Equal(t, "Query products, orders and customers.", cfg.Config.MCP.Server.Description)
 	})
 }
+
+func TestMCPOAuthAuthorizationServerURLs(t *testing.T) {
+	t.Run("reads multiple authorization server urls from yaml", func(t *testing.T) {
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  server:
+    base_url: "https://router.example.com"
+  oauth:
+    enabled: true
+    jwks:
+      - url: "https://auth-a.example.com/.well-known/jwks.json"
+    authorization_server_urls:
+      - "https://auth-a.example.com"
+      - "https://auth-b.example.com"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, []string{
+			"https://auth-a.example.com",
+			"https://auth-b.example.com",
+		}, cfg.Config.MCP.OAuth.AuthorizationServerURLs)
+	})
+
+	t.Run("reads multiple authorization server urls from the environment", func(t *testing.T) {
+		t.Setenv("MCP_OAUTH_AUTHORIZATION_SERVER_URLS", "https://auth-a.example.com,https://auth-b.example.com")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  server:
+    base_url: "https://router.example.com"
+  oauth:
+    enabled: true
+    jwks:
+      - url: "https://auth-a.example.com/.well-known/jwks.json"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, []string{
+			"https://auth-a.example.com",
+			"https://auth-b.example.com",
+		}, cfg.Config.MCP.OAuth.AuthorizationServerURLs)
+	})
+
+	t.Run("keeps the single authorization server url working", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  server:
+    base_url: "https://router.example.com"
+  oauth:
+    enabled: true
+    jwks:
+      - url: "https://auth-a.example.com/.well-known/jwks.json"
+    authorization_server_url: "https://auth-a.example.com"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, "https://auth-a.example.com", cfg.Config.MCP.OAuth.AuthorizationServerURL)
+		require.Equal(t, []string{"https://auth-a.example.com"}, cfg.Config.MCP.OAuth.AuthorizationServers())
+	})
+}
+
+func TestMCPOAuthAuthorizationServersAccessor(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		config   MCPOAuthConfiguration
+		expected []string
+	}{
+		{
+			name:     "empty config returns nil",
+			config:   MCPOAuthConfiguration{},
+			expected: nil,
+		},
+		{
+			name: "single url only",
+			config: MCPOAuthConfiguration{
+				AuthorizationServerURL: "https://auth-a.example.com",
+			},
+			expected: []string{"https://auth-a.example.com"},
+		},
+		{
+			name: "multiple urls only",
+			config: MCPOAuthConfiguration{
+				AuthorizationServerURLs: []string{"https://auth-a.example.com", "https://auth-b.example.com"},
+			},
+			expected: []string{"https://auth-a.example.com", "https://auth-b.example.com"},
+		},
+		{
+			name: "single url comes first and duplicates are removed",
+			config: MCPOAuthConfiguration{
+				AuthorizationServerURL:  "https://auth-a.example.com",
+				AuthorizationServerURLs: []string{"https://auth-b.example.com", "https://auth-a.example.com"},
+			},
+			expected: []string{"https://auth-a.example.com", "https://auth-b.example.com"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			require.Equal(t, tc.expected, tc.config.AuthorizationServers())
+		})
+	}
+}
