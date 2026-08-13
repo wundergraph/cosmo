@@ -143,6 +143,7 @@ type Config struct {
 	// Poller
 	configPoller                 configpoller.ConfigPoller
 	selfRegister                 selfregister.SelfRegister
+	promptToQueryClient          mcpserver.PromptToQueryClient
 	registrationInfo             *nodev1.RegistrationInfo
 	securityConfiguration        config.SecurityConfiguration
 	customModules                []Module

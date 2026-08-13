@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { type AxiosInstance, create as createHttpClient } from 'axios';
@@ -12,10 +13,11 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import * as z from 'zod';
 import { traced } from '../tracing.js';
 import * as schema from '../../db/schema.js';
+import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 
 const validationSchema = z.object({
-  schemaSha: z.string().regex(/^sha256:[\da-f]{64}$/i),
+  version: z.string().uuid(),
   prompt: z.string().trim().min(1),
 });
 
@@ -37,6 +39,11 @@ const ptqResponseSchema = z.object({
 });
 
 type PtQResponse = z.infer<typeof ptqResponseSchema>;
+
+// Yoko generates index IDs from the SHA-256 hash of the schema SDL using this format.
+function getYokoIndexId(schemaSDL: string): string {
+  return `sha256:${createHash('sha256').update(schemaSDL).digest('hex')}`;
+}
 
 @traced
 export class PromptToQueryService {
@@ -65,7 +72,7 @@ export class PromptToQueryService {
     });
   }
 
-  async generateQuery(schemaSha: string, prompt: string): Promise<GenerateQueryResponse> {
+  async generateQuery(federatedGraphId: string, version: string, prompt: string): Promise<GenerateQueryResponse> {
     if (!this.serviceAddress) {
       // The feature doesn't seem to be configured correctly
       return create(GenerateQueryResponseSchema, {
@@ -77,7 +84,7 @@ export class PromptToQueryService {
     }
 
     // Ensure that the provided parameters are valid
-    const parsed = validationSchema.safeParse({ schemaSha, prompt });
+    const parsed = validationSchema.safeParse({ version, prompt });
     if (!parsed.success) {
       return create(GenerateQueryResponseSchema, {
         response: {
@@ -98,13 +105,37 @@ export class PromptToQueryService {
       });
     }
 
+    const fedRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+    const federatedGraph = await fedRepo.byId(federatedGraphId);
+    if (!federatedGraph) {
+      return create(GenerateQueryResponseSchema, {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Federated graph not found',
+        },
+      });
+    }
+
+    const schemaVersion = await fedRepo.getSdlBasedOnSchemaVersion({
+      targetId: federatedGraph.targetId,
+      schemaVersionId: parsed.data.version,
+    });
+    if (!schemaVersion?.sdl) {
+      return create(GenerateQueryResponseSchema, {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Schema version not found for this federated graph',
+        },
+      });
+    }
+
     // Invoke the `prompt to query` service
     try {
       const response = await this.#httpClient('/yoko.v1.YokoService/GenerateQuery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({
-          indexId: parsed.data.schemaSha,
+          indexId: getYokoIndexId(schemaVersion.sdl),
           prompt: parsed.data.prompt,
         }),
       });

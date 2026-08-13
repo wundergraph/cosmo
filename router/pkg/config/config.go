@@ -1430,6 +1430,9 @@ type MCPOAuthScopesConfiguration struct {
 	// GetSchema specifies scopes required to call the get_schema built-in tool.
 	// Additive to tools_call scopes. Only relevant when expose_schema is true.
 	GetSchema []string `yaml:"get_schema,omitempty" env:"GET_SCHEMA"`
+	// GenerateQuery specifies scopes required to call the generate_query built-in tool.
+	// Additive to tools_call scopes. Only relevant when a control-plane client is configured.
+	GenerateQuery []string `yaml:"generate_query,omitempty" env:"GENERATE_QUERY"`
 }
 
 type MCPSessionConfig struct {
