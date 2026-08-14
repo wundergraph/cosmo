@@ -151,52 +151,52 @@ icon: "user-shield"
 </Step>
 
 <Step>
-  Depending on the features available for your Okta tenant, you will need to configure the `ssoGroups` claim using <a href="#using-authorization-servers">Authorization Servers</a> or <a href="#using-token-claims">Token Claims</a> directly on your application.
+  Depending on your Okta tenant's available features, configure the `ssoGroups` claim directly on your application, using either <a href="#using-authorization-servers">Authorization Servers</a> or <a href="#using-token-claims">Token Claims</a>.
 </Step>
 
 <Step>
-  Now you can assign users/groups to the application, and those users will be able to log into Cosmo using the URL provided on setting up the provider.
+  Now you can assign users and groups to the application, and those users will be able to log into Cosmo using the URL provided when you set up the provider.
 </Step>
 </Steps>
 
 <Info>
-  Please make sure that the users added to the application have a username.
+  Ensure that users added to the application have a username.
 </Info>
 
 ### Using Authorization Servers
 
 <Step>
-  Navigate to Security -> API, and click on the **default** auth server. Navigate to the **claims** tab and then click on **Add Claim.**
+  Navigate to Security → API, then click the **Default authorization server**. Open the Claims tab, then click **Add Claim**.
 
-<Frame>
-  <img
-    src="/images/studio/sso/access-policies-with-token-preview.png"
-    alt="Access Policies section showing claims list and Token Preview button"
-    title="Access Policies with Token Preview"
-  />
-</Frame>
-
+  <Frame>
+    <img
+      src="/images/studio/sso/access-policies-with-token-preview.png"
+      alt="Access Policies section showing claims list and Token Preview button"
+      title="Access Policies with Token Preview"
+    />
+  </Frame>
 </Step>
-<Step>
-  Name the claim `ssoGroups`, and include it in the **ID Token,** for the value type select **Groups,** and  for the filter select **Matches regex** and populate the field with  **".\*".**&#x43;lick on **Create.**
 
-<Frame>
-  <img
-    src="/images/studio/sso/add-claim-dialog-for-group-filters.png"
-    alt="Add Claim dialog for ssoGroups with filters, scopes, and create button"
-    title="Add Claim dialog for group filters"
-  />
-</Frame>
+<Step>
+  Name the claim `ssoGroups` and include it in the **ID Token**. For value type, select **Groups**. For filter, select **Matches** regex and enter `.*` in the field. Click **Create**.
+
+  <Frame>
+    <img
+      src="/images/studio/sso/add-claim-dialog-for-group-filters.png"
+      alt="Add Claim dialog for ssoGroups with filters, scopes, and create button"
+      title="Add Claim dialog for group filters"
+    />
+  </Frame>
 </Step>
 
 ### Using Token Claims
 
 <Step>
-  Navigate to Applications and Resources -> Applications, and select the desired application.
+  Navigate to Applications and Resources → Applications, then select the application.
 </Step>
 
 <Step>
-  Select the `Sign On` tab and scroll until you see the `Token claims` card and click on the `Add expression` button.
+  Select the `Sign On` tab, scroll to the `Token Claims` card, then click **Add Expression**.
 
   <Frame>
     <img
@@ -208,10 +208,10 @@ icon: "user-shield"
 </Step>
 
 <Step>
-  Name the expression `ssoGroups` and for the expression use `user.getGroups({'group.profile.name': 'WunderGraph.*'}).![profile.name]`. Click on `Save`.
+  Name the expression `ssoGroups`. For the expression, enter `user.getGroups({'group.profile.name': 'WunderGraph.*'}).![profile.name]`, then click **Save**.
 
-  This expression will tell Okta to assign all the groups that start with `WunderGraph` to the `ssoGroups` claim. You may adjust the expression as required by your organization. To learn more about the expressions, refer to the
-  <a href="https://help.okta.com/oie/en-us/content/topics/apps/federated-claims-overview.htm" target="_blank" rel="noopener norefer">Okta documentation</a>.
+  This expression tells Okta to assign all groups that start with `WunderGraph` to the `ssoGroups` claim. You can adjust the expression to fit your organization's needs. To learn more,
+  refer to the <a href="https://help.okta.com/oie/en-us/content/topics/apps/federated-claims-overview.htm" target="_blank" rel="noopener noreferrer">Okta documentation</a>.
 
   <Frame>
     <img
