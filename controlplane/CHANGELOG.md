@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.247.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.246.0...controlplane@0.247.0) (2026-08-11)
+
+### Features
+
+* **controlplane:** add CreateFederatedSubgraphs batch rpc ([#3152](https://github.com/wundergraph/cosmo/issues/3152)) ([9543225](https://github.com/wundergraph/cosmo/commit/95432255e3391369c617712e7c04e1762d122a39)) (@thisisnithin)
+
 # [0.246.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.245.4...controlplane@0.246.0) (2026-08-10)
 
 ### Features

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.63.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.63.2...@wundergraph/composition@0.63.3) (2026-08-11)
+
+### Bug Fixes
+
+* allow fields marked with `[@inaccessible](https://github.com/inaccessible)` to be used in `SubscriptionFilter` ([#3142](https://github.com/wundergraph/cosmo/issues/3142)) ([a3621f9](https://github.com/wundergraph/cosmo/commit/a3621f97e318b4684b85c7f753c2f4856332af8d)) (@wilsonrivera)
+
 ## [0.63.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.63.1...@wundergraph/composition@0.63.2) (2026-07-29)
 
 ### Bug Fixes

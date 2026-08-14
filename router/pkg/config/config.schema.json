@@ -2774,7 +2774,17 @@
             "authorization_server_url": {
               "type": "string",
               "description": "The base URL of the OAuth 2.0 authorization server. This URL is advertised to MCP clients via the Protected Resource Metadata endpoint (RFC 9728) to enable automatic discovery of OAuth endpoints. Clients will append '/.well-known/oauth-authorization-server' to this URL to discover token, authorization, and registration endpoints. Example: 'https://auth.example.com'",
-              "format": "http-url"
+              "format": "http-url",
+              "deprecated": true,
+              "deprecationMessage": "The authorization_server_url is deprecated. Please use the authorization_server_urls configuration instead."
+            },
+            "authorization_server_urls": {
+              "type": "array",
+              "description": "A list of base URLs of OAuth 2.0 authorization servers. All URLs are advertised to MCP clients via the Protected Resource Metadata endpoint (RFC 9728). Use this field to trust more than one authorization server. Entries are merged with 'authorization_server_url' and duplicates are removed. Configure a JWKS entry for each issuer under 'jwks' so the router can validate its tokens.",
+              "items": {
+                "type": "string",
+                "format": "http-url"
+              }
             },
             "scopes": {
               "type": "object",
@@ -3962,6 +3972,16 @@
           "type": "boolean",
           "description": "Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
           "default": true
+        },
+        "enable_multi_fetch": {
+          "type": "boolean",
+          "description": "Enables merging entity fetches to the same subgraph that execute in the same wave into a single batched request with aliased _entities fields. Merging reduces the number of subgraph requests.",
+          "default": false
+        },
+        "enable_schedule_fetches": {
+          "type": "boolean",
+          "description": "Enables the dependency-aware fetch scheduler, which organizes fetches into component-split, chain-inlined execution trees instead of the legacy wave-based structure.",
+          "default": false
         },
         "websocket_client_write_timeout": {
           "type": "string",

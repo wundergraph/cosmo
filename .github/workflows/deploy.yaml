@@ -13,7 +13,14 @@ permissions:
 
 concurrency:
   group: Production-Deploy
-  cancel-in-progress: false
+  # A single lerna publish emits one release event per package, so several runs
+  # enter this group at once. Every run computes the same full payload, but
+  # cosmo-cloud opens a deployment PR per dispatch, so duplicate dispatches
+  # are harmful. cancel-in-progress cancels any older run still in flight when a
+  # newer one starts, which collapses the overlapping burst to a single dispatch
+  # (It is not a hard guarantee: a run that finishes and dispatches before
+  # the next release event arrives can still cause a second PR.)
+  cancel-in-progress: true
 
 env:
   CI: true
@@ -23,40 +30,56 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # lerna publishes a separate GitHub release per package, so this workflow
-    # fires once per released package. Only controlplane and studio are deployed,
-    # so ignore every other package's release. Manual dispatch always runs.
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      startsWith(github.event.release.tag_name, 'controlplane@') ||
-      startsWith(github.event.release.tag_name, 'studio@')
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-
-      # On a release event, deploy only the package that was just released (its
-      # version comes from the release tag, e.g. "controlplane@0.243.0"). On a
-      # manual dispatch there is no tag, so deploy the current version of both.
+          # Need the release commit's parent so "Read versions" can diff it.
+          fetch-depth: 2
       # Unset versions stay empty and the cosmo-cloud receiver skips them.
       - name: Read versions
         id: versions
         env:
           EVENT_NAME: ${{ github.event_name }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
+          controlplane=""
+          studio=""
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            echo "controlplane=$(node -p "require('./controlplane/package.json').version")" >> "$GITHUB_OUTPUT"
-            echo "studio=$(node -p "require('./studio/package.json').version")" >> "$GITHUB_OUTPUT"
+            # On a manual dispatch there is no release commit, so deploy the current
+            # version of both packages.
+            controlplane="$(node -p "require('./controlplane/package.json').version")"
+            studio="$(node -p "require('./studio/package.json').version")"
           else
-            case "$RELEASE_TAG" in
-              controlplane@*) echo "controlplane=${RELEASE_TAG#controlplane@}" >> "$GITHUB_OUTPUT" ;;
-              studio@*)       echo "studio=${RELEASE_TAG#studio@}" >> "$GITHUB_OUTPUT" ;;
+            # On a release event we must NOT trust the triggering tag: lerna bumps every
+            # published package in a single release commit and emits one release event
+            # per package. All those events reference the same commit, and the
+            # Production-Deploy concurrency group collapses their overlapping runs down
+            # to a single surviving run (GitHub keeps only the newest queued run and
+            # cancels the rest) — which may even be an unrelated package's run. So each
+            # run instead derives the full deploy set from the release commit itself, by
+            # detecting which packages' versions changed in it. This is identical across
+            # every run, so whichever one survives dispatches the complete payload.
+            changed="$(git diff --name-only HEAD~1 HEAD)"
+            case "$changed" in
+              *controlplane/package.json*) controlplane="$(node -p "require('./controlplane/package.json').version")" ;;
+            esac
+            case "$changed" in
+              *studio/package.json*) studio="$(node -p "require('./studio/package.json').version")" ;;
             esac
           fi
+          {
+            echo "controlplane=$controlplane"
+            echo "studio=$studio"
+            if [ -n "$controlplane" ] || [ -n "$studio" ]; then
+              echo "deploy=true"
+            else
+              echo "deploy=false"
+            fi
+          } >> "$GITHUB_OUTPUT"
 
       - name: Authenticate
         id: app-token
+        if: steps.versions.outputs.deploy == 'true'
         uses: actions/create-github-app-token@v3
         with:
           client-id: ${{ secrets.APP_CLIENT_ID }}
@@ -66,6 +89,7 @@ jobs:
           permission-contents: write
 
       - name: Trigger Deployment Repo Dispatch
+        if: steps.versions.outputs.deploy == 'true'
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ steps.app-token.outputs.token }}
