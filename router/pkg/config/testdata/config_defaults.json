@@ -520,6 +520,8 @@
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
     "EnableDefer": false,
+    "EnableMultiFetch": false,
+    "EnableScheduleFetches": false,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,
