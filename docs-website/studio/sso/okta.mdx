@@ -208,7 +208,7 @@ icon: "user-shield"
 </Step>
 
 <Step>
-  Name the expression `ssoGroups` and for the expression use `user.getGroups({'group.profile.name': 'WunderGraph.*'}).![profile.name]`.
+  Name the expression `ssoGroups` and for the expression use `user.getGroups({'group.profile.name': 'WunderGraph.*'}).![profile.name]`. Click on `Save`.
 
   This expression will tell Okta to assign all the groups that start with `WunderGraph` to the `ssoGroups` claim. You may adjust the expression as required by your organization. To learn more about the expressions, refer to the
   <a href="https://help.okta.com/oie/en-us/content/topics/apps/federated-claims-overview.htm" target="_blank" rel="noopener norefer">Okta documentation</a>.
