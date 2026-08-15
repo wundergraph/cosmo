@@ -155,17 +155,22 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 					return
 				}
 				log.Debug("subscription update", zap.String("message_channel", msg.Channel), zap.String("data", msg.Payload))
-				p.streamMetricStore.Consume(ctx, metric.StreamsEvent{
+				streamEvent := metric.StreamsEvent{
 					ProviderId:          conf.ProviderID(),
 					StreamOperationName: redisReceive,
 					ProviderType:        metric.ProviderTypeRedis,
 					DestinationName:     msg.Channel,
-				})
+					RootFieldName:       conf.RootFieldName(),
+				}
+				p.streamMetricStore.Consume(ctx, streamEvent)
+				p.streamMetricStore.DispatchStart(ctx, streamEvent)
+				dispatchStarted := time.Now()
 				updater.Update([]datasource.StreamEvent{
 					&Event{evt: &MutableEvent{
 						Data: []byte(msg.Payload),
 					}},
 				})
+				p.streamMetricStore.DispatchFinish(context.WithoutCancel(ctx), streamEvent, time.Since(dispatchStarted))
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscription if it is not already done
 				log.Debug("application context done, stopping subscription")

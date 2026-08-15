@@ -46,3 +46,13 @@ func (o *otlpStreamEventMetrics) Produce(ctx context.Context, opts ...otelmetric
 func (o *otlpStreamEventMetrics) Consume(ctx context.Context, opts ...otelmetric.AddOption) {
 	o.instruments.consumedMessages.Add(ctx, 1, opts...)
 }
+
+func (o *otlpStreamEventMetrics) Process(ctx context.Context, opts ...otelmetric.AddOption) {
+	o.instruments.processedMessages.Add(ctx, 1, opts...)
+}
+func (o *otlpStreamEventMetrics) DispatchInFlight(ctx context.Context, delta int64, opts ...otelmetric.AddOption) {
+	o.instruments.dispatchInFlight.Add(ctx, delta, opts...)
+}
+func (o *otlpStreamEventMetrics) DispatchDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	o.instruments.dispatchDuration.Record(ctx, duration, opts...)
+}

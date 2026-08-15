@@ -124,6 +124,24 @@ func createMeasures(meter otelmetric.Meter, opts MetricOpts) (*Measurements, err
 	}
 	h.counters[SubscriptionLimitReachedCounter] = subscriptionLimitReached
 
+	sseWritesInFlight, err := meter.Int64UpDownCounter(SSEWritesInFlightUpDownCounter, SSEWritesInFlightUpDownCounterOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SSE writes in flight counter: %w", err)
+	}
+	h.upDownCounters[SSEWritesInFlightUpDownCounter] = sseWritesInFlight
+
+	sseWriteDuration, err := meter.Float64Histogram(SSEWriteDurationHistogram, SSEWriteDurationHistogramOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SSE write duration histogram: %w", err)
+	}
+	h.histograms[SSEWriteDurationHistogram] = sseWriteDuration
+
+	sseWriteFailures, err := meter.Int64Counter(SSEWriteFailuresCounter, SSEWriteFailuresCounterOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SSE write failures counter: %w", err)
+	}
+	h.counters[SSEWriteFailuresCounter] = sseWriteFailures
+
 	operationPlanningTime, err := meter.Float64Histogram(
 		OperationPlanningTime,
 		OperationPlanningTimeHistogramOptions...,

@@ -82,6 +82,15 @@ func (n NoopMetrics) MeasureSubscriptionLateCompletion(context.Context, []attrib
 func (n NoopMetrics) MeasureSubscriptionLimitReached(context.Context, []attribute.KeyValue, otelmetric.AddOption) {
 }
 
+func (n NoopMetrics) MeasureSSEWritesInFlight(context.Context, int64, []attribute.KeyValue, otelmetric.AddOption) {
+}
+
+func (n NoopMetrics) MeasureSSEWriteDuration(context.Context, time.Duration, []attribute.KeyValue, otelmetric.RecordOption) {
+}
+
+func (n NoopMetrics) MeasureSSEWriteFailure(context.Context, []attribute.KeyValue, otelmetric.AddOption) {
+}
+
 func NewNoopMetrics() Store {
 	return &NoopMetrics{}
 }

@@ -6,11 +6,27 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
+
+type deadlineRecorder struct {
+	*httptest.ResponseRecorder
+	deadline time.Time
+}
+
+func (r *deadlineRecorder) SetWriteDeadline(deadline time.Time) error {
+	r.deadline = deadline
+	return nil
+}
+
+func (r *deadlineRecorder) FlushError() error {
+	r.Flush()
+	return nil
+}
 
 func TestNegotiateSubscriptionParams(t *testing.T) {
 	type args struct {
@@ -137,10 +153,37 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
 		req.Header.Set("Accept", sseMimeType)
 
-		_, _, ok := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, false)
+		_, _, ok := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{})
 		require.True(t, ok)
 
 		assert.Equal(t, sseMimeType, recorder.Header().Get("Content-Type"))
 		assert.True(t, recorder.Flushed, "expected the SSE response head to be flushed before any message is written")
+	})
+
+	t.Run("sets and refreshes a deadline for SSE headers and data", func(t *testing.T) {
+		recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+
+		_, writer, ok := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{SSEWriteTimeout: time.Second})
+		require.True(t, ok)
+		headerDeadline := recorder.deadline
+		require.False(t, headerDeadline.IsZero())
+
+		time.Sleep(time.Millisecond)
+		_, err := writer.Write([]byte(`{"data":{"id":1}}`))
+		require.NoError(t, err)
+		require.NoError(t, writer.Flush())
+		assert.True(t, recorder.deadline.After(headerDeadline), "expected each SSE frame to refresh the write deadline")
+	})
+
+	t.Run("fails closed when an SSE deadline is configured but unsupported", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+
+		_, writer, ok := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{SSEWriteTimeout: time.Second})
+		assert.False(t, ok)
+		assert.Nil(t, writer)
 	})
 }

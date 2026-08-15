@@ -1806,6 +1806,7 @@ func (s *graphServer) buildGraphMux(
 		SubgraphErrorPropagation:        s.subgraphErrorPropagation,
 		EngineLoaderHooks:               loaderHooks,
 		HeaderPropagation:               s.headerPropagation,
+		SSEServerWriteTimeout:           s.engineExecutionConfiguration.SSEServerWriteTimeout,
 	}
 
 	if s.redisClient != nil {

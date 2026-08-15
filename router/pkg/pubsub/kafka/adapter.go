@@ -48,7 +48,8 @@ type ProviderAdapter struct {
 }
 
 type PollerOpts struct {
-	providerId string
+	providerId    string
+	rootFieldName string
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
@@ -102,12 +103,16 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 					headers[header.Key] = header.Value
 				}
 
-				p.streamMetricStore.Consume(ctx, metric.StreamsEvent{
+				streamEvent := metric.StreamsEvent{
 					ProviderId:          pollerOpts.providerId,
 					StreamOperationName: kafkaReceive,
 					ProviderType:        metric.ProviderTypeKafka,
 					DestinationName:     r.Topic,
-				})
+					RootFieldName:       pollerOpts.rootFieldName,
+				}
+				p.streamMetricStore.Consume(ctx, streamEvent)
+				p.streamMetricStore.DispatchStart(ctx, streamEvent)
+				dispatchStarted := time.Now()
 
 				updater.Update([]datasource.StreamEvent{
 					&Event{
@@ -118,6 +123,7 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 						},
 					},
 				})
+				p.streamMetricStore.DispatchFinish(context.WithoutCancel(ctx), streamEvent, time.Since(dispatchStarted))
 			}
 		}
 	}
@@ -173,7 +179,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		stop := context.AfterFunc(p.ctx, cancel)
 		defer stop()
 
-		err := p.topicPoller(pollerCtx, client, updater, PollerOpts{providerId: conf.ProviderID()})
+		err := p.topicPoller(pollerCtx, client, updater, PollerOpts{providerId: conf.ProviderID(), rootFieldName: conf.RootFieldName()})
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
 				log.Debug("poller canceled", zap.Error(err))

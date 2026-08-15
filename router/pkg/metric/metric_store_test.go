@@ -438,6 +438,41 @@ func TestSubscriptionCancellationMetrics(t *testing.T) {
 	require.EqualValues(t, 1, findMetricDataPoints(t, rm, SubscriptionLimitReachedCounter)[0].Value)
 }
 
+func TestSSEWriteMetrics(t *testing.T) {
+	metricReader := metric.NewManualReader()
+	store := createTestStore(t, 0, metricReader)
+	ctx := context.Background()
+	attrs := []attribute.KeyValue{attribute.String("wg.sse.frame_type", "next")}
+	opt := otelmetric.WithAttributes(attrs...)
+
+	store.MeasureSSEWritesInFlight(ctx, 1, attrs, opt)
+	store.MeasureSSEWriteDuration(ctx, 25*time.Millisecond, attrs, opt)
+	store.MeasureSSEWriteFailure(ctx, attrs, opt)
+	store.MeasureSSEWritesInFlight(ctx, -1, attrs, opt)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, metricReader.Collect(ctx, &rm))
+	require.EqualValues(t, 0, findMetricDataPoints(t, rm, SSEWritesInFlightUpDownCounter)[0].Value)
+	require.EqualValues(t, 1, findMetricDataPoints(t, rm, SSEWriteFailuresCounter)[0].Value)
+	require.NotEmpty(t, findFloatMetricDataPoints(t, rm, SSEWriteDurationHistogram))
+}
+
+func findFloatMetricDataPoints(t *testing.T, rm metricdata.ResourceMetrics, name string) []metricdata.HistogramDataPoint[float64] {
+	t.Helper()
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name == name {
+				if histogram, ok := m.Data.(metricdata.Histogram[float64]); ok {
+					return histogram.DataPoints
+				}
+				t.Fatalf("metric %q has unexpected data type %T", name, m.Data)
+			}
+		}
+	}
+	t.Fatalf("metric %q not found", name)
+	return nil
+}
+
 // TestOperationCostMetrics tests that operation cost metrics are recorded correctly
 func TestOperationCostMetrics(t *testing.T) {
 	t.Parallel()
