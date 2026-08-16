@@ -4687,12 +4687,6 @@
           "default": 20,
           "description": "MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. Zero will default to 2"
         },
-        "max_concurrent_subscription_requests": {
-          "type": "integer",
-          "default": 128,
-          "minimum": 1,
-          "description": "Maximum number of supervised subscription subgraph requests per subgraph. A request retains its slot until the underlying transport returns, including after caller cancellation."
-        },
         "circuit_breaker": {
           "type": "object",
           "description": "The Circuit Breaker configuration, it allows you to enable and configure circuit breakers for subgraphs.",

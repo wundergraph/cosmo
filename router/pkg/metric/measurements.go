@@ -88,42 +88,6 @@ func createMeasures(meter otelmetric.Meter, opts MetricOpts) (*Measurements, err
 
 	h.upDownCounters[InFlightRequestsUpDownCounter] = inFlightRequestsGauge
 
-	subscriptionHardCancellations, err := meter.Int64Counter(
-		SubscriptionHardCancellationsCounter,
-		SubscriptionHardCancellationsCounterOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create subscription hard cancellations counter: %w", err)
-	}
-	h.counters[SubscriptionHardCancellationsCounter] = subscriptionHardCancellations
-
-	subscriptionAbandonedRequests, err := meter.Int64UpDownCounter(
-		SubscriptionAbandonedRequestsCounter,
-		SubscriptionAbandonedRequestsCounterOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create subscription abandoned requests counter: %w", err)
-	}
-	h.upDownCounters[SubscriptionAbandonedRequestsCounter] = subscriptionAbandonedRequests
-
-	subscriptionLateCompletions, err := meter.Int64Counter(
-		SubscriptionLateCompletionsCounter,
-		SubscriptionLateCompletionsCounterOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create subscription late completions counter: %w", err)
-	}
-	h.counters[SubscriptionLateCompletionsCounter] = subscriptionLateCompletions
-
-	subscriptionLimitReached, err := meter.Int64Counter(
-		SubscriptionLimitReachedCounter,
-		SubscriptionLimitReachedCounterOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create subscription limit reached counter: %w", err)
-	}
-	h.counters[SubscriptionLimitReachedCounter] = subscriptionLimitReached
-
 	sseWritesInFlight, err := meter.Int64UpDownCounter(SSEWritesInFlightUpDownCounter, SSEWritesInFlightUpDownCounterOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SSE writes in flight counter: %w", err)

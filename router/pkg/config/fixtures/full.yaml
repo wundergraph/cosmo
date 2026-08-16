@@ -301,7 +301,6 @@ traffic_shaping:
     expect_continue_timeout: 0s
     keep_alive_idle_timeout: 0s
     keep_alive_probe_interval: 30s
-    max_concurrent_subscription_requests: 128
     # Retry
     retry: # Rule is only applied to GraphQL operations of type "query"
       enabled: true
@@ -312,7 +311,6 @@ traffic_shaping:
   subgraphs:
     products: # Will only affect this subgraph
       request_timeout: 120s
-      max_concurrent_subscription_requests: 8
 
 # Header manipulation
 # See "https://cosmo-docs.wundergraph.com/router/proxy-capabilities" for more information

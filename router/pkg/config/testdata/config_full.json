@@ -512,8 +512,7 @@
       "KeepAliveProbeInterval": 30000000000,
       "MaxConnsPerHost": 100,
       "MaxIdleConns": 1024,
-      "MaxIdleConnsPerHost": 20,
-      "MaxConcurrentSubscriptionRequests": 128
+      "MaxIdleConnsPerHost": 20
     },
     "Router": {
       "MaxRequestBodyBytes": 5000000,
@@ -552,8 +551,7 @@
         "KeepAliveProbeInterval": null,
         "MaxConnsPerHost": null,
         "MaxIdleConns": null,
-        "MaxIdleConnsPerHost": null,
-        "MaxConcurrentSubscriptionRequests": 8
+        "MaxIdleConnsPerHost": null
       }
     }
   },

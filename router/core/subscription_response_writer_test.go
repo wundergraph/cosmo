@@ -11,11 +11,34 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.opentelemetry.io/otel/attribute"
+	otelmetric "go.opentelemetry.io/otel/metric"
+
+	routermetric "github.com/wundergraph/cosmo/router/pkg/metric"
 )
 
 type deadlineRecorder struct {
 	*httptest.ResponseRecorder
 	deadline time.Time
+}
+
+type sseMetricSpy struct {
+	routermetric.Store
+	writesInFlightCalls int
+	durationCalls       int
+	failureCalls        int
+}
+
+func (s *sseMetricSpy) MeasureSSEWritesInFlight(context.Context, int64, []attribute.KeyValue, otelmetric.AddOption) {
+	s.writesInFlightCalls++
+}
+
+func (s *sseMetricSpy) MeasureSSEWriteDuration(context.Context, time.Duration, []attribute.KeyValue, otelmetric.RecordOption) {
+	s.durationCalls++
+}
+
+func (s *sseMetricSpy) MeasureSSEWriteFailure(context.Context, []attribute.KeyValue, otelmetric.AddOption) {
+	s.failureCalls++
 }
 
 func (r *deadlineRecorder) SetWriteDeadline(deadline time.Time) error {
@@ -175,6 +198,27 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, writer.Flush())
 		assert.True(t, recorder.deadline.After(headerDeadline), "expected each SSE frame to refresh the write deadline")
+	})
+
+	t.Run("does not measure successful heartbeat lifecycle", func(t *testing.T) {
+		recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+		metrics := &sseMetricSpy{}
+
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{
+			SSEWriteTimeout: time.Second,
+			MetricStore:     metrics,
+		})
+		require.NoError(t, err)
+		metrics.writesInFlightCalls = 0
+		metrics.durationCalls = 0
+		metrics.failureCalls = 0
+
+		require.NoError(t, writer.Heartbeat())
+		assert.Zero(t, metrics.writesInFlightCalls)
+		assert.Zero(t, metrics.durationCalls)
+		assert.Zero(t, metrics.failureCalls)
 	})
 
 	t.Run("fails closed when an SSE deadline is configured but unsupported", func(t *testing.T) {

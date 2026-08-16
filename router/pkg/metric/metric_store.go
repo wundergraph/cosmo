@@ -27,13 +27,9 @@ const (
 	CircuitBreakerStateGauge           = "router.circuit_breaker.state"
 	CircuitBreakerShortCircuitsCounter = "router.circuit_breaker.short_circuits"
 
-	SubscriptionHardCancellationsCounter = "router.http.client.subscription.hard_cancellations"
-	SubscriptionAbandonedRequestsCounter = "router.http.client.subscription.abandoned_requests"
-	SubscriptionLateCompletionsCounter   = "router.http.client.subscription.late_completions"
-	SubscriptionLimitReachedCounter      = "router.http.client.subscription.limit_reached"
-	SSEWritesInFlightUpDownCounter       = "router.http.server.sse.writes.in_flight"
-	SSEWriteDurationHistogram            = "router.http.server.sse.write.duration"
-	SSEWriteFailuresCounter              = "router.http.server.sse.write.failures"
+	SSEWritesInFlightUpDownCounter = "router.http.server.sse.writes.in_flight"
+	SSEWriteDurationHistogram      = "router.http.server.sse.write.duration"
+	SSEWriteFailuresCounter        = "router.http.server.sse.write.failures"
 
 	SchemaFieldUsageCounter = "router.graphql.schema_field_usage" // Total field usage
 
@@ -77,18 +73,6 @@ var (
 	InFlightRequestsUpDownCounterDescription = "Number of requests in flight"
 	InFlightRequestsUpDownCounterOptions     = []otelmetric.Int64UpDownCounterOption{
 		otelmetric.WithDescription(InFlightRequestsUpDownCounterDescription),
-	}
-	SubscriptionHardCancellationsCounterOptions = []otelmetric.Int64CounterOption{
-		otelmetric.WithDescription("Subscription subgraph requests returned at their deadline before the delegate completed"),
-	}
-	SubscriptionAbandonedRequestsCounterOptions = []otelmetric.Int64UpDownCounterOption{
-		otelmetric.WithDescription("Subscription subgraph request delegates still running after caller cancellation"),
-	}
-	SubscriptionLateCompletionsCounterOptions = []otelmetric.Int64CounterOption{
-		otelmetric.WithDescription("Abandoned subscription subgraph request delegates that later completed"),
-	}
-	SubscriptionLimitReachedCounterOptions = []otelmetric.Int64CounterOption{
-		otelmetric.WithDescription("Subscription subgraph requests that reached their supervised concurrency limit"),
 	}
 	SSEWritesInFlightUpDownCounterOptions = []otelmetric.Int64UpDownCounterOption{
 		otelmetric.WithDescription("SSE writes currently in progress"),
@@ -203,10 +187,6 @@ type (
 		MeasureCircuitBreakerShortCircuit(ctx context.Context, opts ...otelmetric.AddOption)
 		MeasureOperationCostEstimated(ctx context.Context, cost int64, opts ...otelmetric.RecordOption)
 		MeasureOperationCostActual(ctx context.Context, cost int64, opts ...otelmetric.RecordOption)
-		MeasureSubscriptionHardCancellation(ctx context.Context, opts ...otelmetric.AddOption)
-		MeasureSubscriptionAbandonedRequests(ctx context.Context, delta int64, opts ...otelmetric.AddOption)
-		MeasureSubscriptionLateCompletion(ctx context.Context, opts ...otelmetric.AddOption)
-		MeasureSubscriptionLimitReached(ctx context.Context, opts ...otelmetric.AddOption)
 		MeasureSSEWritesInFlight(ctx context.Context, delta int64, opts ...otelmetric.AddOption)
 		MeasureSSEWriteDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 		MeasureSSEWriteFailure(ctx context.Context, opts ...otelmetric.AddOption)
@@ -230,10 +210,6 @@ type (
 		SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureOperationCostEstimated(ctx context.Context, cost int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureOperationCostActual(ctx context.Context, cost int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
-		MeasureSubscriptionHardCancellation(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
-		MeasureSubscriptionAbandonedRequests(ctx context.Context, delta int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
-		MeasureSubscriptionLateCompletion(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
-		MeasureSubscriptionLimitReached(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		MeasureSSEWritesInFlight(ctx context.Context, delta int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		MeasureSSEWriteDuration(ctx context.Context, duration time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureSSEWriteFailure(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
@@ -302,30 +278,6 @@ func (h *Metrics) MeasureInFlight(ctx context.Context, sliceAttr []attribute.Key
 			h()
 		}
 	}
-}
-
-func (h *Metrics) MeasureSubscriptionHardCancellation(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
-	h.measureAdd(ctx, sliceAttr, opt, func(provider Provider, ctx context.Context, opts ...otelmetric.AddOption) {
-		provider.MeasureSubscriptionHardCancellation(ctx, opts...)
-	})
-}
-
-func (h *Metrics) MeasureSubscriptionAbandonedRequests(ctx context.Context, delta int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
-	h.measureAdd(ctx, sliceAttr, opt, func(provider Provider, ctx context.Context, opts ...otelmetric.AddOption) {
-		provider.MeasureSubscriptionAbandonedRequests(ctx, delta, opts...)
-	})
-}
-
-func (h *Metrics) MeasureSubscriptionLateCompletion(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
-	h.measureAdd(ctx, sliceAttr, opt, func(provider Provider, ctx context.Context, opts ...otelmetric.AddOption) {
-		provider.MeasureSubscriptionLateCompletion(ctx, opts...)
-	})
-}
-
-func (h *Metrics) MeasureSubscriptionLimitReached(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
-	h.measureAdd(ctx, sliceAttr, opt, func(provider Provider, ctx context.Context, opts ...otelmetric.AddOption) {
-		provider.MeasureSubscriptionLimitReached(ctx, opts...)
-	})
 }
 
 func (h *Metrics) MeasureSSEWritesInFlight(ctx context.Context, delta int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {

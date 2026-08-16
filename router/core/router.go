@@ -128,8 +128,6 @@ type (
 		MaxConnsPerHost     int
 		MaxIdleConns        int
 		MaxIdleConnsPerHost int
-
-		MaxConcurrentSubscriptionRequests int
 	}
 
 	SubgraphTransportOptions struct {
@@ -2361,10 +2359,6 @@ func NewTransportRequestOptions(cfg config.GlobalSubgraphRequestRule, defaults *
 		MaxConnsPerHost:        or(cfg.MaxConnsPerHost, defaults.MaxConnsPerHost),
 		MaxIdleConns:           or(cfg.MaxIdleConns, defaults.MaxIdleConns),
 		MaxIdleConnsPerHost:    or(cfg.MaxIdleConnsPerHost, defaults.MaxIdleConnsPerHost),
-		MaxConcurrentSubscriptionRequests: or(
-			cfg.MaxConcurrentSubscriptionRequests,
-			defaults.MaxConcurrentSubscriptionRequests,
-		),
 	}
 }
 
@@ -2381,8 +2375,6 @@ func DefaultTransportRequestOptions() *TransportRequestOptions {
 		MaxConnsPerHost:     1024,
 		MaxIdleConnsPerHost: 64,
 		MaxIdleConns:        64 * 10,
-
-		MaxConcurrentSubscriptionRequests: 128,
 	}
 }
 

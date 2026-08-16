@@ -28,7 +28,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/internal/docker"
-	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 )
 
@@ -197,8 +196,6 @@ type TransportFactory struct {
 	tracePropagators              propagation.TextMapPropagator
 	spanNameFormatter             SpanNameFormatterFunc
 	enableTraceClient             bool
-	subgraphTransportOptions      *SubgraphTransportOptions
-	subscriptionRequestSupervisor *httpclient.CancellationSupervisor
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -246,8 +243,6 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		spanNameFormatter:             spanNameFormatter,
 		circuitBreaker:                opts.CircuitBreaker,
 		enableTraceClient:             opts.EnableTraceClient,
-		subgraphTransportOptions:      opts.SubgraphTransportOptions,
-		subscriptionRequestSupervisor: httpclient.NewCancellationSupervisor(),
 	}
 }
 
@@ -301,104 +296,7 @@ func (t TransportFactory) RoundTripper(baseTransport http.RoundTripper) http.Rou
 	tp.postHandlers = t.postHandlers
 	tp.logger = t.logger
 
-	// Keep request deadlines effective even when a custom module or wrapped
-	// RoundTripper fails to return after its request context is canceled. This is
-	// particularly important for subscription hydration because one blocked
-	// update otherwise prevents subsequent stream events from being processed.
-	return httpclient.NewCancelableRoundTripper(tp, httpclient.CancelableRoundTripperOptions{
-		ShouldSupervise: shouldSuperviseSubscriptionRequest,
-		Key:             subscriptionRequestKey,
-		Limit:           t.subscriptionRequestLimit,
-		Observer:        &subscriptionCancellationMetrics{store: t.metricStore},
-		Supervisor:      t.subscriptionRequestSupervisor,
-	})
-}
-
-func shouldSuperviseSubscriptionRequest(req *http.Request) bool {
-	requestContext := getRequestContext(req.Context())
-	return requestContext != nil && requestContext.operation != nil &&
-		requestContext.operation.opType == OperationTypeSubscription
-}
-
-func subscriptionRequestKey(req *http.Request) string {
-	requestContext := getRequestContext(req.Context())
-	if requestContext != nil && requestContext.subgraphResolver != nil {
-		if subgraph := requestContext.ActiveSubgraph(req); subgraph != nil {
-			if subgraph.Id != "" {
-				return subgraph.Id
-			}
-			return subgraph.Name
-		}
-	}
-	return req.URL.Host
-}
-
-func (t TransportFactory) subscriptionRequestLimit(req *http.Request) int {
-	options := t.subgraphTransportOptions
-	if options == nil {
-		return 0
-	}
-	requestContext := getRequestContext(req.Context())
-	if requestContext != nil && requestContext.subgraphResolver != nil {
-		if subgraph := requestContext.ActiveSubgraph(req); subgraph != nil {
-			if subgraphOptions, ok := options.SubgraphMap[subgraph.Name]; ok {
-				return subgraphOptions.MaxConcurrentSubscriptionRequests
-			}
-		}
-	}
-	return options.MaxConcurrentSubscriptionRequests
-}
-
-type subscriptionCancellationMetrics struct {
-	store metric.Store
-}
-
-func (m *subscriptionCancellationMetrics) HardCancellation(req *http.Request) {
-	if m.store == nil {
-		return
-	}
-	ctx, attrs := subscriptionCancellationMetricAttributes(req)
-	m.store.MeasureSubscriptionHardCancellation(ctx, nil, otelmetric.WithAttributes(attrs...))
-}
-
-func (m *subscriptionCancellationMetrics) AbandonedRequests(req *http.Request, delta int64) {
-	if m.store == nil {
-		return
-	}
-	ctx, attrs := subscriptionCancellationMetricAttributes(req)
-	m.store.MeasureSubscriptionAbandonedRequests(ctx, delta, nil, otelmetric.WithAttributes(attrs...))
-}
-
-func (m *subscriptionCancellationMetrics) LateCompletion(req *http.Request) {
-	if m.store == nil {
-		return
-	}
-	ctx, attrs := subscriptionCancellationMetricAttributes(req)
-	m.store.MeasureSubscriptionLateCompletion(ctx, nil, otelmetric.WithAttributes(attrs...))
-}
-
-func (m *subscriptionCancellationMetrics) LimitReached(req *http.Request) {
-	if m.store == nil {
-		return
-	}
-	ctx, attrs := subscriptionCancellationMetricAttributes(req)
-	m.store.MeasureSubscriptionLimitReached(ctx, nil, otelmetric.WithAttributes(attrs...))
-}
-
-func subscriptionCancellationMetricAttributes(req *http.Request) (context.Context, []attribute.KeyValue) {
-	ctx := context.WithoutCancel(req.Context())
-	requestContext := getRequestContext(req.Context())
-	if requestContext == nil || requestContext.subgraphResolver == nil {
-		return ctx, nil
-	}
-	subgraph := requestContext.ActiveSubgraph(req)
-	if subgraph == nil {
-		return ctx, nil
-	}
-	return ctx, []attribute.KeyValue{
-		otel.WgSubgraphName.String(subgraph.Name),
-		otel.WgSubgraphID.String(subgraph.Id),
-	}
+	return tp
 }
 
 func (t TransportFactory) DefaultHTTPProxyURL() *url.URL {

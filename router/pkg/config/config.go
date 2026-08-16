@@ -252,10 +252,6 @@ type GlobalSubgraphRequestRule struct {
 	MaxConnsPerHost     *int `yaml:"max_conns_per_host,omitempty" envDefault:"100"`
 	MaxIdleConns        *int `yaml:"max_idle_conns,omitempty" envDefault:"1024"`
 	MaxIdleConnsPerHost *int `yaml:"max_idle_conns_per_host,omitempty" envDefault:"20"`
-	// MaxConcurrentSubscriptionRequests bounds supervised subscription subgraph
-	// requests per subgraph. A slot is retained until the underlying request
-	// returns, even after caller cancellation.
-	MaxConcurrentSubscriptionRequests *int `yaml:"max_concurrent_subscription_requests,omitempty" envDefault:"128"`
 }
 
 type SubgraphTrafficRequestRule struct {

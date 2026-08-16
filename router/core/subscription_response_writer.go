@@ -44,6 +44,15 @@ type SubscriptionResponseWriterOptions struct {
 	MetricStore                              rmetric.Store
 }
 
+type sseFrameType string
+
+const (
+	sseFrameTypeHeaders   sseFrameType = "headers"
+	sseFrameTypeHeartbeat sseFrameType = "heartbeat"
+	sseFrameTypeNext      sseFrameType = "next"
+	sseFrameTypeComplete  sseFrameType = "complete"
+)
+
 type HttpFlushWriter struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
@@ -69,7 +78,7 @@ func (f *HttpFlushWriter) Complete() {
 		return
 	}
 	if f.sse {
-		_ = f.writeAndFlushSSE("complete", func() error {
+		_ = f.writeAndFlushSSE(sseFrameTypeComplete, func() error {
 			_, err := f.writer.Write([]byte("event: complete\ndata: \n\n"))
 			return err
 		})
@@ -106,7 +115,7 @@ func (f *HttpFlushWriter) Heartbeat() error {
 	var heartbeat []byte
 	if f.sse {
 		heartbeat = []byte(":heartbeat\n\n")
-		return f.writeAndFlushSSE("heartbeat", func() error {
+		return f.writeAndFlushSSE(sseFrameTypeHeartbeat, func() error {
 			_, err := f.writer.Write(heartbeat)
 			return err
 		})
@@ -171,7 +180,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 
 	full := flushBreak + string(resp) + separation
 	if f.sse {
-		err = f.writeAndFlushSSE("next", func() error {
+		err = f.writeAndFlushSSE(sseFrameTypeNext, func() error {
 			_, writeErr := f.writer.Write([]byte(full))
 			return writeErr
 		})
@@ -193,21 +202,29 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	return nil
 }
 
-func (f *HttpFlushWriter) writeAndFlushSSE(frameType string, write func() error) (err error) {
-	started := time.Now()
+func (f *HttpFlushWriter) writeAndFlushSSE(frameType sseFrameType, write func() error) (err error) {
 	metricCtx := context.WithoutCancel(f.ctx)
-	attrs := []attribute.KeyValue{attribute.String("wg.sse.frame_type", frameType)}
-	if f.metricStore != nil {
+	recordLifecycle := f.metricStore != nil && frameType != sseFrameTypeHeartbeat
+	var started time.Time
+	var attrs []attribute.KeyValue
+	if recordLifecycle {
+		started = time.Now()
+		attrs = []attribute.KeyValue{attribute.String("wg.sse.frame_type", string(frameType))}
 		f.metricStore.MeasureSSEWritesInFlight(metricCtx, 1, attrs, otelmetric.WithAttributes())
-		defer func() {
+	}
+	defer func() {
+		if recordLifecycle {
 			f.metricStore.MeasureSSEWritesInFlight(metricCtx, -1, attrs, otelmetric.WithAttributes())
 			f.metricStore.MeasureSSEWriteDuration(metricCtx, time.Since(started), attrs, otelmetric.WithAttributes())
-			if err != nil {
-				failureAttrs := append(attrs, attribute.String("wg.sse.failure_reason", sseWriteFailureReason(err)))
-				f.metricStore.MeasureSSEWriteFailure(metricCtx, failureAttrs, otelmetric.WithAttributes())
+		}
+		if f.metricStore != nil && err != nil {
+			failureAttrs := []attribute.KeyValue{
+				attribute.String("wg.sse.frame_type", string(frameType)),
+				attribute.String("wg.sse.failure_reason", sseWriteFailureReason(err)),
 			}
-		}()
-	}
+			f.metricStore.MeasureSSEWriteFailure(metricCtx, failureAttrs, otelmetric.WithAttributes())
+		}
+	}()
 
 	if f.sseWriteTimeout > 0 {
 		if err = f.responseControl.SetWriteDeadline(time.Now().Add(f.sseWriteTimeout)); err != nil {
@@ -277,7 +294,7 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 		// Flush the response head immediately so the client establishes the connection
 		// before the first message, instead of blocking until one is streamed.
 		if wgParams.UseSse {
-			if err := flushWriter.writeAndFlushSSE("headers", func() error { return nil }); err != nil {
+			if err := flushWriter.writeAndFlushSSE(sseFrameTypeHeaders, func() error { return nil }); err != nil {
 				flushWriter.cancel()
 				return ctx, nil, fmt.Errorf("flush initial SSE response headers: %w", err)
 			}

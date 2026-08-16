@@ -24,14 +24,13 @@ var (
 	_ core.EnginePreOriginHandler = (*blockingHydrationModule)(nil)
 )
 
-// blockingHydrationModule simulates an origin hook or transport operation that does not
-// honor request-context cancellation. It blocks exactly one employees hydration request.
+// blockingHydrationModule blocks exactly one employees hydration request until
+// its request context is canceled.
 type blockingHydrationModule struct {
-	armed             *atomic.Bool
-	started           chan struct{}
-	release           chan struct{}
-	startedOnce       *sync.Once
-	honorCancellation bool
+	armed       *atomic.Bool
+	started     chan struct{}
+	release     chan struct{}
+	startedOnce *sync.Once
 }
 
 func (m *blockingHydrationModule) Module() core.ModuleInfo {
@@ -40,11 +39,10 @@ func (m *blockingHydrationModule) Module() core.ModuleInfo {
 		Priority: math.MaxInt32,
 		New: func() core.Module {
 			return &blockingHydrationModule{
-				armed:             m.armed,
-				started:           m.started,
-				release:           m.release,
-				startedOnce:       m.startedOnce,
-				honorCancellation: m.honorCancellation,
+				armed:       m.armed,
+				started:     m.started,
+				release:     m.release,
+				startedOnce: m.startedOnce,
 			}
 		},
 	}
@@ -54,47 +52,28 @@ func (m *blockingHydrationModule) OnOriginRequest(req *http.Request, ctx core.Re
 	subgraph := ctx.ActiveSubgraph(req)
 	if subgraph != nil && subgraph.Name == "employees" && m.armed.CompareAndSwap(true, false) {
 		m.startedOnce.Do(func() { close(m.started) })
-		if m.honorCancellation {
-			select {
-			case <-m.release:
-			case <-req.Context().Done():
-			}
-		} else {
-			<-m.release
+		select {
+		case <-m.release:
+		case <-req.Context().Done():
 		}
 	}
 	return req, nil
 }
 
-// TestKafkaSubscriptionContinuesWhenHydrationIgnoresCancellation verifies that
-// one non-cooperative origin operation cannot stall the shared trigger. The
-// timed-out event emits an inline error and a later Kafka event continues over
-// the same WebSocket subscription.
-func TestKafkaSubscriptionContinuesWhenHydrationIgnoresCancellation(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping Kafka integration test in short mode")
-	}
-
-	recovered, receivedError := runKafkaHydrationTimeoutScenario(t, "employeeUpdated-hydration-hang", false)
-	require.True(t, receivedError, "expected the stuck event to emit an error over the subscription")
-	require.True(t, recovered, "expected the shared trigger to dispatch the later Kafka event")
-}
-
-// TestKafkaSubscriptionContinuesAfterHydrationHonorsCancellation is the control
-// case for the regression above. It proves that the request timeout already lets
-// the same WebSocket subscription receive an inline error and then a later event
-// when the blocked hydration operation returns on context cancellation.
+// TestKafkaSubscriptionContinuesAfterHydrationHonorsCancellation proves that a
+// request timeout lets the same WebSocket subscription receive an inline error
+// and then a later event when the hydration operation honors cancellation.
 func TestKafkaSubscriptionContinuesAfterHydrationHonorsCancellation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping Kafka integration test in short mode")
 	}
 
-	recovered, receivedError := runKafkaHydrationTimeoutScenario(t, "employeeUpdated-hydration-canceled", true)
+	recovered, receivedError := runKafkaHydrationTimeoutScenario(t, "employeeUpdated-hydration-canceled")
 	require.True(t, receivedError, "expected the timed-out event to emit an error over the subscription")
 	require.True(t, recovered, "expected the existing subscription to receive a later Kafka event")
 }
 
-func runKafkaHydrationTimeoutScenario(t *testing.T, topic string, honorCancellation bool) (recovered bool, receivedError bool) {
+func runKafkaHydrationTimeoutScenario(t *testing.T, topic string) (recovered bool, receivedError bool) {
 	t.Helper()
 
 	armed := &atomic.Bool{}
@@ -104,11 +83,10 @@ func runKafkaHydrationTimeoutScenario(t *testing.T, topic string, honorCancellat
 	t.Cleanup(func() { releaseOnce.Do(func() { close(release) }) })
 
 	module := &blockingHydrationModule{
-		armed:             armed,
-		started:           started,
-		release:           release,
-		startedOnce:       &sync.Once{},
-		honorCancellation: honorCancellation,
+		armed:       armed,
+		started:     started,
+		release:     release,
+		startedOnce: &sync.Once{},
 	}
 
 	testenv.Run(t, &testenv.Config{
