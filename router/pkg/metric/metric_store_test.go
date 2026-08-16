@@ -423,11 +423,32 @@ func TestSSEWriteMetrics(t *testing.T) {
 	attrs := []attribute.KeyValue{attribute.String("wg.sse.frame_type", "next")}
 	opt := otelmetric.WithAttributes(attrs...)
 
+	store.MeasureSSEWriteDuration(ctx, 25*time.Millisecond, attrs, opt)
 	store.MeasureSSEWriteFailure(ctx, attrs, opt)
 
 	var rm metricdata.ResourceMetrics
 	require.NoError(t, metricReader.Collect(ctx, &rm))
 	require.EqualValues(t, 1, findMetricDataPoints(t, rm, SSEWriteFailuresCounter)[0].Value)
+	durationPoints := findFloatMetricDataPoints(t, rm, SSEWriteDurationHistogram)
+	require.Len(t, durationPoints, 1)
+	require.EqualValues(t, 1, durationPoints[0].Count)
+	require.Equal(t, 25.0, durationPoints[0].Sum)
+}
+
+func findFloatMetricDataPoints(t *testing.T, rm metricdata.ResourceMetrics, name string) []metricdata.HistogramDataPoint[float64] {
+	t.Helper()
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name == name {
+				if histogram, ok := m.Data.(metricdata.Histogram[float64]); ok {
+					return histogram.DataPoints
+				}
+				t.Fatalf("metric %q has unexpected data type %T", name, m.Data)
+			}
+		}
+	}
+	t.Fatalf("metric %q not found", name)
+	return nil
 }
 
 // TestOperationCostMetrics tests that operation cost metrics are recorded correctly

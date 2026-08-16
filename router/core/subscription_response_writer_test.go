@@ -26,7 +26,12 @@ type deadlineRecorder struct {
 
 type sseMetricSpy struct {
 	routermetric.Store
-	failureCalls int
+	durationCalls int
+	failureCalls  int
+}
+
+func (s *sseMetricSpy) MeasureSSEWriteDuration(context.Context, time.Duration, []attribute.KeyValue, otelmetric.RecordOption) {
+	s.durationCalls++
 }
 
 func (s *sseMetricSpy) MeasureSSEWriteFailure(context.Context, []attribute.KeyValue, otelmetric.AddOption) {
@@ -195,7 +200,7 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		assert.True(t, recorder.deadline.After(headerDeadline), "expected each SSE frame to refresh the write deadline")
 	})
 
-	t.Run("does not report a successful heartbeat as a failure", func(t *testing.T) {
+	t.Run("does not measure a successful heartbeat", func(t *testing.T) {
 		recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
 		req.Header.Set("Accept", sseMimeType)
@@ -206,10 +211,31 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 			MetricStore:     metrics,
 		})
 		require.NoError(t, err)
+		metrics.durationCalls = 0
 		metrics.failureCalls = 0
 
 		require.NoError(t, writer.Heartbeat())
+		assert.Zero(t, metrics.durationCalls)
 		assert.Zero(t, metrics.failureCalls)
+	})
+
+	t.Run("measures a successful data frame", func(t *testing.T) {
+		recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+		metrics := &sseMetricSpy{}
+
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{
+			SSEWriteTimeout: time.Second,
+			MetricStore:     metrics,
+		})
+		require.NoError(t, err)
+		metrics.durationCalls = 0
+
+		_, err = writer.Write([]byte(`{"data":{"id":1}}`))
+		require.NoError(t, err)
+		require.NoError(t, writer.Flush())
+		assert.Equal(t, 1, metrics.durationCalls)
 	})
 
 	t.Run("reports a failed heartbeat", func(t *testing.T) {

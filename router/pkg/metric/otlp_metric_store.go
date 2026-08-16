@@ -85,6 +85,10 @@ func (h *OtlpMetricStore) MeasureRequestCount(ctx context.Context, opts ...otelm
 	}
 }
 
+func (h *OtlpMetricStore) MeasureSSEWriteDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	h.measurements.histograms[SSEWriteDurationHistogram].Record(ctx, duration, opts...)
+}
+
 func (h *OtlpMetricStore) MeasureSSEWriteFailure(ctx context.Context, opts ...otelmetric.AddOption) {
 	h.measurements.counters[SSEWriteFailuresCounter].Add(ctx, 1, opts...)
 }

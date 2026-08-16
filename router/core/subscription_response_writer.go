@@ -203,6 +203,14 @@ func (f *HttpFlushWriter) Flush() (err error) {
 }
 
 func (f *HttpFlushWriter) writeAndFlushSSE(frameType sseFrameType, write func() error) (err error) {
+	if f.metricStore != nil && frameType != sseFrameTypeHeartbeat {
+		started := time.Now()
+		defer func() {
+			attrs := []attribute.KeyValue{attribute.String("wg.sse.frame_type", string(frameType))}
+			f.metricStore.MeasureSSEWriteDuration(context.WithoutCancel(f.ctx), time.Since(started), attrs, otelmetric.WithAttributes())
+		}()
+	}
+
 	if f.sseWriteTimeout > 0 {
 		if err = f.responseControl.SetWriteDeadline(time.Now().Add(f.sseWriteTimeout)); err != nil {
 			// Failing closed prevents a response writer without deadline support from
