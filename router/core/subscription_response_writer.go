@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
@@ -212,7 +213,7 @@ func (f *HttpFlushWriter) writeAndFlushSSE(frameType string, write func() error)
 		if err = f.responseControl.SetWriteDeadline(time.Now().Add(f.sseWriteTimeout)); err != nil {
 			// Failing closed prevents a response writer without deadline support from
 			// reintroducing an unbounded shared-trigger stall.
-			return err
+			return fmt.Errorf("set SSE write deadline: %w", err)
 		}
 	}
 
@@ -241,15 +242,15 @@ func sseWriteFailureReason(err error) string {
 	return "other"
 }
 
-func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter, opts SubscriptionResponseWriterOptions) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
+func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter, opts SubscriptionResponseWriterOptions) (*resolve.Context, resolve.SubscriptionResponseWriter, error) {
 	if wfw, ok := w.(withFlushWriter); ok {
-		return ctx, wfw.SubscriptionResponseWriter(), true
+		return ctx, wfw.SubscriptionResponseWriter(), nil
 	}
 	wgParams := NegotiateSubscriptionParams(r, false)
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		return ctx, nil, false
+		return ctx, nil, errors.New("subscription response writer does not support flushing")
 	}
 
 	setSubscriptionHeaders(wgParams, r, w)
@@ -278,14 +279,14 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 		if wgParams.UseSse {
 			if err := flushWriter.writeAndFlushSSE("headers", func() error { return nil }); err != nil {
 				flushWriter.cancel()
-				return ctx, nil, false
+				return ctx, nil, fmt.Errorf("flush initial SSE response headers: %w", err)
 			}
 		} else {
 			flusher.Flush()
 		}
 	}
 
-	return ctx, flushWriter, true
+	return ctx, flushWriter, nil
 }
 
 func wrapMultipartMessage(resp []byte, wrapPayload bool) ([]byte, error) {

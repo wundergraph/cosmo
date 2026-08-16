@@ -288,20 +288,20 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	case *plan.SubscriptionResponsePlan:
 		var (
-			writer resolve.SubscriptionResponseWriter
-			ok     bool
+			writer    resolve.SubscriptionResponseWriter
+			writerErr error
 		)
 		h.setDebugCacheHeaders(w, reqCtx.operation)
 
 		defer propagateSubgraphErrors(resolveCtx)
-		resolveCtx, writer, ok = GetSubscriptionResponseWriter(resolveCtx, r, w, SubscriptionResponseWriterOptions{
+		resolveCtx, writer, writerErr = GetSubscriptionResponseWriter(resolveCtx, r, w, SubscriptionResponseWriterOptions{
 			ApolloSubscriptionMultipartPrintBoundary: h.apolloSubscriptionMultipartPrintBoundary,
 			SSEWriteTimeout:                          h.sseServerWriteTimeout,
 			MetricStore:                              h.metricStore,
 		})
-		if !ok {
-			reqCtx.logger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
-			trackFinalResponseError(r.Context(), errCouldNotFlushResponse)
+		if writerErr != nil {
+			reqCtx.logger.Error("unable to get subscription response writer", zap.Error(writerErr))
+			trackFinalResponseError(r.Context(), writerErr)
 			writeRequestErrors(writeRequestErrorsParams{
 				request:           r,
 				writer:            w,

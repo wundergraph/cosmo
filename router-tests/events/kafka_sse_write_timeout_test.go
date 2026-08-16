@@ -172,8 +172,8 @@ func TestKafkaSubscriptionRecoversAfterSSEWriteTimeout(t *testing.T) {
 		xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 		armed.Store(true)
-		events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topic,
-			`{"__typename":"Employee","id":1,"update":{"name":"blocked"}}`)
+		xEnv.KafkaPublishUntilReceived(topic,
+			`{"__typename":"Employee","id":1,"update":{"name":"blocked"}}`, 1, EventWaitTimeout)
 
 		select {
 		case <-writeStarted:
@@ -199,7 +199,7 @@ func TestKafkaSubscriptionRecoversAfterSSEWriteTimeout(t *testing.T) {
 		select {
 		case data := <-recovery:
 			require.Contains(t, data, `"id":2`)
-		case <-time.After(time.Second):
+		case <-time.After(EventWaitTimeout):
 			t.Fatal("healthy subscription did not receive the queued event after the SSE write deadline")
 		}
 

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -58,6 +59,80 @@ func TestRetryWaitHonorsRequestCancellation(t *testing.T) {
 		t.Fatal("retry backoff did not stop after request cancellation")
 	}
 	assert.Equal(t, 1, attempts)
+}
+
+type blockingReadBody struct {
+	release     chan struct{}
+	closed      chan struct{}
+	releaseOnce sync.Once
+	closedOnce  sync.Once
+}
+
+func newBlockingReadBody() *blockingReadBody {
+	return &blockingReadBody{
+		release: make(chan struct{}),
+		closed:  make(chan struct{}),
+	}
+}
+
+func (b *blockingReadBody) Read([]byte) (int, error) {
+	<-b.release
+	return 0, io.EOF
+}
+
+func (b *blockingReadBody) Close() error {
+	b.closedOnce.Do(func() { close(b.closed) })
+	b.releaseRead()
+	return nil
+}
+
+func (b *blockingReadBody) releaseRead() {
+	b.releaseOnce.Do(func() { close(b.release) })
+}
+
+func TestRetryCancellationClosesBodyWithoutDraining(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com", nil)
+	assert.NoError(t, err)
+
+	body := newBlockingReadBody()
+	t.Cleanup(body.releaseRead)
+	retrying := make(chan struct{})
+	transport := RetryHTTPTransport{
+		RoundTripper: &MockTransport{handler: func(*http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: http.StatusInternalServerError, Body: body}, nil
+		}},
+		getRequestLogger: func(*http.Request) *zap.Logger { return zap.NewNop() },
+		RetryOptions: RetryOptions{
+			MaxRetryCount: 5,
+			Interval:      time.Minute,
+			MaxDuration:   time.Minute,
+			ShouldRetry:   simpleShouldRetry,
+			OnRetry: func(int, *http.Request, *http.Response, time.Duration, error) {
+				close(retrying)
+			},
+		},
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		_, roundTripErr := transport.RoundTrip(request)
+		done <- roundTripErr
+	}()
+	<-retrying
+	cancel()
+
+	select {
+	case err := <-done:
+		assert.ErrorIs(t, err, context.Canceled)
+	case <-time.After(250 * time.Millisecond):
+		t.Fatal("retry cancellation blocked while draining the response body")
+	}
+	select {
+	case <-body.closed:
+	case <-time.After(250 * time.Millisecond):
+		t.Fatal("retry cancellation did not close the response body")
+	}
 }
 
 const defaultMaxDuration = 100 * time.Second

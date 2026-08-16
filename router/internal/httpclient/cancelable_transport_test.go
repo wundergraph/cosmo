@@ -69,6 +69,9 @@ func TestCancelableRoundTripperReturnsWhenDelegateIgnoresCancellation(t *testing
 
 	started := time.Now()
 	resp, err := transport.RoundTrip(req)
+	if resp != nil && resp.Body != nil {
+		require.NoError(t, resp.Body.Close())
+	}
 	require.ErrorIs(t, err, context.DeadlineExceeded)
 	require.Nil(t, resp)
 	require.Less(t, time.Since(started), 250*time.Millisecond)
@@ -89,6 +92,9 @@ func TestCancelableRoundTripperDoesNotSuperviseOrdinaryRequests(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	require.NoError(t, err)
 	resp, err := transport.RoundTrip(req)
+	if resp != nil && resp.Body != nil {
+		require.NoError(t, resp.Body.Close())
+	}
 	require.ErrorIs(t, err, wantErr)
 	require.Nil(t, resp)
 	require.Zero(t, observer.hardCancellations.Load())
@@ -113,7 +119,12 @@ func TestCancelableRoundTripperClosesResponseThatArrivesAfterCancellation(t *tes
 
 	done := make(chan error, 1)
 	go func() {
-		_, roundTripErr := transport.RoundTrip(req)
+		resp, roundTripErr := transport.RoundTrip(req)
+		if resp != nil && resp.Body != nil {
+			if closeErr := resp.Body.Close(); roundTripErr == nil {
+				roundTripErr = closeErr
+			}
+		}
 		done <- roundTripErr
 	}()
 

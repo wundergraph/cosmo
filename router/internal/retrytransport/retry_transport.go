@@ -154,7 +154,9 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 				default:
 				}
 			}
-			rt.drainBody(resp, requestLogger)
+			if resp != nil && resp.Body != nil {
+				_ = resp.Body.Close()
+			}
 			return nil, req.Context().Err()
 		}
 

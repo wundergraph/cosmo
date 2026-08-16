@@ -87,24 +87,9 @@ func (e *StreamMetrics) withAttrs(attrs ...attribute.KeyValue) otelmetric.AddOpt
 }
 
 func (e *StreamMetrics) Produce(ctx context.Context, event StreamsEvent) {
-	attrs := []attribute.KeyValue{
-		otel.WgStreamOperationName.String(event.StreamOperationName),
-		otel.WgProviderType.String(string(event.ProviderType)),
-	}
-	if event.ErrorType != "" {
-		attrs = append(attrs, otel.WgErrorType.String(event.ErrorType))
-	}
-	if event.ProviderId != "" {
-		attrs = append(attrs, otel.WgProviderId.String(event.ProviderId))
-	}
-	if event.DestinationName != "" {
-		attrs = append(attrs, otel.WgDestinationName.String(event.DestinationName))
-	}
-	opt := e.withAttrs(attrs...)
-
-	for _, provider := range e.providers {
+	e.recordAdd(ctx, event, func(provider StreamMetricProvider, ctx context.Context, opt otelmetric.AddOption) {
 		provider.Produce(ctx, opt)
-	}
+	})
 }
 
 func (e *StreamMetrics) Consume(ctx context.Context, event StreamsEvent) {

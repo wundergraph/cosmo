@@ -153,8 +153,8 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
 		req.Header.Set("Accept", sseMimeType)
 
-		_, _, ok := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{})
-		require.True(t, ok)
+		_, _, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{})
+		require.NoError(t, err)
 
 		assert.Equal(t, sseMimeType, recorder.Header().Get("Content-Type"))
 		assert.True(t, recorder.Flushed, "expected the SSE response head to be flushed before any message is written")
@@ -165,13 +165,13 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
 		req.Header.Set("Accept", sseMimeType)
 
-		_, writer, ok := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{SSEWriteTimeout: time.Second})
-		require.True(t, ok)
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{SSEWriteTimeout: time.Second})
+		require.NoError(t, err)
 		headerDeadline := recorder.deadline
 		require.False(t, headerDeadline.IsZero())
 
 		time.Sleep(time.Millisecond)
-		_, err := writer.Write([]byte(`{"data":{"id":1}}`))
+		_, err = writer.Write([]byte(`{"data":{"id":1}}`))
 		require.NoError(t, err)
 		require.NoError(t, writer.Flush())
 		assert.True(t, recorder.deadline.After(headerDeadline), "expected each SSE frame to refresh the write deadline")
@@ -182,8 +182,10 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
 		req.Header.Set("Accept", sseMimeType)
 
-		_, writer, ok := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{SSEWriteTimeout: time.Second})
-		assert.False(t, ok)
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{SSEWriteTimeout: time.Second})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, http.ErrNotSupported)
+		assert.ErrorContains(t, err, "set SSE write deadline")
 		assert.Nil(t, writer)
 	})
 }
