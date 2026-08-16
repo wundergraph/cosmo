@@ -90,14 +90,6 @@ func (h *PromMetricStore) MeasureRequestCount(ctx context.Context, opts ...otelm
 	}
 }
 
-func (h *PromMetricStore) MeasureSSEWritesInFlight(ctx context.Context, delta int64, opts ...otelmetric.AddOption) {
-	h.measurements.upDownCounters[SSEWritesInFlightUpDownCounter].Add(ctx, delta, opts...)
-}
-
-func (h *PromMetricStore) MeasureSSEWriteDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	h.measurements.histograms[SSEWriteDurationHistogram].Record(ctx, duration, opts...)
-}
-
 func (h *PromMetricStore) MeasureSSEWriteFailure(ctx context.Context, opts ...otelmetric.AddOption) {
 	h.measurements.counters[SSEWriteFailuresCounter].Add(ctx, 1, opts...)
 }

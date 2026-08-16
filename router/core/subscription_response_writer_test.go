@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -20,21 +21,12 @@ import (
 type deadlineRecorder struct {
 	*httptest.ResponseRecorder
 	deadline time.Time
+	flushErr error
 }
 
 type sseMetricSpy struct {
 	routermetric.Store
-	writesInFlightCalls int
-	durationCalls       int
-	failureCalls        int
-}
-
-func (s *sseMetricSpy) MeasureSSEWritesInFlight(context.Context, int64, []attribute.KeyValue, otelmetric.AddOption) {
-	s.writesInFlightCalls++
-}
-
-func (s *sseMetricSpy) MeasureSSEWriteDuration(context.Context, time.Duration, []attribute.KeyValue, otelmetric.RecordOption) {
-	s.durationCalls++
+	failureCalls int
 }
 
 func (s *sseMetricSpy) MeasureSSEWriteFailure(context.Context, []attribute.KeyValue, otelmetric.AddOption) {
@@ -47,6 +39,9 @@ func (r *deadlineRecorder) SetWriteDeadline(deadline time.Time) error {
 }
 
 func (r *deadlineRecorder) FlushError() error {
+	if r.flushErr != nil {
+		return r.flushErr
+	}
 	r.Flush()
 	return nil
 }
@@ -200,7 +195,7 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		assert.True(t, recorder.deadline.After(headerDeadline), "expected each SSE frame to refresh the write deadline")
 	})
 
-	t.Run("does not measure successful heartbeat lifecycle", func(t *testing.T) {
+	t.Run("does not report a successful heartbeat as a failure", func(t *testing.T) {
 		recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
 		req.Header.Set("Accept", sseMimeType)
@@ -211,14 +206,29 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 			MetricStore:     metrics,
 		})
 		require.NoError(t, err)
-		metrics.writesInFlightCalls = 0
-		metrics.durationCalls = 0
 		metrics.failureCalls = 0
 
 		require.NoError(t, writer.Heartbeat())
-		assert.Zero(t, metrics.writesInFlightCalls)
-		assert.Zero(t, metrics.durationCalls)
 		assert.Zero(t, metrics.failureCalls)
+	})
+
+	t.Run("reports a failed heartbeat", func(t *testing.T) {
+		recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+		metrics := &sseMetricSpy{}
+
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{
+			SSEWriteTimeout: time.Second,
+			MetricStore:     metrics,
+		})
+		require.NoError(t, err)
+		metrics.failureCalls = 0
+		flushErr := errors.New("flush failed")
+		recorder.flushErr = flushErr
+
+		require.ErrorIs(t, writer.Heartbeat(), flushErr)
+		assert.Equal(t, 1, metrics.failureCalls)
 	})
 
 	t.Run("fails closed when an SSE deadline is configured but unsupported", func(t *testing.T) {

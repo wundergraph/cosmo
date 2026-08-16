@@ -203,43 +203,37 @@ func (f *HttpFlushWriter) Flush() (err error) {
 }
 
 func (f *HttpFlushWriter) writeAndFlushSSE(frameType sseFrameType, write func() error) (err error) {
-	metricCtx := context.WithoutCancel(f.ctx)
-	recordLifecycle := f.metricStore != nil && frameType != sseFrameTypeHeartbeat
-	var started time.Time
-	var attrs []attribute.KeyValue
-	if recordLifecycle {
-		started = time.Now()
-		attrs = []attribute.KeyValue{attribute.String("wg.sse.frame_type", string(frameType))}
-		f.metricStore.MeasureSSEWritesInFlight(metricCtx, 1, attrs, otelmetric.WithAttributes())
-	}
-	defer func() {
-		if recordLifecycle {
-			f.metricStore.MeasureSSEWritesInFlight(metricCtx, -1, attrs, otelmetric.WithAttributes())
-			f.metricStore.MeasureSSEWriteDuration(metricCtx, time.Since(started), attrs, otelmetric.WithAttributes())
-		}
-		if f.metricStore != nil && err != nil {
-			failureAttrs := []attribute.KeyValue{
-				attribute.String("wg.sse.frame_type", string(frameType)),
-				attribute.String("wg.sse.failure_reason", sseWriteFailureReason(err)),
-			}
-			f.metricStore.MeasureSSEWriteFailure(metricCtx, failureAttrs, otelmetric.WithAttributes())
-		}
-	}()
-
 	if f.sseWriteTimeout > 0 {
 		if err = f.responseControl.SetWriteDeadline(time.Now().Add(f.sseWriteTimeout)); err != nil {
 			// Failing closed prevents a response writer without deadline support from
 			// reintroducing an unbounded shared-trigger stall.
-			return fmt.Errorf("set SSE write deadline: %w", err)
+			err = fmt.Errorf("set SSE write deadline: %w", err)
+			f.measureSSEWriteFailure(frameType, err)
+			return err
 		}
 	}
 
 	if err = write(); err != nil {
+		f.measureSSEWriteFailure(frameType, err)
 		return err
 	}
 
 	err = f.responseControl.Flush()
+	if err != nil {
+		f.measureSSEWriteFailure(frameType, err)
+	}
 	return err
+}
+
+func (f *HttpFlushWriter) measureSSEWriteFailure(frameType sseFrameType, err error) {
+	if f.metricStore == nil {
+		return
+	}
+	attrs := []attribute.KeyValue{
+		attribute.String("wg.sse.frame_type", string(frameType)),
+		attribute.String("wg.sse.failure_reason", sseWriteFailureReason(err)),
+	}
+	f.metricStore.MeasureSSEWriteFailure(context.WithoutCancel(f.ctx), attrs, otelmetric.WithAttributes())
 }
 
 func sseWriteFailureReason(err error) string {
