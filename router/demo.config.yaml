@@ -5,6 +5,47 @@
 
 version: "1"
 
+# The composed graph for the demo subgraphs, so the router starts without a
+# control plane. Start the subgraphs it points at with ../demo/run_subgraphs.sh.
+execution_config:
+  file:
+    path: "../demo/config.json"
+    watch: true
+
+router_registration: false
+
+# Entity caching. Redis on a database of its own so its keys cannot be confused
+# with the events provider below, which is a different feature on the same
+# server. Nothing here caches on its own: only subgraph responses whose
+# Cache-Control asks to be cached are stored, and the demo subgraphs say nothing
+# unless SUBGRAPH_CACHE_CONTROL is set for them. See the note at the bottom.
+storage_providers:
+  redis:
+    - id: entity-cache-redis
+      urls:
+        - "redis://localhost:6379/3"
+
+entity_cache:
+  enabled: true
+  # Reached only by a response that says public without saying for how long. A
+  # response naming its own max-age gets that instead.
+  ttl: 60s
+  key_prefix: "cosmo_demo_entity_cache:"
+  storage:
+    provider: redis
+    provider_id: entity-cache-redis
+    # To try this without a redis at all, replace the three lines above with:
+    #
+    #   provider: memory
+    #   max_entries: 10000
+    #
+    # and the storage_providers block above becomes unnecessary too. The cache
+    # then lives in this router process: it is lost on restart, and a second
+    # router would not see any of it. provider_id and key_prefix mean nothing to
+    # it. Note that this has to be changed here rather than with
+    # ENTITY_CACHE_STORAGE_PROVIDER=memory, because the config loader applies the
+    # yaml after the environment, so a key present here always wins.
+
 events:
   providers:
     nats:
@@ -20,3 +61,29 @@ events:
       - id: my-redis
         urls:
           - "redis://localhost:6379/2"
+# Trying entity caching end to end:
+#
+#   redis-server --port 6379                       # or docker run -p 6379:6379 redis
+#   cd ../demo && SUBGRAPH_CACHE_CONTROL="public, max-age=60" ./run_subgraphs.sh
+#   cd ../router && CONFIG_PATH=demo.config.yaml go run cmd/router/main.go
+#
+# SUBGRAPH_CACHE_CONTROL is what makes any of this observable. Entity caching is
+# opt-in per subgraph response: a response with no Cache-Control header is never
+# cached, whatever ttl above is set to, and the demo subgraphs have no caching
+# opinion of their own. Without it the router runs and caches precisely nothing,
+# which is correct and looks identical to the cache being broken.
+#
+# Then send an operation with an entity fetch in it, twice:
+#
+#   query { employees { id currentMood { id } } }
+#
+# The first run reaches the mood subgraph, the second is served from redis. To
+# watch it, either check the keys with
+# `redis-cli -n 3 --scan --pattern 'cosmo_demo_entity_cache:*'`, or stop the mood
+# subgraph after the first run and send it again: it still answers.
+#
+# With `provider: memory` the redis-server step drops out, and so does the
+# redis-cli check, since there are no keys to look at. Stopping the mood subgraph
+# is then the way to see the cache work. Restarting the router and repeating it is
+# the way to see the difference from redis: the cache is gone, and the third call
+# fails.

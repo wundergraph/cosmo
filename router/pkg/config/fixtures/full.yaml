@@ -534,6 +534,15 @@ storage_providers:
         - 'test@localhost:8000'
         - 'test2@localhost:8001'
 
+entity_cache:
+  enabled: true
+  ttl: 30s
+  key_prefix: 'entity_cache_test:'
+  storage:
+    provider: 'redis'
+    provider_id: 'my_redis'
+    max_entries: 2048
+
 security:
   complexity_calculation_cache:
     enabled: true

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/redis/go-redis/v9"
 	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
@@ -16,6 +17,10 @@ type RedisCache struct {
 	// here. It is a UniversalClient so a single, cluster or sentinel client all
 	// fit without this cache having to know which one it got.
 	client redis.UniversalClient
+	// closeOnce keeps Close idempotent, and closeErr keeps every caller after
+	// the first answering the same thing the first one was told.
+	closeOnce sync.Once
+	closeErr  error
 	// prefix is prepended to every key before it reaches redis, so entity cache
 	// entries stay in their own namespace and cannot collide with anything else
 	// sharing the instance. It is applied on the way in and stripped back off on
@@ -144,4 +149,15 @@ func (c *RedisCache) SetMany(ctx context.Context, items []enginecache.Item) erro
 	}
 
 	return &enginecache.SetManyError{KnownStoredKeys: stored, Err: err}
+}
+
+// Close releases the redis client the cache was built with. The Once is not for
+// thread safety, which the client has of its own, but so that a second shutdown
+// path reaching this is answered the same as the first rather than with
+// go-redis' complaint that the client is already closed.
+func (c *RedisCache) Close() error {
+	c.closeOnce.Do(func() {
+		c.closeErr = c.client.Close()
+	})
+	return c.closeErr
 }

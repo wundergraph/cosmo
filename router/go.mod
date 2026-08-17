@@ -180,4 +180,6 @@ require (
 // Remember you can use Go workspaces to avoid using replace directives in multiple go.mod files
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
-// replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+// Entity caching depends on engine changes that are not released yet, so the
+// pin cannot be a version. This must go back to a version pin before merging.
+replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2

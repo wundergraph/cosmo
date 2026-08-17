@@ -55,7 +55,9 @@ func newTestCacheOfSize(t *testing.T, maxEntries int64) *InMemoryCache {
 
 	c, err := NewInMemoryCache(maxEntries)
 	require.NoError(t, err)
-	t.Cleanup(c.Close)
+	t.Cleanup(func() {
+		require.NoError(t, c.Close())
+	})
 
 	return c
 }
@@ -687,8 +689,8 @@ func TestInMemoryCache(t *testing.T) {
 			// Twice here, and a third time from the cleanup the helper
 			// registered, so a second shutdown path reaching it is not a panic.
 			c := newTestCache(t)
-			c.Close()
-			c.Close()
+			require.NoError(t, c.Close())
+			require.NoError(t, c.Close())
 		})
 	})
 

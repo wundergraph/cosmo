@@ -860,6 +860,16 @@
     "Timeout": 30000000000,
     "InMemoryFallback": true
   },
+  "EntityCache": {
+    "Enabled": true,
+    "TTL": 30000000000,
+    "KeyPrefix": "entity_cache_test:",
+    "Storage": {
+      "Provider": "redis",
+      "ProviderID": "my_redis",
+      "MaxEntries": 2048
+    }
+  },
   "RouterConfigPath": "latest.json",
   "RouterRegistration": true,
   "OverrideRoutingURL": {

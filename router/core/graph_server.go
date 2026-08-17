@@ -1808,6 +1808,11 @@ func (s *graphServer) buildGraphMux(
 		HeaderPropagation:               s.headerPropagation,
 	}
 
+	if s.entityCache != nil {
+		handlerOpts.EntityCache = s.entityCache
+		handlerOpts.EntityCacheTTL = s.entityCacheConfig.TTL
+	}
+
 	if s.redisClient != nil {
 		handlerOpts.RateLimitConfig = s.rateLimit
 		handlerOpts.RateLimiter, err = NewCosmoRateLimiter(&CosmoRateLimiterOptions{

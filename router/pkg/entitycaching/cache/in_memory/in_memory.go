@@ -106,7 +106,10 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	return nil
 }
 
-// Close closes the in memory cache
-func (c *InMemoryCache) Close() {
+// Close closes the in memory cache. The error is always nil, ristretto having
+// nothing to fail at on the way down, and is returned only so that this and the
+// redis cache close the same way and can be held behind one interface.
+func (c *InMemoryCache) Close() error {
 	c.closeOnce.Do(c.cache.Close)
+	return nil
 }
