@@ -235,6 +235,38 @@ message CreateFederatedSubgraphRequest {
   SubgraphType type = 13;
 }
 
+// A single subgraph entry to create as part of a batch create request.
+message CreateSubgraph {
+  // The FQDN of the subgraph to be created e.g. "wg.team1.orders"
+  string name = 1;
+  // routing_url is the URL of the service which will be used to route the requests to the subgraph.
+  optional string routing_url = 2;
+  // labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
+  repeated Label labels = 3;
+  // subscription protocol to use when subscribing to this subgraph
+  optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 4;
+  // url used for subscriptions
+  optional string subscription_url = 5;
+  // readme of the subgraph
+  optional string readme = 6;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 7;
+  optional bool is_event_driven_graph = 8;
+}
+
+message CreateFederatedSubgraphsRequest {
+  // The namespace all the subgraphs will be created in.
+  string namespace = 1;
+  // The subgraphs to create. None of them may already exist in the namespace. Plugins and gRPC services are not
+  // supported, because each requires artifacts that a batch request cannot carry.
+  repeated CreateSubgraph subgraphs = 2;
+}
+
+message CreateFederatedSubgraphsResponse {
+  Response response = 1;
+  // The names of the subgraphs that were created.
+  repeated string createdSubgraphNames = 2;
+}
+
 message DeleteFederatedGraphRequest {
   string name = 1;
   string namespace = 2;
@@ -518,6 +550,8 @@ message GetFederatedGraphByNameResponse {
   FederatedGraph graph = 2;
   repeated Subgraph subgraphs = 3;
   string graphRequestToken = 4;
+  // The feature subgraphs that are part of the feature flags which match this federated graph.
+  repeated Subgraph featureSubgraphs = 5;
 }
 
 message GetFederatedGraphSDLByNameRequest {
@@ -3520,6 +3554,9 @@ service PlatformService {
 
   // CreateFederatedSubgraph creates a federated subgraph on the control plane.
   rpc CreateFederatedSubgraph(CreateFederatedSubgraphRequest) returns (CreateFederatedSubgraphResponse) {}
+  // CreateFederatedSubgraphs creates multiple federated subgraphs on the control plane in a single request. Either
+  // every subgraph is created or none is.
+  rpc CreateFederatedSubgraphs(CreateFederatedSubgraphsRequest) returns (CreateFederatedSubgraphsResponse) {}
   // PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
   rpc PublishFederatedSubgraph(PublishFederatedSubgraphRequest) returns (PublishFederatedSubgraphResponse) {}
   // PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
