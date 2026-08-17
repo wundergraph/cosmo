@@ -82,7 +82,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           opts.billingDefaultPlanId,
         );
 
-        return ptqService.generateQuery(authContext.federatedGraphId, req.version, req.prompt);
+        return ptqService.generateQuery(authContext.federatedGraphId, req.version, req.prompt, ctx.signal);
       });
     },
   };
