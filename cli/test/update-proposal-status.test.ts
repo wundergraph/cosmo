@@ -44,6 +44,23 @@ async function runUpdateStatus(
   );
 }
 
+function getJsonOutput(logSpy: MockInstance<typeof console.log>) {
+  const call = logSpy.mock.calls.find(([arg]) => {
+    try {
+      JSON.parse(String(arg));
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
+  if (!call) {
+    throw new Error('No JSON output found in console.log calls');
+  }
+
+  return JSON.parse(String(call[0]));
+}
+
 describe('update proposal status', () => {
   let logSpy: MockInstance<typeof console.log>;
   let errorSpy: MockInstance<typeof console.error>;
@@ -101,6 +118,17 @@ describe('update proposal status', () => {
     });
   });
 
+  test('prints the updated proposal status as json', async () => {
+    await runUpdateStatus({ response: { code: EnumStatusCode.OK } }, ['--json']);
+
+    expect(getJsonOutput(logSpy)).toEqual({
+      status: 'success',
+      message: "Proposal 'my-proposal' status was updated to APPROVED successfully.",
+    });
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(process.exitCode).toBeUndefined();
+  });
+
   test('rejects statuses that cannot be set manually', async () => {
     let updateCalled = false;
 
@@ -123,6 +151,27 @@ describe('update proposal status', () => {
 
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Proposal my-proposal not found'));
     expect(logSpy).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
+  test('prints the control-plane error as json', async () => {
+    await runUpdateStatus(
+      {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Proposal my-proposal not found',
+        },
+      },
+      ['--json'],
+    );
+
+    expect(getJsonOutput(logSpy)).toEqual({
+      status: 'error',
+      code: EnumStatusCode.ERR_NOT_FOUND,
+      message: "Failed to update status for proposal 'my-proposal'.",
+      details: 'Proposal my-proposal not found',
+    });
+    expect(errorSpy).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
   });
 });

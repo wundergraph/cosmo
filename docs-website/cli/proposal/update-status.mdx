@@ -25,6 +25,7 @@ The API key used by the command must have write access to the federated graph.
 - `-f, --federation-graph <federatedGraphName>` (required): The name of the federated graph this proposal is for.
 - `-s, --status <status>` (required): The status to set. Accepted values are `approved` and `closed`. Values are case-insensitive.
 - `-n, --namespace [namespace]`: The namespace of the federated graph (Default: `default`).
+- `-j, --json`: Prints structured JSON instead of text.
 
 ## **CI examples**
 
@@ -37,7 +38,8 @@ export COSMO_API_KEY=<API_KEY>
 npx wgc proposal update-status product-changes \
   --federation-graph my-graph \
   --namespace production \
-  --status approved
+  --status approved \
+  --json
 ```
 
 Close a proposal:
