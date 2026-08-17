@@ -14,9 +14,7 @@ import (
 	brotli "go.withmatt.com/connect-brotli"
 )
 
-const defaultTimeout = 15 * time.Second
-
-type Option func(*Client)
+const clientTimeout = 15 * time.Second
 
 // Client generates GraphQL operations through the control plane.
 type Client struct {
@@ -24,10 +22,9 @@ type Client struct {
 	graphAPIToken        string
 	controlplaneEndpoint string
 	logger               *zap.Logger
-	clientTimeout        time.Duration
 }
 
-func New(endpoint string, token string, opts ...Option) (*Client, error) {
+func New(endpoint string, token string, logger *zap.Logger) (*Client, error) {
 	if endpoint == "" {
 		return nil, fmt.Errorf("controlplane endpoint is required for prompt to query")
 	}
@@ -39,11 +36,7 @@ func New(endpoint string, token string, opts ...Option) (*Client, error) {
 	c := &Client{
 		controlplaneEndpoint: endpoint,
 		graphAPIToken:        token,
-		clientTimeout:        defaultTimeout,
-	}
-
-	for _, opt := range opts {
-		opt(c)
+		logger:               logger,
 	}
 
 	if c.logger == nil {
@@ -62,7 +55,7 @@ func New(endpoint string, token string, opts ...Option) (*Client, error) {
 	}
 
 	httpClient := retryClient.StandardClient()
-	httpClient.Timeout = c.clientTimeout
+	httpClient.Timeout = clientTimeout
 
 	c.nodeServiceClient = nodev1connect.NewNodeServiceClient(httpClient, c.controlplaneEndpoint,
 		brotli.WithCompression(),
@@ -85,16 +78,4 @@ func (c *Client) GenerateQuery(ctx context.Context, schemaVersionID, prompt stri
 	}
 
 	return resp.Msg, nil
-}
-
-func WithLogger(logger *zap.Logger) Option {
-	return func(c *Client) {
-		c.logger = logger
-	}
-}
-
-func WithClientTimeout(timeout time.Duration) Option {
-	return func(c *Client) {
-		c.clientTimeout = timeout
-	}
 }
