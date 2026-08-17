@@ -96,6 +96,24 @@ describe('proposal status', () => {
     expect(process.exitCode).toBeUndefined();
   });
 
+  test('uses the default namespace when none is specified', async () => {
+    let request: GetProposalsByFederatedGraphRequest | undefined;
+
+    await runStatus(
+      {
+        response: { code: EnumStatusCode.OK },
+        proposals: [{ name: 'my-proposal', state: 'DRAFT' }],
+        totalCount: 1,
+      },
+      [],
+      (req) => {
+        request = req;
+      },
+    );
+
+    expect(request?.namespace).toBe('default');
+  });
+
   test('only checks the 50 most recent proposals by default', async () => {
     let requestCount = 0;
 

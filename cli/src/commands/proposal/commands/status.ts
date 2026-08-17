@@ -80,7 +80,7 @@ export default (opts: BaseCommandOptions) => {
     '-f, --federation-graph <federatedGraphName>',
     'The name of the federated graph this proposal is for.',
   );
-  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph.', 'default');
   command.option('-j, --json', 'Prints to the console in json format instead of text.');
   command.option(
     '--check-all-proposals',
