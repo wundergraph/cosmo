@@ -122,6 +122,33 @@ func TestEntityCacheInMemory(t *testing.T) {
 		})
 	})
 
+	t.Run("a single entity fetch is cached", func(t *testing.T) {
+		t.Parallel()
+
+		// Distinct from the batch cases above because the planner gives a single
+		// entity fetch its own response shape to select from, and the engine reads
+		// the cacheable entities out of the wire shape rather than that selection.
+		// Reading the selection instead yields one object where the array is
+		// expected, and nothing is ever cached.
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: entityCacheOptions(time.Minute),
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{
+					Middleware: cacheControlMiddleware("public, max-age=60"),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { employee(id: 1) { id currentMood } }`})
+			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { employee(id: 1) { id currentMood } }`})
+
+			require.Equal(t, first.Body, second.Body)
+			require.Contains(t, first.Body, `"currentMood"`)
+
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(),
+				"a single entity fetch must be cached just as a batch of one would be")
+		})
+	})
+
 	t.Run("a partially cached batch is refetched whole", func(t *testing.T) {
 		t.Parallel()
 
