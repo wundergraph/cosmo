@@ -128,7 +128,7 @@ export default (opts: BaseCommandOptions) => {
       return;
     }
 
-    console.log(`Proposal '${name}' status is ${pc.bold(result.proposal.state)}.`);
+    console.log(`Proposal '${name}' status is ${result.proposal.state}.`);
   });
 
   return command;
