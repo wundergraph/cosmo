@@ -9,6 +9,7 @@ import (
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
+	"github.com/wundergraph/cosmo/router/internal/controlplane"
 	"github.com/wundergraph/cosmo/router/internal/prompttoquery"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -161,7 +162,12 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 	}
 
 	if cfg.MCP.Enabled && cfg.Graph.Token != "" {
-		promptToQueryClient, err := prompttoquery.New(cfg.ControlplaneURL, cfg.Graph.Token, logger)
+		controlplaneTransport, err := controlplane.NewTransport(cfg.Graph.Token, logger)
+		if err != nil {
+			return nil, fmt.Errorf("could not create controlplane transport: %w", err)
+		}
+
+		promptToQueryClient, err := prompttoquery.New(cfg.ControlplaneURL, controlplaneTransport)
 		if err != nil {
 			return nil, fmt.Errorf("could not create prompt-to-query client: %w", err)
 		}
