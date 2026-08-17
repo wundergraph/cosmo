@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { BaseCommandOptions } from '../../core/types/types.js';
 import { checkAuth } from '../auth/utils.js';
 import CreateProposalCommand from './commands/create.js';
+import StatusProposalCommand from './commands/status.js';
 import UpdateProposalCommand from './commands/update.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -9,6 +10,7 @@ export default (opts: BaseCommandOptions) => {
   command.description('Provides commands for creating and maintaining proposals for a federated graph');
   command.addCommand(CreateProposalCommand(opts));
   command.addCommand(UpdateProposalCommand(opts));
+  command.addCommand(StatusProposalCommand(opts));
 
   command.hook('preAction', async (thisCmd) => {
     await checkAuth();
