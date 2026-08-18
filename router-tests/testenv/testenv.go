@@ -96,6 +96,9 @@ var (
 	//go:embed testdata/configWithGRPC.json
 	ConfigWithGRPCJSONTemplate string
 
+	//go:embed testdata/natsSubscriptionFilter.json
+	NatsSubscriptionFilterJSONTemplate string
+
 	// routerTestsDir is the absolute path to the router-tests directory,
 	// derived from this source file's location. Used internally by testexec.go
 	// to locate the router binary.

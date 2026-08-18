@@ -8,6 +8,7 @@ import {
   detachPlaygroundAPI,
   PreFlightScript,
 } from '@/components/playground/custom-scripts';
+import { CopyOperation } from '@/components/playground/copy-operation';
 import { PlanView } from '@/components/playground/plan-view';
 import { SharePlaygroundModal } from '@/components/playground/share-playground-modal';
 import { TraceContext, TraceView } from '@/components/playground/trace-view';
@@ -42,6 +43,7 @@ import { useHydratePlaygroundStateFromUrl } from '@/hooks/use-hydrate-playground
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE, PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
 import { NextPageWithLayout } from '@/lib/page';
+import { substituteHeadersFromEnv, validateHeaders } from '@/lib/playground-headers';
 import { parseSchema } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
@@ -118,57 +120,6 @@ class CosmoGraphiqlStorage implements GraphiQLStorage {
     return this.storage.length;
   }
 }
-
-const validateHeaders = (headers: Record<string, string>) => {
-  for (const headersKey in headers) {
-    if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
-      throw new TypeError(`Header name must be a valid HTTP token [${headersKey}]`);
-    }
-  }
-};
-
-const substituteHeadersFromEnv = (headers: Record<string, string>, graphId: string) => {
-  const env = JSON.parse(localStorage.getItem('playground:env') || '{}');
-  const graphEnv: Record<string, any> | undefined = env[graphId];
-
-  if (!graphEnv) {
-    return headers;
-  }
-
-  const storedHeaders: Record<string, any> = {};
-
-  Object.entries(graphEnv).forEach(([key, value]) => {
-    if (value === 'true' || value === 'false') {
-      storedHeaders[key] = value === 'true';
-    } else if (!isNaN(value as any) && value !== '') {
-      storedHeaders[key] = Number(value);
-    } else {
-      storedHeaders[key] = value;
-    }
-  });
-
-  for (const key in headers) {
-    let value = headers[key];
-    const placeholderRegex = /{\s*{\s*(\w+)\s*}\s*}/g;
-
-    if (typeof value !== 'string') {
-      continue;
-    }
-
-    value = value.replace(placeholderRegex, (match, p1) => {
-      if (storedHeaders[p1] !== undefined) {
-        return storedHeaders[p1];
-      } else {
-        console.warn(`No value found for placeholder: ${p1}`);
-        return match;
-      }
-    });
-
-    headers[key] = value;
-  }
-
-  return headers;
-};
 
 const executeScript = async (code: string | undefined, graphId: string) => {
   if (!code) {
@@ -735,6 +686,7 @@ const PlaygroundPortal = () => {
   const scriptsSection = document.getElementById('scripts-section');
   const preFlightScriptSection = document.getElementById('pre-flight-script-section');
   const shareButton = document.getElementById('share-button');
+  const copyButton = document.getElementById('copy-button');
 
   if (
     !responseToolbar ||
@@ -744,6 +696,7 @@ const PlaygroundPortal = () => {
     !toggleClientValidation ||
     !scriptsSection ||
     !shareButton ||
+    !copyButton ||
     !preFlightScriptSection
   ) {
     return null;
@@ -759,6 +712,7 @@ const PlaygroundPortal = () => {
       {createPortal(<CustomScripts />, scriptsSection)}
       {createPortal(<PreFlightScript />, preFlightScriptSection)}
       {createPortal(<SharePlaygroundModal />, shareButton)}
+      {createPortal(<CopyOperation />, copyButton)}
     </>
   );
 };
@@ -962,6 +916,17 @@ const PlaygroundPage: NextPageWithLayout = () => {
     const toolbar = document.getElementsByClassName('graphiql-toolbar')[0] as any as HTMLDivElement;
 
     if (toolbar) {
+      // graphiql's own copy button is hidden via css and replaced by this one, which can also copy the curl request
+      const graphiqlCopyButton = toolbar.querySelector('[aria-label^="Copy query"]');
+      const copyButton = document.createElement('div');
+      copyButton.id = 'copy-button';
+
+      if (graphiqlCopyButton) {
+        toolbar.insertBefore(copyButton, graphiqlCopyButton);
+      } else {
+        toolbar.append(copyButton);
+      }
+
       const saveButton = document.createElement('div');
       saveButton.id = 'save-button';
       toolbar.append(saveButton);
@@ -1013,6 +978,14 @@ const PlaygroundPage: NextPageWithLayout = () => {
     };
   }, [graphContext?.graph?.routingURL, graphContext?.subgraphs, loadSchemaGraphId, type]);
 
+  const featureFlagName = useMemo(() => {
+    if (type !== 'featureFlag') {
+      return undefined;
+    }
+
+    return (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name;
+  }, [compositionFlagsData?.featureFlags, loadSchemaGraphId, type]);
+
   const [status, setStatus] = useState<number>();
   const [statusText, setStatusText] = useState<string>();
 
@@ -1035,9 +1008,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
           args[0] as URL,
           args[1] as RequestInit,
           graphContext?.graph?.id || '',
-          type === 'featureFlag'
-            ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
-            : undefined,
+          featureFlagName,
         ),
     });
   }, [
@@ -1045,11 +1016,9 @@ const PlaygroundPage: NextPageWithLayout = () => {
     subscriptionUrl,
     graphContext?.graphRequestToken,
     graphContext?.graph?.id,
-    compositionFlagsData?.featureFlags,
+    featureFlagName,
     schema,
     clientValidationEnabled,
-    type,
-    loadSchemaGraphId,
   ]);
 
   const [debouncedQuery] = useDebounce(query, 300);
@@ -1163,6 +1132,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
         setView,
         isHydrated,
         setIsHydrated,
+        routingUrl,
+        featureFlagName,
       }}
     >
       <TraceContext.Provider

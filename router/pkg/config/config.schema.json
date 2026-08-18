@@ -2761,6 +2761,18 @@
           "default": false,
           "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
         },
+        "output_schema": {
+          "type": "object",
+          "description": "Configuration for MCP structured tool output (MCP specification revision 2025-06-18).",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "When enabled, every tool generated from a GraphQL operation declares an output schema derived from the operation's selection set, and successful tool results additionally carry the response as structured content. This lets MCP clients know the response shape ahead of time and validate results, at the cost of larger tools/list payloads and roughly doubled tool result sizes, which consume more of the AI model's context window."
+            }
+          }
+        },
         "resource_documentation": {
           "type": "string",
           "description": "A URL to a human-readable page describing this MCP resource, its access policies, and how to get started. Included in the RFC 9728 Protected Resource Metadata response if set.",
@@ -2779,7 +2791,17 @@
             "authorization_server_url": {
               "type": "string",
               "description": "The base URL of the OAuth 2.0 authorization server. This URL is advertised to MCP clients via the Protected Resource Metadata endpoint (RFC 9728) to enable automatic discovery of OAuth endpoints. Clients will append '/.well-known/oauth-authorization-server' to this URL to discover token, authorization, and registration endpoints. Example: 'https://auth.example.com'",
-              "format": "http-url"
+              "format": "http-url",
+              "deprecated": true,
+              "deprecationMessage": "The authorization_server_url is deprecated. Please use the authorization_server_urls configuration instead."
+            },
+            "authorization_server_urls": {
+              "type": "array",
+              "description": "A list of base URLs of OAuth 2.0 authorization servers. All URLs are advertised to MCP clients via the Protected Resource Metadata endpoint (RFC 9728). Use this field to trust more than one authorization server. Entries are merged with 'authorization_server_url' and duplicates are removed. Configure a JWKS entry for each issuer under 'jwks' so the router can validate its tokens.",
+              "items": {
+                "type": "string",
+                "format": "http-url"
+              }
             },
             "scopes": {
               "type": "object",
@@ -3967,6 +3989,16 @@
           "type": "boolean",
           "description": "Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
           "default": true
+        },
+        "enable_multi_fetch": {
+          "type": "boolean",
+          "description": "Enables merging entity fetches to the same subgraph that execute in the same wave into a single batched request with aliased _entities fields. Merging reduces the number of subgraph requests.",
+          "default": false
+        },
+        "enable_schedule_fetches": {
+          "type": "boolean",
+          "description": "Enables the dependency-aware fetch scheduler, which organizes fetches into component-split, chain-inlined execution trees instead of the legacy wave-based structure.",
+          "default": false
         },
         "websocket_client_write_timeout": {
           "type": "string",
