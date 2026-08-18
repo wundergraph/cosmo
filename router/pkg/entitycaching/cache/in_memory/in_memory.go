@@ -3,6 +3,7 @@ package in_memory
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -19,6 +20,8 @@ type InMemoryCache struct {
 	// not a panic on a channel ristretto has already closed.
 	closeOnce sync.Once
 }
+
+var _ enginecache.Cache = (*InMemoryCache)(nil)
 
 // NewInMemoryCache returns a cache holding at most maxEntries entries. The
 // caller owns it and must Close it.
@@ -50,7 +53,7 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) (map[string]
 	}
 
 	if len(keys) == 0 {
-		return nil, nil
+		return nil, errors.New("entity cache lookup requires at least one key")
 	}
 
 	results := make(map[string]enginecache.Item, len(keys))
@@ -84,7 +87,7 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	}
 
 	if len(items) == 0 {
-		return nil
+		return errors.New("entity cache write requires at least one item")
 	}
 
 	// Map used for deduplications

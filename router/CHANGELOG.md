@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.341.0](https://github.com/wundergraph/cosmo/compare/router@0.340.0...router@0.341.0) (2026-08-18)
+
+### Features
+
+* **mcp:** add structured tool output behind mcp.output_schema flag ([#3136](https://github.com/wundergraph/cosmo/issues/3136)) ([ca13b07](https://github.com/wundergraph/cosmo/commit/ca13b077d6ad15b70d12b20872600f904d0fd96a)) (@asoorm)
+
 # [0.340.0](https://github.com/wundergraph/cosmo/compare/router@0.339.0...router@0.340.0) (2026-08-13)
 
 ### Features
