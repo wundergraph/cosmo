@@ -118,6 +118,8 @@ mcp:
       instructions: 'Use the operation tools to interact with the graph.'
   storage:
     provider_id: mcp
+  output_schema:
+    enabled: true
 
 watch_config:
   enabled: true
