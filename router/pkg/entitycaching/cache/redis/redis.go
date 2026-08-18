@@ -102,9 +102,7 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]ent
 	return results, nil
 }
 
-// SetMany implements entitycaching.SetMany. A write with no items is a caller
-// bug rather than a write that stored nothing, so it is reported instead of
-// being accepted.
+// SetMany implements entitycaching.SetMany.
 func (c *RedisCache) SetMany(ctx context.Context, items []entitycaching.Item) error {
 	if len(items) == 0 {
 		return errors.New("entity cache write requires at least one item")

@@ -21,8 +21,6 @@ type InMemoryCache struct {
 	closeOnce sync.Once
 }
 
-// Compile time proof that this cache satisfies the interface the engine
-// looks entries up through.
 var _ enginecache.Cache = (*InMemoryCache)(nil)
 
 // NewInMemoryCache returns a cache holding at most maxEntries entries. The
@@ -82,9 +80,7 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) (map[string]
 	return results, nil
 }
 
-// SetMany implements enginecache.SetMany. A write with no items is a caller
-// bug rather than a write that stored nothing, so it is reported instead of
-// being accepted.
+// SetMany implements enginecache.SetMany.
 func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) error {
 	if err := ctx.Err(); err != nil {
 		return err
