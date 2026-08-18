@@ -3141,6 +3141,7 @@ message GetProposalsByFederatedGraphRequest {
   string endDate = 4;
   int32 limit = 5;
   int32 offset = 6;
+  optional string proposalName = 7;
 }
 
 message GetProposalsByFederatedGraphResponse {

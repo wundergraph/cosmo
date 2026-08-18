@@ -14,21 +14,21 @@ import { Client } from '../src/core/client/client.js';
 type GetProposalsResponse = MessageInitShape<typeof GetProposalsByFederatedGraphResponseSchema>;
 
 function createMockTransport(
-  response: GetProposalsResponse | ((req: GetProposalsByFederatedGraphRequest) => GetProposalsResponse),
+  response: GetProposalsResponse,
   onGetProposals?: (req: GetProposalsByFederatedGraphRequest) => void,
 ) {
   return createRouterTransport(({ service }) => {
     service(PlatformService, {
       getProposalsByFederatedGraph: (req) => {
         onGetProposals?.(req);
-        return typeof response === 'function' ? response(req) : response;
+        return response;
       },
     });
   });
 }
 
 async function runStatus(
-  response: GetProposalsResponse | ((req: GetProposalsByFederatedGraphRequest) => GetProposalsResponse),
+  response: GetProposalsResponse,
   args: string[] = [],
   onGetProposals?: (req: GetProposalsByFederatedGraphRequest) => void,
 ): Promise<void> {
@@ -73,7 +73,8 @@ describe('proposal status', () => {
     expect(request).toMatchObject({
       federatedGraphName: 'my-graph',
       namespace: 'production',
-      limit: 50,
+      proposalName: 'my-proposal',
+      limit: 1,
       offset: 0,
     });
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Proposal 'my-proposal' status is DRAFT."));
@@ -112,56 +113,6 @@ describe('proposal status', () => {
     );
 
     expect(request?.namespace).toBe('default');
-  });
-
-  test('only checks the 50 most recent proposals by default', async () => {
-    let requestCount = 0;
-
-    await runStatus(
-      {
-        response: { code: EnumStatusCode.OK },
-        proposals: [{ name: 'another-proposal', state: 'DRAFT' }],
-        totalCount: 51,
-      },
-      ['--json'],
-      () => {
-        requestCount++;
-      },
-    );
-
-    expect(requestCount).toBe(1);
-    expect(process.exitCode).toBe(1);
-  });
-
-  test('checks subsequent pages when --check-all-proposals is set', async () => {
-    const requestedOffsets: number[] = [];
-
-    await runStatus(
-      (req) => {
-        if (req.offset === 0) {
-          return {
-            response: { code: EnumStatusCode.OK },
-            proposals: [{ name: 'another-proposal', state: 'DRAFT' }],
-            totalCount: 2,
-          };
-        }
-
-        return {
-          response: { code: EnumStatusCode.OK },
-          proposals: [{ name: 'my-proposal', state: 'CLOSED' }],
-          totalCount: 2,
-        };
-      },
-      ['--check-all-proposals', '--json'],
-      (req) => {
-        requestedOffsets.push(req.offset);
-      },
-    );
-
-    expect(requestedOffsets).toEqual([0, 1]);
-    expect(logSpy).toHaveBeenCalledWith(JSON.stringify({ status: 'CLOSED' }));
-    expect(errorSpy).not.toHaveBeenCalled();
-    expect(process.exitCode).toBeUndefined();
   });
 
   test('prints a json error and sets a non-zero exit code when the proposal is not found', async () => {

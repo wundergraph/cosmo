@@ -28323,6 +28323,7 @@ type GetProposalsByFederatedGraphRequest struct {
 	EndDate            string                 `protobuf:"bytes,4,opt,name=endDate,proto3" json:"endDate,omitempty"`
 	Limit              int32                  `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
 	Offset             int32                  `protobuf:"varint,6,opt,name=offset,proto3" json:"offset,omitempty"`
+	ProposalName       *string                `protobuf:"bytes,7,opt,name=proposalName,proto3,oneof" json:"proposalName,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -28397,6 +28398,13 @@ func (x *GetProposalsByFederatedGraphRequest) GetOffset() int32 {
 		return x.Offset
 	}
 	return 0
+}
+
+func (x *GetProposalsByFederatedGraphRequest) GetProposalName() string {
+	if x != nil && x.ProposalName != nil {
+		return *x.ProposalName
+	}
+	return ""
 }
 
 type GetProposalsByFederatedGraphResponse struct {
@@ -36319,14 +36327,16 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x10currentSubgraphs\x18\x03 \x03(\v29.wg.cosmo.platform.v1.GetProposalResponse.CurrentSubgraphR\x10currentSubgraphs\x1aC\n" +
 	"\x0fCurrentSubgraph\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
-	"\tschemaSDL\x18\x02 \x01(\tR\tschemaSDL\"\xd9\x01\n" +
+	"\tschemaSDL\x18\x02 \x01(\tR\tschemaSDL\"\x93\x02\n" +
 	"#GetProposalsByFederatedGraphRequest\x12.\n" +
 	"\x12federatedGraphName\x18\x01 \x01(\tR\x12federatedGraphName\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1c\n" +
 	"\tstartDate\x18\x03 \x01(\tR\tstartDate\x12\x18\n" +
 	"\aendDate\x18\x04 \x01(\tR\aendDate\x12\x14\n" +
 	"\x05limit\x18\x05 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06offset\x18\x06 \x01(\x05R\x06offset\"\xf0\x01\n" +
+	"\x06offset\x18\x06 \x01(\x05R\x06offset\x12'\n" +
+	"\fproposalName\x18\a \x01(\tH\x00R\fproposalName\x88\x01\x01B\x0f\n" +
+	"\r_proposalName\"\xf0\x01\n" +
 	"$GetProposalsByFederatedGraphResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12<\n" +
 	"\tproposals\x18\x02 \x03(\v2\x1e.wg.cosmo.platform.v1.ProposalR\tproposals\x12.\n" +
@@ -38520,6 +38530,7 @@ func file_wg_cosmo_platform_v1_platform_proto_init() {
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[411].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[417].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[424].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[427].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[431].OneofWrappers = []any{
 		(*UpdateProposalRequest_State)(nil),
 		(*UpdateProposalRequest_UpdatedSubgraphs)(nil),
