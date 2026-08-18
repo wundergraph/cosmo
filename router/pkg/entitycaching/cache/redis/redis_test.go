@@ -34,7 +34,7 @@ func newTestRedisCacheWithHook(t *testing.T, hook redis.Hook) (*RedisCache, *min
 	if hook != nil {
 		client.AddHook(hook)
 	}
-	c, err := NewRedisCache(client, testPrefix)
+	c, err := NewRedisCache(t.Context(), client, testPrefix)
 	if err != nil {
 		// Ownership never transferred, so the client is still the test's to
 		// close before it gives up.
@@ -114,10 +114,34 @@ func TestRedisCache(t *testing.T) {
 	t.Run("NewRedisCache", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("rejects a nil client", func(t *testing.T) {
+		t.Run("rejects a server it cannot reach", func(t *testing.T) {
 			t.Parallel()
 
-			c, err := NewRedisCache(nil, testPrefix)
+			// Nothing is listening here, so construction fails on the ping
+			// rather than leaving a broken cache to be discovered by the first
+			// lookup.
+			client := redis.NewClient(&redis.Options{Addr: "127.0.0.1:1", DialTimeout: time.Second})
+			t.Cleanup(func() {
+				require.NoError(t, client.Close())
+			})
+
+			c, err := NewRedisCache(ctx, client, testPrefix)
+			require.Error(t, err)
+			require.Nil(t, c)
+		})
+
+		t.Run("rejects credentials redis will not take", func(t *testing.T) {
+			t.Parallel()
+
+			mr := miniredis.RunT(t)
+			mr.RequireAuth("right")
+
+			client := redis.NewClient(&redis.Options{Addr: mr.Addr(), Password: "wrong"})
+			t.Cleanup(func() {
+				require.NoError(t, client.Close())
+			})
+
+			c, err := NewRedisCache(ctx, client, testPrefix)
 			require.Error(t, err)
 			require.Nil(t, c)
 		})
@@ -149,7 +173,7 @@ func TestRedisCache(t *testing.T) {
 			mr := miniredis.RunT(t)
 			client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 
-			c, err := NewRedisCache(client, testPrefix)
+			c, err := NewRedisCache(ctx, client, testPrefix)
 			require.NoError(t, err)
 			require.NoError(t, c.Close())
 
@@ -173,23 +197,23 @@ func TestRedisCache(t *testing.T) {
 	t.Run("SetMany", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("nil items is a no-op", func(t *testing.T) {
+		t.Run("nil items is an error", func(t *testing.T) {
 			t.Parallel()
 
 			c, mr := newTestRedisCache(t)
 
 			err := c.SetMany(ctx, nil)
-			require.NoError(t, err)
+			require.EqualError(t, err, "entity cache write requires at least one item")
 			require.Empty(t, mr.Keys())
 		})
 
-		t.Run("empty items is a no-op", func(t *testing.T) {
+		t.Run("empty items is an error", func(t *testing.T) {
 			t.Parallel()
 
 			c, mr := newTestRedisCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{})
-			require.NoError(t, err)
+			require.EqualError(t, err, "entity cache write requires at least one item")
 			require.Empty(t, mr.Keys())
 		})
 
@@ -406,23 +430,23 @@ func TestRedisCache(t *testing.T) {
 	t.Run("GetMany", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("nil keys", func(t *testing.T) {
+		t.Run("nil keys is an error", func(t *testing.T) {
 			t.Parallel()
 
 			c, _ := newTestRedisCache(t)
 
 			results, err := c.GetMany(ctx, nil)
-			require.NoError(t, err)
+			require.EqualError(t, err, "entity cache lookup requires at least one key")
 			require.Nil(t, results)
 		})
 
-		t.Run("empty keys", func(t *testing.T) {
+		t.Run("empty keys is an error", func(t *testing.T) {
 			t.Parallel()
 
 			c, _ := newTestRedisCache(t)
 
 			results, err := c.GetMany(ctx, []string{})
-			require.NoError(t, err)
+			require.EqualError(t, err, "entity cache lookup requires at least one key")
 			require.Nil(t, results)
 		})
 
@@ -854,5 +878,3 @@ func TestRedisCache(t *testing.T) {
 		})
 	})
 }
-
-var _ enginecache.Cache = (*RedisCache)(nil)

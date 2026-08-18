@@ -931,7 +931,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 	}
 
-	if err := r.setupEntityCache(); err != nil {
+	if err := r.setupEntityCache(ctx); err != nil {
 		return err
 	}
 
@@ -1185,7 +1185,7 @@ func (r *Router) setupTelemetry(ctx context.Context) error {
 // provider decides what it is built on: a redis instance declared under
 // storage_providers.redis and shared with every other replica, or a cache held
 // in this process alone.
-func (r *Router) setupEntityCache() error {
+func (r *Router) setupEntityCache(ctx context.Context) error {
 	if r.entityCacheConfig == nil || !r.entityCacheConfig.Enabled {
 		return nil
 	}
@@ -1207,7 +1207,7 @@ func (r *Router) setupEntityCache() error {
 	// shared cache into one cache per replica.
 	switch provider := r.entityCacheConfig.Storage.Provider; provider {
 	case "", config.EntityCacheStorageProviderRedis:
-		return r.setupRedisEntityCache()
+		return r.setupRedisEntityCache(ctx)
 	case config.EntityCacheStorageProviderMemory:
 		return r.setupInMemoryEntityCache()
 	default:
@@ -1248,7 +1248,7 @@ func (r *Router) setupInMemoryEntityCache() error {
 
 // setupRedisEntityCache builds an entity cache on a redis instance declared
 // under storage_providers.redis.
-func (r *Router) setupRedisEntityCache() error {
+func (r *Router) setupRedisEntityCache(ctx context.Context) error {
 	providerID := r.entityCacheConfig.Storage.ProviderID
 	if providerID == "" {
 		return fmt.Errorf("entity cache is enabled with the %q storage provider but no storage provider_id is configured; configure one, or set the storage provider to %q to cache in this router's memory instead",
@@ -1271,7 +1271,7 @@ func (r *Router) setupRedisEntityCache() error {
 		return fmt.Errorf("failed to create redis client for entity cache: %w", err)
 	}
 
-	cache, err := rediscache.NewRedisCache(client, r.entityCacheConfig.KeyPrefix)
+	cache, err := rediscache.NewRedisCache(ctx, client, r.entityCacheConfig.KeyPrefix)
 	if err != nil {
 		// Ownership of the client only passes to the cache once there is a cache,
 		// so on this path it is still ours and has to be closed here or it leaks
@@ -1333,6 +1333,7 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
 		mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
 		mcpserver.WithOmitToolNamePrefix(r.mcp.OmitToolNamePrefix),
+		mcpserver.WithOutputSchemaEnabled(r.mcp.OutputSchema.Enabled),
 		mcpserver.WithStateless(r.mcp.Session.Stateless),
 		mcpserver.WithInstructions(r.mcp.Server.Discover.Instructions),
 		mcpserver.WithServerVersion(cmp.Or(r.mcp.Server.Version, Version)),

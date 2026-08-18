@@ -128,26 +128,26 @@ func TestInMemoryCache(t *testing.T) {
 	t.Run("SetMany", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("nil items is a no-op", func(t *testing.T) {
+		t.Run("nil items is an error", func(t *testing.T) {
 			t.Parallel()
 
 			c := newTestCache(t)
 
 			err := c.SetMany(ctx, nil)
-			require.NoError(t, err)
+			require.EqualError(t, err, "entity cache write requires at least one item")
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
 			require.Empty(t, results)
 		})
 
-		t.Run("empty items is a no-op", func(t *testing.T) {
+		t.Run("empty items is an error", func(t *testing.T) {
 			t.Parallel()
 
 			c := newTestCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{})
-			require.NoError(t, err)
+			require.EqualError(t, err, "entity cache write requires at least one item")
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -376,23 +376,23 @@ func TestInMemoryCache(t *testing.T) {
 	t.Run("GetMany", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("nil keys", func(t *testing.T) {
+		t.Run("nil keys is an error", func(t *testing.T) {
 			t.Parallel()
 
 			c := newTestCache(t)
 
 			results, err := c.GetMany(ctx, nil)
-			require.NoError(t, err)
+			require.EqualError(t, err, "entity cache lookup requires at least one key")
 			require.Nil(t, results)
 		})
 
-		t.Run("empty keys", func(t *testing.T) {
+		t.Run("empty keys is an error", func(t *testing.T) {
 			t.Parallel()
 
 			c := newTestCache(t)
 
 			results, err := c.GetMany(ctx, []string{})
-			require.NoError(t, err)
+			require.EqualError(t, err, "entity cache lookup requires at least one key")
 			require.Nil(t, results)
 		})
 
@@ -785,5 +785,3 @@ func TestInMemoryCache(t *testing.T) {
 		})
 	})
 }
-
-var _ enginecache.Cache = (*InMemoryCache)(nil)
