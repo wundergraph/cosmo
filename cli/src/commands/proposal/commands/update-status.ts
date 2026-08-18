@@ -104,11 +104,12 @@ export default (opts: BaseCommandOptions) => {
     });
 
     if (responseMetadata.status === 'error') {
-      if (!options.json) {
-        throw responseMetadata.error;
+      if (options.json) {
+        console.log(JSON.stringify(createJsonErrorOutput(name, EnumStatusCode.ERR, responseMetadata.error.message)));
+      } else {
+        console.error(pc.red(responseMetadata.error.message));
       }
 
-      console.log(JSON.stringify(createJsonErrorOutput(name, EnumStatusCode.ERR, responseMetadata.error.message)));
       process.exitCode = 1;
       return;
     }
