@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/redis/go-redis/v9"
-	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
 )
 
 // RedisCache stores entries in Redis.
@@ -24,22 +24,24 @@ type RedisCache struct {
 	prefix string
 }
 
+var _ entitycaching.Cache = (*RedisCache)(nil)
+
 // NewRedisCache returns a cache backed by client, namespacing every key with
 // prefix. The caller keeps ownership of client and is responsible for closing
 // it. rediscloser.RDCloser satisfies redis.UniversalClient, so a client built
 // by rediscloser.NewRedisCloser can be passed straight in.
-func NewRedisCache(client redis.UniversalClient, prefix string) (*RedisCache, error) {
-	if client == nil {
-		return nil, errors.New("redis client is nil")
+func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix string) (*RedisCache, error) {
+	if err := client.Ping(ctx).Err(); err != nil {
+		return nil, fmt.Errorf("redis is not reachable: %w", err)
 	}
 
 	return &RedisCache{client: client, prefix: prefix}, nil
 }
 
-// GetMany implements enginecache.GetMany.
-func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]enginecache.Item, error) {
+// GetMany implements entitycaching.GetMany.
+func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]entitycaching.Item, error) {
 	if len(keys) == 0 {
-		return nil, nil
+		return nil, errors.New("entity cache lookup requires at least one key")
 	}
 
 	// A pipeline of GETs rather than a single MGET: go-redis splits a pipeline
@@ -72,20 +74,20 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]eng
 
 	// Sized for every key finding something, which is the case worth being
 	// ready for. A miss adds nothing, so the map is only as big as the hits.
-	results := make(map[string]enginecache.Item, len(keys))
+	results := make(map[string]entitycaching.Item, len(keys))
 	for i, key := range keys {
 		value, err := values[i].Bytes()
-		if errors.Is(err, redis.Nil) {
-			continue
-		}
 		if err != nil {
+			if errors.Is(err, redis.Nil) {
+				continue
+			}
 			// There is no partial read to salvage, the whole batch fails.
-			return nil, fmt.Errorf("get %q: %w", key, err)
+			return nil, fmt.Errorf("redis adapter get %q: %w", key, err)
 		}
 
 		ttl, err := ttls[i].Result()
 		if err != nil {
-			return nil, fmt.Errorf("pttl %q: %w", key, err)
+			return nil, fmt.Errorf("redis adapter pttl %q: %w", key, err)
 		}
 
 		if ttl <= 0 {
@@ -94,16 +96,18 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]eng
 
 		// Keyed by what the caller asked with, not the prefixed key it was
 		// stored under: the namespace is this cache's business, not theirs.
-		results[key] = enginecache.Item{Key: key, Value: bytes.Clone(value), TTL: ttl}
+		results[key] = entitycaching.Item{Key: key, Value: bytes.Clone(value), TTL: ttl}
 	}
 
 	return results, nil
 }
 
-// SetMany implements enginecache.SetMany.
-func (c *RedisCache) SetMany(ctx context.Context, items []enginecache.Item) error {
+// SetMany implements entitycaching.SetMany. A write with no items is a caller
+// bug rather than a write that stored nothing, so it is reported instead of
+// being accepted.
+func (c *RedisCache) SetMany(ctx context.Context, items []entitycaching.Item) error {
 	if len(items) == 0 {
-		return nil
+		return errors.New("entity cache write requires at least one item")
 	}
 
 	// Queuing writes nothing to redis, only Exec below does, so validating as
@@ -118,7 +122,7 @@ func (c *RedisCache) SetMany(ctx context.Context, items []enginecache.Item) erro
 	cmds := make([]*redis.StatusCmd, len(items))
 	for i, item := range items {
 		if item.TTL <= 0 {
-			return fmt.Errorf("%w: key %q", enginecache.ErrMissingTTL, item.Key)
+			return fmt.Errorf("%w: key %q", entitycaching.ErrMissingTTL, item.Key)
 		}
 		cmds[i] = pipe.Set(ctx, c.prefix+item.Key, item.Value, item.TTL)
 	}
@@ -143,5 +147,5 @@ func (c *RedisCache) SetMany(ctx context.Context, items []enginecache.Item) erro
 		return err
 	}
 
-	return &enginecache.SetManyError{KnownStoredKeys: stored, Err: err}
+	return &entitycaching.SetManyError{KnownStoredKeys: stored, Err: err}
 }
