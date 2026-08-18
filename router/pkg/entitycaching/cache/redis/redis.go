@@ -32,7 +32,7 @@ var _ entitycaching.Cache = (*RedisCache)(nil)
 // by rediscloser.NewRedisCloser can be passed straight in.
 func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix string) (*RedisCache, error) {
 	if err := client.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("redis is not reachable: %w", err)
+		return nil, fmt.Errorf("unable to connect to redis: %w", err)
 	}
 
 	return &RedisCache{client: client, prefix: prefix}, nil
