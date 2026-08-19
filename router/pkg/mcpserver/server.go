@@ -202,9 +202,41 @@ type LLMGuidance struct {
 	ExecutionTips  []string `json:"executionTips"`
 }
 
-// GraphQLError represents an error returned in a GraphQL response
+// GraphQLErrorLocation identifies a position in the GraphQL document.
+type GraphQLErrorLocation struct {
+	Line   int `json:"line"`
+	Column int `json:"column"`
+}
+
+// GraphQLError represents an error returned in a GraphQL response.
 type GraphQLError struct {
-	Message string `json:"message"`
+	Message    string                 `json:"message"`
+	Locations  []GraphQLErrorLocation `json:"locations,omitempty"`
+	Path       []any                  `json:"path,omitempty"`
+	Extensions map[string]any         `json:"extensions,omitempty"`
+}
+
+func formatGraphQLError(graphqlError GraphQLError) string {
+	if len(graphqlError.Locations) == 0 && len(graphqlError.Path) == 0 && len(graphqlError.Extensions) == 0 {
+		return graphqlError.Message
+	}
+
+	details := struct {
+		Locations  []GraphQLErrorLocation `json:"locations,omitempty"`
+		Path       []any                  `json:"path,omitempty"`
+		Extensions map[string]any         `json:"extensions,omitempty"`
+	}{
+		Locations:  graphqlError.Locations,
+		Path:       graphqlError.Path,
+		Extensions: graphqlError.Extensions,
+	}
+
+	detailsJSON, err := json.Marshal(details)
+	if err != nil {
+		return graphqlError.Message
+	}
+
+	return fmt.Sprintf("%s (details: %s)", graphqlError.Message, detailsJSON)
 }
 
 // GraphQLResponse represents a GraphQL response structure
@@ -1033,7 +1065,7 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 		// Concatenate all error messages
 		var errorMessages []string
 		for _, gqlErr := range graphqlResponse.Errors {
-			errorMessages = append(errorMessages, gqlErr.Message)
+			errorMessages = append(errorMessages, formatGraphQLError(gqlErr))
 		}
 
 		errorMessage := strings.Join(errorMessages, "; ")
