@@ -98,16 +98,18 @@ export function validateAndFetchPluginData(
         };
       }
 
-      subgraph = await subgraphRepo.create({
-        name: req.name,
-        namespace: req.namespace,
-        namespaceId: namespace.id,
-        createdBy: authContext.userId,
-        labels: req.labels,
-        routingUrl: '',
-        isEventDrivenGraph: false,
-        type: 'grpc_plugin',
-      });
+      [subgraph] = await subgraphRepo.create([
+        {
+          name: req.name,
+          namespace: req.namespace,
+          namespaceId: namespace.id,
+          createdBy: authContext.userId,
+          labels: req.labels,
+          routingUrl: '',
+          isEventDrivenGraph: false,
+          type: 'grpc_plugin',
+        },
+      ]);
 
       if (!subgraph) {
         return {

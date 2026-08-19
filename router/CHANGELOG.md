@@ -4,6 +4,35 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.341.0](https://github.com/wundergraph/cosmo/compare/router@0.340.0...router@0.341.0) (2026-08-18)
+
+### Features
+
+* **mcp:** add structured tool output behind mcp.output_schema flag ([#3136](https://github.com/wundergraph/cosmo/issues/3136)) ([ca13b07](https://github.com/wundergraph/cosmo/commit/ca13b077d6ad15b70d12b20872600f904d0fd96a)) (@asoorm)
+
+# [0.340.0](https://github.com/wundergraph/cosmo/compare/router@0.339.0...router@0.340.0) (2026-08-13)
+
+### Features
+
+* merge entity fetches and then schedule optimally ([#3146](https://github.com/wundergraph/cosmo/issues/3146)) ([86ca1fd](https://github.com/wundergraph/cosmo/commit/86ca1fd0009e678304d0d418628b0baa51efb427)) (@ysmolski)
+
+# [0.339.0](https://github.com/wundergraph/cosmo/compare/router@0.338.0...router@0.339.0) (2026-08-12)
+
+### Bug Fixes
+
+* **router:** bump go-m1cpu to v0.2.2 ([#3155](https://github.com/wundergraph/cosmo/issues/3155)) ([70cd61d](https://github.com/wundergraph/cosmo/commit/70cd61d800569aaed64f9db3e62095ebd9398353)) (@fiam)
+* **router:** close Kafka consumer client when subscription ends ([#3133](https://github.com/wundergraph/cosmo/issues/3133)) ([b0f5a1b](https://github.com/wundergraph/cosmo/commit/b0f5a1b059152876afb7c223dc67406fa4ee24d4)) (@mwisner)
+
+### Features
+
+* **router:** support multiple OAuth authorization servers for MCP ([#3148](https://github.com/wundergraph/cosmo/issues/3148)) ([cd0da09](https://github.com/wundergraph/cosmo/commit/cd0da09236c28ccec626dc157ca6b0c23a5dc4b2)) (@asoorm)
+
+# [0.338.0](https://github.com/wundergraph/cosmo/compare/router@0.337.1...router@0.338.0) (2026-08-11)
+
+### Features
+
+* in memory adapter for entity caching cache ([#3137](https://github.com/wundergraph/cosmo/issues/3137)) ([f8f0a76](https://github.com/wundergraph/cosmo/commit/f8f0a76fbff94c76b10da56b6e02518bc72a4981)) (@SkArchon)
+
 ## [0.337.1](https://github.com/wundergraph/cosmo/compare/router@0.337.0...router@0.337.1) (2026-08-05)
 
 ### Bug Fixes

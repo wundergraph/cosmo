@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.157.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.156.0...@wundergraph/cosmo-connect@0.157.0) (2026-08-11)
+
+### Features
+
+* **controlplane:** add CreateFederatedSubgraphs batch rpc ([#3152](https://github.com/wundergraph/cosmo/issues/3152)) ([9543225](https://github.com/wundergraph/cosmo/commit/95432255e3391369c617712e7c04e1762d122a39)) (@thisisnithin)
+
+# [0.156.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.155.3...@wundergraph/cosmo-connect@0.156.0) (2026-08-10)
+
+### Features
+
+* resolve feature subgraphs in federated graph field usage ([#3144](https://github.com/wundergraph/cosmo/issues/3144)) ([e81b5fa](https://github.com/wundergraph/cosmo/commit/e81b5fa984e8496aab8042f351372b239358099a)) (@JivusAyrus)
+
 ## [0.155.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.155.2...@wundergraph/cosmo-connect@0.155.3) (2026-07-31)
 
 **Note:** Version bump only for package @wundergraph/cosmo-connect

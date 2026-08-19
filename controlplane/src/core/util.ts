@@ -7,7 +7,7 @@ import {
   GraphQLSubscriptionProtocol,
   GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
+import { isValidUrl, joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { AxiosError } from 'axios';
 import { isNetworkError, isRetryableError } from 'axios-retry';
 import { formatISO, subHours } from 'date-fns';
@@ -18,7 +18,7 @@ import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
 import DOMPurify from 'isomorphic-dompurify';
 import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
-import { ProposalOrigin, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { ProposalOrigin, Subgraph, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole, ProposalOrigin as ProposalOriginEnum, WebsocketSubprotocol } from '../db/models.js';
 import {
   AuthContext,
@@ -27,10 +27,12 @@ import {
   Label,
   LoginMethod,
   NamespaceAccess,
+  PlainMessage,
   ResponseMessage,
   S3StorageOptions,
   SOCIAL_LOGIN_PROVIDERS,
   SocialLoginProvider,
+  SubgraphDTO,
 } from '../types/index.js';
 import { paginationDefaults } from './constants.js';
 import {
@@ -701,6 +703,28 @@ export const convertToSubgraphType = (type: string) => {
   }
 };
 
+/**
+ * Maps a subgraph (or feature subgraph) DTO to its proto representation.
+ */
+export function convertToSubgraphProto(subgraph: SubgraphDTO): PlainMessage<Subgraph> {
+  return {
+    id: subgraph.id,
+    name: subgraph.name,
+    routingURL: subgraph.routingUrl,
+    lastUpdatedAt: subgraph.lastUpdatedAt,
+    labels: subgraph.labels,
+    targetId: subgraph.targetId,
+    subscriptionUrl: subgraph.subscriptionUrl,
+    namespace: subgraph.namespace,
+    subscriptionProtocol: subgraph.subscriptionProtocol,
+    isEventDrivenGraph: subgraph.isEventDrivenGraph,
+    isV2Graph: subgraph.isV2Graph,
+    websocketSubprotocol: subgraph.websocketSubprotocol || '',
+    isFeatureSubgraph: subgraph.isFeatureSubgraph,
+    type: convertToSubgraphType(subgraph.type),
+  };
+}
+
 export function toProposalOriginEnum(value: ProposalOrigin): ProposalOriginEnum {
   switch (value) {
     case ProposalOrigin.EXTERNAL: {
@@ -929,6 +953,75 @@ export function isValidGrpcNamingScheme(url: string): boolean {
       return false;
     }
   }
+}
+
+/**
+ * How a handler treats the routing URL of a non-Event-Driven subgraph:
+ *
+ * - `required` → the subgraph is being created, so a valid URL must be present.
+ * - `optional` → the subgraph already exists, so an absent URL leaves it unchanged.
+ * - `skipped` → the subgraph carries no routing URL at all (a plugin).
+ */
+export type RoutingUrlRequirement = 'required' | 'optional' | 'skipped';
+
+/**
+ * Validates the routing and subscription configuration shared by every subgraph
+ * write (create, batch create, publish and update), returning the first
+ * violation as a message, or undefined when the input is valid.
+ */
+export function validateSubgraphRouting(input: {
+  isEventDrivenGraph: boolean;
+  routingUrl?: string;
+  subscriptionUrl?: string;
+  subscriptionProtocol?: GraphQLSubscriptionProtocol;
+  websocketSubprotocol?: GraphQLWebsocketSubprotocol;
+  routingUrlRequirement: RoutingUrlRequirement;
+  isGrpcService?: boolean;
+  isFeatureSubgraph?: boolean;
+}): string | undefined {
+  if (input.isEventDrivenGraph) {
+    if (input.routingUrl !== undefined) {
+      return `An Event-Driven Graph must not define a routing URL`;
+    }
+    if (input.subscriptionUrl !== undefined) {
+      return `An Event-Driven Graph must not define a subscription URL`;
+    }
+    if (input.subscriptionProtocol !== undefined) {
+      return `An Event-Driven Graph must not define a subscription protocol`;
+    }
+    if (input.websocketSubprotocol !== undefined) {
+      return `An Event-Driven Graph must not define a websocket subprotocol`;
+    }
+    return undefined;
+  }
+
+  if (input.routingUrlRequirement === 'skipped') {
+    return undefined;
+  }
+
+  const routingUrl = input.routingUrl ?? '';
+
+  if (routingUrl) {
+    if (!isValidUrl(routingUrl)) {
+      return `Routing URL "${routingUrl}" is not a valid URL`;
+    }
+    if (input.isGrpcService && !isValidGrpcNamingScheme(routingUrl)) {
+      return (
+        `Routing URL must follow gRPC naming scheme. ` +
+        `See https://grpc.io/docs/guides/custom-name-resolution/ for examples.`
+      );
+    }
+  } else if (input.routingUrlRequirement === 'required') {
+    return input.isFeatureSubgraph
+      ? `A valid, non-empty routing URL is required to create and publish a feature subgraph`
+      : `A non-Event-Driven Graph must define a routing URL`;
+  }
+
+  if (input.subscriptionUrl && !isValidUrl(input.subscriptionUrl)) {
+    return `Subscription URL "${input.subscriptionUrl}" is not a valid URL`;
+  }
+
+  return undefined;
 }
 
 /**

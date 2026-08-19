@@ -84,6 +84,10 @@ type Options struct {
 	ExposeSchema bool
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names
 	OmitToolNamePrefix bool
+	// OutputSchemaEnabled declares an output schema on each operation tool and
+	// adds structured content to successful tool results (MCP structured tool
+	// output). Increases tools/list and result payload sizes.
+	OutputSchemaEnabled bool
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
 	// CorsConfig is the CORS configuration for the MCP server
@@ -127,6 +131,7 @@ type GraphQLSchemaServer struct {
 	enableArbitraryOperations bool
 	exposeSchema              bool
 	omitToolNamePrefix        bool
+	outputSchemaEnabled       bool
 	stateless                 bool
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
@@ -293,7 +298,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 
 		options.Logger.Info("MCP OAuth authentication enabled",
 			zap.Int("jwks_providers", len(options.OAuthConfig.JWKS)),
-			zap.String("authorization_server", options.OAuthConfig.AuthorizationServerURL))
+			zap.Strings("authorization_servers", options.OAuthConfig.AuthorizationServers()))
 	}
 
 	// Create the MCP server with all options
@@ -337,6 +342,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
 		omitToolNamePrefix:        options.OmitToolNamePrefix,
+		outputSchemaEnabled:       options.OutputSchemaEnabled,
 		stateless:                 options.Stateless,
 		corsConfig:                options.CorsConfig,
 		cancel:                    cancel,
@@ -445,6 +451,14 @@ func WithOmitToolNamePrefix(omitToolNamePrefix bool) func(*Options) {
 	}
 }
 
+// WithOutputSchemaEnabled enables MCP structured tool output: an output schema
+// on each operation tool and structured content on successful tool results
+func WithOutputSchemaEnabled(outputSchemaEnabled bool) func(*Options) {
+	return func(o *Options) {
+		o.OutputSchemaEnabled = outputSchemaEnabled
+	}
+}
+
 func WithCORS(corsCfg cors.Config) func(*Options) {
 	return func(o *Options) {
 		// Force specific CORS settings for MCP server
@@ -512,7 +526,7 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 	mux := http.NewServeMux()
 
 	// OAuth 2.0 Protected Resource Metadata (RFC 9728) — public discovery endpoint
-	if s.oauthConfig != nil && s.oauthConfig.Enabled && s.oauthConfig.AuthorizationServerURL != "" {
+	if s.oauthConfig != nil && s.oauthConfig.Enabled && len(s.oauthConfig.AuthorizationServers()) > 0 {
 		mux.Handle("/.well-known/oauth-protected-resource/mcp", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
 	}
 
@@ -764,11 +778,26 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			inputSchema = map[string]any{"type": "object", "properties": map[string]any{}}
 		}
 
+		// Declare the response envelope of the operation's selection set as the
+		// tool's output schema. A build failure only degrades the tool: it is
+		// registered without an output schema.
+		var outputSchema any
+		if s.outputSchemaEnabled {
+			if outputJSONSchema, err := buildResponseSchema(&op.Document, s.operationsManager.GetSchema()); err != nil {
+				s.logger.Warn("failed to build output schema for operation; registering tool without output schema",
+					zap.String("operation", op.Name),
+					zap.Error(err))
+			} else {
+				outputSchema = outputJSONSchema
+			}
+		}
+
 		openWorld := true
 		tool := &mcp.Tool{
-			Name:        toolName,
-			Description: toolDescription,
-			InputSchema: inputSchema,
+			Name:         toolName,
+			Description:  toolDescription,
+			InputSchema:  inputSchema,
+			OutputSchema: outputSchema,
 			Annotations: &mcp.ToolAnnotations{
 				IdempotentHint: op.OperationType != "mutation",
 				Title:          fmt.Sprintf("Execute operation %s", op.Name),
@@ -987,10 +1016,20 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	// Parse the GraphQL response
-	var graphqlResponse GraphQLResponse
+	// Per the GraphQL-over-HTTP specification the response body of a GraphQL
+	// endpoint must be a JSON object, so a body that cannot be parsed as one
+	// (a proxy error page, an empty body, or a literal JSON null, which leaves
+	// the pointer nil after unmarshaling) is transport-level breakage and is
+	// reported as a tool error.
+	var graphqlResponse *GraphQLResponse
+	if err := json.Unmarshal(body, &graphqlResponse); err != nil || graphqlResponse == nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Response error: unexpected response from GraphQL endpoint: %s", body)}},
+			IsError: true,
+		}, nil
+	}
 
-	if err := json.Unmarshal(body, &graphqlResponse); err == nil && len(graphqlResponse.Errors) > 0 {
+	if len(graphqlResponse.Errors) > 0 {
 		// Concatenate all error messages
 		var errorMessages []string
 		for _, gqlErr := range graphqlResponse.Errors {
@@ -1016,9 +1055,15 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 		}, nil
 	}
 
-	return &mcp.CallToolResult{
+	result := &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: string(body)}},
-	}, nil
+	}
+	// Expose the response as structured content, per the MCP structured tool
+	// output specification
+	if s.outputSchemaEnabled {
+		result.StructuredContent = json.RawMessage(body)
+	}
+	return result, nil
 }
 
 // handleExecuteGraphQL returns a handler function that executes arbitrary GraphQL queries
@@ -1156,7 +1201,7 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 
 	metadata := ProtectedResourceMetadata{
 		Resource:               mcpResourceURL,
-		AuthorizationServers:   []string{s.oauthConfig.AuthorizationServerURL},
+		AuthorizationServers:   s.oauthConfig.AuthorizationServers(),
 		BearerMethodsSupported: []string{"header"},
 		ResourceDocumentation:  s.resourceDocumentation,
 		ScopesSupported:        scopes,
