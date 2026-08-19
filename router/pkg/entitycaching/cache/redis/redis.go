@@ -13,9 +13,9 @@ import (
 
 // RedisCache stores entries in Redis.
 type RedisCache struct {
-	// client is owned by the caller, not this cache, so it is never closed
-	// here. It is a UniversalClient so a single, cluster or sentinel client all
-	// fit without this cache having to know which one it got.
+	// client is owned by this cache once construction succeeds, and Close
+	// closes it. It is a UniversalClient so a single, cluster or sentinel
+	// client all fit without this cache having to know which one it got.
 	client redis.UniversalClient
 	// closeOnce keeps Close idempotent, and closeErr keeps every caller after
 	// the first answering the same thing the first one was told.
@@ -32,9 +32,11 @@ type RedisCache struct {
 var _ entitycaching.Cache = (*RedisCache)(nil)
 
 // NewRedisCache returns a cache backed by client, namespacing every key with
-// prefix. The caller keeps ownership of client and is responsible for closing
-// it. rediscloser.RDCloser satisfies redis.UniversalClient, so a client built
-// by rediscloser.NewRedisCloser can be passed straight in.
+// prefix. On success the cache takes ownership of client and closes it in
+// Close, so the caller must not close it independently; if construction fails
+// the client is untouched and closing it stays with the caller.
+// rediscloser.RDCloser satisfies redis.UniversalClient, so a client built by
+// rediscloser.NewRedisCloser can be passed straight in.
 func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix string) (*RedisCache, error) {
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("unable to connect to redis: %w", err)
