@@ -46,7 +46,7 @@ func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix str
 // GetMany implements entitycaching.GetMany.
 func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]entitycaching.Item, error) {
 	if len(keys) == 0 {
-		return nil, errors.New("entity cache lookup requires at least one key")
+		return nil, entitycaching.ErrNoKeys
 	}
 
 	// A pipeline of GETs rather than a single MGET: go-redis splits a pipeline
@@ -110,7 +110,7 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]ent
 // SetMany implements entitycaching.SetMany.
 func (c *RedisCache) SetMany(ctx context.Context, items []entitycaching.Item) error {
 	if len(items) == 0 {
-		return errors.New("entity cache write requires at least one item")
+		return entitycaching.ErrNoItems
 	}
 
 	// Queuing writes nothing to redis, only Exec below does, so validating as

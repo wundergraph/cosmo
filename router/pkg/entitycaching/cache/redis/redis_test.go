@@ -203,7 +203,7 @@ func TestRedisCache(t *testing.T) {
 			c, mr := newTestRedisCache(t)
 
 			err := c.SetMany(ctx, nil)
-			require.EqualError(t, err, "entity cache write requires at least one item")
+			require.ErrorIs(t, err, enginecache.ErrNoItems)
 			require.Empty(t, mr.Keys())
 		})
 
@@ -213,7 +213,7 @@ func TestRedisCache(t *testing.T) {
 			c, mr := newTestRedisCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{})
-			require.EqualError(t, err, "entity cache write requires at least one item")
+			require.ErrorIs(t, err, enginecache.ErrNoItems)
 			require.Empty(t, mr.Keys())
 		})
 
@@ -436,7 +436,7 @@ func TestRedisCache(t *testing.T) {
 			c, _ := newTestRedisCache(t)
 
 			results, err := c.GetMany(ctx, nil)
-			require.EqualError(t, err, "entity cache lookup requires at least one key")
+			require.ErrorIs(t, err, enginecache.ErrNoKeys)
 			require.Nil(t, results)
 		})
 
@@ -446,7 +446,7 @@ func TestRedisCache(t *testing.T) {
 			c, _ := newTestRedisCache(t)
 
 			results, err := c.GetMany(ctx, []string{})
-			require.EqualError(t, err, "entity cache lookup requires at least one key")
+			require.ErrorIs(t, err, enginecache.ErrNoKeys)
 			require.Nil(t, results)
 		})
 

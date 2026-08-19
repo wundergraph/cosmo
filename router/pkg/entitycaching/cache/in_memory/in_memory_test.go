@@ -134,7 +134,7 @@ func TestInMemoryCache(t *testing.T) {
 			c := newTestCache(t)
 
 			err := c.SetMany(ctx, nil)
-			require.EqualError(t, err, "entity cache write requires at least one item")
+			require.ErrorIs(t, err, enginecache.ErrNoItems)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -147,7 +147,7 @@ func TestInMemoryCache(t *testing.T) {
 			c := newTestCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{})
-			require.EqualError(t, err, "entity cache write requires at least one item")
+			require.ErrorIs(t, err, enginecache.ErrNoItems)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -382,7 +382,7 @@ func TestInMemoryCache(t *testing.T) {
 			c := newTestCache(t)
 
 			results, err := c.GetMany(ctx, nil)
-			require.EqualError(t, err, "entity cache lookup requires at least one key")
+			require.ErrorIs(t, err, enginecache.ErrNoKeys)
 			require.Nil(t, results)
 		})
 
@@ -392,7 +392,7 @@ func TestInMemoryCache(t *testing.T) {
 			c := newTestCache(t)
 
 			results, err := c.GetMany(ctx, []string{})
-			require.EqualError(t, err, "entity cache lookup requires at least one key")
+			require.ErrorIs(t, err, enginecache.ErrNoKeys)
 			require.Nil(t, results)
 		})
 

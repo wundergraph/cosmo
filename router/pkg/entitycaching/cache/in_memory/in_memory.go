@@ -3,7 +3,6 @@ package in_memory
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 
@@ -53,7 +52,7 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) (map[string]
 	}
 
 	if len(keys) == 0 {
-		return nil, errors.New("entity cache lookup requires at least one key")
+		return nil, enginecache.ErrNoKeys
 	}
 
 	results := make(map[string]enginecache.Item, len(keys))
@@ -87,7 +86,7 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	}
 
 	if len(items) == 0 {
-		return errors.New("entity cache write requires at least one item")
+		return enginecache.ErrNoItems
 	}
 
 	// Map used for deduplications
