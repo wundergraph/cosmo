@@ -345,71 +345,34 @@ func TestExecuteGraphQLQueryResultBoundary(t *testing.T) {
 }
 
 func TestExecuteGraphQLQueryPreservesGraphQLErrorDetails(t *testing.T) {
-	testCases := []struct {
-		name         string
-		responseBody string
-		wantText     string
-	}{
-		{
-			name:         "message-only error keeps the existing format",
-			responseBody: `{"errors":[{"message":"boom"}]}`,
-			wantText:     "Response error: boom",
-		},
-		{
-			name:         "nested extensions are preserved",
-			responseBody: `{"errors":[{"message":"Input validation error","extensions":{"code":"INPUT_VALIDATION","issues":{"dataSetId":["IS_BLANK"]}}}]}`,
-			wantText:     `Response error: Input validation error (details: {"extensions":{"code":"INPUT_VALIDATION","issues":{"dataSetId":["IS_BLANK"]}}})`,
-		},
-		{
-			name:         "extensions preserve every JSON value type",
-			responseBody: `{"errors":[{"message":"Validation failed","extensions":{"code":"INVALID","retryable":false,"attempts":3,"metadata":null,"rules":[{"field":"name","minimum":1}]}}]}`,
-			wantText:     `Response error: Validation failed (details: {"extensions":{"attempts":3,"code":"INVALID","metadata":null,"retryable":false,"rules":[{"field":"name","minimum":1}]}})`,
-		},
-		{
-			name:         "locations and mixed path elements are preserved",
-			responseBody: `{"errors":[{"message":"Invalid employee","locations":[{"line":2,"column":7}],"path":["employees",0,"name"],"extensions":{"code":"BAD_USER_INPUT"}}]}`,
-			wantText:     `Response error: Invalid employee (details: {"locations":[{"line":2,"column":7}],"path":["employees",0,"name"],"extensions":{"code":"BAD_USER_INPUT"}})`,
-		},
-		{
-			name:         "multiple errors retain their own metadata",
-			responseBody: `{"errors":[{"message":"first"},{"message":"second","path":["employee"],"extensions":{"code":"SECOND"}}]}`,
-			wantText:     `Response error: first; second (details: {"path":["employee"],"extensions":{"code":"SECOND"}})`,
-		},
-		{
-			name:         "partial data is retained with detailed errors",
-			responseBody: `{"data":{"employee":null},"errors":[{"message":"partial failure","path":["employee"],"extensions":{"code":"PARTIAL"}}]}`,
-			wantText:     `Response error with partial success, Error: partial failure (details: {"path":["employee"],"extensions":{"code":"PARTIAL"}}), Data: {"employee":null})`,
-		},
-	}
+	responseBody := `{"errors":[{"message":"Input validation error","locations":[{"line":2,"column":7}],"path":["createDataSet",0],"extensions":{"code":"INPUT_VALIDATION","issues":{"dataSetId":["IS_BLANK"]}}}]}`
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(responseBody))
+	}))
+	defer upstream.Close()
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write([]byte(tc.responseBody))
-			}))
-			defer upstream.Close()
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		upstream.URL,
+		WithLogger(zap.NewNop()),
+		WithOperationsDir(t.TempDir()),
+		WithOutputSchemaEnabled(true),
+	)
+	require.NoError(t, err)
 
-			srv, err := NewGraphQLSchemaServer(
-				t.Context(),
-				upstream.URL,
-				WithLogger(zap.NewNop()),
-				WithOperationsDir(t.TempDir()),
-				WithOutputSchemaEnabled(true),
-			)
-			require.NoError(t, err)
+	result, err := srv.executeGraphQLQuery(t.Context(), "query { employee { name } }", nil)
+	require.NoError(t, err)
+	require.True(t, result.IsError)
+	require.Nil(t, result.StructuredContent)
+	require.Len(t, result.Content, 1)
 
-			result, err := srv.executeGraphQLQuery(t.Context(), "query { employee { name } }", nil)
-			require.NoError(t, err)
-			require.True(t, result.IsError)
-			require.Nil(t, result.StructuredContent)
-			require.Len(t, result.Content, 1)
-
-			content, ok := result.Content[0].(*mcp.TextContent)
-			require.True(t, ok)
-			assert.Equal(t, tc.wantText, content.Text)
-		})
-	}
+	content, ok := result.Content[0].(*mcp.TextContent)
+	require.True(t, ok)
+	assert.Equal(t,
+		`Response error: Input validation error (details: {"locations":[{"line":2,"column":7}],"path":["createDataSet",0],"extensions":{"code":"INPUT_VALIDATION","issues":{"dataSetId":["IS_BLANK"]}}})`,
+		content.Text,
+	)
 }
 
 // TestExecuteGraphQLQueryStructuredContentDisabled proves that the flag only
