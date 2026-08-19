@@ -311,6 +311,7 @@ func TestExecuteGraphQLQueryResultBoundary(t *testing.T) {
 		{"non-JSON body returns a tool error", `<html>bad gateway</html>`, true, false},
 		{"empty body returns a tool error", ``, true, false},
 		{"null body returns a tool error", `null`, true, false},
+		{"trailing JSON value returns a tool error", `{"data":{}} {}`, true, false},
 	}
 
 	for _, tc := range testCases {
@@ -366,6 +367,11 @@ func TestExecuteGraphQLQueryPreservesGraphQLErrorDetails(t *testing.T) {
 			name:         "multiple errors are separated",
 			responseBody: `{"errors":[{"message":"First error"},{"message":"Second error","path":["createDataSet"],"extensions":{"code":"INVALID"}}]}`,
 			wantText:     `Response error: First error; Second error (details: {"path":["createDataSet"],"extensions":{"code":"INVALID"}})`,
+		},
+		{
+			name:         "large integers preserve precision",
+			responseBody: `{"errors":[{"message":"Invalid identifier","path":["createDataSet",9007199254740993],"extensions":{"requestId":9007199254740993}}]}`,
+			wantText:     `Response error: Invalid identifier (details: {"path":["createDataSet",9007199254740993],"extensions":{"requestId":9007199254740993}})`,
 		},
 	}
 
