@@ -362,6 +362,11 @@ func TestExecuteGraphQLQueryPreservesGraphQLErrorDetails(t *testing.T) {
 			responseBody: `{"errors":[{"message":"Input validation error","locations":[{"line":2,"column":7}],"path":["createDataSet",0],"extensions":{"code":"INPUT_VALIDATION","issues":{"dataSetId":["IS_BLANK"]}}}]}`,
 			wantText:     `Response error: Input validation error (details: {"locations":[{"line":2,"column":7}],"path":["createDataSet",0],"extensions":{"code":"INPUT_VALIDATION","issues":{"dataSetId":["IS_BLANK"]}}})`,
 		},
+		{
+			name:         "multiple errors are separated",
+			responseBody: `{"errors":[{"message":"First error"},{"message":"Second error","path":["createDataSet"],"extensions":{"code":"INVALID"}}]}`,
+			wantText:     `Response error: First error; Second error (details: {"path":["createDataSet"],"extensions":{"code":"INVALID"}})`,
+		},
 	}
 
 	for _, tc := range testCases {
