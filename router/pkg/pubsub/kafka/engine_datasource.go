@@ -16,15 +16,7 @@ import (
 
 // Event implements datasource.StreamEvent
 type Event struct {
-	evt      *MutableEvent
-	metadata datasource.EventMetadata
-}
-
-func (e *Event) StreamEventMetadata() datasource.EventMetadata {
-	if e.metadata.ID == "" && e.evt != nil {
-		return e.evt.metadata
-	}
-	return e.metadata
+	evt *MutableEvent
 }
 
 func (e *Event) GetData() []byte {
@@ -49,11 +41,7 @@ func (e *Event) GetHeaders() map[string][]byte {
 }
 
 func (e Event) Clone() datasource.MutableStreamEvent {
-	clone, _ := e.evt.Clone().(*MutableEvent)
-	if clone != nil {
-		clone.metadata = e.metadata
-	}
-	return clone
+	return e.evt.Clone()
 }
 
 func cloneHeaders(src map[string][]byte) map[string][]byte {
@@ -69,13 +57,10 @@ func cloneHeaders(src map[string][]byte) map[string][]byte {
 
 // MutableEvent implements datasource.MutableEvent
 type MutableEvent struct {
-	Key      []byte            `json:"key"`
-	Data     json.RawMessage   `json:"data"`
-	Headers  map[string][]byte `json:"headers"`
-	metadata datasource.EventMetadata
+	Key     []byte            `json:"key"`
+	Data    json.RawMessage   `json:"data"`
+	Headers map[string][]byte `json:"headers"`
 }
-
-func (e *MutableEvent) StreamEventMetadata() datasource.EventMetadata { return e.metadata }
 
 func (e *MutableEvent) GetData() []byte {
 	return e.Data
@@ -255,7 +240,7 @@ func (s *PublishDataSource) Load(ctx context.Context, headers http.Header, input
 		return nil, err
 	}
 
-	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&Event{evt: &publishData.Event}}); err != nil {
+	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&Event{&publishData.Event}}); err != nil {
 		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
 		return []byte(`{"__typename": "edfs__PublishResult", "success": false}`), nil
 	}

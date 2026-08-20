@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -40,13 +41,37 @@ func TestEngineMetricsExportsSubscriptionDeliveryAndDisconnectCounters(t *testin
 
 	var resourceMetrics metricdata.ResourceMetrics
 	require.NoError(t, reader.Collect(context.Background(), &resourceMetrics))
-	names := make(map[string]bool)
+	type metricPoint struct {
+		value      int64
+		attributes map[string]string
+	}
+	points := make(map[string]metricPoint)
 	for _, scope := range resourceMetrics.ScopeMetrics {
 		for _, metric := range scope.Metrics {
-			names[metric.Name] = true
+			sum, ok := metric.Data.(metricdata.Sum[int64])
+			if !ok || len(sum.DataPoints) == 0 {
+				continue
+			}
+			attrs := make(map[string]string)
+			for _, attr := range sum.DataPoints[0].Attributes.ToSlice() {
+				attrs[string(attr.Key)] = attr.Value.AsString()
+			}
+			points[metric.Name] = metricPoint{value: sum.DataPoints[0].Value, attributes: attrs}
 		}
 	}
-	require.True(t, names[subscriptionDeliveryAttemptsKey])
-	require.True(t, names[subscriptionDeliveryFailuresKey])
-	require.True(t, names[subscriptionDisconnectsKey])
+	require.Equal(t, metricPoint{value: 1, attributes: map[string]string{
+		string(rotel.WgSubscriptionTransport): "sse",
+		string(rotel.WgSubscriptionFrameType): "next",
+	}}, points[subscriptionDeliveryAttemptsKey])
+	require.Equal(t, metricPoint{value: 1, attributes: map[string]string{
+		string(rotel.WgSubscriptionTransport):     "sse",
+		string(rotel.WgSubscriptionFrameType):     "next",
+		string(rotel.WgSubscriptionFailureStage):  "flush",
+		string(rotel.WgSubscriptionFailureReason): "timeout",
+	}}, points[subscriptionDeliveryFailuresKey])
+	require.Equal(t, metricPoint{value: 1, attributes: map[string]string{
+		string(rotel.WgSubscriptionTransport):           "sse",
+		string(rotel.WgSubscriptionDisconnectInitiator): "router",
+		string(rotel.WgSubscriptionDisconnectReason):    "write_timeout",
+	}}, points[subscriptionDisconnectsKey])
 }

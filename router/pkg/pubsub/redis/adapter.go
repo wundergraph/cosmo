@@ -161,14 +161,8 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 					ProviderType:        metric.ProviderTypeRedis,
 					DestinationName:     msg.Channel,
 				})
-				eventID := datasource.NewEventID()
 				updater.Update([]datasource.StreamEvent{
-					&Event{metadata: datasource.EventMetadata{
-						ID:         eventID,
-						SourceType: "redis",
-						SourceName: msg.Channel,
-						SourceID:   eventID,
-					}, evt: &MutableEvent{
+					&Event{evt: &MutableEvent{
 						Data: []byte(msg.Payload),
 					}},
 				})

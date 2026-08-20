@@ -2,9 +2,12 @@ package core
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"net"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -39,11 +42,26 @@ type subscriptionDisconnectTracker struct {
 	telemetry subscriptionTelemetryContext
 }
 
+type subscriptionDeliveryTracker struct {
+	sequence      atomic.Uint64
+	failureLogged atomic.Bool
+	stats         statistics.EngineStatistics
+	logger        *zap.Logger
+	subscription  string
+}
+
 func newSubscriptionDisconnectTracker(stats statistics.EngineStatistics, logger *zap.Logger, telemetry subscriptionTelemetryContext) *subscriptionDisconnectTracker {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
 	return &subscriptionDisconnectTracker{stats: stats, logger: logger, telemetry: telemetry}
+}
+
+func newSubscriptionDeliveryTracker(stats statistics.EngineStatistics, logger *zap.Logger, subscription string) *subscriptionDeliveryTracker {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	return &subscriptionDeliveryTracker{stats: stats, logger: logger, subscription: subscription}
 }
 
 func (t *subscriptionDisconnectTracker) disconnect(initiator, reason string, err error) {
@@ -84,6 +102,8 @@ func disconnectReasonFromWriteError(err error) (initiator, reason string) {
 		return "router", "write_timeout"
 	case "client_disconnected":
 		return "client", "client_closed"
+	case "connection_closed":
+		return "router", "connection_closed"
 	case "context_canceled":
 		return "client", "context_canceled"
 	default:
@@ -91,9 +111,8 @@ func disconnectReasonFromWriteError(err error) (initiator, reason string) {
 	}
 }
 
-func (e *subscriptionWriteError) Error() string                { return e.err.Error() }
-func (e *subscriptionWriteError) Unwrap() error                { return e.err }
-func (e *subscriptionWriteError) IsSubscriptionDeliveryError() {}
+func (e *subscriptionWriteError) Error() string { return e.err.Error() }
+func (e *subscriptionWriteError) Unwrap() error { return e.err }
 
 func wrapSubscriptionWriteError(stage string, err error) error {
 	if err == nil {
@@ -102,22 +121,23 @@ func wrapSubscriptionWriteError(stage string, err error) error {
 	return &subscriptionWriteError{stage: stage, err: err}
 }
 
-func observeSubscriptionDelivery(stats statistics.EngineStatistics, logger *zap.Logger, telemetry subscriptionTelemetryContext, report resolve.SubscriptionDeliveryReport) {
-	observeSubscription(stats, statistics.SubscriptionObservation{
+func (t *subscriptionDeliveryTracker) observe(telemetry subscriptionTelemetryContext, payload []byte, duration time.Duration, err error) {
+	if t == nil {
+		return
+	}
+	deliverySequence := t.sequence.Add(1)
+	observeSubscription(t.stats, statistics.SubscriptionObservation{
 		Kind:        statistics.SubscriptionObservationDeliveryAttempt,
 		Transport:   telemetry.transport,
 		FrameType:   "next",
 		Subprotocol: telemetry.subprotocol,
 	})
-	if report.Err == nil {
+	if err == nil {
 		return
 	}
-	if logger == nil {
-		logger = zap.NewNop()
-	}
 
-	stage, reason := classifySubscriptionWriteFailure(report.Err)
-	observeSubscription(stats, statistics.SubscriptionObservation{
+	stage, reason := classifySubscriptionWriteFailure(err)
+	observeSubscription(t.stats, statistics.SubscriptionObservation{
 		Kind:          statistics.SubscriptionObservationDeliveryFailure,
 		Transport:     telemetry.transport,
 		FrameType:     "next",
@@ -125,26 +145,29 @@ func observeSubscriptionDelivery(stats statistics.EngineStatistics, logger *zap.
 		FailureReason: reason,
 		Subprotocol:   telemetry.subprotocol,
 	})
-	logger.Warn("Subscription event delivery failed",
+	payloadHash := sha256.Sum256(payload)
+	fields := []zap.Field{
 		zap.String("transport", telemetry.transport),
 		zap.String("websocket_subprotocol", telemetry.subprotocol),
 		zap.String("request_id", telemetry.requestID),
 		zap.String("operation_name", telemetry.operationName),
-		zap.Int64("connection_id", int64(report.ConnectionID)),
-		zap.Int64("subscription_id", report.SubscriptionID),
-		zap.Uint64("trigger_id", report.TriggerID),
-		zap.String("event_id", report.EventID),
-		zap.String("event_hash", report.EventHash),
-		zap.Int("event_bytes", report.EventBytes),
-		zap.String("event_source_type", report.SourceType),
-		zap.String("event_source_name", report.SourceName),
-		zap.String("event_source_id", report.SourceID),
+		zap.Int64("connection_id", int64(telemetry.connectionID)),
+		zap.String("subscription_id", t.subscription),
+		zap.Uint64("delivery_sequence", deliverySequence),
+		zap.String("payload_sha256", hex.EncodeToString(payloadHash[:])),
+		zap.Int("payload_bytes", len(payload)),
 		zap.String("frame_type", "next"),
 		zap.String("failure_stage", stage),
 		zap.String("failure_reason", reason),
 		zap.Int64("configured_write_timeout_ms", telemetry.writeTimeout.Milliseconds()),
-		zap.Error(report.Err),
-	)
+		zap.Float64("write_duration_ms", float64(duration)/float64(time.Millisecond)),
+		zap.Error(err),
+	}
+	if t.failureLogged.CompareAndSwap(false, true) {
+		t.logger.Warn("Subscription event delivery failed", fields...)
+		return
+	}
+	t.logger.Debug("Subscription event delivery failed", fields...)
 }
 
 func observeSubscriptionFrame(stats statistics.EngineStatistics, logger *zap.Logger, telemetry subscriptionTelemetryContext, frameType string, err error) {
@@ -206,7 +229,9 @@ func classifySubscriptionWriteFailure(err error) (stage, reason string) {
 		return stage, "timeout"
 	case errors.Is(err, context.Canceled):
 		return stage, "context_canceled"
-	case errors.Is(err, net.ErrClosed), errors.Is(err, syscall.EPIPE), errors.Is(err, syscall.ECONNRESET):
+	case errors.Is(err, net.ErrClosed):
+		return stage, "connection_closed"
+	case errors.Is(err, syscall.EPIPE), errors.Is(err, syscall.ECONNRESET):
 		return stage, "client_disconnected"
 	case errors.Is(err, errors.ErrUnsupported):
 		return stage, "unsupported"

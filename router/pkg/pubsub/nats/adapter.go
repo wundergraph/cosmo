@@ -158,22 +158,8 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 							DestinationName:     msg.Subject(),
 						})
 
-						metadata, metadataErr := msg.Metadata()
-						eventID := datasource.NewEventID()
-						if metadataErr == nil {
-							streamName := metadata.Stream
-							if streamName == "" {
-								streamName = subConf.StreamConfiguration.StreamName
-							}
-							eventID = fmt.Sprintf("%s/%d", streamName, metadata.Sequence.Stream)
-						}
 						updater.Update([]datasource.StreamEvent{
-							&Event{metadata: datasource.EventMetadata{
-								ID:         eventID,
-								SourceType: "nats",
-								SourceName: msg.Subject(),
-								SourceID:   eventID,
-							}, evt: &MutableEvent{
+							&Event{evt: &MutableEvent{
 								Data:    msg.Data(),
 								Headers: map[string][]string(msg.Headers()),
 							}},
@@ -222,14 +208,8 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 					ProviderType:        metric.ProviderTypeNats,
 					DestinationName:     msg.Subject,
 				})
-				eventID := datasource.NewEventID()
 				updater.Update([]datasource.StreamEvent{
-					&Event{metadata: datasource.EventMetadata{
-						ID:         eventID,
-						SourceType: "nats",
-						SourceName: msg.Subject,
-						SourceID:   eventID,
-					}, evt: &MutableEvent{
+					&Event{evt: &MutableEvent{
 						Data:    msg.Data,
 						Headers: map[string][]string(msg.Header),
 					}},

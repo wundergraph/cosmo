@@ -638,12 +638,12 @@ type websocketResponseWriter struct {
 	propagateErrors bool
 	subscriptions   *sync.Map
 	telemetry       subscriptionTelemetryContext
+	delivery        *subscriptionDeliveryTracker
 }
 
 var (
-	_ http.ResponseWriter                  = (*websocketResponseWriter)(nil)
-	_ resolve.SubscriptionResponseWriter   = (*websocketResponseWriter)(nil)
-	_ resolve.SubscriptionDeliveryReporter = (*websocketResponseWriter)(nil)
+	_ http.ResponseWriter                = (*websocketResponseWriter)(nil)
+	_ resolve.SubscriptionResponseWriter = (*websocketResponseWriter)(nil)
 )
 
 func newWebsocketResponseWriter(id string, protocol wsproto.Proto, propagateErrors bool, logger *zap.Logger, stats statistics.EngineStatistics, subscriptions *sync.Map, telemetry subscriptionTelemetryContext) *websocketResponseWriter {
@@ -656,6 +656,7 @@ func newWebsocketResponseWriter(id string, protocol wsproto.Proto, propagateErro
 		propagateErrors: propagateErrors,
 		subscriptions:   subscriptions,
 		telemetry:       telemetry,
+		delivery:        newSubscriptionDeliveryTracker(stats, logger, id),
 	}
 }
 
@@ -742,6 +743,7 @@ func (rw *websocketResponseWriter) Flush() error {
 			})
 			if err != nil {
 				err = wrapSubscriptionWriteError("serialize", err)
+				rw.delivery.observe(rw.telemetry, payload, 0, err)
 				rw.logger.Warn("Serializing response headers", zap.Error(err))
 				return err
 			}
@@ -757,17 +759,15 @@ func (rw *websocketResponseWriter) Flush() error {
 			}
 		}
 
+		started := time.Now()
 		err = wrapSubscriptionWriteError("write", rw.protocol.WriteGraphQLData(rw.id, payload, extensions))
+		rw.delivery.observe(rw.telemetry, payload, time.Since(started), err)
 		rw.buf.Reset()
 		if err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func (rw *websocketResponseWriter) ReportSubscriptionDelivery(report resolve.SubscriptionDeliveryReport) {
-	observeSubscriptionDelivery(rw.stats, rw.logger, rw.telemetry, report)
 }
 
 func (rw *websocketResponseWriter) SubscriptionResponseWriter() resolve.SubscriptionResponseWriter {
@@ -1469,12 +1469,14 @@ func websocketDisconnectReason(err error, closeKind wsproto.CloseKind) (initiato
 	var syntaxErr *json.SyntaxError
 	var typeErr *json.UnmarshalTypeError
 	switch {
-	case errors.Is(err, errClientTerminatedConnection), errors.Is(err, io.EOF), errors.Is(err, net.ErrClosed):
+	case errors.Is(err, errClientTerminatedConnection), errors.Is(err, io.EOF):
 		return "client", "client_closed"
+	case errors.Is(err, net.ErrClosed):
+		return "router", "connection_closed"
 	case errors.As(err, &closedErr):
 		return "client", "client_closed"
 	case errors.As(err, &netErr) && netErr.Timeout():
-		return "network", "read_timeout"
+		return "network", "timeout"
 	case errors.As(err, &syntaxErr), errors.As(err, &typeErr):
 		return "client", "protocol_error"
 	case errors.As(err, &closeErr):

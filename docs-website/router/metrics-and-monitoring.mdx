@@ -253,7 +253,7 @@ telemetry:
 
 * `router.subscription.disconnects`: Closed SSE requests and WebSocket connections, tagged with the transport, disconnect initiator, and disconnect reason. A WebSocket connection is counted once even when it carries multiple subscriptions.
 
-Failed event writes also produce a structured `Subscription event delivery failed` log containing the request, connection, subscription, and event identifiers. Kafka offsets and NATS stream sequences are used when available; otherwise the router generates an occurrence ID. Payloads are represented by a SHA-256 hash and byte count and are not logged. A successful transport write means the router handed the frame to the connection; SSE and WebSocket do not provide application-level client acknowledgements.
+Failed event writes also produce a structured `Subscription event delivery failed` log containing request, connection, subscription, and operation identifiers; a router-local delivery sequence; the write duration; and the configured timeout. Payloads are represented by a SHA-256 hash and byte count and are not logged. The delivery sequence is scoped to one subscription and is intended to distinguish its attempted events; it is not a broker offset. A successful transport write means the router handed the frame to the connection; SSE and WebSocket do not provide application-level client acknowledgements.
 
 
 ### Resolver Metrics

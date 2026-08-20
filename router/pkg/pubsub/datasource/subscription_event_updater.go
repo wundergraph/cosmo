@@ -45,7 +45,7 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 			if event == nil {
 				continue
 			}
-			s.updateEvent(event)
+			s.eventUpdater.Update(event.GetData())
 		}
 		return
 	}
@@ -187,45 +187,13 @@ func (s *subscriptionEventUpdater) updateSubscription(subscriptionCtx context.Co
 		if event == nil {
 			continue
 		}
-		s.updateSubscriptionEvent(subID, event)
+		s.eventUpdater.UpdateSubscription(subID, event.GetData())
 	}
 
 	// In case there was an error we close the affected subscription.
 	if err != nil {
 		s.eventUpdater.CloseSubscription(subID)
 	}
-}
-
-func (s *subscriptionEventUpdater) updateEvent(event StreamEvent) {
-	enriched, ok := s.eventUpdater.(resolve.SubscriptionEventUpdater)
-	if !ok {
-		s.eventUpdater.Update(event.GetData())
-		return
-	}
-	enriched.UpdateEvent(resolveSubscriptionEvent(event))
-}
-
-func (s *subscriptionEventUpdater) updateSubscriptionEvent(id resolve.SubscriptionIdentifier, event StreamEvent) {
-	enriched, ok := s.eventUpdater.(resolve.SubscriptionEventUpdater)
-	if !ok {
-		s.eventUpdater.UpdateSubscription(id, event.GetData())
-		return
-	}
-	enriched.UpdateSubscriptionEvent(id, resolveSubscriptionEvent(event))
-}
-
-func resolveSubscriptionEvent(event StreamEvent) resolve.SubscriptionEvent {
-	result := resolve.SubscriptionEvent{Data: event.GetData()}
-	metadataProvider, ok := event.(StreamEventMetadataProvider)
-	if !ok {
-		return result
-	}
-	metadata := metadataProvider.StreamEventMetadata()
-	result.ID = metadata.ID
-	result.SourceType = metadata.SourceType
-	result.SourceName = metadata.SourceName
-	result.SourceID = metadata.SourceID
-	return result
 }
 
 func (s *subscriptionEventUpdater) recoverPanic(subID resolve.SubscriptionIdentifier, err any) {

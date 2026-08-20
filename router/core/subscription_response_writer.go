@@ -61,6 +61,7 @@ type HttpFlushWriter struct {
 	telemetry       subscriptionTelemetryContext
 	requestContext  context.Context
 	disconnect      *subscriptionDisconnectTracker
+	delivery        *subscriptionDeliveryTracker
 	// apolloSubscriptionMultipartPrintBoundary if set to true will send the multipart boundary at the end of the message to allow
 	// misbehaving client (like apollo client) to read the message just sent before the next one or the heartbeat
 	apolloSubscriptionMultipartPrintBoundary bool
@@ -103,7 +104,13 @@ func (f *HttpFlushWriter) Complete() {
 
 func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
 	if err = f.ctx.Err(); err != nil {
-		return 0, wrapSubscriptionWriteError("buffer", err)
+		err = wrapSubscriptionWriteError("buffer", err)
+		if f.sse {
+			f.delivery.observe(f.telemetry, p, 0, err)
+			initiator, reason := disconnectReasonFromWriteError(err)
+			f.disconnect.disconnect(initiator, reason, err)
+		}
+		return 0, err
 	}
 
 	return f.buf.Write(p)
@@ -145,7 +152,7 @@ func (f *HttpFlushWriter) Error(data []byte) {
 		return
 	}
 	_, _ = f.buf.Write(data)
-	err := f.Flush()
+	err := f.flush("terminal_error")
 	if f.sse {
 		observeSubscriptionFrame(f.stats, f.logger, f.telemetry, "terminal_error", err)
 		if err != nil {
@@ -156,17 +163,6 @@ func (f *HttpFlushWriter) Error(data []byte) {
 		}
 	}
 	f.cancel()
-}
-
-func (f *HttpFlushWriter) ReportSubscriptionDelivery(report resolve.SubscriptionDeliveryReport) {
-	if !f.sse {
-		return
-	}
-	observeSubscriptionDelivery(f.stats, f.logger, f.telemetry, report)
-	if report.Err != nil {
-		initiator, reason := disconnectReasonFromWriteError(report.Err)
-		f.disconnect.disconnect(initiator, reason, report.Err)
-	}
 }
 
 func (f *HttpFlushWriter) subscriptionRequestEnded() {
@@ -181,7 +177,17 @@ func (f *HttpFlushWriter) subscriptionRequestEnded() {
 }
 
 func (f *HttpFlushWriter) Flush() (err error) {
+	return f.flush("next")
+}
+
+func (f *HttpFlushWriter) flush(frameType string) (err error) {
 	if err = f.ctx.Err(); err != nil {
+		if f.sse && frameType == "next" {
+			err = wrapSubscriptionWriteError("buffer", err)
+			f.delivery.observe(f.telemetry, f.buf.Bytes(), 0, err)
+			initiator, reason := disconnectReasonFromWriteError(err)
+			f.disconnect.disconnect(initiator, reason, err)
+		}
 		return err
 	}
 
@@ -219,10 +225,18 @@ func (f *HttpFlushWriter) Flush() (err error) {
 
 	full := flushBreak + string(resp) + separation
 	if f.sse {
+		started := time.Now()
 		err = f.writeAndFlushSSE(func() error {
 			_, writeErr := f.writer.Write([]byte(full))
 			return writeErr
 		})
+		if frameType == "next" {
+			f.delivery.observe(f.telemetry, []byte(full), time.Since(started), err)
+			if err != nil {
+				initiator, reason := disconnectReasonFromWriteError(err)
+				f.disconnect.disconnect(initiator, reason, err)
+			}
+		}
 	} else {
 		_, err = f.writer.Write([]byte(full))
 		if err == nil {
@@ -288,6 +302,7 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 	}
 	if flushWriter.sse {
 		flushWriter.disconnect = newSubscriptionDisconnectTracker(flushWriter.stats, flushWriter.logger, flushWriter.telemetry)
+		flushWriter.delivery = newSubscriptionDeliveryTracker(flushWriter.stats, flushWriter.logger, "")
 	}
 
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())

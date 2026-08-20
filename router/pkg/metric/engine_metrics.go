@@ -60,7 +60,13 @@ func (i *engineInstruments) toList() []otelmetric.Observable {
 		result = append(result, i.messagesSent)
 	}
 	if i.deliveryAttempts != nil {
-		result = append(result, i.deliveryAttempts, i.deliveryFailures, i.disconnects)
+		result = append(result, i.deliveryAttempts)
+	}
+	if i.deliveryFailures != nil {
+		result = append(result, i.deliveryFailures)
+	}
+	if i.disconnects != nil {
+		result = append(result, i.disconnects)
 	}
 
 	if i.resolversMaxConcurrent != nil {

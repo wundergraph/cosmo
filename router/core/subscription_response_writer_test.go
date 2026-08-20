@@ -11,7 +11,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	zapobserver "go.uber.org/zap/zaptest/observer"
 )
 
 type deadlineRecorder struct {
@@ -202,6 +206,38 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		flushErr := errors.New("flush failed")
 		recorder.flushErr = flushErr
 		require.ErrorIs(t, writer.Heartbeat(), flushErr)
+	})
+
+	t.Run("observes a failed SSE event at the transport writer", func(t *testing.T) {
+		recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+		logCore, logs := zapobserver.New(zapcore.DebugLevel)
+		stats := statistics.NewEngineStats(t.Context(), zap.NewNop(), false)
+
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{
+			Logger: zap.New(logCore),
+			Stats:  stats,
+			Telemetry: subscriptionTelemetryContext{
+				transport:     subscriptionTransportSSE,
+				requestID:     "request-1",
+				operationName: "ProductUpdated",
+			},
+		})
+		require.NoError(t, err)
+		recorder.flushErr = context.DeadlineExceeded
+
+		_, err = writer.Write([]byte(`{"data":{"productUpdated":{"id":"1"}}}`))
+		require.NoError(t, err)
+		require.ErrorIs(t, writer.Flush(), context.DeadlineExceeded)
+
+		require.Len(t, stats.GetReport().SubscriptionObservations, 4)
+		require.Equal(t, 1, logs.FilterMessage("Subscription event delivery failed").Len())
+		fields := logs.FilterMessage("Subscription event delivery failed").All()[0].ContextMap()
+		require.Equal(t, "sse", fields["transport"])
+		require.Equal(t, uint64(1), fields["delivery_sequence"])
+		require.Equal(t, "flush", fields["failure_stage"])
+		require.Equal(t, "timeout", fields["failure_reason"])
 	})
 
 	t.Run("propagates an SSE deadline error", func(t *testing.T) {
