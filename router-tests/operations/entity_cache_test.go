@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -296,6 +297,111 @@ func TestEntityCacheInMemory(t *testing.T) {
 				"a failed subgraph response must not be cached however cacheable it claims to be")
 		})
 	})
+	t.Run("the entities a batch did answer are cached even when one of them is null", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: entityCacheOptions(time.Minute),
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{
+					// Employee 1 comes back as a null entity: the shape a subgraph
+					// answers with for a reference it holds no row for, and one it
+					// is free to send without an accompanying error.
+					Middleware: nullEntitiesMiddleware(t, "public, max-age=60", 1),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// The batch carrying the null. currentMood is non null in the schema, so
+			// employee 1 nulls out of the response while the other nine are answered
+			// in full.
+			batch, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: `query { employees { id currentMood } }`})
+			require.NoError(t, err)
+			require.Contains(t, batch.Body, `"currentMood":"HAPPY"`)
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+
+			// Operations is employees 4 and 11, both of them entities the batch above
+			// answered, and neither of them the one that came back null. Their batch
+			// is a full hit only if the null next to them did not throw their entries
+			// away with it.
+			ops := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { teammates(team: OPERATIONS) { id currentMood } }`})
+			require.Contains(t, ops.Body, `"currentMood":"HAPPY"`)
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(),
+				"the entities the subgraph did answer must be cached even though one of their batch was null")
+
+			// And the null itself was not cached, which is what makes the hit above a
+			// partial write rather than the whole batch having been stored null and
+			// all.
+			repeat, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: `query { employees { id currentMood } }`})
+			require.NoError(t, err)
+			require.Equal(t, batch.Body, repeat.Body)
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(),
+				"a batch containing an entity that was never cached must go back to the subgraph")
+		})
+	})
+}
+
+// nullEntitiesMiddleware answers an entity fetch itself, with a null in place of
+// every entity whose id is in nullIDs and a whole object for all the rest. It
+// replies rather than delegating because the demo subgraphs resolve every
+// employee they are asked for, and a dangling reference is the one thing they
+// cannot be made to produce. The reply keeps the length and the order of the
+// representations it was sent, as the federation spec requires and as the engine
+// relies on to line an entity up with its cache key.
+func nullEntitiesMiddleware(t *testing.T, cacheControl string, nullIDs ...int) func(http.Handler) http.Handler {
+	t.Helper()
+
+	null := make(map[int]struct{}, len(nullIDs))
+	for _, id := range nullIDs {
+		null[id] = struct{}{}
+	}
+
+	return func(http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var req struct {
+				Variables struct {
+					Representations []struct {
+						ID int `json:"id"`
+					} `json:"representations"`
+				} `json:"variables"`
+			}
+			// Reported rather than required: this runs on the server's goroutine,
+			// where a failed require would abandon the request half answered and
+			// leave the test hanging on a reply that never comes.
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Errorf("decoding the subgraph request: %v", err)
+				http.Error(w, "bad request", http.StatusBadRequest)
+				return
+			}
+			if len(req.Variables.Representations) == 0 {
+				t.Errorf("expected an entity fetch, got a request with no representations")
+				http.Error(w, "not an entity fetch", http.StatusBadRequest)
+				return
+			}
+
+			entities := make([]json.RawMessage, len(req.Variables.Representations))
+			for i, representation := range req.Variables.Representations {
+				if _, ok := null[representation.ID]; ok {
+					entities[i] = json.RawMessage(`null`)
+					continue
+				}
+				entities[i] = json.RawMessage(`{"currentMood":"HAPPY"}`)
+			}
+
+			// A fixed mood rather than the subgraph's own, so that a body compared
+			// across two requests is comparing what the cache did and not what the
+			// subgraph felt like answering.
+			body, err := json.Marshal(map[string]any{"data": map[string]any{"_entities": entities}})
+			if err != nil {
+				t.Errorf("encoding the subgraph response: %v", err)
+				http.Error(w, "internal error", http.StatusInternalServerError)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", cacheControl)
+			_, _ = w.Write(body)
+		})
+	}
 }
 
 // entityCacheOptions enables the entity cache on the in memory provider. ttl is
