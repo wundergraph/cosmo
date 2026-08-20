@@ -2422,6 +2422,8 @@ security:
   operation_name_length_limit: 1024
 ```
 
+Both complexity modes calculate and expose operation complexity. `measure` reports the values without rejecting requests. `enforce` reports the same values and rejects requests that exceed enabled limits. The calculated values and cache status can be seen on the traces or added to router access logs with [operation complexity expressions](/router/access-logs#logging-operation-complexity).
+
 <Warning>
   Query Depth is now deprecated. We recommend using the
   `security.complexity_calculation_cache` and `security.complexity_limits`

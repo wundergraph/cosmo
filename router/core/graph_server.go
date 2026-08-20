@@ -896,6 +896,9 @@ func (s *graphMux) waitForCaches() {
 	if s.operationHashCache != nil {
 		s.operationHashCache.Wait()
 	}
+	if s.complexityCalculationCache != nil {
+		s.complexityCalculationCache.Wait()
+	}
 }
 
 // configureCacheMetrics sets up the cache metrics for this mux if enabled in the config.
