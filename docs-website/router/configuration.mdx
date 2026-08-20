@@ -2288,6 +2288,7 @@ rate_limit:
 
 <Warning>
   Excluding subscriptions from rate limiting can expose the router and your subgraphs to a denial-of-service risk, as an unrestricted client can open subscriptions that trigger unbounded subgraph fetches. Prefer a `key_suffix_expression` based on request headers where possible.
+  If subscriptions are not excluded, every subgraph request done while the subscription is active will be subject to the rate limiting.
 </Warning>
 
 ## Subgraph Data Propagation
