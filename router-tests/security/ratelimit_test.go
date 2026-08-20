@@ -1088,19 +1088,19 @@ func TestRateLimitExcludeSubscriptions(t *testing.T) {
 		}
 	}
 
-	cleanupKey := func(t *testing.T, key string) {
-		t.Cleanup(func() {
+	cleanupKey := func(t *testing.T, key string) func() {
+		return func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), key)
-			require.NoError(t, del.Err())
-		})
+			t.Error(del.Err())
+		}
 	}
 
 	t.Run("subscription events are rate limited when exclude_subscriptions is disabled", func(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
-		cleanupKey(t, key)
+		t.Cleanup(cleanupKey(t, key))
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
@@ -1150,7 +1150,7 @@ func TestRateLimitExcludeSubscriptions(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
-		cleanupKey(t, key)
+		t.Cleanup(cleanupKey(t, key))
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
@@ -1204,7 +1204,7 @@ func TestRateLimitExcludeSubscriptions(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
-		cleanupKey(t, key)
+		t.Cleanup(cleanupKey(t, key))
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
@@ -1250,7 +1250,7 @@ func TestRateLimitExcludeSubscriptions(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
-		cleanupKey(t, key)
+		t.Cleanup(cleanupKey(t, key))
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
