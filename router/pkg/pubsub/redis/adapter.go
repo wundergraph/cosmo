@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
@@ -23,13 +22,7 @@ const (
 // Ensure ProviderAdapter implements ProviderSubscriptionHooks
 var _ datasource.Adapter = (*ProviderAdapter)(nil)
 
-type redisAdapterOptions struct {
-	urls           []string
-	clusterEnabled bool
-	pool           *config.RedisConnectionPoolConfiguration
-}
-
-func NewProviderAdapter(ctx context.Context, logger *zap.Logger, redisOpts redisAdapterOptions, opts datasource.ProviderOpts) datasource.Adapter {
+func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, clusterEnabled bool, opts datasource.ProviderOpts) datasource.Adapter {
 	ctx, cancel := context.WithCancel(ctx)
 	if logger == nil {
 		logger = zap.NewNop()
@@ -46,9 +39,8 @@ func NewProviderAdapter(ctx context.Context, logger *zap.Logger, redisOpts redis
 		ctx:               ctx,
 		cancel:            cancel,
 		logger:            logger,
-		urls:              redisOpts.urls,
-		clusterEnabled:    redisOpts.clusterEnabled,
-		pool:              redisOpts.pool,
+		urls:              urls,
+		clusterEnabled:    clusterEnabled,
 		streamMetricStore: store,
 		skipUnavailable:   opts.SkipUnavailableProviders,
 	}
@@ -62,7 +54,6 @@ type ProviderAdapter struct {
 	closeWg           sync.WaitGroup
 	urls              []string
 	clusterEnabled    bool
-	pool              *config.RedisConnectionPoolConfiguration
 	streamMetricStore metric.StreamMetricStore
 	// skipUnavailable mirrors events.skip_unavailable_providers. When true, Startup keeps
 	// the resilient client even if the initial connection check fails, so go-redis can
@@ -80,7 +71,6 @@ func (p *ProviderAdapter) Startup(ctx context.Context) error {
 		Logger:         p.logger,
 		URLs:           p.urls,
 		ClusterEnabled: p.clusterEnabled,
-		Pool:           p.pool,
 		Context:        pingCtx,
 	})
 	if err != nil {

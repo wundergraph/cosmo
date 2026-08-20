@@ -112,7 +112,7 @@ events:
 
 </CodeGroup>
 
-The provider also accepts an optional `pool` block to tune the connection pool the router keeps to Redis. See [Redis Connection Pool](/router/configuration#redis-connection-pool).
+Connection and pool settings are passed in the URL query string, e.g. `redis://localhost:6379/?pool_size=20`. See [Redis Connection URLs](/router/configuration#redis-connection-urls).
 
 ## Example Query
 

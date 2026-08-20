@@ -11,9 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
 )
 
@@ -21,18 +19,18 @@ import (
 // show pool contention, connection churn, or round-trip cost. Point them at a Redis with
 // TEST_REDIS_URL; they skip when nothing is listening, so `make test` stays green without infra.
 //
-//	go test ./internal/rediscloser/ -run TestPoolUnderSaturation -v
-//	go test ./internal/rediscloser/ -run XXX -bench BenchmarkPool -benchtime 3s
+//	go test ./internal/rediscloser/ -run TestURLConfiguredPoolUnderSaturation -v
+//	go test ./internal/rediscloser/ -run XXX -bench BenchmarkURLConfiguredPoolSize -benchtime 3s
 
-const defaultBenchRedisURL = "redis://localhost:6379"
+const defaultTestRedisURL = "redis://localhost:6379"
 
-// benchRedisURL returns the Redis URL to test against, skipping the caller when it is unreachable.
-func benchRedisURL(tb testing.TB) string {
+// testRedisURL returns the base Redis URL to test against, skipping the caller when unreachable.
+func testRedisURL(tb testing.TB) string {
 	tb.Helper()
 
 	raw := os.Getenv("TEST_REDIS_URL")
 	if raw == "" {
-		raw = defaultBenchRedisURL
+		raw = defaultTestRedisURL
 	}
 
 	parsed, err := url.Parse(raw)
@@ -47,11 +45,22 @@ func benchRedisURL(tb testing.TB) string {
 	return raw
 }
 
-// TestPoolUnderSaturation drives far more concurrent commands than the pool has connections, and
-// asserts what would break a router under load: commands queue rather than fail, the pool stays
-// within its configured size, and it does not churn connections while busy.
-func TestPoolUnderSaturation(t *testing.T) {
-	redisURL := benchRedisURL(t)
+// withParams appends query parameters to the base test URL.
+func withParams(tb testing.TB, base, params string) string {
+	tb.Helper()
+
+	sep := "?"
+	if parsed, err := url.Parse(base); err == nil && parsed.RawQuery != "" {
+		sep = "&"
+	}
+	return base + sep + params
+}
+
+// TestURLConfiguredPoolUnderSaturation drives far more concurrent commands than the pool has
+// connections, with the pool sized purely from the URL query string. It asserts the parameters
+// really govern the pool at runtime and that saturation queues commands instead of failing them.
+func TestURLConfiguredPoolUnderSaturation(t *testing.T) {
+	redisURL := testRedisURL(t)
 
 	const (
 		poolSize          = 4
@@ -61,12 +70,9 @@ func TestPoolUnderSaturation(t *testing.T) {
 
 	client, err := NewRedisCloser(&RedisCloserOptions{
 		Logger: zap.NewNop(),
-		URLs:   []string{redisURL},
-		Pool: &config.RedisConnectionPoolConfiguration{
-			Size: poolSize,
-			// Generous for a localhost round trip: a timeout here would mean dropped commands.
-			Timeout: 10 * time.Second,
-		},
+		// pool_timeout is generous for a localhost round trip: a timeout here would mean commands
+		// are being dropped rather than queued.
+		URLs: []string{withParams(t, redisURL, fmt.Sprintf("pool_size=%d&pool_timeout=10s", poolSize))},
 	})
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = client.Close() })
@@ -75,7 +81,7 @@ func TestPoolUnderSaturation(t *testing.T) {
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		for i := 0; i < goroutines; i++ {
+		for i := range goroutines {
 			client.Del(ctx, fmt.Sprintf("%s%d", keyPrefix, i))
 		}
 	})
@@ -91,13 +97,13 @@ func TestPoolUnderSaturation(t *testing.T) {
 	start := time.Now()
 
 	var wg sync.WaitGroup
-	for worker := 0; worker < goroutines; worker++ {
+	for worker := range goroutines {
 		wg.Add(1)
-		go func(worker int) {
+		go func() {
 			defer wg.Done()
 
 			key := fmt.Sprintf("%s%d", keyPrefix, worker)
-			for i := 0; i < commandsPerWorker; i++ {
+			for i := range commandsPerWorker {
 				if err := client.Set(ctx, key, i, time.Minute).Err(); err != nil {
 					failures.Add(1)
 					return
@@ -110,7 +116,7 @@ func TestPoolUnderSaturation(t *testing.T) {
 					maxObserved.Store(total)
 				}
 			}
-		}(worker)
+		}()
 	}
 	wg.Wait()
 
@@ -126,9 +132,8 @@ func TestPoolUnderSaturation(t *testing.T) {
 	require.Zero(t, failures.Load(), "commands must queue for a connection, not fail, when the pool is saturated")
 	require.Zero(t, stats.Timeouts, "no command should have given up waiting for a connection")
 
-	// With MaxActiveConns unset, PoolSize is the cap for pooled connections, so exceeding it would
-	// mean the setting never reached the client.
-	require.LessOrEqual(t, int(maxObserved.Load()), poolSize, "pool must not grow past the configured size")
+	// The URL said pool_size=4, so exceeding it would mean the parameter never reached the pool.
+	require.LessOrEqual(t, int(maxObserved.Load()), poolSize, "pool_size from the URL must cap the pool")
 
 	// A miss ratio anywhere near 1 would mean the pool reconnects per command.
 	require.Greater(t, stats.Hits, uint32(totalCommands/2),
@@ -137,22 +142,16 @@ func TestPoolUnderSaturation(t *testing.T) {
 		"the pool should not churn connections while it is continuously busy")
 }
 
-// TestPoolMaxActiveConnsIsEnforced checks the hard cap operators reach for when Redis has a
-// maxclients limit to respect. Size equals the cap here, which is the configuration we recommend;
-// see TestPoolMaxActiveConnsBelowSizeFailsFast for what happens when it is not.
-func TestPoolMaxActiveConnsIsEnforced(t *testing.T) {
-	redisURL := benchRedisURL(t)
-
-	const maxActive = 3
+// TestURLConfiguredMaxActiveConnsFailsFast documents an asymmetry worth knowing before reaching for
+// max_active_conns. pool_size is a turnstile that makes commands wait up to pool_timeout, but
+// max_active_conns is checked when a connection is needed and returns "connection pool exhausted"
+// immediately, so setting it below pool_size makes the excess commands fail rather than queue.
+func TestURLConfiguredMaxActiveConnsFailsFast(t *testing.T) {
+	redisURL := testRedisURL(t)
 
 	client, err := NewRedisCloser(&RedisCloserOptions{
 		Logger: zap.NewNop(),
-		URLs:   []string{redisURL},
-		Pool: &config.RedisConnectionPoolConfiguration{
-			Size:           maxActive,
-			MaxActiveConns: maxActive,
-			Timeout:        10 * time.Second,
-		},
+		URLs:   []string{withParams(t, redisURL, "pool_size=32&max_active_conns=2&pool_timeout=10s")},
 	})
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = client.Close() })
@@ -160,76 +159,44 @@ func TestPoolMaxActiveConnsIsEnforced(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	var maxObserved atomic.Int32
-	var failures atomic.Int64
+	var exhausted atomic.Int64
 	var wg sync.WaitGroup
-	for worker := 0; worker < 32; worker++ {
+	for range 32 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for i := 0; i < 50; i++ {
+			for range 50 {
 				if err := client.Ping(ctx).Err(); err != nil {
-					failures.Add(1)
-					return
-				}
-				if total := int32(client.PoolStats().TotalConns); total > maxObserved.Load() {
-					maxObserved.Store(total)
+					require.ErrorContains(t, err, "connection pool exhausted")
+					exhausted.Add(1)
 				}
 			}
 		}()
 	}
 	wg.Wait()
 
-	require.Zero(t, failures.Load(), "commands must queue rather than fail when size equals the cap")
-	require.LessOrEqual(t, int(maxObserved.Load()), maxActive,
-		"max_active_conns must cap the total number of connections")
-	require.Zero(t, client.PoolStats().Timeouts)
+	require.Positive(t, exhausted.Load(),
+		"max_active_conns below pool_size is expected to reject commands rather than queue them")
 }
 
-// TestPoolMaxActiveConns pins down an easily misconfigured go-redis behaviour.
-// Size is a turnstile that makes commands wait up to Timeout, but MaxActiveConns is checked when a
-// connection is needed and returns "connection pool exhausted" immediately. Setting it below Size
-// admits more commands than there are connections for, which is why NewRedisCloser warns.
-func TestPoolMaxActiveConns(t *testing.T) {
-	redisURL := benchRedisURL(t)
+// BenchmarkURLConfiguredPoolSize measures GET throughput across pool sizes set in the URL, with
+// many more goroutines than connections. It backs the sizing guidance in the docs.
+func BenchmarkURLConfiguredPoolSize(b *testing.B) {
+	redisURL := testRedisURL(b)
 
-	client, err := NewRedisCloser(&RedisCloserOptions{
-		Logger: zap.NewNop(),
-		URLs:   []string{redisURL},
-		Pool: &config.RedisConnectionPoolConfiguration{
-			Size:           32,
-			MaxActiveConns: 2,
-			Timeout:        10 * time.Second,
-		},
-	})
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = client.Close() })
-
-	options := client.(*redis.Client).Options()
-
-	require.Equal(t, options.MaxActiveConns, options.PoolSize)
-}
-
-// BenchmarkPoolSize measures GET throughput across pool sizes with many more goroutines than
-// connections, to catch a pool that does not scale and to give a reference point when tuning.
-func BenchmarkPoolSize(b *testing.B) {
-	redisURL := benchRedisURL(b)
-
-	// 0 means "leave unset", i.e. the go-redis default of 10 * GOMAXPROCS.
+	// An empty params string leaves the go-redis default of 10 * GOMAXPROCS.
 	for _, poolSize := range []int{1, 4, 16, 0, 128} {
 		name := fmt.Sprintf("pool_size=%d", poolSize)
+		params := fmt.Sprintf("pool_size=%d&pool_timeout=30s", poolSize)
 		if poolSize == 0 {
 			name = "pool_size=default"
+			params = "pool_timeout=30s"
 		}
 
 		b.Run(name, func(b *testing.B) {
 			client, err := NewRedisCloser(&RedisCloserOptions{
 				Logger: zap.NewNop(),
-				URLs:   []string{redisURL},
-				Pool: &config.RedisConnectionPoolConfiguration{
-					Size:    poolSize,
-					Timeout: 30 * time.Second,
-				},
+				URLs:   []string{withParams(b, redisURL, params)},
 			})
 			require.NoError(b, err)
 			defer func() { _ = client.Close() }()

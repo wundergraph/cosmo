@@ -391,16 +391,7 @@
     "Storage": {
       "URLs": null,
       "ClusterEnabled": false,
-      "KeyPrefix": "cosmo_rate_limit",
-      "Pool": {
-        "Size": 0,
-        "MinIdleConns": 0,
-        "MaxIdleConns": 0,
-        "MaxActiveConns": 0,
-        "Timeout": 0,
-        "ConnMaxIdleTime": 0,
-        "ConnMaxLifetime": 0
-      }
+      "KeyPrefix": "cosmo_rate_limit"
     },
     "Debug": false,
     "KeySuffixExpression": "",

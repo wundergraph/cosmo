@@ -33,7 +33,6 @@ func NewRedisClient(opts *RedisOptions) (KVClient, error) {
 		Logger:         opts.Logger,
 		URLs:           opts.StorageConfig.URLs,
 		ClusterEnabled: opts.StorageConfig.ClusterEnabled,
-		Pool:           &opts.StorageConfig.Pool,
 	})
 
 	rclient := &redisClient{

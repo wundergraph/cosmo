@@ -922,7 +922,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.redisClient, err = rd.NewRedisCloser(&rd.RedisCloserOptions{
 			URLs:           r.rateLimit.Storage.URLs,
 			ClusterEnabled: r.rateLimit.Storage.ClusterEnabled,
-			Pool:           &r.rateLimit.Storage.Pool,
 			Logger:         r.logger,
 		})
 		if err != nil {
