@@ -9,10 +9,11 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
+	"go.uber.org/zap/zapcore"
+
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
-	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -479,8 +480,9 @@ type EngineExecutionConfiguration struct {
 	// Deprecated: EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
 	EnableExecutionPlanCacheResponseHeader bool `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
 
-	MaxConcurrentResolvers                           int           `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
-	EnableNetPoll                                    bool          `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
+	MaxConcurrentResolvers int  `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
+	EnableNetPoll          bool `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
+
 	ExecutionPlanCacheSize                           int64         `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	SlowPlanCacheSize                                int64         `envDefault:"300" env:"ENGINE_SLOW_PLAN_CACHE_SIZE" yaml:"slow_plan_cache_size,omitempty"`
 	SlowPlanCacheThreshold                           time.Duration `envDefault:"100ms" env:"ENGINE_SLOW_PLAN_CACHE_THRESHOLD" yaml:"slow_plan_cache_threshold,omitempty"`
@@ -499,6 +501,13 @@ type EngineExecutionConfiguration struct {
 	EnableRequireFetchReasons                        bool          `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
 	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
 	EnableDefer                                      bool          `envDefault:"false" env:"ENGINE_ENABLE_DEFER" yaml:"enable_defer"`
+
+	// EnableMultiFetch merges entity fetches to the same subgraph that execute
+	// in the same wave into a single batched request with aliased _entities fields.
+	EnableMultiFetch bool `envDefault:"false" env:"ENGINE_ENABLE_MULTI_FETCH" yaml:"enable_multi_fetch"`
+	// EnableScheduleFetches replaces the legacy wave-based fetch organizers with the
+	// dependency-aware fetch scheduler (component-split, chain-inlined execution trees).
+	EnableScheduleFetches bool `envDefault:"false" env:"ENGINE_ENABLE_SCHEDULE_FETCHES" yaml:"enable_schedule_fetches"`
 
 	// Server-side WebSocket handler options (router accepting client connections)
 	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`
@@ -1373,6 +1382,16 @@ type MCPConfiguration struct {
 	// ResourceDocumentation is a URL to a human-readable page describing this MCP resource,
 	// its access policies, and how to get started. Included in RFC 9728 Protected Resource Metadata if set.
 	ResourceDocumentation string `yaml:"resource_documentation,omitempty" env:"MCP_RESOURCE_DOCUMENTATION"`
+	// OutputSchema configures MCP structured tool output (outputSchema + structuredContent).
+	OutputSchema MCPOutputSchemaConfiguration `yaml:"output_schema,omitempty"`
+}
+
+// MCPOutputSchemaConfiguration configures MCP structured tool output (spec revision 2025-06-18):
+// an output schema declared on operation tools and structured content on successful tool
+// results. A tool whose schema cannot be derived stays registered without an output schema.
+// Disabled by default because it increases tools/list and result payload sizes.
+type MCPOutputSchemaConfiguration struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"MCP_OUTPUT_SCHEMA_ENABLED"`
 }
 
 type MCPOAuthConfiguration struct {

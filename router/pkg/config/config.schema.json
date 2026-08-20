@@ -2782,6 +2782,18 @@
           "default": false,
           "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
         },
+        "output_schema": {
+          "type": "object",
+          "description": "Configuration for MCP structured tool output (MCP specification revision 2025-06-18).",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "When enabled, every tool generated from a GraphQL operation declares an output schema derived from the operation's selection set, and successful tool results additionally carry the response as structured content. This lets MCP clients know the response shape ahead of time and validate results, at the cost of larger tools/list payloads and roughly doubled tool result sizes, which consume more of the AI model's context window."
+            }
+          }
+        },
         "resource_documentation": {
           "type": "string",
           "description": "A URL to a human-readable page describing this MCP resource, its access policies, and how to get started. Included in the RFC 9728 Protected Resource Metadata response if set.",
@@ -3998,6 +4010,16 @@
           "type": "boolean",
           "description": "Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
           "default": true
+        },
+        "enable_multi_fetch": {
+          "type": "boolean",
+          "description": "Enables merging entity fetches to the same subgraph that execute in the same wave into a single batched request with aliased _entities fields. Merging reduces the number of subgraph requests.",
+          "default": false
+        },
+        "enable_schedule_fetches": {
+          "type": "boolean",
+          "description": "Enables the dependency-aware fetch scheduler, which organizes fetches into component-split, chain-inlined execution trees instead of the legacy wave-based structure.",
+          "default": false
         },
         "websocket_client_write_timeout": {
           "type": "string",
