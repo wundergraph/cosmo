@@ -1196,8 +1196,8 @@ func (r *Router) setupEntityCache(ctx context.Context) error {
 	// one error at one startup. The config schema already refuses a ttl below 1s
 	// in the YAML, but that leaves the env override and any embedder building
 	// the configuration itself, and this catches both.
-	if r.entityCacheConfig.TTL <= 0 {
-		return fmt.Errorf("entity cache is enabled but its ttl is %s, which must be a positive duration", r.entityCacheConfig.TTL)
+	if r.entityCacheConfig.FallbackTTL <= 0 {
+		return fmt.Errorf("entity cache is enabled but its fallback_ttl is %s, which must be a positive duration", r.entityCacheConfig.FallbackTTL)
 	}
 
 	// An empty provider is redis, which is what the field defaults to and what a
@@ -1238,7 +1238,7 @@ func (r *Router) setupInMemoryEntityCache() error {
 	// keyspace with nothing, the adapter has no prefix to apply, and logging one
 	// would say that it did.
 	r.logger.Info("Entity cache enabled",
-		zap.Duration("ttl", r.entityCacheConfig.TTL),
+		zap.Duration("fallback_ttl", r.entityCacheConfig.FallbackTTL),
 		zap.String("storage_provider", string(config.EntityCacheStorageProviderMemory)),
 		zap.Int64("max_entries", r.entityCacheConfig.Storage.MaxEntries),
 	)
@@ -1287,7 +1287,7 @@ func (r *Router) setupRedisEntityCache(ctx context.Context) error {
 	r.entityCache = cache
 
 	r.logger.Info("Entity cache enabled",
-		zap.Duration("ttl", r.entityCacheConfig.TTL),
+		zap.Duration("fallback_ttl", r.entityCacheConfig.FallbackTTL),
 		zap.String("storage_provider", string(config.EntityCacheStorageProviderRedis)),
 		zap.String("key_prefix", r.entityCacheConfig.KeyPrefix),
 		zap.String("storage_provider_id", providerID),

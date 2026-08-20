@@ -1810,7 +1810,7 @@ func (s *graphServer) buildGraphMux(
 
 	if s.entityCache != nil {
 		handlerOpts.EntityCache = s.entityCache
-		handlerOpts.EntityCacheTTL = s.entityCacheConfig.TTL
+		handlerOpts.EntityCacheFallbackTTL = s.entityCacheConfig.FallbackTTL
 	}
 
 	if s.redisClient != nil {

@@ -439,7 +439,7 @@
   },
   "EntityCache": {
     "Enabled": false,
-    "TTL": 300000000000,
+    "FallbackTTL": 300000000000,
     "KeyPrefix": "cosmo_entity_cache:",
     "Storage": {
       "Provider": "redis",

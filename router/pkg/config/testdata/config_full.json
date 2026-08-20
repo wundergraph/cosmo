@@ -865,7 +865,7 @@
   },
   "EntityCache": {
     "Enabled": true,
-    "TTL": 30000000000,
+    "FallbackTTL": 30000000000,
     "KeyPrefix": "entity_cache_test:",
     "Storage": {
       "Provider": "redis",

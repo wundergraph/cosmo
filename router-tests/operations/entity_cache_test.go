@@ -68,8 +68,8 @@ func TestEntityCacheInMemory(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithEntityCache(&config.EntityCacheConfiguration{
-					Enabled: false,
-					TTL:     time.Minute,
+					Enabled:     false,
+					FallbackTTL: time.Minute,
 					Storage: config.EntityCacheStorageConfig{
 						Provider:   config.EntityCacheStorageProviderMemory,
 						MaxEntries: 1000,
@@ -359,8 +359,8 @@ func fixedResponseMiddleware(cacheControl, body string) func(http.Handler) http.
 func entityCacheOptions(ttl time.Duration) []core.Option {
 	return []core.Option{
 		core.WithEntityCache(&config.EntityCacheConfiguration{
-			Enabled: true,
-			TTL:     ttl,
+			Enabled:     true,
+			FallbackTTL: ttl,
 			// Set explicitly. An empty provider means redis, which would need a
 			// server these tests deliberately do not have.
 			Storage: config.EntityCacheStorageConfig{

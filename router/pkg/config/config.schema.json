@@ -3358,7 +3358,7 @@
     },
     "entity_cache": {
       "type": "object",
-      "description": "Caches federation entity fetches, either in Redis or in this router's own memory. An entity is cached per selection set, so asking for different fields of the same entity does not share a cache entry. A batch of entities is served from the cache only when every entity in it is present, otherwise the request is sent to the subgraph unchanged. Only subgraph responses whose Cache-Control header asks to be cached are stored.",
+      "description": "Caches federation entity fetches, either in Redis or in this router's own memory. An entity is cached per selection set, so asking for different fields of the same entity does not share a cache entry. A batch of entities is served from the cache only when every entity in it is present, otherwise the request is sent to the subgraph unchanged. Only subgraph responses whose Cache-Control header asks to be cached are stored. NOTE: This option is experimental and may change in future versions.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
@@ -3366,10 +3366,10 @@
           "description": "Enable entity caching.",
           "default": false
         },
-        "ttl": {
+        "fallback_ttl": {
           "type": "string",
           "format": "go-duration",
-          "description": "How long an entity is kept when the subgraph response sends Cache-Control: public but does not say for how long. A subgraph that sends max-age or s-maxage gets the last word either way, including refusing with no-store, or with an unqualified no-cache or private. A subgraph response with no Cache-Control header is never cached, whatever this is set to. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
+          "description": "How long an entity is kept when the subgraph response sends Cache-Control: public but does not say for how long. A subgraph that sends max-age or s-maxage gets the last word either way, including refusing with no-store, no-cache or private. A subgraph response with no Cache-Control header is never cached, whatever this is set to. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
           "default": "5m",
           "duration": {
             "minimum": "1s"

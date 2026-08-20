@@ -92,8 +92,8 @@ type HandlerOptions struct {
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
 
-	EntityCache    entitycaching.Cache
-	EntityCacheTTL time.Duration
+	EntityCache            entitycaching.Cache
+	EntityCacheFallbackTTL time.Duration
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -117,7 +117,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
 		headerPropagation:                        opts.HeaderPropagation,
 		entityCacheStore:                         opts.EntityCache,
-		entityCacheTTL:                           opts.EntityCacheTTL,
+		entityCacheFallbackTTL:                   opts.EntityCacheFallbackTTL,
 		entityCacheErrorHandler:                  newEntityCacheErrorHandler(opts.Log),
 	}
 	return graphQLHandler
@@ -171,7 +171,7 @@ type GraphQLHandler struct {
 	engineLoaderHooks        resolve.LoaderHooks
 	headerPropagation        *HeaderPropagation
 	entityCacheStore         entitycaching.Cache
-	entityCacheTTL           time.Duration
+	entityCacheFallbackTTL   time.Duration
 	entityCacheErrorHandler  func(error)
 
 	enableCacheResponseHeaders      bool
@@ -225,7 +225,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	resolveCtx = h.configureRateLimiting(resolveCtx)
 	if h.entityCacheStore != nil {
-		resolveCtx.SetEntityCache(h.entityCacheStore, h.entityCacheTTL, h.entityCacheErrorHandler)
+		resolveCtx.SetEntityCache(h.entityCacheStore, h.entityCacheFallbackTTL, h.entityCacheErrorHandler)
 	}
 	if reqCtx.customFieldValueRenderer != nil {
 		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)

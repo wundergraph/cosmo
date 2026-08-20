@@ -538,7 +538,7 @@ storage_providers:
 
 entity_cache:
   enabled: true
-  ttl: 30s
+  fallback_ttl: 30s
   key_prefix: 'entity_cache_test:'
   storage:
     provider: 'redis'
