@@ -180,4 +180,6 @@ require (
 // Remember you can use Go workspaces to avoid using replace directives in multiple go.mod files
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
-// replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+// Temporary preview dependency for https://github.com/wundergraph/graphql-go-tools/pull/1640.
+// Remove this replacement after the delivery reporting API is released upstream.
+replace github.com/wundergraph/graphql-go-tools/v2 => github.com/mwisner/graphql-go-tools/v2 v2.16.0-subscription-delivery-diagnostics.1

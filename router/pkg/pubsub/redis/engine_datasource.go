@@ -15,7 +15,15 @@ import (
 )
 
 type Event struct {
-	evt *MutableEvent
+	evt      *MutableEvent
+	metadata datasource.EventMetadata
+}
+
+func (e *Event) StreamEventMetadata() datasource.EventMetadata {
+	if e.metadata.ID == "" && e.evt != nil {
+		return e.evt.metadata
+	}
+	return e.metadata
 }
 
 func (e *Event) GetData() []byte {
@@ -26,12 +34,19 @@ func (e *Event) GetData() []byte {
 }
 
 func (e *Event) Clone() datasource.MutableStreamEvent {
-	return e.evt.Clone()
+	clone, _ := e.evt.Clone().(*MutableEvent)
+	if clone != nil {
+		clone.metadata = e.metadata
+	}
+	return clone
 }
 
 type MutableEvent struct {
-	Data json.RawMessage `json:"data"`
+	Data     json.RawMessage `json:"data"`
+	metadata datasource.EventMetadata
 }
+
+func (e *MutableEvent) StreamEventMetadata() datasource.EventMetadata { return e.metadata }
 
 func (e *MutableEvent) GetData() []byte {
 	if e == nil {
@@ -53,7 +68,8 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 	}
 
 	return &MutableEvent{
-		Data: slices.Clone(e.Data),
+		Data:     slices.Clone(e.Data),
+		metadata: e.metadata,
 	}
 }
 

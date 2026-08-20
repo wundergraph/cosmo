@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 const (
@@ -37,6 +39,9 @@ type withFlushWriter interface {
 type SubscriptionResponseWriterOptions struct {
 	ApolloSubscriptionMultipartPrintBoundary bool
 	SSEWriteTimeout                          time.Duration
+	Logger                                   *zap.Logger
+	Stats                                    statistics.EngineStatistics
+	Telemetry                                subscriptionTelemetryContext
 }
 
 type HttpFlushWriter struct {
@@ -51,6 +56,11 @@ type HttpFlushWriter struct {
 	buf             *bytes.Buffer
 	firstMessage    bool
 	sseWriteTimeout time.Duration
+	logger          *zap.Logger
+	stats           statistics.EngineStatistics
+	telemetry       subscriptionTelemetryContext
+	requestContext  context.Context
+	disconnect      *subscriptionDisconnectTracker
 	// apolloSubscriptionMultipartPrintBoundary if set to true will send the multipart boundary at the end of the message to allow
 	// misbehaving client (like apollo client) to read the message just sent before the next one or the heartbeat
 	apolloSubscriptionMultipartPrintBoundary bool
@@ -63,10 +73,17 @@ func (f *HttpFlushWriter) Complete() {
 		return
 	}
 	if f.sse {
-		_ = f.writeAndFlushSSE(func() error {
+		err := f.writeAndFlushSSE(func() error {
 			_, err := f.writer.Write([]byte("event: complete\ndata: \n\n"))
 			return err
 		})
+		observeSubscriptionFrame(f.stats, f.logger, f.telemetry, "complete", err)
+		if err != nil {
+			initiator, reason := disconnectReasonFromWriteError(err)
+			f.disconnect.disconnect(initiator, reason, err)
+		} else {
+			f.disconnect.disconnect("server", "normal_completion", nil)
+		}
 	} else if f.multipart {
 		// Write the final boundary in the multipart response
 		if f.apolloSubscriptionMultipartPrintBoundary {
@@ -86,7 +103,7 @@ func (f *HttpFlushWriter) Complete() {
 
 func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
 	if err = f.ctx.Err(); err != nil {
-		return
+		return 0, wrapSubscriptionWriteError("buffer", err)
 	}
 
 	return f.buf.Write(p)
@@ -100,10 +117,16 @@ func (f *HttpFlushWriter) Heartbeat() error {
 	var heartbeat []byte
 	if f.sse {
 		heartbeat = []byte(":heartbeat\n\n")
-		return f.writeAndFlushSSE(func() error {
+		err := f.writeAndFlushSSE(func() error {
 			_, err := f.writer.Write(heartbeat)
 			return err
 		})
+		observeSubscriptionFrame(f.stats, f.logger, f.telemetry, "heartbeat", err)
+		if err != nil {
+			initiator, reason := disconnectReasonFromWriteError(err)
+			f.disconnect.disconnect(initiator, reason, err)
+		}
+		return err
 	} else if f.multipart {
 		if _, err := f.Write([]byte("{}")); err != nil {
 			return err
@@ -122,8 +145,39 @@ func (f *HttpFlushWriter) Error(data []byte) {
 		return
 	}
 	_, _ = f.buf.Write(data)
-	_ = f.Flush()
+	err := f.Flush()
+	if f.sse {
+		observeSubscriptionFrame(f.stats, f.logger, f.telemetry, "terminal_error", err)
+		if err != nil {
+			initiator, reason := disconnectReasonFromWriteError(err)
+			f.disconnect.disconnect(initiator, reason, err)
+		} else {
+			f.disconnect.disconnect("server", "normal_completion", nil)
+		}
+	}
 	f.cancel()
+}
+
+func (f *HttpFlushWriter) ReportSubscriptionDelivery(report resolve.SubscriptionDeliveryReport) {
+	if !f.sse {
+		return
+	}
+	observeSubscriptionDelivery(f.stats, f.logger, f.telemetry, report)
+	if report.Err != nil {
+		initiator, reason := disconnectReasonFromWriteError(report.Err)
+		f.disconnect.disconnect(initiator, reason, report.Err)
+	}
+}
+
+func (f *HttpFlushWriter) subscriptionRequestEnded() {
+	if !f.sse {
+		return
+	}
+	if err := f.requestContext.Err(); err != nil {
+		f.disconnect.disconnect("client", "context_canceled", err)
+		return
+	}
+	f.disconnect.disconnect("server", "normal_completion", nil)
 }
 
 func (f *HttpFlushWriter) Flush() (err error) {
@@ -192,15 +246,15 @@ func (f *HttpFlushWriter) writeAndFlushSSE(write func() error) error {
 		if err := f.responseControl.SetWriteDeadline(time.Now().Add(f.sseWriteTimeout)); err != nil {
 			// Failing closed prevents a response writer without deadline support from
 			// reintroducing an unbounded shared-trigger stall.
-			return fmt.Errorf("set SSE write deadline: %w", err)
+			return wrapSubscriptionWriteError("deadline", fmt.Errorf("set SSE write deadline: %w", err))
 		}
 	}
 
 	if err := write(); err != nil {
-		return err
+		return wrapSubscriptionWriteError("write", err)
 	}
 
-	return f.responseControl.Flush()
+	return wrapSubscriptionWriteError("flush", f.responseControl.Flush())
 }
 
 func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter, opts SubscriptionResponseWriterOptions) (*resolve.Context, resolve.SubscriptionResponseWriter, error) {
@@ -226,7 +280,14 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 		buf:                                      &bytes.Buffer{},
 		firstMessage:                             true,
 		sseWriteTimeout:                          opts.SSEWriteTimeout,
+		logger:                                   opts.Logger,
+		stats:                                    opts.Stats,
+		telemetry:                                opts.Telemetry,
+		requestContext:                           r.Context(),
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
+	}
+	if flushWriter.sse {
+		flushWriter.disconnect = newSubscriptionDisconnectTracker(flushWriter.stats, flushWriter.logger, flushWriter.telemetry)
 	}
 
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())
@@ -237,7 +298,11 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 		// Flush the response head immediately so the client establishes the connection
 		// before the first message, instead of blocking until one is streamed.
 		if wgParams.UseSse {
-			if err := flushWriter.writeAndFlushSSE(func() error { return nil }); err != nil {
+			err := flushWriter.writeAndFlushSSE(func() error { return nil })
+			observeSubscriptionFrame(flushWriter.stats, flushWriter.logger, flushWriter.telemetry, "headers", err)
+			if err != nil {
+				initiator, reason := disconnectReasonFromWriteError(err)
+				flushWriter.disconnect.disconnect(initiator, reason, err)
 				flushWriter.cancel()
 				return ctx, nil, fmt.Errorf("flush initial SSE response headers: %w", err)
 			}

@@ -5,6 +5,7 @@ import (
 	"iter"
 	"slices"
 
+	"github.com/google/uuid"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 )
 
@@ -88,6 +89,23 @@ type StreamEvent interface {
 	GetData() []byte
 	// Clone returns a mutable copy of the event.
 	Clone() MutableStreamEvent
+}
+
+// StreamEventMetadataProvider is an optional extension for preserving a
+// source event's identity through subscription fan-out and hooks.
+type StreamEventMetadataProvider interface {
+	StreamEventMetadata() EventMetadata
+}
+
+type EventMetadata struct {
+	ID         string
+	SourceType string
+	SourceName string
+	SourceID   string
+}
+
+func NewEventID() string {
+	return uuid.NewString()
 }
 
 // A MutableStreamEvent is a stream event that can be modified.

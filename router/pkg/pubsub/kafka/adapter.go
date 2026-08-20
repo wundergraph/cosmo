@@ -109,8 +109,15 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 					DestinationName:     r.Topic,
 				})
 
+				eventID := fmt.Sprintf("%s/%d/%d", r.Topic, r.Partition, r.Offset)
 				updater.Update([]datasource.StreamEvent{
 					&Event{
+						metadata: datasource.EventMetadata{
+							ID:         eventID,
+							SourceType: "kafka",
+							SourceName: r.Topic,
+							SourceID:   eventID,
+						},
 						evt: &MutableEvent{
 							Data:    r.Value,
 							Headers: headers,

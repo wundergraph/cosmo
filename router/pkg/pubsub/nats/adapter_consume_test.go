@@ -36,6 +36,9 @@ func TestProviderAdapterStreamSubscribe(t *testing.T) {
 		msg.EXPECT().Subject().Return("employeeUpdated.12")
 		msg.EXPECT().Data().Return([]byte(`{"id":13}`))
 		msg.EXPECT().Headers().Return(nil)
+		msg.EXPECT().Metadata().Return(&jetstream.MsgMetadata{
+			Sequence: jetstream.SequencePair{Stream: 42},
+		}, nil)
 		msg.EXPECT().Ack().RunAndReturn(func() error { cancel(); return nil }).Once()
 
 		batch := NewMockMessageBatch(t)

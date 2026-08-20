@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -21,6 +22,9 @@ const (
 	engineSubscriptionCountKey      = engineMetricBaseKey + "subscriptions"
 	engineTriggerCountKey           = engineMetricBaseKey + "triggers"
 	engineMessagesSentKey           = engineMetricBaseKey + "messages.sent"
+	subscriptionDeliveryAttemptsKey = "router.subscription.delivery.attempts"
+	subscriptionDeliveryFailuresKey = "router.subscription.delivery.write.failures"
+	subscriptionDisconnectsKey      = "router.subscription.disconnects"
 	engineResolversMaxConcurrentKey = engineMetricBaseKey + "resolvers.max_concurrent"
 	engineResolversInflightKey      = engineMetricBaseKey + "resolvers.inflight"
 )
@@ -30,6 +34,9 @@ type engineInstruments struct {
 	subscriptionCount      otelmetric.Int64ObservableUpDownCounter
 	triggerCount           otelmetric.Int64ObservableUpDownCounter
 	messagesSent           otelmetric.Int64ObservableCounter
+	deliveryAttempts       otelmetric.Int64ObservableCounter
+	deliveryFailures       otelmetric.Int64ObservableCounter
+	disconnects            otelmetric.Int64ObservableCounter
 	resolversMaxConcurrent otelmetric.Int64ObservableUpDownCounter
 	resolversInflight      otelmetric.Int64ObservableUpDownCounter
 }
@@ -51,6 +58,9 @@ func (i *engineInstruments) toList() []otelmetric.Observable {
 
 	if i.messagesSent != nil {
 		result = append(result, i.messagesSent)
+	}
+	if i.deliveryAttempts != nil {
+		result = append(result, i.deliveryAttempts, i.deliveryFailures, i.disconnects)
 	}
 
 	if i.resolversMaxConcurrent != nil {
@@ -115,6 +125,9 @@ func setupInstruments(m otelmetric.Meter, statConfig *EngineStatsConfig, resolve
 		subscriptionCount      otelmetric.Int64ObservableUpDownCounter
 		triggerCount           otelmetric.Int64ObservableUpDownCounter
 		messagesSent           otelmetric.Int64ObservableCounter
+		deliveryAttempts       otelmetric.Int64ObservableCounter
+		deliveryFailures       otelmetric.Int64ObservableCounter
+		disconnects            otelmetric.Int64ObservableCounter
 		resolversMaxConcurrent otelmetric.Int64ObservableUpDownCounter
 		resolversInflight      otelmetric.Int64ObservableUpDownCounter
 	)
@@ -144,6 +157,22 @@ func setupInstruments(m otelmetric.Meter, statConfig *EngineStatsConfig, resolve
 		if err != nil {
 			return nil, err
 		}
+
+		deliveryAttempts, err = m.Int64ObservableCounter(subscriptionDeliveryAttemptsKey,
+			otelmetric.WithDescription("Number of downstream subscription delivery attempts."))
+		if err != nil {
+			return nil, err
+		}
+		deliveryFailures, err = m.Int64ObservableCounter(subscriptionDeliveryFailuresKey,
+			otelmetric.WithDescription("Number of downstream subscription write failures."))
+		if err != nil {
+			return nil, err
+		}
+		disconnects, err = m.Int64ObservableCounter(subscriptionDisconnectsKey,
+			otelmetric.WithDescription("Number of downstream subscription transport disconnects."))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if resolverStats {
@@ -165,6 +194,9 @@ func setupInstruments(m otelmetric.Meter, statConfig *EngineStatsConfig, resolve
 		subscriptionCount:      subscriptionCount,
 		triggerCount:           triggerCount,
 		messagesSent:           messagesSent,
+		deliveryAttempts:       deliveryAttempts,
+		deliveryFailures:       deliveryFailures,
+		disconnects:            disconnects,
 		resolversMaxConcurrent: resolversMaxConcurrent,
 		resolversInflight:      resolversInflight,
 	}, nil
@@ -200,6 +232,31 @@ func (e *EngineMetrics) observeInstruments(o otelmetric.Observer, stats statisti
 		o.ObserveInt64(e.instruments.subscriptionCount, int64(report.Subscriptions), otelmetric.WithAttributes(e.baseAttributes...))
 		o.ObserveInt64(e.instruments.triggerCount, int64(report.Triggers), otelmetric.WithAttributes(e.baseAttributes...))
 		o.ObserveInt64(e.instruments.messagesSent, int64(report.MessagesSent), otelmetric.WithAttributes(e.baseAttributes...))
+		for _, item := range report.SubscriptionObservations {
+			attrs := append([]attribute.KeyValue{}, e.baseAttributes...)
+			attrs = append(attrs, rotel.WgSubscriptionTransport.String(item.Observation.Transport))
+			if item.Observation.Subprotocol != "" {
+				attrs = append(attrs, rotel.WgWebSocketSubprotocol.String(item.Observation.Subprotocol))
+			}
+			switch item.Observation.Kind {
+			case statistics.SubscriptionObservationDeliveryAttempt:
+				attrs = append(attrs, rotel.WgSubscriptionFrameType.String(item.Observation.FrameType))
+				o.ObserveInt64(e.instruments.deliveryAttempts, int64(item.Count), otelmetric.WithAttributes(attrs...))
+			case statistics.SubscriptionObservationDeliveryFailure:
+				attrs = append(attrs,
+					rotel.WgSubscriptionFrameType.String(item.Observation.FrameType),
+					rotel.WgSubscriptionFailureStage.String(item.Observation.FailureStage),
+					rotel.WgSubscriptionFailureReason.String(item.Observation.FailureReason),
+				)
+				o.ObserveInt64(e.instruments.deliveryFailures, int64(item.Count), otelmetric.WithAttributes(attrs...))
+			case statistics.SubscriptionObservationDisconnect:
+				attrs = append(attrs,
+					rotel.WgSubscriptionDisconnectInitiator.String(item.Observation.Initiator),
+					rotel.WgSubscriptionDisconnectReason.String(item.Observation.DisconnectReason),
+				)
+				o.ObserveInt64(e.instruments.disconnects, int64(item.Count), otelmetric.WithAttributes(attrs...))
+			}
+		}
 	}
 
 	if e.instruments.resolversMaxConcurrent != nil {

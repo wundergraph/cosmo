@@ -15,7 +15,15 @@ import (
 )
 
 type Event struct {
-	evt *MutableEvent
+	evt      *MutableEvent
+	metadata datasource.EventMetadata
+}
+
+func (e *Event) StreamEventMetadata() datasource.EventMetadata {
+	if e.metadata.ID == "" && e.evt != nil {
+		return e.evt.metadata
+	}
+	return e.metadata
 }
 
 func (e *Event) GetData() []byte {
@@ -33,13 +41,20 @@ func (e *Event) GetHeaders() map[string][]string {
 }
 
 func (e Event) Clone() datasource.MutableStreamEvent {
-	return e.evt.Clone()
+	clone, _ := e.evt.Clone().(*MutableEvent)
+	if clone != nil {
+		clone.metadata = e.metadata
+	}
+	return clone
 }
 
 type MutableEvent struct {
-	Data    json.RawMessage     `json:"data"`
-	Headers map[string][]string `json:"headers"`
+	Data     json.RawMessage     `json:"data"`
+	Headers  map[string][]string `json:"headers"`
+	metadata datasource.EventMetadata
 }
+
+func (e *MutableEvent) StreamEventMetadata() datasource.EventMetadata { return e.metadata }
 
 func (e *MutableEvent) GetData() []byte {
 	if e == nil {
@@ -60,13 +75,14 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 		return nil
 	}
 	return &MutableEvent{
-		Data:    slices.Clone(e.Data),
-		Headers: cloneHeaders(e.Headers),
+		Data:     slices.Clone(e.Data),
+		Headers:  cloneHeaders(e.Headers),
+		metadata: e.metadata,
 	}
 }
 
 func (e *MutableEvent) ToStreamEvent() datasource.StreamEvent {
-	return &Event{evt: e}
+	return &Event{evt: e, metadata: e.metadata}
 }
 
 func cloneHeaders(src map[string][]string) map[string][]string {
