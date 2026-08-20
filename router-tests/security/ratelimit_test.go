@@ -1092,7 +1092,7 @@ func TestRateLimitExcludeSubscriptions(t *testing.T) {
 		return func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), key)
-			t.Error(del.Err())
+			require.NoError(t, del.Err())
 		}
 	}
 
