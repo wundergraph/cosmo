@@ -304,8 +304,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				transport:     subscriptionTransportSSE,
 				requestID:     middleware.GetReqID(r.Context()),
 				operationName: reqCtx.operation.name,
-				clientName:    reqCtx.operation.clientInfo.Name,
-				clientVersion: reqCtx.operation.clientInfo.Version,
 				writeTimeout:  h.sseServerWriteTimeout,
 			},
 		})

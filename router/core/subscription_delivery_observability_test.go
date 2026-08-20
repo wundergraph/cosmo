@@ -22,8 +22,6 @@ func TestObserveSubscriptionDeliveryRecordsFailureWithoutPayload(t *testing.T) {
 		transport:     subscriptionTransportSSE,
 		requestID:     "request-1",
 		operationName: "ProductUpdated",
-		clientName:    "storefront",
-		clientVersion: "1.2.3",
 	}
 
 	observeSubscriptionDelivery(stats, zap.New(logCore), telemetry, resolve.SubscriptionDeliveryReport{
@@ -48,6 +46,8 @@ func TestObserveSubscriptionDeliveryRecordsFailureWithoutPayload(t *testing.T) {
 	require.Equal(t, "flush", fields["failure_stage"])
 	require.Equal(t, "timeout", fields["failure_reason"])
 	require.NotContains(t, fields, "payload")
+	require.NotContains(t, fields, "client_name")
+	require.NotContains(t, fields, "client_version")
 }
 
 func TestSubscriptionDisconnectTrackerRecordsOnce(t *testing.T) {

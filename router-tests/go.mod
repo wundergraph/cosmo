@@ -209,5 +209,7 @@ replace (
 	github.com/wundergraph/cosmo/router => ../router
 	github.com/wundergraph/cosmo/router-plugin => ../router-plugin
 	github.com/wundergraph/cosmo/speedtrap => ../speedtrap
-// github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+	// Temporary preview dependency for https://github.com/wundergraph/graphql-go-tools/pull/1640.
+	// Remove this replacement after the delivery reporting API is released upstream.
+	github.com/wundergraph/graphql-go-tools/v2 => github.com/mwisner/graphql-go-tools/v2 v2.16.0-subscription-delivery-diagnostics.1
 )

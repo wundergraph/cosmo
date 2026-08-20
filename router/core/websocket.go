@@ -857,13 +857,11 @@ var detectNonRegex = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
 func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
 	telemetry := subscriptionTelemetryContext{
-		transport:     subscriptionTransportWebSocket,
-		subprotocol:   opts.Protocol.Subprotocol(),
-		requestID:     opts.InitRequestID,
-		clientName:    opts.ClientInfo.Name,
-		clientVersion: opts.ClientInfo.Version,
-		connectionID:  opts.ConnectionID,
-		writeTimeout:  opts.Connection.writeTimeout,
+		transport:    subscriptionTransportWebSocket,
+		subprotocol:  opts.Protocol.Subprotocol(),
+		requestID:    opts.InitRequestID,
+		connectionID: opts.ConnectionID,
+		writeTimeout: opts.Connection.writeTimeout,
 	}
 	handler := &WebSocketConnectionHandler{
 		ctx:                          ctx,
@@ -1099,13 +1097,11 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 func (h *WebSocketConnectionHandler) executeSubscription(registration *SubscriptionRegistration) {
 	rw := newWebsocketResponseWriter(registration.msg.ID, h.protocol, h.graphqlHandler.subgraphErrorPropagation.Enabled, h.logger, h.stats, &h.subscriptions, subscriptionTelemetryContext{
-		transport:     subscriptionTransportWebSocket,
-		subprotocol:   h.protocol.Subprotocol(),
-		requestID:     h.initRequestID,
-		clientName:    h.clientInfo.Name,
-		clientVersion: h.clientInfo.Version,
-		connectionID:  h.connectionID,
-		writeTimeout:  h.conn.writeTimeout,
+		transport:    subscriptionTransportWebSocket,
+		subprotocol:  h.protocol.Subprotocol(),
+		requestID:    h.initRequestID,
+		connectionID: h.connectionID,
+		writeTimeout: h.conn.writeTimeout,
 	})
 
 	_, operationCtx, err := h.parseAndPlan(registration)
@@ -1354,9 +1350,6 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 				h.request.Header.Set(h.clientInfoFromInitialPayload.ForwardToRequestHeaders.VersionTargetHeader, clientVersion)
 			}
 		}
-		h.disconnect.telemetry.clientName = h.clientInfo.Name
-		h.disconnect.telemetry.clientVersion = h.clientInfo.Version
-
 		// Update planner options with new client info
 		h.plannerOptions.ClientInfo = h.clientInfo
 	}

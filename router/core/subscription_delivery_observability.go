@@ -23,8 +23,6 @@ type subscriptionTelemetryContext struct {
 	subprotocol   string
 	requestID     string
 	operationName string
-	clientName    string
-	clientVersion string
 	connectionID  resolve.ConnectionID
 	writeTimeout  time.Duration
 }
@@ -64,8 +62,6 @@ func (t *subscriptionDisconnectTracker) disconnect(initiator, reason string, err
 			zap.String("transport", t.telemetry.transport),
 			zap.String("websocket_subprotocol", t.telemetry.subprotocol),
 			zap.String("request_id", t.telemetry.requestID),
-			zap.String("client_name", t.telemetry.clientName),
-			zap.String("client_version", t.telemetry.clientVersion),
 			zap.Int64("connection_id", int64(t.telemetry.connectionID)),
 			zap.String("disconnect_initiator", initiator),
 			zap.String("disconnect_reason", reason),
@@ -134,8 +130,6 @@ func observeSubscriptionDelivery(stats statistics.EngineStatistics, logger *zap.
 		zap.String("websocket_subprotocol", telemetry.subprotocol),
 		zap.String("request_id", telemetry.requestID),
 		zap.String("operation_name", telemetry.operationName),
-		zap.String("client_name", telemetry.clientName),
-		zap.String("client_version", telemetry.clientVersion),
 		zap.Int64("connection_id", int64(report.ConnectionID)),
 		zap.Int64("subscription_id", report.SubscriptionID),
 		zap.Uint64("trigger_id", report.TriggerID),
@@ -180,8 +174,6 @@ func observeSubscriptionFrame(stats statistics.EngineStatistics, logger *zap.Log
 		zap.String("websocket_subprotocol", telemetry.subprotocol),
 		zap.String("request_id", telemetry.requestID),
 		zap.String("operation_name", telemetry.operationName),
-		zap.String("client_name", telemetry.clientName),
-		zap.String("client_version", telemetry.clientVersion),
 		zap.Int64("connection_id", int64(telemetry.connectionID)),
 		zap.String("frame_type", frameType),
 		zap.String("failure_stage", stage),
