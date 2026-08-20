@@ -183,8 +183,9 @@ func TestKafkaSubscriptionRecoversAfterSSEWriteTimeout(t *testing.T) {
 
 		require.Contains(t, readSSEData(t, healthyReader), `"id":1`)
 
-		events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topic,
-			`{"__typename":"Employee","id":2,"update":{"name":"recovery"}}`)
+		xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+		xEnv.KafkaPublishUntilReceived(topic,
+			`{"__typename":"Employee","id":2,"update":{"name":"recovery"}}`, 1, EventWaitTimeout)
 
 		recovery := make(chan string, 1)
 		go func() {
@@ -202,8 +203,6 @@ func TestKafkaSubscriptionRecoversAfterSSEWriteTimeout(t *testing.T) {
 		case <-time.After(EventWaitTimeout):
 			t.Fatal("healthy subscription did not receive the queued event after the SSE write deadline")
 		}
-
-		xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
 	})
 }
 

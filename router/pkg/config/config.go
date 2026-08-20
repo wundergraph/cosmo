@@ -1722,6 +1722,10 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		}
 	}
 
+	if cfg.Config.EngineExecutionConfiguration.SSEServerWriteTimeout < 0 {
+		return nil, errors.New("engine.sse_server_write_timeout must be greater or equal to 0s")
+	}
+
 	// Post-process the config
 	if cfg.Config.DevelopmentMode {
 		cfg.Config.JSONLog = false

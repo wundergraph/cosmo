@@ -4154,6 +4154,9 @@
         "sse_server_write_timeout": {
           "type": "string",
           "format": "go-duration",
+          "duration": {
+            "minimum": "0s"
+          },
           "default": "0s",
           "description": "The maximum time allowed for each downstream SSE write and flush. When exceeded, the affected SSE subscription is terminated so it cannot indefinitely block other subscriptions sharing a trigger. A value of 0s disables the deadline."
         },
