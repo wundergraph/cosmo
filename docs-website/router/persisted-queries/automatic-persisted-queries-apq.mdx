@@ -59,6 +59,8 @@ Users can supply a list of URLs for their redis storage provider.
 * If `cluster_enabled: true` , then we will use all of the URLs for the [Redis Cluster](https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/) connection.
 
 URLs can be supplied with redis configuration options embedded, such as: `redis://myUser:myPass@localhost:6379?ssl=true&db=1@connectTimeout=2`
+
+The connection pool can also be tuned explicitly with a `pool` block on the storage provider. See [Redis Connection Pool](/router/configuration#redis-connection-pool).
 </Info>
 <Note>
 Prior to [router@v0.169.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.168.1), the redis configuration looks like:

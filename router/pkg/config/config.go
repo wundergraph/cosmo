@@ -750,9 +750,36 @@ type RateLimitErrorExtensionCode struct {
 }
 
 type RedisConfiguration struct {
-	URLs           []string `yaml:"urls,omitempty" env:"RATE_LIMIT_REDIS_URLS"`
-	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"RATE_LIMIT_REDIS_CLUSTER_ENABLED"`
-	KeyPrefix      string   `yaml:"key_prefix,omitempty" envDefault:"cosmo_rate_limit" env:"RATE_LIMIT_REDIS_KEY_PREFIX"`
+	URLs           []string                         `yaml:"urls,omitempty" env:"RATE_LIMIT_REDIS_URLS"`
+	ClusterEnabled bool                             `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"RATE_LIMIT_REDIS_CLUSTER_ENABLED"`
+	KeyPrefix      string                           `yaml:"key_prefix,omitempty" envDefault:"cosmo_rate_limit" env:"RATE_LIMIT_REDIS_KEY_PREFIX"`
+	Pool           RedisConnectionPoolConfiguration `yaml:"pool,omitempty" envPrefix:"RATE_LIMIT_REDIS_POOL_"`
+}
+
+// RedisConnectionPoolConfiguration tunes the connection pool the router keeps to Redis. Every field
+// is optional: zero means "not configured", keeping the value parsed from the connection URL query
+// parameters (e.g. ?pool_size=50) or the go-redis default. For a cluster the limits apply per node.
+type RedisConnectionPoolConfiguration struct {
+	// Size is the maximum number of socket connections kept open. Defaults to 10 * GOMAXPROCS.
+	Size int `yaml:"size,omitempty" env:"SIZE"`
+	// MinIdleConns is the number of idle connections kept ready, so a burst of traffic does not
+	// pay the cost of establishing connections on the request path.
+	MinIdleConns int `yaml:"min_idle_conns,omitempty" env:"MIN_IDLE_CONNS"`
+	// MaxIdleConns is the upper bound on idle connections. Defaults to no limit.
+	MaxIdleConns int `yaml:"max_idle_conns,omitempty" env:"MAX_IDLE_CONNS"`
+	// MaxActiveConns is a hard cap on connections, including those handed out. Defaults to no
+	// limit. Unlike Size it fails fast: once reached, commands return "connection pool exhausted"
+	// instead of waiting for Timeout, so keep it at or above Size.
+	MaxActiveConns int `yaml:"max_active_conns,omitempty" env:"MAX_ACTIVE_CONNS"`
+	// Timeout is how long a command waits for a free connection before failing. Defaults to the
+	// read timeout plus one second.
+	Timeout time.Duration `yaml:"timeout,omitempty" env:"TIMEOUT"`
+	// ConnMaxIdleTime retires connections idle for longer than this. Defaults to 30m; a negative
+	// value disables the check.
+	ConnMaxIdleTime time.Duration `yaml:"conn_max_idle_time,omitempty" env:"CONN_MAX_IDLE_TIME"`
+	// ConnMaxLifetime retires connections at this age, measured from creation. Disabled by default;
+	// set it when a proxy in front of Redis needs connections recycled to rebalance.
+	ConnMaxLifetime time.Duration `yaml:"conn_max_lifetime,omitempty" env:"CONN_MAX_LIFETIME"`
 }
 
 type RateLimitSimpleStrategy struct {
@@ -858,9 +885,10 @@ func (k KafkaEventSource) GetID() string {
 }
 
 type RedisEventSource struct {
-	ID             string   `yaml:"id,omitempty"`
-	URLs           []string `yaml:"urls,omitempty"`
-	ClusterEnabled bool     `yaml:"cluster_enabled"`
+	ID             string                           `yaml:"id,omitempty"`
+	URLs           []string                         `yaml:"urls,omitempty"`
+	ClusterEnabled bool                             `yaml:"cluster_enabled"`
+	Pool           RedisConnectionPoolConfiguration `yaml:"pool,omitempty"`
 }
 
 func (r RedisEventSource) GetID() string {
@@ -1153,9 +1181,10 @@ type FileSystemStorageProvider struct {
 }
 
 type RedisStorageProvider struct {
-	ID             string   `yaml:"id,omitempty" env:"ID"`
-	URLs           []string `yaml:"urls,omitempty" env:"URLS"`
-	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" env:"CLUSTER_ENABLED" envDefault:"false"`
+	ID             string                           `yaml:"id,omitempty" env:"ID"`
+	URLs           []string                         `yaml:"urls,omitempty" env:"URLS"`
+	ClusterEnabled bool                             `yaml:"cluster_enabled,omitempty" env:"CLUSTER_ENABLED" envDefault:"false"`
+	Pool           RedisConnectionPoolConfiguration `yaml:"pool,omitempty" envPrefix:"POOL_"`
 }
 
 type PersistedOperationsCDNProvider struct {

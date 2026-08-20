@@ -74,7 +74,8 @@
                 "type": "boolean",
                 "description": "Whether to use the Redis Cluster client.",
                 "default": false
-              }
+              },
+              "pool": { "$ref": "#/$defs/redis_connection_pool" }
             }
           }
         },
@@ -2593,7 +2594,8 @@
               "type": "string",
               "description": "The prefix of the keys used to store the rate limit data.",
               "default": "cosmo_rate_limit"
-            }
+            },
+            "pool": { "$ref": "#/$defs/redis_connection_pool" }
           }
         },
         "debug": {
@@ -3311,7 +3313,8 @@
                     "type": "boolean",
                     "description": "If enabled, the Redis cluster client is used to connect to the server.",
                     "default": false
-                  }
+                  },
+                  "pool": { "$ref": "#/$defs/redis_connection_pool" }
                 }
               }
             }
@@ -4502,6 +4505,48 @@
     }
   },
   "$defs": {
+    "redis_connection_pool": {
+      "type": "object",
+      "description": "Tuning for the connection pool the router keeps to this Redis deployment. Every property is optional: anything left unset keeps the value taken from the connection URL query parameters (e.g. '?pool_size=50') and otherwise falls back to the go-redis default. For a Redis Cluster the limits apply per node, not to the cluster as a whole.",
+      "additionalProperties": false,
+      "properties": {
+        "size": {
+          "type": "integer",
+          "description": "The maximum number of socket connections the pool keeps open. Connections may still be allocated in excess of this while the pool is saturated, unless 'max_active_conns' caps them. Defaults to 10 * GOMAXPROCS.",
+          "minimum": 1
+        },
+        "min_idle_conns": {
+          "type": "integer",
+          "description": "The number of idle connections the pool keeps ready, so that a burst of traffic does not pay the cost of establishing connections on the request path. Defaults to 0.",
+          "minimum": 0
+        },
+        "max_idle_conns": {
+          "type": "integer",
+          "description": "The upper bound on idle connections held by the pool. Defaults to no limit.",
+          "minimum": 0
+        },
+        "max_active_conns": {
+          "type": "integer",
+          "description": "A hard cap on the connections the pool may hold, including those currently handed out to in-flight commands. Defaults to no limit. Unlike 'size', this cap fails fast: once it is reached, a command that needs a connection fails immediately with \"connection pool exhausted\" instead of waiting for 'timeout'. Keep it at or above 'size', otherwise commands fail instead of queueing for a free connection.",
+          "minimum": 0
+        },
+        "timeout": {
+          "type": "string",
+          "description": "How long a command waits for a free connection once the pool is saturated before failing. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. Defaults to the read timeout plus one second.",
+          "format": "go-duration"
+        },
+        "conn_max_idle_time": {
+          "type": "string",
+          "description": "Retire a connection that has been idle for longer than this. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. Defaults to 30m; a negative value disables the check.",
+          "format": "go-duration"
+        },
+        "conn_max_lifetime": {
+          "type": "string",
+          "description": "Retire a connection once it reaches this age, measured from when it was created. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. Disabled by default, which is usually what you want unless a proxy or load balancer in front of Redis needs connections recycled so it can rebalance.",
+          "format": "go-duration"
+        }
+      }
+    },
     "jwks_configuration": {
       "type": "object",
       "additionalProperties": false,

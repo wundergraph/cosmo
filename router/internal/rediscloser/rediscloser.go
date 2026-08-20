@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
 )
 
@@ -21,6 +22,9 @@ type RedisCloserOptions struct {
 	URLs           []string
 	ClusterEnabled bool
 	Password       string
+	// Pool is applied on top of whatever the connection URL encoded, so only explicitly set
+	// fields take effect. When nil, the URL parameters and go-redis defaults are used as-is.
+	Pool *config.RedisConnectionPoolConfiguration
 	// Context bounds the initial connectivity check (Ping). When nil, context.Background()
 	// is used. Callers that must guarantee NewRedisCloser returns within a deadline (e.g. a
 	// bounded provider startup) should pass a context with a timeout so a black-holed broker
@@ -34,6 +38,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 	}
 
 	var rdb RDCloser
+	// Recorded per branch so both client kinds log their pool settings in one place below.
 	// If provided, we create a cluster client
 	if opts.ClusterEnabled {
 		opts.Logger.Info("Detected that redis is running in cluster mode.")
@@ -59,6 +64,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 			// provided in the URL
 			clusterOps.Password = opts.Password
 		}
+		applyClusterPoolConfiguration(clusterOps, opts.Pool)
 
 		rdb = redis.NewClusterClient(clusterOps)
 	} else {
@@ -71,6 +77,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 			// provided in the URL
 			urlEncodedOpts.Password = opts.Password
 		}
+		applyPoolConfiguration(urlEncodedOpts, opts.Pool)
 		rdb = redis.NewClient(urlEncodedOpts)
 
 		if isClusterClient(rdb) {

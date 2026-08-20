@@ -431,6 +431,14 @@ events:
         urls:
           - 'redis://localhost:6379/11'
         cluster_enabled: true
+        pool:
+          size: 40
+          min_idle_conns: 4
+          max_idle_conns: 20
+          max_active_conns: 80
+          timeout: 4s
+          conn_max_idle_time: 10m
+          conn_max_lifetime: 1h
   handlers:
     on_receive_events:
       max_concurrent_handlers: 100
@@ -472,6 +480,14 @@ rate_limit:
       - 'test@localhost:8000'
       - 'test2@localhost:8001'
     key_prefix: 'cosmo_rate_limit'
+    pool:
+      size: 30
+      min_idle_conns: 3
+      max_idle_conns: 15
+      max_active_conns: 60
+      timeout: 3s
+      conn_max_idle_time: 5m
+      conn_max_lifetime: 30m
   simple_strategy:
     rate: 60
     burst: 60
@@ -535,6 +551,14 @@ storage_providers:
       urls:
         - 'test@localhost:8000'
         - 'test2@localhost:8001'
+      pool:
+        size: 20
+        min_idle_conns: 2
+        max_idle_conns: 10
+        max_active_conns: 40
+        timeout: 2s
+        conn_max_idle_time: 1m
+        conn_max_lifetime: 15m
 
 security:
   complexity_calculation_cache:

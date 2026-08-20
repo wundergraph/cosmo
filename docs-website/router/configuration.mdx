@@ -1211,6 +1211,9 @@ storage_providers:
       urls:
         - "redis://localhost:6379"
       cluster_enabled: false
+      pool:
+        size: 20
+        min_idle_conns: 2
   file_system:
     - id: "fs-provider"
       path: "/path/to/files"
@@ -1255,6 +1258,7 @@ Used for distributed caching like automatic persisted queries.
 | STORAGE_PROVIDER_REDIS_\{n\}_ID              | id              | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations                                               |               |
 | STORAGE_PROVIDER_REDIS_\{n\}_URLS            | urls            | <Icon icon="square-check" iconType="solid" /> | List of Redis URLs to connect to. If cluster_enabled is true, these are the seeds to discover the cluster |               |
 | STORAGE_PROVIDER_REDIS_\{n\}_CLUSTER_ENABLED | cluster_enabled | <Icon icon="square" />                        | Whether to use the Redis Cluster client                                                                   | false         |
+|                                         | pool            | <Icon icon="square" />                        | Connection pool tuning. See [Redis Connection Pool](/router/configuration#redis-connection-pool)          |               |
 
 #### File System Storage Provider
 
@@ -1907,6 +1911,9 @@ events:
       - id: my-redis
         urls:
           - "redis://localhost:6379"
+        pool:
+          size: 40
+          min_idle_conns: 4
 ```
 
 ### Options
@@ -2010,6 +2017,8 @@ The NATS provider supports four TLS modes:
 | :------------------- | :--- | :------- | :--------------------------------------------------------------------------------------- | :------------ |
 |                      | id   |          | The ID of the provider. This have to match with the ID specified in the subgraph schema. | []            |
 |                      | urls |          | A list of redis instances URLS, e.g: `redis://localhost:6379/2`                          |               |
+|                      | cluster_enabled |          | If enabled, the Redis Cluster client is used and the URLs are treated as cluster seeds.   | false         |
+|                      | pool |          | Connection pool tuning. See [Redis Connection Pool](/router/configuration#redis-connection-pool) |               |
 
 ### Cosmo Streams handlers
 
@@ -2231,6 +2240,56 @@ For mor information on how to use the expression language, please refer to the [
 | RATE_LIMIT_REDIS_URLS            | urls            | <Icon icon="square-check" iconType="solid" /> | List of the connection URL(s).                      | [redis://localhost:6379] |
 | RATE_LIMIT_REDIS_CLUSTER_ENABLED | cluster_enabled | <Icon icon="square" />                        | If the Redis instance is a Redis cluster            | false                    |
 | RATE_LIMIT_REDIS_KEY_PREFIX      | key_prefix      | <Icon icon="square" />                        | This prefix is used to namespace the ratelimit keys | cosmo_rate_limit         |
+|                                  | pool            | <Icon icon="square" />                        | Connection pool tuning. See [Redis Connection Pool](/router/configuration#redis-connection-pool) |          |
+
+### Redis Connection Pool
+
+Every place the router connects to Redis accepts an optional `pool` block that tunes the connection pool: `rate_limit.storage`, each entry under `storage_providers.redis`, and each entry under `events.providers.redis`.
+
+Each property is optional. Anything you leave unset keeps the value taken from the connection URL query parameters (for example `redis://localhost:6379?pool_size=50`) and otherwise falls back to the go-redis default, so a `pool` block only overrides what it explicitly names.
+
+<Note>
+  For a Redis Cluster these limits apply **per node**, not to the cluster as a whole. A `size` of 20 against a six-node cluster permits up to 20 connections to each node.
+</Note>
+
+| YAML                 | Required               | Description                                                                                                                                                                             | Default Value       |
+| -------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| size                 | <Icon icon="square" /> | Maximum number of socket connections the pool keeps open. Commands that arrive while every connection is busy wait up to `timeout` for one to free up.                                   | 10 * number of CPUs |
+| min_idle_conns       | <Icon icon="square" /> | Number of idle connections kept ready, so a burst of traffic does not pay the cost of establishing connections on the request path.                                                      | 0                   |
+| max_idle_conns       | <Icon icon="square" /> | Upper bound on idle connections held by the pool.                                                                                                                                       | no limit            |
+| max_active_conns     | <Icon icon="square" /> | Hard cap on connections, including those handed out to in-flight commands. Unlike `size` this cap fails fast: see the warning below.                                                     | no limit            |
+| timeout              | <Icon icon="square" /> | How long a command waits for a free connection once the pool is saturated before failing, e.g. `3s`.                                                                                     | read timeout + 1s   |
+| conn_max_idle_time   | <Icon icon="square" /> | Retire a connection that has been idle for longer than this, e.g. `5m`. A negative value disables the check.                                                                             | 30m                 |
+| conn_max_lifetime    | <Icon icon="square" /> | Retire a connection once it reaches this age, measured from when it was created, e.g. `30m`. Useful when a proxy or load balancer in front of Redis needs connections recycled to rebalance. | disabled            |
+
+<Warning>
+  `size` and `max_active_conns` are enforced differently. `size` makes commands **wait** for a free connection, up to `timeout`. `max_active_conns` **fails immediately** with `connection pool exhausted` once the cap is reached.
+
+  Setting `max_active_conns` lower than `size` therefore admits more concurrent commands than there are connections available for, and the excess fails instead of queueing. Keep `max_active_conns` at or above `size`, or leave it unset. The router logs a warning at startup if you configure this combination.
+</Warning>
+
+The default `size` of 10 per CPU is generous. If you are running many router replicas against one Redis, lowering it reduces the connection count on the Redis side, usually with no loss in throughput — a single connection is enough to serve thousands of commands per second, since the pool reuses it rather than reconnecting.
+
+Environment variables are available for the rate limit storage and for storage providers:
+
+| Environment Variable                              | YAML                          |
+| ------------------------------------------------- | ----------------------------- |
+| RATE_LIMIT_REDIS_POOL_SIZE                        | rate_limit.storage.pool.size  |
+| RATE_LIMIT_REDIS_POOL_MIN_IDLE_CONNS              | ...pool.min_idle_conns        |
+| RATE_LIMIT_REDIS_POOL_MAX_IDLE_CONNS              | ...pool.max_idle_conns        |
+| RATE_LIMIT_REDIS_POOL_MAX_ACTIVE_CONNS            | ...pool.max_active_conns      |
+| RATE_LIMIT_REDIS_POOL_TIMEOUT                     | ...pool.timeout               |
+| RATE_LIMIT_REDIS_POOL_CONN_MAX_IDLE_TIME          | ...pool.conn_max_idle_time    |
+| RATE_LIMIT_REDIS_POOL_CONN_MAX_LIFETIME           | ...pool.conn_max_lifetime     |
+| STORAGE_PROVIDER_REDIS_\{n\}_POOL_SIZE              | storage_providers.redis[n].pool.size |
+| STORAGE_PROVIDER_REDIS_\{n\}_POOL_MIN_IDLE_CONNS    | ...pool.min_idle_conns        |
+| STORAGE_PROVIDER_REDIS_\{n\}_POOL_MAX_IDLE_CONNS    | ...pool.max_idle_conns        |
+| STORAGE_PROVIDER_REDIS_\{n\}_POOL_MAX_ACTIVE_CONNS  | ...pool.max_active_conns      |
+| STORAGE_PROVIDER_REDIS_\{n\}_POOL_TIMEOUT           | ...pool.timeout               |
+| STORAGE_PROVIDER_REDIS_\{n\}_POOL_CONN_MAX_IDLE_TIME| ...pool.conn_max_idle_time    |
+| STORAGE_PROVIDER_REDIS_\{n\}_POOL_CONN_MAX_LIFETIME | ...pool.conn_max_lifetime     |
+
+Event provider pools are configured in YAML only.
 
 ### Rate Limiting Simple Strategy
 
@@ -2277,6 +2336,9 @@ rate_limit:
         urls:
          - "redis://localhost:6379"
         key_prefix: "cosmo_rate_limit"
+        pool:
+            size: 30
+            min_idle_conns: 3
     debug: false
     key_suffix_expression: "request.header.Get('X-Api-Key')"
     error_extension_code:

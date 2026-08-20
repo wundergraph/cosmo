@@ -766,7 +766,16 @@
         "test2@localhost:8001"
       ],
       "ClusterEnabled": true,
-      "KeyPrefix": "cosmo_rate_limit"
+      "KeyPrefix": "cosmo_rate_limit",
+      "Pool": {
+        "Size": 30,
+        "MinIdleConns": 3,
+        "MaxIdleConns": 15,
+        "MaxActiveConns": 60,
+        "Timeout": 3000000000,
+        "ConnMaxIdleTime": 300000000000,
+        "ConnMaxLifetime": 1800000000000
+      }
     },
     "Debug": false,
     "KeySuffixExpression": "",
@@ -834,7 +843,16 @@
           "URLs": [
             "redis://localhost:6379/11"
           ],
-          "ClusterEnabled": true
+          "ClusterEnabled": true,
+          "Pool": {
+            "Size": 40,
+            "MinIdleConns": 4,
+            "MaxIdleConns": 20,
+            "MaxActiveConns": 80,
+            "Timeout": 4000000000,
+            "ConnMaxIdleTime": 600000000000,
+            "ConnMaxLifetime": 3600000000000
+          }
         }
       ]
     },
@@ -1095,7 +1113,16 @@
           "test@localhost:8000",
           "test2@localhost:8001"
         ],
-        "ClusterEnabled": false
+        "ClusterEnabled": false,
+        "Pool": {
+          "Size": 20,
+          "MinIdleConns": 2,
+          "MaxIdleConns": 10,
+          "MaxActiveConns": 40,
+          "Timeout": 2000000000,
+          "ConnMaxIdleTime": 60000000000,
+          "ConnMaxLifetime": 900000000000
+        }
       }
     ],
     "FileSystem": [
