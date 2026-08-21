@@ -1130,7 +1130,7 @@ type ResponseCacheConfiguration struct {
 	Storage   ResponseCacheStorageConfig `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
 }
 
-// ResponseCacheStorageProvider names the backend an response cache is built on.
+// ResponseCacheStorageProvider names the backend a response cache is built on.
 type ResponseCacheStorageProvider string
 
 const (

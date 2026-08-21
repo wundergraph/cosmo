@@ -2588,6 +2588,40 @@ response_cache:
 		require.Equal(t, int64(2048), cfg.Config.ResponseCache.Storage.MaxEntries)
 	})
 
+	t.Run("enabling the cache requires a storage block", func(t *testing.T) {
+		t.Parallel()
+
+		// Turning the cache on without saying where entries go has no reading
+		// that is safe to guess at: the provider defaults to redis, which cannot
+		// work without a provider_id, so the whole block has to be demanded
+		// rather than half of it defaulted.
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+response_cache:
+  enabled: true
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/response_cache'")
+		require.ErrorContains(t, err, "missing property 'storage'")
+	})
+
+	t.Run("a disabled cache needs no storage block", func(t *testing.T) {
+		t.Parallel()
+
+		// The storage requirement hangs off enabled, so the block a user leaves
+		// behind while the cache is off must still load.
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+response_cache:
+  enabled: false
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.False(t, cfg.Config.ResponseCache.Enabled)
+	})
+
 	t.Run("the redis provider requires a provider_id", func(t *testing.T) {
 		t.Parallel()
 

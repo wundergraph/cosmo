@@ -1190,21 +1190,11 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 		return nil
 	}
 
-	// Checked here rather than where it is used. The engine takes the TTL on
-	// trust, because a fallback of zero can only be discovered again on every
-	// response that needs it and swallowed again every time, whereas here it is
-	// one error at one startup. The config schema already refuses a ttl below 1s
-	// in the YAML, but that leaves the env override and any embedder building
-	// the configuration itself, and this catches both.
+	// Validate the TTL during startup to avoid additional checks during execution.
 	if r.responseCacheConfig.FallbackTTL <= 0 {
-		return fmt.Errorf("response cache is enabled but its fallback_ttl is %s, which must be a positive duration", r.responseCacheConfig.FallbackTTL)
+		return fmt.Errorf("response cache is enabled but its fallback_ttl is %s, which must be greater than zero", r.responseCacheConfig.FallbackTTL)
 	}
 
-	// An empty provider is redis, which is what the field defaults to and what a
-	// configuration assembled in go, having never passed through the yaml
-	// defaults, still means. Caching in memory is only ever reached by asking for
-	// it by name, so a missing or misspelled provider_id cannot quietly turn one
-	// shared cache into one cache per replica.
 	switch provider := r.responseCacheConfig.Storage.Provider; provider {
 	case "", config.ResponseCacheStorageProviderRedis:
 		return r.setupRedisResponseCache(ctx)
@@ -1219,7 +1209,7 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 	}
 }
 
-// setupInMemoryResponseCache builds an response cache held in this process. Nothing
+// setupInMemoryResponseCache builds a response cache held in this process. Nothing
 // is shared with any other replica and nothing survives a restart, which is the
 // whole difference from the redis backed one.
 func (r *Router) setupInMemoryResponseCache() error {
@@ -1246,7 +1236,7 @@ func (r *Router) setupInMemoryResponseCache() error {
 	return nil
 }
 
-// setupRedisResponseCache builds an response cache on a redis instance declared
+// setupRedisResponseCache builds a response cache on a redis instance declared
 // under storage_providers.redis.
 func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 	providerID := r.responseCacheConfig.Storage.ProviderID
