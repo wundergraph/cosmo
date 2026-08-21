@@ -2,6 +2,8 @@ package integration
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
@@ -196,6 +198,13 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 				require.Equal(t, `{"data":{"__typename":"Query"}}`, res3.Body)
 			})
 		})
+
+		// Note: the in-memory (local cache) TTL-renewal path for issue #3062 is
+		// covered deterministically by the unit tests in
+		// router/core/operation_processor_apq_ttl_test.go. The in-memory store
+		// (ristretto) is eventually consistent, so an HTTP-level cross-variable read
+		// here would be racy; the Redis (distributed) end-to-end regression below
+		// uses a synchronous store and is the authoritative integration guard.
 	})
 
 	t.Run("redis cache", func(t *testing.T) {
@@ -480,6 +489,91 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					Header:     header2,
 				})
 				require.Equal(t, `{"data":{"__typename":"Query"}}`, res3.Body)
+			})
+		})
+
+		// Regression test for https://github.com/wundergraph/cosmo/issues/3062 with a
+		// distributed (Redis) APQ store. TTL renewal must keep the raw query in Redis,
+		// not the per-request normalized (directive-stripped) representation.
+		t.Run("ttl renewal preserves a query with @skip directives", func(t *testing.T) {
+			t.Parallel()
+
+			// Hermetic query: the conditionally-included field is a second aliased
+			// __typename, so the assertion depends only on @skip evaluation and not
+			// on any subgraph data.
+			const query = `query SkipRenewal($skip: Boolean!) { a: __typename b: __typename @skip(if: $skip) }`
+			sum := sha256.Sum256([]byte(query))
+			sha := hex.EncodeToString(sum[:])
+			extensions := fmt.Sprintf(`{"persistedQuery": {"version": 1, "sha256Hash": %q}}`, sha)
+
+			const skippedBody = `{"data":{"a":"Query"}}`
+			const includedBody = `{"data":{"a":"Query","b":"Query"}}`
+
+			key := uuid.New().String()
+			t.Cleanup(func() {
+				del := client.Del(context.Background(), key+sha)
+				require.NoError(t, del.Err())
+			})
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithStorageProviders(config.StorageProviders{
+						Redis: []config.RedisStorageProvider{
+							{
+								URLs: []string{redisUrl},
+								ID:   "redis",
+							},
+						},
+					}),
+				},
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+					Cache: config.AutomaticPersistedQueriesCacheConfig{
+						TTL: 5, // a TTL is required to reach the renewal branch
+					},
+					Storage: config.AutomaticPersistedQueriesStorageConfig{
+						ProviderID:   "redis",
+						ObjectPrefix: key,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+
+				// 1) Register with skip:true (full query body). Stores the raw query.
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:         query,
+					OperationName: []byte(`"SkipRenewal"`),
+					Variables:     []byte(`{"skip":true}`),
+					Extensions:    []byte(extensions),
+					Header:        header,
+				})
+				require.Equal(t, skippedBody, res.Body)
+
+				// 2) Hash-only replay with skip:true is a cache hit that renews the TTL.
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					OperationName: []byte(`"SkipRenewal"`),
+					Variables:     []byte(`{"skip":true}`),
+					Extensions:    []byte(extensions),
+					Header:        header,
+				})
+				require.Equal(t, skippedBody, res.Body)
+
+				// The Redis entry must still be the raw query after renewal, not the
+				// normalized, directive-stripped form.
+				stored, err := client.Get(context.Background(), key+sha).Result()
+				require.NoError(t, err)
+				require.Equal(t, query, stored)
+
+				// 3) Hash-only request with skip:false must still return the conditional
+				//    field, resolved from the uncorrupted Redis store.
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					OperationName: []byte(`"SkipRenewal"`),
+					Variables:     []byte(`{"skip":false}`),
+					Extensions:    []byte(extensions),
+					Header:        header,
+				})
+				require.Equal(t, includedBody, res.Body)
 			})
 		})
 	})

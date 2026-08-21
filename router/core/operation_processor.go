@@ -456,8 +456,11 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	}
 	if fromCache {
 		if fromCacheHasTTL, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.Name, includeOperationName); fromCacheHasTTL {
-			// if it is an APQ request, we need to save it again to renew the TTL expiration
-			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.NormalizedRepresentation); err != nil {
+			// If it is an APQ request, renew the store TTL. We must NOT write the
+			// normalized representation back: it has @skip/@include evaluated for the
+			// current request's variables, which would corrupt the stored raw query
+			// for subsequent requests using different variables (see issue #3062).
+			if err = o.operationProcessor.persistedOperationClient.RenewOperationTTL(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash); err != nil {
 				return false, false, err
 			}
 		}
