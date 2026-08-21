@@ -10,7 +10,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -87,6 +89,7 @@ type HandlerOptions struct {
 	EnableCostResponseHeaders       bool
 
 	ApolloSubscriptionMultipartPrintBoundary bool
+	SSEServerWriteTimeout                    time.Duration
 	HeaderPropagation                        *HeaderPropagation
 }
 
@@ -109,6 +112,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		subgraphErrorPropagation:                 opts.SubgraphErrorPropagation,
 		engineLoaderHooks:                        opts.EngineLoaderHooks,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
+		sseServerWriteTimeout:                    opts.SSEServerWriteTimeout,
 		headerPropagation:                        opts.HeaderPropagation,
 	}
 	return graphQLHandler
@@ -143,6 +147,7 @@ type GraphQLHandler struct {
 	enableCostResponseHeaders       bool
 
 	apolloSubscriptionMultipartPrintBoundary bool
+	sseServerWriteTimeout                    time.Duration
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -284,25 +289,39 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	case *plan.SubscriptionResponsePlan:
 		var (
-			writer resolve.SubscriptionResponseWriter
-			ok     bool
+			writer    resolve.SubscriptionResponseWriter
+			writerErr error
 		)
 		h.setDebugCacheHeaders(w, reqCtx.operation)
 
 		defer propagateSubgraphErrors(resolveCtx)
-		resolveCtx, writer, ok = GetSubscriptionResponseWriter(resolveCtx, r, w, h.apolloSubscriptionMultipartPrintBoundary)
-		if !ok {
-			reqCtx.logger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
-			trackFinalResponseError(r.Context(), errCouldNotFlushResponse)
+		resolveCtx, writer, writerErr = GetSubscriptionResponseWriter(resolveCtx, r, w, SubscriptionResponseWriterOptions{
+			ApolloSubscriptionMultipartPrintBoundary: h.apolloSubscriptionMultipartPrintBoundary,
+			SSEWriteTimeout:                          h.sseServerWriteTimeout,
+			Logger:                                   reqCtx.logger,
+			Stats:                                    h.engineStats,
+			Telemetry: subscriptionTelemetryContext{
+				transport:     subscriptionTransportSSE,
+				requestID:     middleware.GetReqID(r.Context()),
+				operationName: reqCtx.operation.name,
+				writeTimeout:  h.sseServerWriteTimeout,
+			},
+		})
+		if writerErr != nil {
+			reqCtx.logger.Error("unable to get subscription response writer", zap.Error(writerErr))
+			trackFinalResponseError(r.Context(), writerErr)
 			writeRequestErrors(writeRequestErrorsParams{
 				request:           r,
 				writer:            w,
 				statusCode:        http.StatusInternalServerError,
-				requestErrors:     graphqlerrors.RequestErrorsFromError(errCouldNotFlushResponse),
+				requestErrors:     graphqlerrors.RequestErrorsFromError(writerErr),
 				logger:            reqCtx.logger,
 				headerPropagation: h.headerPropagation,
 			})
 			return
+		}
+		if lifecycle, ok := writer.(*HttpFlushWriter); ok {
+			defer lifecycle.subscriptionRequestEnded()
 		}
 
 		if !resolveCtx.ExecutionOptions.SkipLoader {
