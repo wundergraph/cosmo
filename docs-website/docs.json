@@ -22,6 +22,9 @@
   "appearance": {
     "default": "dark"
   },
+  "metadata": {
+    "timestamp": true
+  },
   "styling": {
     "codeblocks": "system",
     "eyebrows": "breadcrumbs"
