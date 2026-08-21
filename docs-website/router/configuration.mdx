@@ -1267,7 +1267,7 @@ This provider allows you to load files from the local file system.
 
 ## Redis Connection URLs
 
-Everywhere the router connects to Redis it takes a connection URL: `rate_limit.storage`, each entry under `storage_providers.redis`, and each entry under `events.providers.redis`. There is no separate block for connection or pool settings — the Redis client parses them from the URL query string, so you tune them there.
+Everywhere the router connects to Redis it takes a connection URL: `rate_limit.storage`, each entry under `storage_providers.redis`, and each entry under `events.providers.redis`. There is no separate block for connection or pool settings. The Redis client parses them from the URL query string, so you tune them there.
 
 ```yaml config.yaml
 rate_limit:
@@ -1289,7 +1289,7 @@ Use the `rediss://` scheme instead of `redis://` to connect over TLS. There is n
 | pool_size          | Maximum number of socket connections the pool keeps open. Commands arriving while every connection is busy wait up to `pool_timeout` for one to free up. | 10 * number of CPUs |
 | min_idle_conns     | Number of idle connections kept ready, so a burst of traffic does not pay the cost of establishing connections on the request path.                    | 0                   |
 | max_idle_conns     | Upper bound on idle connections held by the pool.                                                                                                     | no limit            |
-| max_active_conns   | Hard cap on connections, including those handed out to in-flight commands. Unlike `pool_size` this cap fails fast — see the warning below.             | no limit            |
+| max_active_conns   | Hard cap on connections, including those handed out to in-flight commands. Unlike `pool_size` this cap fails fast. See the warning below.             | no limit            |
 | pool_timeout       | How long a command waits for a free connection before failing, e.g. `3s`.                                                                            | read timeout + 1s   |
 | conn_max_idle_time | Retire a connection idle for longer than this, e.g. `5m`. A negative value disables the check.                                                        | 30m                 |
 | conn_max_lifetime  | Retire a connection at this age, measured from when it was created, e.g. `30m`. Useful when a proxy in front of Redis needs connections recycled to rebalance. | disabled            |
@@ -1348,7 +1348,7 @@ For a Redis Cluster these limits apply **per node**, not to the cluster as a who
 
 The default of 10 connections per CPU is generous. A pooled connection is reused rather than reconnected, so even a small pool sustains a high command rate. Benchmarking GET throughput against a local Redis with far more concurrent callers than connections showed steeply diminishing returns: 1 connection took ~83µs per command, 4 took ~35µs, and 16 took ~19µs, after which the curve flattens. The default of 140 connections on a 14-core machine was only about 15% faster than 16 connections, for nearly nine times as many open connections, and 128 connections were no faster than the default.
 
-So if you run many router replicas against one Redis, setting `pool_size` explicitly is usually worth it: it cuts the connection count on the Redis side, which matters against its `maxclients` limit, for a modest throughput trade-off. Watch for `pool_timeout` errors after lowering it — those mean commands are queueing longer than the timeout allows and the pool is now too small.
+So if you run many router replicas against one Redis, setting `pool_size` explicitly is usually worth it: it cuts the connection count on the Redis side, which matters against its `maxclients` limit, for a modest throughput trade-off. Watch for `pool_timeout` errors after lowering it. Those mean commands are queueing longer than the timeout allows and the pool is now too small.
 
 ## Persisted Operations
 

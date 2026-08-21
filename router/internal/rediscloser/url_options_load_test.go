@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -167,7 +168,7 @@ func TestURLConfiguredMaxActiveConnsFailsFast(t *testing.T) {
 			defer wg.Done()
 			for range 50 {
 				if err := client.Ping(ctx).Err(); err != nil {
-					require.ErrorContains(t, err, "connection pool exhausted")
+					assert.ErrorContains(t, err, "connection pool exhausted")
 					exhausted.Add(1)
 				}
 			}

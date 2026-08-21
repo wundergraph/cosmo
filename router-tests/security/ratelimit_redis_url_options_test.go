@@ -38,7 +38,10 @@ func TestRateLimitRedisURLOptions(t *testing.T) {
 
 	t.Cleanup(func() {
 		client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
-		defer client.Close()
+		defer func() {
+			_ = client.Close()
+		}()
+
 		// redis_rate namespaces the counter it keeps for our key.
 		require.NoError(t, client.Del(context.Background(), key, "rate:"+key).Err())
 	})
