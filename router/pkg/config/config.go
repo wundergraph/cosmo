@@ -1121,7 +1121,7 @@ type SubgraphExtensionPropagationConfiguration struct {
 // asks to be cached are stored; a subgraph that sends no Cache-Control header is
 // never cached.
 type EntityCacheConfiguration struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Enabled     bool          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	FallbackTTL time.Duration `yaml:"fallback_ttl" envDefault:"30s" env:"FALLBACK_TTL"`
 	// KeyPrefix namespaces keys against everything else sharing the store, so it
 	// is a redis concern only. The in memory provider shares its keyspace with

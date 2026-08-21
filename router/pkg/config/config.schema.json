@@ -3370,7 +3370,7 @@
           "type": "string",
           "format": "go-duration",
           "description": "How long an entity is kept when the subgraph response sends Cache-Control: public but does not say for how long. A subgraph that sends max-age or s-maxage gets the last word either way, including refusing with no-store, no-cache or private. A subgraph response with no Cache-Control header is never cached, whatever this is set to. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
-          "default": "5m",
+          "default": "30s",
           "duration": {
             "minimum": "1s"
           }

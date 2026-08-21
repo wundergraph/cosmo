@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/ristretto/v2"
-	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
+	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 )
 
 const entryCost = 1

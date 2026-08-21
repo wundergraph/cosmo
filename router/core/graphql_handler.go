@@ -23,10 +23,10 @@ import (
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource/subscriptionclient/transport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
@@ -92,7 +92,7 @@ type HandlerOptions struct {
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
 
-	EntityCache            entitycaching.Cache
+	EntityCache            caching.Cache
 	EntityCacheFallbackTTL time.Duration
 }
 
@@ -170,7 +170,7 @@ type GraphQLHandler struct {
 	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	engineLoaderHooks        resolve.LoaderHooks
 	headerPropagation        *HeaderPropagation
-	entityCacheStore         entitycaching.Cache
+	entityCacheStore         caching.Cache
 	entityCacheFallbackTTL   time.Duration
 	entityCacheErrorHandler  func(error)
 

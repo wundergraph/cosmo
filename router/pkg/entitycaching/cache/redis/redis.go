@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 )
 
 // RedisCache stores entries in Redis.
@@ -29,7 +29,7 @@ type RedisCache struct {
 	prefix string
 }
 
-var _ entitycaching.Cache = (*RedisCache)(nil)
+var _ caching.Cache = (*RedisCache)(nil)
 
 // NewRedisCache returns a cache backed by client, namespacing every key with
 // prefix. On success the cache takes ownership of client and closes it in
@@ -46,9 +46,9 @@ func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix str
 }
 
 // GetMany implements entitycaching.GetMany.
-func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]entitycaching.Item, error) {
+func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]caching.Item, error) {
 	if len(keys) == 0 {
-		return nil, entitycaching.ErrNoKeys
+		return nil, caching.ErrNoKeys
 	}
 
 	// A pipeline of GETs rather than a single MGET: go-redis splits a pipeline
@@ -81,7 +81,7 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]ent
 
 	// Sized for every key finding something, which is the case worth being
 	// ready for. A miss adds nothing, so the map is only as big as the hits.
-	results := make(map[string]entitycaching.Item, len(keys))
+	results := make(map[string]caching.Item, len(keys))
 	for i, key := range keys {
 		value, err := values[i].Bytes()
 		if err != nil {
@@ -103,16 +103,16 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]ent
 
 		// Keyed by what the caller asked with, not the prefixed key it was
 		// stored under: the namespace is this cache's business, not theirs.
-		results[key] = entitycaching.Item{Key: key, Value: bytes.Clone(value), TTL: ttl}
+		results[key] = caching.Item{Key: key, Value: bytes.Clone(value), TTL: ttl}
 	}
 
 	return results, nil
 }
 
 // SetMany implements entitycaching.SetMany.
-func (c *RedisCache) SetMany(ctx context.Context, items []entitycaching.Item) error {
+func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
-		return entitycaching.ErrNoItems
+		return caching.ErrNoItems
 	}
 
 	// Queuing writes nothing to redis, only Exec below does, so validating as
@@ -127,7 +127,7 @@ func (c *RedisCache) SetMany(ctx context.Context, items []entitycaching.Item) er
 	cmds := make([]*redis.StatusCmd, len(items))
 	for i, item := range items {
 		if item.TTL <= 0 {
-			return fmt.Errorf("%w: key %q", entitycaching.ErrMissingTTL, item.Key)
+			return fmt.Errorf("%w: key %q", caching.ErrMissingTTL, item.Key)
 		}
 		cmds[i] = pipe.Set(ctx, c.prefix+item.Key, item.Value, item.TTL)
 	}
@@ -152,7 +152,7 @@ func (c *RedisCache) SetMany(ctx context.Context, items []entitycaching.Item) er
 		return err
 	}
 
-	return &entitycaching.SetManyError{KnownStoredKeys: stored, Err: err}
+	return &caching.SetManyError{KnownStoredKeys: stored, Err: err}
 }
 
 // Close releases the redis client the cache was built with. The Once is not for

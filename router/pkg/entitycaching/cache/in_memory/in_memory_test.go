@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
+	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"go.uber.org/goleak"
 )
 

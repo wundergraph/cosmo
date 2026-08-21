@@ -22,7 +22,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/profile/pyroscope"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -63,7 +63,7 @@ type beforeEventsDispatchHooks struct {
 }
 
 type EntityCache interface {
-	entitycaching.Cache
+	caching.Cache
 	io.Closer
 }
 
