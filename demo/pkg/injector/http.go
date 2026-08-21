@@ -12,7 +12,7 @@ import (
 // cacheControl is put on every subgraph response when it is set, and nothing is
 // sent when it is not.
 //
-// The router's entity cache is opt-in per response: one carrying no
+// The router's response cache is opt-in per response: one carrying no
 // Cache-Control header is never cached, however the router is configured. These
 // subgraphs have no caching opinion of their own and should not acquire one just
 // by existing, so this stays off unless SUBGRAPH_CACHE_CONTROL is set, which is

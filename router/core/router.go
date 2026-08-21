@@ -55,13 +55,13 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
-	inmemorycache "github.com/wundergraph/cosmo/router/pkg/entitycaching/cache/in_memory"
-	rediscache "github.com/wundergraph/cosmo/router/pkg/entitycaching/cache/redis"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	inmemorycache "github.com/wundergraph/cosmo/router/pkg/responsecaching/cache/in_memory"
+	rediscache "github.com/wundergraph/cosmo/router/pkg/responsecaching/cache/redis"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
@@ -931,7 +931,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 	}
 
-	if err := r.setupEntityCache(ctx); err != nil {
+	if err := r.setupResponseCache(ctx); err != nil {
 		return err
 	}
 
@@ -1181,12 +1181,12 @@ func (r *Router) setupTelemetry(ctx context.Context) error {
 	return nil
 }
 
-// setupEntityCache builds the entity cache when it is enabled. The storage
+// setupResponseCache builds the response cache when it is enabled. The storage
 // provider decides what it is built on: a redis instance declared under
 // storage_providers.redis and shared with every other replica, or a cache held
 // in this process alone.
-func (r *Router) setupEntityCache(ctx context.Context) error {
-	if r.entityCacheConfig == nil || !r.entityCacheConfig.Enabled {
+func (r *Router) setupResponseCache(ctx context.Context) error {
+	if r.responseCacheConfig == nil || !r.responseCacheConfig.Enabled {
 		return nil
 	}
 
@@ -1196,8 +1196,8 @@ func (r *Router) setupEntityCache(ctx context.Context) error {
 	// one error at one startup. The config schema already refuses a ttl below 1s
 	// in the YAML, but that leaves the env override and any embedder building
 	// the configuration itself, and this catches both.
-	if r.entityCacheConfig.FallbackTTL <= 0 {
-		return fmt.Errorf("entity cache is enabled but its fallback_ttl is %s, which must be a positive duration", r.entityCacheConfig.FallbackTTL)
+	if r.responseCacheConfig.FallbackTTL <= 0 {
+		return fmt.Errorf("response cache is enabled but its fallback_ttl is %s, which must be a positive duration", r.responseCacheConfig.FallbackTTL)
 	}
 
 	// An empty provider is redis, which is what the field defaults to and what a
@@ -1205,61 +1205,61 @@ func (r *Router) setupEntityCache(ctx context.Context) error {
 	// defaults, still means. Caching in memory is only ever reached by asking for
 	// it by name, so a missing or misspelled provider_id cannot quietly turn one
 	// shared cache into one cache per replica.
-	switch provider := r.entityCacheConfig.Storage.Provider; provider {
-	case "", config.EntityCacheStorageProviderRedis:
-		return r.setupRedisEntityCache(ctx)
-	case config.EntityCacheStorageProviderMemory:
-		return r.setupInMemoryEntityCache()
+	switch provider := r.responseCacheConfig.Storage.Provider; provider {
+	case "", config.ResponseCacheStorageProviderRedis:
+		return r.setupRedisResponseCache(ctx)
+	case config.ResponseCacheStorageProviderMemory:
+		return r.setupInMemoryResponseCache()
 	default:
-		return fmt.Errorf("entity cache storage provider %q is not supported, use %q or %q",
+		return fmt.Errorf("response cache storage provider %q is not supported, use %q or %q",
 			provider,
-			config.EntityCacheStorageProviderRedis,
-			config.EntityCacheStorageProviderMemory,
+			config.ResponseCacheStorageProviderRedis,
+			config.ResponseCacheStorageProviderMemory,
 		)
 	}
 }
 
-// setupInMemoryEntityCache builds an entity cache held in this process. Nothing
+// setupInMemoryResponseCache builds an response cache held in this process. Nothing
 // is shared with any other replica and nothing survives a restart, which is the
 // whole difference from the redis backed one.
-func (r *Router) setupInMemoryEntityCache() error {
+func (r *Router) setupInMemoryResponseCache() error {
 	// The size is the adapter's to accept or refuse, bounds included, so it is
 	// passed on as it is rather than checked twice here against a second copy of
 	// the same limit.
-	cache, err := inmemorycache.NewInMemoryCache(r.entityCacheConfig.Storage.MaxEntries)
+	cache, err := inmemorycache.NewInMemoryCache(r.responseCacheConfig.Storage.MaxEntries)
 	if err != nil {
-		return fmt.Errorf("failed to create entity cache: %w", err)
+		return fmt.Errorf("failed to create response cache: %w", err)
 	}
 
-	// Owned from here on by r.entityCache, which Shutdown closes.
-	r.entityCache = cache
+	// Owned from here on by r.responseCache, which Shutdown closes.
+	r.responseCache = cache
 
 	// key_prefix is deliberately absent from this line: this cache shares its
 	// keyspace with nothing, the adapter has no prefix to apply, and logging one
 	// would say that it did.
-	r.logger.Info("Entity cache enabled",
-		zap.Duration("fallback_ttl", r.entityCacheConfig.FallbackTTL),
-		zap.String("storage_provider", string(config.EntityCacheStorageProviderMemory)),
-		zap.Int64("max_entries", r.entityCacheConfig.Storage.MaxEntries),
+	r.logger.Info("Response cache enabled",
+		zap.Duration("fallback_ttl", r.responseCacheConfig.FallbackTTL),
+		zap.String("storage_provider", string(config.ResponseCacheStorageProviderMemory)),
+		zap.Int64("max_entries", r.responseCacheConfig.Storage.MaxEntries),
 	)
 
 	return nil
 }
 
-// setupRedisEntityCache builds an entity cache on a redis instance declared
+// setupRedisResponseCache builds an response cache on a redis instance declared
 // under storage_providers.redis.
-func (r *Router) setupRedisEntityCache(ctx context.Context) error {
-	providerID := r.entityCacheConfig.Storage.ProviderID
+func (r *Router) setupRedisResponseCache(ctx context.Context) error {
+	providerID := r.responseCacheConfig.Storage.ProviderID
 	if providerID == "" {
-		return fmt.Errorf("entity cache is enabled with the %q storage provider but no storage provider_id is configured; configure one, or set the storage provider to %q to cache in this router's memory instead",
-			config.EntityCacheStorageProviderRedis,
-			config.EntityCacheStorageProviderMemory,
+		return fmt.Errorf("response cache is enabled with the %q storage provider but no storage provider_id is configured; configure one, or set the storage provider to %q to cache in this router's memory instead",
+			config.ResponseCacheStorageProviderRedis,
+			config.ResponseCacheStorageProviderMemory,
 		)
 	}
 
 	provider, ok := r.providerRegistry.Redis(providerID)
 	if !ok {
-		return fmt.Errorf("entity cache references unknown redis storage provider %q", providerID)
+		return fmt.Errorf("response cache references unknown redis storage provider %q", providerID)
 	}
 
 	client, err := rd.NewRedisCloser(&rd.RedisCloserOptions{
@@ -1268,28 +1268,28 @@ func (r *Router) setupRedisEntityCache(ctx context.Context) error {
 		Logger:         r.logger,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create redis client for entity cache: %w", err)
+		return fmt.Errorf("failed to create redis client for response cache: %w", err)
 	}
 
-	cache, err := rediscache.NewRedisCache(ctx, client, r.entityCacheConfig.KeyPrefix)
+	cache, err := rediscache.NewRedisCache(ctx, client, r.responseCacheConfig.KeyPrefix)
 	if err != nil {
 		// Ownership of the client only passes to the cache once there is a cache,
 		// so on this path it is still ours and has to be closed here or it leaks
 		// along with its connection pool.
 		if closeErr := client.Close(); closeErr != nil {
-			r.logger.Error("failed to close redis client after entity cache setup failed", zap.Error(closeErr))
+			r.logger.Error("failed to close redis client after response cache setup failed", zap.Error(closeErr))
 		}
-		return fmt.Errorf("failed to create entity cache: %w", err)
+		return fmt.Errorf("failed to create response cache: %w", err)
 	}
 
 	// The cache owns the client from here on and closes it with itself, and
 	// Shutdown closes the cache.
-	r.entityCache = cache
+	r.responseCache = cache
 
-	r.logger.Info("Entity cache enabled",
-		zap.Duration("fallback_ttl", r.entityCacheConfig.FallbackTTL),
-		zap.String("storage_provider", string(config.EntityCacheStorageProviderRedis)),
-		zap.String("key_prefix", r.entityCacheConfig.KeyPrefix),
+	r.logger.Info("Response cache enabled",
+		zap.Duration("fallback_ttl", r.responseCacheConfig.FallbackTTL),
+		zap.String("storage_provider", string(config.ResponseCacheStorageProviderRedis)),
+		zap.String("key_prefix", r.responseCacheConfig.KeyPrefix),
 		zap.String("storage_provider_id", providerID),
 	)
 
@@ -2086,10 +2086,10 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		})
 	}
 
-	if r.entityCache != nil {
+	if r.responseCache != nil {
 		wg.Go(func() {
-			if closeErr := r.entityCache.Close(); closeErr != nil {
-				err.Append(fmt.Errorf("failed to close entity cache: %w", closeErr))
+			if closeErr := r.responseCache.Close(); closeErr != nil {
+				err.Append(fmt.Errorf("failed to close response cache: %w", closeErr))
 			}
 		})
 	}
@@ -2444,12 +2444,12 @@ func WithRateLimitConfig(cfg *config.RateLimitConfiguration) Option {
 	}
 }
 
-// WithEntityCache configures caching of federation entity fetches. The cache is
+// WithResponseCache configures caching of federation entity fetches. The cache is
 // only built when cfg.Enabled is set; the rest of the router behaves exactly as
 // it did without one when it is not.
-func WithEntityCache(cfg *config.EntityCacheConfiguration) Option {
+func WithResponseCache(cfg *config.ResponseCacheConfiguration) Option {
 	return func(r *Router) {
-		r.entityCacheConfig = cfg
+		r.responseCacheConfig = cfg
 	}
 }
 

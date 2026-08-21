@@ -12,14 +12,14 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-func TestEntityCacheInMemory(t *testing.T) {
+func TestResponseCacheInMemory(t *testing.T) {
 	t.Parallel()
 
 	t.Run("a second identical request does not reach the subgraph", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions: entityCacheOptions(time.Minute),
+			RouterOptions: responseCacheOptions(time.Minute),
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{
 					Middleware: cacheControlMiddleware("public, max-age=60"),
@@ -46,7 +46,7 @@ func TestEntityCacheInMemory(t *testing.T) {
 
 		// The control for the subtest above. Without it, a passing count of 1 up
 		// there could equally be the normalization cache or single flight, and
-		// the test would prove nothing about entity caching.
+		// the test would prove nothing about response caching.
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{
@@ -58,7 +58,7 @@ func TestEntityCacheInMemory(t *testing.T) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { employees { id currentMood } }`})
 
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(),
-				"with no entity cache configured every request must reach the subgraph")
+				"with no response cache configured every request must reach the subgraph")
 		})
 	})
 
@@ -67,11 +67,11 @@ func TestEntityCacheInMemory(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithEntityCache(&config.EntityCacheConfiguration{
+				core.WithResponseCache(&config.ResponseCacheConfiguration{
 					Enabled:     false,
 					FallbackTTL: time.Minute,
-					Storage: config.EntityCacheStorageConfig{
-						Provider:   config.EntityCacheStorageProviderMemory,
+					Storage: config.ResponseCacheStorageConfig{
+						Provider:   config.ResponseCacheStorageProviderMemory,
 						MaxEntries: 1000,
 					},
 				}),
@@ -93,7 +93,7 @@ func TestEntityCacheInMemory(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions: entityCacheOptions(time.Minute),
+			RouterOptions: responseCacheOptions(time.Minute),
 			Subgraphs: testenv.SubgraphsConfig{
 				Family: testenv.SubgraphConfig{
 					Middleware: cacheControlMiddleware("public, max-age=60"),
@@ -131,7 +131,7 @@ func TestEntityCacheInMemory(t *testing.T) {
 		// Reading the selection instead yields one object where the array is
 		// expected, and nothing is ever cached.
 		testenv.Run(t, &testenv.Config{
-			RouterOptions: entityCacheOptions(time.Minute),
+			RouterOptions: responseCacheOptions(time.Minute),
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{
 					Middleware: cacheControlMiddleware("public, max-age=60"),
@@ -153,7 +153,7 @@ func TestEntityCacheInMemory(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions: entityCacheOptions(time.Minute),
+			RouterOptions: responseCacheOptions(time.Minute),
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{
 					Middleware: cacheControlMiddleware("public, max-age=60"),
@@ -182,7 +182,7 @@ func TestEntityCacheInMemory(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions: entityCacheOptions(time.Minute),
+			RouterOptions: responseCacheOptions(time.Minute),
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{
 					Middleware: cacheControlMiddleware("public"),
@@ -204,7 +204,7 @@ func TestEntityCacheInMemory(t *testing.T) {
 		// the configured ttl were the one applied, the entry would still be there
 		// when this gives up.
 		testenv.Run(t, &testenv.Config{
-			RouterOptions: entityCacheOptions(time.Minute),
+			RouterOptions: responseCacheOptions(time.Minute),
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{
 					Middleware: cacheControlMiddleware("public, max-age=1"),
@@ -238,7 +238,7 @@ func TestEntityCacheInMemory(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions: entityCacheOptions(time.Minute),
+			RouterOptions: responseCacheOptions(time.Minute),
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{
 					Middleware: cacheControlMiddleware("public, s-maxage=1, max-age=60"),
@@ -272,7 +272,7 @@ func TestEntityCacheInMemory(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions: entityCacheOptions(time.Minute),
+			RouterOptions: responseCacheOptions(time.Minute),
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{
 					Middleware: func(http.Handler) http.Handler {
@@ -307,7 +307,7 @@ func TestEntityCacheInMemory(t *testing.T) {
 			`]}}`
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions: entityCacheOptions(time.Minute),
+			RouterOptions: responseCacheOptions(time.Minute),
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{
 					Middleware: fixedResponseMiddleware("public, max-age=60", moodBatchWithNullEmployee1),
@@ -353,18 +353,18 @@ func fixedResponseMiddleware(cacheControl, body string) func(http.Handler) http.
 	}
 }
 
-// entityCacheOptions enables the entity cache on the in memory provider. ttl is
+// responseCacheOptions enables the response cache on the in memory provider. ttl is
 // the fallback reached only by a response that says public without saying for how
 // long; a response naming its own max-age gets that instead.
-func entityCacheOptions(ttl time.Duration) []core.Option {
+func responseCacheOptions(ttl time.Duration) []core.Option {
 	return []core.Option{
-		core.WithEntityCache(&config.EntityCacheConfiguration{
+		core.WithResponseCache(&config.ResponseCacheConfiguration{
 			Enabled:     true,
 			FallbackTTL: ttl,
 			// Set explicitly. An empty provider means redis, which would need a
 			// server these tests deliberately do not have.
-			Storage: config.EntityCacheStorageConfig{
-				Provider:   config.EntityCacheStorageProviderMemory,
+			Storage: config.ResponseCacheStorageConfig{
+				Provider:   config.ResponseCacheStorageProviderMemory,
 				MaxEntries: 1000,
 			},
 		}),

@@ -2541,7 +2541,7 @@ func TestMCPOAuthAuthorizationServersAccessor(t *testing.T) {
 	}
 }
 
-func TestEntityCacheStorageConfig(t *testing.T) {
+func TestResponseCacheStorageConfig(t *testing.T) {
 	t.Parallel()
 
 	t.Run("the storage provider defaults to redis", func(t *testing.T) {
@@ -2559,15 +2559,15 @@ storage_providers:
       urls:
         - "redis://localhost:6379"
 
-entity_cache:
+response_cache:
   enabled: true
   storage:
     provider_id: my_redis
 `)
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.Equal(t, EntityCacheStorageProviderRedis, cfg.Config.EntityCache.Storage.Provider)
-		require.Equal(t, int64(10000), cfg.Config.EntityCache.Storage.MaxEntries)
+		require.Equal(t, ResponseCacheStorageProviderRedis, cfg.Config.ResponseCache.Storage.Provider)
+		require.Equal(t, int64(10000), cfg.Config.ResponseCache.Storage.MaxEntries)
 	})
 
 	t.Run("the memory provider needs no provider_id", func(t *testing.T) {
@@ -2576,7 +2576,7 @@ entity_cache:
 		f := createTempFileFromFixture(t, `
 version: "1"
 
-entity_cache:
+response_cache:
   enabled: true
   storage:
     provider: memory
@@ -2584,8 +2584,8 @@ entity_cache:
 `)
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.Equal(t, EntityCacheStorageProviderMemory, cfg.Config.EntityCache.Storage.Provider)
-		require.Equal(t, int64(2048), cfg.Config.EntityCache.Storage.MaxEntries)
+		require.Equal(t, ResponseCacheStorageProviderMemory, cfg.Config.ResponseCache.Storage.Provider)
+		require.Equal(t, int64(2048), cfg.Config.ResponseCache.Storage.MaxEntries)
 	})
 
 	t.Run("the redis provider requires a provider_id", func(t *testing.T) {
@@ -2594,13 +2594,13 @@ entity_cache:
 		f := createTempFileFromFixture(t, `
 version: "1"
 
-entity_cache:
+response_cache:
   enabled: true
   storage:
     provider: redis
 `)
 		_, err := LoadConfig([]string{f})
-		require.ErrorContains(t, err, "at '/entity_cache/storage'")
+		require.ErrorContains(t, err, "at '/response_cache/storage'")
 		require.ErrorContains(t, err, "missing property 'provider_id'")
 	})
 
@@ -2612,13 +2612,13 @@ entity_cache:
 		f := createTempFileFromFixture(t, `
 version: "1"
 
-entity_cache:
+response_cache:
   enabled: true
   storage:
     max_entries: 2048
 `)
 		_, err := LoadConfig([]string{f})
-		require.ErrorContains(t, err, "at '/entity_cache/storage'")
+		require.ErrorContains(t, err, "at '/response_cache/storage'")
 		require.ErrorContains(t, err, "missing property 'provider_id'")
 	})
 
@@ -2628,13 +2628,13 @@ entity_cache:
 		f := createTempFileFromFixture(t, `
 version: "1"
 
-entity_cache:
+response_cache:
   enabled: true
   storage:
     provider: memcached
 `)
 		_, err := LoadConfig([]string{f})
-		require.ErrorContains(t, err, "at '/entity_cache/storage/provider'")
+		require.ErrorContains(t, err, "at '/response_cache/storage/provider'")
 	})
 
 	t.Run("max_entries must be positive", func(t *testing.T) {
@@ -2643,14 +2643,14 @@ entity_cache:
 		f := createTempFileFromFixture(t, `
 version: "1"
 
-entity_cache:
+response_cache:
   enabled: true
   storage:
     provider: memory
     max_entries: 0
 `)
 		_, err := LoadConfig([]string{f})
-		require.ErrorContains(t, err, "at '/entity_cache/storage/max_entries'")
+		require.ErrorContains(t, err, "at '/response_cache/storage/max_entries'")
 	})
 
 	t.Run("max_entries is capped", func(t *testing.T) {
@@ -2662,25 +2662,25 @@ entity_cache:
 		f := createTempFileFromFixture(t, `
 version: "1"
 
-entity_cache:
+response_cache:
   enabled: true
   storage:
     provider: memory
     max_entries: 200000
 `)
 		_, err := LoadConfig([]string{f})
-		require.ErrorContains(t, err, "at '/entity_cache/storage/max_entries'")
+		require.ErrorContains(t, err, "at '/response_cache/storage/max_entries'")
 	})
 
 }
 
-// TestLoadEntityCacheStorageCfgFromEnvars asserts the ENTITY_CACHE_ + STORAGE_
+// TestLoadResponseCacheStorageCfgFromEnvars asserts the RESPONSE_CACHE_ + STORAGE_
 // envPrefix pair composes down to the leaf env names, which is the only way to
 // reach the storage configuration without a yaml file.
-func TestLoadEntityCacheStorageCfgFromEnvars(t *testing.T) {
-	t.Setenv("ENTITY_CACHE_ENABLED", "true")
-	t.Setenv("ENTITY_CACHE_STORAGE_PROVIDER", "memory")
-	t.Setenv("ENTITY_CACHE_STORAGE_MAX_ENTRIES", "4096")
+func TestLoadResponseCacheStorageCfgFromEnvars(t *testing.T) {
+	t.Setenv("RESPONSE_CACHE_ENABLED", "true")
+	t.Setenv("RESPONSE_CACHE_STORAGE_PROVIDER", "memory")
+	t.Setenv("RESPONSE_CACHE_STORAGE_MAX_ENTRIES", "4096")
 
 	f := createTempFileFromFixture(t, `
 version: "1"
@@ -2689,7 +2689,7 @@ version: "1"
 	cfg, err := LoadConfig([]string{f})
 
 	require.NoError(t, err)
-	require.True(t, cfg.Config.EntityCache.Enabled)
-	require.Equal(t, EntityCacheStorageProviderMemory, cfg.Config.EntityCache.Storage.Provider)
-	require.Equal(t, int64(4096), cfg.Config.EntityCache.Storage.MaxEntries)
+	require.True(t, cfg.Config.ResponseCache.Enabled)
+	require.Equal(t, ResponseCacheStorageProviderMemory, cfg.Config.ResponseCache.Storage.Provider)
+	require.Equal(t, int64(4096), cfg.Config.ResponseCache.Storage.MaxEntries)
 }

@@ -1808,9 +1808,9 @@ func (s *graphServer) buildGraphMux(
 		HeaderPropagation:               s.headerPropagation,
 	}
 
-	if s.entityCache != nil {
-		handlerOpts.EntityCache = s.entityCache
-		handlerOpts.EntityCacheFallbackTTL = s.entityCacheConfig.FallbackTTL
+	if s.responseCache != nil {
+		handlerOpts.ResponseCache = s.responseCache
+		handlerOpts.ResponseCacheFallbackTTL = s.responseCacheConfig.FallbackTTL
 	}
 
 	if s.redisClient != nil {

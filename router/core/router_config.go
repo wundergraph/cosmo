@@ -62,7 +62,7 @@ type beforeEventsDispatchHooks struct {
 	timeout  time.Duration
 }
 
-type EntityCache interface {
+type ResponseCache interface {
 	caching.Cache
 	io.Closer
 }
@@ -134,8 +134,8 @@ type Config struct {
 	accessController                *AccessController
 	retryOptions                    retrytransport.RetryOptions
 	redisClient                     rd.RDCloser
-	entityCacheConfig               *config.EntityCacheConfiguration
-	entityCache                     EntityCache
+	responseCacheConfig             *config.ResponseCacheConfiguration
+	responseCache                   ResponseCache
 	mcpServer                       *mcpserver.GraphQLSchemaServer
 	connectRPCServer                *connectrpc.Server
 	processStartTime                time.Time

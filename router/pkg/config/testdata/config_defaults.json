@@ -437,10 +437,10 @@
     "Timeout": 30000000000,
     "InMemoryFallback": true
   },
-  "EntityCache": {
+  "ResponseCache": {
     "Enabled": false,
     "FallbackTTL": 30000000000,
-    "KeyPrefix": "cosmo_entity_cache:",
+    "KeyPrefix": "cosmo_response_cache:",
     "Storage": {
       "Provider": "redis",
       "ProviderID": "",

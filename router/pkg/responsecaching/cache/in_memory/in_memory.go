@@ -26,10 +26,10 @@ var _ enginecache.Cache = (*InMemoryCache)(nil)
 // caller owns it and must Close it.
 func NewInMemoryCache(maxEntries int64) (*InMemoryCache, error) {
 	if maxEntries <= 0 {
-		return nil, fmt.Errorf("in memory entity cache needs a positive size, got %d", maxEntries)
+		return nil, fmt.Errorf("in memory response cache needs a positive size, got %d", maxEntries)
 	}
 	if maxEntries > maxSize {
-		return nil, fmt.Errorf("in memory entity cache size is too large: %d", maxEntries)
+		return nil, fmt.Errorf("in memory response cache size is too large: %d", maxEntries)
 	}
 
 	cache, err := ristretto.NewCache(&ristretto.Config[string, []byte]{
@@ -39,7 +39,7 @@ func NewInMemoryCache(maxEntries int64) (*InMemoryCache, error) {
 		BufferItems:        64,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create in memory entity cache: %w", err)
+		return nil, fmt.Errorf("failed to create in memory response cache: %w", err)
 	}
 
 	return &InMemoryCache{cache: cache}, nil

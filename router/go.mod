@@ -180,6 +180,6 @@ require (
 // Remember you can use Go workspaces to avoid using replace directives in multiple go.mod files
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
-// Entity caching depends on engine changes that are not released yet, so the pin
+// Response caching depends on engine changes that are not released yet, so the pin
 // below is a commit from wundergraph/graphql-go-tools#1638 rather than a version.
 // This must go back to a version pin once that PR is merged and released.

@@ -3356,14 +3356,14 @@
         }
       }
     },
-    "entity_cache": {
+    "response_cache": {
       "type": "object",
       "description": "Caches federation entity fetches, either in Redis or in this router's own memory. An entity is cached per selection set, so asking for different fields of the same entity does not share a cache entry. A batch of entities is served from the cache only when every entity in it is present, otherwise the request is sent to the subgraph unchanged. Only subgraph responses whose Cache-Control header asks to be cached are stored. NOTE: This option is experimental and may change in future versions.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enable entity caching.",
+          "description": "Enable response caching.",
           "default": false
         },
         "fallback_ttl": {
@@ -3377,8 +3377,8 @@
         },
         "key_prefix": {
           "type": "string",
-          "description": "Prepended to every cache key so entity cache entries cannot collide with anything else sharing the Redis instance. Applies to the 'redis' storage provider only: the 'memory' storage provider shares its keyspace with nothing and ignores this.",
-          "default": "cosmo_entity_cache:"
+          "description": "Prepended to every cache key so response cache entries cannot collide with anything else sharing the Redis instance. Applies to the 'redis' storage provider only: the 'memory' storage provider shares its keyspace with nothing and ignores this.",
+          "default": "cosmo_response_cache:"
         },
         "storage": {
           "type": "object",

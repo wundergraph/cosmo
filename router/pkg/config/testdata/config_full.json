@@ -863,10 +863,10 @@
     "Timeout": 30000000000,
     "InMemoryFallback": true
   },
-  "EntityCache": {
+  "ResponseCache": {
     "Enabled": true,
     "FallbackTTL": 30000000000,
-    "KeyPrefix": "entity_cache_test:",
+    "KeyPrefix": "response_cache_test:",
     "Storage": {
       "Provider": "redis",
       "ProviderID": "my_redis",

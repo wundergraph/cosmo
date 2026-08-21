@@ -243,7 +243,7 @@
                 "icon": "flask-round-potion",
                 "pages": ["router/development", "router/development/debugging", "router/development/development-mode"]
               },
-              "router/entity-cache",
+              "router/response-cache",
               "router/request-deduplication",
               "router/performance-debugging",
               "router/advanced-request-tracing-art",

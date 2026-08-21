@@ -1,18 +1,18 @@
 ---
-title: "Entity Cache (Experimental)"
+title: "Response Cache (Experimental)"
 description: "Cache federation entity fetches to avoid fetching from upstream subgraphs."
 icon: "boxes-stacked"
 ---
 
 <Danger>
-  **Experimental feature.** Entity caching is in alpha and is subject to change, and should not be used in production environments.
+  **Experimental feature.** Response caching is in alpha and is subject to change, and should not be used in production environments.
 </Danger>
 
 The router caches the responses to federation entity fetches. An entity fetch is the request the router sends to a subgraph through the `_entities` root field to resolve fields of an entity that another subgraph owns. Root field fetches are not cached.
 
 Entries are keyed per entity and per selection set. Asking for different fields of the same entity does not share an entry.
 
-Entity caching is disabled by default.
+Response caching is disabled by default.
 
 ## What gets cached
 
@@ -32,7 +32,7 @@ A subgraph that sends no `Cache-Control` header at all is never cached. `fallbac
 A response carrying GraphQL errors is never cached, whatever its `Cache-Control` header says.
 
 <Info>
-  Configuring the entity cache does not make anything cacheable on its own. Subgraphs opt in by sending `Cache-Control: public`. If nothing appears to be cached, check the subgraph response headers first.
+  Configuring the response cache does not make anything cacheable on its own. Subgraphs opt in by sending `Cache-Control: public`. If nothing appears to be cached, check the subgraph response headers first.
 </Info>
 
 ## Enable it
@@ -50,10 +50,10 @@ storage_providers:
       urls:
         - 'redis://localhost:6379'
 
-entity_cache:
+response_cache:
   enabled: true
   fallback_ttl: 30s
-  key_prefix: 'cosmo_entity_cache:'
+  key_prefix: 'cosmo_response_cache:'
   storage:
     provider: 'redis'
     provider_id: 'my_redis'
@@ -68,7 +68,7 @@ Each replica holds its own cache, nothing survives a restart, and no Redis is ne
 
 <CodeGroup>
 ```yaml config.yaml
-entity_cache:
+response_cache:
   enabled: true
   fallback_ttl: 30s
   storage:
@@ -82,8 +82,8 @@ entity_cache:
 ## Configuration reference
 
 ```yaml config.yaml
-entity_cache:
-  # Enable entity caching. Default: false.
+response_cache:
+  # Enable response caching. Default: false.
   enabled: true
   # Lifetime for a response that says public without saying for how long.
   # A response naming its own max-age or s-maxage gets that instead.
@@ -91,8 +91,8 @@ entity_cache:
   fallback_ttl: 30s
   # Prepended to every cache key so entries cannot collide with anything else
   # sharing the Redis instance. Redis only, ignored by the memory provider.
-  # Default: cosmo_entity_cache:
-  key_prefix: 'cosmo_entity_cache:'
+  # Default: cosmo_response_cache:
+  key_prefix: 'cosmo_response_cache:'
   storage:
     # redis or memory. Default: redis.
     provider: 'redis'
@@ -115,20 +115,20 @@ These apply to the current alpha.
 
 **Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
 
-**`enable_multi_fetch` disables entity caching.** When `engine.enable_multi_fetch` is on, the router merges entity fetches to the same subgraph within one parallel wave into a single request. Merged fetches are not cached, and nothing reports that they were skipped. Do not enable both and expect entity caching.
+**`enable_multi_fetch` disables response caching.** When `engine.enable_multi_fetch` is on, the router merges entity fetches to the same subgraph within one parallel wave into a single request. Merged fetches are not cached, and nothing reports that they were skipped. Do not enable both and expect response caching.
 
 ## Observability
 
 The router logs once at startup when the cache is enabled. With the Redis provider:
 
 ```
-INFO  Entity cache enabled  {"fallback_ttl": "30s", "storage_provider": "redis", "key_prefix": "cosmo_entity_cache:", "storage_provider_id": "my_redis"}
+INFO  Response cache enabled  {"fallback_ttl": "30s", "storage_provider": "redis", "key_prefix": "cosmo_response_cache:", "storage_provider_id": "my_redis"}
 ```
 
 With the memory provider:
 
 ```
-INFO  Entity cache enabled  {"fallback_ttl": "30s", "storage_provider": "memory", "max_entries": 2048}
+INFO  Response cache enabled  {"fallback_ttl": "30s", "storage_provider": "memory", "max_entries": 2048}
 ```
 
 Nothing is logged when the cache is disabled.
@@ -136,7 +136,7 @@ Nothing is logged when the cache is disabled.
 Cache failures never fail a request. When a read or a write fails, the router serves from the subgraph and logs a warning:
 
 ```
-WARN  Entity cache degraded, serving from the subgraph instead
+WARN  Response cache degraded, serving from the subgraph instead
 ```
 
 That warning is sampled to one line per second. An unreachable cache produces one failure per entity fetch of every request in flight, and logging it unsampled would compound the outage.

@@ -1115,45 +1115,45 @@ type SubgraphExtensionPropagationConfiguration struct {
 	Algorithm              SubgraphExtensionPropagationAlgorithm `yaml:"algorithm,omitempty" envDefault:"first_write" env:"ALGORITHM"`
 }
 
-// EntityCacheConfiguration configures caching of federation entity fetches.
+// ResponseCacheConfiguration configures caching of federation entity fetches.
 // Entities are cached per selection set, so asking for different fields of the
 // same entity does not share an entry. Only responses whose Cache-Control header
 // asks to be cached are stored; a subgraph that sends no Cache-Control header is
 // never cached.
-type EntityCacheConfiguration struct {
+type ResponseCacheConfiguration struct {
 	Enabled     bool          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	FallbackTTL time.Duration `yaml:"fallback_ttl" envDefault:"30s" env:"FALLBACK_TTL"`
 	// KeyPrefix namespaces keys against everything else sharing the store, so it
 	// is a redis concern only. The in memory provider shares its keyspace with
 	// nothing and ignores this.
-	KeyPrefix string                   `yaml:"key_prefix" envDefault:"cosmo_entity_cache:" env:"KEY_PREFIX"`
-	Storage   EntityCacheStorageConfig `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
+	KeyPrefix string                     `yaml:"key_prefix" envDefault:"cosmo_response_cache:" env:"KEY_PREFIX"`
+	Storage   ResponseCacheStorageConfig `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
 }
 
-// EntityCacheStorageProvider names the backend an entity cache is built on.
-type EntityCacheStorageProvider string
+// ResponseCacheStorageProvider names the backend an response cache is built on.
+type ResponseCacheStorageProvider string
 
 const (
-	// EntityCacheStorageProviderRedis stores entries in the redis instance named
+	// ResponseCacheStorageProviderRedis stores entries in the redis instance named
 	// by ProviderID, so every router replica shares one cache and entries
 	// outlive the process. This is the default, because it is the only one of the
 	// two that a reader of the configuration would not want to be surprised by.
-	EntityCacheStorageProviderRedis EntityCacheStorageProvider = "redis"
-	// EntityCacheStorageProviderMemory stores entries in the router process. Each
+	ResponseCacheStorageProviderRedis ResponseCacheStorageProvider = "redis"
+	// ResponseCacheStorageProviderMemory stores entries in the router process. Each
 	// replica then has a cache of its own and nothing survives a restart, so it
 	// has to be asked for by name rather than fallen back into.
-	EntityCacheStorageProviderMemory EntityCacheStorageProvider = "memory"
+	ResponseCacheStorageProviderMemory ResponseCacheStorageProvider = "memory"
 )
 
-type EntityCacheStorageConfig struct {
+type ResponseCacheStorageConfig struct {
 	// Provider selects the backend. An empty value is read as
-	// EntityCacheStorageProviderRedis, both because that is what this field
+	// ResponseCacheStorageProviderRedis, both because that is what this field
 	// defaults to and because it is what a configuration assembled in go, which
 	// never passes through the yaml defaults, still means.
-	Provider EntityCacheStorageProvider `yaml:"provider,omitempty" envDefault:"redis" env:"PROVIDER"`
+	Provider ResponseCacheStorageProvider `yaml:"provider,omitempty" envDefault:"redis" env:"PROVIDER"`
 	// ProviderID names a redis storage provider declared under
 	// storage_providers.redis and only means anything with
-	// EntityCacheStorageProviderRedis.
+	// ResponseCacheStorageProviderRedis.
 	ProviderID string `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
 	// MaxEntries caps how many entries the in memory provider holds and is
 	// ignored by redis, which is capped where it lives rather than from here.
@@ -1605,7 +1605,7 @@ type Config struct {
 	DevelopmentMode               bool                        `yaml:"dev_mode" envDefault:"false" env:"DEV_MODE"`
 	Events                        EventsConfiguration         `yaml:"events,omitempty"`
 	CacheWarmup                   CacheWarmupConfiguration    `yaml:"cache_warmup,omitempty"`
-	EntityCache                   EntityCacheConfiguration    `yaml:"entity_cache,omitempty" envPrefix:"ENTITY_CACHE_"`
+	ResponseCache                 ResponseCacheConfiguration  `yaml:"response_cache,omitempty" envPrefix:"RESPONSE_CACHE_"`
 
 	RouterConfigPath   string `yaml:"router_config_path,omitempty" env:"ROUTER_CONFIG_PATH"`
 	RouterRegistration bool   `yaml:"router_registration" env:"ROUTER_REGISTRATION" envDefault:"true"`

@@ -21,7 +21,7 @@ type RedisCache struct {
 	// the first answering the same thing the first one was told.
 	closeOnce sync.Once
 	closeErr  error
-	// prefix is prepended to every key before it reaches redis, so entity cache
+	// prefix is prepended to every key before it reaches redis, so response cache
 	// entries stay in their own namespace and cannot collide with anything else
 	// sharing the instance. It is applied on the way in and stripped back off on
 	// the way out, so callers only ever see the keys they asked with. An empty
@@ -45,7 +45,7 @@ func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix str
 	return &RedisCache{client: client, prefix: prefix}, nil
 }
 
-// GetMany implements entitycaching.GetMany.
+// GetMany implements caching.GetMany.
 func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]caching.Item, error) {
 	if len(keys) == 0 {
 		return nil, caching.ErrNoKeys
@@ -109,7 +109,7 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 	return results, nil
 }
 
-// SetMany implements entitycaching.SetMany.
+// SetMany implements caching.SetMany.
 func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
 		return caching.ErrNoItems
