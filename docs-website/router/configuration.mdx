@@ -2307,6 +2307,7 @@ For mor information on how to use the expression language, please refer to the [
 | Rate Limiting Simple Strategy](/router/configuration#rate-limiting-simple-strategy)      | simple                |                                               |                                                                                                                                                                                                                                                                                        |               |
 |                                                                                          | storage               | <Icon icon="square" />                        | [Rate Limiting Redis Storage](/router/configuration#rate-limiting-redis-storage)                                                                                                                                                                                                       |               |
 | RATE_LIMIT_KEY_SUFFIX_EXPRESSION                                                         | key_suffix_expression | <Icon icon="square" />                        | The expression to define a key suffix for the rate limit, e.g. by using request headers, claims, or a combination of both with a fallback strategy. The expression is specified as a string and needs to evaluate to a string. Please see https://expr-lang.org/ for more information. |               |
+| RATE_LIMIT_EXCLUDE_SUBSCRIPTIONS                                                         | exclude_subscriptions | <Icon icon="square" />                        | Exclude subscription operations from rate limiting. Queries and mutations remain rate limited, including those sent over subscription transports like WebSockets.                                                                                                                     | false         |
 |                                                                                          | error_extension_code  | <Icon icon="square" />                        |                                                                                                                                                                                                                                                                                        |               |
 | [Rate Limit Error Extension Code](/router/configuration#rate-limit-error-extension-code) |                       |                                               |                                                                                                                                                                                                                                                                                        |               |
 
@@ -2365,10 +2366,16 @@ rate_limit:
         key_prefix: "cosmo_rate_limit"
     debug: false
     key_suffix_expression: "request.header.Get('X-Api-Key')"
+    exclude_subscriptions: false
     error_extension_code:
         enabled: true
         code: "RATE_LIMIT_EXCEEDED"
 ```
+
+<Warning>
+  Excluding subscriptions from rate limiting can expose the router and your subgraphs to a denial-of-service risk, as an unrestricted client can open subscriptions that trigger unbounded subgraph fetches. Prefer a `key_suffix_expression` based on request headers where possible.
+  If subscriptions are not excluded, every subgraph request done while the subscription is active will be subject to the rate limiting.
+</Warning>
 
 ## Subgraph Data Propagation
 

@@ -1159,7 +1159,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 			resolveCtx.SetPreFetchFieldAuthorizer(h.graphqlHandler.authorizer)
 		}
 	}
-	resolveCtx = h.graphqlHandler.configureRateLimiting(resolveCtx)
+	resolveCtx = h.graphqlHandler.configureRateLimiting(resolveCtx, operationCtx.opType)
 
 	// Put in a closure to evaluate err after defer
 	defer func() {
