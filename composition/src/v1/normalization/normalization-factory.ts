@@ -43,6 +43,7 @@ import {
 import {
   extractLinkArgs,
   getConditionalFieldSetDirectiveName,
+  parseCacheTagFormat,
   getInitialFieldCoordsPath,
   getNormalizedFieldSet,
   initializeDirectiveDefinitionDatas,
@@ -80,6 +81,7 @@ import {
   duplicateImplementedInterfaceError,
   duplicateTypeDefinitionError,
   duplicateUnionMemberDefinitionError,
+  emptyCacheTagFormatErrorMessage,
   entityCacheWithoutKeyErrorMessage,
   equivalentSourceAndTargetOverrideErrorMessage,
   expectedEntityError,
@@ -110,6 +112,7 @@ import {
   invalidInterfaceImplementationError,
   invalidKeyFieldSetsEventDrivenErrorMessage,
   invalidMutationOrSubscriptionFieldCoordsErrorMessage,
+  invalidQueryRootFieldErrorMessage,
   invalidMutuallyExclusiveCacheDirectivesError,
   invalidNamedTypeError,
   invalidNatsStreamConfigurationDefinitionErrorMessage,
@@ -139,6 +142,9 @@ import {
   listSizeSlicingArgumentSegmentNotFoundErrorMessage,
   listSizeSlicingArgumentSegmentNotInputObjectErrorMessage,
   maxAgeNotPositiveIntegerErrorMessage,
+  unsupportedFieldCacheTagNamespaceErrorMessage,
+  undefinedCacheTagArgumentErrorMessage,
+  invalidCacheTagArgumentTypeErrorMessage,
   multipleNamedTypeDefinitionError,
   negativeCacheTTLNotNonNegativeIntegerErrorMessage,
   noBaseScalarDefinitionError,
@@ -186,6 +192,7 @@ import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
   type CacheInvalidateConfiguration,
   type CachePopulateConfiguration,
+  type CacheTagConfiguration,
   type ConfigurationData,
   type Costs,
   type EntityCacheConfiguration,
@@ -274,9 +281,11 @@ import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from '../constants/integers';
 import { type Warning } from '../../warnings/types';
 import { type NormalizationResult } from '../../normalization/types';
 import {
+  ARGS,
   ARGUMENT,
   ASSUMED_SIZE,
   AUTHENTICATED,
+  CACHE_TAG,
   CHANNEL,
   CHANNELS,
   COMPOSE_DIRECTIVE,
@@ -299,6 +308,7 @@ import {
   EXTENDS,
   EXTERNAL,
   FIELDS,
+  FORMAT,
   FIRST_ORDINAL,
   HYPHEN_JOIN,
   INACCESSIBLE,
@@ -4456,6 +4466,107 @@ export class NormalizationFactory {
     return true;
   }
 
+  extractFieldCacheTagDirectives(fieldData: FieldData) {
+    const directiveNodes = fieldData.directivesByName.get(CACHE_TAG);
+    if (!directiveNodes || directiveNodes.length < 1) {
+      return;
+    }
+    const { name: fieldName, originalParentTypeName, renamedParentTypeName: typeName } = fieldData;
+    const fieldCoords = `${originalParentTypeName}.${fieldName}`;
+    if (this.getOperationTypeNodeForRootTypeName(originalParentTypeName) !== OperationTypeNode.QUERY) {
+      this.errors.push(
+        invalidDirectiveError(CACHE_TAG, fieldCoords, FIRST_ORDINAL, [invalidQueryRootFieldErrorMessage()]),
+      );
+      return;
+    }
+    const configurations: Array<CacheTagConfiguration> = [];
+    for (const [index, directiveNode] of directiveNodes.entries()) {
+      const ordinal = numberToOrdinal(index + 1);
+      const format = this.getCacheTagFormat(directiveNode);
+      if (format === undefined) {
+        this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, [emptyCacheTagFormatErrorMessage()]));
+        continue;
+      }
+      const errorMessages: Array<string> = [];
+      for (const { namespace, reference } of parseCacheTagFormat(format, errorMessages)) {
+        // We only allow `args.*` format
+        if (namespace !== ARGS) {
+          errorMessages.push(unsupportedFieldCacheTagNamespaceErrorMessage(namespace));
+          continue;
+        }
+        const argumentData = this.getCacheTagArgumentData(fieldData, reference);
+        if (!argumentData) {
+          errorMessages.push(undefinedCacheTagArgumentErrorMessage(reference));
+          continue;
+        }
+        if (!this.isValidCacheTagLeaf(argumentData)) {
+          errorMessages.push(
+            invalidCacheTagArgumentTypeErrorMessage({
+              reference: reference,
+              typeString: printTypeNode(argumentData.type),
+            }),
+          );
+        }
+      }
+      if (errorMessages.length > 0) {
+        this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, errorMessages));
+        continue;
+      }
+      configurations.push({ fieldName, format, typeName });
+    }
+    if (configurations.length < 1) {
+      return;
+    }
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
+      newConfigurationData(false, typeName),
+    );
+    getOrInitializeEntityCaching(configurationData).cacheTagConfigurations.push(...configurations);
+  }
+
+  isValidCacheTagLeaf({ namedTypeName, type }: FieldData | InputValueData): boolean {
+    if (isTypeNodeListType(type)) {
+      return false;
+    }
+    if (BASE_SCALARS.has(namedTypeName)) {
+      return true;
+    }
+    const namedTypeData = this.parentDefinitionDataByTypeName.get(namedTypeName);
+    if (!namedTypeData) {
+      return true;
+    }
+    return namedTypeData.kind === Kind.SCALAR_TYPE_DEFINITION || namedTypeData.kind === Kind.ENUM_TYPE_DEFINITION;
+  }
+
+  getCacheTagFormat(directiveNode: ConstDirectiveNode): string | undefined {
+    const formatArgument = directiveNode.arguments?.find((argument) => argument.name.value === FORMAT);
+    if (!formatArgument || formatArgument.value.kind !== Kind.STRING || formatArgument.value.value === '') {
+      return;
+    }
+    return formatArgument.value.value;
+  }
+
+  getCacheTagArgumentData(fieldData: FieldData, reference: string): InputValueData | undefined {
+    const path = reference.split(LITERAL_PERIOD);
+    let inputValueDataByName: Map<string, InputValueData> | undefined = fieldData.argumentDataByName;
+    for (const [index, segment] of path.entries()) {
+      const inputValueData: InputValueData | undefined = inputValueDataByName?.get(segment);
+      if (!inputValueData) {
+        return;
+      }
+      // Whether the final segment is an interpolatable leaf value is assessed by the consumer.
+      if (index === path.length - 1) {
+        return inputValueData;
+      }
+      // We do not support lists at the moment
+      if (isTypeNodeListType(inputValueData.type)) {
+        return;
+      }
+      const namedTypeData = this.parentDefinitionDataByTypeName.get(inputValueData.namedTypeName);
+      inputValueDataByName =
+        namedTypeData?.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION ? namedTypeData.inputValueDataByName : undefined;
+    }
+  }
+
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
     const externalFieldNames = new Set<string>();
     for (const [fieldName, fieldData] of fieldDataByFieldName) {
@@ -4531,6 +4642,8 @@ export class NormalizationFactory {
       const fieldCoords = `${data.originalParentTypeName}.${data.name}`;
       this.errors.push(invalidMutuallyExclusiveCacheDirectivesError(fieldCoords));
     }
+
+    this.extractFieldCacheTagDirectives(data);
   }
 
   normalize(document: DocumentNode): NormalizationResult {
