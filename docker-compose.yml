@@ -336,6 +336,65 @@ services:
     profiles:
       - dev
 
+  # Opt-in replica nodes, one per master, enabled with the redis-cluster-replicas profile:
+  #   docker compose --profile dev --profile redis-cluster-replicas up -d redis-cluster-configure
+  # redis-cluster-create.sh picks up whichever of these are running and joins them with
+  # --cluster-replicas 1, which is what makes read_only=true routing testable locally. Without the
+  # profile the cluster stays three masters with no replicas.
+  redis-cluster-node-4:
+    image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - primary
+    ports:
+      - '7004:6379'
+      - '16374:16379'
+    volumes:
+      - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-p', '6379', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - redis-cluster-replicas
+
+  redis-cluster-node-5:
+    image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - primary
+    ports:
+      - '7005:6379'
+      - '16375:16379'
+    volumes:
+      - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-p', '6379', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - redis-cluster-replicas
+
+  redis-cluster-node-6:
+    image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - primary
+    ports:
+      - '7006:6379'
+      - '16376:16379'
+    volumes:
+      - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-p', '6379', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - redis-cluster-replicas
+
   redis-cluster-configure:
     image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
     command: /usr/local/etc/redis/redis-cluster-create.sh
@@ -348,6 +407,18 @@ services:
         condition: service_healthy
       redis-cluster-node-3:
         condition: service_healthy
+      redis-cluster-node-4:
+        condition: service_healthy
+        # Absent unless the redis-cluster-replicas profile is enabled.
+        required: false
+      redis-cluster-node-5:
+        condition: service_healthy
+        # Absent unless the redis-cluster-replicas profile is enabled.
+        required: false
+      redis-cluster-node-6:
+        condition: service_healthy
+        # Absent unless the redis-cluster-replicas profile is enabled.
+        required: false
     volumes:
       - ./docker/redis/:/usr/local/etc/redis/
     restart: on-failure:1
@@ -433,4 +504,7 @@ volumes:
   redis-cluster-node-1:
   redis-cluster-node-2:
   redis-cluster-node-3:
+  redis-cluster-node-4:
+  redis-cluster-node-5:
+  redis-cluster-node-6:
   plugin-registry:
