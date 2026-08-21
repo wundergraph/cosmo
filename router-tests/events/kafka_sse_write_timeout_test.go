@@ -32,10 +32,13 @@ var (
 // connection without closing it. The wrapped writer only returns when the
 // router sets a write deadline or the test releases it during cleanup.
 type blockingSSEWriterModule struct {
-	armed        *atomic.Bool
-	writeStarted chan struct{}
-	startedOnce  *sync.Once
-	release      chan struct{}
+	armed         *atomic.Bool
+	writeStarted  chan struct{}
+	startedOnce   *sync.Once
+	writeReturned *atomic.Bool
+	returned      chan struct{}
+	returnedOnce  *sync.Once
+	release       chan struct{}
 }
 
 func (m *blockingSSEWriterModule) Module() core.ModuleInfo {
@@ -44,10 +47,13 @@ func (m *blockingSSEWriterModule) Module() core.ModuleInfo {
 		Priority: 1,
 		New: func() core.Module {
 			return &blockingSSEWriterModule{
-				armed:        m.armed,
-				writeStarted: m.writeStarted,
-				startedOnce:  m.startedOnce,
-				release:      m.release,
+				armed:         m.armed,
+				writeStarted:  m.writeStarted,
+				startedOnce:   m.startedOnce,
+				writeReturned: m.writeReturned,
+				returned:      m.returned,
+				returnedOnce:  m.returnedOnce,
+				release:       m.release,
 			}
 		},
 	}
@@ -64,6 +70,9 @@ func (m *blockingSSEWriterModule) RouterOnRequest(ctx core.RequestContext, next 
 		armed:          m.armed,
 		writeStarted:   m.writeStarted,
 		startedOnce:    m.startedOnce,
+		writeReturned:  m.writeReturned,
+		returned:       m.returned,
+		returnedOnce:   m.returnedOnce,
 		release:        m.release,
 	}, ctx.Request())
 }
@@ -73,6 +82,9 @@ type deadlineBlockingResponseWriter struct {
 	armed         *atomic.Bool
 	writeStarted  chan struct{}
 	startedOnce   *sync.Once
+	writeReturned *atomic.Bool
+	returned      chan struct{}
+	returnedOnce  *sync.Once
 	release       chan struct{}
 	deadlineNanos atomic.Int64
 }
@@ -83,6 +95,10 @@ func (w *deadlineBlockingResponseWriter) Write(data []byte) (int, error) {
 	}
 
 	w.startedOnce.Do(func() { close(w.writeStarted) })
+	defer func() {
+		w.writeReturned.Store(true)
+		w.returnedOnce.Do(func() { close(w.returned) })
+	}()
 	deadlineNanos := w.deadlineNanos.Load()
 	if deadlineNanos == 0 {
 		<-w.release
@@ -131,18 +147,27 @@ func TestKafkaSubscriptionRecoversAfterSSEWriteTimeout(t *testing.T) {
 		t.Skip("skipping Kafka integration test in short mode")
 	}
 
-	const topic = "employeeUpdated-sse-write-timeout"
+	const (
+		topic           = "employeeUpdated-sse-write-timeout"
+		sseWriteTimeout = 3 * time.Second
+		healthyClients  = 2
+	)
 	armed := &atomic.Bool{}
 	writeStarted := make(chan struct{})
+	writeReturned := &atomic.Bool{}
+	returned := make(chan struct{})
 	release := make(chan struct{})
 	var releaseOnce sync.Once
 	t.Cleanup(func() { releaseOnce.Do(func() { close(release) }) })
 
 	module := &blockingSSEWriterModule{
-		armed:        armed,
-		writeStarted: writeStarted,
-		startedOnce:  &sync.Once{},
-		release:      release,
+		armed:         armed,
+		writeStarted:  writeStarted,
+		startedOnce:   &sync.Once{},
+		writeReturned: writeReturned,
+		returned:      returned,
+		returnedOnce:  &sync.Once{},
+		release:       release,
 	}
 
 	testenv.Run(t, &testenv.Config{
@@ -154,7 +179,7 @@ func TestKafkaSubscriptionRecoversAfterSSEWriteTimeout(t *testing.T) {
 				[]string{"employeeUpdated", "employeeUpdatedTwo"}, topic)
 		},
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-			cfg.SSEServerWriteTimeout = 100 * time.Millisecond
+			cfg.SSEServerWriteTimeout = sseWriteTimeout
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topic)
@@ -164,11 +189,14 @@ func TestKafkaSubscriptionRecoversAfterSSEWriteTimeout(t *testing.T) {
 		client := &http.Client{}
 		blockedResp := openSSESubscription(t, ctx, client, xEnv.GraphQLRequestURL(), true)
 		defer blockedResp.Body.Close()
-		healthyResp := openSSESubscription(t, ctx, client, xEnv.GraphQLRequestURL(), false)
-		defer healthyResp.Body.Close()
-		healthyReader := bufio.NewReader(healthyResp.Body)
+		healthyReaders := make([]*bufio.Reader, 0, healthyClients)
+		for range healthyClients {
+			healthyResp := openSSESubscription(t, ctx, client, xEnv.GraphQLRequestURL(), false)
+			defer healthyResp.Body.Close()
+			healthyReaders = append(healthyReaders, bufio.NewReader(healthyResp.Body))
+		}
 
-		xEnv.WaitForSubscriptionCount(2, EventWaitTimeout)
+		xEnv.WaitForSubscriptionCount(healthyClients+1, EventWaitTimeout)
 		xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 		armed.Store(true)
@@ -181,27 +209,50 @@ func TestKafkaSubscriptionRecoversAfterSSEWriteTimeout(t *testing.T) {
 			t.Fatal("timed out waiting for the SSE write to block")
 		}
 
-		require.Contains(t, readSSEData(t, healthyReader), `"id":1`)
+		for _, reader := range healthyReaders {
+			require.Contains(t, readSSEData(t, reader), `"id":1`)
+		}
 
-		xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
-		xEnv.KafkaPublishUntilReceived(topic,
-			`{"__typename":"Employee","id":2,"update":{"name":"recovery"}}`, 1, EventWaitTimeout)
+		type readResult struct {
+			data                    string
+			err                     error
+			blockedWriteHadReturned bool
+		}
+		recovery := make(chan readResult, healthyClients)
+		for _, reader := range healthyReaders {
+			go func() {
+				data, err := readSSEDataLine(reader)
+				recovery <- readResult{
+					data:                    data,
+					err:                     err,
+					blockedWriteHadReturned: writeReturned.Load(),
+				}
+			}()
+		}
 
-		recovery := make(chan string, 1)
-		go func() {
-			data, err := readSSEDataLine(healthyReader)
-			if err != nil {
-				recovery <- "error: " + err.Error()
-				return
-			}
-			recovery <- data
-		}()
+		// Queue the next provider event while the first event's shared-trigger
+		// dispatch is still blocked on one subscriber's SSE write.
+		events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topic,
+			`{"__typename":"Employee","id":2,"update":{"name":"recovery"}}`)
+		require.False(t, writeReturned.Load(), "blocked SSE write returned before the second event was queued")
 
 		select {
-		case data := <-recovery:
-			require.Contains(t, data, `"id":2`)
-		case <-time.After(EventWaitTimeout):
-			t.Fatal("healthy subscription did not receive the queued event after the SSE write deadline")
+		case <-returned:
+		case <-time.After(sseWriteTimeout + time.Second):
+			t.Fatal("blocked SSE write did not return after its deadline")
+		}
+
+		xEnv.WaitForSubscriptionCount(healthyClients, EventWaitTimeout)
+		for range healthyClients {
+			select {
+			case result := <-recovery:
+				require.NoError(t, result.err)
+				require.True(t, result.blockedWriteHadReturned,
+					"healthy subscription received the queued event while shared-trigger dispatch was blocked")
+				require.Contains(t, result.data, `"id":2`)
+			case <-time.After(EventWaitTimeout):
+				t.Fatal("healthy subscription did not receive the queued event after the SSE write deadline")
+			}
 		}
 	})
 }
