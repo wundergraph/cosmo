@@ -1,0 +1,54 @@
+---
+title: "Update Status"
+description: "Updates the status of an existing proposal for a federated graph."
+icon: arrows-rotate
+---
+
+## Usage
+
+```bash
+npx wgc proposal update-status <name> --federation-graph <federated-graph-name> --status <status> [options]
+```
+
+## Description
+
+The `npx wgc proposal update-status` command updates an existing proposal's review status. The command is non-interactive, which makes it suitable for CI workflows.
+
+The API key used by the command must have write access to the federated graph.
+
+## **Parameters**
+
+- `[name]`: The name of the proposal to update.
+
+## **Options**
+
+- `-f, --federation-graph <federatedGraphName>` (required): The name of the federated graph this proposal is for.
+- `-s, --status <status>` (required): The status to set. Accepted values are `approved` and `closed`. Values are case-insensitive.
+- `-n, --namespace [namespace]`: The namespace of the federated graph (Default: `default`).
+- `-j, --json`: Prints structured JSON instead of text.
+
+## **CI examples**
+
+Configure an API key as a secret in your CI system and expose it as `COSMO_API_KEY` before running the command.
+
+Approve a proposal:
+
+```bash
+export COSMO_API_KEY=<API_KEY>
+npx wgc proposal update-status product-changes \
+  --federation-graph my-graph \
+  --namespace production \
+  --status approved \
+  --json
+```
+
+Close a proposal:
+
+```bash
+npx wgc proposal update-status product-changes \
+  --federation-graph my-graph \
+  --namespace production \
+  --status closed
+```
+
+The command exits with a non-zero status when the proposal status cannot be updated, allowing the CI job to fail immediately.

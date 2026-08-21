@@ -1,0 +1,208 @@
+{
+  "data": {
+    "employee": {
+      "id": 1,
+      "derivedMood": "HAPPY"
+    },
+    "findEmployees": [
+      {
+        "id": 1,
+        "isAvailable": false
+      },
+      {
+        "id": 2,
+        "isAvailable": false
+      },
+      {
+        "id": 4,
+        "isAvailable": false
+      },
+      {
+        "id": 11,
+        "isAvailable": false
+      }
+    ]
+  },
+  "extensions": {
+    "queryPlan": {
+      "version": "1",
+      "kind": "Parallel",
+      "children": [
+        {
+          "kind": "Sequence",
+          "children": [
+            {
+              "kind": "Single",
+              "fetch": {
+                "kind": "Single",
+                "subgraphName": "employees",
+                "subgraphId": "0",
+                "fetchId": 0,
+                "query": "query($a: Int!){\n    employee(id: $a){\n        id\n        __typename\n    }\n}"
+              }
+            },
+            {
+              "kind": "Single",
+              "fetch": {
+                "kind": "Entity",
+                "path": "employee",
+                "subgraphName": "mood",
+                "subgraphId": "6",
+                "fetchId": 1,
+                "dependsOnFetchIds": [
+                  0
+                ],
+                "representations": [
+                  {
+                    "kind": "@key",
+                    "typeName": "Employee",
+                    "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
+                  }
+                ],
+                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            currentMood\n        }\n    }\n}",
+                "dependencies": [
+                  {
+                    "coordinate": {
+                      "typeName": "Employee",
+                      "fieldName": "currentMood"
+                    },
+                    "isUserRequested": false,
+                    "dependsOn": [
+                      {
+                        "fetchId": 0,
+                        "subgraph": "employees",
+                        "coordinate": {
+                          "typeName": "Employee",
+                          "fieldName": "id"
+                        },
+                        "isKey": true,
+                        "isRequires": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "Single",
+              "fetch": {
+                "kind": "Entity",
+                "path": "employee",
+                "subgraphName": "employees",
+                "subgraphId": "0",
+                "fetchId": 4,
+                "dependsOnFetchIds": [
+                  0,
+                  1
+                ],
+                "representations": [
+                  {
+                    "kind": "@requires",
+                    "typeName": "Employee",
+                    "fieldName": "derivedMood",
+                    "fragment": "fragment Requires_for_derivedMood on Employee {\n    currentMood\n}"
+                  },
+                  {
+                    "kind": "@key",
+                    "typeName": "Employee",
+                    "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
+                  }
+                ],
+                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            derivedMood\n        }\n    }\n}",
+                "dependencies": [
+                  {
+                    "coordinate": {
+                      "typeName": "Employee",
+                      "fieldName": "derivedMood"
+                    },
+                    "isUserRequested": true,
+                    "dependsOn": [
+                      {
+                        "fetchId": 1,
+                        "subgraph": "mood",
+                        "coordinate": {
+                          "typeName": "Employee",
+                          "fieldName": "currentMood"
+                        },
+                        "isKey": false,
+                        "isRequires": true
+                      },
+                      {
+                        "fetchId": 0,
+                        "subgraph": "employees",
+                        "coordinate": {
+                          "typeName": "Employee",
+                          "fieldName": "id"
+                        },
+                        "isKey": true,
+                        "isRequires": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "kind": "Sequence",
+          "children": [
+            {
+              "kind": "Single",
+              "fetch": {
+                "kind": "Single",
+                "subgraphName": "family",
+                "subgraphId": "1",
+                "fetchId": 2,
+                "query": "query($b: SearchInput){\n    findEmployees(criteria: $b){\n        id\n        __typename\n    }\n}"
+              }
+            },
+            {
+              "kind": "Single",
+              "fetch": {
+                "kind": "BatchEntity",
+                "path": "findEmployees",
+                "subgraphName": "availability",
+                "subgraphId": "5",
+                "fetchId": 3,
+                "dependsOnFetchIds": [
+                  2
+                ],
+                "representations": [
+                  {
+                    "kind": "@key",
+                    "typeName": "Employee",
+                    "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
+                  }
+                ],
+                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            isAvailable\n        }\n    }\n}",
+                "dependencies": [
+                  {
+                    "coordinate": {
+                      "typeName": "Employee",
+                      "fieldName": "isAvailable"
+                    },
+                    "isUserRequested": true,
+                    "dependsOn": [
+                      {
+                        "fetchId": 2,
+                        "subgraph": "family",
+                        "coordinate": {
+                          "typeName": "Employee",
+                          "fieldName": "id"
+                        },
+                        "isKey": true,
+                        "isRequires": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "normalizedQuery": "query IndependentChains($a: Int!, $b: SearchInput){employee(id: $a){id derivedMood} findEmployees(criteria: $b){id isAvailable}}"
+    }
+  }
+}
