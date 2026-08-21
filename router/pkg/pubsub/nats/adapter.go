@@ -151,12 +151,16 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
-						p.streamMetricStore.Consume(p.ctx, metric.StreamsEvent{
+						streamEvent := metric.StreamsEvent{
 							ProviderId:          subConf.ProviderID(),
 							StreamOperationName: natsReceive,
 							ProviderType:        metric.ProviderTypeNats,
 							DestinationName:     msg.Subject(),
-						})
+							RootFieldName:       subConf.RootFieldName(),
+						}
+						p.streamMetricStore.Consume(p.ctx, streamEvent)
+						p.streamMetricStore.DispatchStart(p.ctx, streamEvent)
+						dispatchStarted := time.Now()
 
 						updater.Update([]datasource.StreamEvent{
 							&Event{evt: &MutableEvent{
@@ -164,6 +168,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 								Headers: map[string][]string(msg.Headers()),
 							}},
 						})
+						p.streamMetricStore.DispatchFinish(context.WithoutCancel(p.ctx), streamEvent, time.Since(dispatchStarted))
 
 						// Acknowledge the message after it has been processed
 						ackErr := msg.Ack()
@@ -202,18 +207,23 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 			select {
 			case msg := <-msgChan:
 				log.Debug("subscription update", zap.String("message_subject", msg.Subject), zap.ByteString("data", msg.Data))
-				p.streamMetricStore.Consume(p.ctx, metric.StreamsEvent{
+				streamEvent := metric.StreamsEvent{
 					ProviderId:          subConf.ProviderID(),
 					StreamOperationName: natsReceive,
 					ProviderType:        metric.ProviderTypeNats,
 					DestinationName:     msg.Subject,
-				})
+					RootFieldName:       subConf.RootFieldName(),
+				}
+				p.streamMetricStore.Consume(p.ctx, streamEvent)
+				p.streamMetricStore.DispatchStart(p.ctx, streamEvent)
+				dispatchStarted := time.Now()
 				updater.Update([]datasource.StreamEvent{
 					&Event{evt: &MutableEvent{
 						Data:    msg.Data,
 						Headers: map[string][]string(msg.Header),
 					}},
 				})
+				p.streamMetricStore.DispatchFinish(context.WithoutCancel(p.ctx), streamEvent, time.Since(dispatchStarted))
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions
 				for _, subscription := range subscriptions {

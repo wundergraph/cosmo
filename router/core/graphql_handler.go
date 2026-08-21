@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -87,6 +88,7 @@ type HandlerOptions struct {
 	EnableCostResponseHeaders       bool
 
 	ApolloSubscriptionMultipartPrintBoundary bool
+	SSEServerWriteTimeout                    time.Duration
 	HeaderPropagation                        *HeaderPropagation
 }
 
@@ -109,6 +111,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		subgraphErrorPropagation:                 opts.SubgraphErrorPropagation,
 		engineLoaderHooks:                        opts.EngineLoaderHooks,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
+		sseServerWriteTimeout:                    opts.SSEServerWriteTimeout,
 		headerPropagation:                        opts.HeaderPropagation,
 	}
 	return graphQLHandler
@@ -143,6 +146,7 @@ type GraphQLHandler struct {
 	enableCostResponseHeaders       bool
 
 	apolloSubscriptionMultipartPrintBoundary bool
+	sseServerWriteTimeout                    time.Duration
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -284,16 +288,20 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	case *plan.SubscriptionResponsePlan:
 		var (
-			writer resolve.SubscriptionResponseWriter
-			ok     bool
+			writer    resolve.SubscriptionResponseWriter
+			writerErr error
 		)
 		h.setDebugCacheHeaders(w, reqCtx.operation)
 
 		defer propagateSubgraphErrors(resolveCtx)
-		resolveCtx, writer, ok = GetSubscriptionResponseWriter(resolveCtx, r, w, h.apolloSubscriptionMultipartPrintBoundary)
-		if !ok {
-			reqCtx.logger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
-			trackFinalResponseError(r.Context(), errCouldNotFlushResponse)
+		resolveCtx, writer, writerErr = GetSubscriptionResponseWriter(resolveCtx, r, w, SubscriptionResponseWriterOptions{
+			ApolloSubscriptionMultipartPrintBoundary: h.apolloSubscriptionMultipartPrintBoundary,
+			SSEWriteTimeout:                          h.sseServerWriteTimeout,
+			MetricStore:                              h.metricStore,
+		})
+		if writerErr != nil {
+			reqCtx.logger.Error("unable to get subscription response writer", zap.Error(writerErr))
+			trackFinalResponseError(r.Context(), writerErr)
 			writeRequestErrors(writeRequestErrorsParams{
 				request:           r,
 				writer:            w,
