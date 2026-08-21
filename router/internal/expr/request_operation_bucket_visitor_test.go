@@ -11,7 +11,7 @@ import (
 // based on the attributes they access.
 //
 // Priority (low → high): Default < Auth < Sha256 < ParsingTime < NameOrType < PersistedID <
-//	NormalizationTime < Hash < ValidationTime < PlanningTime < Subgraph
+//	NormalizationTime < Hash < QueryPlanHash < QueryComplexity < ValidationTime < PlanningTime < Subgraph
 
 func TestRequestOperationBucketVisitor(t *testing.T) {
 	t.Parallel()
@@ -186,6 +186,50 @@ func TestRequestOperationBucketVisitor(t *testing.T) {
 			description:    "Query plan hash with bracket notation should use query plan hash bucket",
 		},
 
+		// BucketQueryComplexity - request.operation query complexity fields
+		{
+			name:           "query depth",
+			expression:     `request.operation.queryDepth`,
+			expectedBucket: BucketQueryComplexity,
+			description:    "Query depth should use the query complexity bucket",
+		},
+		{
+			name:           "query total fields",
+			expression:     `request.operation.queryTotalFields`,
+			expectedBucket: BucketQueryComplexity,
+			description:    "Query total fields should use the query complexity bucket",
+		},
+		{
+			name:           "query root fields",
+			expression:     `request.operation.queryRootFields`,
+			expectedBucket: BucketQueryComplexity,
+			description:    "Query root fields should use the query complexity bucket",
+		},
+		{
+			name:           "query root field aliases",
+			expression:     `request.operation.queryRootFieldAliases`,
+			expectedBucket: BucketQueryComplexity,
+			description:    "Query root field aliases should use the query complexity bucket",
+		},
+		{
+			name:           "query complexity cache hit",
+			expression:     `request.operation.queryComplexityCacheHit`,
+			expectedBucket: BucketQueryComplexity,
+			description:    "Query complexity cache status should use the query complexity bucket",
+		},
+		{
+			name:           "query complexity with bracket notation",
+			expression:     `request["operation"]["queryDepth"]`,
+			expectedBucket: BucketQueryComplexity,
+			description:    "Query complexity with bracket notation should use the query complexity bucket",
+		},
+		{
+			name:           "query plan hash and query complexity",
+			expression:     `request.operation.queryPlanHash != "" && request.operation.queryDepth > 0`,
+			expectedBucket: BucketQueryComplexity,
+			description:    "Query complexity is higher priority than query plan hash",
+		},
+
 		// BucketValidationTime - request.operation.validationTime
 		{
 			name:           "validationTime",
@@ -198,6 +242,12 @@ func TestRequestOperationBucketVisitor(t *testing.T) {
 			expression:     `request.operation.validationTime > request.operation.normalizationTime && request.operation.hash != ""`,
 			expectedBucket: BucketValidationTime,
 			description:    "Validation time is higher priority than hash",
+		},
+		{
+			name:           "validationTime and query complexity",
+			expression:     `request.operation.validationTime.Nanoseconds() > 0 && request.operation.queryDepth > 0`,
+			expectedBucket: BucketValidationTime,
+			description:    "Validation time is higher priority than query complexity",
 		},
 
 		// BucketPlanningTime - request.operation.planningTime
@@ -212,6 +262,12 @@ func TestRequestOperationBucketVisitor(t *testing.T) {
 			expression:     `request.operation.planningTime + request.operation.validationTime`,
 			expectedBucket: BucketPlanningTime,
 			description:    "Planning time is higher priority than validation time",
+		},
+		{
+			name:           "planningTime and query complexity",
+			expression:     `request.operation.planningTime.Nanoseconds() > 0 && request.operation.queryDepth > 0`,
+			expectedBucket: BucketPlanningTime,
+			description:    "Planning time is higher priority than query complexity",
 		},
 
 		// BucketSubgraph - subgraph or subgraph.* (highest priority)
@@ -371,6 +427,8 @@ func bucketName(bucket AttributeBucket) string {
 		return "BucketHash"
 	case BucketQueryPlanHash:
 		return "BucketQueryPlanHash"
+	case BucketQueryComplexity:
+		return "BucketQueryComplexity"
 	case BucketValidationTime:
 		return "BucketValidationTime"
 	case BucketPlanningTime:
@@ -397,7 +455,8 @@ func TestBucketPriority(t *testing.T) {
 	assert.True(t, BucketPersistedID < BucketNormalizationTime, "PersistedID should be lower priority than NormalizationTime")
 	assert.True(t, BucketNormalizationTime < BucketHash, "NormalizationTime should be lower priority than Hash")
 	assert.True(t, BucketHash < BucketQueryPlanHash, "Hash should be lower priority than QueryPlanHash")
-	assert.True(t, BucketQueryPlanHash < BucketValidationTime, "QueryPlanHash should be lower priority than ValidationTime")
+	assert.True(t, BucketQueryPlanHash < BucketQueryComplexity, "QueryPlanHash should be lower priority than QueryComplexity")
+	assert.True(t, BucketQueryComplexity < BucketValidationTime, "QueryComplexity should be lower priority than ValidationTime")
 	assert.True(t, BucketValidationTime < BucketPlanningTime, "ValidationTime should be lower priority than PlanningTime")
 	assert.True(t, BucketPlanningTime < BucketSubgraph, "PlanningTime should be lower priority than Subgraph")
 }
