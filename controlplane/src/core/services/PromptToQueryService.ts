@@ -35,17 +35,15 @@ const ptqQuerySchema = z.object({
   description: z.string().optional(),
   document: z.string().min(1),
   operationName: z.string().min(1),
-  operationType: z.union([z.literal('query'), z.literal('mutation'), z.literal('subscription')]),
+  operationType: z.enum(['OPERATION_TYPE_QUERY', 'OPERATION_TYPE_MUTATION', 'OPERATION_TYPE_SUBSCRIPTION']),
   variablesSchema: z.string().optional(),
 });
 
 const ptqUnsatisfiedSchema = z.object({ reason: z.string() });
 
 const ptqResponseSchema = z.object({
-  resolution: z.object({
-    queries: z.array(ptqQuerySchema).optional(),
-    unsatisfied: z.array(ptqUnsatisfiedSchema).optional(),
-  }),
+  query: ptqQuerySchema.optional(),
+  unsatisfied: z.array(ptqUnsatisfiedSchema).optional(),
 });
 
 type PtQResponse = z.infer<typeof ptqResponseSchema>;
@@ -142,7 +140,7 @@ export class PromptToQueryService {
     // Invoke the `prompt to query` service
     try {
       const indexId = await this.ensureIndex(schemaVersion.sdl, signal);
-      const response = await this.#httpClient('/yoko.v1.YokoService/GenerateQuery', {
+      const response = await this.#httpClient('/yoko.v1.YokoService/PromptToQuery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({
@@ -234,13 +232,13 @@ export class PromptToQueryService {
 
   private static getOperationType(type: z.infer<typeof ptqQuerySchema>['operationType']): SatisfiedOperationType {
     switch (type) {
-      case 'query': {
+      case 'OPERATION_TYPE_QUERY': {
         return SatisfiedOperationType.QUERY;
       }
-      case 'mutation': {
+      case 'OPERATION_TYPE_MUTATION': {
         return SatisfiedOperationType.MUTATION;
       }
-      case 'subscription': {
+      case 'OPERATION_TYPE_SUBSCRIPTION': {
         return SatisfiedOperationType.SUBSCRIPTION;
       }
     }
@@ -249,13 +247,11 @@ export class PromptToQueryService {
   }
 
   private static handleServiceResponse(response: PtQResponse): GenerateQueryResponse {
-    const { resolution } = response;
-    if (!resolution?.queries?.length) {
-      const { unsatisfied } = resolution;
+    if (!response.query) {
       let failureDetails = 'It was not possible to generate a query from the provided prompt';
-      if (unsatisfied?.length) {
+      if (response.unsatisfied?.length) {
         failureDetails += ':';
-        for (const { reason } of unsatisfied) {
+        for (const { reason } of response.unsatisfied) {
           failureDetails += `\n - ${reason}`;
         }
       }
@@ -268,7 +264,7 @@ export class PromptToQueryService {
       });
     }
 
-    const generated = resolution.queries[0];
+    const generated = response.query;
     return create(GenerateQueryResponseSchema, {
       response: { code: EnumStatusCode.OK },
       query: {
