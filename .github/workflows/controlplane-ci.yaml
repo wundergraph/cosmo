@@ -23,11 +23,15 @@ jobs:
   build_test:
     timeout-minutes: 20
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       DOCKER_CREDENTIALS_AVAILABLE: ${{ secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '' }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Log in to Docker Hub
         if: env.DOCKER_CREDENTIALS_AVAILABLE == 'true'
@@ -104,8 +108,13 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: ./.github/actions/build-push-image
         with:
