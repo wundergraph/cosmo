@@ -11,7 +11,8 @@ message Response {
 }
 
 message GenerateQueryRequest {
-  string schema_hash = 1;
+  // Copied from RouterConfig.version in the active router configuration.
+  string version = 1;
   string prompt = 2;
 }
 

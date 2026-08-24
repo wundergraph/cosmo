@@ -20,7 +20,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof AIServ
           opts.billingDefaultPlanId,
         );
 
-        return promptToQueryService.generateQuery(req.schemaHash, req.prompt);
+        return promptToQueryService.generateQuery(authContext.federatedGraphId, req.version, req.prompt);
       });
     },
   };

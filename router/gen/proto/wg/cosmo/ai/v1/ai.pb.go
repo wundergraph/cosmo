@@ -128,9 +128,10 @@ func (x *Response) GetDetails() string {
 }
 
 type GenerateQueryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SchemaHash    string                 `protobuf:"bytes,1,opt,name=schema_hash,json=schemaHash,proto3" json:"schema_hash,omitempty"`
-	Prompt        string                 `protobuf:"bytes,2,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Copied from RouterConfig.version in the active router configuration.
+	Version       string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Prompt        string `protobuf:"bytes,2,opt,name=prompt,proto3" json:"prompt,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -165,9 +166,9 @@ func (*GenerateQueryRequest) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_ai_v1_ai_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *GenerateQueryRequest) GetSchemaHash() string {
+func (x *GenerateQueryRequest) GetVersion() string {
 	if x != nil {
-		return x.SchemaHash
+		return x.Version
 	}
 	return ""
 }
@@ -316,10 +317,9 @@ const file_wg_cosmo_ai_v1_ai_proto_rawDesc = "" +
 	"\x04code\x18\x01 \x01(\x0e2\x1f.wg.cosmo.common.EnumStatusCodeR\x04code\x12\x1d\n" +
 	"\adetails\x18\x02 \x01(\tH\x00R\adetails\x88\x01\x01B\n" +
 	"\n" +
-	"\b_details\"O\n" +
-	"\x14GenerateQueryRequest\x12\x1f\n" +
-	"\vschema_hash\x18\x01 \x01(\tR\n" +
-	"schemaHash\x12\x16\n" +
+	"\b_details\"H\n" +
+	"\x14GenerateQueryRequest\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12\x16\n" +
 	"\x06prompt\x18\x02 \x01(\tR\x06prompt\"\x92\x01\n" +
 	"\x15GenerateQueryResponse\x124\n" +
 	"\bresponse\x18\x01 \x01(\v2\x18.wg.cosmo.ai.v1.ResponseR\bresponse\x129\n" +
