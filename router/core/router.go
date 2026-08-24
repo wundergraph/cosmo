@@ -1335,6 +1335,9 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpserver.WithServerTitle(r.mcp.Server.Title),
 		mcpserver.WithServerDescription(r.mcp.Server.Description),
 	}
+	if r.promptToQueryClient != nil {
+		mcpOpts = append(mcpOpts, mcpserver.WithPromptToQueryClient(r.promptToQueryClient))
+	}
 
 	if r.corsOptions != nil {
 		mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
@@ -2219,6 +2222,13 @@ func WithConfigPoller(cf configpoller.ConfigPoller) Option {
 func WithSelfRegistration(sr selfregister.SelfRegister) Option {
 	return func(r *Router) {
 		r.selfRegister = sr
+	}
+}
+
+// WithPromptToQueryClient sets the control-plane client used by the MCP generate_query tool.
+func WithPromptToQueryClient(client mcpserver.PromptToQueryClient) Option {
+	return func(r *Router) {
+		r.promptToQueryClient = client
 	}
 }
 

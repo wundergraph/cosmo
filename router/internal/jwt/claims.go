@@ -12,6 +12,7 @@ const (
 	OrganizationIDClaim       = "organization_id"
 	FeaturesClaim             = "features"
 	FeatureSplitConfigLoading = "split-config-loading"
+	FeaturePromptToQuery      = "prompt-to-query"
 )
 
 type FederatedGraphTokenClaims struct {
