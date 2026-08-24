@@ -5,18 +5,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 )
 
 // RedisCache stores entries in Redis.
 type RedisCache struct {
-	// client is owned by the caller, not this cache, so it is never closed
-	// here. It is a UniversalClient so a single, cluster or sentinel client all
-	// fit without this cache having to know which one it got.
+	// client is owned by this cache once construction succeeds, and Close
+	// closes it. It is a UniversalClient so a single, cluster or sentinel
+	// client all fit without this cache having to know which one it got.
 	client redis.UniversalClient
-	// prefix is prepended to every key before it reaches redis, so entity cache
+	// closeOnce keeps Close idempotent, and closeErr keeps every caller after
+	// the first answering the same thing the first one was told.
+	closeOnce sync.Once
+	closeErr  error
+	// prefix is prepended to every key before it reaches redis, so response cache
 	// entries stay in their own namespace and cannot collide with anything else
 	// sharing the instance. It is applied on the way in and stripped back off on
 	// the way out, so callers only ever see the keys they asked with. An empty
@@ -24,12 +29,14 @@ type RedisCache struct {
 	prefix string
 }
 
-var _ entitycaching.Cache = (*RedisCache)(nil)
+var _ caching.Cache = (*RedisCache)(nil)
 
 // NewRedisCache returns a cache backed by client, namespacing every key with
-// prefix. The caller keeps ownership of client and is responsible for closing
-// it. rediscloser.RDCloser satisfies redis.UniversalClient, so a client built
-// by rediscloser.NewRedisCloser can be passed straight in.
+// prefix. On success the cache takes ownership of client and closes it in
+// Close, so the caller must not close it independently; if construction fails
+// the client is untouched and closing it stays with the caller.
+// rediscloser.RDCloser satisfies redis.UniversalClient, so a client built by
+// rediscloser.NewRedisCloser can be passed straight in.
 func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix string) (*RedisCache, error) {
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("unable to connect to redis: %w", err)
@@ -38,10 +45,10 @@ func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix str
 	return &RedisCache{client: client, prefix: prefix}, nil
 }
 
-// GetMany implements entitycaching.GetMany.
-func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]entitycaching.Item, error) {
+// GetMany implements caching.GetMany.
+func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]caching.Item, error) {
 	if len(keys) == 0 {
-		return nil, errors.New("entity cache lookup requires at least one key")
+		return nil, caching.ErrNoKeys
 	}
 
 	// A pipeline of GETs rather than a single MGET: go-redis splits a pipeline
@@ -74,7 +81,7 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]ent
 
 	// Sized for every key finding something, which is the case worth being
 	// ready for. A miss adds nothing, so the map is only as big as the hits.
-	results := make(map[string]entitycaching.Item, len(keys))
+	results := make(map[string]caching.Item, len(keys))
 	for i, key := range keys {
 		value, err := values[i].Bytes()
 		if err != nil {
@@ -96,16 +103,16 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]ent
 
 		// Keyed by what the caller asked with, not the prefixed key it was
 		// stored under: the namespace is this cache's business, not theirs.
-		results[key] = entitycaching.Item{Key: key, Value: bytes.Clone(value), TTL: ttl}
+		results[key] = caching.Item{Key: key, Value: bytes.Clone(value), TTL: ttl}
 	}
 
 	return results, nil
 }
 
-// SetMany implements entitycaching.SetMany.
-func (c *RedisCache) SetMany(ctx context.Context, items []entitycaching.Item) error {
+// SetMany implements caching.SetMany.
+func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
-		return errors.New("entity cache write requires at least one item")
+		return caching.ErrNoItems
 	}
 
 	// Queuing writes nothing to redis, only Exec below does, so validating as
@@ -120,7 +127,7 @@ func (c *RedisCache) SetMany(ctx context.Context, items []entitycaching.Item) er
 	cmds := make([]*redis.StatusCmd, len(items))
 	for i, item := range items {
 		if item.TTL <= 0 {
-			return fmt.Errorf("%w: key %q", entitycaching.ErrMissingTTL, item.Key)
+			return fmt.Errorf("%w: key %q", caching.ErrMissingTTL, item.Key)
 		}
 		cmds[i] = pipe.Set(ctx, c.prefix+item.Key, item.Value, item.TTL)
 	}
@@ -145,5 +152,16 @@ func (c *RedisCache) SetMany(ctx context.Context, items []entitycaching.Item) er
 		return err
 	}
 
-	return &entitycaching.SetManyError{KnownStoredKeys: stored, Err: err}
+	return &caching.SetManyError{KnownStoredKeys: stored, Err: err}
+}
+
+// Close releases the redis client the cache was built with. The Once is not for
+// thread safety, which the client has of its own, but so that a second shutdown
+// path reaching this is answered the same as the first rather than with
+// go-redis' complaint that the client is already closed.
+func (c *RedisCache) Close() error {
+	c.closeOnce.Do(func() {
+		c.closeErr = c.client.Close()
+	})
+	return c.closeErr
 }

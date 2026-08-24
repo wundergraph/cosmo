@@ -9,7 +9,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
-	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
+	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 )
 
 const testPrefix = "entity:"
@@ -34,12 +34,17 @@ func newTestRedisCacheWithHook(t *testing.T, hook redis.Hook) (*RedisCache, *min
 	if hook != nil {
 		client.AddHook(hook)
 	}
-	t.Cleanup(func() {
-		require.NoError(t, client.Close())
-	})
-
 	c, err := NewRedisCache(t.Context(), client, testPrefix)
-	require.NoError(t, err)
+	if err != nil {
+		// Ownership never transferred, so the client is still the test's to
+		// close before it gives up.
+		require.NoError(t, client.Close())
+		require.NoError(t, err)
+	}
+
+	t.Cleanup(func() {
+		require.NoError(t, c.Close())
+	})
 
 	return c, mr
 }
@@ -159,6 +164,36 @@ func TestRedisCache(t *testing.T) {
 		})
 	})
 
+	t.Run("Close", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("closes the client it was given", func(t *testing.T) {
+			t.Parallel()
+
+			mr := miniredis.RunT(t)
+			client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+			c, err := NewRedisCache(ctx, client, testPrefix)
+			require.NoError(t, err)
+			require.NoError(t, c.Close())
+
+			// The client is the cache's to close, so it is gone rather than
+			// merely unreferenced, and anything reaching for it now says so.
+			require.Error(t, client.Ping(ctx).Err())
+		})
+
+		t.Run("is idempotent", func(t *testing.T) {
+			t.Parallel()
+
+			// Twice here, and a third time from the cleanup the helper
+			// registered, so a second shutdown path reaching it is answered the
+			// same as the first rather than with go-redis' already-closed.
+			c, _ := newTestRedisCache(t)
+			require.NoError(t, c.Close())
+			require.NoError(t, c.Close())
+		})
+	})
+
 	t.Run("SetMany", func(t *testing.T) {
 		t.Parallel()
 
@@ -168,7 +203,7 @@ func TestRedisCache(t *testing.T) {
 			c, mr := newTestRedisCache(t)
 
 			err := c.SetMany(ctx, nil)
-			require.EqualError(t, err, "entity cache write requires at least one item")
+			require.ErrorIs(t, err, enginecache.ErrNoItems)
 			require.Empty(t, mr.Keys())
 		})
 
@@ -178,7 +213,7 @@ func TestRedisCache(t *testing.T) {
 			c, mr := newTestRedisCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{})
-			require.EqualError(t, err, "entity cache write requires at least one item")
+			require.ErrorIs(t, err, enginecache.ErrNoItems)
 			require.Empty(t, mr.Keys())
 		})
 
@@ -401,7 +436,7 @@ func TestRedisCache(t *testing.T) {
 			c, _ := newTestRedisCache(t)
 
 			results, err := c.GetMany(ctx, nil)
-			require.EqualError(t, err, "entity cache lookup requires at least one key")
+			require.ErrorIs(t, err, enginecache.ErrNoKeys)
 			require.Nil(t, results)
 		})
 
@@ -411,7 +446,7 @@ func TestRedisCache(t *testing.T) {
 			c, _ := newTestRedisCache(t)
 
 			results, err := c.GetMany(ctx, []string{})
-			require.EqualError(t, err, "entity cache lookup requires at least one key")
+			require.ErrorIs(t, err, enginecache.ErrNoKeys)
 			require.Nil(t, results)
 		})
 
