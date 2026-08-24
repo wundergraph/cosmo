@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -310,6 +311,7 @@ func TestExecuteGraphQLQueryResultBoundary(t *testing.T) {
 		{"non-JSON body returns a tool error", `<html>bad gateway</html>`, true, false},
 		{"empty body returns a tool error", ``, true, false},
 		{"null body returns a tool error", `null`, true, false},
+		{"trailing JSON value returns a tool error", `{"data":{}} {}`, true, false},
 	}
 
 	for _, tc := range testCases {
@@ -339,6 +341,66 @@ func TestExecuteGraphQLQueryResultBoundary(t *testing.T) {
 			} else {
 				assert.Nil(t, result.StructuredContent)
 			}
+		})
+	}
+}
+
+func TestExecuteGraphQLQueryPreservesGraphQLErrorDetails(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		responseBody string
+		wantText     string
+	}{
+		{
+			name:         "message-only error keeps the existing format",
+			responseBody: `{"errors":[{"message":"boom"}]}`,
+			wantText:     "Response error: boom",
+		},
+		{
+			name:         "error details are preserved",
+			responseBody: `{"errors":[{"message":"Input validation error","locations":[{"line":2,"column":7}],"path":["createDataSet",0],"extensions":{"code":"INPUT_VALIDATION","issues":{"dataSetId":["IS_BLANK"]}}}]}`,
+			wantText:     `Response error: Input validation error (details: {"locations":[{"line":2,"column":7}],"path":["createDataSet",0],"extensions":{"code":"INPUT_VALIDATION","issues":{"dataSetId":["IS_BLANK"]}}})`,
+		},
+		{
+			name:         "multiple errors are separated",
+			responseBody: `{"errors":[{"message":"First error"},{"message":"Second error","path":["createDataSet"],"extensions":{"code":"INVALID"}}]}`,
+			wantText:     `Response error: First error; Second error (details: {"path":["createDataSet"],"extensions":{"code":"INVALID"}})`,
+		},
+		{
+			name:         "large integers preserve precision",
+			responseBody: `{"errors":[{"message":"Invalid identifier","path":["createDataSet",9007199254740993],"extensions":{"requestId":9007199254740993}}]}`,
+			wantText:     `Response error: Invalid identifier (details: {"path":["createDataSet",9007199254740993],"extensions":{"requestId":9007199254740993}})`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(tc.responseBody))
+			}))
+			defer upstream.Close()
+
+			srv, err := NewGraphQLSchemaServer(
+				t.Context(),
+				upstream.URL,
+				WithLogger(zap.NewNop()),
+				WithOperationsDir(t.TempDir()),
+				WithOutputSchemaEnabled(true),
+			)
+			require.NoError(t, err)
+
+			result, err := srv.executeGraphQLQuery(t.Context(), "query { employee { name } }", nil)
+			require.NoError(t, err)
+			require.True(t, result.IsError)
+			require.Nil(t, result.StructuredContent)
+			require.Len(t, result.Content, 1)
+
+			content, ok := result.Content[0].(*mcp.TextContent)
+			require.True(t, ok)
+			assert.Equal(t, tc.wantText, content.Text)
 		})
 	}
 }

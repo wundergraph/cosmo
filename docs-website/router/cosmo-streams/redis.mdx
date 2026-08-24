@@ -112,6 +112,8 @@ events:
 
 </CodeGroup>
 
+Connection and pool settings are passed in the URL query string, e.g. `redis://localhost:6379/?pool_size=20`. See [Redis Connection URLs](/router/configuration#redis-connection-urls).
+
 ## Example Query
 
 In the example query below, one or more subgraphs have been implemented alongside the Event-Driven Graph to resolve any other fields defined on `Employee`, e.g., `tag` and `details.surname`.

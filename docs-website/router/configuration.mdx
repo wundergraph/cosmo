@@ -1253,7 +1253,7 @@ Used for distributed caching like automatic persisted queries.
 | Environment Variable                    | YAML            | Required                                      | Description                                                                                               | Default Value |
 | --------------------------------------- | --------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------- |
 | STORAGE_PROVIDER_REDIS_\{n\}_ID              | id              | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations                                               |               |
-| STORAGE_PROVIDER_REDIS_\{n\}_URLS            | urls            | <Icon icon="square-check" iconType="solid" /> | List of Redis URLs to connect to. If cluster_enabled is true, these are the seeds to discover the cluster |               |
+| STORAGE_PROVIDER_REDIS_\{n\}_URLS            | urls            | <Icon icon="square-check" iconType="solid" /> | List of Redis URLs to connect to. If cluster_enabled is true, these are the seeds to discover the cluster. Connection and pool settings go in the URL query string, see [Redis Connection URLs](/router/configuration#redis-connection-urls) |               |
 | STORAGE_PROVIDER_REDIS_\{n\}_CLUSTER_ENABLED | cluster_enabled | <Icon icon="square" />                        | Whether to use the Redis Cluster client                                                                   | false         |
 
 #### File System Storage Provider
@@ -1264,6 +1264,91 @@ This provider allows you to load files from the local file system.
 | --------------------------- | ---- | --------------------------------------------- | ------------------------------------------------------------- | ------------- |
 | STORAGE_PROVIDER_FS_\{n\}_ID   | id   | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations   |               |
 | STORAGE_PROVIDER_FS_\{n\}_PATH | path | <Icon icon="square-check" iconType="solid" /> | The path on the file system where files should be loaded from |               |
+
+## Redis Connection URLs
+
+Everywhere the router connects to Redis it takes a connection URL: `rate_limit.storage`, each entry under `storage_providers.redis`, and each entry under `events.providers.redis`. There is no separate block for connection or pool settings. The Redis client parses them from the URL query string, so you tune them there.
+
+```yaml config.yaml
+rate_limit:
+  storage:
+    urls:
+      - "redis://user:password@localhost:6379/0?pool_size=20&min_idle_conns=2&pool_timeout=3s"
+```
+
+Use the `rediss://` scheme instead of `redis://` to connect over TLS. There is no query parameter for this.
+
+<Note>
+  A parameter the client does not recognise makes the router fail at startup with `redis: unexpected option: <name>`, so a typo in a pool setting cannot be silently ignored. This also means options from other Redis clients (for example `ssl=true` or `connectTimeout`) are not accepted.
+</Note>
+
+### Connection pool options
+
+| Parameter          | Description                                                                                                                                          | Default Value       |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| pool_size          | Maximum number of socket connections the pool keeps open. Commands arriving while every connection is busy wait up to `pool_timeout` for one to free up. | 10 * number of CPUs |
+| min_idle_conns     | Number of idle connections kept ready, so a burst of traffic does not pay the cost of establishing connections on the request path.                    | 0                   |
+| max_idle_conns     | Upper bound on idle connections held by the pool.                                                                                                     | no limit            |
+| max_active_conns   | Hard cap on connections, including those handed out to in-flight commands. Unlike `pool_size` this cap fails fast. See the warning below.             | no limit            |
+| pool_timeout       | How long a command waits for a free connection before failing, e.g. `3s`.                                                                            | read timeout + 1s   |
+| conn_max_idle_time | Retire a connection idle for longer than this, e.g. `5m`. A negative value disables the check.                                                        | 30m                 |
+| conn_max_lifetime  | Retire a connection at this age, measured from when it was created, e.g. `30m`. Useful when a proxy in front of Redis needs connections recycled to rebalance. | disabled            |
+| pool_fifo          | Use FIFO instead of LIFO when handing out pooled connections. LIFO keeps the pool warm; FIFO recycles connections more evenly.                        | false               |
+
+### Connection and retry options
+
+| Parameter          | Description                                                                       | Default Value |
+| ------------------ | --------------------------------------------------------------------------------- | ------------- |
+| dial_timeout       | Timeout for establishing a new connection, e.g. `5s`.                             | 5s            |
+| read_timeout       | Socket read timeout, e.g. `3s`. Also the basis for the default `pool_timeout`.     | 3s            |
+| write_timeout      | Socket write timeout, e.g. `3s`.                                                  | read timeout  |
+| max_retries        | Number of retries before giving up on a command. `-1` disables retries.           | 3             |
+| min_retry_backoff  | Minimum backoff between retries, e.g. `8ms`. `-1` disables backoff.               | 8ms           |
+| max_retry_backoff  | Maximum backoff between retries, e.g. `512ms`. `-1` disables backoff.             | 512ms         |
+| client_name        | Name sent to Redis with `CLIENT SETNAME`, which makes the router's connections identifiable in `CLIENT LIST`. |               |
+| protocol           | RESP protocol version, `2` or `3`.                                                | 3             |
+
+### Single node only
+
+| Parameter | Description                                                                        | Default Value |
+| --------- | ---------------------------------------------------------------------------------- | ------------- |
+| db        | Database index to select. Also settable as the URL path, e.g. `redis://host:6379/2`. | 0             |
+
+### Cluster only
+
+These apply when `cluster_enabled: true`.
+
+| Parameter        | Description                                                                                | Default Value |
+| ---------------- | ------------------------------------------------------------------------------------------ | ------------- |
+| max_redirects    | Number of MOVED/ASK redirects to follow before giving up on a command.                      | 3             |
+| read_only        | Allow routing read-only commands to replicas.                                               | false         |
+| route_by_latency | Route read-only commands to the closest node by measured latency. Implies `read_only`.      | false         |
+| route_randomly   | Route read-only commands to a random node. Implies `read_only`.                             | false         |
+
+<Warning>
+  With `cluster_enabled: true`, query parameters are only read from the **first** URL in the list. The router uses the remaining URLs as additional cluster seed addresses and takes only their host and port, so parameters placed on them are silently dropped. Put all connection options on the first URL.
+
+  ```yaml config.yaml
+  urls:
+    - "redis://localhost:7001?pool_size=20&max_redirects=5" # options read from here
+    - "redis://localhost:7002"                              # host only
+    - "redis://localhost:7003"                              # host only
+  ```
+</Warning>
+
+<Warning>
+  `pool_size` and `max_active_conns` are enforced differently. `pool_size` makes commands **wait** for a free connection, up to `pool_timeout`. `max_active_conns` **fails immediately** with `connection pool exhausted` once the cap is reached.
+
+  Setting `max_active_conns` lower than `pool_size` therefore admits more concurrent commands than there are connections available for, and the excess fails instead of queueing. Keep `max_active_conns` at or above `pool_size`, or leave it unset.
+</Warning>
+
+### Sizing the pool
+
+For a Redis Cluster these limits apply **per node**, not to the cluster as a whole: `pool_size=20` against a six-node cluster permits up to 20 connections to each node.
+
+The default of 10 connections per CPU is generous. A pooled connection is reused rather than reconnected, so even a small pool sustains a high command rate. Benchmarking GET throughput against a local Redis with far more concurrent callers than connections showed steeply diminishing returns: 1 connection took ~83µs per command, 4 took ~35µs, and 16 took ~19µs, after which the curve flattens. The default of 140 connections on a 14-core machine was only about 15% faster than 16 connections, for nearly nine times as many open connections, and 128 connections were no faster than the default.
+
+So if you run many router replicas against one Redis, setting `pool_size` explicitly is usually worth it: it cuts the connection count on the Redis side, which matters against its `maxclients` limit, for a modest throughput trade-off. Watch for `pool_timeout` errors after lowering it. Those mean commands are queueing longer than the timeout allows and the pool is now too small.
 
 ## Persisted Operations
 
@@ -2027,7 +2112,8 @@ The NATS provider supports four TLS modes:
 | Environment Variable | YAML | Required | Description                                                                              | Default Value |
 | :------------------- | :--- | :------- | :--------------------------------------------------------------------------------------- | :------------ |
 |                      | id   |          | The ID of the provider. This have to match with the ID specified in the subgraph schema. | []            |
-|                      | urls |          | A list of redis instances URLS, e.g: `redis://localhost:6379/2`                          |               |
+|                      | urls |          | A list of redis instances URLS, e.g: `redis://localhost:6379/2`. Connection and pool settings go in the URL query string, see [Redis Connection URLs](/router/configuration#redis-connection-urls) |               |
+|                      | cluster_enabled |          | If enabled, the Redis Cluster client is used and the URLs are treated as cluster seeds.   | false         |
 
 ### Cosmo Streams handlers
 
@@ -2246,7 +2332,7 @@ For mor information on how to use the expression language, please refer to the [
 
 | Environment Variable             | YAML            | Required                                      | Description                                         | Default Value            |
 | -------------------------------- | --------------- | --------------------------------------------- | --------------------------------------------------- | ------------------------ |
-| RATE_LIMIT_REDIS_URLS            | urls            | <Icon icon="square-check" iconType="solid" /> | List of the connection URL(s).                      | [redis://localhost:6379] |
+| RATE_LIMIT_REDIS_URLS            | urls            | <Icon icon="square-check" iconType="solid" /> | List of the connection URL(s). Connection and pool settings go in the URL query string, see [Redis Connection URLs](/router/configuration#redis-connection-urls) | [redis://localhost:6379] |
 | RATE_LIMIT_REDIS_CLUSTER_ENABLED | cluster_enabled | <Icon icon="square" />                        | If the Redis instance is a Redis cluster            | false                    |
 | RATE_LIMIT_REDIS_KEY_PREFIX      | key_prefix      | <Icon icon="square" />                        | This prefix is used to namespace the ratelimit keys | cosmo_rate_limit         |
 

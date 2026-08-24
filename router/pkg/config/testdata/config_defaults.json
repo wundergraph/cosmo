@@ -437,6 +437,16 @@
     "Timeout": 30000000000,
     "InMemoryFallback": true
   },
+  "ResponseCache": {
+    "Enabled": false,
+    "FallbackTTL": 30000000000,
+    "KeyPrefix": "cosmo_response_cache:",
+    "Storage": {
+      "Provider": "redis",
+      "ProviderID": "",
+      "MaxEntries": 10000
+    }
+  },
   "RouterConfigPath": "",
   "RouterRegistration": true,
   "OverrideRoutingURL": {
