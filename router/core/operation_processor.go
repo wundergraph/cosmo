@@ -456,16 +456,8 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	}
 	if fromCache {
 		if fromCacheHasTTL, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.Name, includeOperationName); fromCacheHasTTL {
-			sha256Hash := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
-			// Reload the raw APQ body because normalization can remove conditional fields.
-			operationBody, apqOperation, loadErr := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, sha256Hash)
-			if apqOperation && loadErr != nil {
-				return false, false, loadErr
-			}
-			if apqOperation && len(operationBody) > 0 {
-				if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, sha256Hash, string(operationBody)); err != nil {
-					return false, false, err
-				}
+			if err := o.renewAPQTTL(ctx, clientInfo.Name); err != nil {
+				return false, false, err
 			}
 		}
 		return true, false, nil
@@ -516,6 +508,23 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	}
 
 	return false, isAPQ, nil
+}
+
+func (o *OperationKit) renewAPQTTL(ctx context.Context, clientName string) error {
+	sha256Hash := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
+	// Reload the raw APQ body because normalization can remove conditional fields.
+	operationBody, isAPQ, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientName, sha256Hash)
+	if err != nil {
+		return err
+	}
+	if !isAPQ {
+		return nil
+	}
+	if len(operationBody) == 0 {
+		return nil
+	}
+
+	return o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientName, sha256Hash, string(operationBody))
 }
 
 const (
