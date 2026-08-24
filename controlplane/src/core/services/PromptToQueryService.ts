@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { setTimeout } from 'node:timers/promises';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { type AxiosInstance, create as createHttpClient } from 'axios';
@@ -19,6 +19,16 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 const validationSchema = z.object({
   version: z.string().uuid(),
   prompt: z.string().trim().min(1),
+});
+
+const indexPollInterval = 1000;
+
+const indexResponseSchema = z.object({
+  index: z.object({
+    indexId: z.string().trim().min(1),
+    status: z.enum(['INDEX_STATUS_INDEXING', 'INDEX_STATUS_READY', 'INDEX_STATUS_FAILED']),
+    lastError: z.string().optional(),
+  }),
 });
 
 const ptqQuerySchema = z.object({
@@ -67,7 +77,12 @@ export class PromptToQueryService {
     });
   }
 
-  async generateQuery(federatedGraphId: string, version: string, prompt: string): Promise<GenerateQueryResponse> {
+  async generateQuery(
+    federatedGraphId: string,
+    version: string,
+    prompt: string,
+    signal?: AbortSignal,
+  ): Promise<GenerateQueryResponse> {
     if (!this.serviceAddress) {
       // The feature doesn't seem to be configured correctly
       return create(GenerateQueryResponseSchema, {
@@ -126,13 +141,15 @@ export class PromptToQueryService {
 
     // Invoke the `prompt to query` service
     try {
+      const indexId = await this.ensureIndex(schemaVersion.sdl, signal);
       const response = await this.#httpClient('/yoko.v1.YokoService/GenerateQuery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({
-          indexId: `sha256:${createHash('sha256').update(schemaVersion.sdl).digest('hex')}`,
+          indexId,
           prompt: parsed.data.prompt,
         }),
+        signal,
       });
 
       const parsedResponse = ptqResponseSchema.safeParse(response.data);
@@ -176,6 +193,43 @@ export class PromptToQueryService {
       headers: { 'Content-Type': 'application/json' },
       data: JSON.stringify({ sdl: schema }),
     }).catch((e) => this.logger.error(e, 'Failed to index schema due an unexpected error'));
+  }
+
+  private async ensureIndex(schemaSDL: string, signal?: AbortSignal): Promise<string> {
+    const response = await this.#httpClient('/yoko.v1.YokoService/EnsureIndex', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: JSON.stringify({ sdl: schemaSDL }),
+      signal,
+    });
+
+    let index = PromptToQueryService.parseIndexResponse(response.data);
+    while (index.status === 'INDEX_STATUS_INDEXING') {
+      await setTimeout(indexPollInterval, undefined, { signal });
+
+      const response = await this.#httpClient('/yoko.v1.YokoService/GetIndex', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({ indexId: index.indexId }),
+        signal,
+      });
+      index = PromptToQueryService.parseIndexResponse(response.data);
+    }
+
+    if (index.status === 'INDEX_STATUS_FAILED') {
+      throw new Error(`Prompt to Query index generation failed${index.lastError ? `: ${index.lastError}` : ''}`);
+    }
+
+    return index.indexId;
+  }
+
+  private static parseIndexResponse(response: unknown): z.infer<typeof indexResponseSchema>['index'] {
+    const parsed = indexResponseSchema.safeParse(response);
+    if (!parsed.success) {
+      throw new Error('It was not possible to parse the response returned by the Prompt to Query index service');
+    }
+
+    return parsed.data.index;
   }
 
   private static getOperationType(type: z.infer<typeof ptqQuerySchema>['operationType']): SatisfiedOperationType {
