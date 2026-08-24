@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -19,6 +20,8 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"go.uber.org/zap"
 
+	aiv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/ai/v1"
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/headers"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -35,6 +38,7 @@ import (
 var reservedToolNames = []string{
 	"get_schema",
 	"execute_graphql",
+	"generate_query",
 	"get_operation_info",
 }
 
@@ -114,6 +118,14 @@ type Options struct {
 	// ServerDescription is a human-readable description reported in the MCP
 	// serverInfo.
 	ServerDescription string
+	// PromptToQueryClient generates GraphQL operations through the Cosmo control plane.
+	// When nil, the generate_query tool is not exposed.
+	PromptToQueryClient PromptToQueryClient
+}
+
+// PromptToQueryClient generates a GraphQL operation for a schema version.
+type PromptToQueryClient interface {
+	GenerateQuery(ctx context.Context, schemaVersionID, prompt string) (*aiv1.GenerateQueryResponse, error)
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -142,6 +154,9 @@ type GraphQLSchemaServer struct {
 	serverBaseURL             string
 	resourceDocumentation     string
 	authMiddleware            *MCPAuthMiddleware
+	promptToQueryClient       PromptToQueryClient
+	schemaVersionIDMu         sync.RWMutex
+	schemaVersionID           string
 }
 
 type graphqlRequest struct {
@@ -153,6 +168,20 @@ type graphqlRequest struct {
 type ExecuteGraphQLInput struct {
 	Query     string          `json:"query"`
 	Variables json.RawMessage `json:"variables,omitempty"`
+}
+
+// GenerateQueryInput defines the input structure for the generate_query tool.
+type GenerateQueryInput struct {
+	Prompt string `json:"prompt"`
+}
+
+// GeneratedQueryResponse is returned by the generate_query tool.
+type GeneratedQueryResponse struct {
+	Description     string `json:"description,omitempty"`
+	Document        string `json:"document"`
+	OperationName   string `json:"operationName"`
+	OperationType   string `json:"operationType"`
+	VariablesSchema string `json:"variablesSchema,omitempty"`
 }
 
 // operationHandler holds an operation and its compiled JSON schema
@@ -407,6 +436,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		serverBaseURL:             options.ServerBaseURL,
 		resourceDocumentation:     options.ResourceDocumentation,
 		authMiddleware:            authMiddleware,
+		promptToQueryClient:       options.PromptToQueryClient,
 	}
 
 	return gs, nil
@@ -443,6 +473,13 @@ func WithServerTitle(title string) func(*Options) {
 func WithServerDescription(description string) func(*Options) {
 	return func(o *Options) {
 		o.ServerDescription = description
+	}
+}
+
+// WithPromptToQueryClient enables the generate_query tool using the provided control-plane client.
+func WithPromptToQueryClient(client PromptToQueryClient) func(*Options) {
+	return func(o *Options) {
+		o.PromptToQueryClient = client
 	}
 }
 
@@ -639,13 +676,14 @@ func (s *GraphQLSchemaServer) Start() error {
 
 // Reload reloads the operations and schema, and computes per-tool scope
 // requirements from @requiresScopes directives in the field configurations.
-func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev1.FieldConfiguration) error {
+func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev1.FieldConfiguration, schemaVersionID string) error {
 	if s.server == nil {
 		return fmt.Errorf("server is not started")
 	}
 
 	s.schemaCompiler = NewSchemaCompiler(s.logger)
 	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations)
+	s.setSchemaVersionID(schemaVersionID)
 
 	if s.operationsDir != "" {
 		if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
@@ -759,6 +797,36 @@ func (s *GraphQLSchemaServer) registerTools() error {
 
 		s.server.AddTool(tool, s.handleExecuteGraphQL())
 		s.registeredTools = append(s.registeredTools, "execute_graphql")
+	}
+
+	if s.promptToQueryClient != nil {
+		openWorldHint := true
+		generateQueryTool := &mcp.Tool{
+			Name:        "generate_query",
+			Description: "Generates a GraphQL operation for this API from a natural-language prompt.",
+			InputSchema: map[string]any{
+				"type":        "object",
+				"description": "A natural-language description of the GraphQL operation to generate.",
+				"properties": map[string]any{
+					"prompt": map[string]any{
+						"type":        "string",
+						"minLength":   1,
+						"description": "A natural-language description of the GraphQL operation to generate.",
+					},
+				},
+				"additionalProperties": false,
+				"required":             []string{"prompt"},
+			},
+			Annotations: &mcp.ToolAnnotations{
+				Title:          "Generate GraphQL Operation",
+				ReadOnlyHint:   true,
+				IdempotentHint: true,
+				OpenWorldHint:  &openWorldHint,
+			},
+		}
+
+		s.server.AddTool(generateQueryTool, s.handleGenerateQuery())
+		s.registeredTools = append(s.registeredTools, "generate_query")
 	}
 
 	// Get operations filtered by the excludeMutations setting
@@ -903,6 +971,98 @@ func (s *GraphQLSchemaServer) registerTools() error {
 	s.registeredTools = append(s.registeredTools, "get_operation_info")
 
 	return nil
+}
+
+func (s *GraphQLSchemaServer) setSchemaVersionID(schemaVersionID string) {
+	s.schemaVersionIDMu.Lock()
+	defer s.schemaVersionIDMu.Unlock()
+	s.schemaVersionID = schemaVersionID
+}
+
+func (s *GraphQLSchemaServer) getSchemaVersionID() string {
+	s.schemaVersionIDMu.RLock()
+	defer s.schemaVersionIDMu.RUnlock()
+	return s.schemaVersionID
+}
+
+func toolError(message string) *mcp.CallToolResult {
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{&mcp.TextContent{Text: message}},
+		IsError: true,
+	}
+}
+
+func operationTypeString(operationType aiv1.SatisfiedOperationType) string {
+	switch operationType {
+	case aiv1.SatisfiedOperationType_SATISFIED_OPERATION_TYPE_QUERY:
+		return "query"
+	case aiv1.SatisfiedOperationType_SATISFIED_OPERATION_TYPE_MUTATION:
+		return "mutation"
+	case aiv1.SatisfiedOperationType_SATISFIED_OPERATION_TYPE_SUBSCRIPTION:
+		return "subscription"
+	default:
+		return ""
+	}
+}
+
+func (s *GraphQLSchemaServer) handleGenerateQuery() func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		var input GenerateQueryInput
+		if err := json.Unmarshal(request.Params.Arguments, &input); err != nil {
+			return toolError(fmt.Sprintf("Invalid input: %v", err)), nil
+		}
+
+		input.Prompt = strings.TrimSpace(input.Prompt)
+		if input.Prompt == "" {
+			return toolError("Input validation failed: prompt is required"), nil
+		}
+
+		schemaVersionID := s.getSchemaVersionID()
+		if schemaVersionID == "" {
+			return toolError("The active GraphQL schema version is not available"), nil
+		}
+
+		response, err := s.promptToQueryClient.GenerateQuery(ctx, schemaVersionID, input.Prompt)
+		if err != nil {
+			s.logger.Error("failed to generate query through the control plane", zap.Error(err))
+			return toolError("Failed to generate a GraphQL operation through the control plane"), nil
+		}
+		if response == nil || response.GetResponse() == nil {
+			return toolError("The control plane returned an invalid generate-query response"), nil
+		}
+		if response.GetResponse().GetCode() != common.EnumStatusCode_OK {
+			details := response.GetResponse().GetDetails()
+			if details == "" {
+				details = fmt.Sprintf("control plane returned status %s", response.GetResponse().GetCode())
+			}
+			return toolError(details), nil
+		}
+
+		query := response.GetQuery()
+		if query == nil {
+			return toolError("The control plane did not return a generated GraphQL operation"), nil
+		}
+		operationType := operationTypeString(query.GetOperationType())
+		if operationType == "" {
+			return toolError("The control plane returned an invalid GraphQL operation type"), nil
+		}
+
+		result := GeneratedQueryResponse{
+			Description:     query.GetDescription(),
+			Document:        query.GetDocument(),
+			OperationName:   query.GetOperationName(),
+			OperationType:   operationType,
+			VariablesSchema: query.GetVariablesSchema(),
+		}
+		resultJSON, err := json.Marshal(result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal generated query response: %w", err)
+		}
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
+		}, nil
+	}
 }
 
 // handleOperation handles a specific operation
@@ -1224,6 +1384,9 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 	}
 	if s.exposeSchema {
 		scopeLists = append(scopeLists, s.oauthConfig.Scopes.GetSchema)
+	}
+	if s.promptToQueryClient != nil {
+		scopeLists = append(scopeLists, s.oauthConfig.Scopes.GenerateQuery)
 	}
 
 	for _, scopeList := range scopeLists {
