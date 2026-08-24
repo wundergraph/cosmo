@@ -291,7 +291,8 @@
         "ToolsCall": null,
         "ExecuteGraphQL": null,
         "GetOperationInfo": null,
-        "GetSchema": null
+        "GetSchema": null,
+        "GenerateQuery": null
       },
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048

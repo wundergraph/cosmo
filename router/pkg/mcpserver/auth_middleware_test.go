@@ -607,6 +607,8 @@ func TestMCPAuthMiddlewareBuiltinToolScopes(t *testing.T) {
 				return authentication.Claims{"sub": "user3", "scope": "mcp:connect mcp:tools:call mcp:graphql:execute"}, nil
 			case "has-ops-read":
 				return authentication.Claims{"sub": "user4", "scope": "mcp:connect mcp:tools:call mcp:ops:read"}, nil
+			case "has-query-generate":
+				return authentication.Claims{"sub": "user5", "scope": "mcp:connect mcp:tools:call mcp:query:generate"}, nil
 			default:
 				return nil, errors.New("invalid token")
 			}
@@ -619,6 +621,7 @@ func TestMCPAuthMiddlewareBuiltinToolScopes(t *testing.T) {
 		ExecuteGraphQL:   []string{"mcp:graphql:execute"},
 		GetOperationInfo: []string{"mcp:ops:read"},
 		GetSchema:        []string{"mcp:schema:read"},
+		GenerateQuery:    []string{"mcp:query:generate"},
 	}
 
 	tests := []struct {
@@ -665,6 +668,19 @@ func TestMCPAuthMiddlewareBuiltinToolScopes(t *testing.T) {
 			name:           "allows get_operation_info when token has required builtin scope",
 			token:          "has-ops-read",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_operation_info"}}`,
+			wantStatusCode: 200,
+		},
+		{
+			name:           "returns 403 when generate_query lacks required builtin scope",
+			token:          "base-only",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"generate_query"}}`,
+			wantStatusCode: 403,
+			wantScope:      `scope="mcp:query:generate"`,
+		},
+		{
+			name:           "allows generate_query when token has required builtin scope",
+			token:          "has-query-generate",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"generate_query"}}`,
 			wantStatusCode: 200,
 		},
 		{

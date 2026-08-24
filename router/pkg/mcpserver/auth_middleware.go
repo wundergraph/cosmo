@@ -91,6 +91,8 @@ func (m *MCPAuthMiddleware) getBuiltinToolScopes(toolName string) []string {
 		return m.scopes.GetOperationInfo
 	case "get_schema":
 		return m.scopes.GetSchema
+	case "generate_query":
+		return m.scopes.GenerateQuery
 	default:
 		return nil
 	}
