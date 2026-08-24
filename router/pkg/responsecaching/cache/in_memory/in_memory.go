@@ -3,12 +3,11 @@ package in_memory
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/dgraph-io/ristretto/v2"
-	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
+	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 )
 
 const entryCost = 1
@@ -27,10 +26,10 @@ var _ enginecache.Cache = (*InMemoryCache)(nil)
 // caller owns it and must Close it.
 func NewInMemoryCache(maxEntries int64) (*InMemoryCache, error) {
 	if maxEntries <= 0 {
-		return nil, fmt.Errorf("in memory entity cache needs a positive size, got %d", maxEntries)
+		return nil, fmt.Errorf("in memory response cache needs a positive size, got %d", maxEntries)
 	}
 	if maxEntries > maxSize {
-		return nil, fmt.Errorf("in memory entity cache size is too large: %d", maxEntries)
+		return nil, fmt.Errorf("in memory response cache size is too large: %d", maxEntries)
 	}
 
 	cache, err := ristretto.NewCache(&ristretto.Config[string, []byte]{
@@ -40,7 +39,7 @@ func NewInMemoryCache(maxEntries int64) (*InMemoryCache, error) {
 		BufferItems:        64,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create in memory entity cache: %w", err)
+		return nil, fmt.Errorf("failed to create in memory response cache: %w", err)
 	}
 
 	return &InMemoryCache{cache: cache}, nil
@@ -53,7 +52,7 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) (map[string]
 	}
 
 	if len(keys) == 0 {
-		return nil, errors.New("entity cache lookup requires at least one key")
+		return nil, enginecache.ErrNoKeys
 	}
 
 	results := make(map[string]enginecache.Item, len(keys))
@@ -87,7 +86,7 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	}
 
 	if len(items) == 0 {
-		return errors.New("entity cache write requires at least one item")
+		return enginecache.ErrNoItems
 	}
 
 	// Map used for deduplications
@@ -109,7 +108,10 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	return nil
 }
 
-// Close closes the in memory cache
-func (c *InMemoryCache) Close() {
+// Close closes the in memory cache. The error is always nil, ristretto having
+// nothing to fail at on the way down, and is returned only so that this and the
+// redis cache close the same way and can be held behind one interface.
+func (c *InMemoryCache) Close() error {
 	c.closeOnce.Do(c.cache.Close)
+	return nil
 }
