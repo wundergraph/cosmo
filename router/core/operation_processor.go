@@ -456,9 +456,16 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	}
 	if fromCache {
 		if fromCacheHasTTL, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.Name, includeOperationName); fromCacheHasTTL {
-			// if it is an APQ request, we need to save it again to renew the TTL expiration
-			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.NormalizedRepresentation); err != nil {
-				return false, false, err
+			sha256Hash := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
+			// Reload the raw APQ body because normalization can remove conditional fields.
+			operationBody, apqOperation, loadErr := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, sha256Hash)
+			if apqOperation && loadErr != nil {
+				return false, false, loadErr
+			}
+			if apqOperation && len(operationBody) > 0 {
+				if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, sha256Hash, string(operationBody)); err != nil {
+					return false, false, err
+				}
 			}
 		}
 		return true, false, nil
