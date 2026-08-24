@@ -1224,9 +1224,6 @@ func (r *Router) setupInMemoryResponseCache() error {
 	// Owned from here on by r.responseCache, which Shutdown closes.
 	r.responseCache = cache
 
-	// key_prefix is deliberately absent from this line: this cache shares its
-	// keyspace with nothing, the adapter has no prefix to apply, and logging one
-	// would say that it did.
 	r.logger.Info("Response cache enabled",
 		zap.Duration("fallback_ttl", r.responseCacheConfig.FallbackTTL),
 		zap.String("storage_provider", string(config.ResponseCacheStorageProviderMemory)),
