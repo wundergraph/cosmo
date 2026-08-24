@@ -6,7 +6,7 @@ import {
   type GenerateQueryResponse,
   GenerateQueryResponseSchema,
   SatisfiedOperationType,
-} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+} from '@wundergraph/cosmo-connect/dist/ai/v1/ai_pb';
 import { create } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import * as z from 'zod';
