@@ -23,7 +23,7 @@ A subgraph response is cached only when its `Cache-Control` header asks to be. T
 3. `public` is required. `Cache-Control: max-age=60` on its own is not cached.
 4. `s-maxage` sets the lifetime and takes precedence over `max-age`.
 5. `max-age` sets the lifetime when `s-maxage` is absent.
-6. `fallback_ttl` sets the lifetime when the response says `public` and names no lifetime of its own.
+6. `fallback_ttl` sets a max-age when the "Cache-Control" response header from the subgraph has a value of `public` but does not specify `max-age` as part of its value.
 
 A value of `0` for `s-maxage` or `max-age` refuses caching. It does not fall through to the next rule.
 
@@ -115,7 +115,7 @@ These apply to the current alpha.
 
 **Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
 
-**`enable_multi_fetch` disables response caching.** When `engine.enable_multi_fetch` is on, the router merges entity fetches to the same subgraph within one parallel wave into a single request. Merged fetches are not cached, and nothing reports that they were skipped. Do not enable both and expect response caching.
+**`enable_multi_fetch` disables response caching.** When `engine.enable_multi_fetch` is on, the router merges entity fetches to the same subgraph within one parallel wave into a single request. Merged fetches are not cached, and nothing reports that they were skipped. Do not enable both and expect response caching at this moment, we plan on supporting this in the future.
 
 ## Observability
 
