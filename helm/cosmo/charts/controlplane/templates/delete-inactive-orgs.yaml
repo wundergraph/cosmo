@@ -25,6 +25,8 @@ spec:
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          initContainers:
+            {{- tpl (.Values.jobs.deleteInactiveOrgs.initContainers | toYaml) . | nindent 12 }}
           containers:
             - name: delete-inactive-orgs
               securityContext:
