@@ -13,7 +13,7 @@ import (
 
 func TestAdapterLeaksGoroutines(t *testing.T) {
 	// Subscribe and unsubscribe 10 times sequentially, then verify no goroutines have leaked.
-	// A goroutine snapshot is taking after starting the testenv but before the first subscribe.
+	// A goroutine snapshot is taken after starting the testenv but before the first subscribe.
 	// After the last unsubscribe this snapshot is used to diff the goroutines,
 	// ensuring we only fail if new, still active goroutines have been created meantime.
 

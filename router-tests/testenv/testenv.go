@@ -81,7 +81,7 @@ const (
 )
 
 // Handler defines what is run inside the test environment.
-// It provided to testenv.Run and executed inside it.
+// It is provided to testenv.Run and executed inside it.
 type Handler func(t *testing.T, xEnv *Environment)
 
 var (
