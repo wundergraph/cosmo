@@ -425,7 +425,7 @@ func isPortAccepting(port int) bool {
 	for _, host := range []string{"127.0.0.1", "::1"} {
 		conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(port)), 200*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 	}
