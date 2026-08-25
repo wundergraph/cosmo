@@ -80,6 +80,10 @@ const (
 	myRedisProviderID     = "my-redis"
 )
 
+// Handler defines what is run inside the test environment.
+// It provided to testenv.Run and executed inside it.
+type Handler func(t *testing.T, xEnv *Environment)
+
 var (
 	//go:embed testdata/config.json
 	ConfigJSONTemplate string
@@ -117,7 +121,7 @@ func init() {
 }
 
 // Run runs the test and fails the test if an error occurs
-func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
+func Run(t *testing.T, cfg *Config, f Handler) {
 	t.Helper()
 	env, err := CreateTestEnv(t, cfg)
 	if env != nil {

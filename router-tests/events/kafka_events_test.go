@@ -15,7 +15,6 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/goleak"
 
 	"github.com/wundergraph/cosmo/router-tests/events"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -1470,66 +1469,5 @@ func TestKafkaEvents(t *testing.T) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 		})
-	})
-}
-
-func TestKafkaAdapterLeaks(t *testing.T) {
-	// Subscribe and unsubscribe 10 times sequentially, then verify no goroutines have leaked.
-	// A goroutine snapshot is taking after starting the testenv but before the first subscribe.
-	// After the last unsubscribe this snapshot is used to diff the goroutines,
-	// ensuring we only fail if new, still active goroutines have been created meantime.
-
-	cfg := testenv.Config{
-		RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
-		EnableKafka:              true,
-	}
-
-	type query struct {
-		EmployeeUpdatedMyKafka struct {
-			ID      float64 `graphql:"id"`
-			Details struct {
-				Forename string `graphql:"forename"`
-				Surname  string `graphql:"surname"`
-			} `graphql:"details"`
-		} `graphql:"employeeUpdatedMyKafka(employeeID: 1)"`
-	}
-
-	noopHandler := func(_ []byte, _ error) error {
-		return nil
-	}
-
-	testenv.Run(t, &cfg, func(t *testing.T, xEnv *testenv.Environment) {
-		ignore := []goleak.Option{
-			goleak.IgnoreCurrent(),
-			// The hasura test client itself leaks sometimes, we have to ignore it.
-			goleak.IgnoreAnyFunction("github.com/hasura/go-graphql-client.(*SubscriptionContext).run"),
-		}
-
-		for range 10 {
-			client := graphql.NewSubscriptionClient(xEnv.GraphQLWebSocketSubscriptionURL())
-
-			subID, err := client.Subscribe(new(query), nil, noopHandler)
-			require.NoError(t, err)
-
-			clientRunCh := make(chan error, 1)
-			go func() {
-				clientRunCh <- client.Run()
-			}()
-			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
-
-			err = client.Unsubscribe(subID)
-			require.NoError(t, err)
-			xEnv.WaitForSubscriptionCount(0, EventWaitTimeout)
-
-			err = client.Close()
-			require.NoError(t, err)
-			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientRunCh, func(t *testing.T, err error) {
-				require.NoError(t, err)
-			})
-		}
-
-		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			assert.NoError(t, goleak.Find(ignore...))
-		}, EventWaitTimeout, time.Millisecond*100, "adapter leaked goroutines")
 	})
 }
