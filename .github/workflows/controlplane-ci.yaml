@@ -108,13 +108,8 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: read
-      packages: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
 
       - uses: ./.github/actions/build-push-image
         with:
