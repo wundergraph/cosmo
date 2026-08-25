@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.130.0](https://github.com/wundergraph/cosmo/compare/wgc@0.129.9...wgc@0.130.0) (2026-08-24)
+
+### Features
+
+* add approve command ([#3145](https://github.com/wundergraph/cosmo/issues/3145)) ([9ddb729](https://github.com/wundergraph/cosmo/commit/9ddb7292c874e530adb4e71d8726cade9989fb77)) (@alepane21)
+
 ## [0.129.9](https://github.com/wundergraph/cosmo/compare/wgc@0.129.8...wgc@0.129.9) (2026-08-11)
 
 **Note:** Version bump only for package wgc

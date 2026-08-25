@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.343.0](https://github.com/wundergraph/cosmo/compare/router@0.342.0...router@0.343.0) (2026-08-25)
+
+### Features
+
+* allow to run query plan with new planner options ([#3184](https://github.com/wundergraph/cosmo/issues/3184)) ([3b08fa2](https://github.com/wundergraph/cosmo/commit/3b08fa2fcd7f60debef83e8526fa8fe5a0fc408a)) (@alepane21)
+
+# [0.342.0](https://github.com/wundergraph/cosmo/compare/router@0.341.0...router@0.342.0) (2026-08-24)
+
+### Bug Fixes
+
+* **mcp:** preserve GraphQL error details in tool responses ([#3171](https://github.com/wundergraph/cosmo/issues/3171)) ([0284997](https://github.com/wundergraph/cosmo/commit/02849973e735a4f751b6c937f11e2c036b289164)) (@fiam)
+
+### Features
+
+* add redis connection pool options ([#3174](https://github.com/wundergraph/cosmo/issues/3174)) ([6e0a147](https://github.com/wundergraph/cosmo/commit/6e0a147f4d2ec387cddc06b45b97814b940fe40b)) (@Noroth)
+* redis adapter for entity caching cache ([#3139](https://github.com/wundergraph/cosmo/issues/3139)) ([c9ea405](https://github.com/wundergraph/cosmo/commit/c9ea4054b864adec3e4eaebfbc4f2316b8aecd4a)) (@SkArchon)
+* response caching ([#3166](https://github.com/wundergraph/cosmo/issues/3166)) ([f3b7ec5](https://github.com/wundergraph/cosmo/commit/f3b7ec5915f883f8b717535a4ff97d2493d736f5)) (@SkArchon)
+
 # [0.341.0](https://github.com/wundergraph/cosmo/compare/router@0.340.0...router@0.341.0) (2026-08-18)
 
 ### Features
