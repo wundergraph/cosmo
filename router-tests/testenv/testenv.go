@@ -2039,12 +2039,13 @@ func (e *Environment) Shutdown() {
 		}
 	}
 
-	// Flush Kafka connection
+	// Flush Kafka connection and close client
 	if e.cfg.EnableKafka && e.KafkaClient != nil {
 		err := e.KafkaClient.Flush(ctx)
 		if err != nil {
 			e.t.Logf("could not flush Kafka connection: %s", err)
 		}
+		e.KafkaClient.Close()
 	}
 
 	if e.routerCmd != nil {
