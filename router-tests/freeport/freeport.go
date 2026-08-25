@@ -23,6 +23,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -414,6 +415,20 @@ func isPortInUse(port int) bool {
 		return true
 	}
 	ln.Close()
+
+	return isPortAccepting(port)
+}
+
+// isPortAccepting reports whether any listener accepts a connection on the port over
+// loopback, including listeners bound to the wildcard address.
+func isPortAccepting(port int) bool {
+	for _, host := range []string{"127.0.0.1", "::1"} {
+		conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(port)), 200*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+	}
 	return false
 }
 
