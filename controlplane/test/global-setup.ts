@@ -1,7 +1,12 @@
 import { pino } from 'pino';
 import Keycloak from '../src/core/services/Keycloak.js';
 import { retryWithBackoff } from '../src/core/util/timers.js';
-import { TEST_REALM, keycloakClientOptions, isAlreadyExistsError } from './keycloak-test-utils.js';
+import {
+  TEST_DIRECT_GRANT_CLIENT_ID,
+  TEST_REALM,
+  keycloakClientOptions,
+  isAlreadyExistsError,
+} from './keycloak-test-utils.js';
 
 /**
  * Creates the shared test realm once, before any test worker spawns. Otherwise the
@@ -48,5 +53,38 @@ export default async function setup() {
       }
     },
     { attempts: 30, baseInterval: 500, maxInterval: 500 },
+  );
+
+  // The client the tests sign users in through. A fresh realm only carries Keycloak's built-in
+  // clients, and the obvious candidate (`admin-cli`) issues lightweight access tokens: they omit
+  // `sub`, and the userinfo endpoint rejects them from Keycloak 26.6.2 onward, leaving the user
+  // behind the token unresolvable. Owning the client keeps the token shape ours to guarantee, and
+  // matches the clients production logs in through (`studio`, `hub-oidc`).
+  await retryWithBackoff(
+    async () => {
+      try {
+        await keycloakClient.client.clients.create({
+          realm: TEST_REALM,
+          clientId: TEST_DIRECT_GRANT_CLIENT_ID,
+          enabled: true,
+          publicClient: true,
+          // The tests authenticate with a username and password, nothing else.
+          directAccessGrantsEnabled: true,
+          standardFlowEnabled: false,
+          attributes: {
+            // Explicit rather than inherited, so a future change to Keycloak's default cannot
+            // quietly strip `sub` back out of the tokens these tests depend on.
+            'client.use.lightweight.access.token.enabled': 'false',
+          },
+        });
+      } catch (e: unknown) {
+        if (isAlreadyExistsError(e)) {
+          return;
+        }
+        // Anything else may be transient
+        throw e;
+      }
+    },
+    { attempts: 10, baseInterval: 1000, maxInterval: 1000 },
   );
 }
