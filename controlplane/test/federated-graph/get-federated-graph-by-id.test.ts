@@ -244,4 +244,72 @@ describe('GetFederatedGraphById', () => {
     expect(response.featureFlagsInLatestValidComposition).toHaveLength(1);
     expect(response.featureFlagsInLatestValidComposition.some((f) => f.name === flagName)).toBe(true);
   });
+
+  test('Should exclude a disabled feature flag when split config loading is enabled', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['split-config-loading'] });
+    testContext.onTestFinished(() => server.close());
+
+    const graphName = genID('fedgraph');
+    await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, ['team=A'], 'http://localhost:8080');
+
+    const subgraphName = genID('subgraph');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      'type Query { hello: String }',
+      [{ key: 'team', value: 'A' }],
+      'http://localhost:4001',
+    );
+
+    const featureSubgraphName = genID('featureSubgraph');
+    await createThenPublishFeatureSubgraph(
+      client,
+      featureSubgraphName,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      'type Query { hello: String, goodbye: String }',
+      [{ key: 'team', value: 'A' }],
+      'http://localhost:4002',
+    );
+
+    const flagName = genID('flag');
+    await createFeatureFlag(
+      client,
+      flagName,
+      [{ key: 'team', value: 'A' }],
+      [featureSubgraphName],
+      DEFAULT_NAMESPACE,
+      true,
+    );
+
+    const graphByName = await client.getFederatedGraphByName({
+      name: graphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(graphByName.response?.code).toBe(EnumStatusCode.OK);
+
+    // Pin the enabled state first, otherwise a lookup that finds nothing at all would satisfy the
+    // exclusion assertion below.
+    const whileEnabled = await client.getFederatedGraphById({
+      id: graphByName.graph!.id,
+      includeMetrics: false,
+    });
+    expect(whileEnabled.featureFlagsInLatestValidComposition.length).toBe(1);
+
+    const disableResp = await client.enableFeatureFlag({
+      name: flagName,
+      namespace: DEFAULT_NAMESPACE,
+      enabled: false,
+    });
+    expect(disableResp.response?.code).toBe(EnumStatusCode.OK);
+
+    const afterDisable = await client.getFederatedGraphById({
+      id: graphByName.graph!.id,
+      includeMetrics: false,
+    });
+
+    expect(afterDisable.response?.code).toBe(EnumStatusCode.OK);
+    expect(afterDisable.featureFlagsInLatestValidComposition).toHaveLength(0);
+  });
 });

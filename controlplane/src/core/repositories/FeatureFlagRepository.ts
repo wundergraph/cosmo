@@ -1541,6 +1541,7 @@ export class FeatureFlagRepository {
         eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
       )
       .innerJoin(graphCompositions, eq(graphCompositions.schemaVersionId, schemaVersion.id))
+      .innerJoin(featureFlags, eq(featureFlags.id, federatedGraphsToFeatureFlagSchemaVersions.featureFlagId))
       .where(
         and(
           baseLinkageCondition,
@@ -1548,6 +1549,7 @@ export class FeatureFlagRepository {
           eq(graphCompositions.isComposable, true),
           or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
           or(isNull(graphCompositions.admissionError), eq(graphCompositions.admissionError, '')),
+          eq(featureFlags.isEnabled, true),
         ),
       )
       .orderBy(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, desc(schemaVersion.createdAt))
