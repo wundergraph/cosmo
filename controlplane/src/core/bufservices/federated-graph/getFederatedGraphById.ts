@@ -81,7 +81,9 @@ export function getFederatedGraphById(
       if (ffsInLatestValidComposition) {
         for (const ff of ffsInLatestValidComposition) {
           const flag = featureFlags.find((f) => f.id === ff.featureFlagId);
-          if (flag) {
+          // A disabled feature flag is no longer served in the latest composition. With split config its
+          // schema version rows are never superseded by a new base composition, so it has to be excluded here.
+          if (flag?.isEnabled) {
             featureFlagsInLatestValidComposition.push(flag);
           }
         }
