@@ -20,6 +20,8 @@ Versioning and publishing to npm are separate steps. The version step bumps vers
 
 If the publish step fails — sigstore's transparency log occasionally rejects a provenance write, which aborts the publish for every remaining package — just trigger the workflow again. The version step finds nothing new to version and no-ops, and the publish step publishes only the versions still missing from the registry. It also retries three times on its own before failing the run.
 
+Do this before anything else lands on main. The publish step works from the versions in the tree, so once a later release bumps them the versions that were never published cannot be recovered — their tags and GitHub releases stay, but npm skips straight to the newer version.
+
 ## Release Automation
 
 We use conventional commits to automate the release process. This means that we use the commit message to determine the next version. The commit message must follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
