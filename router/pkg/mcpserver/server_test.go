@@ -518,3 +518,93 @@ func TestExecuteGraphQLQueryStructuredContentDisabled(t *testing.T) {
 		})
 	}
 }
+
+func TestGetContextTool(t *testing.T) {
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"FindEmployee.graphql": findEmployeeOp,
+		"notes.md":             "---\ntitle: Notes\ndescription: Team notes.\n---\n# Notes body\n",
+	})
+	skillDir := filepath.Join(tempDir, "employee-workflows")
+	require.NoError(t, os.MkdirAll(skillDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"),
+		[]byte("---\nname: employee-workflows\ndescription: How to combine employee tools.\n---\n# Guide\n"), 0o644))
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(zap.NewNop()),
+		WithOperationsDir(tempDir),
+		WithResourcesEnabled(true),
+	)
+	require.NoError(t, err)
+	require.NoError(t, srv.Reload(&schemaDoc, nil))
+
+	assert.Contains(t, srv.registeredTools, "get_context")
+
+	handler := srv.handleGetContext()
+
+	t.Run("no uri returns index", func(t *testing.T) {
+		result, err := handler(t.Context(), &mcp.CallToolRequest{
+			Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{}`)},
+		})
+		require.NoError(t, err)
+		text := result.Content[0].(*mcp.TextContent).Text
+
+		var index ContextIndex
+		require.NoError(t, json.Unmarshal([]byte(text), &index))
+		require.Len(t, index.Skills, 1)
+		assert.Equal(t, "employee-workflows", index.Skills[0].Name)
+		assert.Equal(t, "skill://employee-workflows/SKILL.md", index.Skills[0].URI)
+		require.Len(t, index.Documents, 1)
+		assert.Equal(t, "context:///notes.md", index.Documents[0].URI)
+		assert.Equal(t, "Notes", index.Documents[0].Title)
+
+		// The index is also returned as structured content (text is the
+		// backward-compatible fallback).
+		require.NotNil(t, result.StructuredContent)
+	})
+
+	t.Run("uri returns raw content", func(t *testing.T) {
+		result, err := handler(t.Context(), &mcp.CallToolRequest{
+			Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{"uri":"skill://employee-workflows/SKILL.md"}`)},
+		})
+		require.NoError(t, err)
+		text := result.Content[0].(*mcp.TextContent).Text
+		assert.Contains(t, text, "# Guide")
+	})
+
+	t.Run("unknown uri returns error", func(t *testing.T) {
+		result, err := handler(t.Context(), &mcp.CallToolRequest{
+			Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{"uri":"context:///nope.md"}`)},
+		})
+		require.NoError(t, err)
+		assert.True(t, result.IsError)
+	})
+}
+
+func TestGetContextToolNotRegisteredWhenDisabled(t *testing.T) {
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"FindEmployee.graphql": findEmployeeOp,
+	})
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(zap.NewNop()),
+		WithOperationsDir(tempDir),
+	)
+	require.NoError(t, err)
+	require.NoError(t, srv.Reload(&schemaDoc, nil))
+
+	assert.NotContains(t, srv.registeredTools, "get_context")
+}

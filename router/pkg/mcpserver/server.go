@@ -44,6 +44,7 @@ var reservedToolNames = []string{
 	"get_schema",
 	"execute_graphql",
 	"get_operation_info",
+	"get_context",
 }
 
 // requestHeadersKey is a custom context key for storing request headers.
@@ -189,6 +190,32 @@ type OperationsResponse struct {
 	Usage       string          `json:"usage"`
 	LLMGuidance LLMGuidance     `json:"llmGuidance"`
 	Endpoint    string          `json:"endpoint"`
+}
+
+// ContextSkillEntry describes one Agent Skill in the get_context index.
+type ContextSkillEntry struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	URI         string `json:"uri"`
+}
+
+// ContextDocumentEntry describes one loose context document in the
+// get_context index.
+type ContextDocumentEntry struct {
+	URI         string `json:"uri"`
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+}
+
+// ContextIndex is the get_context response when no URI is requested.
+type ContextIndex struct {
+	Skills    []ContextSkillEntry    `json:"skills"`
+	Documents []ContextDocumentEntry `json:"documents"`
+}
+
+// GetContextInput is the input of the get_context tool.
+type GetContextInput struct {
+	URI string `json:"uri,omitempty"`
 }
 
 // GraphQLOperationInfoResponse is the response structure for the graphql_operation_info tool.
@@ -861,6 +888,35 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		s.registeredTools = append(s.registeredTools, "execute_graphql")
 	}
 
+	// Register the get_context tool when context resources are enabled. It
+	// mirrors resources/list + resources/read for MCP clients that never
+	// fetch resources on their own.
+	if s.resourcesEnabled {
+		getContextSchema := map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"uri": map[string]any{
+					"type":        "string",
+					"description": "URI of a context document or skill file to read (from the index). Omit to list all available skills and context documents.",
+				},
+			},
+			"additionalProperties": false,
+		}
+
+		tool := &mcp.Tool{
+			Name:        "get_context",
+			Description: "Discover and load domain guidance and skills for using this server's tools. Call without a URI before complex or multi-tool workflows to find relevant instructions. When a relevant skill exists, load its SKILL.md before executing the workflow. When a loaded skill references another file by relative path, resolve it against the skill root and request the resulting skill:// URI.",
+			InputSchema: getContextSchema,
+			Annotations: &mcp.ToolAnnotations{
+				Title:        "Get Context Documents and Skills",
+				ReadOnlyHint: true,
+			},
+		}
+
+		s.server.AddTool(tool, s.handleGetContext())
+		s.registeredTools = append(s.registeredTools, "get_context")
+	}
+
 	// Get operations filtered by the excludeMutations setting
 	operations := s.operationsManager.GetFilteredOperations()
 
@@ -1265,6 +1321,79 @@ func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context,
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: schemaStr}},
+		}, nil
+	}
+}
+
+// handleGetContext serves the get_context tool: without a URI it returns the
+// index of skills and context documents, with a URI it returns that
+// resource's raw text content.
+func (s *GraphQLSchemaServer) handleGetContext() func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		var input GetContextInput
+		if len(request.Params.Arguments) > 0 {
+			if err := json.Unmarshal(request.Params.Arguments, &input); err != nil {
+				return nil, fmt.Errorf("invalid input: %w", err)
+			}
+		}
+
+		scan := s.contextScan
+
+		if input.URI == "" {
+			index := ContextIndex{
+				Skills:    []ContextSkillEntry{},
+				Documents: []ContextDocumentEntry{},
+			}
+			for _, sk := range scan.skills {
+				index.Skills = append(index.Skills, ContextSkillEntry{
+					Name:        sk.name,
+					Description: sk.description,
+					URI:         sk.uri,
+				})
+			}
+			for _, res := range scan.resources {
+				if res.skillName != "" {
+					continue
+				}
+				index.Documents = append(index.Documents, ContextDocumentEntry{
+					URI:         res.uri,
+					Title:       res.title,
+					Description: res.description,
+				})
+			}
+			payload, err := json.Marshal(index)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal context index: %w", err)
+			}
+			// Structured content plus a serialized-JSON text fallback, per
+			// current MCP guidance for structured tool results. No output
+			// schema is declared on the tool: the uri form returns raw
+			// document text, so one schema cannot describe both responses.
+			return &mcp.CallToolResult{
+				Content:           []mcp.Content{&mcp.TextContent{Text: string(payload)}},
+				StructuredContent: index,
+			}, nil
+		}
+
+		res, ok := scan.byURI[input.URI]
+		if !ok {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("unknown context uri: %s (call get_context without arguments to list valid uris)", input.URI)}},
+			}, nil
+		}
+		content, err := os.ReadFile(res.filePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read %s: %w", input.URI, err)
+		}
+		if !utf8.Valid(content) {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("%s is a binary resource; read it via resources/read", input.URI)}},
+			}, nil
+		}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: string(content)}},
 		}, nil
 	}
 }
