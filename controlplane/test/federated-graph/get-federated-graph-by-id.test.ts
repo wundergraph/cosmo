@@ -7,7 +7,14 @@ import {
   createTestRBACEvaluator,
   genID,
 } from '../../src/core/test-util.js';
-import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from '../test-util.js';
+import {
+  createFeatureFlag,
+  createFederatedGraph,
+  createThenPublishFeatureSubgraph,
+  createThenPublishSubgraph,
+  DEFAULT_NAMESPACE,
+  SetupTest,
+} from '../test-util.js';
 
 let dbname = '';
 
@@ -80,6 +87,62 @@ describe('GetFederatedGraphById', () => {
     // The subgraph should be associated with the graph since the labels match
     expect(response.subgraphs.length).toBe(1);
     expect(response.subgraphs[0].name).toBe(subgraphName);
+  });
+
+  test('Should return the feature flags in the latest valid composition when split config loading is enabled', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['split-config-loading'] });
+    testContext.onTestFinished(() => server.close());
+
+    const graphName = genID('fedgraph');
+    await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, ['team=A'], 'http://localhost:8080');
+
+    const subgraphName = genID('subgraph');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      'type Query { hello: String }',
+      [{ key: 'team', value: 'A' }],
+      'http://localhost:4001',
+    );
+
+    const featureSubgraphName = genID('featureSubgraph');
+    await createThenPublishFeatureSubgraph(
+      client,
+      featureSubgraphName,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      'type Query { hello: String, goodbye: String }',
+      [{ key: 'team', value: 'A' }],
+      'http://localhost:4002',
+    );
+
+    const flagName = genID('flag');
+    await createFeatureFlag(
+      client,
+      flagName,
+      [{ key: 'team', value: 'A' }],
+      [featureSubgraphName],
+      DEFAULT_NAMESPACE,
+      true,
+    );
+
+    const graphByName = await client.getFederatedGraphByName({
+      name: graphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(graphByName.response?.code).toBe(EnumStatusCode.OK);
+
+    const response = await client.getFederatedGraphById({
+      id: graphByName.graph!.id,
+      includeMetrics: false,
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    // With split config the flag composition is not tied to the base schema version, so it has to be
+    // resolved via the federated graph instead.
+    expect(response.featureFlagsInLatestValidComposition.length).toBe(1);
+    expect(response.featureFlagsInLatestValidComposition[0].name).toBe(flagName);
   });
 
   test('Should fail when the graph does not exist', async (testContext) => {

@@ -112,13 +112,16 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     const recomposeResp2 = await client.recomposeFeatureFlag({ name: flagName, namespace });
     expect(recomposeResp2.response?.code).toBe(EnumStatusCode.OK);
 
+    // With split config the flag compositions are not tied to the base schema version, so they have to be
+    // looked up by federated graph. Each flag still appears exactly once, despite the recompositions.
     const resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
       federatedGraphName,
       namespace,
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
-    expect(resp.featureFlags).toHaveLength(0);
+    expect(resp.featureFlags).toHaveLength(1);
+    expect(resp.featureFlags[0].name).toBe(flagName);
 
     // Create a second, enabled feature flag
     const secondFlagName = genID('flag');
@@ -129,7 +132,8 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
       namespace,
     });
     expect(withSecondFlag.response?.code).toBe(EnumStatusCode.OK);
-    expect(withSecondFlag.featureFlags).toHaveLength(0);
+    expect(withSecondFlag.featureFlags).toHaveLength(2);
+    expect(withSecondFlag.featureFlags.map((f) => f.name).sort()).toStrictEqual([flagName, secondFlagName].sort());
 
     // Only the base graph composition should show up when excluding feature flag compositions
     let compositionsResp = await client.getCompositions({
@@ -164,6 +168,67 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
         expect.objectContaining({ featureFlagName: secondFlagName, isFeatureFlagComposition: true }),
       ]),
     );
+  });
+
+  test('that a disabled feature flag is excluded when split config loading is enabled', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['split-config-loading'] });
+    testContext.onTestFinished(() => server.close());
+
+    const namespace = genID('namespace').toLowerCase();
+    const labels = [genUniqueLabel()];
+    const federatedGraphName = genID('fedGraph');
+
+    await createNamespace(client, namespace);
+
+    await createAndPublishSubgraph(
+      client,
+      'users',
+      namespace,
+      fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/users.graphql')).toString(),
+      labels,
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createThenPublishFeatureSubgraph(
+      client,
+      'users-feature',
+      'users',
+      namespace,
+      fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/users-feature.graphql')).toString(),
+      labels,
+      'http://localhost:4101',
+    );
+
+    const federatedGraphLabels = labels.map(({ key, value }) => `${key}=${value}`);
+    await createFederatedGraph(client, federatedGraphName, namespace, federatedGraphLabels, DEFAULT_ROUTER_URL);
+
+    const flagName = genID('flag');
+    await createFeatureFlag(client, flagName, labels, ['users-feature'], namespace, true);
+
+    // Pin the enabled state first, otherwise a lookup that finds nothing at all would satisfy the
+    // exclusion assertion below.
+    const whileEnabled = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
+      federatedGraphName,
+      namespace,
+    });
+
+    expect(whileEnabled.response?.code).toBe(EnumStatusCode.OK);
+    expect(whileEnabled.featureFlags).toHaveLength(1);
+    expect(whileEnabled.featureFlags[0].name).toBe(flagName);
+
+    // Disabling does not recompose, so the flag's schema version rows survive. Only the enabled check keeps
+    // it out of the list, which matters more with split config where the rows are never superseded by a
+    // new base composition.
+    const disableResp = await client.enableFeatureFlag({ name: flagName, namespace, enabled: false });
+    expect(disableResp.response?.code).toBe(EnumStatusCode.OK);
+
+    const afterDisable = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
+      federatedGraphName,
+      namespace,
+    });
+
+    expect(afterDisable.response?.code).toBe(EnumStatusCode.OK);
+    expect(afterDisable.featureFlags).toHaveLength(0);
   });
 
   test('Should return empty list when no feature flags exist', async (testContext) => {
