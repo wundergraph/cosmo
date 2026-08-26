@@ -208,6 +208,9 @@
       "ObjectPath": "",
       "PollInterval": 10000000000
     },
+    "Resources": {
+      "Enabled": false
+    },
     "Session": {
       "Stateless": true
     },

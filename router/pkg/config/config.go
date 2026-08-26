@@ -1517,10 +1517,11 @@ type CacheWarmupConfiguration struct {
 }
 
 type MCPConfiguration struct {
-	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
-	Server                    MCPServer        `yaml:"server,omitempty"`
-	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
-	Session                   MCPSessionConfig `yaml:"session,omitempty"`
+	Enabled                   bool                       `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	Server                    MCPServer                  `yaml:"server,omitempty"`
+	Storage                   MCPStorageConfig           `yaml:"storage,omitempty"`
+	Resources                 MCPResourcesConfiguration  `yaml:"resources,omitempty"`
+	Session                   MCPSessionConfig           `yaml:"session,omitempty"`
 	GraphName                 string           `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
 	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
 	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
@@ -1624,6 +1625,14 @@ type MCPStorageConfig struct {
 	// operations are loaded from the manifest and reloaded when its revision changes.
 	ObjectPath   string        `yaml:"object_path,omitempty" env:"MCP_STORAGE_OBJECT_PATH"`
 	PollInterval time.Duration `yaml:"poll_interval,omitempty" envDefault:"10s" env:"MCP_STORAGE_POLL_INTERVAL"`
+}
+
+// MCPResourcesConfiguration configures serving of user-provided context
+// documents and Agent Skills from the MCP operations directory as MCP
+// resources. Disabled by default so stray markdown files in existing
+// operations directories are not silently exposed to MCP clients.
+type MCPResourcesConfiguration struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"MCP_RESOURCES_ENABLED"`
 }
 
 type MCPServer struct {

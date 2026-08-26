@@ -282,6 +282,9 @@
       "ObjectPath": "mcp/manifest.json",
       "PollInterval": 30000000000
     },
+    "Resources": {
+      "Enabled": true
+    },
     "Session": {
       "Stateless": true
     },
