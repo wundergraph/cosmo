@@ -114,6 +114,81 @@ func TestReload_NoToolDuplication(t *testing.T) {
 		"no tool name collision errors should be logged on reload")
 }
 
+func TestReload_RegistersContextResources(t *testing.T) {
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"FindEmployee.graphql": findEmployeeOp,
+		"notes.md":             "---\ntitle: Notes\ndescription: Team notes.\n---\n# Notes body\n",
+	})
+	skillDir := filepath.Join(tempDir, "employee-workflows")
+	require.NoError(t, os.MkdirAll(skillDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"),
+		[]byte("---\nname: employee-workflows\ndescription: How to combine employee tools.\n---\n# Guide\n"), 0o644))
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(zap.NewNop()),
+		WithOperationsDir(tempDir),
+		WithResourcesEnabled(true),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, srv.Reload(&schemaDoc, nil))
+
+	assert.ElementsMatch(t, []string{
+		"context:///notes.md",
+		"skill://employee-workflows/SKILL.md",
+	}, srv.registeredResources)
+
+	// Reload again: no duplicates.
+	require.NoError(t, srv.Reload(&schemaDoc, nil))
+	assert.Len(t, srv.registeredResources, 2)
+
+	// Read handler serves file content fresh from disk.
+	handler := srv.handleReadContextResource()
+	result, err := handler(t.Context(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: "context:///notes.md"},
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Contents, 1)
+	assert.Equal(t, "context:///notes.md", result.Contents[0].URI)
+	assert.Equal(t, "text/markdown", result.Contents[0].MIMEType)
+	assert.Contains(t, result.Contents[0].Text, "# Notes body")
+
+	_, err = handler(t.Context(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: "context:///missing.md"},
+	})
+	assert.Error(t, err)
+}
+
+func TestReload_ResourcesDisabledRegistersNothing(t *testing.T) {
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"FindEmployee.graphql": findEmployeeOp,
+		"notes.md":             "# Notes\n",
+	})
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(zap.NewNop()),
+		WithOperationsDir(tempDir),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, srv.Reload(&schemaDoc, nil))
+	assert.Empty(t, srv.registeredResources)
+}
+
 func TestReload_ReservedToolNameCollision(t *testing.T) {
 	core, logs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
