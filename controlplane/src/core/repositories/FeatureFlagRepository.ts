@@ -1493,13 +1493,25 @@ export class FeatureFlagRepository {
     return featureFlagCompositions;
   }
 
-  // return all the feature flag schema versions associated with the base schema version
-  // input: base schema version id
+  /**
+   * Returns all the feature flag schema versions associated with the base schema version.
+   *
+   * @param baseSchemaVersionId The base composition the feature flags were composed against.
+   * @param federatedGraphId Used in place of the base composition when split config is enabled.
+   */
   public async getFeatureFlagSchemaVersionsByBaseSchemaVersion({
     baseSchemaVersionId,
+    federatedGraphId,
   }: {
     baseSchemaVersionId: string;
+    federatedGraphId: string;
   }) {
+    const orgRepo = new OrganizationRepository(this.logger, this.db);
+    const splitConfigFeature = await orgRepo.getFeature({
+      organizationId: this.organizationId,
+      featureId: 'split-config-loading',
+    });
+
     // A feature flag can have multiple composed schema versions against the same base schema version
     // (e.g. recomposing the feature flag recomposes it against the unchanged base, so rows accumulate).
     // Deduplicate by feature flag, keeping the latest composed version, so callers get one entry per flag.
@@ -1513,7 +1525,16 @@ export class FeatureFlagRepository {
         schemaVersion,
         eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
       )
-      .where(eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId))
+      .where(
+        // When split config is enabled, the feature flag composition will not be tied to the base schema version, so
+        // the flags have to be looked up by federated graph with a null baseCompositionSchemaVersionId instead.
+        splitConfigFeature?.enabled
+          ? and(
+              isNull(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId),
+              eq(federatedGraphsToFeatureFlagSchemaVersions.federatedGraphId, federatedGraphId),
+            )
+          : eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
+      )
       .orderBy(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, desc(schemaVersion.createdAt))
       .execute();
 
