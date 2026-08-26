@@ -18,9 +18,9 @@ Release the full monorepo with all packages and services can be done by triggeri
 
 Versioning and publishing to npm are separate steps. The version step bumps versions, creates the tags and GitHub releases, and (through the `postversion` hooks) kicks off the image builds; the publish step pushes the npm packages.
 
-If the publish step fails — sigstore's transparency log occasionally rejects a provenance write, which aborts the publish for every remaining package — just trigger the workflow again. The version step finds nothing new to version and no-ops, and the publish step publishes only the versions still missing from the registry. It also retries three times on its own before failing the run.
+If the publish step fails (sigstore's transparency log occasionally rejects a provenance write, which aborts the publish for every remaining package), trigger the [Release workflow](https://github.com/wundergraph/cosmo/actions/workflows/release.yaml) again exactly as you started it: "Run workflow" against `main`, or `gh workflow run release.yaml --ref main`. The version step finds nothing new to version and no-ops, and the publish step publishes only the versions still missing from the registry. It also retries three times on its own before failing the run.
 
-Do this before anything else lands on main. The publish step works from the versions in the tree, so once a later release bumps them the versions that were never published cannot be recovered — their tags and GitHub releases stay, but npm skips straight to the newer version.
+Do this before anything else lands on main. The publish step works from the versions in the tree, so once a later release bumps them the versions that were never published cannot be recovered. Their tags and GitHub releases stay, but npm skips straight to the newer version.
 
 ## Release Automation
 
