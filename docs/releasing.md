@@ -12,6 +12,7 @@ Release the full monorepo with all packages and services can be done by triggeri
 2. After the release, you can validate the release by:
    1. checking the [GitHub Cosmo Packages](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
    2. checking the [GitHub Cosmo Releases](https://github.com/wundergraph/cosmo/releases)
+   3. checking that each npm package is published at the released version, e.g. `npm view wgc version`
 
 ### If a release fails halfway
 

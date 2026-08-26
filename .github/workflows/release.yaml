@@ -80,11 +80,15 @@ jobs:
       - name: Publish packages to npm
         run: |
           # Retried on intermittent sigstore 409s. `from-package` publishes only
-          # what the registry is missing, so repeating is safe.
+          # what the registry is missing, so repeating is safe. The reset drops
+          # the temporary gitHead lerna writes into the manifests before
+          # publishing and only cleans up on success; left behind, it fails the
+          # next attempt's working tree check instead.
           for attempt in 1 2 3; do
             if pnpm release:publish; then
               exit 0
             fi
+            git reset --hard
             if [ "$attempt" -lt 3 ]; then
               echo "::warning::npm publish attempt $attempt failed, retrying in 20s"
               sleep 20
