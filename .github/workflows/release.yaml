@@ -67,10 +67,30 @@ jobs:
       - name: Revert changes
         run: git reset --hard
 
-      - name: Publish packages & Create Github Releases
+        # Split from publish so a failed publish can be re-run: the combined
+        # `lerna publish` finds its own tags on a second run and publishes nothing.
+      - name: Version, tag & create Github Releases
         run: |
           git config --global user.email "bot@wundergraph.com"
           git config --global user.name "hardworker-bot"
-          pnpm release
+          pnpm release:version
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Publish packages to npm
+        run: |
+          # Retried on intermittent sigstore 409s. `from-package` publishes only
+          # what the registry is missing, so repeating is safe.
+          for attempt in 1 2 3; do
+            if pnpm release:publish; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "::warning::npm publish attempt $attempt failed, retrying in 20s"
+              sleep 20
+            fi
+          done
+          echo "npm publish still failing after 3 attempts" >&2
+          exit 1
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
