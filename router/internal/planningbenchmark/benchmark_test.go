@@ -30,7 +30,7 @@ func TestPlanning(t *testing.T) {
 
 	logger := zap.NewNop()
 
-	pg, err := core.NewPlanGenerator(cfg.ExecutionConfigPath, logger, 0)
+	pg, err := core.NewPlanGenerator(cfg.ExecutionConfigPath, logger, core.PlanGeneratorOptions{})
 	require.NoError(t, err)
 
 	pl, err := pg.GetPlanner()
@@ -58,7 +58,7 @@ func BenchmarkPlanning(b *testing.B) {
 
 	logger := zap.NewNop()
 
-	pg, err := core.NewPlanGenerator(cfg.ExecutionConfigPath, logger, 0)
+	pg, err := core.NewPlanGenerator(cfg.ExecutionConfigPath, logger, core.PlanGeneratorOptions{})
 	require.NoError(b, err)
 
 	pl, err := pg.GetPlanner()
