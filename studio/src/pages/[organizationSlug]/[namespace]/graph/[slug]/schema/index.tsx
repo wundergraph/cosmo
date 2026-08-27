@@ -852,7 +852,7 @@ export const GraphSelector = () => {
   const router = useRouter();
   const activeFeatureFlag = router.query.featureFlag as string;
   const graphName = router.query.slug as string;
-  const schemaType = (router.query.schemaType as string) === 'router' ? 'router' : 'client';
+  const schemaType = router.query.schemaType === 'router' ? 'router' : 'client';
   const {
     namespace: { name: namespace },
   } = useWorkspace();

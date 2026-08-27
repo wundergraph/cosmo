@@ -621,6 +621,15 @@ type ConfigSelection = { load: string; type: ConfigType; featureFlag?: string };
 /** A feature subgraph can belong to more than one flag, so `load` alone does not identify it. */
 const configSelectionValue = (selection: ConfigSelection) => JSON.stringify(selection);
 
+const parseConfigSelection = (value: string): ConfigSelection => {
+  const { load, type, featureFlag } = JSON.parse(value) as Record<string, string | undefined>;
+  return {
+    load: load ?? '',
+    type: type && isConfigType(type) ? type : 'graph',
+    featureFlag,
+  };
+};
+
 const ConfigSelect = () => {
   const router = useRouter();
 
@@ -649,7 +658,7 @@ const ConfigSelect = () => {
       <Select
         value={currentValue}
         onValueChange={(value) => {
-          const selection = JSON.parse(value) as ConfigSelection;
+          const selection = parseConfigSelection(value);
           applyParams({
             load: selection.load,
             type: selection.type,
