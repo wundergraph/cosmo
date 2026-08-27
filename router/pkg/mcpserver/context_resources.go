@@ -290,9 +290,24 @@ func collectSkillDirectory(scan *contextScan, scanDir, root string, logger *zap.
 	}
 	skillPath := filepath.ToSlash(relRoot)
 
+	// The first skill-path segment lands in the URI authority position, where
+	// net/url rejects percent-escapes and other characters that are otherwise
+	// valid path segments (for example a space in a prefix directory name).
+	// go-sdk's Server.AddResource panics on an unparsable URI, so an invalid
+	// skill must be rejected here rather than crashing the router at
+	// registration time. Only the authority segment can be invalid, so
+	// validating the entry URI covers every file URI of this skill.
+	entryURI := skillFileURI(skillPath, skillFileName)
+	if _, uriErr := url.Parse(entryURI); uriErr != nil {
+		logger.Error("Skipping MCP skill with invalid URI",
+			zap.String("dir", root), zap.String("uri", entryURI), zap.Error(uriErr))
+		return
+	}
+
 	var (
-		files      []contextResource
-		totalBytes int64
+		files            []contextResource
+		totalBytes       int64
+		skillMDCollected bool
 	)
 	walkErr := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -327,6 +342,7 @@ func collectSkillDirectory(scan *contextScan, scanDir, root string, logger *zap.
 			// The skill entry point carries the skill's identity.
 			res.name = fm.Name
 			res.description = fm.Description
+			skillMDCollected = true
 		} else if path.Base(relSlash) == skillFileName {
 			// SEP-2640 permits nested skills; from this skill's perspective a
 			// nested SKILL.md is ordinary supporting content.
@@ -346,11 +362,19 @@ func collectSkillDirectory(scan *contextScan, scanDir, root string, logger *zap.
 			zap.Int("files", len(files)), zap.Int64("total_bytes", totalBytes))
 		return
 	}
+	if !skillMDCollected {
+		// os.ReadFile above follows a symlinked SKILL.md during frontmatter
+		// validation, but the walk above only serves regular files, so a
+		// symlinked SKILL.md would otherwise advertise a skill URI with no
+		// backing resource.
+		logger.Error("Skipping MCP skill without a regular SKILL.md file", zap.String("dir", root))
+		return
+	}
 
 	scan.skills = append(scan.skills, contextSkill{
 		name:        fm.Name,
 		description: fm.Description,
-		uri:         skillFileURI(skillPath, skillFileName),
+		uri:         entryURI,
 	})
 	for _, res := range files {
 		scan.add(res)

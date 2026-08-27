@@ -112,7 +112,6 @@ func TestContextURIBuilders(t *testing.T) {
 	assert.Equal(t, "skill://trip-planning/assets/a%20b.md", skillFileURI("trip-planning", "assets/a b.md"))
 	// Multi-segment skill-path: SEP-2640 organizational prefix, every segment encoded.
 	assert.Equal(t, "skill://acme/billing/refunds/SKILL.md", skillFileURI("acme/billing/refunds", "SKILL.md"))
-	assert.Equal(t, "skill://my%20team/refunds/SKILL.md", skillFileURI("my team/refunds", "SKILL.md"))
 }
 
 func TestScanContextResources(t *testing.T) {
@@ -333,6 +332,38 @@ func TestScanContextResources(t *testing.T) {
 		require.Len(t, scan.skills, 1)
 		assert.Contains(t, scan.byURI, "skill://trip-planning/nested/SKILL.md")
 		assert.Equal(t, 1, logs.FilterMessage("Nested SKILL.md served as supporting content of the enclosing skill").Len())
+	})
+
+	t.Run("skill under an invalid prefix directory is skipped", func(t *testing.T) {
+		core, logs := observer.New(zapcore.DebugLevel)
+		dir := t.TempDir()
+		writeContextFiles(t, dir, map[string]string{
+			"my team/refunds/SKILL.md": "---\nname: refunds\ndescription: Handle refunds.\n---\n# Refunds\n",
+		})
+
+		scan, err := scanContextResources(dir, zap.New(core))
+		require.NoError(t, err)
+		assert.Empty(t, scan.skills)
+		assert.Empty(t, scan.resources)
+		assert.Equal(t, 1, logs.FilterMessage("Skipping MCP skill with invalid URI").Len())
+	})
+
+	t.Run("skill with a symlinked SKILL.md is skipped", func(t *testing.T) {
+		core, logs := observer.New(zapcore.DebugLevel)
+		dir := t.TempDir()
+		outsideDir := t.TempDir()
+		realFile := filepath.Join(outsideDir, "real-skill.md")
+		require.NoError(t, os.WriteFile(realFile, []byte("---\nname: refunds\ndescription: Handle refunds.\n---\n# Refunds\n"), 0o644))
+
+		skillDir := filepath.Join(dir, "refunds")
+		require.NoError(t, os.MkdirAll(skillDir, 0o755))
+		require.NoError(t, os.Symlink(realFile, filepath.Join(skillDir, "SKILL.md")))
+
+		scan, err := scanContextResources(dir, zap.New(core))
+		require.NoError(t, err)
+		assert.Empty(t, scan.skills)
+		assert.Empty(t, scan.resources)
+		assert.Equal(t, 1, logs.FilterMessage("Skipping MCP skill without a regular SKILL.md file").Len())
 	})
 
 	t.Run("missing directory returns error", func(t *testing.T) {
