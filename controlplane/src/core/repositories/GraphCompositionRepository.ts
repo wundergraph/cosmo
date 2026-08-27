@@ -435,7 +435,7 @@ export class GraphCompositionRepository {
       eq(graphCompositionSubgraphs.isFeatureSubgraph, true),
     ];
 
-    // Gates on targets.namespaceId and targets.id, so the query must join targets.
+    // The query must join targets, which the RBAC conditions gate on.
     if (!SubgraphRepository.applyRbacConditionsToQuery(input.rbac, conditions)) {
       return [];
     }

@@ -614,7 +614,6 @@ const CONFIG_TYPE_LABELS: Record<ConfigType, string> = {
   subgraph: 'Subgraph',
 };
 
-// hasOwn, not `in`: the value comes from the URL, and `in` would accept `__proto__`.
 const isConfigType = (value: string): value is ConfigType => Object.hasOwn(CONFIG_TYPE_LABELS, value);
 
 type ConfigSelection = { load: string; type: ConfigType; featureFlag?: string };
