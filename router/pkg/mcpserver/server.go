@@ -765,12 +765,17 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 // registered MCP resources, mirroring the tools flow in Reload. The go-sdk
 // advertises the resources capability and emits list_changed notifications
 // automatically when resources are added or removed.
+//
+// The directory is scanned before anything is removed: a scan error leaves
+// the previously registered resources live instead of leaving the server
+// resource-less, and there is no window where resources are briefly
+// unregistered while the scan runs. This mirrors how Reload leaves old tools
+// registered when operation loading fails.
 func (s *GraphQLSchemaServer) registerContextResources() error {
-	s.server.RemoveResources(s.registeredResources...)
-	s.registeredResources = nil
-	s.contextScan = newEmptyContextScan()
-
 	if !s.resourcesEnabled || s.operationsDir == "" {
+		s.server.RemoveResources(s.registeredResources...)
+		s.registeredResources = nil
+		s.contextScan = newEmptyContextScan()
 		return nil
 	}
 
@@ -778,6 +783,9 @@ func (s *GraphQLSchemaServer) registerContextResources() error {
 	if err != nil {
 		return err
 	}
+
+	s.server.RemoveResources(s.registeredResources...)
+	s.registeredResources = nil
 	s.contextScan = scan
 
 	handler := s.handleReadContextResource()
@@ -799,6 +807,24 @@ func (s *GraphQLSchemaServer) registerContextResources() error {
 	return nil
 }
 
+// checkServableFile validates a context resource file at read time. The scan
+// records file metadata once, but a file can grow or be replaced (for
+// example by a FIFO) between the scan and a request, so both read paths
+// re-check the 16 MiB cap and the regular-file requirement before reading.
+func checkServableFile(filePath string) error {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to stat resource file: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("resource file is not a regular file")
+	}
+	if info.Size() > maxServedFileBytes {
+		return fmt.Errorf("resource file exceeds the %d byte limit", maxServedFileBytes)
+	}
+	return nil
+}
+
 // handleReadContextResource serves resources/read for context documents and
 // skill files. Content is read from disk per request so edits between config
 // reloads are served fresh.
@@ -807,6 +833,9 @@ func (s *GraphQLSchemaServer) handleReadContextResource() mcp.ResourceHandler {
 		res, ok := s.contextScan.byURI[req.Params.URI]
 		if !ok {
 			return nil, fmt.Errorf("unknown resource: %s", req.Params.URI)
+		}
+		if err := checkServableFile(res.filePath); err != nil {
+			return nil, fmt.Errorf("cannot serve resource %s: %w", req.Params.URI, err)
 		}
 		content, err := os.ReadFile(res.filePath)
 		if err != nil {
@@ -1380,6 +1409,12 @@ func (s *GraphQLSchemaServer) handleGetContext() func(ctx context.Context, reque
 			return &mcp.CallToolResult{
 				IsError: true,
 				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("unknown context uri: %s (call get_context without arguments to list valid uris)", input.URI)}},
+			}, nil
+		}
+		if err := checkServableFile(res.filePath); err != nil {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("cannot serve %s: %s", input.URI, err)}},
 			}, nil
 		}
 		content, err := os.ReadFile(res.filePath)

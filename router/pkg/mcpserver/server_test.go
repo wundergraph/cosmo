@@ -187,6 +187,56 @@ func TestReload_ResourcesDisabledRegistersNothing(t *testing.T) {
 
 	require.NoError(t, srv.Reload(&schemaDoc, nil))
 	assert.Empty(t, srv.registeredResources)
+
+	// A disabled server still carries a non-nil, empty scan: handlers that
+	// read s.contextScan must never see a nil map.
+	require.NotNil(t, srv.contextScan)
+	assert.Empty(t, srv.contextScan.skills)
+	assert.Empty(t, srv.contextScan.resources)
+	assert.Empty(t, srv.contextScan.byURI)
+}
+
+// TestReadContextResource_OversizedFileAtReadTimeIsRejected proves both read
+// paths (resources/read and get_context) re-check the 16 MiB cap and the
+// regular-file requirement at request time, not just at scan time: a file
+// that grows after the scan must not be served.
+func TestReadContextResource_OversizedFileAtReadTimeIsRejected(t *testing.T) {
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"notes.md": "# Notes\n",
+	})
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(zap.NewNop()),
+		WithOperationsDir(tempDir),
+		WithResourcesEnabled(true),
+	)
+	require.NoError(t, err)
+	require.NoError(t, srv.Reload(&schemaDoc, nil))
+	require.Contains(t, srv.registeredResources, "context:///notes.md")
+
+	// Grow the file past the limit on disk, after the scan already recorded it.
+	oversized := make([]byte, maxServedFileBytes+1)
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "notes.md"), oversized, 0o644))
+
+	readHandler := srv.handleReadContextResource()
+	_, err = readHandler(t.Context(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: "context:///notes.md"},
+	})
+	assert.Error(t, err)
+
+	getContextHandler := srv.handleGetContext()
+	result, err := getContextHandler(t.Context(), &mcp.CallToolRequest{
+		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{"uri":"context:///notes.md"}`)},
+	})
+	require.NoError(t, err)
+	assert.True(t, result.IsError)
 }
 
 func TestReload_ReservedToolNameCollision(t *testing.T) {
