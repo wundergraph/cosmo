@@ -26,7 +26,8 @@
     "format": "pnpm run -r --parallel format",
     "clean": "rm -rf node_modules **/node_modules dist **/dist gen **/gen .next **/.next tsconfig.tsbuildinfo **/tsconfig.tsbuildinfo .eslintcache **/.eslintcache",
     "release-preview": "lerna publish --ignore-scripts --dry-run",
-    "release": "lerna publish -y",
+    "release:version": "lerna version --yes",
+    "release:publish": "lerna publish from-package --yes",
     "wgc": "DO_NOT_TRACK=1 pnpm -r run --filter './cli' wgc"
   },
   "files": [
