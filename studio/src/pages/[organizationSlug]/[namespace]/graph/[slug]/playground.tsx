@@ -631,21 +631,21 @@ const ConfigSelect = () => {
   const featureSubgraphs = compositionFlagsData?.featureSubgraphs ?? [];
 
   const selected = (router.query.load as string) || graphContext?.graph?.id || '';
-  const queryType = (router.query.type as string) || 'graph';
-  const type: ConfigType = isConfigType(queryType) ? queryType : 'graph';
+  const typeParam = (router.query.type as string) || 'graph';
+  const configType: ConfigType = isConfigType(typeParam) ? typeParam : 'graph';
   const activeFeatureFlag = (router.query.featureFlag as string) || '';
 
   const applyParams = useApplyParams();
 
   const currentValue = configSelectionValue({
     load: selected,
-    type,
-    featureFlag: type === 'featureSubgraph' ? activeFeatureFlag : undefined,
+    type: configType,
+    featureFlag: configType === 'featureSubgraph' ? activeFeatureFlag : undefined,
   });
 
   return (
     <div className="ml-1 flex items-center gap-x-2 pl-3">
-      <span className="text-sm text-muted-foreground">Querying {CONFIG_TYPE_LABELS[type]} :</span>
+      <span className="text-sm text-muted-foreground">Querying {CONFIG_TYPE_LABELS[configType]} :</span>
       <Select
         value={currentValue}
         onValueChange={(value) => {
@@ -771,12 +771,12 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
 
   const loadSchemaGraphId = (router.query.load as string) || graphContext?.graph?.id || '';
-  const type = (router.query.type as string) || 'graph';
+  const configType = (router.query.type as string) || 'graph';
 
   const compositionFlagsData = useCompositionFlags();
 
   const activeFeatureSubgraph = useMemo(() => {
-    if (type !== 'featureSubgraph') {
+    if (configType !== 'featureSubgraph') {
       return undefined;
     }
 
@@ -788,13 +788,13 @@ const PlaygroundPage: NextPageWithLayout = () => {
       (featureSubgraph) =>
         featureSubgraph.id === loadSchemaGraphId && featureSubgraph.featureFlagId === featureFlag?.id,
     );
-  }, [compositionFlagsData, loadSchemaGraphId, router.query.featureFlag, type]);
+  }, [compositionFlagsData, loadSchemaGraphId, router.query.featureFlag, configType]);
 
   const { data, isLoading: isLoadingGraphSchema } = useQuery(getFederatedGraphSDLByName, {
     name: graphContext?.graph?.name,
     namespace: graphContext?.graph?.namespace,
     featureFlagName:
-      type === 'featureFlag'
+      configType === 'featureFlag'
         ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
         : undefined,
   });
@@ -807,7 +807,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
       namespace: graphContext?.graph?.namespace,
     },
     {
-      enabled: !!loadSchemaGraphId && loadSchemaGraphId !== graphContext?.graph?.id && type === 'subgraph',
+      enabled: !!loadSchemaGraphId && loadSchemaGraphId !== graphContext?.graph?.id && configType === 'subgraph',
     },
   );
 
@@ -829,7 +829,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     isLoadingSubgraphSchema ||
     isLoadingFeatureSubgraphSchema ||
     // Which schema to fetch is unknown until the flag list has loaded.
-    (type === 'featureSubgraph' && !activeFeatureSubgraph);
+    (configType === 'featureSubgraph' && !activeFeatureSubgraph);
 
   const schema = useMemo(() => {
     return parseSchema(featureSubgraphData?.sdl || subgraphData?.sdl || data?.clientSchema)?.ast ?? null;
@@ -1041,12 +1041,12 @@ const PlaygroundPage: NextPageWithLayout = () => {
   }, [query, isGraphiqlRendered]);
 
   const { routingUrl, subscriptionUrl } = useMemo(() => {
-    if (!loadSchemaGraphId || type === 'graph' || type === 'featureFlag') {
+    if (!loadSchemaGraphId || configType === 'graph' || configType === 'featureFlag') {
       const url = graphContext?.graph?.routingURL ?? '';
       return { routingUrl: url, subscriptionUrl: url.replace('http', 'ws') };
     }
 
-    if (type === 'featureSubgraph') {
+    if (configType === 'featureSubgraph') {
       return {
         routingUrl: activeFeatureSubgraph?.routingUrl ?? '',
         subscriptionUrl: activeFeatureSubgraph?.subscriptionUrl ?? '',
@@ -1062,15 +1062,15 @@ const PlaygroundPage: NextPageWithLayout = () => {
       routingUrl: subgraph.routingURL,
       subscriptionUrl: subgraph.subscriptionUrl,
     };
-  }, [activeFeatureSubgraph, graphContext?.graph?.routingURL, graphContext?.subgraphs, loadSchemaGraphId, type]);
+  }, [activeFeatureSubgraph, graphContext?.graph?.routingURL, graphContext?.subgraphs, loadSchemaGraphId, configType]);
 
   const featureFlagName = useMemo(() => {
-    if (type !== 'featureFlag') {
+    if (configType !== 'featureFlag') {
       return undefined;
     }
 
     return (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name;
-  }, [compositionFlagsData?.featureFlags, loadSchemaGraphId, type]);
+  }, [compositionFlagsData?.featureFlags, loadSchemaGraphId, configType]);
 
   const [status, setStatus] = useState<number>();
   const [statusText, setStatusText] = useState<string>();
@@ -1145,7 +1145,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
         requestHeaders = substituteHeadersFromEnv(requestHeaders, graphContext?.graph?.id);
         validateHeaders(requestHeaders);
 
-        if (type === 'featureFlag') {
+        if (configType === 'featureFlag') {
           const featureFlag = (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId);
           if (featureFlag) {
             requestHeaders['X-Feature-Flag'] = featureFlag.name;
@@ -1184,7 +1184,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     loadSchemaGraphId,
     routingUrl,
     schema,
-    type,
+    configType,
     view,
   ]);
 
