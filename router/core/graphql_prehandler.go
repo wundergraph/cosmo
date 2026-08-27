@@ -1075,6 +1075,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		engineValidateSpan.SetAttributes(otel.WgQueryRootFieldAliases.Int(complexityCalcs.RootFieldAliases))
 		requestContext.expressionContext.Request.Operation.QueryComplexityCacheHit = cacheHit
 		engineValidateSpan.SetAttributes(otel.WgQueryDepthCacheHit.Bool(cacheHit))
+		setTelemetryAttributes(validationCtx, requestContext, expr.BucketQueryComplexity)
+
 		if queryDepthErr != nil {
 			rtrace.AttachErrToSpan(engineValidateSpan, err)
 
