@@ -16,6 +16,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -34,14 +35,17 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   getFederatedGraphSDLByName,
   getFeatureFlagsInLatestCompositionByFederatedGraph,
+  getSdlBySchemaVersion,
   getSubgraphSDLFromLatestComposition,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useContext } from 'react';
 import { MdOutlineFeaturedPlayList } from 'react-icons/md';
+import { RxComponentInstance } from 'react-icons/rx';
 import { PiGraphLight } from 'react-icons/pi';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { useApplyParams } from '@/components/analytics/use-apply-params';
 
 const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -54,19 +58,59 @@ const SDLPage: NextPageWithLayout = () => {
   const organizationSlug = router.query.organizationSlug as string;
   const schemaType = router.query.schemaType as string;
 
-  const fullPath = router.asPath;
-  const pathWithHash = fullPath.split('?')[0];
-  const pathname = pathWithHash.split('#')[0];
-
   const hash = useHash();
 
   const graphData = useContext(GraphContext);
+  const applyParams = useApplyParams();
 
-  const { data: federatedGraphSdl, isLoading: loadingGraphSDL } = useQuery(getFederatedGraphSDLByName, {
-    name: graphName,
-    namespace,
-    featureFlagName: activeFeatureFlag,
-  });
+  const { data: compositionFlagsData, isLoading: loadingCompositionFlags } = useQuery(
+    getFeatureFlagsInLatestCompositionByFederatedGraph,
+    {
+      federatedGraphName: graphData?.graph?.name,
+      namespace,
+    },
+    {
+      enabled: !!graphData?.graph?.name,
+    },
+  );
+
+  const featureFlags = compositionFlagsData?.featureFlags ?? [];
+
+  const featureSubgraphsOfFlag = (featureFlagId: string) =>
+    compositionFlagsData?.featureSubgraphs.filter(
+      (featureSubgraph) => featureSubgraph.featureFlagId === featureFlagId,
+    ) ?? [];
+
+  // `?featureFlag=X&subgraph=Y` addresses a feature subgraph, `?subgraph=Y` alone a base subgraph.
+  const isFeatureSubgraphSelected = !!activeFeatureFlag && !!activeSubgraph;
+
+  const activeFeatureSubgraph = isFeatureSubgraphSelected
+    ? featureSubgraphsOfFlag(featureFlags.find((flag) => flag.name === activeFeatureFlag)?.id ?? '').find(
+        (featureSubgraph) => featureSubgraph.name === activeSubgraph,
+      )
+    : undefined;
+
+  const activeSchemaType = schemaType === 'router' ? 'router' : 'client';
+
+  /** Only one schema source can be selected, so every selection clears the other two params. */
+  const selectSchemaSource = (source: { featureFlag?: string; subgraph?: string; schemaType?: string }) =>
+    applyParams({
+      featureFlag: source.featureFlag ?? null,
+      subgraph: source.subgraph ?? null,
+      schemaType: source.schemaType ?? null,
+    });
+
+  const { data: federatedGraphSdl, isLoading: loadingGraphSDL } = useQuery(
+    getFederatedGraphSDLByName,
+    {
+      name: graphName,
+      namespace,
+      featureFlagName: activeFeatureFlag,
+    },
+    {
+      enabled: !activeSubgraph,
+    },
+  );
 
   let validGraph = graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
 
@@ -78,37 +122,24 @@ const SDLPage: NextPageWithLayout = () => {
       namespace,
     },
     {
-      enabled: !!graphData?.subgraphs && !!activeSubgraph,
+      enabled: !!graphData?.subgraphs && !!activeSubgraph && !isFeatureSubgraphSelected,
     },
   );
 
-  const { data: compositionFlagsData } = useQuery(
-    getFeatureFlagsInLatestCompositionByFederatedGraph,
+  // Feature subgraphs are not in the base composition, so getSubgraphSDLFromLatestComposition
+  // cannot resolve them.
+  const { data: featureSubgraphSdl, isLoading: loadingFeatureSubgraphSDL } = useQuery(
+    getSdlBySchemaVersion,
     {
-      federatedGraphName: graphData?.graph?.name,
-      namespace,
+      schemaVersionId: activeFeatureSubgraph?.schemaVersionId,
+      targetId: activeFeatureSubgraph?.targetId,
     },
     {
-      enabled: !!graphData?.graph?.name,
+      enabled: !!activeFeatureSubgraph,
     },
   );
 
-  const subgraphs =
-    graphData?.subgraphs.map((each) => {
-      return {
-        name: each.name,
-        query: `?subgraph=${each.name}`,
-      };
-    }) ?? [];
-
-  const featureFlags =
-    compositionFlagsData?.featureFlags.map((each) => {
-      return {
-        name: each.name,
-        query: `?featureFlag=${each.name}`,
-        hasFailedLatestComposition: !!each.hasFailedLatestComposition,
-      };
-    }) ?? [];
+  const subgraphs = graphData?.subgraphs ?? [];
 
   // The active flag is identified by name in the URL, so resolve staleness by name for the banner
   const activeFeatureFlagIsStale = featureFlags.some(
@@ -119,36 +150,59 @@ const SDLPage: NextPageWithLayout = () => {
     return each.name === activeSubgraph;
   });
 
-  const activeGraphWithSDL = activeSubgraph
+  // downloadName becomes a filename, so it cannot contain a slash.
+  const activeGraphWithSDL = isFeatureSubgraphSelected
     ? {
-        title: activeSubgraphObject?.name ?? '',
-        targetId: activeSubgraphObject?.targetId ?? '',
-        routingUrl: activeSubgraphObject?.routingURL ?? '',
-        sdl: subgraphSdl?.sdl ?? '',
-        versionId: subgraphSdl?.versionId,
+        title: `${activeFeatureFlag} / ${activeSubgraph}`,
+        downloadName: `${activeFeatureFlag}-${activeSubgraph}`,
+        routingUrl: activeFeatureSubgraph?.routingUrl ?? '',
+        sdl: featureSubgraphSdl?.sdl ?? '',
         time: '',
       }
-    : {
-        title: activeFeatureFlag || graphName,
-        targetId: graphData?.graph?.targetId ?? '',
-        routingUrl: graphData?.graph?.routingURL ?? '',
-        sdl:
-          schemaType === 'router'
-            ? (federatedGraphSdl?.sdl ?? '')
-            : federatedGraphSdl?.clientSchema || federatedGraphSdl?.sdl,
-        time: graphData?.graph?.lastUpdatedAt,
-        versionId: federatedGraphSdl?.versionId,
-      };
+    : activeSubgraph
+      ? {
+          title: activeSubgraphObject?.name ?? '',
+          downloadName: activeSubgraphObject?.name ?? '',
+          routingUrl: activeSubgraphObject?.routingURL ?? '',
+          sdl: subgraphSdl?.sdl ?? '',
+          time: '',
+        }
+      : {
+          title: activeFeatureFlag || graphName,
+          downloadName: activeFeatureFlag || graphName,
+          routingUrl: graphData?.graph?.routingURL ?? '',
+          sdl:
+            activeSchemaType === 'router'
+              ? (federatedGraphSdl?.sdl ?? '')
+              : federatedGraphSdl?.clientSchema || federatedGraphSdl?.sdl,
+          time: graphData?.graph?.lastUpdatedAt ?? '',
+        };
 
-  const isLoading = loadingGraphSDL || loadingSubgraphSDL;
+  const isLoading =
+    loadingGraphSDL ||
+    loadingSubgraphSDL ||
+    loadingFeatureSubgraphSDL ||
+    // Which SDL to fetch is unknown until the flag list has loaded.
+    (isFeatureSubgraphSelected && loadingCompositionFlags);
 
   let content: React.ReactNode;
 
   if (isLoading) {
     content = <Loader fullscreen />;
-  } else if (activeSubgraph && subgraphSdl?.response && subgraphSdl.response?.code === EnumStatusCode.ERR_NOT_FOUND) {
+  } else if (isFeatureSubgraphSelected && !featureSubgraphSdl?.sdl) {
     content = <EmptySchema subgraphName={activeSubgraph} />;
-  } else if (federatedGraphSdl?.response && federatedGraphSdl.response?.code === EnumStatusCode.ERR_NOT_FOUND) {
+  } else if (
+    activeSubgraph &&
+    !isFeatureSubgraphSelected &&
+    subgraphSdl?.response &&
+    subgraphSdl.response?.code === EnumStatusCode.ERR_NOT_FOUND
+  ) {
+    content = <EmptySchema subgraphName={activeSubgraph} />;
+  } else if (
+    !activeSubgraph &&
+    federatedGraphSdl?.response &&
+    federatedGraphSdl.response?.code === EnumStatusCode.ERR_NOT_FOUND
+  ) {
     validGraph = true;
     content = <EmptySchema subgraphName={graphData?.subgraphs?.[0]?.name || undefined} />;
   } else {
@@ -200,7 +254,7 @@ const SDLPage: NextPageWithLayout = () => {
                           </p>
                           {!activeSubgraph && (
                             <Badge variant="secondary" className="ml-2">
-                              {schemaType === 'router' ? 'router' : 'client'}
+                              {activeSchemaType}
                             </Badge>
                           )}
                         </div>
@@ -221,18 +275,18 @@ const SDLPage: NextPageWithLayout = () => {
                           <DropdownMenuPortal>
                             <DropdownMenuSubContent>
                               <DropdownMenuRadioGroup
-                                onValueChange={(query) => router.push(pathname + query)}
-                                value={`${!activeFeatureFlag ? `?schemaType=${schemaType}` : undefined}`}
+                                onValueChange={(value) => selectSchemaSource({ schemaType: value })}
+                                value={!activeFeatureFlag && !activeSubgraph ? activeSchemaType : ''}
                               >
                                 <DropdownMenuRadioItem
                                   className="w-[150px] items-center justify-between pl-2"
-                                  value="?schemaType=client"
+                                  value="client"
                                 >
                                   Client Schema
                                 </DropdownMenuRadioItem>
                                 <DropdownMenuRadioItem
                                   className="w-[150px] items-center justify-between pl-2"
-                                  value="?schemaType=router"
+                                  value="router"
                                 >
                                   Router Schema
                                 </DropdownMenuRadioItem>
@@ -250,39 +304,67 @@ const SDLPage: NextPageWithLayout = () => {
                             <DropdownMenuLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
                               <MdOutlineFeaturedPlayList className="h-3 w-3" /> Feature Flags
                             </DropdownMenuLabel>
-                            {featureFlags.map(({ name, query, hasFailedLatestComposition }) => {
+                            {featureFlags.map(({ id, name, hasFailedLatestComposition }) => {
+                              const isActiveFlag = name === activeFeatureFlag;
+                              const featureSubgraphs = featureSubgraphsOfFlag(id);
+
                               return (
-                                <>
-                                  <DropdownMenuSub>
-                                    <DropdownMenuSubTrigger>
-                                      <span className="flex items-center gap-x-1.5">
-                                        {name}
-                                        {hasFailedLatestComposition && <StaleCompositionIcon />}
-                                      </span>
-                                    </DropdownMenuSubTrigger>
-                                    <DropdownMenuPortal>
-                                      <DropdownMenuSubContent>
-                                        <DropdownMenuRadioGroup
-                                          value={`?featureFlag=${activeFeatureFlag}&schemaType=${schemaType}`}
-                                          onValueChange={(query) => router.push(pathname + query)}
+                                <DropdownMenuSub key={id}>
+                                  <DropdownMenuSubTrigger>
+                                    <span className="flex items-center gap-x-1.5">
+                                      {name}
+                                      {hasFailedLatestComposition && <StaleCompositionIcon />}
+                                    </span>
+                                  </DropdownMenuSubTrigger>
+                                  <DropdownMenuPortal>
+                                    <DropdownMenuSubContent>
+                                      <DropdownMenuRadioGroup
+                                        value={isActiveFlag && !activeSubgraph ? activeSchemaType : ''}
+                                        onValueChange={(value) =>
+                                          selectSchemaSource({ featureFlag: name, schemaType: value })
+                                        }
+                                      >
+                                        <DropdownMenuRadioItem
+                                          className="w-[170px] items-center justify-between pl-2"
+                                          value="client"
                                         >
-                                          <DropdownMenuRadioItem
-                                            className="w-[150px] items-center justify-between pl-2"
-                                            value={`${query}&schemaType=client`}
+                                          Client Schema
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem
+                                          className="w-[170px] items-center justify-between pl-2"
+                                          value="router"
+                                        >
+                                          Router Schema
+                                        </DropdownMenuRadioItem>
+                                      </DropdownMenuRadioGroup>
+
+                                      {featureSubgraphs.length > 0 && (
+                                        <>
+                                          <DropdownMenuSeparator className="my-2" />
+                                          <DropdownMenuLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                                            <RxComponentInstance className="h-3 w-3" /> Feature Subgraphs
+                                          </DropdownMenuLabel>
+                                          <DropdownMenuRadioGroup
+                                            value={isActiveFlag ? (activeSubgraph ?? '') : ''}
+                                            onValueChange={(value) =>
+                                              selectSchemaSource({ featureFlag: name, subgraph: value })
+                                            }
                                           >
-                                            Client Schema
-                                          </DropdownMenuRadioItem>
-                                          <DropdownMenuRadioItem
-                                            className="w-[150px] items-center justify-between pl-2"
-                                            value={`${query}&schemaType=router`}
-                                          >
-                                            Router Schema
-                                          </DropdownMenuRadioItem>
-                                        </DropdownMenuRadioGroup>
-                                      </DropdownMenuSubContent>
-                                    </DropdownMenuPortal>
-                                  </DropdownMenuSub>
-                                </>
+                                            {featureSubgraphs.map((featureSubgraph) => (
+                                              <DropdownMenuRadioItem
+                                                className="w-[170px] items-center justify-between pl-2"
+                                                key={featureSubgraph.id}
+                                                value={featureSubgraph.name}
+                                              >
+                                                <span className="truncate">{featureSubgraph.name}</span>
+                                              </DropdownMenuRadioItem>
+                                            ))}
+                                          </DropdownMenuRadioGroup>
+                                        </>
+                                      )}
+                                    </DropdownMenuSubContent>
+                                  </DropdownMenuPortal>
+                                </DropdownMenuSub>
                               );
                             })}
                           </DropdownMenuGroup>
@@ -295,15 +377,15 @@ const SDLPage: NextPageWithLayout = () => {
                           <Component2Icon className="h-3 w-3" /> Subgraphs
                         </DropdownMenuLabel>
                         <DropdownMenuRadioGroup
-                          onValueChange={(query) => router.push(pathname + query)}
-                          value={`?subgraph=${activeSubgraph}`}
+                          onValueChange={(value) => selectSchemaSource({ subgraph: value })}
+                          value={activeFeatureFlag ? '' : (activeSubgraph ?? '')}
                         >
-                          {subgraphs.map(({ name, query }) => {
+                          {subgraphs.map(({ name }) => {
                             return (
                               <DropdownMenuRadioItem
                                 className="items-center justify-between pl-2"
                                 key={name}
-                                value={query}
+                                value={name}
                               >
                                 {name}
                               </DropdownMenuRadioItem>
@@ -314,16 +396,19 @@ const SDLPage: NextPageWithLayout = () => {
                     </>
                   ) : (
                     <>
-                      <DropdownMenuRadioGroup onValueChange={(query) => router.push(pathname + query)}>
+                      <DropdownMenuRadioGroup
+                        onValueChange={(value) => selectSchemaSource({ subgraph: value || undefined })}
+                        value={activeSubgraph ?? ''}
+                      >
                         <DropdownMenuRadioItem className="w-[150px] items-center justify-between pl-2" value="">
                           Router SDL
                         </DropdownMenuRadioItem>
-                        {subgraphs.map(({ name, query }) => {
+                        {subgraphs.map(({ name }) => {
                           return (
                             <DropdownMenuRadioItem
                               className="w-[150px] items-center justify-between pl-2"
                               key={name}
-                              value={query}
+                              value={name}
                             >
                               Published SDL
                             </DropdownMenuRadioItem>
@@ -337,7 +422,7 @@ const SDLPage: NextPageWithLayout = () => {
               <SDLViewerActions
                 className="w-auto"
                 sdl={activeGraphWithSDL.sdl ?? ''}
-                targetName={activeGraphWithSDL.title !== '' ? activeGraphWithSDL.title : undefined}
+                targetName={activeGraphWithSDL.downloadName !== '' ? activeGraphWithSDL.downloadName : undefined}
               />
             </div>
           </SchemaToolbar>
