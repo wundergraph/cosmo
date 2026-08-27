@@ -10,10 +10,12 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -21,6 +23,7 @@ import (
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource/subscriptionclient/transport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -88,6 +91,9 @@ type HandlerOptions struct {
 
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
+
+	ResponseCache            caching.Cache
+	ResponseCacheFallbackTTL time.Duration
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -110,8 +116,35 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		engineLoaderHooks:                        opts.EngineLoaderHooks,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
 		headerPropagation:                        opts.HeaderPropagation,
+		responseCacheStore:                       opts.ResponseCache,
+		responseCacheFallbackTTL:                 opts.ResponseCacheFallbackTTL,
+		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log),
 	}
 	return graphQLHandler
+}
+
+// newResponseCacheErrorHandler builds what the engine calls when it has swallowed
+// a cache failure in order to keep a request alive. The request was served
+// either way; this only decides whether anyone finds out that the cache is no
+// longer doing anything.
+//
+// Sampled down to one line a second, because the failure worth surfacing here is
+// "the cache is unreachable", and that one arrives once per entity fetch of
+// every request in flight. Logged unsampled it would stop being a report of the
+// outage and become a second outage.
+func newResponseCacheErrorHandler(log *zap.Logger) func(error) {
+	if log == nil {
+		return nil
+	}
+
+	sampled := log.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+		// One through per second, nothing thereafter.
+		return zapcore.NewSamplerWithOptions(core, time.Second, 1, 0)
+	}))
+
+	return func(err error) {
+		sampled.Warn("Response cache degraded, serving from the subgraph instead", zap.Error(err))
+	}
 }
 
 // Error and Status Code handling
@@ -133,10 +166,13 @@ type GraphQLHandler struct {
 	authorizer  *CosmoAuthorizer
 	rateLimiter *CosmoRateLimiter
 
-	rateLimitConfig          *config.RateLimitConfiguration
-	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
-	engineLoaderHooks        resolve.LoaderHooks
-	headerPropagation        *HeaderPropagation
+	rateLimitConfig           *config.RateLimitConfiguration
+	subgraphErrorPropagation  config.SubgraphErrorPropagationConfiguration
+	engineLoaderHooks         resolve.LoaderHooks
+	headerPropagation         *HeaderPropagation
+	responseCacheStore        caching.Cache
+	responseCacheFallbackTTL  time.Duration
+	responseCacheErrorHandler func(error)
 
 	enableCacheResponseHeaders      bool
 	enableResponseHeaderPropagation bool
@@ -188,6 +224,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		resolveCtx.SetEngineLoaderHooks(h.engineLoaderHooks)
 	}
 	resolveCtx = h.configureRateLimiting(resolveCtx)
+	if h.responseCacheStore != nil {
+		resolveCtx.SetResponseCache(h.responseCacheStore, h.responseCacheFallbackTTL, h.responseCacheErrorHandler)
+	}
 	if reqCtx.customFieldValueRenderer != nil {
 		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)
 	}

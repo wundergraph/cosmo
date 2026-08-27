@@ -5,6 +5,7 @@ import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/
 import { EmptyState } from '@/components/empty-state';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { EmptySchema } from '@/components/schema/empty-schema-state';
+import { StaleCompositionIcon } from '@/components/schema/stale-composition-warning';
 import { SchemaToolbar } from '@/components/schema/toolbar';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -92,6 +93,7 @@ import { Line, LineChart, ResponsiveContainer } from 'recharts';
 import { useDebounce } from 'use-debounce';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { buildUrl } from '@/lib/build-url';
+import { CompositionErrorsBanner } from '@/components/composition-errors-banner';
 
 const fallback = buildASTSchema(parse(`type Query { dummy: String! }`));
 
@@ -897,6 +899,7 @@ export const GraphSelector = () => {
       return {
         name: each.name,
         query: `?featureFlag=${each.name}`,
+        hasFailedLatestComposition: !!each.hasFailedLatestComposition,
       };
     }) ?? [];
 
@@ -964,11 +967,16 @@ export const GraphSelector = () => {
             <DropdownMenuLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
               <MdOutlineFeaturedPlayList className="h-3 w-3" /> Feature Flags
             </DropdownMenuLabel>
-            {featureFlags.map(({ name, query }) => {
+            {featureFlags.map(({ name, query, hasFailedLatestComposition }) => {
               return (
                 <>
                   <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>{name}</DropdownMenuSubTrigger>
+                    <DropdownMenuSubTrigger>
+                      <span className="flex items-center gap-x-1.5">
+                        {name}
+                        {hasFailedLatestComposition && <StaleCompositionIcon />}
+                      </span>
+                    </DropdownMenuSubTrigger>
                     <DropdownMenuPortal>
                       <DropdownMenuSubContent>
                         <DropdownMenuRadioGroup
@@ -1242,6 +1250,22 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     featureFlagName: featureFlagName,
   });
 
+  const { data: compositionFlagsData } = useQuery(
+    getFeatureFlagsInLatestCompositionByFederatedGraph,
+    {
+      federatedGraphName: graphName,
+      namespace,
+    },
+    {
+      enabled: !!graphName,
+    },
+  );
+
+  // The active flag is identified by name in the URL, so resolve staleness by name for the banner
+  const activeFeatureFlagIsStale = (compositionFlagsData?.featureFlags ?? []).some(
+    (flag) => flag.name === featureFlagName && flag.hasFailedLatestComposition,
+  );
+
   const schemaType = router.query.schemaType as string;
   const schema = schemaType === 'router' ? data?.sdl : data?.clientSchema || data?.sdl;
 
@@ -1314,6 +1338,16 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
         }
         noPadding
       >
+        {activeFeatureFlagIsStale && (
+          <CompositionErrorsBanner
+            viewCompositionsHref={buildUrl('/:organizationSlug/:namespace/graph/:graphName/compositions', {
+              organizationSlug,
+              namespace,
+              graphName,
+            })}
+            className="mx-4 mt-4"
+          />
+        )}
         <div className="flex h-full flex-row">
           <div className="hidden h-full min-w-[200px] max-w-[240px] overflow-y-auto border-r py-2 scrollbar-thin xl:block">
             <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-6 xl:px-8">

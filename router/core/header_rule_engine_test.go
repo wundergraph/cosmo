@@ -29,21 +29,24 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		policies       []*cachedirective.Object
-		expectedHeader string
+		name               string
+		policies           []*cachedirective.Object
+		expectedHeader     string
+		expectedDirectives *cachedirective.ResponseCacheDirectives
 	}{
 		{
-			name:           "empty policies",
-			policies:       []*cachedirective.Object{},
-			expectedHeader: "",
+			name:               "empty policies",
+			policies:           []*cachedirective.Object{},
+			expectedHeader:     "",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{},
 		},
 		{
 			name: "single policy max-age",
 			policies: []*cachedirective.Object{
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60}},
 			},
-			expectedHeader: "max-age=60",
+			expectedHeader:     "max-age=60",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60},
 		},
 		{
 			name: "no-store short-circuits",
@@ -51,7 +54,8 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{NoStore: true}},
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300}},
 			},
-			expectedHeader: "no-store",
+			expectedHeader:     "no-store",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{NoStore: true},
 		},
 		{
 			name: "no-cache wins over max-age",
@@ -59,7 +63,8 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{NoCachePresent: true}},
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300}},
 			},
-			expectedHeader: "no-cache",
+			expectedHeader:     "no-cache",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{NoCachePresent: true, MaxAge: 300},
 		},
 		{
 			name: "shortest max-age wins",
@@ -67,7 +72,8 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 600}},
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300}},
 			},
-			expectedHeader: "max-age=300",
+			expectedHeader:     "max-age=300",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300},
 		},
 		{
 			name: "private wins over public",
@@ -75,7 +81,8 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, Public: true}},
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 600, PrivatePresent: true}},
 			},
-			expectedHeader: "max-age=300, private",
+			expectedHeader:     "max-age=300, private",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, PrivatePresent: true},
 		},
 		{
 			name: "public without private",
@@ -83,14 +90,32 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, Public: true}},
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 600, Public: true}},
 			},
-			expectedHeader: "max-age=300, public",
+			expectedHeader:     "max-age=300, public",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, Public: true},
+		},
+		{
+			name: "single public policy keeps public on the result",
+			policies: []*cachedirective.Object{
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{Public: true}},
+			},
+			expectedHeader:     "public",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{Public: true},
+		},
+		{
+			name: "no-cache with public",
+			policies: []*cachedirective.Object{
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{NoCachePresent: true, Public: true}},
+			},
+			expectedHeader:     "no-cache, public",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{NoCachePresent: true, Public: true},
 		},
 		{
 			name: "no-cache with private",
 			policies: []*cachedirective.Object{
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{NoCachePresent: true, PrivatePresent: true}},
 			},
-			expectedHeader: "no-cache, private",
+			expectedHeader:     "no-cache, private",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{NoCachePresent: true, PrivatePresent: true},
 		},
 	}
 
@@ -99,9 +124,127 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 			t.Parallel()
 			result, header := createMostRestrictivePolicy(tt.policies)
 			assert.Equal(t, tt.expectedHeader, header)
-			assert.NotNil(t, result)
+			require.NotNil(t, result)
+			require.NotNil(t, result.RespDirectives)
+			assert.Equal(t, tt.expectedDirectives.Public, result.RespDirectives.Public, "public directive")
+			assert.Equal(t, tt.expectedDirectives.PrivatePresent, result.RespDirectives.PrivatePresent, "private directive")
+			assert.Equal(t, tt.expectedDirectives.NoStore, result.RespDirectives.NoStore, "no-store directive")
+			assert.Equal(t, tt.expectedDirectives.NoCachePresent, result.RespDirectives.NoCachePresent, "no-cache directive")
+			assert.Equal(t, tt.expectedDirectives.MaxAge, result.RespDirectives.MaxAge, "max-age directive")
 		})
 	}
+
+	// The caller stores the returned policy as previousCacheControl and merges it
+	// with the next subgraph response, so directives dropped from the result
+	// silently disappear from the header on the following round.
+	t.Run("result is a valid input for the next round", func(t *testing.T) {
+		t.Parallel()
+
+		roundTripTests := []struct {
+			name           string
+			first          []*cachedirective.Object
+			second         *cachedirective.Object
+			expectedHeader string
+		}{
+			{
+				name: "public survives a round trip",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, Public: true}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 600, Public: true}},
+				expectedHeader: "max-age=300, public",
+			},
+			{
+				name: "public from a previous round is downgraded by a later private",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, Public: true}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 600, PrivatePresent: true}},
+				expectedHeader: "max-age=300, private",
+			},
+			{
+				name: "public without max-age survives a round trip",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{Public: true}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{}},
+				expectedHeader: "public",
+			},
+			{
+				name: "no-cache from a previous round is not lost to a later max-age",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{NoCachePresent: true}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300}},
+				expectedHeader: "no-cache",
+			},
+			{
+				name: "no-cache in a later round overrides a previous max-age",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{NoCachePresent: true}},
+				expectedHeader: "no-cache",
+			},
+			{
+				name: "no-store from a previous round is not lost to a later max-age",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{NoStore: true}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300}},
+				expectedHeader: "no-store",
+			},
+			{
+				name: "no-store in a later round overrides a previous no-cache",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{NoCachePresent: true}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{NoStore: true}},
+				expectedHeader: "no-store",
+			},
+			{
+				name: "shorter max-age from a previous round survives a longer one",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 600}},
+				expectedHeader: "max-age=300",
+			},
+			{
+				name: "shorter max-age in a later round wins over a previous one",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 600}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300}},
+				expectedHeader: "max-age=300",
+			},
+			{
+				name: "max-age and private both survive a round trip",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, PrivatePresent: true}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 600}},
+				expectedHeader: "max-age=300, private",
+			},
+			{
+				name: "no-cache and public both survive a round trip",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{NoCachePresent: true, Public: true}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, Public: true}},
+				expectedHeader: "no-cache, public",
+			},
+		}
+
+		for _, tt := range roundTripTests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+				previous, _ := createMostRestrictivePolicy(tt.first)
+				_, header := createMostRestrictivePolicy([]*cachedirective.Object{tt.second, previous})
+				assert.Equal(t, tt.expectedHeader, header)
+			})
+		}
+	})
 
 	t.Run("expires header - earlier wins", func(t *testing.T) {
 		t.Parallel()

@@ -1006,6 +1006,7 @@ func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirec
 		result.RespDirectives.MaxAge = minMaxAge
 	}
 	result.RespDirectives.PrivatePresent = isPrivate
+	result.RespDirectives.Public = isPublic && !isPrivate
 
 	// Format the final Cache-Control header
 	headerParts := []string{}
