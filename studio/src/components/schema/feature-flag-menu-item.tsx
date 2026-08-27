@@ -20,7 +20,6 @@ export interface FeatureFlagMenuItemProps {
   onSelect: (selection: SchemaSelection) => void;
 }
 
-/** One feature flag's submenu: its composed schemas, then the feature subgraphs it pinned. */
 export const FeatureFlagMenuItem = ({
   featureFlag,
   featureSubgraphs,

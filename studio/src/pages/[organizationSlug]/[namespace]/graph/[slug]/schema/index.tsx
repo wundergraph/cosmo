@@ -878,7 +878,7 @@ export const GraphSelector = () => {
     );
   }
 
-  // The explorer renders supergraph schemas, so it offers no subgraphs and no feature subgraphs.
+  // The explorer renders supergraph schemas, so subgraphs are not selectable here.
   return (
     <SchemaSelector
       title={activeFeatureFlag || graphName}

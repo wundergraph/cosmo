@@ -9,7 +9,6 @@ export interface SchemaTypeSelectProps {
   className?: string;
 }
 
-/** Switches between a graph's client and router schema, with a note on what each one is. */
 export const SchemaTypeSelect = ({ value, onValueChange, className }: SchemaTypeSelectProps) => {
   return (
     <Select onValueChange={onValueChange} value={value}>

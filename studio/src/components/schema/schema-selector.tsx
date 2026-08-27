@@ -25,19 +25,15 @@ import { MdOutlineFeaturedPlayList } from 'react-icons/md';
 import { PiGraphLight } from 'react-icons/pi';
 
 export interface SchemaSelectorProps {
-  /** Label for the closed dropdown, describing the current selection. */
   title: string;
   supportsFederation: boolean;
   featureFlags: FeatureFlag[];
   selection: SchemaSelection;
   onSelect: (selection: SchemaSelection) => void;
-  /** Omit to hide the Subgraphs group, as the schema explorer does. */
   subgraphNames?: string[];
-  /** Omit to hide feature subgraphs from the flag submenus, as the schema explorer does. */
   featureSubgraphsOfFlag?: (featureFlagId: string) => FeatureSubgraphInFlagComposition[];
 }
 
-/** Picks which schema a graph's schema page shows: the graph, a feature flag, or a subgraph. */
 export const SchemaSelector = ({
   title,
   supportsFederation,
