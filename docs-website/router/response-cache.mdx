@@ -117,7 +117,7 @@ These apply to the current alpha.
 
 **Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
 
-**`enable_multi_fetch` disables entity caching.** When `engine.enable_multi_fetch` is on, the router merges entity fetches to the same subgraph within one parallel wave into a single request. Merged fetches are not cached, and nothing reports that they were skipped. Root query fetches are unaffected and are still cached. Do not enable both and expect entity caching at this moment, we plan on supporting this in the future.
+**`enable_multi_fetch` disables caching for merged entity fetches.** When `engine.enable_multi_fetch` is on, the router merges entity fetches to the same subgraph within one parallel wave into a single request. A merged fetch is not cached, and nothing reports that it was skipped. An entity fetch that has nothing to merge with is still cached, and root query fetches are unaffected. Support for caching merged fetches is planned.
 
 ## Observability
 
