@@ -1380,7 +1380,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 		return err
 	}
 
-	apqClient, err := r.buildAPQClient(registry)
+	apqStore, err := r.buildAPQStore(registry)
 	if err != nil {
 		return err
 	}
@@ -1395,7 +1395,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 		pClient = nil
 	}
 
-	if pClient != nil || apqClient != nil || pqlStore != nil {
+	if pClient != nil || apqStore != nil || pqlStore != nil {
 		// For backwards compatibility with cdn config field
 		cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
 		if cacheSize <= 0 {
@@ -1406,7 +1406,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 			CacheSize:      cacheSize,
 			Logger:         r.logger,
 			ProviderClient: pClient,
-			ApqClient:      apqClient,
+			APQStore:       apqStore,
 			PQLStore:       pqlStore,
 		})
 		if err != nil {
@@ -1503,38 +1503,33 @@ func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedo
 	return nil, nil, nil
 }
 
-// buildAPQClient creates the automatic persisted queries client and its
-// optional Redis backing store.
-func (r *Router) buildAPQClient(registry *ProviderRegistry) (apq.Client, error) {
-	var kvClient apq.KVClient
-	if provider, ok := registry.Redis(r.automaticPersistedQueriesConfig.Storage.ProviderID); ok {
-		c, err := apq.NewRedisClient(&apq.RedisOptions{
-			Logger:        r.logger,
-			StorageConfig: &provider,
-			Prefix:        r.automaticPersistedQueriesConfig.Storage.ObjectPrefix,
-		})
-		if err != nil {
-			return nil, err
-		}
-		kvClient = c
-		r.logger.Info("Use redis as storage provider for automatic persisted operations",
-			zap.String("provider_id", provider.ID),
-		)
-	}
-
+// buildAPQStore creates the automatic persisted queries store.
+func (r *Router) buildAPQStore(registry *ProviderRegistry) (apq.Store, error) {
 	if !r.automaticPersistedQueriesConfig.Enabled {
 		return nil, nil
 	}
 
-	apqClient, err := apq.NewClient(&apq.Options{
-		Logger:    r.logger,
-		ApqConfig: &r.automaticPersistedQueriesConfig,
-		KVClient:  kvClient,
-	})
-	if err != nil {
-		return nil, err
+	ttl := time.Duration(r.automaticPersistedQueriesConfig.Cache.TTL) * time.Second
+	if provider, ok := registry.Redis(r.automaticPersistedQueriesConfig.Storage.ProviderID); ok {
+		store, err := apq.NewRedisStore(&apq.RedisOptions{
+			Logger:        r.logger,
+			StorageConfig: &provider,
+			Prefix:        r.automaticPersistedQueriesConfig.Storage.ObjectPrefix,
+			TTL:           ttl,
+		})
+		if err != nil {
+			return nil, err
+		}
+		r.logger.Info("Use redis as storage provider for automatic persisted operations",
+			zap.String("provider_id", provider.ID),
+		)
+		return store, nil
 	}
-	return apqClient, nil
+
+	return apq.NewMemoryStore(
+		int64(r.automaticPersistedQueriesConfig.Cache.Size.Uint64()),
+		ttl,
+	)
 }
 
 // buildManifestStore sets up the PQL manifest store and its background poller.

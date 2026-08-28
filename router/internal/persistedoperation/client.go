@@ -37,14 +37,14 @@ type Options struct {
 	Logger    *zap.Logger
 
 	ProviderClient StorageClient
-	ApqClient      apq.Client
+	APQStore       apq.Store
 	PQLStore       *pqlmanifest.Store
 }
 
 type Client struct {
 	cache          *operationstorage.OperationsCache
 	providerClient StorageClient
-	apqClient      apq.Client
+	apqStore       apq.Store
 	pqlStore       *pqlmanifest.Store
 }
 
@@ -59,14 +59,14 @@ func NewClient(opts *Options) (*Client, error) {
 	return &Client{
 		providerClient: opts.ProviderClient,
 		cache:          cache,
-		apqClient:      opts.ApqClient,
+		apqStore:       opts.APQStore,
 		pqlStore:       opts.PQLStore,
 	}, nil
 }
 
 func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
 	if c.APQEnabled() {
-		resp, apqErr := c.apqClient.PersistedOperation(ctx, clientName, sha256Hash)
+		resp, apqErr := c.apqStore.Get(ctx, sha256Hash)
 		if len(resp) > 0 || apqErr != nil {
 			return resp, true, apqErr
 		}
@@ -96,12 +96,10 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 		return nil, c.APQEnabled(), nil
 	}
 
-	var (
-		poNotFound *PersistentOperationNotFoundError
-	)
+	var poNotFound *PersistentOperationNotFoundError
 
 	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
-	if errors.As(err, &poNotFound) && c.apqClient != nil {
+	if errors.As(err, &poNotFound) && c.APQEnabled() {
 		// This could well be the first time a client is requesting an APQ operation and the query is attached to the request. Return without error here, and we'll verify the operation later.
 		return content, true, nil
 	}
@@ -114,24 +112,32 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 	return content, false, nil
 }
 
-func (c *Client) SaveOperation(ctx context.Context, clientName, sha256Hash, operationBody string) error {
-	if c.apqClient != nil && c.apqClient.Enabled() {
+func (c *Client) SaveOperation(ctx context.Context, sha256Hash, operationBody string) error {
+	if c.APQEnabled() {
 		// For in-memory APQ, skip saving operations the manifest already has —
 		// the manifest is the authoritative source and avoids redundant cache entries.
 		// For distributed APQ (Redis), always save so all router instances can resolve the operation.
-		if !c.apqClient.IsDistributed() && c.ManifestEnabled() {
+		if !c.apqStore.IsDistributed() && c.ManifestEnabled() {
 			if _, found := c.pqlStore.LookupByHash(sha256Hash); found {
 				return nil
 			}
 		}
-		return c.apqClient.SaveOperation(ctx, clientName, sha256Hash, []byte(operationBody))
+		return c.apqStore.Set(ctx, sha256Hash, []byte(operationBody))
 	}
 
 	return nil
 }
 
+func (c *Client) RenewOperation(ctx context.Context, sha256Hash string) error {
+	if !c.APQEnabled() {
+		return nil
+	}
+
+	return c.apqStore.Renew(ctx, sha256Hash)
+}
+
 func (c *Client) APQEnabled() bool {
-	return c.apqClient != nil && c.apqClient.Enabled()
+	return c.apqStore != nil
 }
 
 // ManifestEnabled returns whether a PQL manifest is configured and loaded.
@@ -151,7 +157,7 @@ func (c *Client) Close() {
 	if c.cache != nil && c.cache.Cache != nil {
 		c.cache.Cache.Close()
 	}
-	if c.apqClient != nil {
-		c.apqClient.Close()
+	if c.APQEnabled() {
+		c.apqStore.Close()
 	}
 }
