@@ -60,30 +60,51 @@ export default async function setup() {
   // `sub`, and the userinfo endpoint rejects them from Keycloak 26.6.2 onward, leaving the user
   // behind the token unresolvable. Owning the client keeps the token shape ours to guarantee, and
   // matches the clients production logs in through (`studio`, `hub-oidc`).
+  const testClient = {
+    clientId: TEST_DIRECT_GRANT_CLIENT_ID,
+    enabled: true,
+    publicClient: true,
+    // The tests authenticate with a username and password, nothing else.
+    directAccessGrantsEnabled: true,
+    standardFlowEnabled: false,
+    attributes: {
+      // Explicit rather than inherited, so a future change to Keycloak's default cannot
+      // quietly strip `sub` back out of the tokens these tests depend on.
+      'client.use.lightweight.access.token.enabled': 'false',
+    },
+  };
+
   await retryWithBackoff(
     async () => {
       try {
-        await keycloakClient.client.clients.create({
-          realm: TEST_REALM,
-          clientId: TEST_DIRECT_GRANT_CLIENT_ID,
-          enabled: true,
-          publicClient: true,
-          // The tests authenticate with a username and password, nothing else.
-          directAccessGrantsEnabled: true,
-          standardFlowEnabled: false,
-          attributes: {
-            // Explicit rather than inherited, so a future change to Keycloak's default cannot
-            // quietly strip `sub` back out of the tokens these tests depend on.
-            'client.use.lightweight.access.token.enabled': 'false',
-          },
-        });
+        await keycloakClient.client.clients.create({ realm: TEST_REALM, ...testClient });
+        return;
       } catch (e: unknown) {
-        if (isAlreadyExistsError(e)) {
-          return;
+        if (!isAlreadyExistsError(e)) {
+          // Anything else may be transient
+          throw e;
         }
-        // Anything else may be transient
-        throw e;
       }
+
+      const [existing] = await keycloakClient.client.clients.find({
+        realm: TEST_REALM,
+        clientId: TEST_DIRECT_GRANT_CLIENT_ID,
+      });
+
+      if (!existing?.id) {
+        throw new Error(
+          `Keycloak reported an existing "${TEST_DIRECT_GRANT_CLIENT_ID}" client, but no exact match was readable yet`,
+        );
+      }
+
+      await keycloakClient.client.clients.update(
+        { id: existing.id, realm: TEST_REALM },
+        {
+          ...testClient,
+          // Keep any unrelated attributes the client already carries.
+          attributes: { ...existing.attributes, ...testClient.attributes },
+        },
+      );
     },
     { attempts: 10, baseInterval: 1000, maxInterval: 1000 },
   );
