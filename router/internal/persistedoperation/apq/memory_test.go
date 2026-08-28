@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewMemoryStore(t *testing.T) {
-	t.Run("returns error when cache size is zero", func(t *testing.T) {
+	t.Run("returns an error when cache size is zero", func(t *testing.T) {
 		store, err := NewMemoryStore(0, time.Minute)
 
 		require.Error(t, err)
