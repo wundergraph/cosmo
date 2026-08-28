@@ -403,7 +403,11 @@ func TestRootFetchResponseCacheInMemory(t *testing.T) {
 	t.Run("forwarded headers do not separate entries", func(t *testing.T) {
 		t.Parallel()
 
-		// Pins today's behaviour rather than endorsing it.
+		// Pins today's behaviour rather than endorsing it. The cache key is built
+		// from the request the router renders for the subgraph, and header
+		// propagation runs after that, so a propagated header never reaches the
+		// key. A subgraph whose answer varies by header must therefore not mark
+		// that answer public, or one caller is served another caller's response.
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: append(responseCacheOptions(time.Minute),
 				core.WithHeaderRules(config.HeaderRules{
@@ -432,7 +436,8 @@ func TestRootFetchResponseCacheInMemory(t *testing.T) {
 
 			require.Equal(t, one.Body, another.Body)
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load(),
-				"the second tenant is served the first tenant's entry")
+				"the second tenant is served the first tenant's entry, which is why a "+
+					"header dependent answer must not be marked public")
 		})
 	})
 
