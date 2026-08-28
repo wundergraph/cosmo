@@ -433,6 +433,7 @@ export class GraphCompositionRepository {
       inArray(graphCompositions.schemaVersionId, input.schemaVersionIds),
       eq(schemaVersion.organizationId, input.organizationId),
       eq(graphCompositionSubgraphs.isFeatureSubgraph, true),
+      not(eq(graphCompositionSubgraphs.changeType, 'removed')),
     ];
 
     // The query must join targets, which the RBAC conditions gate on.

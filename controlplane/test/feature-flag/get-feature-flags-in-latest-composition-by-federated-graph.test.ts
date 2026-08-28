@@ -18,6 +18,7 @@ import {
   createNamespace,
   createThenPublishFeatureSubgraph,
   DEFAULT_ROUTER_URL,
+  featureFlagIntegrationTestSetUp,
   DEFAULT_SUBGRAPH_URL_ONE,
   SetupTest,
 } from '../test-util.js';
@@ -944,5 +945,54 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
     expect(resp.featureFlags.some((flag) => flag.name === flagName)).toBe(true);
     expect(resp.featureSubgraphs).toHaveLength(0);
+  });
+
+  test('that a feature subgraph removed from a flag is no longer returned', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const labels = [genUniqueLabel()];
+    const federatedGraphName = genID('fedGraph');
+
+    await featureFlagIntegrationTestSetUp(
+      client,
+      [
+        { name: 'users', hasFeatureSubgraph: true },
+        { name: 'products', hasFeatureSubgraph: true },
+      ],
+      federatedGraphName,
+      labels,
+    );
+
+    const flagName = genID('flag');
+    await createFeatureFlag(client, flagName, labels, ['users-feature', 'products-feature'], 'default', true);
+
+    let resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
+      federatedGraphName,
+      namespace: 'default',
+    });
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(new Set(resp.featureSubgraphs.map((sg) => sg.name))).toStrictEqual(
+      new Set(['users-feature', 'products-feature']),
+    );
+
+    // Recomposing after the drop records users-feature with changeType 'removed' rather than
+    // deleting the row, so it must be filtered out of the response. users-feature is the one
+    // dropped because it carries @override(from: "products-feature"), which would be orphaned.
+    const updateResp = await client.updateFeatureFlag({
+      name: flagName,
+      namespace: 'default',
+      labels,
+      featureSubgraphNames: ['products-feature'],
+    });
+    expect(updateResp.response?.code).toBe(EnumStatusCode.OK);
+
+    resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
+      federatedGraphName,
+      namespace: 'default',
+    });
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(resp.featureFlags.some((flag) => flag.name === flagName)).toBe(true);
+    expect(resp.featureSubgraphs.map((sg) => sg.name)).toStrictEqual(['products-feature']);
   });
 });
