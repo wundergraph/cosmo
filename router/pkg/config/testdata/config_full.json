@@ -864,6 +864,16 @@
     "Timeout": 30000000000,
     "InMemoryFallback": true
   },
+  "ResponseCache": {
+    "Enabled": true,
+    "FallbackTTL": 30000000000,
+    "KeyPrefix": "response_cache_test:",
+    "Storage": {
+      "Provider": "redis",
+      "ProviderID": "my_redis",
+      "MaxEntries": 2048
+    }
+  },
   "RouterConfigPath": "latest.json",
   "RouterRegistration": true,
   "OverrideRoutingURL": {

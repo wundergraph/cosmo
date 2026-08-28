@@ -3361,6 +3361,81 @@
         }
       }
     },
+    "response_cache": {
+      "type": "object",
+      "description": "Caches federation entity fetches, either in Redis or in this router's own memory. An entity is cached per selection set, so asking for different fields of the same entity does not share a cache entry. A batch of entities is served from the cache only when every entity in it is present, otherwise the request is sent to the subgraph unchanged. Only subgraph responses whose Cache-Control header asks to be cached are stored. NOTE: This option is experimental and may change in future versions.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable response caching.",
+          "default": false
+        },
+        "fallback_ttl": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "How long an entity is kept when the subgraph response sends Cache-Control: public but does not say for how long. A subgraph that sends max-age or s-maxage gets the last word either way, including refusing with no-store, no-cache or private. A subgraph response with no Cache-Control header is never cached, whatever this is set to. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
+          "default": "30s",
+          "duration": {
+            "minimum": "1s"
+          }
+        },
+        "key_prefix": {
+          "type": "string",
+          "description": "Prepended to every cache key so response cache entries cannot collide with anything else sharing the Redis instance. Applies to the 'redis' storage provider only: the 'memory' storage provider shares its keyspace with nothing and ignores this.",
+          "default": "cosmo_response_cache:"
+        },
+        "storage": {
+          "type": "object",
+          "description": "Where cached entities are stored.",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "type": "string",
+              "enum": ["redis", "memory"],
+              "default": "redis",
+              "description": "Which backend holds the cache. 'redis' stores entries in the Redis instance named by 'provider_id', so every router replica shares one cache and entries outlive the process. 'memory' stores them in this router process: each replica then caches on its own, nothing survives a restart, and no Redis is needed. Defaults to 'redis', so caching in memory has to be asked for by name.",
+              "examples": ["redis", "memory"]
+            },
+            "provider_id": {
+              "type": "string",
+              "description": "The ID of a Redis storage provider declared under 'storage_providers.redis'. Required when 'provider' is 'redis', which is the default; an unknown ID fails startup. Ignored by the 'memory' provider."
+            },
+            "max_entries": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000,
+              "default": 10000,
+              "description": "The greatest number of entries the 'memory' provider holds, after which the least valuable are evicted. Entries are counted, not measured, so the memory this costs depends on the size of the cached subgraph responses. Ignored by the 'redis' provider.",
+              "examples": [10000]
+            }
+          },
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "memory"
+              }
+            },
+            "required": ["provider"]
+          },
+          "then": {},
+          "else": {
+            "required": ["provider_id"]
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "enabled": {
+            "const": true
+          }
+        },
+        "required": ["enabled"]
+      },
+      "then": {
+        "required": ["storage"]
+      }
+    },
     "cache_warmup": {
       "type": "object",
       "description": "Cache Warmup pre-warms all caches (e.g. normalization, validation, planning) before accepting traffic.",
