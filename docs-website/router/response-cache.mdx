@@ -1,6 +1,6 @@
 ---
 title: "Response Cache (Experimental)"
-description: "Cache fetches to avoid subsequent requests reetching from upstream subgraphs."
+description: "Cache fetches to avoid subsequent requests reaching upstream subgraphs."
 icon: "boxes-stacked"
 ---
 
@@ -12,7 +12,7 @@ The router caches two kinds of subgraph response.
 
 **Entity fetches.** An entity fetch is the request the router sends to a subgraph through the `_entities` root field to resolve fields of an entity that another subgraph owns. Entries are keyed per entity and per selection set, so asking for different fields of the same entity does not share an entry.
 
-**Root query fetches.** A root query fetch is the request that opens a query: what the router asks a subgraph for the root fields the client selected. The whole answer is one entry, keyed by the request that produced it — the operation text and every variable value — so any difference in either is a miss and the request goes to the subgraph as it would have. Only queries are cached; mutations and subscriptions never are.
+**Root query fetches.** A root query fetch is the request the router sends a subgraph for the root fields the client selected. The whole answer is stored as one entry. The key covers the operation text and every variable value. Any difference in either is a miss, and the request goes to the subgraph as it would have. Only queries are cached. Mutations and subscriptions are never cached.
 
 Response caching is disabled by default.
 
