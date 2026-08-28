@@ -355,7 +355,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			})
 		})
 
-		t.Run("query renewal preserves the stored query", func(t *testing.T) {
+		t.Run("renews ttl without changing the stored query after variable-based normalization", func(t *testing.T) {
 			t.Parallel()
 
 			const query = `query SkipRenewal($skip: Boolean!) { a: __typename b: __typename @skip(if: $skip) }`
