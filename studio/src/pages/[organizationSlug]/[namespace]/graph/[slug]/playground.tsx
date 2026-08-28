@@ -44,6 +44,7 @@ import { useLocalStorage } from '@/hooks/use-local-storage';
 import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE, PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
 import { NextPageWithLayout } from '@/lib/page';
 import { substituteHeadersFromEnv, validateHeaders } from '@/lib/playground-headers';
+import { isPlaygroundSchemaLoading } from '@/lib/playground-schema-loading';
 import { parseSchema } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
@@ -635,7 +636,7 @@ const ConfigSelect = () => {
 
   const graphContext = useContext(GraphContext);
   const subgraphs = graphContext?.subgraphs;
-  const compositionFlagsData = useCompositionFlags();
+  const { data: compositionFlagsData } = useCompositionFlags();
   const featureFlags = compositionFlagsData?.featureFlags ?? [];
   const featureSubgraphs = compositionFlagsData?.featureSubgraphs ?? [];
 
@@ -782,7 +783,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const loadSchemaGraphId = (router.query.load as string) || graphContext?.graph?.id || '';
   const configType = (router.query.type as string) || 'graph';
 
-  const compositionFlagsData = useCompositionFlags();
+  const { data: compositionFlagsData, isLoading: isLoadingCompositionFlags } = useCompositionFlags();
 
   const activeFeatureSubgraph = useMemo(() => {
     if (configType !== 'featureSubgraph') {
@@ -833,12 +834,13 @@ const PlaygroundPage: NextPageWithLayout = () => {
     },
   );
 
-  const isLoading =
-    isLoadingGraphSchema ||
-    isLoadingSubgraphSchema ||
-    isLoadingFeatureSubgraphSchema ||
-    // Which schema to fetch is unknown until the flag list has loaded.
-    (configType === 'featureSubgraph' && !activeFeatureSubgraph);
+  const isLoading = isPlaygroundSchemaLoading({
+    isLoadingGraphSchema,
+    isLoadingSubgraphSchema,
+    isLoadingFeatureSubgraphSchema,
+    isLoadingCompositionFlags,
+    isFeatureSubgraphSelected: configType === 'featureSubgraph',
+  });
 
   const schema = useMemo(() => {
     return parseSchema(featureSubgraphData?.sdl || subgraphData?.sdl || data?.clientSchema)?.ast ?? null;
@@ -1281,9 +1283,12 @@ const PlaygroundPage: NextPageWithLayout = () => {
   );
 };
 
-const CompositionFlagsContext = createContext<GetFeatureFlagsInLatestCompositionByFederatedGraphResponse | undefined>(
-  undefined,
-);
+interface CompositionFlags {
+  data?: GetFeatureFlagsInLatestCompositionByFederatedGraphResponse;
+  isLoading: boolean;
+}
+
+const CompositionFlagsContext = createContext<CompositionFlags>({ isLoading: false });
 
 function useCompositionFlags() {
   return useContext(CompositionFlagsContext);
@@ -1291,7 +1296,7 @@ function useCompositionFlags() {
 
 const CompositionFlagsProvider = ({ children }: PropsWithChildren) => {
   const graphContext = useContext(GraphContext);
-  const { data: compositionFlagsData } = useQuery(
+  const { data, isLoading } = useQuery(
     getFeatureFlagsInLatestCompositionByFederatedGraph,
     {
       federatedGraphName: graphContext?.graph?.name,
@@ -1302,7 +1307,9 @@ const CompositionFlagsProvider = ({ children }: PropsWithChildren) => {
     },
   );
 
-  return <CompositionFlagsContext.Provider value={compositionFlagsData}>{children}</CompositionFlagsContext.Provider>;
+  const value = useMemo(() => ({ data, isLoading }), [data, isLoading]);
+
+  return <CompositionFlagsContext.Provider value={value}>{children}</CompositionFlagsContext.Provider>;
 };
 
 PlaygroundPage.getLayout = (page: ReactNode) => {
