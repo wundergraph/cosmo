@@ -781,7 +781,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
 
   const loadSchemaGraphId = (router.query.load as string) || graphContext?.graph?.id || '';
-  const configType = (router.query.type as string) || 'graph';
+  const typeParam = (router.query.type as string) || 'graph';
+  const configType: ConfigType = isConfigType(typeParam) ? typeParam : 'graph';
 
   const { data: compositionFlagsData, isLoading: isLoadingCompositionFlags } = useCompositionFlags();
 

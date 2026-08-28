@@ -82,20 +82,27 @@ async function expectFeatureSubgraphsScopedToTheirFlag(client: Awaited<ReturnTyp
   expect(flagOne).toBeDefined();
   expect(flagTwo).toBeDefined();
 
-  const featureSubgraphOne = resp.featureSubgraphs.find((sg) => sg.featureFlagId === flagOne!.id);
-  const featureSubgraphTwo = resp.featureSubgraphs.find((sg) => sg.featureFlagId === flagTwo!.id);
+  // Exact membership, so a response that leaked either feature subgraph into both flags fails.
+  expect(resp.featureSubgraphs).toHaveLength(2);
+  const ofFlagOne = resp.featureSubgraphs.filter((sg) => sg.featureFlagId === flagOne!.id);
+  const ofFlagTwo = resp.featureSubgraphs.filter((sg) => sg.featureFlagId === flagTwo!.id);
+  expect(ofFlagOne).toHaveLength(1);
+  expect(ofFlagTwo).toHaveLength(1);
 
-  expect(featureSubgraphOne?.name).toBe('products-feature-one');
-  expect(featureSubgraphOne?.routingUrl).toBe('http://localhost:4101');
-  expect(featureSubgraphOne?.schemaVersionId).toBeTruthy();
+  const featureSubgraphOne = ofFlagOne[0];
+  const featureSubgraphTwo = ofFlagTwo[0];
 
-  expect(featureSubgraphTwo?.name).toBe('products-feature-two');
-  expect(featureSubgraphTwo?.routingUrl).toBe('http://localhost:4102');
-  expect(featureSubgraphTwo?.schemaVersionId).toBeTruthy();
+  expect(featureSubgraphOne.name).toBe('products-feature-one');
+  expect(featureSubgraphOne.routingUrl).toBe('http://localhost:4101');
+  expect(featureSubgraphOne.schemaVersionId).toBeTruthy();
+
+  expect(featureSubgraphTwo.name).toBe('products-feature-two');
+  expect(featureSubgraphTwo.routingUrl).toBe('http://localhost:4102');
+  expect(featureSubgraphTwo.schemaVersionId).toBeTruthy();
 
   // Republishing recomposes only the flag that contains it.
-  const previousVersionOne = featureSubgraphOne!.schemaVersionId;
-  const previousVersionTwo = featureSubgraphTwo!.schemaVersionId;
+  const previousVersionOne = featureSubgraphOne.schemaVersionId;
+  const previousVersionTwo = featureSubgraphTwo.schemaVersionId;
 
   const republishResp = await client.publishFederatedSubgraph({
     name: 'products-feature-one',
@@ -115,11 +122,14 @@ async function expectFeatureSubgraphsScopedToTheirFlag(client: Awaited<ReturnTyp
   const updatedFlagOne = resp.featureFlags.find((flag) => flag.name === flagOneName);
   const updatedFlagTwo = resp.featureFlags.find((flag) => flag.name === flagTwoName);
 
-  const updatedFeatureSubgraphOne = resp.featureSubgraphs.find((sg) => sg.featureFlagId === updatedFlagOne!.id);
-  const updatedFeatureSubgraphTwo = resp.featureSubgraphs.find((sg) => sg.featureFlagId === updatedFlagTwo!.id);
+  expect(resp.featureSubgraphs).toHaveLength(2);
+  const updatedOfFlagOne = resp.featureSubgraphs.filter((sg) => sg.featureFlagId === updatedFlagOne!.id);
+  const updatedOfFlagTwo = resp.featureSubgraphs.filter((sg) => sg.featureFlagId === updatedFlagTwo!.id);
+  expect(updatedOfFlagOne).toHaveLength(1);
+  expect(updatedOfFlagTwo).toHaveLength(1);
 
-  expect(updatedFeatureSubgraphOne?.schemaVersionId).not.toBe(previousVersionOne);
-  expect(updatedFeatureSubgraphTwo?.schemaVersionId).toBe(previousVersionTwo);
+  expect(updatedOfFlagOne[0].schemaVersionId).not.toBe(previousVersionOne);
+  expect(updatedOfFlagTwo[0].schemaVersionId).toBe(previousVersionTwo);
 }
 
 describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
