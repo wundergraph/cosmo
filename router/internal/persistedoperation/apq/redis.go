@@ -58,6 +58,9 @@ func (r *redisStore) Set(ctx context.Context, operationHash string, operationBod
 }
 
 func (r *redisStore) Renew(ctx context.Context, operationHash string) error {
+	if r.ttl <= 0 {
+		return nil
+	}
 	return r.client.Expire(ctx, r.prefix+operationHash, r.ttl).Err()
 }
 

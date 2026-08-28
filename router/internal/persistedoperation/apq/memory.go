@@ -2,6 +2,7 @@ package apq
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
@@ -13,6 +14,10 @@ type memoryStore struct {
 }
 
 func NewMemoryStore(cacheSize int64, ttl time.Duration) (*memoryStore, error) {
+	if cacheSize <= 0 {
+		return nil, errors.New("cache size must be positive")
+	}
+
 	cache, err := operationstorage.NewOperationsCache(cacheSize)
 	if err != nil {
 		return nil, err
