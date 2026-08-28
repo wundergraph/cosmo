@@ -223,7 +223,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.engineLoaderHooks != nil {
 		resolveCtx.SetEngineLoaderHooks(h.engineLoaderHooks)
 	}
-	resolveCtx = h.configureRateLimiting(resolveCtxresolveCtx = h.configureRateLimiting(resolveCtx, reqCtx.operation.opType))
+	resolveCtx = h.configureRateLimiting(resolveCtx, reqCtx.operation.opType)
 	if h.responseCacheStore != nil {
 		resolveCtx.SetResponseCache(h.responseCacheStore, h.responseCacheFallbackTTL, h.responseCacheErrorHandler)
 	}
