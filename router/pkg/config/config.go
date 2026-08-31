@@ -1135,7 +1135,7 @@ type ResponseCacheInvalidationConfig struct {
 	CacheTag bool `yaml:"cache_tag" envDefault:"true" env:"CACHE_TAG"`
 	// Subgraph indexes under the subgraph that answered.
 	Subgraph bool `yaml:"subgraph" envDefault:"true" env:"SUBGRAPH"`
-	// Type indexes entities under their __typename. Root query fetches have none.
+	// Type indexes entities under their __typename.
 	Type bool `yaml:"type" envDefault:"true" env:"TYPE"`
 }
 
