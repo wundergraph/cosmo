@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.16.0](https://github.com/wundergraph/cosmo/compare/keycloak@0.15.1...keycloak@0.16.0) (2026-08-30)
+
+### Features
+
+* upgrade keycloak to 26.7.2 ([#3181](https://github.com/wundergraph/cosmo/issues/3181)) ([23daace](https://github.com/wundergraph/cosmo/commit/23daaced53bda57c52673aef2dc38e0398dd6c42)) (@JivusAyrus)
+
+## [0.15.1](https://github.com/wundergraph/cosmo/compare/keycloak@0.15.0...keycloak@0.15.1) (2026-08-26)
+
+### Bug Fixes
+
+* update packages with high severity vulnerabilities ([#3190](https://github.com/wundergraph/cosmo/issues/3190)) ([5ac650f](https://github.com/wundergraph/cosmo/commit/5ac650ffa61b16b5e70aba197a9b8c2d4abdfbfc)) (@gausie)
+
 # [0.15.0](https://github.com/wundergraph/cosmo/compare/keycloak@0.14.2...keycloak@0.15.0) (2026-07-27)
 
 ### Features

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
+	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"go.uber.org/goleak"
 )
 
@@ -55,7 +55,9 @@ func newTestCacheOfSize(t *testing.T, maxEntries int64) *InMemoryCache {
 
 	c, err := NewInMemoryCache(maxEntries)
 	require.NoError(t, err)
-	t.Cleanup(c.Close)
+	t.Cleanup(func() {
+		require.NoError(t, c.Close())
+	})
 
 	return c
 }
@@ -132,7 +134,7 @@ func TestInMemoryCache(t *testing.T) {
 			c := newTestCache(t)
 
 			err := c.SetMany(ctx, nil)
-			require.EqualError(t, err, "entity cache write requires at least one item")
+			require.ErrorIs(t, err, enginecache.ErrNoItems)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -145,7 +147,7 @@ func TestInMemoryCache(t *testing.T) {
 			c := newTestCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{})
-			require.EqualError(t, err, "entity cache write requires at least one item")
+			require.ErrorIs(t, err, enginecache.ErrNoItems)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -380,7 +382,7 @@ func TestInMemoryCache(t *testing.T) {
 			c := newTestCache(t)
 
 			results, err := c.GetMany(ctx, nil)
-			require.EqualError(t, err, "entity cache lookup requires at least one key")
+			require.ErrorIs(t, err, enginecache.ErrNoKeys)
 			require.Nil(t, results)
 		})
 
@@ -390,7 +392,7 @@ func TestInMemoryCache(t *testing.T) {
 			c := newTestCache(t)
 
 			results, err := c.GetMany(ctx, []string{})
-			require.EqualError(t, err, "entity cache lookup requires at least one key")
+			require.ErrorIs(t, err, enginecache.ErrNoKeys)
 			require.Nil(t, results)
 		})
 
@@ -687,8 +689,8 @@ func TestInMemoryCache(t *testing.T) {
 			// Twice here, and a third time from the cleanup the helper
 			// registered, so a second shutdown path reaching it is not a panic.
 			c := newTestCache(t)
-			c.Close()
-			c.Close()
+			require.NoError(t, c.Close())
+			require.NoError(t, c.Close())
 		})
 	})
 
