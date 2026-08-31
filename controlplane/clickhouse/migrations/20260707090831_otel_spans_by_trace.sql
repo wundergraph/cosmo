@@ -1,6 +1,6 @@
 -- migrate:up
 
-CREATE TABLE IF NOT EXISTS otel_spans_by_trace (
+CREATE TABLE IF NOT EXISTS cosmo.otel_spans_by_trace (
    FederatedGraphID String CODEC (ZSTD(3)),
    OrganizationID LowCardinality(String) CODEC (ZSTD(3)),
    TraceId String CODEC (ZSTD(3)),
