@@ -445,6 +445,11 @@
       "Provider": "redis",
       "ProviderID": "",
       "MaxEntries": 10000
+    },
+    "Invalidation": {
+      "CacheTag": true,
+      "Subgraph": true,
+      "Type": true
     }
   },
   "RouterConfigPath": "",

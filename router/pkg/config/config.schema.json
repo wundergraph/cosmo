@@ -3417,6 +3417,28 @@
           "else": {
             "required": ["provider_id"]
           }
+        },
+        "invalidation": {
+          "type": "object",
+          "description": "Secondary indexes built over cached entries so they can later be invalidated by what they are about rather than waiting out their TTL. Each index is independent; with all of them off entries are cached untagged.",
+          "additionalProperties": false,
+          "properties": {
+            "cache_tag": {
+              "type": "boolean",
+              "description": "Index entries under the cache tags a subgraph declares. A subgraph opts in by returning an 'apolloEntityCacheTags' extension: an array of arrays holding one list of tags per cached value, in the same order as the '_entities' it answered with, or a single element outer array for a root query fetch. The extension is consumed by the router and never forwarded to clients. Set to false to stop recording declared cache tags.",
+              "default": true
+            },
+            "subgraph": {
+              "type": "boolean",
+              "description": "Index every cached entry under the subgraph that answered it, so everything one subgraph contributed can be found without that subgraph having declared anything. Set to false to stop maintaining the by-subgraph index.",
+              "default": true
+            },
+            "type": {
+              "type": "boolean",
+              "description": "Index every cached entity under its __typename. Requires the typename to be present in what is cached, which a root query fetch has no single one of. Set to false to stop maintaining the by-type index.",
+              "default": true
+            }
+          }
         }
       },
       "if": {

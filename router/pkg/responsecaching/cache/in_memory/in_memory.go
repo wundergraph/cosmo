@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/dgraph-io/ristretto/v2"
 	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
@@ -15,6 +16,9 @@ const maxSize = 100_000
 
 type InMemoryCache struct {
 	cache *ristretto.Cache[string, []byte]
+	// tags indexes entries by the tags they were stored under, so they can be
+	// found again by something other than their key.
+	tags *tagIndex
 	// closeOnce keeps Close idempotent, so two shutdown paths reaching it is
 	// not a panic on a channel ristretto has already closed.
 	closeOnce sync.Once
@@ -42,7 +46,7 @@ func NewInMemoryCache(maxEntries int64) (*InMemoryCache, error) {
 		return nil, fmt.Errorf("failed to create in memory response cache: %w", err)
 	}
 
-	return &InMemoryCache{cache: cache}, nil
+	return &InMemoryCache{cache: cache, tags: newTagIndex()}, nil
 }
 
 // GetMany implements enginecache.GetMany.
@@ -100,8 +104,15 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 		last[item.Key] = item
 	}
 
+	// One clock reading for the batch, and the same one the index is pruned
+	// against, so nothing written by this call is pruned by it.
+	now := time.Now()
+
+	c.tags.prune(now)
+
 	for _, item := range last {
 		c.cache.SetWithTTL(item.Key, bytes.Clone(item.Value), entryCost, item.TTL)
+		c.tags.add(item.Key, item.Tags, now.Add(item.TTL))
 	}
 
 	c.cache.Wait()

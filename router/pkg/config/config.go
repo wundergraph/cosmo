@@ -1122,8 +1122,21 @@ type ResponseCacheConfiguration struct {
 	// KeyPrefix namespaces keys against everything else sharing the store, so it
 	// is a redis concern only. The in memory provider shares its keyspace with
 	// nothing and ignores this.
-	KeyPrefix string                     `yaml:"key_prefix" envDefault:"cosmo_response_cache:" env:"KEY_PREFIX"`
-	Storage   ResponseCacheStorageConfig `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
+	KeyPrefix    string                          `yaml:"key_prefix" envDefault:"cosmo_response_cache:" env:"KEY_PREFIX"`
+	Storage      ResponseCacheStorageConfig      `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
+	Invalidation ResponseCacheInvalidationConfig `yaml:"invalidation,omitempty" envPrefix:"INVALIDATION_"`
+}
+
+// ResponseCacheInvalidationConfig selects which secondary indexes are built
+// over cached entries. Each is independent; all off caches entries untagged.
+type ResponseCacheInvalidationConfig struct {
+	// CacheTag indexes under the tags a subgraph declared in its
+	// apolloEntityCacheTags response extension.
+	CacheTag bool `yaml:"cache_tag" envDefault:"true" env:"CACHE_TAG"`
+	// Subgraph indexes under the subgraph that answered.
+	Subgraph bool `yaml:"subgraph" envDefault:"true" env:"SUBGRAPH"`
+	// Type indexes entities under their __typename. Root query fetches have none.
+	Type bool `yaml:"type" envDefault:"true" env:"TYPE"`
 }
 
 // ResponseCacheStorageProvider names the backend a response cache is built on.

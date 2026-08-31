@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
@@ -115,20 +116,42 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 		return caching.ErrNoItems
 	}
 
-	// Queuing writes nothing to redis, only Exec below does, so validating as
-	// we go is enough: returning early abandons the whole pipeline unsent, and
-	// a batch rejected for a missing TTL is the one case where nothing at all
-	// was written.
-	//
-	// Each command is kept alongside the item that queued it, rather than read
-	// back off Exec, so which key a reply belongs to is not a question of the
-	// two orders still agreeing.
-	pipe := c.client.Pipeline()
-	cmds := make([]*redis.StatusCmd, len(items))
-	for i, item := range items {
+	// Validated up front, so a batch rejected for a missing TTL is still the one
+	// case where nothing at all was written, now that a single item queues
+	// commands against keys other than its own.
+	for _, item := range items {
 		if item.TTL <= 0 {
 			return fmt.Errorf("%w: key %q", caching.ErrMissingTTL, item.Key)
 		}
+	}
+
+	// One clock reading for the batch. Scoring two items written together as if
+	// they were written at different moments would be a distinction without a
+	// source.
+	now := time.Now()
+
+	pipe := c.client.Pipeline()
+
+	for _, item := range items {
+		if len(item.Tags) == 0 {
+			continue
+		}
+
+		expireAt := now.Add(item.TTL)
+		member := redis.Z{Score: float64(expireAt.UnixMilli()), Member: item.Key}
+		for _, tag := range item.Tags {
+			tagKey := c.prefix + tag
+			pipe.ZAdd(ctx, tagKey, member)
+			pipe.ExpireNX(ctx, tagKey, item.TTL)
+			pipe.ExpireGT(ctx, tagKey, item.TTL)
+		}
+	}
+
+	// Each command is kept alongside the item that queued it, rather than read
+	// back off Exec, so which key a reply belongs to is not a question of the
+	// two orders still agreeing.
+	cmds := make([]*redis.StatusCmd, len(items))
+	for i, item := range items {
 		cmds[i] = pipe.Set(ctx, c.prefix+item.Key, item.Value, item.TTL)
 	}
 

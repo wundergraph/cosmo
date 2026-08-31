@@ -92,8 +92,9 @@ type HandlerOptions struct {
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
 
-	ResponseCache            caching.Cache
-	ResponseCacheFallbackTTL time.Duration
+	ResponseCache             caching.Cache
+	ResponseCacheFallbackTTL  time.Duration
+	ResponseCacheInvalidation config.ResponseCacheInvalidationConfig
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -118,6 +119,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		headerPropagation:                        opts.HeaderPropagation,
 		responseCacheStore:                       opts.ResponseCache,
 		responseCacheFallbackTTL:                 opts.ResponseCacheFallbackTTL,
+		responseCacheInvalidation:                opts.ResponseCacheInvalidation,
 		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log),
 	}
 	return graphQLHandler
@@ -168,6 +170,7 @@ type GraphQLHandler struct {
 	responseCacheStore        caching.Cache
 	responseCacheFallbackTTL  time.Duration
 	responseCacheErrorHandler func(error)
+	responseCacheInvalidation config.ResponseCacheInvalidationConfig
 
 	enableCacheResponseHeaders      bool
 	enableResponseHeaderPropagation bool
@@ -221,6 +224,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resolveCtx = h.configureRateLimiting(resolveCtx)
 	if h.responseCacheStore != nil {
 		resolveCtx.SetResponseCache(h.responseCacheStore, h.responseCacheFallbackTTL, h.responseCacheErrorHandler)
+		resolveCtx.SetResponseCacheInvalidation(resolve.ResponseCacheInvalidationOptions{
+			CacheTag: h.responseCacheInvalidation.CacheTag,
+			Subgraph: h.responseCacheInvalidation.Subgraph,
+			Type:     h.responseCacheInvalidation.Type,
+		})
 	}
 	if reqCtx.customFieldValueRenderer != nil {
 		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)
