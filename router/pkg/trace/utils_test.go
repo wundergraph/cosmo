@@ -79,6 +79,7 @@ func TestCommonRequestFilter(t *testing.T) {
 	r.Header.Set("Upgrade", "websocket")
 	require.NoError(t, err)
 	require.Falsef(t, CommonRequestFilter(r), "ignore websocket upgrades")
+	require.Truef(t, clientRequestFilter(r), "allow outbound websocket upgrades")
 
 	r, err = http.NewRequest("PUT", "http://localhost:8080", nil)
 	require.NoError(t, err)

@@ -55,7 +55,13 @@ const (
 	// HTTPRequestUploadFileCount is the number of files uploaded in a request (Not specified in the OpenTelemetry specification)
 	HTTPRequestUploadFileCount = attribute.Key("http.request.upload.file_count")
 
-	WgClientReusedConnection = attribute.Key("wg.http.client.reused_connection")
+	WgClientReusedConnection          = attribute.Key("wg.http.client.reused_connection")
+	WgClientConnectionAcquireDuration = attribute.Key("wg.http.client.connection.acquire_duration_ms")
+	WgClientDNSLookupDuration         = attribute.Key("wg.http.client.dns_lookup_duration_ms")
+	WgClientTCPConnectDuration        = attribute.Key("wg.http.client.tcp_connect_duration_ms")
+	WgClientTLSHandshakeDuration      = attribute.Key("wg.http.client.tls_handshake_duration_ms")
+	WgClientTimeToFirstRequestByte    = attribute.Key("wg.http.client.time_to_first_request_byte_ms")
+	WgClientTimeToFirstByte           = attribute.Key("wg.http.client.time_to_first_byte_ms")
 
 	// Prometheus Schema Field Usage Attrs
 
