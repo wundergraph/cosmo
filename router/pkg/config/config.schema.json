@@ -3363,7 +3363,7 @@
     },
     "response_cache": {
       "type": "object",
-      "description": "Caches federation entity fetches, either in Redis or in this router's own memory. An entity is cached per selection set, so asking for different fields of the same entity does not share a cache entry. A batch of entities is served from the cache only when every entity in it is present, otherwise the request is sent to the subgraph unchanged. Only subgraph responses whose Cache-Control header asks to be cached are stored. NOTE: This option is experimental and may change in future versions.",
+      "description": "Caches subgraph responses, either in Redis or in this router's own memory. Two things are cached: each entity of a federation entity fetch, per selection set, so asking for different fields of the same entity does not share a cache entry, and a batch is served from the cache only when every entity in it is present; and the whole answer of a root query fetch, keyed by the request that produced it, so any difference in the operation or its variables sends the request to the subgraph unchanged. Neither key covers the headers the router forwards, so a subgraph whose answer varies by request header must not mark it public. Only subgraph responses whose Cache-Control header asks to be cached are stored. NOTE: This option is experimental and may change in future versions.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
