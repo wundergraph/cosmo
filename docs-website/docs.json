@@ -243,6 +243,7 @@
                 "icon": "flask-round-potion",
                 "pages": ["router/development", "router/development/debugging", "router/development/development-mode"]
               },
+              "router/response-cache",
               "router/request-deduplication",
               "router/performance-debugging",
               "router/advanced-request-tracing-art",
@@ -672,7 +673,7 @@
               {
                 "group": "Proposal",
                 "icon": "file-circle-plus",
-                "pages": ["cli/proposal", "cli/proposal/create", "cli/proposal/update"]
+                "pages": ["cli/proposal", "cli/proposal/create", "cli/proposal/update", "cli/proposal/update-status"]
               }
             ]
           }

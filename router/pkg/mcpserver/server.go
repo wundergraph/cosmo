@@ -84,6 +84,10 @@ type Options struct {
 	ExposeSchema bool
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names
 	OmitToolNamePrefix bool
+	// OutputSchemaEnabled declares an output schema on each operation tool and
+	// adds structured content to successful tool results (MCP structured tool
+	// output). Increases tools/list and result payload sizes.
+	OutputSchemaEnabled bool
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
 	// CorsConfig is the CORS configuration for the MCP server
@@ -127,6 +131,7 @@ type GraphQLSchemaServer struct {
 	enableArbitraryOperations bool
 	exposeSchema              bool
 	omitToolNamePrefix        bool
+	outputSchemaEnabled       bool
 	stateless                 bool
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
@@ -197,15 +202,72 @@ type LLMGuidance struct {
 	ExecutionTips  []string `json:"executionTips"`
 }
 
-// GraphQLError represents an error returned in a GraphQL response
+// GraphQLErrorLocation identifies a position in the GraphQL document.
+type GraphQLErrorLocation struct {
+	Line   int `json:"line"`
+	Column int `json:"column"`
+}
+
+// GraphQLError represents an error returned in a GraphQL response.
 type GraphQLError struct {
-	Message string `json:"message"`
+	Message    string                 `json:"message"`
+	Locations  []GraphQLErrorLocation `json:"locations,omitempty"`
+	Path       []any                  `json:"path,omitempty"`
+	Extensions map[string]any         `json:"extensions,omitempty"`
+}
+
+// formatGraphQLError formats an error message and its optional metadata for an MCP client.
+func formatGraphQLError(graphqlError GraphQLError) string {
+	if len(graphqlError.Locations) == 0 && len(graphqlError.Path) == 0 && len(graphqlError.Extensions) == 0 {
+		return graphqlError.Message
+	}
+
+	details := struct {
+		Locations  []GraphQLErrorLocation `json:"locations,omitempty"`
+		Path       []any                  `json:"path,omitempty"`
+		Extensions map[string]any         `json:"extensions,omitempty"`
+	}{
+		Locations:  graphqlError.Locations,
+		Path:       graphqlError.Path,
+		Extensions: graphqlError.Extensions,
+	}
+
+	detailsJSON, err := json.Marshal(details)
+	if err != nil {
+		return graphqlError.Message
+	}
+
+	return fmt.Sprintf("%s (details: %s)", graphqlError.Message, detailsJSON)
 }
 
 // GraphQLResponse represents a GraphQL response structure
 type GraphQLResponse struct {
 	Errors []GraphQLError  `json:"errors"`
 	Data   json.RawMessage `json:"data"`
+}
+
+// decodeGraphQLResponse decodes exactly one response while preserving JSON number precision.
+func decodeGraphQLResponse(body []byte) (*GraphQLResponse, error) {
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.UseNumber()
+
+	var response *GraphQLResponse
+	if err := decoder.Decode(&response); err != nil {
+		return nil, err
+	}
+	if response == nil {
+		return nil, errors.New("GraphQL response must be an object")
+	}
+
+	var trailing json.RawMessage
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return nil, errors.New("GraphQL response must contain exactly one JSON value")
+		}
+		return nil, err
+	}
+
+	return response, nil
 }
 
 // NewGraphQLSchemaServer creates a new GraphQL schema server
@@ -293,7 +355,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 
 		options.Logger.Info("MCP OAuth authentication enabled",
 			zap.Int("jwks_providers", len(options.OAuthConfig.JWKS)),
-			zap.String("authorization_server", options.OAuthConfig.AuthorizationServerURL))
+			zap.Strings("authorization_servers", options.OAuthConfig.AuthorizationServers()))
 	}
 
 	// Create the MCP server with all options
@@ -337,6 +399,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
 		omitToolNamePrefix:        options.OmitToolNamePrefix,
+		outputSchemaEnabled:       options.OutputSchemaEnabled,
 		stateless:                 options.Stateless,
 		corsConfig:                options.CorsConfig,
 		cancel:                    cancel,
@@ -445,6 +508,14 @@ func WithOmitToolNamePrefix(omitToolNamePrefix bool) func(*Options) {
 	}
 }
 
+// WithOutputSchemaEnabled enables MCP structured tool output: an output schema
+// on each operation tool and structured content on successful tool results
+func WithOutputSchemaEnabled(outputSchemaEnabled bool) func(*Options) {
+	return func(o *Options) {
+		o.OutputSchemaEnabled = outputSchemaEnabled
+	}
+}
+
 func WithCORS(corsCfg cors.Config) func(*Options) {
 	return func(o *Options) {
 		// Force specific CORS settings for MCP server
@@ -512,7 +583,7 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 	mux := http.NewServeMux()
 
 	// OAuth 2.0 Protected Resource Metadata (RFC 9728) — public discovery endpoint
-	if s.oauthConfig != nil && s.oauthConfig.Enabled && s.oauthConfig.AuthorizationServerURL != "" {
+	if s.oauthConfig != nil && s.oauthConfig.Enabled && len(s.oauthConfig.AuthorizationServers()) > 0 {
 		mux.Handle("/.well-known/oauth-protected-resource/mcp", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
 	}
 
@@ -764,11 +835,26 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			inputSchema = map[string]any{"type": "object", "properties": map[string]any{}}
 		}
 
+		// Declare the response envelope of the operation's selection set as the
+		// tool's output schema. A build failure only degrades the tool: it is
+		// registered without an output schema.
+		var outputSchema any
+		if s.outputSchemaEnabled {
+			if outputJSONSchema, err := buildResponseSchema(&op.Document, s.operationsManager.GetSchema()); err != nil {
+				s.logger.Warn("failed to build output schema for operation; registering tool without output schema",
+					zap.String("operation", op.Name),
+					zap.Error(err))
+			} else {
+				outputSchema = outputJSONSchema
+			}
+		}
+
 		openWorld := true
 		tool := &mcp.Tool{
-			Name:        toolName,
-			Description: toolDescription,
-			InputSchema: inputSchema,
+			Name:         toolName,
+			Description:  toolDescription,
+			InputSchema:  inputSchema,
+			OutputSchema: outputSchema,
 			Annotations: &mcp.ToolAnnotations{
 				IdempotentHint: op.OperationType != "mutation",
 				Title:          fmt.Sprintf("Execute operation %s", op.Name),
@@ -987,14 +1073,23 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	// Parse the GraphQL response
-	var graphqlResponse GraphQLResponse
+	// Per the GraphQL-over-HTTP specification the response body of a GraphQL
+	// endpoint must be a JSON object, so a body that cannot be parsed as one
+	// (a proxy error page, an empty body, or a literal JSON null) is
+	// transport-level breakage and is reported as a tool error.
+	graphqlResponse, err := decodeGraphQLResponse(body)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Response error: unexpected response from GraphQL endpoint: %s", body)}},
+			IsError: true,
+		}, nil
+	}
 
-	if err := json.Unmarshal(body, &graphqlResponse); err == nil && len(graphqlResponse.Errors) > 0 {
+	if len(graphqlResponse.Errors) > 0 {
 		// Concatenate all error messages
 		var errorMessages []string
 		for _, gqlErr := range graphqlResponse.Errors {
-			errorMessages = append(errorMessages, gqlErr.Message)
+			errorMessages = append(errorMessages, formatGraphQLError(gqlErr))
 		}
 
 		errorMessage := strings.Join(errorMessages, "; ")
@@ -1016,9 +1111,15 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 		}, nil
 	}
 
-	return &mcp.CallToolResult{
+	result := &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: string(body)}},
-	}, nil
+	}
+	// Expose the response as structured content, per the MCP structured tool
+	// output specification
+	if s.outputSchemaEnabled {
+		result.StructuredContent = json.RawMessage(body)
+	}
+	return result, nil
 }
 
 // handleExecuteGraphQL returns a handler function that executes arbitrary GraphQL queries
@@ -1156,7 +1257,7 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 
 	metadata := ProtectedResourceMetadata{
 		Resource:               mcpResourceURL,
-		AuthorizationServers:   []string{s.oauthConfig.AuthorizationServerURL},
+		AuthorizationServers:   s.oauthConfig.AuthorizationServers(),
 		BearerMethodsSupported: []string{"header"},
 		ResourceDocumentation:  s.resourceDocumentation,
 		ScopesSupported:        scopes,

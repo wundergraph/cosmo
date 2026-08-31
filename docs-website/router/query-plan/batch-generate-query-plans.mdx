@@ -106,6 +106,23 @@ If you want the command to exit with an error if at least one query fails to be 
 
 By default the query plan format is text based, but you can view the json version by using `-print-format json`
 
+### Engine execution settings
+
+Some engine settings change the shape of the generated plans. To reproduce the plans of a router
+running with those settings, enable them on the command as well:
+
+* `-enable-multi-fetch` matches `engine.enable_multi_fetch`, merging entity fetches to the same subgraph that execute in the same wave into a single batched request.
+* `-enable-schedule-fetches` matches `engine.enable_schedule_fetches`, replacing the wave-based fetch organizers with the dependency-aware fetch scheduler.
+
+```bash
+./router query-plan \
+  -execution-config execution-config.json \
+  -operations ./operations \
+  -plans ./plans \
+  -enable-multi-fetch \
+  -enable-schedule-fetches
+```
+
 ## Other options
 
 You can see all the options available launching the command without any arguments:
@@ -114,6 +131,10 @@ You can see all the options available launching the command without any argument
 ./router query-plan
   -concurrency int
         how many query plan run concurrently
+  -enable-multi-fetch
+        plan as if engine.enable_multi_fetch is enabled, merging entity fetches to the same subgraph in the same wave
+  -enable-schedule-fetches
+        plan as if engine.enable_schedule_fetches is enabled, using the dependency-aware fetch scheduler
   -execution-config string
         required, execution config file location
   -fail-fast

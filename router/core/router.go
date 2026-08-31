@@ -60,6 +60,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	inmemorycache "github.com/wundergraph/cosmo/router/pkg/responsecaching/cache/in_memory"
+	rediscache "github.com/wundergraph/cosmo/router/pkg/responsecaching/cache/redis"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
@@ -929,6 +931,10 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 	}
 
+	if err := r.setupResponseCache(ctx); err != nil {
+		return err
+	}
+
 	if err := r.startMCPServer(ctx); err != nil {
 		return err
 	}
@@ -1175,6 +1181,108 @@ func (r *Router) setupTelemetry(ctx context.Context) error {
 	return nil
 }
 
+// setupResponseCache builds the response cache when it is enabled. The storage
+// provider decides what it is built on: a redis instance declared under
+// storage_providers.redis and shared with every other replica, or a cache held
+// in this process alone.
+func (r *Router) setupResponseCache(ctx context.Context) error {
+	if r.responseCacheConfig == nil || !r.responseCacheConfig.Enabled {
+		return nil
+	}
+
+	// Validate the TTL during startup to avoid additional checks during execution.
+	if r.responseCacheConfig.FallbackTTL <= 0 {
+		return fmt.Errorf("response cache is enabled but its fallback_ttl is %s, which must be greater than zero", r.responseCacheConfig.FallbackTTL)
+	}
+
+	switch provider := r.responseCacheConfig.Storage.Provider; provider {
+	case "", config.ResponseCacheStorageProviderRedis:
+		return r.setupRedisResponseCache(ctx)
+	case config.ResponseCacheStorageProviderMemory:
+		return r.setupInMemoryResponseCache()
+	default:
+		return fmt.Errorf("response cache storage provider %q is not supported, use %q or %q",
+			provider,
+			config.ResponseCacheStorageProviderRedis,
+			config.ResponseCacheStorageProviderMemory,
+		)
+	}
+}
+
+// setupInMemoryResponseCache builds a response cache held in this process. Nothing
+// is shared with any other replica and nothing survives a restart, which is the
+// whole difference from the redis backed one.
+func (r *Router) setupInMemoryResponseCache() error {
+	// The size is the adapter's to accept or refuse, bounds included, so it is
+	// passed on as it is rather than checked twice here against a second copy of
+	// the same limit.
+	cache, err := inmemorycache.NewInMemoryCache(r.responseCacheConfig.Storage.MaxEntries)
+	if err != nil {
+		return fmt.Errorf("failed to create response cache: %w", err)
+	}
+
+	// Owned from here on by r.responseCache, which Shutdown closes.
+	r.responseCache = cache
+
+	r.logger.Info("Response cache enabled",
+		zap.Duration("fallback_ttl", r.responseCacheConfig.FallbackTTL),
+		zap.String("storage_provider", string(config.ResponseCacheStorageProviderMemory)),
+		zap.Int64("max_entries", r.responseCacheConfig.Storage.MaxEntries),
+	)
+
+	return nil
+}
+
+// setupRedisResponseCache builds a response cache on a redis instance declared
+// under storage_providers.redis.
+func (r *Router) setupRedisResponseCache(ctx context.Context) error {
+	providerID := r.responseCacheConfig.Storage.ProviderID
+	if providerID == "" {
+		return fmt.Errorf("response cache is enabled with the %q storage provider but no storage provider_id is configured; configure one, or set the storage provider to %q to cache in this router's memory instead",
+			config.ResponseCacheStorageProviderRedis,
+			config.ResponseCacheStorageProviderMemory,
+		)
+	}
+
+	provider, ok := r.providerRegistry.Redis(providerID)
+	if !ok {
+		return fmt.Errorf("response cache references unknown redis storage provider %q", providerID)
+	}
+
+	client, err := rd.NewRedisCloser(&rd.RedisCloserOptions{
+		URLs:           provider.URLs,
+		ClusterEnabled: provider.ClusterEnabled,
+		Logger:         r.logger,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create redis client for response cache: %w", err)
+	}
+
+	cache, err := rediscache.NewRedisCache(ctx, client, r.responseCacheConfig.KeyPrefix)
+	if err != nil {
+		// Ownership of the client only passes to the cache once there is a cache,
+		// so on this path it is still ours and has to be closed here or it leaks
+		// along with its connection pool.
+		if closeErr := client.Close(); closeErr != nil {
+			r.logger.Error("failed to close redis client after response cache setup failed", zap.Error(closeErr))
+		}
+		return fmt.Errorf("failed to create response cache: %w", err)
+	}
+
+	// The cache owns the client from here on and closes it with itself, and
+	// Shutdown closes the cache.
+	r.responseCache = cache
+
+	r.logger.Info("Response cache enabled",
+		zap.Duration("fallback_ttl", r.responseCacheConfig.FallbackTTL),
+		zap.String("storage_provider", string(config.ResponseCacheStorageProviderRedis)),
+		zap.String("key_prefix", r.responseCacheConfig.KeyPrefix),
+		zap.String("storage_provider_id", providerID),
+	)
+
+	return nil
+}
+
 // startMCPServer initializes and starts the MCP server if enabled.
 func (r *Router) startMCPServer(ctx context.Context) error {
 	if !r.mcp.Enabled {
@@ -1212,6 +1320,7 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
 		mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
 		mcpserver.WithOmitToolNamePrefix(r.mcp.OmitToolNamePrefix),
+		mcpserver.WithOutputSchemaEnabled(r.mcp.OutputSchema.Enabled),
 		mcpserver.WithStateless(r.mcp.Session.Stateless),
 		mcpserver.WithInstructions(r.mcp.Server.Discover.Instructions),
 		mcpserver.WithServerVersion(cmp.Or(r.mcp.Server.Version, Version)),
@@ -1964,6 +2073,14 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		})
 	}
 
+	if r.responseCache != nil {
+		wg.Go(func() {
+			if closeErr := r.responseCache.Close(); closeErr != nil {
+				err.Append(fmt.Errorf("failed to close response cache: %w", closeErr))
+			}
+		})
+	}
+
 	wg.Go(func() {
 		for _, module := range r.modules {
 			if cleaner, ok := module.(Cleaner); ok {
@@ -2311,6 +2428,12 @@ func WithAuthorizationConfig(cfg *config.AuthorizationConfiguration) Option {
 func WithRateLimitConfig(cfg *config.RateLimitConfiguration) Option {
 	return func(r *Router) {
 		r.rateLimit = cfg
+	}
+}
+
+func WithResponseCache(cfg *config.ResponseCacheConfiguration) Option {
+	return func(r *Router) {
+		r.responseCacheConfig = cfg
 	}
 }
 
