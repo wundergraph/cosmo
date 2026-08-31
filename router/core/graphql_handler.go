@@ -127,18 +127,13 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 // a cache failure in order to keep a request alive. The request was served
 // either way; this only decides whether anyone finds out that the cache is no
 // longer doing anything.
-//
-// Sampled down to one line a second, because the failure worth surfacing here is
-// "the cache is unreachable", and that one arrives once per entity fetch of
-// every request in flight. Logged unsampled it would stop being a report of the
-// outage and become a second outage.
+
 func newResponseCacheErrorHandler(log *zap.Logger) func(error) {
 	if log == nil {
 		return nil
 	}
 
 	sampled := log.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
-		// One through per second, nothing thereafter.
 		return zapcore.NewSamplerWithOptions(core, time.Second, 1, 0)
 	}))
 

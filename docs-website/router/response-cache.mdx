@@ -1,6 +1,6 @@
 ---
 title: "Response Cache (Experimental)"
-description: "Cache federation entity fetches to avoid fetching from upstream subgraphs."
+description: "Cache fetches to avoid subsequent requests reaching upstream subgraphs."
 icon: "boxes-stacked"
 ---
 
@@ -8,9 +8,11 @@ icon: "boxes-stacked"
   **Experimental feature.** Response caching is in alpha and is subject to change, and should not be used in production environments.
 </Danger>
 
-The router caches the responses to federation entity fetches. An entity fetch is the request the router sends to a subgraph through the `_entities` root field to resolve fields of an entity that another subgraph owns. Root field fetches are not cached.
+The router caches two kinds of subgraph response.
 
-Entries are keyed per entity and per selection set. Asking for different fields of the same entity does not share an entry.
+**Entity fetches.** An entity fetch is the request the router sends to a subgraph through the `_entities` root field to resolve fields of an entity that another subgraph owns. Entries are keyed per entity and per selection set, so asking for different fields of the same entity does not share an entry.
+
+**Root query fetches.** A root query fetch is the request the router sends a subgraph for the root fields the client selected. The whole answer is stored as one entry. The key covers the operation text and every variable value. Any difference in either is a miss, and the request goes to the subgraph as it would have. Only queries are cached. Mutations and subscriptions are never cached.
 
 Response caching is disabled by default.
 
@@ -113,9 +115,11 @@ These apply to the current alpha.
 
 **A batch is served from the cache only when every entity in it is present.** One miss sends the whole batch to the subgraph, including the entities that were already cached. Entities are stored individually, so a later batch made up only of cached entities is a full hit.
 
+**Forwarded request headers are not part of the cache key.** The key covers the request the router renders for the subgraph, which is the operation text and its variables. Headers added by header propagation are applied after that and never reach the key. Two requests that differ only by a propagated header share one entry, so the first response is served to the second caller. A subgraph whose answer varies by request header must not mark that answer `public`. Use `private` or `no-store` for it instead.
+
 **Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
 
-**`enable_multi_fetch` disables response caching.** When `engine.enable_multi_fetch` is on, the router merges entity fetches to the same subgraph within one parallel wave into a single request. Merged fetches are not cached, and nothing reports that they were skipped. Do not enable both and expect response caching at this moment, we plan on supporting this in the future.
+**`enable_multi_fetch` disables caching for merged entity fetches.** When `engine.enable_multi_fetch` is on, the router merges entity fetches to the same subgraph within one parallel wave into a single request. A merged fetch is not cached, and nothing reports that it was skipped. An entity fetch that has nothing to merge with is still cached, and root query fetches are unaffected. Support for caching merged fetches is planned.
 
 ## Observability
 
@@ -139,7 +143,7 @@ Cache failures never fail a request. When a read or a write fails, the router se
 WARN  Response cache degraded, serving from the subgraph instead
 ```
 
-That warning is sampled to one line per second. An unreachable cache produces one failure per entity fetch of every request in flight, and logging it unsampled would compound the outage.
+That warning is sampled to one line per second. An unreachable cache produces one failure per cacheable fetch of every request in flight, and logging it unsampled would compound the outage.
 
 ## Related
 
