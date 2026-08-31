@@ -2431,9 +2431,6 @@ func WithRateLimitConfig(cfg *config.RateLimitConfiguration) Option {
 	}
 }
 
-// WithResponseCache configures caching of federation entity fetches. The cache is
-// only built when cfg.Enabled is set; the rest of the router behaves exactly as
-// it did without one when it is not.
 func WithResponseCache(cfg *config.ResponseCacheConfiguration) Option {
 	return func(r *Router) {
 		r.responseCacheConfig = cfg

@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.344.1](https://github.com/wundergraph/cosmo/compare/router@0.344.0...router@0.344.1) (2026-08-31)
+
+### Bug Fixes
+
+* gomod not pointed correctly ([#3199](https://github.com/wundergraph/cosmo/issues/3199)) ([1ef951f](https://github.com/wundergraph/cosmo/commit/1ef951fee150c40094653494bd9c17ba145467d4)) (@SkArchon)
+
+# [0.344.0](https://github.com/wundergraph/cosmo/compare/router@0.343.2...router@0.344.0) (2026-08-31)
+
+### Features
+
+* add root query field caching ([#3188](https://github.com/wundergraph/cosmo/issues/3188)) ([7bedd8a](https://github.com/wundergraph/cosmo/commit/7bedd8aba8dc8a503eef097c9337480eb8fdd800)) (@SkArchon)
+
+## [0.343.2](https://github.com/wundergraph/cosmo/compare/router@0.343.1...router@0.343.2) (2026-08-30)
+
+### Bug Fixes
+
+* **router:** preserve APQ query when renewing TTL ([#3191](https://github.com/wundergraph/cosmo/issues/3191)) ([ea9056a](https://github.com/wundergraph/cosmo/commit/ea9056ac8353128f64910588191f459053d65d7f)) (@fiam)
+
 ## [0.343.1](https://github.com/wundergraph/cosmo/compare/router@0.343.0...router@0.343.1) (2026-08-26)
 
 ### Bug Fixes
