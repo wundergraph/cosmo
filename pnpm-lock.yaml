@@ -1088,6 +1088,12 @@ importers:
       del-cli:
         specifier: 'catalog:'
         version: 5.1.0
+      eslint:
+        specifier: 'catalog:'
+        version: 8.57.1(supports-color@10.2.0)
+      eslint-config-unjs:
+        specifier: 'catalog:'
+        version: 0.2.1(eslint-import-resolver-node@0.3.7(supports-color@10.2.0))(eslint@8.57.1(supports-color@10.2.0))(supports-color@10.2.0)(typescript@5.6.2)
       tsx:
         specifier: 'catalog:'
         version: 4.19.4
