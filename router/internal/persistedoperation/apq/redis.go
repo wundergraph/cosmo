@@ -68,6 +68,10 @@ func (r *redisStore) IsDistributed() bool {
 	return true
 }
 
-func (r *redisStore) Close() {
-	_ = r.client.Close()
+func (r *redisStore) Close() error {
+	if r.client != nil {
+		return r.client.Close()
+	}
+
+	return nil
 }

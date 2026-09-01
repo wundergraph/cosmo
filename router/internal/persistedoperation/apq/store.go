@@ -9,5 +9,5 @@ type Store interface {
 	Set(ctx context.Context, operationHash string, operationBody []byte) error
 	Renew(ctx context.Context, operationHash string) error
 	IsDistributed() bool
-	Close()
+	Close() error
 }

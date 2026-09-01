@@ -49,8 +49,10 @@ func (m *memoryStore) IsDistributed() bool {
 	return false
 }
 
-func (m *memoryStore) Close() {
+func (m *memoryStore) Close() error {
 	if m.cache.Cache != nil {
 		m.cache.Cache.Close()
 	}
+
+	return nil
 }

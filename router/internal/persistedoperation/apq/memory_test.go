@@ -8,7 +8,11 @@ import (
 )
 
 func TestNewMemoryStore(t *testing.T) {
+	t.Parallel()
+
 	t.Run("returns an error when cache size is zero", func(t *testing.T) {
+		t.Parallel()
+
 		store, err := NewMemoryStore(0, time.Minute)
 
 		require.Error(t, err)
@@ -16,9 +20,11 @@ func TestNewMemoryStore(t *testing.T) {
 	})
 
 	t.Run("returns a backed store when cache size is positive", func(t *testing.T) {
+		t.Parallel()
+
 		store, err := NewMemoryStore(1024*1024, time.Minute)
 		require.NoError(t, err)
-		t.Cleanup(store.Close)
+		t.Cleanup(func() { _ = store.Close() })
 
 		require.NotNil(t, store.cache.Cache)
 	})

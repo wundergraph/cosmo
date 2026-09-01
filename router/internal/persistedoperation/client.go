@@ -150,14 +150,20 @@ func (c *Client) PQLStore() *pqlmanifest.Store {
 	return c.pqlStore
 }
 
-func (c *Client) Close() {
+func (c *Client) Close() error {
 	if c.providerClient != nil {
 		c.providerClient.Close()
 	}
+
 	if c.cache != nil && c.cache.Cache != nil {
 		c.cache.Cache.Close()
 	}
+
 	if c.APQEnabled() {
-		c.apqStore.Close()
+		if err := c.apqStore.Close(); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
