@@ -22,9 +22,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/setup@v2
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
         with:
           cache: true
+          install: false
 
       - uses: ./.github/actions/go
 
