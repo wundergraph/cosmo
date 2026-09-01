@@ -169,6 +169,14 @@ func TestInlineLiteralValidation(t *testing.T) {
 			})
 			requireValidationError(t, res.Body, `Variable "$x" got invalid value 123; String cannot represent a non string value: 123`)
 		})
+
+		t.Run("rejects incompatible variable type in input object", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query Q($x: String!) { rootFieldWithInput(arg: {enum: $x}) }`,
+				Variables: json.RawMessage(`{"x":"A"}`),
+			})
+			requireValidationError(t, res.Body, `Variable "$x" of type "String!" used in position expecting type "EnumType".`)
+		})
 	})
 }
 
