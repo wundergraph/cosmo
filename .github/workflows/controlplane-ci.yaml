@@ -43,7 +43,9 @@ jobs:
       - name: Start service containers
         run: docker compose --project-name controlplane-ci --file .github/compose/controlplane-ci.yaml up --detach --wait --wait-timeout 60
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@v2
+        with:
+          cache: true
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

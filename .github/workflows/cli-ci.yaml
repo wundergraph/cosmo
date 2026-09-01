@@ -25,7 +25,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@v2
+        with:
+          cache: true
       - uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
@@ -71,14 +73,15 @@ jobs:
 
     strategy:
       matrix:
-        node-version: ["22.x", "24.x"]
+        node-version: [22, 24]
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@v2
         with:
-          node-version: ${{ matrix.node-version }}
+          runtime: node@${{ matrix.node-version }}
+          cache: true
       - uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies

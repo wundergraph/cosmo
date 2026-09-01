@@ -24,7 +24,9 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@v2
+        with:
+          cache: true
 
       - name: Install dependencies
         run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile

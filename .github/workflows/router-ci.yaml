@@ -49,7 +49,9 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@v2
+        with:
+          cache: true
 
       - name: Install Cli Node Dependencies
         run: |
@@ -145,7 +147,9 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@v2
+        with:
+          cache: true
 
       - name: Install Cli Node Dependencies
         run: |
@@ -360,7 +364,9 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@v2
+        with:
+          cache: true
 
       - name: Install Cli Node Dependencies
         run: |

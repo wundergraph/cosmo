@@ -41,7 +41,9 @@ jobs:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@v2
+        with:
+          cache: true
 
       - run: npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
         shell: bash

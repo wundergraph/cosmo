@@ -21,7 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@v2
+        with:
+          cache: true
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
