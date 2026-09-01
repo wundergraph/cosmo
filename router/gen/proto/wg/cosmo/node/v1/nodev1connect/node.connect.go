@@ -36,15 +36,11 @@ const (
 	// NodeServiceSelfRegisterProcedure is the fully-qualified name of the NodeService's SelfRegister
 	// RPC.
 	NodeServiceSelfRegisterProcedure = "/wg.cosmo.node.v1.NodeService/SelfRegister"
-	// NodeServiceGenerateQueryProcedure is the fully-qualified name of the NodeService's GenerateQuery
-	// RPC.
-	NodeServiceGenerateQueryProcedure = "/wg.cosmo.node.v1.NodeService/GenerateQuery"
 )
 
 // NodeServiceClient is a client for the wg.cosmo.node.v1.NodeService service.
 type NodeServiceClient interface {
 	SelfRegister(context.Context, *connect.Request[v1.SelfRegisterRequest]) (*connect.Response[v1.SelfRegisterResponse], error)
-	GenerateQuery(context.Context, *connect.Request[v1.GenerateQueryRequest]) (*connect.Response[v1.GenerateQueryResponse], error)
 }
 
 // NewNodeServiceClient constructs a client for the wg.cosmo.node.v1.NodeService service. By
@@ -64,19 +60,12 @@ func NewNodeServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(nodeServiceMethods.ByName("SelfRegister")),
 			connect.WithClientOptions(opts...),
 		),
-		generateQuery: connect.NewClient[v1.GenerateQueryRequest, v1.GenerateQueryResponse](
-			httpClient,
-			baseURL+NodeServiceGenerateQueryProcedure,
-			connect.WithSchema(nodeServiceMethods.ByName("GenerateQuery")),
-			connect.WithClientOptions(opts...),
-		),
 	}
 }
 
 // nodeServiceClient implements NodeServiceClient.
 type nodeServiceClient struct {
-	selfRegister  *connect.Client[v1.SelfRegisterRequest, v1.SelfRegisterResponse]
-	generateQuery *connect.Client[v1.GenerateQueryRequest, v1.GenerateQueryResponse]
+	selfRegister *connect.Client[v1.SelfRegisterRequest, v1.SelfRegisterResponse]
 }
 
 // SelfRegister calls wg.cosmo.node.v1.NodeService.SelfRegister.
@@ -84,15 +73,9 @@ func (c *nodeServiceClient) SelfRegister(ctx context.Context, req *connect.Reque
 	return c.selfRegister.CallUnary(ctx, req)
 }
 
-// GenerateQuery calls wg.cosmo.node.v1.NodeService.GenerateQuery.
-func (c *nodeServiceClient) GenerateQuery(ctx context.Context, req *connect.Request[v1.GenerateQueryRequest]) (*connect.Response[v1.GenerateQueryResponse], error) {
-	return c.generateQuery.CallUnary(ctx, req)
-}
-
 // NodeServiceHandler is an implementation of the wg.cosmo.node.v1.NodeService service.
 type NodeServiceHandler interface {
 	SelfRegister(context.Context, *connect.Request[v1.SelfRegisterRequest]) (*connect.Response[v1.SelfRegisterResponse], error)
-	GenerateQuery(context.Context, *connect.Request[v1.GenerateQueryRequest]) (*connect.Response[v1.GenerateQueryResponse], error)
 }
 
 // NewNodeServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -108,18 +91,10 @@ func NewNodeServiceHandler(svc NodeServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(nodeServiceMethods.ByName("SelfRegister")),
 		connect.WithHandlerOptions(opts...),
 	)
-	nodeServiceGenerateQueryHandler := connect.NewUnaryHandler(
-		NodeServiceGenerateQueryProcedure,
-		svc.GenerateQuery,
-		connect.WithSchema(nodeServiceMethods.ByName("GenerateQuery")),
-		connect.WithHandlerOptions(opts...),
-	)
 	return "/wg.cosmo.node.v1.NodeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case NodeServiceSelfRegisterProcedure:
 			nodeServiceSelfRegisterHandler.ServeHTTP(w, r)
-		case NodeServiceGenerateQueryProcedure:
-			nodeServiceGenerateQueryHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -131,8 +106,4 @@ type UnimplementedNodeServiceHandler struct{}
 
 func (UnimplementedNodeServiceHandler) SelfRegister(context.Context, *connect.Request[v1.SelfRegisterRequest]) (*connect.Response[v1.SelfRegisterResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.node.v1.NodeService.SelfRegister is not implemented"))
-}
-
-func (UnimplementedNodeServiceHandler) GenerateQuery(context.Context, *connect.Request[v1.GenerateQueryRequest]) (*connect.Response[v1.GenerateQueryResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.node.v1.NodeService.GenerateQuery is not implemented"))
 }

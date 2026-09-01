@@ -60,33 +60,8 @@ message SelfRegisterResponse {
   optional RegistrationInfo registrationInfo = 2;
 }
 
-message GenerateQueryRequest {
-  string schema_hash = 1;
-  string prompt = 2;
-}
-
-message GenerateQueryResponse {
-  Response response = 1;
-  optional SatisfiedQuery query = 2;
-}
-
-enum SatisfiedOperationType {
-  QUERY = 0;
-  MUTATION = 1;
-  SUBSCRIPTION = 2;
-}
-
-message SatisfiedQuery {
-  string description = 1;
-  string document = 2;
-  string operation_name = 3;
-  SatisfiedOperationType operation_type = 4;
-  string variables_schema = 5;
-}
-
 service NodeService {
   rpc SelfRegister(SelfRegisterRequest) returns (SelfRegisterResponse) {}
-  rpc GenerateQuery(GenerateQueryRequest) returns (GenerateQueryResponse) {}
 }
 
 message EngineConfiguration {

@@ -7,7 +7,6 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import type { PlainMessage } from '../../types/index.js';
 import type { RouterOptions } from '../routes.js';
 import { enrichLogger, getLogger, handleError } from '../util.js';
-import { PromptToQueryService } from '../services/PromptToQueryService.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeService>> {
   const registrationInfoCache = lru<PlainMessage<RegistrationInfo>>(1000, 300_000);
@@ -65,24 +64,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           },
           registrationInfo,
         };
-      });
-    },
-
-    generateQuery(req, ctx) {
-      let logger = getLogger(ctx, opts.logger);
-      return handleError(ctx, logger, async () => {
-        const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
-        logger = enrichLogger(ctx, logger, authContext);
-
-        const ptqService = new PromptToQueryService(
-          opts.db,
-          logger,
-          opts.promptToQueryServiceAddress,
-          authContext.organizationId,
-          opts.billingDefaultPlanId,
-        );
-
-        return ptqService.generateQuery(req.schemaHash, req.prompt);
       });
     },
   };

@@ -214,10 +214,13 @@ export class PromptToQueryService {
 
     let index = PromptToQueryService.parseIndexResponse(response.data);
     if (index.status === 'INDEX_STATUS_INDEXING') {
-      // Re-fetch the index status every second, if after 180 attempts (roughly 3 minutes) the indexing is still in
-      // progress, instead of waiting indefinitely, we'll just bail and let the client decide if they want to attempt
-      // the request again.
-      // We do it this way to prevent process hogging
+      /**
+       * Re-fetch the index status every second, if after 180 attempts (roughly 3 minutes) the indexing is still in
+       * progress, instead of waiting indefinitely, we'll just bail and let the client decide if they want to attempt
+       * the request again.
+       *
+       * We do it this way to prevent process hogging
+       */
       index = await retryWithBackoff<IndexStatusResponse>(
         async (abortSignal) => {
           const response = await this.#httpClient('/yoko.v1.YokoService/EnsureIndex', {
