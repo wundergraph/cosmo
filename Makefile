@@ -150,7 +150,7 @@ dc-federation-demo:
 
 DC_FLAGS=
 dc-subgraphs-demo:
-	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach $(DC_FLAGS) && make dc-subgraphs-config
+	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) SUBGRAPH_CACHE_CONTROL=$(SUBGRAPH_CACHE_CONTROL) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach $(DC_FLAGS) && make dc-subgraphs-config
 
 dc-subgraphs-config:
 	pushd router && make compose-demo-config && popd
@@ -159,7 +159,7 @@ dc-subgraphs-demo-down:
 	docker compose -f docker-compose.full.yml --profile subgraphs down --remove-orphans
 
 dc-subgraphs-demo-rebuild:
-	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --build --remove-orphans --detach $(DC_FLAGS)
+	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) SUBGRAPH_CACHE_CONTROL="$(SUBGRAPH_CACHE_CONTROL)" docker compose -f docker-compose.full.yml --profile subgraphs up --build --remove-orphans --detach $(DC_FLAGS)
 
 docker-build-local:
 	docker compose --file docker-compose.cosmo.yml build --no-cache

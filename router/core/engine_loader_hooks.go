@@ -18,6 +18,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/cache"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -123,6 +124,18 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 	})
 }
 
+// ttlToCacheControl renders the life a cache hit has left. A TTL of zero is
+// valid and means stale as of now, which is no-cache: max-age=0 would be dropped by
+// the most restrictive algorithm and let a longer default win instead.
+func ttlToCacheControl(ttl time.Duration) string {
+	maxAge := cache.ToDeltaSeconds(ttl)
+	if maxAge <= 0 {
+		return noCache
+	}
+	cacheControl := cache.CacheControlResponse{Public: true, MaxAge: &maxAge}
+	return cacheControl.ToHeaderString()
+}
+
 func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourceInfo, responseInfo *resolve.ResponseInfo) {
 
 	if resolve.IsIntrospectionDataSource(ds.ID) {
@@ -140,6 +153,12 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		headers := responseInfo.ResponseHeaders
 		if headers == nil {
 			headers = make(http.Header)
+		}
+		// A cache hit never reached the subgraph, so it carries no Cache-Control of
+		// its own. Present its remaining lifetime as one so the most restrictive
+		// algorithm still weighs it instead of the hit dropping out of the policy.
+		if responseInfo.ResponseCacheHit && headers.Get(cacheControlKey) == "" {
+			headers.Set(cacheControlKey, ttlToCacheControl(responseInfo.ResponseCacheTTL))
 		}
 		f.headerPropagation.ApplyResponseHeaderRules(ctx, headers, ds.Name, responseInfo.StatusCode, responseInfo.Request)
 	}
