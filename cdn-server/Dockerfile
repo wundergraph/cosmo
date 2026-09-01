@@ -19,7 +19,9 @@ COPY . /app/
 RUN pnpm run --filter=./cdn-server/cdn --filter=./cdn-server build
 
 # Deploy
-RUN pnpm --filter=./cdn-server --prod deploy pruned
+# pnpm v10+ defaults to only deploying workspaces with inject-workspace-packages=true;
+# use --legacy to keep the previous (pnpm 9) deploy behavior we rely on here.
+RUN pnpm --filter=./cdn-server --prod deploy --legacy pruned
 
 FROM --platform=${TARGETPLATFORM} node:22.22.2-slim
 
