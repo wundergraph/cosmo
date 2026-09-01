@@ -1,4 +1,3 @@
-import { setTimeout } from 'node:timers/promises';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { type AxiosInstance, create as createHttpClient } from 'axios';
@@ -15,13 +14,12 @@ import { traced } from '../tracing.js';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { retryWithBackoff } from '../util/timers.js';
 
 const validationSchema = z.object({
   version: z.string().uuid(),
   prompt: z.string().trim().min(1),
 });
-
-const indexPollInterval = 1000;
 
 const indexResponseSchema = z.object({
   index: z.object({
@@ -47,6 +45,19 @@ const ptqResponseSchema = z.object({
 });
 
 type PtQResponse = z.infer<typeof ptqResponseSchema>;
+type IndexStatusResponse = z.infer<typeof indexResponseSchema>['index'];
+
+class IndexStatusIndexingError extends Error {
+  constructor(index: IndexStatusResponse) {
+    super(`Prompt to Query index generation failed${index.lastError ? `: ${index.lastError}` : ''}`);
+  }
+}
+
+class UnableToParseIndexStatusError extends Error {
+  constructor() {
+    super('It was not possible to parse the response returned by the Prompt to Query index service');
+  }
+}
 
 @traced
 export class PromptToQueryService {
@@ -202,29 +213,45 @@ export class PromptToQueryService {
     });
 
     let index = PromptToQueryService.parseIndexResponse(response.data);
-    while (index.status === 'INDEX_STATUS_INDEXING') {
-      await setTimeout(indexPollInterval, undefined, { signal });
+    if (index.status === 'INDEX_STATUS_INDEXING') {
+      // Re-fetch the index status every second, if after 180 attempts (roughly 3 minutes) the indexing is still in
+      // progress, instead of waiting indefinitely, we'll just bail and let the client decide if they want to attempt
+      // the request again.
+      // We do it this way to prevent process hogging
+      index = await retryWithBackoff<IndexStatusResponse>(
+        async (abortSignal) => {
+          const response = await this.#httpClient('/yoko.v1.YokoService/EnsureIndex', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            data: JSON.stringify({ sdl: schemaSDL }),
+            signal: abortSignal,
+          });
 
-      const response = await this.#httpClient('/yoko.v1.YokoService/GetIndex', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        data: JSON.stringify({ indexId: index.indexId }),
-        signal,
-      });
-      index = PromptToQueryService.parseIndexResponse(response.data);
-    }
+          const result = PromptToQueryService.parseIndexResponse(response.data);
+          if (result?.status === 'INDEX_STATUS_INDEXING') {
+            throw new IndexStatusIndexingError(index);
+          }
 
-    if (index.status === 'INDEX_STATUS_FAILED') {
-      throw new Error(`Prompt to Query index generation failed${index.lastError ? `: ${index.lastError}` : ''}`);
+          return result;
+        },
+        {
+          attempts: 180,
+          baseInterval: 1000,
+          maxInterval: 1000,
+          jitter: true,
+          signal,
+          shouldRetry: (err) => err instanceof IndexStatusIndexingError || err instanceof UnableToParseIndexStatusError,
+        },
+      );
     }
 
     return index.indexId;
   }
 
-  private static parseIndexResponse(response: unknown): z.infer<typeof indexResponseSchema>['index'] {
+  private static parseIndexResponse(response: unknown): IndexStatusResponse {
     const parsed = indexResponseSchema.safeParse(response);
     if (!parsed.success) {
-      throw new Error('It was not possible to parse the response returned by the Prompt to Query index service');
+      throw new UnableToParseIndexStatusError();
     }
 
     return parsed.data.index;

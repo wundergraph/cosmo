@@ -166,3 +166,4 @@ export const AIService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_wg_cosmo_ai_v1_ai, 0);
+
