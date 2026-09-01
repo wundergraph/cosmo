@@ -698,7 +698,7 @@ func TestResponseCacheTags(t *testing.T) {
 			defer func() { _ = client.Close() }()
 			ctx := context.Background()
 
-			members, err := client.ZRangeWithScores(ctx, cfg.KeyPrefix+"type:Employee", 0, -1).Result()
+			members, err := client.ZRangeWithScores(ctx, cfg.KeyPrefix+responseCacheTagNamespace+"type:Employee", 0, -1).Result()
 			require.NoError(t, err)
 			require.Len(t, members, 10)
 
@@ -713,7 +713,7 @@ func TestResponseCacheTags(t *testing.T) {
 
 			// The tag key expires too, so a tag whose members have all lapsed
 			// does not stay behind as an empty set.
-			ttl, err := client.TTL(ctx, cfg.KeyPrefix+"type:Employee").Result()
+			ttl, err := client.TTL(ctx, cfg.KeyPrefix+responseCacheTagNamespace+"type:Employee").Result()
 			require.NoError(t, err)
 			require.Greater(t, ttl, time.Duration(0), "the tag key must not be persistent")
 		})
@@ -864,6 +864,13 @@ func responseCacheOptions(t *testing.T, ttl time.Duration) []core.Option {
 	return []core.Option{responseCacheStorageProviders(), core.WithResponseCache(responseCacheConfig(t, ttl))}
 }
 
+// The segments the redis adapter keeps entries and tag indexes in, under the
+// configured key prefix.
+const (
+	responseCacheEntryNamespace = "e:"
+	responseCacheTagNamespace   = "t:"
+)
+
 // responseCacheStored reads back what a test wrote, split into the entries
 // themselves and the tag index over them, both with the prefix stripped.
 func responseCacheStored(t *testing.T, prefix string) (entries []string, tags map[string][]string) {
@@ -874,24 +881,29 @@ func responseCacheStored(t *testing.T, prefix string) (entries []string, tags ma
 
 	ctx := context.Background()
 	tags = make(map[string][]string)
+	// SCAN may hand the same key back on more than one iteration, so a key is
+	// only counted the first time it is seen.
+	seen := make(map[string]struct{})
 
 	for cursor := uint64(0); ; {
 		keys, next, err := client.Scan(ctx, cursor, prefix+"*", 512).Result()
 		require.NoError(t, err)
 
 		for _, key := range keys {
-			name := strings.TrimPrefix(key, prefix)
-
-			kind, err := client.Type(ctx, key).Result()
-			require.NoError(t, err)
-
-			if kind == "zset" {
-				members, err := client.ZRange(ctx, key, 0, -1).Result()
-				require.NoError(t, err)
-				tags[name] = members
+			if _, ok := seen[key]; ok {
 				continue
 			}
-			entries = append(entries, name)
+			seen[key] = struct{}{}
+
+			name := strings.TrimPrefix(key, prefix)
+
+			if tag, isTag := strings.CutPrefix(name, responseCacheTagNamespace); isTag {
+				members, err := client.ZRange(ctx, key, 0, -1).Result()
+				require.NoError(t, err)
+				tags[tag] = members
+				continue
+			}
+			entries = append(entries, strings.TrimPrefix(name, responseCacheEntryNamespace))
 		}
 
 		if next == 0 {

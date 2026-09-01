@@ -111,8 +111,11 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	c.tags.prune(now)
 
 	for _, item := range last {
-		c.cache.SetWithTTL(item.Key, bytes.Clone(item.Value), entryCost, item.TTL)
-		c.tags.add(item.Key, item.Tags, now.Add(item.TTL))
+		// A write ristretto turned away is not there to be found, so indexing
+		// it would leave the tag naming an entry that never existed.
+		if c.cache.SetWithTTL(item.Key, bytes.Clone(item.Value), entryCost, item.TTL) {
+			c.tags.add(item.Key, item.Tags, now.Add(item.TTL))
+		}
 	}
 
 	c.cache.Wait()

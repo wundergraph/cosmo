@@ -14,8 +14,6 @@ import (
 func TestRedisCacheTagIndex(t *testing.T) {
 	t.Parallel()
 
-	tagKey := func(tag string) string { return testPrefix + tag }
-
 	t.Run("an entry is indexed under every tag it names", func(t *testing.T) {
 		t.Parallel()
 		c, mr := newTestRedisCache(t)
@@ -25,7 +23,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		}))
 
 		for _, tag := range []string{"declared:users", "declared:user-42"} {
-			members, err := mr.ZMembers(tagKey(tag))
+			members, err := mr.ZMembers(tagIndexKey(tag))
 			require.NoError(t, err)
 			// The member is the key the caller asked with, not the prefixed key
 			// it was stored under, matching what GetMany hands back.
@@ -43,11 +41,11 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:c", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users", "declared:user-7"}},
 		}))
 
-		members, err := mr.ZMembers(tagKey("declared:users"))
+		members, err := mr.ZMembers(tagIndexKey("declared:users"))
 		require.NoError(t, err)
 		require.ElementsMatch(t, []string{"v1:a", "v1:b", "v1:c"}, members)
 
-		members, err = mr.ZMembers(tagKey("declared:user-42"))
+		members, err = mr.ZMembers(tagIndexKey("declared:user-42"))
 		require.NoError(t, err)
 		require.Equal(t, []string{"v1:a"}, members)
 	})
@@ -60,26 +58,29 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:a", Value: []byte(`{}`), TTL: time.Minute},
 		}))
 
-		require.Equal(t, []string{testPrefix + "v1:a"}, mr.Keys())
+		require.Equal(t, []string{entryKey("v1:a")}, mr.Keys())
 	})
 
 	t.Run("a tag cannot be spelled to collide with an entry", func(t *testing.T) {
 		t.Parallel()
 		c, mr := newTestRedisCache(t)
 
-		// A tag naming an entry key verbatim still lands in the tag namespace,
-		// so it cannot overwrite the entry it names.
+		// A tag spelled exactly like an entry key still lands in the tag
+		// namespace, so the SET cannot overwrite the index and the ZADD cannot
+		// fail WRONGTYPE against the value.
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
-			{Key: "v1:a", Value: []byte(`{"real":true}`), TTL: time.Minute, Tags: []string{"declared:v1:a"}},
+			{Key: "v1:a", Value: []byte(`{"real":true}`), TTL: time.Minute, Tags: []string{"v1:a", "declared:v1:a"}},
 		}))
 
-		value, err := mr.Get(testPrefix + "v1:a")
+		value, err := mr.Get(entryKey("v1:a"))
 		require.NoError(t, err)
 		require.JSONEq(t, `{"real":true}`, value)
 
-		members, err := mr.ZMembers(tagKey("declared:v1:a"))
-		require.NoError(t, err)
-		require.Equal(t, []string{"v1:a"}, members)
+		for _, tag := range []string{"v1:a", "declared:v1:a"} {
+			members, err := mr.ZMembers(tagIndexKey(tag))
+			require.NoError(t, err)
+			require.Equal(t, []string{"v1:a"}, members)
+		}
 	})
 
 	t.Run("a member is scored with when its entry expires", func(t *testing.T) {
@@ -92,7 +93,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		}))
 		after := time.Now()
 
-		score, err := mr.ZScore(tagKey("declared:users"), "v1:a")
+		score, err := mr.ZScore(tagIndexKey("declared:users"), "v1:a")
 		require.NoError(t, err)
 
 		require.GreaterOrEqual(t, int64(score), before.Add(time.Minute).UnixMilli())
@@ -105,18 +106,18 @@ func TestRedisCacheTagIndex(t *testing.T) {
 
 		item := enginecache.Item{Key: "v1:a", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}}
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
-		first, err := mr.ZScore(tagKey("declared:users"), "v1:a")
+		first, err := mr.ZScore(tagIndexKey("declared:users"), "v1:a")
 		require.NoError(t, err)
 
 		mr.FastForward(time.Second)
 		item.TTL = 2 * time.Minute
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
 
-		members, err := mr.ZMembers(tagKey("declared:users"))
+		members, err := mr.ZMembers(tagIndexKey("declared:users"))
 		require.NoError(t, err)
 		require.Equal(t, []string{"v1:a"}, members, "a zset holds a member once")
 
-		second, err := mr.ZScore(tagKey("declared:users"), "v1:a")
+		second, err := mr.ZScore(tagIndexKey("declared:users"), "v1:a")
 		require.NoError(t, err)
 		require.Greater(t, second, first, "the longer life must be the one that counts")
 	})
@@ -129,7 +130,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:a", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
 
-		require.Equal(t, mr.TTL(testPrefix+"v1:a"), mr.TTL(tagKey("declared:users")))
+		require.Equal(t, mr.TTL(entryKey("v1:a")), mr.TTL(tagIndexKey("declared:users")))
 	})
 
 	t.Run("a short lived entry does not shorten a tag holding longer lived ones", func(t *testing.T) {
@@ -139,7 +140,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
 			{Key: "v1:long", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{"declared:users"}},
 		}))
-		longTTL := mr.TTL(tagKey("declared:users"))
+		longTTL := mr.TTL(tagIndexKey("declared:users"))
 
 		// Without GT this second write would expire the whole tag in a second,
 		// taking the hour long entry's membership with it and stranding it.
@@ -147,9 +148,9 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:short", Value: []byte(`{}`), TTL: time.Second, Tags: []string{"declared:users"}},
 		}))
 
-		require.Equal(t, longTTL, mr.TTL(tagKey("declared:users")))
+		require.Equal(t, longTTL, mr.TTL(tagIndexKey("declared:users")))
 
-		members, err := mr.ZMembers(tagKey("declared:users"))
+		members, err := mr.ZMembers(tagIndexKey("declared:users"))
 		require.NoError(t, err)
 		require.ElementsMatch(t, []string{"v1:long", "v1:short"}, members)
 	})
@@ -165,7 +166,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:long", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{"declared:users"}},
 		}))
 
-		require.Equal(t, time.Hour, mr.TTL(tagKey("declared:users")))
+		require.Equal(t, time.Hour, mr.TTL(tagIndexKey("declared:users")))
 	})
 
 	t.Run("an item without a TTL is refused before anything is indexed", func(t *testing.T) {

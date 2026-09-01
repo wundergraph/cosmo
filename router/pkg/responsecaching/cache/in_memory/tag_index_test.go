@@ -77,6 +77,19 @@ func TestInMemoryCacheTagIndex(t *testing.T) {
 		require.Zero(t, indexLen(c.tags))
 	})
 
+	t.Run("a write ristretto turned away is not indexed", func(t *testing.T) {
+		c := newTaggedCache(t)
+		require.NoError(t, c.Close())
+
+		// A closed cache takes nothing, so the index must not name an entry
+		// that was never stored.
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
+			{Key: "v1:a", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
+		}))
+
+		require.Zero(t, indexLen(c.tags))
+	})
+
 	t.Run("a tag nobody wrote names nothing", func(t *testing.T) {
 		c := newTaggedCache(t)
 		require.Empty(t, indexKeys(c.tags, "declared:nothing-here"))
