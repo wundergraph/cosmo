@@ -658,13 +658,13 @@ func TestResponseCacheTags(t *testing.T) {
 
 			// The three namespaces name the same ten entries, each for its own
 			// reason.
-			require.ElementsMatch(t, entries, tags["declared:moods"])
+			require.ElementsMatch(t, entries, tags["declared:mood:moods"])
 			require.ElementsMatch(t, entries, tags["subgraph:mood"])
-			require.ElementsMatch(t, entries, tags["type:Employee"])
+			require.ElementsMatch(t, entries, tags["type:mood:Employee"])
 
 			// And the per entity tag names one, which is one of those ten.
 			for i := 1; i <= 10; i++ {
-				tag := fmt.Sprintf("declared:employee-%d", i)
+				tag := fmt.Sprintf("declared:mood:employee-%d", i)
 				require.Len(t, tags[tag], 1, "%s must name exactly one entry", tag)
 				require.Contains(t, entries, tags[tag][0])
 			}
@@ -672,7 +672,73 @@ func TestResponseCacheTags(t *testing.T) {
 			// A subgraph declaring a tag cannot reach the router's own
 			// namespaces with it.
 			require.NotContains(t, tags, "moods")
+			require.NotContains(t, tags, "declared:moods")
 			require.NotContains(t, tags, "subgraph:moods")
+		})
+	})
+
+	t.Run("a root fetch declares one flat list under its own key", func(t *testing.T) {
+		t.Parallel()
+
+		// A root fetch caches its whole answer as one entry, so its tags are
+		// one flat list rather than the list per entity an entity fetch sends.
+		const taggedRoot = `{"data":{"employees":[{"id":1}]},` +
+			`"extensions":{"apolloCacheTags":["employees","homepage"]}}`
+
+		cfg := responseCacheConfig(t, time.Minute)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{responseCacheStorageProviders(), core.WithResponseCache(cfg)},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: fixedResponseMiddleware("public, max-age=60", taggedRoot),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { employees { id } }`})
+
+			entries, tags := responseCacheStored(t, cfg.KeyPrefix)
+			require.Len(t, entries, 1, "the whole root fetch answer is one entry")
+
+			require.ElementsMatch(t, entries, tags["declared:employees:employees"])
+			require.ElementsMatch(t, entries, tags["declared:employees:homepage"])
+			require.ElementsMatch(t, entries, tags["subgraph:employees"])
+
+			// A root fetch's data object is a selection set rather than an
+			// entity, so there is no one typename to index it under.
+			for tag := range tags {
+				require.NotContains(t, tag, "type:", "a root fetch has no typename of its own")
+			}
+		})
+	})
+
+	t.Run("a root fetch sending the entity shaped key is not tagged by it", func(t *testing.T) {
+		t.Parallel()
+
+		// The two keys are not interchangeable: reading either from the other's
+		// key would make the same document mean different things.
+		const nestedOnRoot = `{"data":{"employees":[{"id":1}]},` +
+			`"extensions":{"apolloEntityCacheTags":[["employees","homepage"]]}}`
+
+		cfg := responseCacheConfig(t, time.Minute)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{responseCacheStorageProviders(), core.WithResponseCache(cfg)},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: fixedResponseMiddleware("public, max-age=60", nestedOnRoot),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { employees { id } }`})
+
+			entries, tags := responseCacheStored(t, cfg.KeyPrefix)
+			require.Len(t, entries, 1, "it is cached all the same")
+
+			require.NotContains(t, tags, "declared:employees:employees")
+			require.NotContains(t, tags, "declared:employees:homepage")
+			require.ElementsMatch(t, entries, tags["subgraph:employees"],
+				"what the router derives for itself is unaffected")
 		})
 	})
 
@@ -698,7 +764,7 @@ func TestResponseCacheTags(t *testing.T) {
 			defer func() { _ = client.Close() }()
 			ctx := context.Background()
 
-			members, err := client.ZRangeWithScores(ctx, cfg.KeyPrefix+responseCacheTagNamespace+"type:Employee", 0, -1).Result()
+			members, err := client.ZRangeWithScores(ctx, cfg.KeyPrefix+responseCacheTagNamespace+"type:mood:Employee", 0, -1).Result()
 			require.NoError(t, err)
 			require.Len(t, members, 10)
 
@@ -713,7 +779,7 @@ func TestResponseCacheTags(t *testing.T) {
 
 			// The tag key expires too, so a tag whose members have all lapsed
 			// does not stay behind as an empty set.
-			ttl, err := client.TTL(ctx, cfg.KeyPrefix+responseCacheTagNamespace+"type:Employee").Result()
+			ttl, err := client.TTL(ctx, cfg.KeyPrefix+responseCacheTagNamespace+"type:mood:Employee").Result()
 			require.NoError(t, err)
 			require.Greater(t, ttl, time.Duration(0), "the tag key must not be persistent")
 		})
