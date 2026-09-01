@@ -16,12 +16,16 @@ import (
 
 type deadlineRecorder struct {
 	*httptest.ResponseRecorder
-	deadlines   []time.Time
-	deadlineErr error
-	flushErr    error
+	deadlines        []time.Time
+	deadlineErr      error
+	clearDeadlineErr error
+	flushErr         error
 }
 
 func (r *deadlineRecorder) SetWriteDeadline(deadline time.Time) error {
+	if deadline.IsZero() && r.clearDeadlineErr != nil {
+		return r.clearDeadlineErr
+	}
 	if r.deadlineErr != nil {
 		return r.deadlineErr
 	}
@@ -169,26 +173,31 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		assert.True(t, recorder.Flushed, "expected the SSE response head to be flushed before any message is written")
 	})
 
-	t.Run("sets a fresh deadline for every SSE write and flush", func(t *testing.T) {
+	t.Run("sets and clears a deadline for every SSE write and flush", func(t *testing.T) {
 		recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
 		req.Header.Set("Accept", sseMimeType)
 
 		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{SSEWriteTimeout: time.Second})
 		require.NoError(t, err)
-		require.Len(t, recorder.deadlines, 1, "expected the initial header flush to have a deadline")
+		require.Len(t, recorder.deadlines, 2, "expected the initial header flush deadline to be set and cleared")
+		assert.False(t, recorder.deadlines[0].IsZero())
+		assert.True(t, recorder.deadlines[1].IsZero())
 
 		_, err = writer.Write([]byte(`{"data":{"id":1}}`))
 		require.NoError(t, err)
 		require.NoError(t, writer.Flush())
-		require.Len(t, recorder.deadlines, 2, "expected the data frame to refresh the deadline")
-		assert.False(t, recorder.deadlines[1].Before(recorder.deadlines[0]))
+		require.Len(t, recorder.deadlines, 4, "expected the data frame deadline to be set and cleared")
+		assert.False(t, recorder.deadlines[2].Before(recorder.deadlines[0]))
+		assert.True(t, recorder.deadlines[3].IsZero())
 
 		require.NoError(t, writer.Heartbeat())
-		require.Len(t, recorder.deadlines, 3, "expected the heartbeat to refresh the deadline")
+		require.Len(t, recorder.deadlines, 6, "expected the heartbeat deadline to be set and cleared")
+		assert.True(t, recorder.deadlines[5].IsZero())
 
 		writer.Complete()
-		require.Len(t, recorder.deadlines, 4, "expected the completion frame to refresh the deadline")
+		require.Len(t, recorder.deadlines, 8, "expected the completion frame deadline to be set and cleared")
+		assert.True(t, recorder.deadlines[7].IsZero())
 	})
 
 	t.Run("propagates an SSE flush error", func(t *testing.T) {
@@ -217,6 +226,22 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		err = writer.Heartbeat()
 		assert.ErrorIs(t, err, deadlineErr)
 		assert.ErrorContains(t, err, "set SSE write deadline")
+	})
+
+	t.Run("returns an error when clearing an SSE deadline fails", func(t *testing.T) {
+		clearDeadlineErr := errors.New("clear deadline failed")
+		recorder := &deadlineRecorder{
+			ResponseRecorder: httptest.NewRecorder(),
+			clearDeadlineErr: clearDeadlineErr,
+		}
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{SSEWriteTimeout: time.Second})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, clearDeadlineErr)
+		assert.ErrorContains(t, err, "clear SSE write deadline")
+		assert.Nil(t, writer)
 	})
 
 	t.Run("fails closed when an SSE deadline is configured but unsupported", func(t *testing.T) {

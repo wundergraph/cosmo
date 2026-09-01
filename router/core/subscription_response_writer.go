@@ -187,13 +187,18 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	return nil
 }
 
-func (f *HttpFlushWriter) writeAndFlushSSE(write func() error) error {
+func (f *HttpFlushWriter) writeAndFlushSSE(write func() error) (err error) {
 	if f.sseWriteTimeout > 0 {
 		if err := f.responseControl.SetWriteDeadline(time.Now().Add(f.sseWriteTimeout)); err != nil {
 			// Failing closed prevents a response writer without deadline support from
 			// reintroducing an unbounded shared-trigger stall.
 			return fmt.Errorf("set SSE write deadline: %w", err)
 		}
+		defer func() {
+			if clearErr := f.responseControl.SetWriteDeadline(time.Time{}); clearErr != nil {
+				err = errors.Join(err, fmt.Errorf("clear SSE write deadline: %w", clearErr))
+			}
+		}()
 	}
 
 	if err := write(); err != nil {

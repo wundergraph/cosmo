@@ -3,11 +3,14 @@ package integration
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -59,10 +62,10 @@ func readMultipartPrefix(reader *bufio.Reader) error {
 	return nil
 }
 
-func TestHeartbeats(t *testing.T) {
+func TestHTTPMultipartSubscriptions(t *testing.T) {
 	subscriptionHeartbeatInterval := time.Millisecond * 300
 
-	t.Run("should work correctly for multipart", func(t *testing.T) {
+	t.Run("send heartbeats while waiting for data", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithSubscriptionHeartbeatInterval(subscriptionHeartbeatInterval),
@@ -159,8 +162,12 @@ func TestHeartbeats(t *testing.T) {
 			assert.Equal(t, 6, dataIdx, "expected 6 data messages")
 		})
 	})
+}
 
-	t.Run("should work correctly for sse", func(t *testing.T) {
+func TestSSESubscriptions(t *testing.T) {
+	subscriptionHeartbeatInterval := time.Millisecond * 300
+
+	t.Run("send heartbeats while waiting for data", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithSubscriptionHeartbeatInterval(subscriptionHeartbeatInterval),
@@ -240,7 +247,7 @@ func TestHeartbeats(t *testing.T) {
 		})
 	})
 
-	t.Run("should write an error on sse", func(t *testing.T) {
+	t.Run("write upstream subscription errors", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithSubscriptionHeartbeatInterval(subscriptionHeartbeatInterval),
@@ -303,14 +310,278 @@ func TestHeartbeats(t *testing.T) {
 			})
 		})
 	})
+
+	testSSEWriteTimeout(t)
+	testSSENonFlusherWriter(t)
 }
 
-func TestNonFlusherWriterSubscriptionError(t *testing.T) {
-	t.Parallel()
+const blockSSEWriteHeader = "X-Test-Block-SSE-Write"
 
-	t.Run("subscription error when writer cannot flush", func(t *testing.T) {
-		t.Parallel()
+var (
+	_ core.Module                 = (*blockingSSEWriterModule)(nil)
+	_ core.RouterOnRequestHandler = (*blockingSSEWriterModule)(nil)
+)
 
+type blockingSSEWriteState struct {
+	armed        atomic.Bool
+	writeStarted chan struct{}
+	writeDone    chan struct{}
+	release      chan struct{}
+}
+
+type blockingSSEWriterModule struct {
+	state *blockingSSEWriteState
+}
+
+func (m *blockingSSEWriterModule) Module() core.ModuleInfo {
+	return core.ModuleInfo{
+		ID:       "blockingSSEWriterModule",
+		Priority: 1,
+		New: func() core.Module {
+			return &blockingSSEWriterModule{state: m.state}
+		},
+	}
+}
+
+func (m *blockingSSEWriterModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
+	if ctx.Request().Header.Get(blockSSEWriteHeader) != "true" {
+		next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+		return
+	}
+
+	next.ServeHTTP(&deadlineBlockingResponseWriter{
+		ResponseWriter: ctx.ResponseWriter(),
+		state:          m.state,
+	}, ctx.Request())
+}
+
+type deadlineBlockingResponseWriter struct {
+	http.ResponseWriter
+	state         *blockingSSEWriteState
+	deadlineNanos atomic.Int64
+}
+
+func (w *deadlineBlockingResponseWriter) Write(data []byte) (int, error) {
+	if !w.state.armed.CompareAndSwap(true, false) {
+		return w.ResponseWriter.Write(data)
+	}
+
+	close(w.state.writeStarted)
+	defer close(w.state.writeDone)
+
+	deadlineNanos := w.deadlineNanos.Load()
+	if deadlineNanos == 0 {
+		<-w.state.release
+		return 0, os.ErrDeadlineExceeded
+	}
+
+	wait := time.Until(time.Unix(0, deadlineNanos))
+	if wait <= 0 {
+		return 0, os.ErrDeadlineExceeded
+	}
+
+	timer := time.NewTimer(wait)
+	defer timer.Stop()
+
+	select {
+	case <-w.state.release:
+		return 0, os.ErrDeadlineExceeded
+	case <-timer.C:
+		return 0, os.ErrDeadlineExceeded
+	}
+}
+
+func (w *deadlineBlockingResponseWriter) Flush() {
+	if flusher, ok := w.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
+func (w *deadlineBlockingResponseWriter) FlushError() error {
+	if flusher, ok := w.ResponseWriter.(interface{ FlushError() error }); ok {
+		return flusher.FlushError()
+	}
+	w.Flush()
+	return nil
+}
+
+func (w *deadlineBlockingResponseWriter) SetWriteDeadline(deadline time.Time) error {
+	if deadline.IsZero() {
+		w.deadlineNanos.Store(0)
+		return nil
+	}
+	w.deadlineNanos.Store(deadline.UnixNano())
+	return nil
+}
+
+func (w *deadlineBlockingResponseWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}
+
+func testSSEWriteTimeout(t *testing.T) {
+	t.Run("remain writable after being idle longer than the write timeout", func(t *testing.T) {
+		const (
+			sseWriteTimeout           = 100 * time.Millisecond
+			eventIntervalMilliseconds = 500
+			eventWaitTimeout          = 5 * time.Second
+		)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithSubscriptionHeartbeatInterval(time.Minute),
+			},
+			// TLS enables HTTP/2, where an expired SSE write deadline fails the stream.
+			TLSConfig: config.TLSConfiguration{
+				Server: config.TLSServerConfiguration{
+					Enabled:  true,
+					CertFile: "../testdata/tls/cert.pem",
+					KeyFile:  "../testdata/tls/key.pem",
+				},
+			},
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.SSEServerWriteTimeout = sseWriteTimeout
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			ctx, cancel := context.WithTimeout(t.Context(), eventWaitTimeout)
+			defer cancel()
+
+			response := openCountEmpSSESubscription(
+				t,
+				ctx,
+				xEnv.RouterClient,
+				xEnv.GraphQLRequestURL(),
+				false,
+				eventIntervalMilliseconds,
+			)
+			defer response.Body.Close()
+			require.Equal(t, 2, response.ProtoMajor)
+			reader := bufio.NewReader(response.Body)
+
+			require.JSONEq(t, `{"data":{"countEmp":0}}`, readSSEData(t, reader))
+			require.JSONEq(t, `{"data":{"countEmp":1}}`, readSSEData(t, reader))
+		})
+	})
+
+	t.Run("remove a blocked subscriber after write timeout while a healthy subscriber continues", func(t *testing.T) {
+		const (
+			sseWriteTimeout  = time.Second
+			eventWaitTimeout = 5 * time.Second
+		)
+
+		state := &blockingSSEWriteState{
+			writeStarted: make(chan struct{}),
+			writeDone:    make(chan struct{}),
+			release:      make(chan struct{}),
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithCustomModules(&blockingSSEWriterModule{state: state}),
+				core.WithSubscriptionHeartbeatInterval(time.Minute),
+			},
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.SSEServerWriteTimeout = sseWriteTimeout
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			defer close(state.release)
+
+			ctx, cancel := context.WithTimeout(t.Context(), eventWaitTimeout)
+			defer cancel()
+
+			client := &http.Client{}
+			blockedResponse := openCountEmpSSESubscription(t, ctx, client, xEnv.GraphQLRequestURL(), true, 250)
+			defer blockedResponse.Body.Close()
+			healthyResponse := openCountEmpSSESubscription(t, ctx, client, xEnv.GraphQLRequestURL(), false, 250)
+			defer healthyResponse.Body.Close()
+			healthyReader := bufio.NewReader(healthyResponse.Body)
+
+			xEnv.WaitForSubscriptionCount(2, eventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, eventWaitTimeout)
+			xEnv.RequireTriggerCount(1)
+
+			readSSEData(t, healthyReader)
+			state.armed.Store(true)
+
+			select {
+			case <-state.writeStarted:
+			case <-time.After(eventWaitTimeout):
+				t.Fatal("timed out waiting for the SSE write to block")
+			}
+
+			beforeTimeout := readSSEData(t, healthyReader)
+
+			select {
+			case <-state.writeDone:
+			case <-time.After(sseWriteTimeout + time.Second):
+				t.Fatal("blocked SSE write did not return after its deadline")
+			}
+
+			xEnv.WaitForSubscriptionCount(1, eventWaitTimeout)
+			afterTimeout := readSSEData(t, healthyReader)
+			require.NotEqual(t, beforeTimeout, afterTimeout)
+		})
+	})
+}
+
+func openCountEmpSSESubscription(
+	t *testing.T,
+	ctx context.Context,
+	client *http.Client,
+	url string,
+	blocked bool,
+	intervalMilliseconds int,
+) *http.Response {
+	t.Helper()
+
+	request, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		url,
+		strings.NewReader(fmt.Sprintf(
+			`{"query":"subscription { countEmp(max: 20, intervalMilliseconds: %d) }"}`,
+			intervalMilliseconds,
+		)),
+	)
+	require.NoError(t, err)
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "text/event-stream")
+	if blocked {
+		request.Header.Set(blockSSEWriteHeader, "true")
+	}
+
+	response, err := client.Do(request)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, response.StatusCode)
+	require.Equal(t, "text/event-stream", response.Header.Get("Content-Type"))
+	return response
+}
+
+func readSSEData(t *testing.T, reader *bufio.Reader) string {
+	t.Helper()
+
+	data, err := readSSEDataLine(reader)
+	require.NoError(t, err)
+	return data
+}
+
+func readSSEDataLine(reader *bufio.Reader) (string, error) {
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			return "", err
+		}
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "data: ") {
+			return strings.TrimPrefix(line, "data: "), nil
+		}
+		if strings.HasPrefix(line, "event: complete") {
+			return "", errors.New("subscription completed before receiving data")
+		}
+	}
+}
+
+func testSSENonFlusherWriter(t *testing.T) {
+	t.Run("return an error when the response writer cannot flush", func(t *testing.T) {
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
@@ -340,8 +611,12 @@ func TestNonFlusherWriterSubscriptionError(t *testing.T) {
 			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
-			require.Contains(t, string(body), "errors")
-			require.Contains(t, string(body), "could not flush response")
+			require.Equal(
+				t,
+				`event: next
+data: {"errors":[{"message":"subscription response writer does not support flushing"}]}`,
+				string(body),
+			)
 		})
 	})
 }
