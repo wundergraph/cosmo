@@ -19,6 +19,17 @@ import { buildSchema } from '../composition/composition.js';
 import { getFederatedGraphRouterCompatibilityVersion } from '../util.js';
 import { traced } from '../tracing.js';
 
+// Identifies a field by its parent type and name, matching the (TypeName, FieldName) pairs returned by ClickHouse.
+function fieldKey(typeName: string, name: string) {
+  return `${typeName}.${name}`;
+}
+
+function appendAll<T>(target: T[], items: T[]) {
+  for (const item of items) {
+    target.push(item);
+  }
+}
+
 @traced
 export default class SchemaGraphPruner {
   constructor(
@@ -98,9 +109,16 @@ export default class SchemaGraphPruner {
     const fieldsInGracePeriod = await this.subgraphRepo.getSubgraphFieldsInGracePeriod({ subgraphId, namespaceId });
 
     // filtering out the fields that are in grace period and the fields that were added in the proposed schema
-    const fieldsToBeChecked = allFields.filter((field) => {
-      return !fieldsInGracePeriod.some((f) => f.path === field.path) && !addedFields.some((f) => f.path === field.path);
-    });
+    const excludedFieldPaths = new Set<string>();
+    for (const field of fieldsInGracePeriod) {
+      if (field.path !== null) {
+        excludedFieldPaths.add(field.path);
+      }
+    }
+    for (const field of addedFields) {
+      excludedFieldPaths.add(field.path);
+    }
+    const fieldsToBeChecked = allFields.filter((field) => !excludedFieldPaths.has(field.path));
 
     const graphPruningIssues: GraphPruningIssueResult[] = [];
     const input = [];
@@ -127,9 +145,13 @@ export default class SchemaGraphPruner {
 
     for (const r of result) {
       const { federatedGraphId, federatedGraphName, unusedFieldsWithTypeNames } = r;
-      const unusedFields = allFields.filter((field) =>
-        unusedFieldsWithTypeNames.some((f) => f.name === field.name && f.typeName === field.typeName),
-      );
+      // Index the unused fields returned by ClickHouse so the lookup below is linear in the number of fields
+      // rather than quadratic, which matters for subgraphs with thousands of (mostly unused) fields.
+      const unusedFieldKeys = new Set<string>();
+      for (const f of unusedFieldsWithTypeNames) {
+        unusedFieldKeys.add(fieldKey(f.typeName, f.name));
+      }
+      const unusedFields = allFields.filter((field) => unusedFieldKeys.has(fieldKey(field.typeName, field.name)));
       for (const field of unusedFields) {
         graphPruningIssues.push({
           graphPruningRuleType: 'UNUSED_FIELDS',
@@ -178,12 +200,16 @@ export default class SchemaGraphPruner {
     });
 
     // filtering out the deprecated fields that are in grace period and the deprecated fields that were added in the proposed schema
-    const deprecatedFieldsToBeChecked = allDeprecatedFields.filter((field) => {
-      return (
-        !deprecatedFieldsInGracePeriod.some((f) => f.path === field.path) &&
-        !addedDeprecatedFields.some((f) => f.path === field.path)
-      );
-    });
+    const excludedFieldPaths = new Set<string>();
+    for (const field of deprecatedFieldsInGracePeriod) {
+      if (field.path !== null) {
+        excludedFieldPaths.add(field.path);
+      }
+    }
+    for (const field of addedDeprecatedFields) {
+      excludedFieldPaths.add(field.path);
+    }
+    const deprecatedFieldsToBeChecked = allDeprecatedFields.filter((field) => !excludedFieldPaths.has(field.path));
 
     if (deprecatedFieldsToBeChecked.length === 0) {
       return [];
@@ -215,10 +241,13 @@ export default class SchemaGraphPruner {
     for (const r of result) {
       const { federatedGraphId, federatedGraphName, usedDeprecatedFieldsWithTypeNames } = r;
 
+      const usedFieldKeys = new Set<string>();
+      for (const f of usedDeprecatedFieldsWithTypeNames) {
+        usedFieldKeys.add(fieldKey(f.typeName, f.name));
+      }
+
       for (const field of deprecatedFieldsToBeChecked) {
-        const isUsed = usedDeprecatedFieldsWithTypeNames.some(
-          (f) => f.name === field.name && f.typeName === field.typeName,
-        );
+        const isUsed = usedFieldKeys.has(fieldKey(field.typeName, field.name));
         graphPruningIssues.push({
           graphPruningRuleType: 'DEPRECATED_FIELDS',
           severity: severityLevel === 'error' ? LintSeverity.error : LintSeverity.warn,
@@ -277,12 +306,16 @@ export default class SchemaGraphPruner {
     }
 
     const allDeprecatedFields = this.getAllFields({ schema: oldGraphQLSchema, onlyDeprecated: true });
+    const deprecatedFieldPaths = new Set<string>();
+    for (const field of allDeprecatedFields) {
+      deprecatedFieldPaths.add(field.path);
+    }
     const nonDeprecatedDeletedFields: SchemaDiff[] = [];
     const graphPruningIssues: GraphPruningIssueResult[] = [];
 
     for (const removedField of removedFields) {
       // getting all the fields that were removed without being deprecated first
-      if (!allDeprecatedFields.some((field) => field.path === removedField.path)) {
+      if (!deprecatedFieldPaths.has(removedField.path)) {
         nonDeprecatedDeletedFields.push(removedField);
       }
     }
@@ -350,11 +383,9 @@ export default class SchemaGraphPruner {
             severityLevel: severity,
           });
 
-          if (severity === 'error') {
-            graphPruneErrors.push(...unusedFields);
-          } else {
-            graphPruneWarnings.push(...unusedFields);
-          }
+          // Avoid `push(...spread)`: one issue is produced per field and federated graph, and spreading a
+          // very large array into a call throws a RangeError.
+          appendAll(severity === 'error' ? graphPruneErrors : graphPruneWarnings, unusedFields);
 
           break;
         }
@@ -369,11 +400,9 @@ export default class SchemaGraphPruner {
             addedDeprecatedFields: updatedFields.filter((field) => field.changeType === 'FIELD_DEPRECATION_ADDED'),
           });
 
-          if (severity === 'error') {
-            graphPruneErrors.push(...deprecatedFields);
-          } else {
-            graphPruneWarnings.push(...deprecatedFields);
-          }
+          // Avoid `push(...spread)`: one issue is produced per field and federated graph, and spreading a
+          // very large array into a call throws a RangeError.
+          appendAll(severity === 'error' ? graphPruneErrors : graphPruneWarnings, deprecatedFields);
 
           break;
         }
@@ -385,11 +414,9 @@ export default class SchemaGraphPruner {
             removedFields,
           });
 
-          if (severity === 'error') {
-            graphPruneErrors.push(...nonDeprecatedDeletedFields);
-          } else {
-            graphPruneWarnings.push(...nonDeprecatedDeletedFields);
-          }
+          // Avoid `push(...spread)`: one issue is produced per field and federated graph, and spreading a
+          // very large array into a call throws a RangeError.
+          appendAll(severity === 'error' ? graphPruneErrors : graphPruneWarnings, nonDeprecatedDeletedFields);
 
           break;
         }

@@ -1,7 +1,12 @@
 import { describe, expect, test } from 'vitest';
 import { buildSchema, GraphQLSchema } from 'graphql';
-import { getSchemaDiff } from '../composition/schemaCheck.js';
-import { InspectorSchemaChange, toInspectorChange } from './SchemaUsageTrafficInspector.js';
+import { SchemaCheckChangeAction } from '../../db/models.js';
+import { getSchemaDiff, SchemaDiff } from '../composition/schemaCheck.js';
+import {
+  InspectorSchemaChange,
+  SchemaUsageTrafficInspector,
+  toInspectorChange,
+} from './SchemaUsageTrafficInspector.js';
 
 describe('Schema Change converter', (ctx) => {
   describe('Arguments', (ctx) => {
@@ -492,3 +497,59 @@ async function getBreakingChanges(a: GraphQLSchema, b: GraphQLSchema): Promise<I
 
   return groups;
 }
+
+const change = (path: string, changeType: SchemaDiff['changeType'], message = `${changeType} ${path}`): SchemaDiff => ({
+  path,
+  changeType,
+  message,
+  isBreaking: true,
+  meta: {} as SchemaDiff['meta'],
+});
+
+const action = (id: string, path: string | null, changeType: string | null) =>
+  ({ id, path, changeType }) as unknown as SchemaCheckChangeAction;
+
+describe('schemaChangesToInspectorChanges', () => {
+  const inspector = new SchemaUsageTrafficInspector({} as any);
+
+  test('maps every change to the stored action with the same path and change type', () => {
+    const changes = [change('Query.a', 'FIELD_REMOVED'), change('Employee', 'TYPE_REMOVED')];
+    const actions = [
+      // Same path, different change type must not be picked up
+      action('other', 'Query.a', 'FIELD_ADDED'),
+      action('1', 'Query.a', 'FIELD_REMOVED'),
+      action('2', 'Employee', 'TYPE_REMOVED'),
+      // Actions without a path can never match a change
+      action('3', null, 'TYPE_REMOVED'),
+    ];
+
+    expect(inspector.schemaChangesToInspectorChanges(changes, actions)).toEqual<InspectorSchemaChange[]>([
+      { schemaChangeId: '1', typeName: 'Query', fieldName: 'a' },
+      { schemaChangeId: '2', typeName: 'Employee' },
+    ]);
+  });
+
+  test('uses the first matching action when duplicates are stored', () => {
+    const changes = [change('Query.a', 'FIELD_REMOVED')];
+    const actions = [action('first', 'Query.a', 'FIELD_REMOVED'), action('second', 'Query.a', 'FIELD_REMOVED')];
+
+    expect(inspector.schemaChangesToInspectorChanges(changes, actions)).toEqual<InspectorSchemaChange[]>([
+      { schemaChangeId: 'first', typeName: 'Query', fieldName: 'a' },
+    ]);
+  });
+
+  test('drops changes that cannot be inspected', () => {
+    const changes = [change('Query', 'TYPE_DESCRIPTION_CHANGED')];
+    const actions = [action('1', 'Query', 'TYPE_DESCRIPTION_CHANGED')];
+
+    expect(inspector.schemaChangesToInspectorChanges(changes, actions)).toEqual([]);
+  });
+
+  test('throws when a change has no stored action', () => {
+    const changes = [change('Query.a', 'FIELD_REMOVED', 'Field a was removed')];
+
+    expect(() => inspector.schemaChangesToInspectorChanges(changes, [])).toThrow(
+      'Could not find schema check action for change Field a was removed',
+    );
+  });
+});

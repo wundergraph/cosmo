@@ -21,7 +21,6 @@ import { and, eq, ilike, inArray, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
-import { cloneDeep } from 'lodash-es';
 import pLimit from 'p-limit';
 import { NewSchemaChangeOperationUsage, ProposalMatch, SchemaCheckChangeAction } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
@@ -62,7 +61,7 @@ import {
 } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { defaultRetentionLimitInDays } from '../constants.js';
+import { defaultRetentionLimitInDays, dbInsertBatchSize, dbInClauseBatchSize } from '../constants.js';
 import { traced } from '../tracing.js';
 import { FederatedGraphConfig, FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
@@ -71,6 +70,11 @@ import { SchemaGraphPruningRepository } from './SchemaGraphPruningRepository.js'
 import { SchemaLintRepository } from './SchemaLintRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { NamespaceRepository } from './NamespaceRepository.js';
+
+// Identifies a (change type, path) pair, e.g. to match detected breaking changes against stored overrides.
+function changeKey(changeType: string | null, path: string | null) {
+  return `${changeType ?? ''}::${path ?? ''}`;
+}
 
 @traced
 export class SchemaCheckRepository {
@@ -150,29 +154,42 @@ export class SchemaCheckRepository {
     return updatedSchemaCheck[0].id;
   }
 
-  public createSchemaCheckChanges(data: {
+  public async createSchemaCheckChanges(data: {
     schemaCheckID: string;
     changes: SchemaDiff[];
     schemaCheckSubgraphId?: string;
     isFedGraphChange?: boolean;
-  }) {
+  }): Promise<SchemaCheckChangeAction[]> {
     if (data.changes.length === 0) {
       return [];
     }
-    return this.db
-      .insert(schemaCheckChangeAction)
-      .values(
-        data.changes.map((change) => ({
-          schemaCheckId: data.schemaCheckID,
-          changeType: change.changeType,
-          changeMessage: change.message,
-          path: change.path,
-          isBreaking: change.isBreaking,
-          schemaCheckSubgraphId: data.schemaCheckSubgraphId,
-          isFedGraphChange: data.isFedGraphChange ?? false,
-        })),
-      )
-      .returning();
+
+    // Insert in batches. A single multi-row insert is limited by the number of bind parameters the
+    // Postgres wire protocol supports (65535), which a subgraph with many thousands of changes (e.g.
+    // a deletion) can easily exceed, and it also keeps the size of a single statement bounded.
+    return await this.db.transaction(async (tx) => {
+      const inserted: SchemaCheckChangeAction[] = [];
+      for (const batch of createBatches(data.changes, dbInsertBatchSize)) {
+        const rows = await tx
+          .insert(schemaCheckChangeAction)
+          .values(
+            batch.map((change) => ({
+              schemaCheckId: data.schemaCheckID,
+              changeType: change.changeType,
+              changeMessage: change.message,
+              path: change.path,
+              isBreaking: change.isBreaking,
+              schemaCheckSubgraphId: data.schemaCheckSubgraphId,
+              isFedGraphChange: data.isFedGraphChange ?? false,
+            })),
+          )
+          .returning();
+        for (const row of rows) {
+          inserted.push(row);
+        }
+      }
+      return inserted;
+    });
   }
 
   public createFederatedGraphSchemaChanges(data: {
@@ -186,29 +203,38 @@ export class SchemaCheckRepository {
     }
 
     return this.db.transaction(async (tx) => {
-      // Insert changes into schemaCheckChangeAction with isFedGraphChange: true
-      const insertedChanges = await tx
-        .insert(schemaCheckChangeAction)
-        .values(
-          data.changes.map((change) => ({
-            schemaCheckId: data.schemaCheckId,
-            changeType: change.changeType,
-            changeMessage: change.message,
-            path: change.path,
-            isBreaking: change.isBreaking,
-            isFedGraphChange: true,
-          })),
-        )
-        .returning();
+      const insertedChanges: SchemaCheckChangeAction[] = [];
 
-      // Create mappings to link changes to the federated graph
-      await tx.insert(schema.schemaCheckFederatedGraphChanges).values(
-        insertedChanges.map((change) => ({
-          schemaCheckFederatedGraphId: data.schemaCheckFederatedGraphId,
-          schemaCheckChangeActionId: change.id,
-          featureFlagId: data.featureFlagId,
-        })),
-      );
+      // Insert in batches to stay well below the Postgres bind parameter limit (see createSchemaCheckChanges).
+      for (const batch of createBatches(data.changes, dbInsertBatchSize)) {
+        // Insert changes into schemaCheckChangeAction with isFedGraphChange: true
+        const rows = await tx
+          .insert(schemaCheckChangeAction)
+          .values(
+            batch.map((change) => ({
+              schemaCheckId: data.schemaCheckId,
+              changeType: change.changeType,
+              changeMessage: change.message,
+              path: change.path,
+              isBreaking: change.isBreaking,
+              isFedGraphChange: true,
+            })),
+          )
+          .returning();
+
+        // Create mappings to link changes to the federated graph
+        await tx.insert(schema.schemaCheckFederatedGraphChanges).values(
+          rows.map((change) => ({
+            schemaCheckFederatedGraphId: data.schemaCheckFederatedGraphId,
+            schemaCheckChangeActionId: change.id,
+            featureFlagId: data.featureFlagId,
+          })),
+        );
+
+        for (const row of rows) {
+          insertedChanges.push(row);
+        }
+      }
 
       return insertedChanges;
     });
@@ -269,28 +295,30 @@ export class SchemaCheckRepository {
     const limit = pLimit(10);
 
     for (const [schemaCheckChangeActionId, operations] of schemaCheckActionOperations.entries()) {
-      values.push(
-        ...operations.map(
-          (op) =>
-            ({
-              schemaCheckChangeActionId,
-              name: op.name,
-              type: op.type,
-              hash: op.hash,
-              firstSeenAt: op.firstSeenAt,
-              lastSeenAt: op.lastSeenAt,
-              federatedGraphId,
-              isSafeOverride: op.isSafeOverride,
-            }) as NewSchemaChangeOperationUsage,
-        ),
-      );
+      // Avoid `push(...spread)` here: a popular field can be used by a very large number of
+      // operations and spreading that many arguments into a call throws a RangeError.
+      for (const op of operations) {
+        values.push({
+          schemaCheckChangeActionId,
+          name: op.name,
+          type: op.type,
+          hash: op.hash,
+          firstSeenAt: op.firstSeenAt,
+          lastSeenAt: op.lastSeenAt,
+          federatedGraphId,
+          isSafeOverride: op.isSafeOverride,
+        } as NewSchemaChangeOperationUsage);
+      }
     }
 
     if (values.length === 0) {
       return;
     }
 
-    const arrayOfValues: NewSchemaChangeOperationUsage[][] = createBatches<NewSchemaChangeOperationUsage>(values, 1000);
+    const arrayOfValues: NewSchemaChangeOperationUsage[][] = createBatches<NewSchemaChangeOperationUsage>(
+      values,
+      dbInsertBatchSize,
+    );
     const promises = [];
 
     for (const values of arrayOfValues) {
@@ -300,18 +328,6 @@ export class SchemaCheckRepository {
     await Promise.all(promises);
   }
 
-  private mapChangesFromDriverValue(val: any) {
-    if (typeof val === 'string' && val.length > 0 && val !== '{}') {
-      const pairs = val.slice(2, -2).split('","');
-
-      return pairs.map((pair) => {
-        const [changeType, path] = pair.slice(1, -1).split(',');
-        return { changeType, path };
-      });
-    }
-    return [];
-  }
-
   public async checkClientTrafficAgainstOverrides(data: {
     changes: { id: string; changeType: string | null; path: string | null }[];
     inspectorResultsByChangeId: Map<string, InspectorOperationResult[]>;
@@ -319,84 +335,112 @@ export class SchemaCheckRepository {
   }) {
     let hasUnsafeClientTraffic = false;
 
-    const result = cloneDeep(data.inspectorResultsByChangeId);
+    type ChangeAction = (typeof data.changes)[number];
 
-    const changeActionsByOperationHash: Map<string, typeof data.changes> = new Map();
-
-    for (const [schemaCheckChangeId, operationResults] of result.entries()) {
+    // The caller's map must not be mutated, so copy the operation results. A shallow copy of every
+    // operation is sufficient since we only flip `isSafeOverride`; the previous deep clone doubled the
+    // memory footprint of what can be a very large result set.
+    const result = new Map<string, InspectorOperationResult[]>();
+    for (const [schemaCheckChangeId, operationResults] of data.inspectorResultsByChangeId) {
+      const copies: InspectorOperationResult[] = [];
       for (const operationResult of operationResults) {
-        const { hash } = operationResult;
-        if (!changeActionsByOperationHash.has(hash)) {
-          changeActionsByOperationHash.set(hash, []);
-        }
+        copies.push({ ...operationResult });
+      }
+      result.set(schemaCheckChangeId, copies);
+    }
 
-        const change = data.changes.find((c) => c.id === schemaCheckChangeId);
-        if (change) {
-          changeActionsByOperationHash.get(hash)?.push(change);
+    const changeById = new Map<string, ChangeAction>();
+    for (const change of data.changes) {
+      changeById.set(change.id, change);
+    }
+
+    // For every operation hash, collect the changes that affect it together with the copied operation
+    // so we can flag the operation directly instead of searching for it again later.
+    const affectedByOperationHash = new Map<string, { change: ChangeAction; op: InspectorOperationResult }[]>();
+    for (const [schemaCheckChangeId, operationResults] of result) {
+      const change = changeById.get(schemaCheckChangeId);
+      if (!change) {
+        continue;
+      }
+      for (const op of operationResults) {
+        let affected = affectedByOperationHash.get(op.hash);
+        if (!affected) {
+          affected = [];
+          affectedByOperationHash.set(op.hash, affected);
         }
+        affected.push({ change, op });
       }
     }
 
-    for (const [hash, changes] of changeActionsByOperationHash) {
-      const incomingChanges = `array[${changes.map((c) => `('${c.changeType}'::schema_change_type, '${c.path}'::text)`)}]`;
-      const storedChanges = `array_agg(distinct (${schema.operationChangeOverrides.changeType.name}, ${schema.operationChangeOverrides.path.name}))`;
+    if (affectedByOperationHash.size === 0) {
+      return { hasUnsafeClientTraffic, result };
+    }
 
-      // Incoming changes are new breaking changes detected in the current check run
-      // Stored changes are a list of changes that have been marked as safe (override) by the user
-      // Here except tells us the incoming changes that are not safe and an intersection tells us the incoming changes that are safe
-      const res = await this.db
+    // Load the overrides for all affected operations with a few bulk queries instead of two queries per
+    // operation hash. Operations are identified by hash, so a breaking change to a popular field on a
+    // busy graph can easily be used by tens of thousands of distinct operations, which previously
+    // meant tens of thousands of sequential round trips to the database and check requests timing out.
+    const storedChangesByHash = new Map<string, Set<string>>();
+    const ignoreAllHashes = new Set<string>();
+
+    for (const hashes of createBatches([...affectedByOperationHash.keys()], dbInClauseBatchSize)) {
+      const overrides = await this.db
         .select({
-          unsafeChanges: sql
-            .raw(`array(select unnest(${incomingChanges}) except select unnest(${storedChanges}))`)
-            .mapWith({
-              mapFromDriverValue: this.mapChangesFromDriverValue,
-            }),
-          safeChanges: sql
-            .raw(`array(select unnest(${incomingChanges}) intersect select unnest(${storedChanges}))`)
-            .mapWith({
-              mapFromDriverValue: this.mapChangesFromDriverValue,
-            }),
+          hash: schema.operationChangeOverrides.hash,
+          changeType: schema.operationChangeOverrides.changeType,
+          path: schema.operationChangeOverrides.path,
         })
         .from(schema.operationChangeOverrides)
         .where(
           and(
-            eq(schema.operationChangeOverrides.hash, hash),
             eq(schema.operationChangeOverrides.namespaceId, data.namespaceId),
+            inArray(schema.operationChangeOverrides.hash, hashes),
           ),
-        )
-        .groupBy(schema.operationChangeOverrides.hash);
+        );
 
-      const ignoreAll = await this.db.query.operationIgnoreAllOverrides.findFirst({
-        where: and(
-          eq(schema.operationIgnoreAllOverrides.hash, hash),
-          eq(schema.operationIgnoreAllOverrides.namespaceId, data.namespaceId),
-        ),
-      });
+      for (const override of overrides) {
+        let storedChanges = storedChangesByHash.get(override.hash);
+        if (!storedChanges) {
+          storedChanges = new Set<string>();
+          storedChangesByHash.set(override.hash, storedChanges);
+        }
+        storedChanges.add(changeKey(override.changeType, override.path));
+      }
 
-      if (res.length === 0 && !ignoreAll) {
+      const ignoreAllOverrides = await this.db
+        .select({ hash: schema.operationIgnoreAllOverrides.hash })
+        .from(schema.operationIgnoreAllOverrides)
+        .where(
+          and(
+            eq(schema.operationIgnoreAllOverrides.namespaceId, data.namespaceId),
+            inArray(schema.operationIgnoreAllOverrides.hash, hashes),
+          ),
+        );
+
+      for (const ignoreAllOverride of ignoreAllOverrides) {
+        ignoreAllHashes.add(ignoreAllOverride.hash);
+      }
+    }
+
+    for (const [hash, affected] of affectedByOperationHash) {
+      const ignoreAll = ignoreAllHashes.has(hash);
+      // Stored changes are the changes that have been marked as safe (override) by the user for this operation
+      const storedChanges = storedChangesByHash.get(hash);
+
+      if (!storedChanges && !ignoreAll) {
         // If no safe overrides are found, then mark traffic as unsafe
         hasUnsafeClientTraffic = true;
         continue;
       }
 
-      const safeChanges = ignoreAll ? changes : res[0].safeChanges;
-
-      for (const safeChange of safeChanges) {
-        const change = changes.find((c) => c.changeType === safeChange.changeType && c.path === safeChange.path);
-        if (!change) {
-          continue;
+      // Incoming changes are the new breaking changes detected in the current check run. A change is safe
+      // for this operation if all changes are ignored or if it has explicitly been marked as safe.
+      for (const { change, op } of affected) {
+        if (ignoreAll || storedChanges?.has(changeKey(change.changeType, change.path))) {
+          op.isSafeOverride = true;
+        } else {
+          hasUnsafeClientTraffic = true;
         }
-
-        const op = result.get(change.id)?.find((c) => c.hash === hash);
-        if (!op) {
-          continue;
-        }
-
-        op.isSafeOverride = true;
-      }
-
-      if (!ignoreAll && res[0].unsafeChanges.length > 0) {
-        hasUnsafeClientTraffic = true;
       }
     }
 
@@ -1387,7 +1431,9 @@ export class SchemaCheckRepository {
 
           // Collect inspected operations for later aggregation
           for (const resultElement of fedOverrideCheck.result.values()) {
-            inspectedOperations.push(...resultElement);
+            for (const op of resultElement) {
+              inspectedOperations.push(op);
+            }
           }
         }
       }
@@ -1429,7 +1475,9 @@ export class SchemaCheckRepository {
 
         // Collect all inspected operations for later aggregation
         for (const resultElement of overrideCheck.result.values()) {
-          inspectedOperations.push(...resultElement);
+          for (const op of resultElement) {
+            inspectedOperations.push(op);
+          }
         }
       }
     }

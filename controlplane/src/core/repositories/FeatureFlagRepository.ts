@@ -1,10 +1,8 @@
-import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, count, desc, eq, inArray, like, or, sql, arrayOverlaps, isNull, isNotNull } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { validate as isValidUuid } from 'uuid';
-import { parse } from 'graphql';
 import { alias } from 'drizzle-orm/pg-core';
 import * as schema from '../../db/schema.js';
 import {
@@ -45,8 +43,20 @@ export interface FeatureFlagWithFeatureSubgraphs {
   featureSubgraphs: FeatureSubgraphDTO[];
 }
 
+/**
+ * A lightweight reference to a subgraph that takes part in a composition. Only the name (and url) are
+ * consumed when planning compositions; the SDL is parsed inside the composition worker from the
+ * `SubgraphDTO`s, so we deliberately do not carry a parsed `DocumentNode` here. Parsing every subgraph
+ * of every federated graph on the main thread (and retaining the ASTs, including their token streams,
+ * for the whole check) was a major source of heap pressure on large organizations.
+ */
+export interface CompositionSubgraphRef {
+  name: string;
+  url: string;
+}
+
 export interface SubgraphsToCompose {
-  compositionSubgraphs: Subgraph[];
+  compositionSubgraphs: CompositionSubgraphRef[];
   subgraphs: SubgraphDTO[];
   isFeatureFlagComposition: boolean;
   featureFlagName: string;
@@ -1201,7 +1211,7 @@ export class FeatureFlagRepository {
 
   getFeatureFlagRelatedSubgraphsToCompose(
     featureFlagToComposeByFlagId: Map<string, FeatureFlagWithFeatureSubgraphs>,
-    baseCompositionSubgraphs: Array<Subgraph>,
+    baseCompositionSubgraphs: Array<CompositionSubgraphRef>,
     subgraphs: Array<SubgraphDTO>,
     subgraphsToCompose: Array<SubgraphsToCompose>,
     checkedSubgraphName?: string,
@@ -1224,7 +1234,6 @@ export class FeatureFlagRepository {
         compositionSubgraphs.push({
           name: featureGraph.name,
           url: featureGraph.routingUrl,
-          definitions: parse(featureGraph.schemaSDL),
         });
         subgraphDTOs.push(featureGraph);
       }
@@ -1250,7 +1259,7 @@ export class FeatureFlagRepository {
   }: {
     baseSubgraphs: SubgraphDTO[];
     fedGraphLabelMatchers: string[];
-    baseCompositionSubgraphs: Subgraph[];
+    baseCompositionSubgraphs: CompositionSubgraphRef[];
     // When set (base subgraph checks only), skip recomposing feature flags whose feature subgraph
     // overrides this subgraph — the proposed change is swapped out, so those compositions are redundant.
     checkedSubgraphName?: string;
@@ -1395,10 +1404,9 @@ export class FeatureFlagRepository {
       published: true,
     });
 
-    const baseCompositionSubgraphs: Subgraph[] = baseSubgraphDTOs.map((s) => ({
+    const baseCompositionSubgraphs: CompositionSubgraphRef[] = baseSubgraphDTOs.map((s) => ({
       name: s.name,
       url: s.routingUrl,
-      definitions: parse(s.schemaSDL),
     }));
 
     // Clone each flag and apply the proposed change to the checked feature subgraph. An empty proposed

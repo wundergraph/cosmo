@@ -4,8 +4,10 @@ import { LintConfig, LintSeverity } from '@wundergraph/cosmo-connect/dist/platfo
 import * as schema from '../../db/schema.js';
 import { namespaceLintCheckConfig, schemaCheckLintAction, schemaCheckSubgraphs } from '../../db/schema.js';
 import { SchemaLintDTO, LintSeverityLevel, LintIssueResult, LintRule, SchemaLintIssues } from '../../types/index.js';
+import { dbInsertBatchSize } from '../constants.js';
 import SchemaLinter from '../services/SchemaLinter.js';
 import { traced } from '../tracing.js';
+import { createBatches } from '../util.js';
 
 @traced
 export class SchemaLintRepository {
@@ -61,20 +63,27 @@ export class SchemaLintRepository {
     lintIssues: LintIssueResult[];
     schemaCheckSubgraphId: string;
   }) {
-    if (lintIssues.length > 0) {
-      await this.db.insert(schemaCheckLintAction).values(
-        lintIssues.map((l) => {
-          return {
-            lintRuleType: l.lintRuleType || null,
-            schemaCheckId,
-            message: l.message,
-            location: l.issueLocation,
-            isError: l.severity === LintSeverity.error,
-            schemaCheckSubgraphId,
-          };
-        }),
-      );
+    if (lintIssues.length === 0) {
+      return;
     }
+
+    // Insert in batches to stay below the Postgres bind parameter limit (65535) for large schemas.
+    await this.db.transaction(async (tx) => {
+      for (const batch of createBatches(lintIssues, dbInsertBatchSize)) {
+        await tx.insert(schemaCheckLintAction).values(
+          batch.map((l) => {
+            return {
+              lintRuleType: l.lintRuleType || null,
+              schemaCheckId,
+              message: l.message,
+              location: l.issueLocation,
+              isError: l.severity === LintSeverity.error,
+              schemaCheckSubgraphId,
+            };
+          }),
+        );
+      }
+    });
   }
 
   public deleteExistingSchemaCheckLintIssues({
