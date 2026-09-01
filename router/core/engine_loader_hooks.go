@@ -150,10 +150,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	// singleflight leaders and followers). Must run before the tracing/metrics
 	// early returns below, which may not pass for all fetch contexts.
 	if f.headerPropagation != nil {
-		headers := responseInfo.ResponseHeaders
-		if headers == nil {
-			headers = make(http.Header)
+		if responseInfo.ResponseHeaders == nil {
+			responseInfo.ResponseHeaders = make(http.Header)
 		}
+		headers := responseInfo.ResponseHeaders
 		// A cache hit never reached the subgraph, so it carries no Cache-Control of
 		// its own. Present its remaining lifetime as one so the most restrictive
 		// algorithm still weighs it instead of the hit dropping out of the policy.
