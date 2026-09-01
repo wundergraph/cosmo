@@ -64,6 +64,7 @@ services:
       - '4006:4006'
 
   availability:
+    <<: *subgraph-base
     container_name: availability
     build:
       context: ./demo
@@ -72,6 +73,7 @@ services:
       - '4007:4007'
 
   mood:
+    <<: *subgraph-base
     container_name: mood
     build:
       context: ./demo
@@ -80,6 +82,7 @@ services:
       - '4008:4008'
 
   countries:
+    <<: *subgraph-base
     container_name: countries
     build:
       context: ./demo
