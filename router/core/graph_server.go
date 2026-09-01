@@ -1809,6 +1809,11 @@ func (s *graphServer) buildGraphMux(
 		SSEServerWriteTimeout:           s.engineExecutionConfiguration.SSEServerWriteTimeout,
 	}
 
+	if s.responseCache != nil {
+		handlerOpts.ResponseCache = s.responseCache
+		handlerOpts.ResponseCacheFallbackTTL = s.responseCacheConfig.FallbackTTL
+	}
+
 	if s.redisClient != nil {
 		handlerOpts.RateLimitConfig = s.rateLimit
 		handlerOpts.RateLimiter, err = NewCosmoRateLimiter(&CosmoRateLimiterOptions{

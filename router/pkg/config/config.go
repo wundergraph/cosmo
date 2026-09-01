@@ -1116,6 +1116,49 @@ type SubgraphExtensionPropagationConfiguration struct {
 	Algorithm              SubgraphExtensionPropagationAlgorithm `yaml:"algorithm,omitempty" envDefault:"first_write" env:"ALGORITHM"`
 }
 
+// ResponseCacheConfiguration configures caching of subgraph responses.
+type ResponseCacheConfiguration struct {
+	Enabled     bool          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	FallbackTTL time.Duration `yaml:"fallback_ttl" envDefault:"30s" env:"FALLBACK_TTL"`
+	// KeyPrefix namespaces keys against everything else sharing the store, so it
+	// is a redis concern only. The in memory provider shares its keyspace with
+	// nothing and ignores this.
+	KeyPrefix string                     `yaml:"key_prefix" envDefault:"cosmo_response_cache:" env:"KEY_PREFIX"`
+	Storage   ResponseCacheStorageConfig `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
+}
+
+// ResponseCacheStorageProvider names the backend a response cache is built on.
+type ResponseCacheStorageProvider string
+
+const (
+	// ResponseCacheStorageProviderRedis stores entries in the redis instance named
+	// by ProviderID, so every router replica shares one cache and entries
+	// outlive the process. This is the default, because it is the only one of the
+	// two that a reader of the configuration would not want to be surprised by.
+	ResponseCacheStorageProviderRedis ResponseCacheStorageProvider = "redis"
+	// ResponseCacheStorageProviderMemory stores entries in the router process. Each
+	// replica then has a cache of its own and nothing survives a restart, so it
+	// has to be asked for by name rather than fallen back into.
+	ResponseCacheStorageProviderMemory ResponseCacheStorageProvider = "memory"
+)
+
+type ResponseCacheStorageConfig struct {
+	// Provider selects the backend. An empty value is read as
+	// ResponseCacheStorageProviderRedis, both because that is what this field
+	// defaults to and because it is what a configuration assembled in go, which
+	// never passes through the yaml defaults, still means.
+	Provider ResponseCacheStorageProvider `yaml:"provider,omitempty" envDefault:"redis" env:"PROVIDER"`
+	// ProviderID names a redis storage provider declared under
+	// storage_providers.redis and only means anything with
+	// ResponseCacheStorageProviderRedis.
+	ProviderID string `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
+	// MaxEntries caps how many entries the in memory provider holds and is
+	// ignored by redis, which is capped where it lives rather than from here.
+	// Entries are counted, not measured, so what this costs depends on how big
+	// the cached subgraph responses are.
+	MaxEntries int64 `yaml:"max_entries,omitempty" envDefault:"10000" env:"MAX_ENTRIES"`
+}
+
 type StorageProviders struct {
 	S3         []S3StorageProvider         `yaml:"s3,omitempty" envPrefix:"S3_"`
 	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty" envPrefix:"CDN_"`
@@ -1559,6 +1602,7 @@ type Config struct {
 	DevelopmentMode               bool                        `yaml:"dev_mode" envDefault:"false" env:"DEV_MODE"`
 	Events                        EventsConfiguration         `yaml:"events,omitempty"`
 	CacheWarmup                   CacheWarmupConfiguration    `yaml:"cache_warmup,omitempty"`
+	ResponseCache                 ResponseCacheConfiguration  `yaml:"response_cache,omitempty" envPrefix:"RESPONSE_CACHE_"`
 
 	RouterConfigPath   string `yaml:"router_config_path,omitempty" env:"ROUTER_CONFIG_PATH"`
 	RouterRegistration bool   `yaml:"router_registration" env:"ROUTER_REGISTRATION" envDefault:"true"`
