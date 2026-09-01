@@ -30,18 +30,6 @@ func (h *testNodeServiceHandler) SelfRegister(ctx context.Context, _ *connect.Re
 	return connect.NewResponse(&nodev1.SelfRegisterResponse{}), nil
 }
 
-func (h *testNodeServiceHandler) GenerateQuery(ctx context.Context, _ *connect.Request[nodev1.GenerateQueryRequest]) (*connect.Response[nodev1.GenerateQueryResponse], error) {
-	if h.delay > 0 {
-		select {
-		case <-time.After(h.delay):
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		}
-	}
-
-	return connect.NewResponse(&nodev1.GenerateQueryResponse{}), nil
-}
-
 func newSelfRegisterForTest(t *testing.T, handler nodev1connect.NodeServiceHandler, token string, opts ...Option) SelfRegister {
 	t.Helper()
 
