@@ -30,7 +30,9 @@ RUN curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/relea
     chmod +x /usr/local/bin/dbmate
 
 # Deploy
-RUN pnpm --filter=./controlplane --prod deploy pruned
+# pnpm v10+ defaults to only deploying workspaces with inject-workspace-packages=true;
+# use --legacy to keep the previous (pnpm 9) deploy behavior we rely on here.
+RUN pnpm --filter=./controlplane --prod deploy --legacy pruned
 
 FROM --platform=${TARGETPLATFORM} node:lts-alpine
 
