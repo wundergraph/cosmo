@@ -118,6 +118,8 @@ mcp:
       instructions: 'Use the operation tools to interact with the graph.'
   storage:
     provider_id: mcp
+  output_schema:
+    enabled: true
 
 watch_config:
   enabled: true
@@ -533,6 +535,15 @@ storage_providers:
       urls:
         - 'test@localhost:8000'
         - 'test2@localhost:8001'
+
+response_cache:
+  enabled: true
+  fallback_ttl: 30s
+  key_prefix: 'response_cache_test:'
+  storage:
+    provider: 'redis'
+    provider_id: 'my_redis'
+    max_entries: 2048
 
 security:
   complexity_calculation_cache:

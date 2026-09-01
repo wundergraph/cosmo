@@ -1,3 +1,4 @@
+import { setTimeout } from 'node:timers/promises';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { type AxiosInstance, create as createHttpClient } from 'axios';
@@ -6,34 +7,43 @@ import {
   type GenerateQueryResponse,
   GenerateQueryResponseSchema,
   SatisfiedOperationType,
-} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+} from '@wundergraph/cosmo-connect/dist/ai/v1/ai_pb';
 import { create } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import * as z from 'zod';
 import { traced } from '../tracing.js';
 import * as schema from '../../db/schema.js';
+import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 
 const validationSchema = z.object({
-  schemaSha: z.string().regex(/^sha256:[\da-f]{64}$/i),
+  version: z.string().uuid(),
   prompt: z.string().trim().min(1),
+});
+
+const indexPollInterval = 1000;
+
+const indexResponseSchema = z.object({
+  index: z.object({
+    indexId: z.string().trim().min(1),
+    status: z.enum(['INDEX_STATUS_INDEXING', 'INDEX_STATUS_READY', 'INDEX_STATUS_FAILED']),
+    lastError: z.string().optional(),
+  }),
 });
 
 const ptqQuerySchema = z.object({
   description: z.string().optional(),
   document: z.string().min(1),
   operationName: z.string().min(1),
-  operationType: z.union([z.literal('query'), z.literal('mutation'), z.literal('subscription')]),
+  operationType: z.enum(['OPERATION_TYPE_QUERY', 'OPERATION_TYPE_MUTATION', 'OPERATION_TYPE_SUBSCRIPTION']),
   variablesSchema: z.string().optional(),
 });
 
 const ptqUnsatisfiedSchema = z.object({ reason: z.string() });
 
 const ptqResponseSchema = z.object({
-  resolution: z.object({
-    queries: z.array(ptqQuerySchema).optional(),
-    unsatisfied: z.array(ptqUnsatisfiedSchema).optional(),
-  }),
+  query: ptqQuerySchema.optional(),
+  unsatisfied: z.array(ptqUnsatisfiedSchema).optional(),
 });
 
 type PtQResponse = z.infer<typeof ptqResponseSchema>;
@@ -65,7 +75,12 @@ export class PromptToQueryService {
     });
   }
 
-  async generateQuery(schemaSha: string, prompt: string): Promise<GenerateQueryResponse> {
+  async generateQuery(
+    federatedGraphId: string,
+    version: string,
+    prompt: string,
+    signal?: AbortSignal,
+  ): Promise<GenerateQueryResponse> {
     if (!this.serviceAddress) {
       // The feature doesn't seem to be configured correctly
       return create(GenerateQueryResponseSchema, {
@@ -77,7 +92,7 @@ export class PromptToQueryService {
     }
 
     // Ensure that the provided parameters are valid
-    const parsed = validationSchema.safeParse({ schemaSha, prompt });
+    const parsed = validationSchema.safeParse({ version, prompt });
     if (!parsed.success) {
       return create(GenerateQueryResponseSchema, {
         response: {
@@ -98,15 +113,41 @@ export class PromptToQueryService {
       });
     }
 
+    const federatedGraphRepository = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+    const federatedGraph = await federatedGraphRepository.byId(federatedGraphId);
+    if (!federatedGraph) {
+      return create(GenerateQueryResponseSchema, {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Federated graph not found',
+        },
+      });
+    }
+
+    const schemaVersion = await federatedGraphRepository.getSdlBasedOnSchemaVersion({
+      targetId: federatedGraph.targetId,
+      schemaVersionId: parsed.data.version,
+    });
+    if (!schemaVersion?.sdl) {
+      return create(GenerateQueryResponseSchema, {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Schema version not found for this federated graph',
+        },
+      });
+    }
+
     // Invoke the `prompt to query` service
     try {
-      const response = await this.#httpClient('/yoko.v1.YokoService/GenerateQuery', {
+      const indexId = await this.ensureIndex(schemaVersion.sdl, signal);
+      const response = await this.#httpClient('/yoko.v1.YokoService/PromptToQuery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({
-          indexId: parsed.data.schemaSha,
+          indexId,
           prompt: parsed.data.prompt,
         }),
+        signal,
       });
 
       const parsedResponse = ptqResponseSchema.safeParse(response.data);
@@ -152,15 +193,52 @@ export class PromptToQueryService {
     }).catch((e) => this.logger.error(e, 'Failed to index schema due an unexpected error'));
   }
 
+  private async ensureIndex(schemaSDL: string, signal?: AbortSignal): Promise<string> {
+    const response = await this.#httpClient('/yoko.v1.YokoService/EnsureIndex', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: JSON.stringify({ sdl: schemaSDL }),
+      signal,
+    });
+
+    let index = PromptToQueryService.parseIndexResponse(response.data);
+    while (index.status === 'INDEX_STATUS_INDEXING') {
+      await setTimeout(indexPollInterval, undefined, { signal });
+
+      const response = await this.#httpClient('/yoko.v1.YokoService/GetIndex', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({ indexId: index.indexId }),
+        signal,
+      });
+      index = PromptToQueryService.parseIndexResponse(response.data);
+    }
+
+    if (index.status === 'INDEX_STATUS_FAILED') {
+      throw new Error(`Prompt to Query index generation failed${index.lastError ? `: ${index.lastError}` : ''}`);
+    }
+
+    return index.indexId;
+  }
+
+  private static parseIndexResponse(response: unknown): z.infer<typeof indexResponseSchema>['index'] {
+    const parsed = indexResponseSchema.safeParse(response);
+    if (!parsed.success) {
+      throw new Error('It was not possible to parse the response returned by the Prompt to Query index service');
+    }
+
+    return parsed.data.index;
+  }
+
   private static getOperationType(type: z.infer<typeof ptqQuerySchema>['operationType']): SatisfiedOperationType {
     switch (type) {
-      case 'query': {
+      case 'OPERATION_TYPE_QUERY': {
         return SatisfiedOperationType.QUERY;
       }
-      case 'mutation': {
+      case 'OPERATION_TYPE_MUTATION': {
         return SatisfiedOperationType.MUTATION;
       }
-      case 'subscription': {
+      case 'OPERATION_TYPE_SUBSCRIPTION': {
         return SatisfiedOperationType.SUBSCRIPTION;
       }
     }
@@ -169,13 +247,11 @@ export class PromptToQueryService {
   }
 
   private static handleServiceResponse(response: PtQResponse): GenerateQueryResponse {
-    const { resolution } = response;
-    if (!resolution?.queries?.length) {
-      const { unsatisfied } = resolution;
+    if (!response.query) {
       let failureDetails = 'It was not possible to generate a query from the provided prompt';
-      if (unsatisfied?.length) {
+      if (response.unsatisfied?.length) {
         failureDetails += ':';
-        for (const { reason } of unsatisfied) {
+        for (const { reason } of response.unsatisfied) {
           failureDetails += `\n - ${reason}`;
         }
       }
@@ -188,7 +264,7 @@ export class PromptToQueryService {
       });
     }
 
-    const generated = resolution.queries[0];
+    const generated = response.query;
     return create(GenerateQueryResponseSchema, {
       response: { code: EnumStatusCode.OK },
       query: {
