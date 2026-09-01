@@ -456,7 +456,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	}
 	if fromCache {
 		if fromCacheHasTTL, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.Name, includeOperationName); fromCacheHasTTL {
-			if err := o.renewAPQTTL(ctx, clientInfo.Name); err != nil {
+			if err := o.renewAPQTTL(ctx); err != nil {
 				return false, false, err
 			}
 		}
@@ -468,7 +468,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		isAPQ = true
 
 		// If the operation was fetched with APQ, save it again to renew the TTL
-		err := o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query)
+		err := o.operationProcessor.persistedOperationClient.SaveOperation(ctx, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query)
 		if err != nil {
 			return false, true, err
 		}
@@ -501,7 +501,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 
 		// If the operation was fetched with APQ, save it again to renew the TTL
 		if isAPQ {
-			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
+			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
 				return false, true, err
 			}
 		}
@@ -510,21 +510,9 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	return false, isAPQ, nil
 }
 
-func (o *OperationKit) renewAPQTTL(ctx context.Context, clientName string) error {
+func (o *OperationKit) renewAPQTTL(ctx context.Context) error {
 	sha256Hash := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
-	// Reload the raw APQ body because normalization can remove conditional fields.
-	operationBody, isAPQ, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientName, sha256Hash)
-	if err != nil {
-		return err
-	}
-	if !isAPQ {
-		return nil
-	}
-	if len(operationBody) == 0 {
-		return nil
-	}
-
-	return o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientName, sha256Hash, string(operationBody))
+	return o.operationProcessor.persistedOperationClient.RenewOperation(ctx, sha256Hash)
 }
 
 const (
