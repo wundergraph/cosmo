@@ -223,15 +223,15 @@ export class PromptToQueryService {
        */
       index = await retryWithBackoff<IndexStatusResponse>(
         async (abortSignal) => {
-          const response = await this.#httpClient('/yoko.v1.YokoService/EnsureIndex', {
+          const response = await this.#httpClient('/yoko.v1.YokoService/GetIndex', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            data: JSON.stringify({ sdl: schemaSDL }),
+            data: JSON.stringify({ indexId: index.indexId }),
             signal: abortSignal,
           });
 
           const result = PromptToQueryService.parseIndexResponse(response.data);
-          if (result?.status === 'INDEX_STATUS_INDEXING') {
+          if (result.status === 'INDEX_STATUS_INDEXING') {
             throw new IndexStatusIndexingError(index);
           }
 
