@@ -127,7 +127,10 @@ export const DefaultHeadersDialog = () => {
   const canEditGraphHeaders = data?.canEditGraphHeaders ?? false;
   const preview = effectiveDefaultHeadersString(graphEntries, personalEntries);
 
-  const hasInvalidKey = graphEntries.some(isInvalidKey) || personalEntries.some(isInvalidKey);
+  // Only gate Save on rows the user can actually fix. The graph rows are read-only
+  // for a non-admin and `save` omits them from the request entirely, so letting them
+  // disable Save would strand the user with no way to save their own headers.
+  const hasInvalidKey = personalEntries.some(isInvalidKey) || (canEditGraphHeaders && graphEntries.some(isInvalidKey));
 
   const save = () => {
     const toHeaders = (entries: DefaultHeaderEntry[]) => ({
