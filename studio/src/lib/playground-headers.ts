@@ -2,7 +2,7 @@ import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE } from '@/lib/constants';
 
 /**
  * Keep this regex character-for-character identical to the one in
- * `controlplane/src/core/bufservices/playground/updatePlaygroundDefaultHeaders.ts`.
+ * `controlplane/src/core/util.ts`.
  * The server intentionally duplicates it so it can reject header names the
  * studio would reject, without depending on this package.
  */
