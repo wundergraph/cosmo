@@ -339,6 +339,57 @@ describe('Playground Default Headers', () => {
     },
   );
 
+  test.each([
+    ['CRLF', 'Bearer abc\r\nX-Injected: evil'],
+    ['bare LF', 'Bearer abc\nX-Injected: evil'],
+    ['NUL', 'Bearer abc\u0000'],
+  ])('Should reject a header value containing %s', async (_label, value) => {
+    const { client, server } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
+
+    const graphName = genID('fedGraph');
+    await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+
+    const res = await client.updatePlaygroundDefaultHeaders({
+      federatedGraphName: graphName,
+      namespace: 'default',
+      personalHeaders: { headers: [{ key: 'Authorization', value }] },
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.ERR);
+
+    // Rejected before persistence.
+    const after = await client.getPlaygroundDefaultHeaders({
+      federatedGraphName: graphName,
+      namespace: 'default',
+    });
+    expect(after.personalHeaders).toEqual([]);
+  });
+
+  test('Should accept a header value containing spaces and tabs', async () => {
+    const { client, server } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
+
+    const graphName = genID('fedGraph');
+    await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+
+    // HTAB and space are legal in a field value per RFC 7230; only other C0 controls are not.
+    const value = 'Bearer a b\tc';
+    const res = await client.updatePlaygroundDefaultHeaders({
+      federatedGraphName: graphName,
+      namespace: 'default',
+      personalHeaders: { headers: [{ key: 'Authorization', value }] },
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.OK);
+
+    const after = await client.getPlaygroundDefaultHeaders({
+      federatedGraphName: graphName,
+      namespace: 'default',
+    });
+    expect(after.personalHeaders.map(({ key, value: v }) => ({ key, value: v }))).toEqual([
+      { key: 'Authorization', value },
+    ]);
+  });
+
   test('Deleting the federated graph removes its stored default headers', async () => {
     const { client, server } = await SetupTest({ dbname });
     onTestFinished(() => server.close());
