@@ -21,7 +21,6 @@ import { and, eq, ilike, inArray, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
-import pLimit from 'p-limit';
 import { NewSchemaChangeOperationUsage, ProposalMatch, SchemaCheckChangeAction } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -294,7 +293,6 @@ export class SchemaCheckRepository {
     federatedGraphId: string,
   ) {
     const values: NewSchemaChangeOperationUsage[] = [];
-    const limit = pLimit(10);
 
     for (const [schemaCheckChangeActionId, operations] of schemaCheckActionOperations.entries()) {
       // Avoid `push(...spread)` here: a popular field can be used by a very large number of
@@ -317,17 +315,13 @@ export class SchemaCheckRepository {
       return;
     }
 
-    const arrayOfValues: NewSchemaChangeOperationUsage[][] = createBatches<NewSchemaChangeOperationUsage>(
-      values,
-      DB_INSERT_BATCH_SIZE,
-    );
-    const promises = [];
-
-    for (const values of arrayOfValues) {
-      promises.push(limit(() => this.db.insert(schemaCheckChangeActionOperationUsage).values(values).execute()));
-    }
-
-    await Promise.all(promises);
+    // Insert in batches to stay below the Postgres bind parameter limit, but within a single transaction so a
+    // failing batch does not leave a schema check with partially stored operation usage.
+    await this.db.transaction(async (tx) => {
+      for (const batch of createBatches<NewSchemaChangeOperationUsage>(values, DB_INSERT_BATCH_SIZE)) {
+        await tx.insert(schemaCheckChangeActionOperationUsage).values(batch).execute();
+      }
+    });
   }
 
   public async checkClientTrafficAgainstOverrides(data: {
