@@ -1321,9 +1321,9 @@ These apply when `cluster_enabled: true`.
 | Parameter        | Description                                                                                | Default Value |
 | ---------------- | ------------------------------------------------------------------------------------------ | ------------- |
 | max_redirects    | Number of MOVED/ASK redirects to follow before giving up on a command.                      | 3             |
-| read_only        | Allow routing read-only commands to replicas.                                               | false         |
-| route_by_latency | Route read-only commands to the closest node by measured latency. Implies `read_only`.      | false         |
-| route_randomly   | Route read-only commands to a random node. Implies `read_only`.                             | false         |
+| read_only        | Route read-only commands to a replica of the shard that owns the key, instead of its master. Requires a cluster that has replicas, see [Reading from replicas](/router/configuration#reading-from-replicas). | false         |
+| route_by_latency | Route read-only commands to whichever node of the shard has the lowest measured latency, the master included. Implies `read_only`. | false         |
+| route_randomly   | Route read-only commands to a random node of the shard, the master included. Implies `read_only`. | false         |
 
 <Warning>
   With `cluster_enabled: true`, query parameters are only read from the **first** URL in the list. The router uses the remaining URLs as additional cluster seed addresses and takes only their host and port, so parameters placed on them are silently dropped. Put all connection options on the first URL.
@@ -1341,6 +1341,35 @@ These apply when `cluster_enabled: true`.
 
   Setting `max_active_conns` lower than `pool_size` therefore admits more concurrent commands than there are connections available for, and the excess fails instead of queueing. Keep `max_active_conns` at or above `pool_size`, or leave it unset.
 </Warning>
+
+### Reading from replicas
+
+`read_only=true` sends read-only commands to a replica of the shard that owns the key instead of to its master, which spreads read traffic over more nodes. It is a Redis Cluster feature, so it needs `cluster_enabled: true`.
+
+```yaml config.yaml
+storage_providers:
+  redis:
+    - id: "redis-provider"
+      urls:
+        - "redis://localhost:7001?read_only=true" # options read from the first URL only
+        - "redis://localhost:7002"
+        - "redis://localhost:7003"
+      cluster_enabled: true
+```
+
+Only commands that Redis itself flags as read-only are routed this way. Writes always go to the master, and so do Lua scripts, because `EVALSHA` carries no read-only flag. The rate limiter's counter script therefore keeps running on the master and is unaffected by this setting, while features that read with a plain `GET`, such as automatic persisted queries, start reading from replicas.
+
+The cluster has to actually have replicas for the setting to do anything. Against a cluster of masters only it changes nothing, and a shard whose replica is unreachable falls back to its master. Reads keep working in both cases, they just are not distributed, and neither case is reported as an error.
+
+<Warning>
+  Replication is asynchronous, so a replica can answer with an older value than the master holds, or miss a key entirely for a moment after it is written. A `GET` that immediately follows its `SET` may return the previous value or nothing at all. For automatic persisted queries that means an operation can look unregistered on the request right after it was registered. Only enable `read_only` where a stale read is acceptable.
+</Warning>
+
+`route_by_latency` and `route_randomly` both imply `read_only`, but they choose among all nodes of the shard, the master included. They distribute reads without guaranteeing that a replica serves them, and `route_by_latency` in particular often settles on the master when it is the closest node. Plain `read_only` always prefers a replica.
+
+<Note>
+  These three parameters are only recognised on a cluster URL. Without `cluster_enabled: true` the router fails at startup with `redis: unexpected option: read_only`.
+</Note>
 
 ### Sizing the pool
 
@@ -2307,6 +2336,7 @@ For mor information on how to use the expression language, please refer to the [
 | Rate Limiting Simple Strategy](/router/configuration#rate-limiting-simple-strategy)      | simple                |                                               |                                                                                                                                                                                                                                                                                        |               |
 |                                                                                          | storage               | <Icon icon="square" />                        | [Rate Limiting Redis Storage](/router/configuration#rate-limiting-redis-storage)                                                                                                                                                                                                       |               |
 | RATE_LIMIT_KEY_SUFFIX_EXPRESSION                                                         | key_suffix_expression | <Icon icon="square" />                        | The expression to define a key suffix for the rate limit, e.g. by using request headers, claims, or a combination of both with a fallback strategy. The expression is specified as a string and needs to evaluate to a string. Please see https://expr-lang.org/ for more information. |               |
+| RATE_LIMIT_EXCLUDE_SUBSCRIPTIONS                                                         | exclude_subscriptions | <Icon icon="square" />                        | Exclude subscription operations from rate limiting. Queries and mutations remain rate limited, including those sent over subscription transports like WebSockets.                                                                                                                     | false         |
 |                                                                                          | error_extension_code  | <Icon icon="square" />                        |                                                                                                                                                                                                                                                                                        |               |
 | [Rate Limit Error Extension Code](/router/configuration#rate-limit-error-extension-code) |                       |                                               |                                                                                                                                                                                                                                                                                        |               |
 
@@ -2365,10 +2395,16 @@ rate_limit:
         key_prefix: "cosmo_rate_limit"
     debug: false
     key_suffix_expression: "request.header.Get('X-Api-Key')"
+    exclude_subscriptions: false
     error_extension_code:
         enabled: true
         code: "RATE_LIMIT_EXCEEDED"
 ```
+
+<Warning>
+  Excluding subscriptions from rate limiting can expose the router and your subgraphs to a denial-of-service risk, as an unrestricted client can open subscriptions that trigger unbounded subgraph fetches. Prefer a `key_suffix_expression` based on request headers where possible.
+  If subscriptions are not excluded, every subgraph request done while the subscription is active will be subject to the rate limiting.
+</Warning>
 
 ## Subgraph Data Propagation
 

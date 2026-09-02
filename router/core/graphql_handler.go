@@ -218,7 +218,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.engineLoaderHooks != nil {
 		resolveCtx.SetEngineLoaderHooks(h.engineLoaderHooks)
 	}
-	resolveCtx = h.configureRateLimiting(resolveCtx)
+	resolveCtx = h.configureRateLimiting(resolveCtx, reqCtx.operation.opType)
 	if h.responseCacheStore != nil {
 		resolveCtx.SetResponseCache(h.responseCacheStore, h.responseCacheFallbackTTL, h.responseCacheErrorHandler)
 	}
@@ -452,7 +452,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Context {
+func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context, opType OperationType) *resolve.Context {
 	if h.rateLimiter == nil {
 		return ctx
 	}
@@ -463,6 +463,9 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Co
 		return ctx
 	}
 	if h.rateLimitConfig.Strategy != "simple" {
+		return ctx
+	}
+	if h.rateLimitConfig.ExcludeSubscriptions && opType == OperationTypeSubscription {
 		return ctx
 	}
 	ctx.SetRateLimiter(h.rateLimiter)
