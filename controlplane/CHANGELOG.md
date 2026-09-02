@@ -4,6 +4,23 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.249.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.248.0...controlplane@0.249.0) (2026-08-31)
+
+### Features
+
+* add migration scripts for otel_spans_by_trace table and materialized view ([#3186](https://github.com/wundergraph/cosmo/issues/3186)) ([5f85878](https://github.com/wundergraph/cosmo/commit/5f85878984d451455009a10fc3dee961afc903e9)) (@JivusAyrus)
+* add traces_detail_by_time table and materialized view for enhanced trace data retrieval ([#3093](https://github.com/wundergraph/cosmo/issues/3093)) ([8d60ddb](https://github.com/wundergraph/cosmo/commit/8d60ddbce9440fc415c893a0c652ec938ea39497)) (@JivusAyrus)
+
+# [0.248.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.247.1...controlplane@0.248.0) (2026-08-30)
+
+### Bug Fixes
+
+* allow AWS default credential chain for S3 storage ([#3116](https://github.com/wundergraph/cosmo/issues/3116)) ([7530061](https://github.com/wundergraph/cosmo/commit/7530061b6171b55d2ef51a516a92f405f2d05b70)) (@davideugui1)
+
+### Features
+
+* upgrade keycloak to 26.7.2 ([#3181](https://github.com/wundergraph/cosmo/issues/3181)) ([23daace](https://github.com/wundergraph/cosmo/commit/23daaced53bda57c52673aef2dc38e0398dd6c42)) (@JivusAyrus)
+
 ## [0.247.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.247.0...controlplane@0.247.1) (2026-08-26)
 
 ### Bug Fixes

@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -37,7 +38,7 @@ func TestResponseCacheInMemory(t *testing.T) {
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(),
 				"the second request must be served from the cache")
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Employees.Load(),
-				"only the entity fetch is cached, the root fetch still runs")
+				"the root fetch is cacheable too, but employees answers without a Cache-Control header, so it is not cached")
 		})
 	})
 
@@ -339,6 +340,260 @@ func TestResponseCacheInMemory(t *testing.T) {
 			require.Equal(t, batch.Body, repeat.Body)
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(),
 				"a batch containing an entity that was never cached must go back to the subgraph")
+		})
+	})
+}
+
+// A root query fetch is cached as one entry holding its whole answer, so what is
+// keyed is the request the router sent rather than any one entity in the answer.
+func TestRootFetchResponseCacheInMemory(t *testing.T) {
+	t.Parallel()
+
+	t.Run("a second identical request does not reach the subgraph", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: responseCacheOptions(time.Minute),
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: cacheControlMiddleware("public, max-age=60"),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			const query = `query { employees { id } }`
+
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+
+			// The bodies, not just the counter: a cache that served the wrong
+			// bytes would satisfy the counter on its own.
+			require.Equal(t, first.Body, second.Body)
+			require.Contains(t, first.Body, `"employees"`)
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load(),
+				"the second request must be served from the cache")
+		})
+	})
+
+	t.Run("different variable values do not share an entry", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: responseCacheOptions(time.Minute),
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: cacheControlMiddleware("public, max-age=60"),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			const query = `query Employee($id: Int!) { employee(id: $id) { id } }`
+
+			one := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query, Variables: json.RawMessage(`{"id":1}`)})
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query, Variables: json.RawMessage(`{"id":1}`)})
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load(),
+				"the same variables must be served from the cache")
+
+			another := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query, Variables: json.RawMessage(`{"id":2}`)})
+
+			require.NotEqual(t, one.Body, another.Body)
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Employees.Load(),
+				"the variables are part of the request, so they are part of the key")
+		})
+	})
+
+	t.Run("forwarded headers do not separate entries", func(t *testing.T) {
+		t.Parallel()
+
+		// Pins today's behaviour rather than endorsing it. The cache key is built
+		// from the request the router renders for the subgraph, and header
+		// propagation runs after that, so a propagated header never reaches the
+		// key. A subgraph whose answer varies by header must therefore not mark
+		// that answer public, or one caller is served another caller's response.
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: append(responseCacheOptions(time.Minute),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{Operation: config.HeaderRuleOperationPropagate, Named: "X-Tenant"},
+						},
+					},
+				}),
+			),
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: cacheControlMiddleware("public, max-age=60"),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			forTenant := func(tenant string) *testenv.TestResponse {
+				return xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:  `query { employees { id } }`,
+					Header: http.Header{"X-Tenant": []string{tenant}},
+				})
+			}
+
+			one := forTenant("one")
+			another := forTenant("another")
+
+			require.Equal(t, one.Body, another.Body)
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load(),
+				"the second tenant is served the first tenant's entry, which is why a "+
+					"header dependent answer must not be marked public")
+		})
+	})
+
+	t.Run("a root fetch the subgraph did not mark cacheable is not cached", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: responseCacheOptions(time.Minute),
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: cacheControlMiddleware("private, max-age=60"),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			const query = `query { employees { id } }`
+
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Employees.Load(),
+				"private names a cache that belongs to one client, which this is not")
+		})
+	})
+
+	t.Run("several root fields answered by one subgraph are one entry", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: responseCacheOptions(time.Minute),
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: cacheControlMiddleware("public, max-age=60"),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			const both = `query { employees { id } firstEmployee { id } }`
+			const narrower = `query { employees { id } }`
+
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: both})
+			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: both})
+
+			require.Equal(t, first.Body, second.Body)
+			require.Contains(t, first.Body, `"firstEmployee"`)
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load(),
+				"the planner asks for both root fields in one fetch, and one fetch is one entry")
+
+			third := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: narrower})
+
+			// The entry is the whole answer, so nothing can be taken out of it.
+			// A cache that served the wider entry here would answer with a field
+			// this operation never selected.
+			require.NotContains(t, third.Body, `"firstEmployee"`)
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Employees.Load(),
+				"a narrower operation is a different request, so it is a miss even though its field sits inside the cached entry")
+
+			fourth := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: narrower})
+
+			require.Equal(t, third.Body, fourth.Body)
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Employees.Load(),
+				"the narrower operation then keeps an entry of its own")
+		})
+	})
+
+	t.Run("root fields answered by different subgraphs are cached separately", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: responseCacheOptions(time.Minute),
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: cacheControlMiddleware("public, max-age=60"),
+				},
+				Family: testenv.SubgraphConfig{
+					Middleware: cacheControlMiddleware("public, max-age=60"),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// One operation, two root fetches: employees to the employees
+			// subgraph and findEmployees to the family one.
+			const query = `query { employees { id } findEmployees(criteria: {nested: {maritalStatus: MARRIED}}) { id } }`
+
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+
+			require.Equal(t, first.Body, second.Body)
+			require.Contains(t, first.Body, `"findEmployees"`)
+
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load(),
+				"each root fetch is keyed by its own request, so each is its own entry")
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Family.Load(),
+				"each root fetch is keyed by its own request, so each is its own entry")
+		})
+	})
+}
+
+// TestResponseCacheWithMultiFetch pins what engine.enable_multi_fetch costs the
+// response cache. The merged entity fetch it produces is not cached and nothing
+// reports that it was skipped, while the root query fetch of the same operation
+// is cached as it would be without the flag.
+func TestResponseCacheWithMultiFetch(t *testing.T) {
+	t.Parallel()
+
+	const query = `query Requires {
+	  products {
+		__typename
+		... on Consultancy {
+		  lead {
+			__typename
+			id
+			derivedMood
+		  }
+		  isLeadAvailable
+		}
+	  }
+	  findEmployees(criteria: {nested: {maritalStatus: MARRIED}}) {
+		id
+	  }
+	}`
+
+	t.Run("the merged entity fetch is re-sent on every request", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: responseCacheOptions(time.Minute),
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.EnableMultiFetch = true
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees:    testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
+				Family:       testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
+				Mood:         testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
+				Availability: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Employees.Load(),
+				"the first request is a miss throughout: the root fetch, then the two entity fetches merged into one")
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Family.Load(),
+				"and the other root fetch")
+
+			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+
+			require.Equal(t, first.Body, second.Body)
+			require.Contains(t, first.Body, `"derivedMood"`)
+			require.Contains(t, first.Body, `"isLeadAvailable"`)
+			require.Contains(t, first.Body, `"findEmployees"`)
+
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Family.Load(),
+				"enable_multi_fetch has nothing to merge here and leaves root caching alone")
+			require.EqualValues(t, 3, xEnv.SubgraphRequestCount.Employees.Load(),
+				"the merged entity fetch is re-sent, so it was never cached")
+
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(),
+				"an entity fetch with nothing to merge with is cached as usual")
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Availability.Load(),
+				"an entity fetch with nothing to merge with is cached as usual")
 		})
 	})
 }

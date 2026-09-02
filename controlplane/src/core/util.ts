@@ -513,23 +513,24 @@ export function createS3ClientConfig(bucketName: string, opts: S3StorageOptions)
   const accessKeyId = url.username || username || '';
   const secretAccessKey = url.password || password || '';
 
-  if (!accessKeyId || !secretAccessKey) {
-    throw new Error('Missing S3 credentials. Please provide access key ID and secret access key.');
-  }
-
   if (!region) {
     throw new Error('Missing region in S3 configuration.');
   }
 
-  return {
+  const config: S3ClientConfig = {
     region,
     endpoint,
-    credentials: {
-      accessKeyId,
-      secretAccessKey,
-    },
     forcePathStyle,
   };
+
+  if (accessKeyId && secretAccessKey) {
+    config.credentials = {
+      accessKeyId,
+      secretAccessKey,
+    };
+  }
+
+  return config;
 }
 
 export function extractS3BucketName(opts: S3StorageOptions) {
