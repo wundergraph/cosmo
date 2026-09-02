@@ -18,7 +18,12 @@ import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
 import DOMPurify from 'isomorphic-dompurify';
 import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
-import { ProposalOrigin, Subgraph, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  PlaygroundHeader,
+  ProposalOrigin,
+  Subgraph,
+  SubgraphType,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole, ProposalOrigin as ProposalOriginEnum, WebsocketSubprotocol } from '../db/models.js';
 import {
   AuthContext,
@@ -54,6 +59,10 @@ const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
 const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
 const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
 const pluginVersionRegex = /^v\d+$/;
+// Matches studio/src/lib/playground-headers.ts:isValidHeaderName. Keep the two in sync.
+// The character class is kept verbatim (rather than reordered) so the two copies stay diffable.
+// eslint-disable-next-line unicorn/better-regex
+const headerNameRegex = /^[\^`\-\w!#$%&'*+.|~]+$/;
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -349,6 +358,32 @@ export const isValidGraphName = (name: string): boolean => {
 
 export const isValidPluginVersion = (version: string): boolean => {
   return pluginVersionRegex.test(version);
+};
+
+export const isValidHeaderName = (name: string): boolean => {
+  return headerNameRegex.test(name);
+};
+
+/**
+ * Returns the first problem found in a playground header list, or undefined when it is valid.
+ * `scopeLabel` names the list in the returned message, e.g. 'graph' or 'personal'.
+ */
+export const validatePlaygroundHeaders = (headers: PlaygroundHeader[], scopeLabel: string): string | undefined => {
+  const seen = new Set<string>();
+
+  for (const header of headers) {
+    if (!isValidHeaderName(header.key)) {
+      return `Header name must be a valid HTTP token [${header.key}] in ${scopeLabel} headers`;
+    }
+
+    const lowered = header.key.toLowerCase();
+    if (seen.has(lowered)) {
+      return `Duplicate header name [${header.key}] in ${scopeLabel} headers`;
+    }
+    seen.add(lowered);
+  }
+
+  return undefined;
 };
 
 export const validateDateRanges = ({
