@@ -138,6 +138,12 @@ export const DefaultHeadersDialog = () => {
   // disable Save would strand the user with no way to save their own headers.
   const hasInvalidKey = personalEntries.some(isInvalidKey) || (canEditGraphHeaders && graphEntries.some(isInvalidKey));
 
+  const closeDialog = () => {
+    setPersonalDraft(null);
+    setGraphDraft(null);
+    setIsOpen(false);
+  };
+
   const save = () => {
     const toHeaders = (entries: DefaultHeaderEntry[]) => ({
       headers: entries.filter((entry) => entry.key.trim() !== ''),
@@ -158,7 +164,7 @@ export const DefaultHeadersDialog = () => {
           }
 
           toast({ description: 'Default headers saved', duration: 3000 });
-          setIsOpen(false);
+          closeDialog();
           // Refresh in the background: the playground page observes this same query
           // to seed new tabs, and the dialog re-seeds from fresh data on next open.
           refetch();
@@ -174,11 +180,11 @@ export const DefaultHeadersDialog = () => {
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        if (!open) {
-          setPersonalDraft(null);
-          setGraphDraft(null);
+        if (open) {
+          setIsOpen(true);
+          return;
         }
-        setIsOpen(open);
+        closeDialog();
       }}
     >
       <Tooltip delayDuration={100}>
@@ -239,7 +245,7 @@ export const DefaultHeadersDialog = () => {
         )}
 
         <DialogFooter>
-          <Button variant="secondary" onClick={() => setIsOpen(false)}>
+          <Button variant="secondary" onClick={closeDialog}>
             Cancel
           </Button>
           <Button onClick={save} disabled={isPending || isLoading || isError || hasInvalidKey}>
