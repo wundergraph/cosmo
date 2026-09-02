@@ -11,6 +11,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Loader } from '@/components/ui/loader';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
 import { DefaultHeaderEntry, effectiveDefaultHeadersString, isValidHeaderName } from '@/lib/playground-headers';
@@ -113,7 +114,12 @@ export const DefaultHeadersDialog = () => {
   const federatedGraphName = graphContext?.graph?.name ?? '';
   const namespace = graphContext?.graph?.namespace ?? '';
 
-  const { data, refetch } = useQuery(
+  const {
+    data,
+    isPending: isLoading,
+    isError,
+    refetch,
+  } = useQuery(
     getPlaygroundDefaultHeaders,
     { federatedGraphName, namespace },
     { enabled: !!federatedGraphName, retry: 1, staleTime: 5 * 60 * 1000 },
@@ -194,43 +200,49 @@ export const DefaultHeadersDialog = () => {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-y-6">
-          <div className="space-y-3">
-            <h3 className="select-none text-sm font-medium">My defaults</h3>
-            <p className="text-xs text-muted-foreground">
-              Only you can see these. They override the graph defaults for headers with the same name.
-            </p>
-            <HeaderRows entries={personalEntries} onChange={setPersonalDraft} />
+        {isLoading ? (
+          <div className="py-12">
+            <Loader />
           </div>
+        ) : (
+          <div className="flex flex-col gap-y-6">
+            <div className="space-y-3">
+              <h3 className="select-none text-sm font-medium">My defaults</h3>
+              <p className="text-xs text-muted-foreground">
+                Only you can see these. They override the graph defaults for headers with the same name.
+              </p>
+              <HeaderRows entries={personalEntries} onChange={setPersonalDraft} />
+            </div>
 
-          <div className="space-y-3">
-            <h3 className="select-none text-sm font-medium">Graph defaults</h3>
-            <p className="text-xs text-muted-foreground">
-              {canEditGraphHeaders
-                ? 'Shared with everyone in this organization who can view this graph.'
-                : 'Shared with everyone in this organization. Only a graph admin can change these.'}
-            </p>
-            <HeaderRows entries={graphEntries} disabled={!canEditGraphHeaders} onChange={setGraphDraft} />
-            <Alert>
-              <InfoCircledIcon className="h-4 w-4" />
-              <AlertDescription className="text-xs">
-                Graph defaults are visible to everyone in the organization, so do not put personal credentials here. Add
-                them under My defaults instead - a personal header replaces the graph one with the same name.
-              </AlertDescription>
-            </Alert>
-          </div>
+            <div className="space-y-3">
+              <h3 className="select-none text-sm font-medium">Graph defaults</h3>
+              <p className="text-xs text-muted-foreground">
+                {canEditGraphHeaders
+                  ? 'Shared with everyone in this organization who can view this graph.'
+                  : 'Shared with everyone in this organization. Only a graph admin can change these.'}
+              </p>
+              <HeaderRows entries={graphEntries} disabled={!canEditGraphHeaders} onChange={setGraphDraft} />
+              <Alert>
+                <InfoCircledIcon className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Graph defaults are visible to everyone in the organization, so do not put personal credentials here.
+                  Add them under My defaults instead - a personal header replaces the graph one with the same name.
+                </AlertDescription>
+              </Alert>
+            </div>
 
-          <div className="space-y-2">
-            <h3 className="select-none text-sm font-medium">Effective on new tabs</h3>
-            <pre className="max-h-48 overflow-auto rounded-md border bg-muted p-3 font-mono text-xs">{preview}</pre>
+            <div className="space-y-2">
+              <h3 className="select-none text-sm font-medium">Effective on new tabs</h3>
+              <pre className="max-h-48 overflow-auto rounded-md border bg-muted p-3 font-mono text-xs">{preview}</pre>
+            </div>
           </div>
-        </div>
+        )}
 
         <DialogFooter>
           <Button variant="secondary" onClick={() => setIsOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={save} disabled={isPending || hasInvalidKey}>
+          <Button onClick={save} disabled={isPending || isLoading || isError || hasInvalidKey}>
             Save
           </Button>
         </DialogFooter>
