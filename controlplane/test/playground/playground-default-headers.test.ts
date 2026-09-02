@@ -299,9 +299,7 @@ describe('Playground Default Headers', () => {
       });
       expect(getRes.response?.code).toBe(EnumStatusCode.OK);
       expect(getRes.canEditGraphHeaders).toBe(false);
-      expect(getRes.personalHeaders.map(({ key, value }) => ({ key, value }))).toEqual([
-        { key: 'a', value: '1' },
-      ]);
+      expect(getRes.personalHeaders.map(({ key, value }) => ({ key, value }))).toEqual([{ key: 'a', value: '1' }]);
       expect(getRes.graphHeaders).toEqual([]);
     },
   );
