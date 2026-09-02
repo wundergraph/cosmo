@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.249.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.248.0...controlplane@0.249.0) (2026-08-31)
+
+### Features
+
+* add migration scripts for otel_spans_by_trace table and materialized view ([#3186](https://github.com/wundergraph/cosmo/issues/3186)) ([5f85878](https://github.com/wundergraph/cosmo/commit/5f85878984d451455009a10fc3dee961afc903e9)) (@JivusAyrus)
+* add traces_detail_by_time table and materialized view for enhanced trace data retrieval ([#3093](https://github.com/wundergraph/cosmo/issues/3093)) ([8d60ddb](https://github.com/wundergraph/cosmo/commit/8d60ddbce9440fc415c893a0c652ec938ea39497)) (@JivusAyrus)
+
 # [0.248.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.247.1...controlplane@0.248.0) (2026-08-30)
 
 ### Bug Fixes
