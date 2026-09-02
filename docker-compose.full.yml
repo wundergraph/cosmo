@@ -1,141 +1,103 @@
+version: '3.8'
+
+# Base environment for all subgraphs
+x-subgraph-environment: &subgraph-environment
+  OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
+  OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
+  SUBGRAPH_CACHE_CONTROL: ${SUBGRAPH_CACHE_CONTROL:-}
+
+# Base configuration for all subgraphs
+x-subgraph-base: &subgraph-base
+  environment:
+    <<: *subgraph-environment
+  profiles:
+    - subgraphs
+  networks:
+    - primary
+
 name: 'full-cosmo'
 services:
   # Services for the demo
-
   employees:
+    <<: *subgraph-base
     container_name: employees
-    environment:
-      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
-      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
       dockerfile: docker/employees.Dockerfile
-    profiles:
-      - subgraphs
     ports:
       - '4001:4001'
-    networks:
-      - primary
 
   family:
+    <<: *subgraph-base
     container_name: family
-    environment:
-      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
-      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
       dockerfile: docker/family.Dockerfile
-    profiles:
-      - subgraphs
     ports:
       - '4002:4002'
-    networks:
-      - primary
 
   hobbies:
+    <<: *subgraph-base
     container_name: hobbies
-    environment:
-      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
-      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
       dockerfile: docker/hobbies.Dockerfile
-    profiles:
-      - subgraphs
     ports:
       - '4003:4003'
-    networks:
-      - primary
 
   products:
-    environment:
-      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
-      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
+    <<: *subgraph-base
     container_name: products
     build:
       context: ./demo
       dockerfile: docker/products.Dockerfile
-    profiles:
-      - subgraphs
     ports:
       - '4004:4004'
-    networks:
-      - primary
 
   test1:
-    environment:
-      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
-      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
+    <<: *subgraph-base
     container_name: test1
     build:
       context: ./demo
       dockerfile: docker/test1.Dockerfile
-    profiles:
-      - subgraphs
     ports:
       - '4006:4006'
-    networks:
-      - primary
 
   availability:
+    <<: *subgraph-base
     container_name: availability
-    environment:
-      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
-      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
       dockerfile: docker/availability.Dockerfile
-    profiles:
-      - subgraphs
     ports:
       - '4007:4007'
-    networks:
-      - primary
 
   mood:
+    <<: *subgraph-base
     container_name: mood
-    environment:
-      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
-      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
       dockerfile: docker/mood.Dockerfile
-    profiles:
-      - subgraphs
     ports:
       - '4008:4008'
-    networks:
-      - primary
 
   countries:
+    <<: *subgraph-base
     container_name: countries
-    environment:
-      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
-      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
       dockerfile: docker/countries.Dockerfile
-    profiles:
-      - subgraphs
     ports:
       - '4009:4009'
-    networks:
-      - primary
 
   products_fg:
+    <<: *subgraph-base
     container_name: products_fg
-    environment:
-      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
-      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
       dockerfile: docker/products_fg.Dockerfile
-    profiles:
-      - subgraphs
     ports:
       - '4010:4010'
-    networks:
-      - primary
 
   # Infrastructure services
 
