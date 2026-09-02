@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { buildSchema, GraphQLSchema } from 'graphql';
 import { SchemaCheckChangeAction } from '../../db/models.js';
+import type { ClickHouseClient } from '../clickhouse/index.js';
 import { getSchemaDiff, SchemaDiff } from '../composition/schemaCheck.js';
 import {
   InspectorSchemaChange,
@@ -506,13 +507,13 @@ const change = (path: string, changeType: SchemaDiff['changeType'], message = `$
   meta: {} as SchemaDiff['meta'],
 });
 
-const action = (id: string, path: string | null, changeType: string | null) =>
+const action = (id: string, path: string | null, changeType: string | null): SchemaCheckChangeAction =>
   ({ id, path, changeType }) as unknown as SchemaCheckChangeAction;
 
-describe('schemaChangesToInspectorChanges', () => {
-  const inspector = new SchemaUsageTrafficInspector({} as any);
+describe('schemaChangesToInspectorChanges', (): void => {
+  const inspector = new SchemaUsageTrafficInspector({} as ClickHouseClient);
 
-  test('maps every change to the stored action with the same path and change type', () => {
+  test('maps every change to the stored action with the same path and change type', (): void => {
     const changes = [change('Query.a', 'FIELD_REMOVED'), change('Employee', 'TYPE_REMOVED')];
     const actions = [
       // Same path, different change type must not be picked up
@@ -529,7 +530,7 @@ describe('schemaChangesToInspectorChanges', () => {
     ]);
   });
 
-  test('uses the first matching action when duplicates are stored', () => {
+  test('uses the first matching action when duplicates are stored', (): void => {
     const changes = [change('Query.a', 'FIELD_REMOVED')];
     const actions = [action('first', 'Query.a', 'FIELD_REMOVED'), action('second', 'Query.a', 'FIELD_REMOVED')];
 
@@ -538,14 +539,14 @@ describe('schemaChangesToInspectorChanges', () => {
     ]);
   });
 
-  test('drops changes that cannot be inspected', () => {
+  test('drops changes that cannot be inspected', (): void => {
     const changes = [change('Query', 'TYPE_DESCRIPTION_CHANGED')];
     const actions = [action('1', 'Query', 'TYPE_DESCRIPTION_CHANGED')];
 
     expect(inspector.schemaChangesToInspectorChanges(changes, actions)).toEqual([]);
   });
 
-  test('throws when a change has no stored action', () => {
+  test('throws when a change has no stored action', (): void => {
     const changes = [change('Query.a', 'FIELD_REMOVED', 'Field a was removed')];
 
     expect(() => inspector.schemaChangesToInspectorChanges(changes, [])).toThrow(

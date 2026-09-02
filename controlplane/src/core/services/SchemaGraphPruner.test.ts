@@ -3,7 +3,19 @@ import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platfo
 import { describe, expect, test, vi } from 'vitest';
 import { FederatedGraphDTO } from '../../types/index.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
+import type { UsageRepository } from '../repositories/analytics/UsageRepository.js';
+import type { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+import type { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import SchemaGraphPruner from './SchemaGraphPruner.js';
+
+// The federated graph repository is never touched by the methods under test.
+const federatedGraphRepo = {} as FederatedGraphRepository;
+
+// Only the methods the pruner calls are stubbed; the casts widen the partial doubles to the repository types.
+const asSubgraphRepo = (stub: Pick<SubgraphRepository, 'getSubgraphFieldsInGracePeriod'>): SubgraphRepository =>
+  stub as SubgraphRepository;
+const asUsageRepo = (stub: Partial<Pick<UsageRepository, 'getUnusedFields' | 'getUsedFields'>>): UsageRepository =>
+  stub as UsageRepository;
 
 // The pruner only touches `getSubgraphFieldsInGracePeriod` on the subgraph repository and
 // `getUnusedFields` / `getUsedFields` on the usage repository, so both can be stubbed and the
@@ -54,7 +66,12 @@ describe('SchemaGraphPruner', () => {
     const subgraphRepo = {
       getSubgraphFieldsInGracePeriod: vi.fn().mockResolvedValue([{ path: 'Product.price' }]),
     };
-    const pruner = new SchemaGraphPruner({} as any, subgraphRepo as any, { getUnusedFields } as any, schema);
+    const pruner = new SchemaGraphPruner(
+      federatedGraphRepo,
+      asSubgraphRepo(subgraphRepo),
+      asUsageRepo({ getUnusedFields }),
+      schema,
+    );
 
     const issues = await pruner.fetchUnusedFields({
       subgraphId: 'sg-1',
@@ -98,7 +115,12 @@ describe('SchemaGraphPruner', () => {
     const subgraphRepo = {
       getSubgraphFieldsInGracePeriod: vi.fn().mockResolvedValue([]),
     };
-    const pruner = new SchemaGraphPruner({} as any, subgraphRepo as any, { getUsedFields } as any, schema);
+    const pruner = new SchemaGraphPruner(
+      federatedGraphRepo,
+      asSubgraphRepo(subgraphRepo),
+      asUsageRepo({ getUsedFields }),
+      schema,
+    );
 
     const issues = await pruner.fetchDeprecatedFields({
       subgraphId: 'sg-1',
@@ -121,7 +143,12 @@ describe('SchemaGraphPruner', () => {
     const subgraphRepo = {
       getSubgraphFieldsInGracePeriod: vi.fn().mockResolvedValue([{ path: 'Employee.nickname' }]),
     };
-    const pruner = new SchemaGraphPruner({} as any, subgraphRepo as any, { getUsedFields } as any, schema);
+    const pruner = new SchemaGraphPruner(
+      federatedGraphRepo,
+      asSubgraphRepo(subgraphRepo),
+      asUsageRepo({ getUsedFields }),
+      schema,
+    );
 
     const issues = await pruner.fetchDeprecatedFields({
       subgraphId: 'sg-1',
@@ -138,7 +165,12 @@ describe('SchemaGraphPruner', () => {
   });
 
   test('flags fields removed without prior deprecation for every federated graph', () => {
-    const pruner = new SchemaGraphPruner({} as any, {} as any, {} as any, schema);
+    const pruner = new SchemaGraphPruner(
+      federatedGraphRepo,
+      asSubgraphRepo({} as SubgraphRepository),
+      asUsageRepo({}),
+      schema,
+    );
 
     const issues = pruner.fetchNonDeprecatedDeletedFields({
       federatedGraphs,

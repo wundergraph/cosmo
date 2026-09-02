@@ -61,7 +61,7 @@ import {
 } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { defaultRetentionLimitInDays, dbInsertBatchSize, dbInClauseBatchSize } from '../constants.js';
+import { defaultRetentionLimitInDays, DB_INSERT_BATCH_SIZE, DB_IN_CLAUSE_BATCH_SIZE } from '../constants.js';
 import { traced } from '../tracing.js';
 import { FederatedGraphConfig, FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
@@ -71,8 +71,10 @@ import { SchemaLintRepository } from './SchemaLintRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { NamespaceRepository } from './NamespaceRepository.js';
 
-// Identifies a (change type, path) pair, e.g. to match detected breaking changes against stored overrides.
-function changeKey(changeType: string | null, path: string | null) {
+/**
+ * Identifies a (change type, path) pair, e.g. to match detected breaking changes against stored overrides.
+ */
+function changeKey(changeType: string | null, path: string | null): string {
   return `${changeType ?? ''}::${path ?? ''}`;
 }
 
@@ -169,7 +171,7 @@ export class SchemaCheckRepository {
     // a deletion) can easily exceed, and it also keeps the size of a single statement bounded.
     return await this.db.transaction(async (tx) => {
       const inserted: SchemaCheckChangeAction[] = [];
-      for (const batch of createBatches(data.changes, dbInsertBatchSize)) {
+      for (const batch of createBatches(data.changes, DB_INSERT_BATCH_SIZE)) {
         const rows = await tx
           .insert(schemaCheckChangeAction)
           .values(
@@ -206,7 +208,7 @@ export class SchemaCheckRepository {
       const insertedChanges: SchemaCheckChangeAction[] = [];
 
       // Insert in batches to stay well below the Postgres bind parameter limit (see createSchemaCheckChanges).
-      for (const batch of createBatches(data.changes, dbInsertBatchSize)) {
+      for (const batch of createBatches(data.changes, DB_INSERT_BATCH_SIZE)) {
         // Insert changes into schemaCheckChangeAction with isFedGraphChange: true
         const rows = await tx
           .insert(schemaCheckChangeAction)
@@ -317,7 +319,7 @@ export class SchemaCheckRepository {
 
     const arrayOfValues: NewSchemaChangeOperationUsage[][] = createBatches<NewSchemaChangeOperationUsage>(
       values,
-      dbInsertBatchSize,
+      DB_INSERT_BATCH_SIZE,
     );
     const promises = [];
 
@@ -383,7 +385,7 @@ export class SchemaCheckRepository {
     const storedChangesByHash = new Map<string, Set<string>>();
     const ignoreAllHashes = new Set<string>();
 
-    for (const hashes of createBatches([...affectedByOperationHash.keys()], dbInClauseBatchSize)) {
+    for (const hashes of createBatches([...affectedByOperationHash.keys()], DB_IN_CLAUSE_BATCH_SIZE)) {
       const overrides = await this.db
         .select({
           hash: schema.operationChangeOverrides.hash,

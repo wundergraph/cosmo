@@ -64,9 +64,9 @@ export const graphTokenFeatures: FeatureIds[] = ['split-config-loading'];
  * 65535 bind parameters per statement, so a single multi-row insert of a large result set (e.g. the
  * schema changes of a deleted subgraph or the graph pruning issues of a large schema) would otherwise fail.
  */
-export const dbInsertBatchSize = 1000;
+export const DB_INSERT_BATCH_SIZE = 1000;
 
 /**
  * Maximum number of values passed to a single `IN (...)` clause when looking up rows in bulk.
  */
-export const dbInClauseBatchSize = 5000;
+export const DB_IN_CLAUSE_BATCH_SIZE = 5000;

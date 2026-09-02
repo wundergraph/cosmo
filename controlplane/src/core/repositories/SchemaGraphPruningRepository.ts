@@ -18,7 +18,7 @@ import {
 } from '../../types/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { GetDiffBetweenGraphsSuccess } from '../composition/schemaCheck.js';
-import { dbInsertBatchSize } from '../constants.js';
+import { DB_INSERT_BATCH_SIZE } from '../constants.js';
 import SchemaGraphPruner from '../services/SchemaGraphPruner.js';
 import { traced } from '../tracing.js';
 import { createBatches } from '../util.js';
@@ -98,7 +98,7 @@ export class SchemaGraphPruningRepository {
     // One issue is produced per (field, federated graph) pair, so large subgraphs in many federated graphs
     // produce a lot of rows. Insert in batches to stay below the Postgres bind parameter limit (65535).
     await this.db.transaction(async (tx) => {
-      for (const batch of createBatches(graphPruningIssues, dbInsertBatchSize)) {
+      for (const batch of createBatches(graphPruningIssues, DB_INSERT_BATCH_SIZE)) {
         await tx.insert(schemaCheckGraphPruningAction).values(
           batch.map((l) => {
             return {

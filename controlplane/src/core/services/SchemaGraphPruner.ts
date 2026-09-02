@@ -19,12 +19,18 @@ import { buildSchema } from '../composition/composition.js';
 import { getFederatedGraphRouterCompatibilityVersion } from '../util.js';
 import { traced } from '../tracing.js';
 
-// Identifies a field by its parent type and name, matching the (TypeName, FieldName) pairs returned by ClickHouse.
-function fieldKey(typeName: string, name: string) {
+/**
+ * Identifies a field by its parent type and name, matching the (TypeName, FieldName) pairs returned by ClickHouse.
+ */
+function fieldKey(typeName: string, name: string): string {
   return `${typeName}.${name}`;
 }
 
-function appendAll<T>(target: T[], items: T[]) {
+/**
+ * Appends all items to the target array without spreading them into a single `push` call,
+ * which throws a RangeError for very large arrays.
+ */
+function appendAll<T>(target: T[], items: T[]): void {
   for (const item of items) {
     target.push(item);
   }
