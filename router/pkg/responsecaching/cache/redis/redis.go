@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -28,6 +29,10 @@ type RedisCache struct {
 	// the way out, so callers only ever see the keys they asked with. An empty
 	// prefix is valid and means the keys are used as they are.
 	prefix string
+	// now is the clock index members are scored from. A field so a test can
+	// move it independently of redis' own, which is the difference the prune
+	// grace below exists for.
+	now func() time.Time
 }
 
 var _ caching.Cache = (*RedisCache)(nil)
@@ -40,6 +45,8 @@ const (
 	entryNamespace = "e:"
 	tagNamespace   = "t:"
 )
+
+const tagIndexPruneGrace = 5 * time.Minute
 
 // entryKey is where an entry's value lives.
 func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamespace + key }
@@ -58,7 +65,7 @@ func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix str
 		return nil, fmt.Errorf("unable to connect to redis: %w", err)
 	}
 
-	return &RedisCache{client: client, prefix: prefix}, nil
+	return &RedisCache{client: client, prefix: prefix, now: time.Now}, nil
 }
 
 // GetMany implements caching.GetMany.
@@ -143,7 +150,12 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	// One clock reading for the batch. Scoring two items written together as if
 	// they were written at different moments would be a distinction without a
 	// source.
-	now := time.Now()
+	now := c.now()
+	pruneBefore := strconv.FormatInt(now.Add(-tagIndexPruneGrace).UnixMilli(), 10)
+
+	// One prune per tag rather than per member of it: ten entities answered
+	// under one subgraph tag would otherwise queue the same removal ten times.
+	pruned := make(map[string]struct{})
 
 	pipe := c.client.Pipeline()
 
@@ -157,6 +169,10 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 		for _, tag := range item.Tags {
 			tagKey := c.tagKey(tag)
 			pipe.ZAdd(ctx, tagKey, member)
+			if _, done := pruned[tagKey]; !done {
+				pruned[tagKey] = struct{}{}
+				pipe.ZRemRangeByScore(ctx, tagKey, "-inf", pruneBefore)
+			}
 			pipe.ExpireNX(ctx, tagKey, item.TTL)
 			pipe.ExpireGT(ctx, tagKey, item.TTL)
 		}

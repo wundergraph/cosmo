@@ -223,11 +223,15 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	resolveCtx = h.configureRateLimiting(resolveCtx)
 	if h.responseCacheStore != nil {
-		resolveCtx.SetResponseCache(h.responseCacheStore, h.responseCacheFallbackTTL, h.responseCacheErrorHandler)
-		resolveCtx.SetResponseCacheInvalidation(resolve.ResponseCacheInvalidationOptions{
-			CacheTag: h.responseCacheInvalidation.CacheTag,
-			Subgraph: h.responseCacheInvalidation.Subgraph,
-			Type:     h.responseCacheInvalidation.Type,
+		resolveCtx.SetResponseCache(resolve.ResponseCacheOptions{
+			Store:      h.responseCacheStore,
+			DefaultTTL: h.responseCacheFallbackTTL,
+			OnError:    h.responseCacheErrorHandler,
+			Invalidation: resolve.ResponseCacheInvalidationOptions{
+				CacheTag: h.responseCacheInvalidation.CacheTag,
+				Subgraph: h.responseCacheInvalidation.Subgraph,
+				Type:     h.responseCacheInvalidation.Type,
+			},
 		})
 	}
 	if reqCtx.customFieldValueRenderer != nil {

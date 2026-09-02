@@ -449,7 +449,13 @@
     "Invalidation": {
       "CacheTag": true,
       "Subgraph": true,
-      "Type": true
+      "Type": true,
+      "Endpoint": {
+        "Enabled": false,
+        "ListenAddr": "localhost:5027",
+        "Path": "/invalidation",
+        "SharedKey": ""
+      }
     }
   },
   "RouterConfigPath": "",

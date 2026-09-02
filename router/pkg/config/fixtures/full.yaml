@@ -548,6 +548,11 @@ response_cache:
     cache_tag: true
     subgraph: false
     type: true
+    endpoint:
+      enabled: true
+      listen_addr: 'localhost:5027'
+      path: '/invalidation'
+      shared_key: 'a-shared-key-that-is-long-enough-to-pass'
 
 security:
   complexity_calculation_cache:

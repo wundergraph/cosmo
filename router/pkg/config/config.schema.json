@@ -3435,8 +3435,35 @@
             },
             "type": {
               "type": "boolean",
-              "description": "Index every cached entity under its __typename. Requires the typename to be present in what is cached, which a root query fetch has no single one of. Set to false to stop maintaining the by-type index.",
+              "description": "Index every cached entity under its __typename, scoped to the subgraph that answered so invalidating one subgraph's type leaves the others alone. Requires the typename to be present in what is cached, which a root query fetch has no single one of. Set to false to stop maintaining the by-type index.",
               "default": true
+            },
+            "endpoint": {
+              "type": "object",
+              "description": "An HTTP endpoint that drops cached entries before their TTL. It listens on an address of its own rather than as a route on the router's port, so that reaching the graph does not by itself reach the thing that empties its cache. It accepts a POST carrying a JSON array of invalidation requests, each naming a 'kind' of 'subgraph', 'type' or 'cache_tag' together with the subgraph it applies to, and answers 202 with the number of cache keys removed.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Start the invalidation listener. When disabled, entries are still indexed and still expire on their own TTL; they simply cannot be dropped early.",
+                  "default": false
+                },
+                "listen_addr": {
+                  "type": "string",
+                  "description": "The address the invalidation endpoint listens on. Defaults to loopback, because an endpoint that empties the cache should be exposed on purpose rather than by inheriting whatever the router itself is exposed on. Expose it to internal networks only.",
+                  "default": "localhost:5027"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "The path the invalidation endpoint is served at.",
+                  "default": "/invalidation"
+                },
+                "shared_key": {
+                  "type": "string",
+                  "minLength": 32,
+                  "description": "Compared in full against the 'Authorization' header of an invalidation request, with no 'Bearer' prefix expected. Required when the endpoint is enabled: an enabled endpoint without a key fails startup rather than accepting unauthenticated requests."
+                }
+              }
             }
           }
         }

@@ -103,6 +103,24 @@ response_cache:
     provider_id: 'my_redis'
     # Memory provider only. Default: 10000.
     max_entries: 10000
+  invalidation:
+    # Which secondary indexes are built over cached entries, so an entry can
+    # later be found by what it is about. Each defaults to true.
+    # Index under the cache tags a subgraph declared.
+    cache_tag: true
+    # Index under the subgraph that answered.
+    subgraph: true
+    # Index entities under their __typename.
+    type: true
+    endpoint:
+      # Serve the invalidation endpoint. Default: false.
+      enabled: true
+      # Its own listener, not the router's port. Default: localhost:5027.
+      listen_addr: 'localhost:5027'
+      # Default: /invalidation.
+      path: '/invalidation'
+      # Required when enabled. At least 32 characters.
+      shared_key: '${env.INVALIDATION_SHARED_KEY}'
 ```
 
 `storage` is required when `enabled` is `true`.
@@ -120,6 +138,99 @@ These apply to the current alpha.
 **Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
 
 **`enable_multi_fetch` disables caching for merged entity fetches.** When `engine.enable_multi_fetch` is on, the router merges entity fetches to the same subgraph within one parallel wave into a single request. A merged fetch is not cached, and nothing reports that it was skipped. An entity fetch that has nothing to merge with is still cached, and root query fetches are unaffected. Support for caching merged fetches is planned.
+
+## Cache tags
+
+A subgraph names what its response is about by returning a cache tag extension. Tags are recorded as a secondary index over the cached entries, so an entry can be found by what it is about rather than only by the key it happens to sit under.
+
+The shape depends on what was fetched, because an entity fetch caches one entry per entity while a root query fetch caches its whole answer as one.
+
+**Entity fetches** return `apolloEntityCacheTags`, an array of arrays holding one list per entity, in the same order as the `_entities` answered:
+
+```json
+{
+  "data": { "_entities": [{ "__typename": "User", "id": "1" }, { "__typename": "User", "id": "2" }] },
+  "extensions": { "apolloEntityCacheTags": [["users", "user-1"], ["users", "user-2"]] }
+}
+```
+
+**Root query fetches** return `apolloCacheTags`, one flat array:
+
+```json
+{
+  "data": { "homepage": { "title": "Hello" } },
+  "extensions": { "apolloCacheTags": ["homepage", "featured"] }
+}
+```
+
+An outer array whose length does not match the entities answered costs the whole response its tags, rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and never forwarded to clients.
+
+## Invalidation
+
+Cached entries can be dropped before their TTL through an HTTP endpoint. It listens on an address of its own, defaulting to loopback, so that reaching the router does not by itself reach the endpoint that empties its cache. **Expose it to internal networks only.**
+
+It is off by default. Enabling it without a `shared_key` fails startup rather than accepting unauthenticated requests.
+
+### Making a request
+
+`POST` a JSON array of requests. The shared key goes in `Authorization` in full, with no `Bearer` prefix.
+
+```bash
+curl --request POST \
+  --header 'authorization: ${INVALIDATION_SHARED_KEY}' \
+  --header 'content-type: application/json' \
+  --url http://localhost:5027/invalidation \
+  --data '[{"kind":"type","subgraph":"accounts","type":"User"}]'
+```
+
+```
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+
+{ "count": 300 }
+```
+
+`count` is how many cache keys were removed.
+
+### Kinds
+
+Every kind names a subgraph, because every index is scoped by one. Invalidating `User` for one subgraph leaves every other subgraph's `User` entries alone, and there is no way to name a type or a tag across the whole graph.
+
+```json
+[{ "kind": "subgraph", "subgraph": "accounts" }]
+```
+
+Everything the subgraph answered.
+
+```json
+[{ "kind": "type", "subgraph": "accounts", "type": "User" }]
+```
+
+Every entity of that type the subgraph answered. Root query fetches have no single typename and are not covered by it.
+
+```json
+[{ "kind": "cache_tag", "subgraphs": ["accounts"], "cache_tag": "user-42" }]
+```
+
+Everything carrying a tag the subgraph declared. `subgraphs` is a list, because a tag is indexed per subgraph.
+
+### Errors
+
+The whole array is validated before anything is removed, so a typo in one element never leaves the cache half invalidated. A refusal answers `400` and names the element:
+
+```json
+{
+  "errors": [
+    { "index": 0, "kind": "type", "message": "the \"type\" index is not maintained, so nothing is findable by it" }
+  ]
+}
+```
+
+An index turned off above cannot be invalidated by. Such a request is refused rather than answered with a count of nothing, which would read as "there was nothing to remove" instead of "you cannot ask that". A missing or wrong shared key answers `401`.
+
+### What a count does not tell you
+
+An entry usually carries several tags: its declared ones, its subgraph, and its type. Removing it because of one leaves it named by the others until they expire. Those leftovers cost nothing but a miss, and never resurrect an entry — but it means `count` is of keys removed from the index, not necessarily of live entries destroyed.
 
 ## Observability
 
