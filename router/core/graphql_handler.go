@@ -227,7 +227,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Store:      h.responseCacheStore,
 			DefaultTTL: h.responseCacheFallbackTTL,
 			OnError:    h.responseCacheErrorHandler,
-			Invalidation: resolve.ResponseCacheInvalidationOptions{
+			Invalidation: resolve.ResponseCacheTagIndexOptions{
 				CacheTag: h.responseCacheInvalidation.CacheTag,
 				Subgraph: h.responseCacheInvalidation.Subgraph,
 				Type:     h.responseCacheInvalidation.Type,
