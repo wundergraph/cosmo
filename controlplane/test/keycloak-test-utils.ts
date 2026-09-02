@@ -4,6 +4,15 @@ import { NetworkError } from '@keycloak/keycloak-admin-client';
 // same realm, client, and error handling.
 export const TEST_REALM = 'test';
 
+/**
+ * Client the tests use to sign a user in with a direct grant. Created by global setup rather
+ * than borrowing Keycloak's built-in `admin-cli`, whose defaults are Keycloak's to change: it
+ * issues lightweight access tokens, which omit `sub` and which the userinfo endpoint rejects
+ * from Keycloak 26.6.2 onward. This client mirrors the ones production logs in through
+ * (`studio`, `hub-oidc`), so a token minted here has the same claims as a real one.
+ */
+export const TEST_DIRECT_GRANT_CLIENT_ID = 'cosmo-test';
+
 /** HTTP status of a keycloak-admin-client {@link NetworkError}, or `undefined` for any other error. */
 function keycloakErrorStatus(error: unknown): number | undefined {
   return error instanceof NetworkError ? error.response.status : undefined;

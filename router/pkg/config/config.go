@@ -1115,11 +1115,7 @@ type SubgraphExtensionPropagationConfiguration struct {
 	Algorithm              SubgraphExtensionPropagationAlgorithm `yaml:"algorithm,omitempty" envDefault:"first_write" env:"ALGORITHM"`
 }
 
-// ResponseCacheConfiguration configures caching of federation entity fetches.
-// Entities are cached per selection set, so asking for different fields of the
-// same entity does not share an entry. Only responses whose Cache-Control header
-// asks to be cached are stored; a subgraph that sends no Cache-Control header is
-// never cached.
+// ResponseCacheConfiguration configures caching of subgraph responses.
 type ResponseCacheConfiguration struct {
 	Enabled     bool          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	FallbackTTL time.Duration `yaml:"fallback_ttl" envDefault:"30s" env:"FALLBACK_TTL"`
