@@ -25,22 +25,26 @@ NOGC=1 pnpm test:memory big 20
 pnpm test:memory:alloc big-contracts 3
 # A/B against another build, e.g. the published version or a branch
 COMPOSITION_DIST=/path/to/other/composition/dist/index.js pnpm test:memory:alloc no-contracts 10
+# a real graph: any directory of *.graphql subgraph files (one subgraph per file), kept outside the repository
+COMPOSITION_SUBGRAPHS=/path/to/subgraphs pnpm test:memory custom 50
 ```
 
 ## Scenarios
 
-| Scenario         | Workload                                                                                                          |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `base`           | `federateSubgraphs` with the 8 demo subgraphs from `demo/pkg/subgraphs` (SDL re-parsed every iteration)           |
-| `base-locations` | Like `base`, but the documents keep their source locations, which is how the controlplane parses SDL              |
-| `contracts`      | `federateSubgraphsWithContracts` with three contracts (the controlplane flow when a subgraph is published)        |
-| `no-contracts`   | `federateSubgraphsWithContracts` with an empty contract map (publishing to a federated graph without contracts)   |
-| `contract`       | `federateSubgraphsContract` (the controlplane flow when a contract is created)                                    |
-| `errors`         | A composition that fails with an `@override` conflict                                                             |
-| `normalize`      | `normalizeSubgraphFromString` for each demo subgraph (the subgraph check flow)                                    |
-| `unique`         | A different synthetic graph on every iteration (type and subgraph names change), so nothing can be cached by name |
-| `big`            | A synthetic graph with 12 subgraphs, 480 object types and ~5800 fields                                            |
-| `big-contracts`  | The `big` graph with three contracts                                                                              |
+| Scenario         | Workload                                                                                                                |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `base`           | `federateSubgraphs` with the 8 demo subgraphs from `demo/pkg/subgraphs` (SDL re-parsed every iteration)                 |
+| `base-locations` | Like `base`, but the documents keep their source locations, which is how the controlplane parses SDL                    |
+| `contracts`      | `federateSubgraphsWithContracts` with three contracts (the controlplane flow when a subgraph is published)              |
+| `no-contracts`   | `federateSubgraphsWithContracts` with an empty contract map (publishing to a federated graph without contracts)         |
+| `contract`       | `federateSubgraphsContract` (the controlplane flow when a contract is created)                                          |
+| `errors`         | A composition that fails with an `@override` conflict                                                                   |
+| `normalize`      | `normalizeSubgraphFromString` for each demo subgraph (the subgraph check flow)                                          |
+| `unique`         | A different synthetic graph on every iteration (type and subgraph names change), so nothing can be cached by name       |
+| `custom`         | `federateSubgraphs` with the `*.graphql` subgraph files in `COMPOSITION_SUBGRAPHS` (a real graph kept outside the repo) |
+| `custom-*`       | `custom-locations`, `custom-no-contracts`, `custom-contracts`: the variants above for that graph                        |
+| `big`            | A synthetic graph with 12 subgraphs, 480 object types and ~5800 fields                                                  |
+| `big-contracts`  | The `big` graph with three contracts                                                                                    |
 
 ## How to read the output
 

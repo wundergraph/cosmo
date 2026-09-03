@@ -35,6 +35,36 @@ function readDemoSdls() {
 }
 
 export const demoSdlByName = readDemoSdls();
+
+/**
+ * Any directory of `*.graphql` subgraph SDL files (one subgraph per file, named after the file) can be used through
+ * the `custom*` scenarios by setting COMPOSITION_SUBGRAPHS=/path/to/dir. This keeps real customer graphs out of the
+ * repository while still allowing them to be load tested.
+ */
+function readCustomSdls() {
+  const dir = process.env.COMPOSITION_SUBGRAPHS;
+  if (!dir) {
+    return new Map();
+  }
+  return new Map(
+    readdirSync(dir)
+      .filter((file) => /\.graphqls?$/.test(file))
+      .map((file) => [file.replace(/\.graphqls?$/, ''), readFileSync(join(dir, file), 'utf8')]),
+  );
+}
+
+export const customSdlByName = readCustomSdls();
+
+export function customSubgraphs({ noLocation = true } = {}) {
+  if (customSdlByName.size < 1) {
+    throw new Error('set COMPOSITION_SUBGRAPHS to a directory of *.graphql subgraph files to use the custom scenarios');
+  }
+  return [...customSdlByName].map(([name, sdl]) => ({
+    name,
+    url: `http://${name}:4000/graphql`,
+    definitions: parse(sdl, { noLocation }),
+  }));
+}
 export const demoSubgraphNames = [...demoSdlByName.keys()];
 
 export function demoSubgraphs({ names = demoSubgraphNames, noLocation = true } = {}) {
@@ -179,6 +209,21 @@ export const scenarios = {
         }),
       );
   })(),
+  // the subgraphs in COMPOSITION_SUBGRAPHS, without, with zero, and with three contracts
+  custom: () => assertSuccess(composition.federateSubgraphs({ subgraphs: customSubgraphs() })),
+  'custom-locations': () =>
+    assertSuccess(composition.federateSubgraphs({ subgraphs: customSubgraphs({ noLocation: false }) })),
+  'custom-no-contracts': () =>
+    assertSuccess(
+      composition.federateSubgraphsWithContracts({
+        subgraphs: customSubgraphs(),
+        tagOptionsByContractName: new Map(),
+      }),
+    ),
+  'custom-contracts': () =>
+    assertSuccess(
+      composition.federateSubgraphsWithContracts({ subgraphs: customSubgraphs(), tagOptionsByContractName }),
+    ),
   // a large synthetic graph (12 subgraphs, 480 object types, ~5800 fields)
   big: () => assertSuccess(composition.federateSubgraphs({ subgraphs: syntheticSubgraphs() })),
   // the large synthetic graph with three contracts
