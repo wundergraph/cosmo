@@ -1,6 +1,6 @@
 import { Command, program } from 'commander';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import type { GetClientsResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
+import type { GetClientsResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Table from 'cli-table3';
 import logSymbols from 'log-symbols';
 import pc from 'picocolors';

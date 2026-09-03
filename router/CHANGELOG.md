@@ -4,6 +4,47 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.345.0](https://github.com/wundergraph/cosmo/compare/router@0.344.1...router@0.345.0) (2026-09-02)
+
+### Bug Fixes
+
+* grpc dependency bump ([#3210](https://github.com/wundergraph/cosmo/issues/3210)) ([f92ec25](https://github.com/wundergraph/cosmo/commit/f92ec259c39453a006ae54fc4d19fd5103217edd)) (@SkArchon)
+
+### Features
+
+* allow subscriptions to be excluded from rate limiting ([#3143](https://github.com/wundergraph/cosmo/issues/3143)) ([98f328a](https://github.com/wundergraph/cosmo/commit/98f328a881eb0330a9b3b725e23ca80da78f1407)) (@alepane21)
+* propagate ttl to client ([#3203](https://github.com/wundergraph/cosmo/issues/3203)) ([ae8bace](https://github.com/wundergraph/cosmo/commit/ae8bace8dd9c7cc4c4e84338c8979283feec1e33)) (@Noroth)
+
+## [0.344.1](https://github.com/wundergraph/cosmo/compare/router@0.344.0...router@0.344.1) (2026-08-31)
+
+### Bug Fixes
+
+* gomod not pointed correctly ([#3199](https://github.com/wundergraph/cosmo/issues/3199)) ([1ef951f](https://github.com/wundergraph/cosmo/commit/1ef951fee150c40094653494bd9c17ba145467d4)) (@SkArchon)
+
+# [0.344.0](https://github.com/wundergraph/cosmo/compare/router@0.343.2...router@0.344.0) (2026-08-31)
+
+### Features
+
+* add root query field caching ([#3188](https://github.com/wundergraph/cosmo/issues/3188)) ([7bedd8a](https://github.com/wundergraph/cosmo/commit/7bedd8aba8dc8a503eef097c9337480eb8fdd800)) (@SkArchon)
+
+## [0.343.2](https://github.com/wundergraph/cosmo/compare/router@0.343.1...router@0.343.2) (2026-08-30)
+
+### Bug Fixes
+
+* **router:** preserve APQ query when renewing TTL ([#3191](https://github.com/wundergraph/cosmo/issues/3191)) ([ea9056a](https://github.com/wundergraph/cosmo/commit/ea9056ac8353128f64910588191f459053d65d7f)) (@fiam)
+
+## [0.343.1](https://github.com/wundergraph/cosmo/compare/router@0.343.0...router@0.343.1) (2026-08-26)
+
+### Bug Fixes
+
+* missing public directive when merging cache-control headers ([#3187](https://github.com/wundergraph/cosmo/issues/3187)) ([41ea5e6](https://github.com/wundergraph/cosmo/commit/41ea5e6c6fb0028acfbfeaeb205cf49e9970706c)) (@Noroth)
+
+# [0.343.0](https://github.com/wundergraph/cosmo/compare/router@0.342.0...router@0.343.0) (2026-08-25)
+
+### Features
+
+* allow to run query plan with new planner options ([#3184](https://github.com/wundergraph/cosmo/issues/3184)) ([3b08fa2](https://github.com/wundergraph/cosmo/commit/3b08fa2fcd7f60debef83e8526fa8fe5a0fc408a)) (@alepane21)
+
 # [0.342.0](https://github.com/wundergraph/cosmo/compare/router@0.341.0...router@0.342.0) (2026-08-24)
 
 ### Bug Fixes

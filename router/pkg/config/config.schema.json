@@ -2630,6 +2630,11 @@
           "type": "string",
           "description": "The expression to define a key suffix for the rate limit, e.g. by using request headers, claims, or a combination of both with a fallback strategy. The expression is specified as a string and needs to evaluate to a string. Please see https://expr-lang.org/ for more information."
         },
+        "exclude_subscriptions": {
+          "type": "boolean",
+          "default": false,
+          "description": "Exclude subscription operations from rate limiting. Be aware that disabling rate limiting for subscriptions can expose the router and subgraphs to a denial-of-service risk from unrestricted clients."
+        },
         "error_extension_code": {
           "type": "object",
           "description": "If enabled, a code will be added to the extensions.code field of error objects related to rate limiting. This allows clients to easily identify if an error happened due to rate limiting.",
@@ -3384,7 +3389,7 @@
     },
     "response_cache": {
       "type": "object",
-      "description": "Caches federation entity fetches, either in Redis or in this router's own memory. An entity is cached per selection set, so asking for different fields of the same entity does not share a cache entry. A batch of entities is served from the cache only when every entity in it is present, otherwise the request is sent to the subgraph unchanged. Only subgraph responses whose Cache-Control header asks to be cached are stored. NOTE: This option is experimental and may change in future versions.",
+      "description": "Caches subgraph responses, either in Redis or in this router's own memory. Two things are cached: each entity of a federation entity fetch, per selection set, so asking for different fields of the same entity does not share a cache entry, and a batch is served from the cache only when every entity in it is present; and the whole answer of a root query fetch, keyed by the request that produced it, so any difference in the operation or its variables sends the request to the subgraph unchanged. Neither key covers the headers the router forwards, so a subgraph whose answer varies by request header must not mark it public. Only subgraph responses whose Cache-Control header asks to be cached are stored. NOTE: This option is experimental and may change in future versions.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
@@ -3442,6 +3447,28 @@
           "then": {},
           "else": {
             "required": ["provider_id"]
+          }
+        },
+        "invalidation": {
+          "type": "object",
+          "description": "Secondary indexes built over cached entries so they can later be invalidated by what they are about rather than waiting out their TTL. Each index is independent; with all of them off entries are cached untagged.",
+          "additionalProperties": false,
+          "properties": {
+            "cache_tag": {
+              "type": "boolean",
+              "description": "Index entries under the cache tags a subgraph declares. A subgraph opts in by returning an 'apolloEntityCacheTags' extension: an array of arrays holding one list of tags per cached value, in the same order as the '_entities' it answered with, or a single element outer array for a root query fetch. The extension is consumed by the router and never forwarded to clients. Set to false to stop recording declared cache tags.",
+              "default": true
+            },
+            "subgraph": {
+              "type": "boolean",
+              "description": "Index every cached entry under the subgraph that answered it, so everything one subgraph contributed can be found without that subgraph having declared anything. Set to false to stop maintaining the by-subgraph index.",
+              "default": true
+            },
+            "type": {
+              "type": "boolean",
+              "description": "Index every cached entity under its __typename. Requires the typename to be present in what is cached, which a root query fetch has no single one of. Set to false to stop maintaining the by-type index.",
+              "default": true
+            }
           }
         }
       },

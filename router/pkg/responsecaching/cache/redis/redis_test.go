@@ -14,6 +14,11 @@ import (
 
 const testPrefix = "entity:"
 
+// entryKey and tagIndexKey mirror the namespacing the cache applies, so tests
+// name raw redis keys the same way it does.
+func entryKey(key string) string    { return testPrefix + entryNamespace + key }
+func tagIndexKey(tag string) string { return testPrefix + tagNamespace + tag }
+
 // newTestRedisCache returns a cache backed by an in-process Redis, plus the
 // server itself so tests can inspect raw keys and drive expiry.
 func newTestRedisCache(t *testing.T) (*RedisCache, *miniredis.Miniredis) {
@@ -228,12 +233,12 @@ func TestRedisCache(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			stored, err := mr.Get(testPrefix + "a")
+			stored, err := mr.Get(entryKey("a"))
 			require.NoError(t, err)
 			require.Equal(t, "1", stored)
 
-			require.Equal(t, time.Minute, mr.TTL(testPrefix+"a"))
-			require.Equal(t, 2*time.Minute, mr.TTL(testPrefix+"b"))
+			require.Equal(t, time.Minute, mr.TTL(entryKey("a")))
+			require.Equal(t, 2*time.Minute, mr.TTL(entryKey("b")))
 		})
 
 		t.Run("namespaces keys with the prefix", func(t *testing.T) {
@@ -246,7 +251,7 @@ func TestRedisCache(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			require.Equal(t, []string{testPrefix + "a"}, mr.Keys())
+			require.Equal(t, []string{entryKey("a")}, mr.Keys())
 		})
 
 		t.Run("duplicate key in one batch, last one wins", func(t *testing.T) {
@@ -261,7 +266,7 @@ func TestRedisCache(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, mr.Keys(), 1)
-			require.Equal(t, 2*time.Minute, mr.TTL(testPrefix+"a"))
+			require.Equal(t, 2*time.Minute, mr.TTL(entryKey("a")))
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -285,7 +290,7 @@ func TestRedisCache(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			require.Equal(t, time.Hour, mr.TTL(testPrefix+"a"))
+			require.Equal(t, time.Hour, mr.TTL(entryKey("a")))
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -369,7 +374,7 @@ func TestRedisCache(t *testing.T) {
 			// which is the point: what is reported is the part that can be
 			// proven, not everything that happened.
 			for _, key := range partial.KnownStoredKeys {
-				stored, err := mr.Get(testPrefix + key)
+				stored, err := mr.Get(entryKey(key))
 				require.NoError(t, err)
 				require.NotEmpty(t, stored)
 			}
@@ -471,8 +476,8 @@ func TestRedisCache(t *testing.T) {
 
 			// Written straight to redis, bypassing SetMany. The expiry has to be
 			// set by hand too, a key without one is never served.
-			require.NoError(t, mr.Set(testPrefix+"a", "value"))
-			mr.SetTTL(testPrefix+"a", time.Minute)
+			require.NoError(t, mr.Set(entryKey("a"), "value"))
+			mr.SetTTL(entryKey("a"), time.Minute)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -497,7 +502,7 @@ func TestRedisCache(t *testing.T) {
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
 			require.Contains(t, results, "a")
-			require.NotContains(t, results, testPrefix+"a")
+			require.NotContains(t, results, entryKey("a"))
 			require.Equal(t, "a", results["a"].Key)
 		})
 
@@ -599,7 +604,7 @@ func TestRedisCache(t *testing.T) {
 			// A hash where a string is expected, so GET returns WRONGTYPE. The
 			// leading miss makes redis.Nil the error Exec reports, so the
 			// per-command failure is only caught while reading the results.
-			mr.HSet(testPrefix+"wrong-type", "field", "value")
+			mr.HSet(entryKey("wrong-type"), "field", "value")
 
 			results, err := c.GetMany(ctx, []string{"missing", "wrong-type"})
 			require.Error(t, err)
@@ -746,14 +751,14 @@ func TestRedisCache(t *testing.T) {
 			// SetMany refuses an item without a TTL, so a key sitting in the
 			// namespace with no expiry was put there by something else and is
 			// not this cache's to serve.
-			require.NoError(t, mr.Set(testPrefix+"a", "value"))
+			require.NoError(t, mr.Set(entryKey("a"), "value"))
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
 			require.NotContains(t, results, "a")
 
 			// Reported as a miss, but left where it was found.
-			require.Equal(t, []string{testPrefix + "a"}, mr.Keys())
+			require.Equal(t, []string{entryKey("a")}, mr.Keys())
 		})
 
 		t.Run("a sub-millisecond remainder is not a hit", func(t *testing.T) {
@@ -764,8 +769,8 @@ func TestRedisCache(t *testing.T) {
 			// PTTL answers in whole milliseconds, so anything shorter rounds
 			// down to nothing left. Seeded by hand because a SetMany of this
 			// TTL would be rounded up to a millisecond on the way out.
-			require.NoError(t, mr.Set(testPrefix+"a", "value"))
-			mr.SetTTL(testPrefix+"a", 500*time.Microsecond)
+			require.NoError(t, mr.Set(entryKey("a"), "value"))
+			mr.SetTTL(entryKey("a"), 500*time.Microsecond)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)

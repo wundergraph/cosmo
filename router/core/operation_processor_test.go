@@ -758,6 +758,17 @@ func validateOperationBody(t *testing.T, p *OperationProcessor, body string) (ca
 	return kit.ValidateOperation()
 }
 
+func TestOperationProcessorRejectsIncompatibleVariableTypeBeforeExtraction(t *testing.T) {
+	const schema = `
+		scalar DateTime
+		input Input { date: DateTime! }
+		type Query { field(input: Input!): String }
+	`
+	processor, _ := newValidationCacheProcessor(t, schema)
+	_, err := validateOperationBody(t, processor, `{"query":"query Q($value: String!) { field(input: {date: $value}) }","variables":{"value":"x"}}`)
+	require.EqualError(t, err, `Variable "$value" of type "String!" used in position expecting type "DateTime!".`)
+}
+
 // TestOperationProcessorValidationCache verifies that after splitting schema
 // validation (ValidateOperation) out of Validate and re-keying the validation
 // cache on the pre-extraction normalized representation, the cache still behaves

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.3](https://github.com/wundergraph/cosmo/compare/router-plugin@0.8.2...router-plugin@0.8.3) (2026-09-02)
+
+### Bug Fixes
+
+* grpc dependency bump ([#3210](https://github.com/wundergraph/cosmo/issues/3210)) ([f92ec25](https://github.com/wundergraph/cosmo/commit/f92ec259c39453a006ae54fc4d19fd5103217edd)) (@SkArchon)
+
 ## [0.8.2](https://github.com/wundergraph/cosmo/compare/router-plugin@0.8.1...router-plugin@0.8.2) (2026-07-27)
 
 **Note:** Version bump only for package router-plugin

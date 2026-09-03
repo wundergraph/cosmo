@@ -466,6 +466,7 @@ engine:
 rate_limit:
   enabled: true
   strategy: 'simple'
+  exclude_subscriptions: true
   storage:
     cluster_enabled: true
     urls:
@@ -548,6 +549,10 @@ response_cache:
     provider: 'redis'
     provider_id: 'my_redis'
     max_entries: 2048
+  invalidation:
+    cache_tag: true
+    subgraph: false
+    type: true
 
 security:
   complexity_calculation_cache:

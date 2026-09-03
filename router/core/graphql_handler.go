@@ -92,8 +92,9 @@ type HandlerOptions struct {
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
 
-	ResponseCache            caching.Cache
-	ResponseCacheFallbackTTL time.Duration
+	ResponseCache             caching.Cache
+	ResponseCacheFallbackTTL  time.Duration
+	ResponseCacheInvalidation config.ResponseCacheInvalidationConfig
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -118,6 +119,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		headerPropagation:                        opts.HeaderPropagation,
 		responseCacheStore:                       opts.ResponseCache,
 		responseCacheFallbackTTL:                 opts.ResponseCacheFallbackTTL,
+		responseCacheInvalidation:                opts.ResponseCacheInvalidation,
 		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log),
 	}
 	return graphQLHandler
@@ -127,18 +129,13 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 // a cache failure in order to keep a request alive. The request was served
 // either way; this only decides whether anyone finds out that the cache is no
 // longer doing anything.
-//
-// Sampled down to one line a second, because the failure worth surfacing here is
-// "the cache is unreachable", and that one arrives once per entity fetch of
-// every request in flight. Logged unsampled it would stop being a report of the
-// outage and become a second outage.
+
 func newResponseCacheErrorHandler(log *zap.Logger) func(error) {
 	if log == nil {
 		return nil
 	}
 
 	sampled := log.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
-		// One through per second, nothing thereafter.
 		return zapcore.NewSamplerWithOptions(core, time.Second, 1, 0)
 	}))
 
@@ -173,6 +170,7 @@ type GraphQLHandler struct {
 	responseCacheStore        caching.Cache
 	responseCacheFallbackTTL  time.Duration
 	responseCacheErrorHandler func(error)
+	responseCacheInvalidation config.ResponseCacheInvalidationConfig
 
 	enableCacheResponseHeaders      bool
 	enableResponseHeaderPropagation bool
@@ -223,9 +221,18 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.engineLoaderHooks != nil {
 		resolveCtx.SetEngineLoaderHooks(h.engineLoaderHooks)
 	}
-	resolveCtx = h.configureRateLimiting(resolveCtx)
+	resolveCtx = h.configureRateLimiting(resolveCtx, reqCtx.operation.opType)
 	if h.responseCacheStore != nil {
-		resolveCtx.SetResponseCache(h.responseCacheStore, h.responseCacheFallbackTTL, h.responseCacheErrorHandler)
+		resolveCtx.SetResponseCache(resolve.ResponseCacheOptions{
+			Store:      h.responseCacheStore,
+			DefaultTTL: h.responseCacheFallbackTTL,
+			OnError:    h.responseCacheErrorHandler,
+			Invalidation: resolve.ResponseCacheTagIndexOptions{
+				CacheTag: h.responseCacheInvalidation.CacheTag,
+				Subgraph: h.responseCacheInvalidation.Subgraph,
+				Type:     h.responseCacheInvalidation.Type,
+			},
+		})
 	}
 	if reqCtx.customFieldValueRenderer != nil {
 		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)
@@ -457,7 +464,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Context {
+func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context, opType OperationType) *resolve.Context {
 	if h.rateLimiter == nil {
 		return ctx
 	}
@@ -468,6 +475,9 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Co
 		return ctx
 	}
 	if h.rateLimitConfig.Strategy != "simple" {
+		return ctx
+	}
+	if h.rateLimitConfig.ExcludeSubscriptions && opType == OperationTypeSubscription {
 		return ctx
 	}
 	ctx.SetRateLimiter(h.rateLimiter)
