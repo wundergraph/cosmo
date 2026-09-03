@@ -68,6 +68,29 @@ include it.
 
 ## Findings (September 2026, composition 0.63.3, Node 22)
 
+### Pod simulation: why the controlplane runs out of memory
+
+`parallel-pool.mjs` with 4 worker processes (a 4 CPU pod), each composing one publish of the 52-subgraph Yahoo graph
+with 3 feature flags and 3 contracts (4 x `federateSubgraphsWithContracts`), inside an 8 GB budget:
+
+| Build      | Worker heap cap             | Outcome                                                                                                                        |
+| ---------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| before fix | none (controlplane default) | OOM after 30 s, 0/4 tasks done: combined RSS 8.2 GB (about 2 GB per worker) while the live heap of each worker was about 20 MB |
+| after fix  | none                        | OOM after 27 s, 0/4 tasks done: the library change alone does not stop V8 from hoarding garbage                                |
+| before fix | 1536 MB                     | OK: 4/4 tasks in 73 s, peak combined RSS 6.1 GB                                                                                |
+| after fix  | 1536 MB                     | OK: 4/4 tasks in 61 s, peak combined RSS 6.2 GB                                                                                |
+
+The decisive fix is bounding each worker's heap (`COMPOSITION_WORKER_MAX_OLD_SPACE_SIZE_MB`, passed to the pool as
+`--max-old-space-size`), sized so that `COMPOSITION_MAX_THREADS x cap` fits the container. The cap must stay above the
+live peak of the largest composition (709 MB for the Yahoo graph with 3 contracts before the fix, 537 MB after), which
+is what the library change buys: `federateSubgraphsWithContracts` now takes one pristine copy of the FederationFactory,
+builds each contract on its own copy that is released as soon as its result exists (before, every copy stayed alive
+until all contracts were built), and makes no copy at all when there are no contracts (which halves allocation and
+time for the most common publish). Outputs are byte-identical to the previous implementation on the demo, synthetic,
+Yahoo and MaintainX graphs.
+
+### Steady state and allocation
+
 The library does not retain memory across compositions. Every scenario above was run for 300 to 1000 back-to-back
 compositions (60 for a real 52-subgraph customer graph); the heap after a full GC stayed flat (about 15 to 20 MB for the
 demo graph, 22 MB for the customer graph, 69 MB for `big`, growth of 1 to 18 KB per iteration that the snapshot diff
