@@ -15,7 +15,7 @@ import {
   TimeFilters,
 } from '../../../types/index.js';
 import { traced } from '../../tracing.js';
-import { ClickHouseUnavailableError } from 'src/core/errors/errors.js';
+import { ClickHouseUnavailableError } from '../../errors/errors.js';
 
 @traced
 export class AnalyticsDashboardViewRepository {

@@ -1,4 +1,4 @@
-import { ValidationResult } from '@wundergraph/protographic';
+import type { ValidationResult } from '@wundergraph/protographic';
 import Spinner from 'ora';
 import pc from 'picocolors';
 
