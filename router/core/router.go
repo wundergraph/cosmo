@@ -1173,7 +1173,7 @@ func (r *Router) setupTelemetry(ctx context.Context) error {
 		}
 
 		if len(r.customModules) > 0 {
-			r.pyroscopeConfig.Tags["custom_modules"] = "true"
+			r.pyroscopeConfig.Tags["router_custom_modules"] = "true"
 		}
 
 		profiler, err := pyroscope.NewProfiler(r.logger, r.pyroscopeConfig)
