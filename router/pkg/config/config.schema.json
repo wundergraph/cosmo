@@ -3455,6 +3455,7 @@
                 },
                 "listen_addr": {
                   "type": "string",
+                  "format": "hostname-port",
                   "description": "The address the invalidation endpoint listens on. Defaults to loopback, because an endpoint that empties the cache should be exposed on purpose rather than by inheriting whatever the router itself is exposed on. Expose it to internal networks only.",
                   "default": "localhost:5027"
                 },
