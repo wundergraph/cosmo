@@ -32,10 +32,6 @@ type RedisCache struct {
 
 var _ caching.Cache = (*RedisCache)(nil)
 
-// Entries and the tag index share one redis instance, so each gets its own
-// segment under the prefix. Without that a tag equal to an entry key names the
-// same redis key twice: the SET overwrites the index ZSET, and the next ZADD
-// against it fails with WRONGTYPE.
 const (
 	entryNamespace = "e:"
 	tagNamespace   = "t:"
@@ -131,9 +127,6 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 		return caching.ErrNoItems
 	}
 
-	// Validated up front, so a batch rejected for a missing TTL is still the one
-	// case where nothing at all was written, now that a single item queues
-	// commands against keys other than its own.
 	for _, item := range items {
 		if item.TTL <= 0 {
 			return fmt.Errorf("%w: key %q", caching.ErrMissingTTL, item.Key)
