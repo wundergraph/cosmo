@@ -3635,34 +3635,23 @@ export function federateSubgraphsWithContracts({
     };
   }
   factoryResult.federationFactory.federateSubgraphData();
-  const federationResultByContractName = new Map<ContractName, FederationResult>();
-  if (tagOptionsByContractName.size < 1) {
-    // There is nothing to copy the FederationFactory for if there are no contracts.
-    const federationResult = factoryResult.federationFactory.buildFederationResult();
-    if (!federationResult.success) {
-      return { errors: federationResult.errors, success: false, warnings: federationResult.warnings };
-    }
-    return { ...federationResult, federationResultByContractName };
-  }
-  /* Building a result mutates the FederationFactory, so a pristine deep copy is taken before the base result is built.
-   * Each contract is then built from its own copy of that pristine state.
-   * Only one working copy exists at a time: a copy becomes garbage as soon as its contract result has been built.
-   * Retaining every copy until all contracts were built (the previous approach) multiplied peak memory usage by the
-   * number of contracts, because each copy contains the full subgraph ASTs, GraphQLSchemas, and the resolvability graph.
-   */
-  const pristineFactory = cloneDeep(factoryResult.federationFactory);
+  const federationFactories = [cloneDeep(factoryResult.federationFactory)];
   const federationResult = factoryResult.federationFactory.buildFederationResult();
   // if the base graph fails composition, no contracts will be attempted
   if (!federationResult.success) {
     return { errors: federationResult.errors, success: false, warnings: federationResult.warnings };
   }
   const lastContractIndex = tagOptionsByContractName.size - 1;
+  const federationResultByContractName = new Map<ContractName, FederationResult>();
   let i = 0;
   for (const [contractName, tagOptions] of tagOptionsByContractName) {
-    // The last contract can consume the pristine copy directly instead of copying it once more.
-    const federationFactory = i === lastContractIndex ? pristineFactory : cloneDeep(pristineFactory);
+    // deep copy the current FederationFactory before it is mutated if it is not the last one required
+    if (i !== lastContractIndex) {
+      federationFactories.push(cloneDeep(federationFactories[i]));
+    }
     // note that any one contract could have its own errors
-    federationResultByContractName.set(contractName, federationFactory.buildFederationContractResult(tagOptions));
+    const contractResult = federationFactories[i].buildFederationContractResult(tagOptions);
+    federationResultByContractName.set(contractName, contractResult);
     i++;
   }
   return { ...federationResult, federationResultByContractName };
