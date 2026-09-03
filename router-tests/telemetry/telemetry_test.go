@@ -3965,7 +3965,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			rs = attribute.NewSet(sn[6].Attributes()...)
 
-			require.Len(t, sn[6].Attributes(), 14)
+			require.Len(t, withoutHTTPClientTimingAttributes(sn[6].Attributes()), 14)
 			asssertAttributesEqual(t, rs,
 				otel.WgSubgraphID.String("0"),
 				otel.WgSubgraphName.String("employees"),
@@ -4743,7 +4743,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[6].Attributes(), 14)
+			require.Len(t, withoutHTTPClientTimingAttributes(sn[6].Attributes()), 14)
 			asssertAttributesEqual(t, attribute.NewSet(sn[6].Attributes()...),
 				otel.WgSubgraphID.String("0"),
 				otel.WgSubgraphName.String("employees"),
@@ -5218,7 +5218,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[6].Attributes(), 14)
+			require.Len(t, withoutHTTPClientTimingAttributes(sn[6].Attributes()), 14)
 			asssertAttributesEqual(t, attribute.NewSet(sn[6].Attributes()...),
 				otel.WgSubgraphID.String("0"),
 				otel.WgSubgraphName.String("employees"),
@@ -7280,7 +7280,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			require.Equal(t, "Engine - Fetch", sn[6].Name())
-			require.Len(t, sn[6].Attributes(), 15)
+			require.Len(t, withoutHTTPClientTimingAttributes(sn[6].Attributes()), 15)
 			asssertAttributesEqual(t, attribute.NewSet(sn[6].Attributes()...),
 				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
 				otel.WgFeatureFlag.String("myff"),
@@ -7896,13 +7896,15 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Equal(t, "Engine - Fetch", sn[6].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
-			require.Lenf(t, sn[6].Attributes(), 14, "expected 14 attributes, got %d", len(sn[8].Attributes()))
+			employeesAttributes := withoutHTTPClientTimingAttributes(sn[6].Attributes())
+			require.Lenf(t, employeesAttributes, 14, "expected 14 attributes, got %d", len(employeesAttributes))
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
 
 			require.Equal(t, "Engine - Fetch", sn[8].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[8].SpanKind())
 			require.Equal(t, codes.Error, sn[8].Status().Code)
-			require.Lenf(t, sn[8].Attributes(), 15, "expected 15 attributes, got %d", len(sn[8].Attributes()))
+			productsAttributes := withoutHTTPClientTimingAttributes(sn[8].Attributes())
+			require.Lenf(t, productsAttributes, 15, "expected 15 attributes, got %d", len(productsAttributes))
 			require.Contains(t, sn[8].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph 'products' at Path: 'employees'.")
 
 			events := sn[8].Events()
@@ -7948,9 +7950,10 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
 
-			require.Lenf(t, sn[6].Attributes(), 14, "expected 14 attributes, got %d", len(sn[6].Attributes()))
+			employeesAttributes := withoutHTTPClientTimingAttributes(sn[6].Attributes())
+			require.Lenf(t, employeesAttributes, 14, "expected 14 attributes, got %d", len(employeesAttributes))
 
-			given := attribute.NewSet(sn[6].Attributes()...)
+			given := attribute.NewSet(employeesAttributes...)
 			want := attribute.NewSet([]attribute.KeyValue{
 				semconv.HTTPStatusCode(200),
 				otel.WgClientName.String("unknown"),
@@ -7974,9 +7977,10 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, "Engine - Fetch", sn[8].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[8].SpanKind())
 
-			require.Lenf(t, sn[8].Attributes(), 15, "expected 15 attributes, got %d", len(sn[8].Attributes()))
+			productsAttributes := withoutHTTPClientTimingAttributes(sn[8].Attributes())
+			require.Lenf(t, productsAttributes, 15, "expected 15 attributes, got %d", len(productsAttributes))
 
-			given = attribute.NewSet(sn[8].Attributes()...)
+			given = attribute.NewSet(productsAttributes...)
 			want = attribute.NewSet([]attribute.KeyValue{
 				otel.WgSubgraphName.String("products"),
 				otel.WgSubgraphID.String("3"),
@@ -9786,7 +9790,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				require.Equal(t, "Engine - Fetch", sn[6].Name())
 				require.Len(t, sn[6].Resource().Attributes(), 9)
-				require.Len(t, sn[6].Attributes(), 14)
+				require.Len(t, withoutHTTPClientTimingAttributes(sn[6].Attributes()), 14)
 
 				// GraphQL handler
 				require.Equal(t, "Operation - Execute", sn[7].Name())
