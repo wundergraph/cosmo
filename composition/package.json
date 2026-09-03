@@ -21,6 +21,7 @@
     "test:coverage": "vitest run --coverage",
     "test:memory": "node --expose-gc scripts/memory-load-test/load-test.mjs",
     "test:memory:alloc": "node scripts/memory-load-test/alloc-profile.mjs",
+    "test:memory:pool": "node scripts/memory-load-test/parallel-pool.mjs",
     "lint": "prettier --check .",
     "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && pnpm format",
     "format": "prettier -w -c .",

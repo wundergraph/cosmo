@@ -72,7 +72,9 @@ export function featureFlagCompositions({ sdlByName, featureFlagCount = 3, retai
       }
       return { name, url: `http://${name}:4000/graphql`, definitions: parse(sdl, { noLocation }) };
     });
-    const result = assertSuccess(composition.federateSubgraphsWithContracts({ subgraphs, tagOptionsByContractName }));
+    const result = assertSuccess(
+      composition.federateSubgraphsWithContracts({ options: compositionOptions, subgraphs, tagOptionsByContractName }),
+    );
     if (retainResults) {
       results.push(result);
     }
@@ -163,6 +165,12 @@ export function syntheticSubgraphs({ subgraphCount = 12, typeCount = 40, fieldCo
   return subgraphs;
 }
 
+/**
+ * Resolvability validation is a large share of composition time; it is skipped by default so runs finish faster.
+ * Set COMPOSITION_RESOLVABILITY=1 to include it.
+ */
+export const compositionOptions = { disableResolvabilityValidation: process.env.COMPOSITION_RESOLVABILITY !== '1' };
+
 export const tagOptionsByContractName = new Map([
   ['contract-public-only', composition.newContractTagOptionsFromArrays([], ['public'])],
   ['contract-no-internal', composition.newContractTagOptionsFromArrays(['internal'], [])],
@@ -184,17 +192,26 @@ function assertSuccess(result) {
 
 export const scenarios = {
   // federateSubgraphs with the demo subgraphs (documents are re-parsed every iteration)
-  base: () => assertSuccess(composition.federateSubgraphs({ subgraphs: demoSubgraphs() })),
+  base: () => assertSuccess(composition.federateSubgraphs({ options: compositionOptions, subgraphs: demoSubgraphs() })),
   // the same, but the documents keep their source locations, which is how the controlplane parses subgraph SDL
   'base-locations': () =>
-    assertSuccess(composition.federateSubgraphs({ subgraphs: demoSubgraphs({ noLocation: false }) })),
+    assertSuccess(
+      composition.federateSubgraphs({ options: compositionOptions, subgraphs: demoSubgraphs({ noLocation: false }) }),
+    ),
   // federateSubgraphsWithContracts with three contracts (the controlplane flow when publishing a subgraph)
   contracts: () =>
-    assertSuccess(composition.federateSubgraphsWithContracts({ subgraphs: demoSubgraphs(), tagOptionsByContractName })),
+    assertSuccess(
+      composition.federateSubgraphsWithContracts({
+        options: compositionOptions,
+        subgraphs: demoSubgraphs(),
+        tagOptionsByContractName,
+      }),
+    ),
   // federateSubgraphsContract (the controlplane flow when creating a new contract)
   contract: () =>
     assertSuccess(
       composition.federateSubgraphsContract({
+        options: compositionOptions,
         contractTagOptions: tagOptionsByContractName.get('contract-no-internal'),
         subgraphs: demoSubgraphs(),
       }),
@@ -202,6 +219,7 @@ export const scenarios = {
   // a composition that fails (an @override conflict), to exercise the error path
   errors: () => {
     const result = composition.federateSubgraphs({
+      options: compositionOptions,
       subgraphs: demoSubgraphs({ names: [...demoSubgraphNames, 'products_fg'] }),
     });
     if (result.success) {
@@ -212,7 +230,11 @@ export const scenarios = {
   // normalizeSubgraphFromString for each demo subgraph (the controlplane flow when checking a subgraph)
   normalize: () => {
     for (const sdlString of demoSdlByName.values()) {
-      const result = composition.normalizeSubgraphFromString({ sdlString, noLocation: true });
+      const result = composition.normalizeSubgraphFromString({
+        options: compositionOptions,
+        sdlString,
+        noLocation: true,
+      });
       if (!result.success) {
         throw new Error(result.errors[0].message);
       }
@@ -222,7 +244,11 @@ export const scenarios = {
   // federated graph that has no contracts)
   'no-contracts': () =>
     assertSuccess(
-      composition.federateSubgraphsWithContracts({ subgraphs: demoSubgraphs(), tagOptionsByContractName: new Map() }),
+      composition.federateSubgraphsWithContracts({
+        options: compositionOptions,
+        subgraphs: demoSubgraphs(),
+        tagOptionsByContractName: new Map(),
+      }),
     ),
   // a different (smaller) synthetic graph on every iteration, so that nothing can be cached by type or subgraph name
   unique: (() => {
@@ -230,24 +256,33 @@ export const scenarios = {
     return () =>
       assertSuccess(
         composition.federateSubgraphs({
+          options: compositionOptions,
           subgraphs: syntheticSubgraphs({ subgraphCount: 4, typeCount: 15, fieldCount: 8, salt: `U${iteration++}_` }),
         }),
       );
   })(),
   // the subgraphs in COMPOSITION_SUBGRAPHS, without, with zero, and with three contracts
-  custom: () => assertSuccess(composition.federateSubgraphs({ subgraphs: customSubgraphs() })),
+  custom: () =>
+    assertSuccess(composition.federateSubgraphs({ options: compositionOptions, subgraphs: customSubgraphs() })),
   'custom-locations': () =>
-    assertSuccess(composition.federateSubgraphs({ subgraphs: customSubgraphs({ noLocation: false }) })),
+    assertSuccess(
+      composition.federateSubgraphs({ options: compositionOptions, subgraphs: customSubgraphs({ noLocation: false }) }),
+    ),
   'custom-no-contracts': () =>
     assertSuccess(
       composition.federateSubgraphsWithContracts({
+        options: compositionOptions,
         subgraphs: customSubgraphs(),
         tagOptionsByContractName: new Map(),
       }),
     ),
   'custom-contracts': () =>
     assertSuccess(
-      composition.federateSubgraphsWithContracts({ subgraphs: customSubgraphs(), tagOptionsByContractName }),
+      composition.federateSubgraphsWithContracts({
+        options: compositionOptions,
+        subgraphs: customSubgraphs(),
+        tagOptionsByContractName,
+      }),
     ),
   // a publish with three feature flags and three contracts: 4 x federateSubgraphsWithContracts per iteration
   'custom-featureflags': () => featureFlagCompositions({ sdlByName: customSdlByName }),
@@ -256,11 +291,16 @@ export const scenarios = {
   featureflags: () => featureFlagCompositions({ sdlByName: demoSdlByName }),
   'featureflags-retained': () => featureFlagCompositions({ sdlByName: demoSdlByName, retainResults: true }),
   // a large synthetic graph (12 subgraphs, 480 object types, ~5800 fields)
-  big: () => assertSuccess(composition.federateSubgraphs({ subgraphs: syntheticSubgraphs() })),
+  big: () =>
+    assertSuccess(composition.federateSubgraphs({ options: compositionOptions, subgraphs: syntheticSubgraphs() })),
   // the large synthetic graph with three contracts
   'big-contracts': () =>
     assertSuccess(
-      composition.federateSubgraphsWithContracts({ subgraphs: syntheticSubgraphs(), tagOptionsByContractName }),
+      composition.federateSubgraphsWithContracts({
+        options: compositionOptions,
+        subgraphs: syntheticSubgraphs(),
+        tagOptionsByContractName,
+      }),
     ),
 };
 

@@ -168,7 +168,7 @@ import {
 } from '../../schema-building/utils';
 
 import { renameRootTypes } from './walkers';
-import { cloneDeep } from 'lodash';
+import { cloneDeepWith } from 'lodash';
 import {
   DivergentType,
   type FederateTypeParams,
@@ -3620,6 +3620,20 @@ export function federateSubgraphs({ options, subgraphs }: FederationParams): Fed
   return federationFactoryResult.federationFactory.federateSubgraphsInternal();
 }
 
+/* Building a (contract) result mutates the FederationFactory, so each contract is built on a deep copy of the factory.
+ * The copy shares each subgraph's parsed document and GraphQLSchema with the original: neither is read nor mutated when
+ * a contract result is built, they are only passed through into the result, and together they account for roughly
+ * half of the memory (and time) of a full deep copy.
+ */
+function copyFederationFactory(federationFactory: FederationFactory): FederationFactory {
+  const sharedObjects = new Set<object>();
+  for (const { definitions, schema } of federationFactory.internalSubgraphBySubgraphName.values()) {
+    sharedObjects.add(definitions);
+    sharedObjects.add(schema);
+  }
+  return cloneDeepWith(federationFactory, (value) => (sharedObjects.has(value) ? value : undefined));
+}
+
 // the flow when publishing a subgraph that also has contracts
 export function federateSubgraphsWithContracts({
   options,
@@ -3635,23 +3649,31 @@ export function federateSubgraphsWithContracts({
     };
   }
   factoryResult.federationFactory.federateSubgraphData();
-  const federationFactories = [cloneDeep(factoryResult.federationFactory)];
+  const federationResultByContractName = new Map<ContractName, FederationResult>();
+  // Without contracts there is nothing to copy the FederationFactory for.
+  if (tagOptionsByContractName.size < 1) {
+    const federationResult = factoryResult.federationFactory.buildFederationResult();
+    if (!federationResult.success) {
+      return { errors: federationResult.errors, success: false, warnings: federationResult.warnings };
+    }
+    return { ...federationResult, federationResultByContractName };
+  }
+  // The pristine state is copied before the base result mutates the factory; each contract is built on its own copy.
+  const pristineFactory = copyFederationFactory(factoryResult.federationFactory);
   const federationResult = factoryResult.federationFactory.buildFederationResult();
   // if the base graph fails composition, no contracts will be attempted
   if (!federationResult.success) {
     return { errors: federationResult.errors, success: false, warnings: federationResult.warnings };
   }
   const lastContractIndex = tagOptionsByContractName.size - 1;
-  const federationResultByContractName = new Map<ContractName, FederationResult>();
   let i = 0;
   for (const [contractName, tagOptions] of tagOptionsByContractName) {
-    // deep copy the current FederationFactory before it is mutated if it is not the last one required
-    if (i !== lastContractIndex) {
-      federationFactories.push(cloneDeep(federationFactories[i]));
-    }
+    /* The last contract consumes the pristine copy itself. Only one working copy is alive at a time; keeping every
+     * copy until all contracts were built multiplied peak memory usage by the number of contracts.
+     */
+    const federationFactory = i === lastContractIndex ? pristineFactory : copyFederationFactory(pristineFactory);
     // note that any one contract could have its own errors
-    const contractResult = federationFactories[i].buildFederationContractResult(tagOptions);
-    federationResultByContractName.set(contractName, contractResult);
+    federationResultByContractName.set(contractName, federationFactory.buildFederationContractResult(tagOptions));
     i++;
   }
   return { ...federationResult, federationResultByContractName };

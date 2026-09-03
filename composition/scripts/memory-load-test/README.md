@@ -3,13 +3,14 @@
 Tooling to answer "does the composition library leak memory when many compositions run back to back, and where does
 the memory go?". Everything runs against the built library, so run `pnpm build` first.
 
-| Script                   | What it does                                                                                                                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `load-test.mjs`          | Runs a scenario N times and reports the heap after a forced GC at regular intervals (a growing value is a leak). Optionally writes heap snapshots after warm-up and at the end. |
-| `alloc-profile.mjs`      | Sampling allocation profile of a scenario: allocated bytes per composition and the frames that allocate the most.                                                               |
-| `heap-snapshot-diff.mjs` | Compares two heap snapshots by object class (count and self size).                                                                                                              |
-| `heap-retainers.mjs`     | Prints the retainer tree of a heap snapshot node or class, i.e. why an object is still alive.                                                                                   |
-| `scenarios.mjs`          | The workloads (see below).                                                                                                                                                      |
+| Script                   | What it does                                                                                                                                                                                    |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `load-test.mjs`          | Runs a scenario N times and reports the heap after a forced GC at regular intervals (a growing value is a leak). Optionally writes heap snapshots after warm-up and at the end.                 |
+| `alloc-profile.mjs`      | Sampling allocation profile of a scenario: allocated bytes per composition and the frames that allocate the most.                                                                               |
+| `heap-snapshot-diff.mjs` | Compares two heap snapshots by object class (count and self size).                                                                                                                              |
+| `heap-retainers.mjs`     | Prints the retainer tree of a heap snapshot node or class, i.e. why an object is still alive.                                                                                                   |
+| `parallel-pool.mjs`      | Simulates the controlplane worker pool in a memory-limited pod: N worker processes compose concurrently under a combined RSS budget (OOM when exceeded), optionally with a per-worker heap cap. |
+| `scenarios.mjs`          | The workloads (see below).                                                                                                                                                                      |
 
 ```sh
 pnpm build
@@ -27,7 +28,12 @@ pnpm test:memory:alloc big-contracts 3
 COMPOSITION_DIST=/path/to/other/composition/dist/index.js pnpm test:memory:alloc no-contracts 10
 # a real graph: any directory of *.graphql subgraph files (one subgraph per file), kept outside the repository
 COMPOSITION_SUBGRAPHS=/path/to/subgraphs pnpm test:memory custom 50
+# 4 worker processes composing a feature-flag publish concurrently inside an "8 GB pod", each capped at 1.5 GB of heap
+COMPOSITION_SUBGRAPHS=/path/to/subgraphs pnpm test:memory:pool --scenario custom-featureflags --workers 4 --tasks 1 --budget-mb 8192 --heap-cap-mb 1536
 ```
+
+Resolvability validation is skipped by all scenarios (it dominates composition time); set `COMPOSITION_RESOLVABILITY=1` to
+include it.
 
 ## Scenarios
 
