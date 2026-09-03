@@ -1,0 +1,186 @@
+---
+title: "Response Cache (Experimental)"
+description: "Cache fetches to avoid subsequent requests reaching upstream subgraphs."
+icon: "boxes-stacked"
+---
+
+<Danger>
+  **Experimental feature.** Response caching is in alpha and is subject to change, and should not be used in production environments.
+</Danger>
+
+The router caches two kinds of subgraph response.
+
+**Entity fetches.** An entity fetch is the request the router sends to a subgraph through the `_entities` root field to resolve fields of an entity that another subgraph owns. Entries are keyed per entity and per selection set, so asking for different fields of the same entity does not share an entry.
+
+**Root query fetches.** A root query fetch is the request the router sends a subgraph for the root fields the client selected. The whole answer is stored as one entry. The key covers the operation text and every variable value. Any difference in either is a miss, and the request goes to the subgraph as it would have. Only queries are cached. Mutations and subscriptions are never cached.
+
+Response caching is disabled by default.
+
+## What gets cached
+
+A subgraph response is cached only when its `Cache-Control` header asks to be. The rules apply in this order:
+
+1. `no-store` refuses caching.
+2. `no-cache` or `private` refuses caching, in any form. This includes the qualified `no-cache="Set-Cookie"` form.
+3. `public` is required. `Cache-Control: max-age=60` on its own is not cached.
+4. `s-maxage` sets the lifetime and takes precedence over `max-age`.
+5. `max-age` sets the lifetime when `s-maxage` is absent.
+6. `fallback_ttl` sets a max-age when the "Cache-Control" response header from the subgraph has a value of `public` but does not specify `max-age` as part of its value.
+
+A value of `0` for `s-maxage` or `max-age` refuses caching. It does not fall through to the next rule.
+
+A subgraph that sends no `Cache-Control` header at all is never cached. `fallback_ttl` does not apply to it.
+
+A response carrying GraphQL errors is never cached, whatever its `Cache-Control` header says.
+
+<Info>
+  Configuring the response cache does not make anything cacheable on its own. Subgraphs opt in by sending `Cache-Control: public`. If nothing appears to be cached, check the subgraph response headers first.
+</Info>
+
+## Enable it
+
+### Redis
+
+Every router replica shares one cache and entries outlive the process. Define a [storage provider](/router/storage-providers), then reference it by `provider_id`.
+
+<CodeGroup>
+```yaml config.yaml
+storage_providers:
+  redis:
+    - id: 'my_redis'
+      cluster_enabled: false
+      urls:
+        - 'redis://localhost:6379'
+
+response_cache:
+  enabled: true
+  fallback_ttl: 30s
+  key_prefix: 'cosmo_response_cache:'
+  storage:
+    provider: 'redis'
+    provider_id: 'my_redis'
+```
+</CodeGroup>
+
+An unknown `provider_id` fails startup.
+
+### Router memory
+
+Each replica holds its own cache, nothing survives a restart, and no Redis is needed.
+
+<CodeGroup>
+```yaml config.yaml
+response_cache:
+  enabled: true
+  fallback_ttl: 30s
+  storage:
+    provider: 'memory'
+    max_entries: 2048
+```
+</CodeGroup>
+
+`provider` defaults to `redis`, so caching in memory has to be asked for by name. This prevents a missing `provider_id` from quietly turning one shared cache into one cache per replica.
+
+## Configuration reference
+
+```yaml config.yaml
+response_cache:
+  # Enable response caching. Default: false.
+  enabled: true
+  # Lifetime for a response that says public without saying for how long.
+  # A response naming its own max-age or s-maxage gets that instead.
+  # Minimum 1s. Default: 30s.
+  fallback_ttl: 30s
+  # Prepended to every cache key so entries cannot collide with anything else
+  # sharing the Redis instance. Redis only, ignored by the memory provider.
+  # Default: cosmo_response_cache:
+  key_prefix: 'cosmo_response_cache:'
+  storage:
+    # redis or memory. Default: redis.
+    provider: 'redis'
+    # ID of a provider declared under storage_providers.redis.
+    # Required unless provider is memory.
+    provider_id: 'my_redis'
+    # Memory provider only. Default: 10000.
+    max_entries: 10000
+  invalidation:
+    # Which secondary indexes are built over cached entries, so an entry can
+    # later be found by what it is about. Each defaults to true.
+    # Index under the cache tags a subgraph declared.
+    cache_tag: true
+    # Index under the subgraph that answered.
+    subgraph: true
+    # Index entities under their __typename.
+    type: true
+```
+
+`storage` is required when `enabled` is `true`.
+
+Environment variables bypass the config schema validation. A `fallback_ttl` of zero or less fails startup either way.
+
+## Limitations
+
+These apply to the current alpha.
+
+**A batch is served from the cache only when every entity in it is present.** One miss sends the whole batch to the subgraph, including the entities that were already cached. Entities are stored individually, so a later batch made up only of cached entities is a full hit.
+
+**Forwarded request headers are not part of the cache key.** The key covers the request the router renders for the subgraph, which is the operation text and its variables. Headers added by header propagation are applied after that and never reach the key. Two requests that differ only by a propagated header share one entry, so the first response is served to the second caller. A subgraph whose answer varies by request header must not mark that answer `public`. Use `private` or `no-store` for it instead.
+
+**Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
+
+**`enable_multi_fetch` disables caching for merged entity fetches.** When `engine.enable_multi_fetch` is on, the router merges entity fetches to the same subgraph within one parallel wave into a single request. A merged fetch is not cached, and nothing reports that it was skipped. An entity fetch that has nothing to merge with is still cached, and root query fetches are unaffected. Support for caching merged fetches is planned.
+
+## Cache tags
+
+A subgraph names what its response is about by returning a cache tag extension. Tags are recorded as a secondary index over the cached entries, so an entry can be found by what it is about rather than only by the key it happens to sit under.
+
+The shape depends on what was fetched, because an entity fetch caches one entry per entity while a root query fetch caches its whole answer as one.
+
+**Entity fetches** return `apolloEntityCacheTags`, an array of arrays holding one list per entity, in the same order as the `_entities` answered:
+
+```json
+{
+  "data": { "_entities": [{ "__typename": "User", "id": "1" }, { "__typename": "User", "id": "2" }] },
+  "extensions": { "apolloEntityCacheTags": [["users", "user-1"], ["users", "user-2"]] }
+}
+```
+
+**Root query fetches** return `apolloCacheTags`, one flat array:
+
+```json
+{
+  "data": { "homepage": { "title": "Hello" } },
+  "extensions": { "apolloCacheTags": ["homepage", "featured"] }
+}
+```
+
+An outer array whose length does not match the entities answered costs the whole response its tags, rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and never forwarded to clients.
+
+## Observability
+
+The router logs once at startup when the cache is enabled. With the Redis provider:
+
+```
+INFO  Response cache enabled  {"fallback_ttl": "30s", "storage_provider": "redis", "key_prefix": "cosmo_response_cache:", "storage_provider_id": "my_redis"}
+```
+
+With the memory provider:
+
+```
+INFO  Response cache enabled  {"fallback_ttl": "30s", "storage_provider": "memory", "max_entries": 2048}
+```
+
+Nothing is logged when the cache is disabled.
+
+Cache failures never fail a request. When a read or a write fails, the router serves from the subgraph and logs a warning:
+
+```
+WARN  Response cache degraded, serving from the subgraph instead
+```
+
+That warning is sampled to one line per second. An unreachable cache produces one failure per cacheable fetch of every request in flight, and logging it unsampled would compound the outage.
+
+## Related
+
+* [Storage Providers](/router/storage-providers) defines the Redis instance the `redis` provider references.
+* [Cache Warmer](/concepts/cache-warmer) is a different cache. It pre-populates the operation plan cache and does not cache subgraph responses.

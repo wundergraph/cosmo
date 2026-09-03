@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
@@ -6,8 +8,20 @@ import {
   createTestGroup,
   createTestRBACEvaluator,
   genID,
+  genUniqueLabel,
 } from '../../src/core/test-util.js';
-import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from '../test-util.js';
+import {
+  createAndPublishSubgraph,
+  createFeatureFlag,
+  createFederatedGraph,
+  createNamespace,
+  createThenPublishFeatureSubgraph,
+  createThenPublishSubgraph,
+  DEFAULT_NAMESPACE,
+  DEFAULT_ROUTER_URL,
+  DEFAULT_SUBGRAPH_URL_ONE,
+  SetupTest,
+} from '../test-util.js';
 
 let dbname = '';
 
@@ -177,4 +191,125 @@ describe('GetFederatedGraphById', () => {
       expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     },
   );
+
+  test('Should return the feature flags in the latest composition when split config loading is enabled', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['split-config-loading'] });
+    testContext.onTestFinished(() => server.close());
+
+    const namespace = genID('namespace').toLowerCase();
+    const labels = [genUniqueLabel()];
+    const federatedGraphName = genID('fedGraph');
+
+    await createNamespace(client, namespace);
+
+    await createAndPublishSubgraph(
+      client,
+      'users',
+      namespace,
+      fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/users.graphql')).toString(),
+      labels,
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createThenPublishFeatureSubgraph(
+      client,
+      'users-feature',
+      'users',
+      namespace,
+      fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/users-feature.graphql')).toString(),
+      labels,
+      'http://localhost:4101',
+    );
+
+    const federatedGraphLabels = labels.map(({ key, value }) => `${key}=${value}`);
+    await createFederatedGraph(client, federatedGraphName, namespace, federatedGraphLabels, DEFAULT_ROUTER_URL);
+
+    const flagName = genID('flag');
+    await createFeatureFlag(client, flagName, labels, ['users-feature'], namespace, true);
+
+    const graphByName = await client.getFederatedGraphByName({
+      name: federatedGraphName,
+      namespace,
+    });
+    expect(graphByName.response?.code).toBe(EnumStatusCode.OK);
+
+    // Under split config the feature flag composition rows have a null base linkage; getFederatedGraphById must still
+    // resolve them via the federated graph so the flag shows up in the latest composition (COSMO-315).
+    const response = await client.getFederatedGraphById({
+      id: graphByName.graph!.id,
+      includeMetrics: false,
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.featureFlagsInLatestValidComposition).toHaveLength(1);
+    expect(response.featureFlagsInLatestValidComposition.some((f) => f.name === flagName)).toBe(true);
+  });
+
+  test('Should exclude a disabled feature flag when split config loading is enabled', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['split-config-loading'] });
+    testContext.onTestFinished(() => server.close());
+
+    const graphName = genID('fedgraph');
+    await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, ['team=A'], 'http://localhost:8080');
+
+    const subgraphName = genID('subgraph');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      'type Query { hello: String }',
+      [{ key: 'team', value: 'A' }],
+      'http://localhost:4001',
+    );
+
+    const featureSubgraphName = genID('featureSubgraph');
+    await createThenPublishFeatureSubgraph(
+      client,
+      featureSubgraphName,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      'type Query { hello: String, goodbye: String }',
+      [{ key: 'team', value: 'A' }],
+      'http://localhost:4002',
+    );
+
+    const flagName = genID('flag');
+    await createFeatureFlag(
+      client,
+      flagName,
+      [{ key: 'team', value: 'A' }],
+      [featureSubgraphName],
+      DEFAULT_NAMESPACE,
+      true,
+    );
+
+    const graphByName = await client.getFederatedGraphByName({
+      name: graphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(graphByName.response?.code).toBe(EnumStatusCode.OK);
+
+    // Pin the enabled state first, otherwise a lookup that finds nothing at all would satisfy the
+    // exclusion assertion below.
+    const whileEnabled = await client.getFederatedGraphById({
+      id: graphByName.graph!.id,
+      includeMetrics: false,
+    });
+    expect(whileEnabled.featureFlagsInLatestValidComposition.length).toBe(1);
+
+    const disableResp = await client.enableFeatureFlag({
+      name: flagName,
+      namespace: DEFAULT_NAMESPACE,
+      enabled: false,
+    });
+    expect(disableResp.response?.code).toBe(EnumStatusCode.OK);
+
+    const afterDisable = await client.getFederatedGraphById({
+      id: graphByName.graph!.id,
+      includeMetrics: false,
+    });
+
+    expect(afterDisable.response?.code).toBe(EnumStatusCode.OK);
+    expect(afterDisable.featureFlagsInLatestValidComposition).toHaveLength(0);
+  });
 });

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
+	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"go.uber.org/goleak"
 )
 
@@ -55,7 +55,9 @@ func newTestCacheOfSize(t *testing.T, maxEntries int64) *InMemoryCache {
 
 	c, err := NewInMemoryCache(maxEntries)
 	require.NoError(t, err)
-	t.Cleanup(c.Close)
+	t.Cleanup(func() {
+		require.NoError(t, c.Close())
+	})
 
 	return c
 }
@@ -126,26 +128,26 @@ func TestInMemoryCache(t *testing.T) {
 	t.Run("SetMany", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("nil items is a no-op", func(t *testing.T) {
+		t.Run("nil items is an error", func(t *testing.T) {
 			t.Parallel()
 
 			c := newTestCache(t)
 
 			err := c.SetMany(ctx, nil)
-			require.NoError(t, err)
+			require.ErrorIs(t, err, enginecache.ErrNoItems)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
 			require.Empty(t, results)
 		})
 
-		t.Run("empty items is a no-op", func(t *testing.T) {
+		t.Run("empty items is an error", func(t *testing.T) {
 			t.Parallel()
 
 			c := newTestCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{})
-			require.NoError(t, err)
+			require.ErrorIs(t, err, enginecache.ErrNoItems)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -293,22 +295,22 @@ func TestInMemoryCache(t *testing.T) {
 			require.Empty(t, results)
 		})
 
-		t.Run("one bad item rejects the whole batch", func(t *testing.T) {
+		t.Run("one item with an invalid TTL rejects the whole batch", func(t *testing.T) {
 			t.Parallel()
 
 			c := newTestCache(t)
 
-			// The valid items sit on both sides of the bad one, so an
-			// implementation that wrote as it went would leave traces.
+			// The items with a valid TTL sit on both sides of the invalid one,
+			// so an implementation that wrote as it went would leave traces.
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "before", Value: []byte("1"), TTL: time.Minute},
-				{Key: "no-ttl", Value: []byte("2")},
+				{Key: "invalid-ttl", Value: []byte("2")},
 				{Key: "after", Value: []byte("3"), TTL: time.Minute},
 			})
 			require.ErrorIs(t, err, enginecache.ErrMissingTTL)
-			require.ErrorContains(t, err, "no-ttl")
+			require.ErrorContains(t, err, "invalid-ttl")
 
-			results, err := c.GetMany(ctx, []string{"before", "no-ttl", "after"})
+			results, err := c.GetMany(ctx, []string{"before", "invalid-ttl", "after"})
 			require.NoError(t, err)
 			require.Empty(t, results)
 		})
@@ -374,23 +376,23 @@ func TestInMemoryCache(t *testing.T) {
 	t.Run("GetMany", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("nil keys", func(t *testing.T) {
+		t.Run("nil keys is an error", func(t *testing.T) {
 			t.Parallel()
 
 			c := newTestCache(t)
 
 			results, err := c.GetMany(ctx, nil)
-			require.NoError(t, err)
+			require.ErrorIs(t, err, enginecache.ErrNoKeys)
 			require.Nil(t, results)
 		})
 
-		t.Run("empty keys", func(t *testing.T) {
+		t.Run("empty keys is an error", func(t *testing.T) {
 			t.Parallel()
 
 			c := newTestCache(t)
 
 			results, err := c.GetMany(ctx, []string{})
-			require.NoError(t, err)
+			require.ErrorIs(t, err, enginecache.ErrNoKeys)
 			require.Nil(t, results)
 		})
 
@@ -687,8 +689,8 @@ func TestInMemoryCache(t *testing.T) {
 			// Twice here, and a third time from the cleanup the helper
 			// registered, so a second shutdown path reaching it is not a panic.
 			c := newTestCache(t)
-			c.Close()
-			c.Close()
+			require.NoError(t, c.Close())
+			require.NoError(t, c.Close())
 		})
 	})
 
@@ -783,5 +785,3 @@ func TestInMemoryCache(t *testing.T) {
 		})
 	})
 }
-
-var _ enginecache.Cache = (*InMemoryCache)(nil)

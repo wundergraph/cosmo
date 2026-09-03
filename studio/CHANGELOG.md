@@ -4,6 +4,23 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.180.2](https://github.com/wundergraph/cosmo/compare/studio@0.180.1...studio@0.180.2) (2026-08-26)
+
+### Bug Fixes
+
+* show feature flags for a federated graph under split config ([#3129](https://github.com/wundergraph/cosmo/issues/3129)) ([6a8da18](https://github.com/wundergraph/cosmo/commit/6a8da18dffcb02d012ae9491c017293e78efda39)) (@JivusAyrus)
+* update packages with high severity vulnerabilities ([#3190](https://github.com/wundergraph/cosmo/issues/3190)) ([5ac650f](https://github.com/wundergraph/cosmo/commit/5ac650ffa61b16b5e70aba197a9b8c2d4abdfbfc)) (@gausie)
+
+## [0.180.1](https://github.com/wundergraph/cosmo/compare/studio@0.180.0...studio@0.180.1) (2026-08-11)
+
+**Note:** Version bump only for package studio
+
+# [0.180.0](https://github.com/wundergraph/cosmo/compare/studio@0.179.0...studio@0.180.0) (2026-08-11)
+
+### Features
+
+* add copy cURL request option to playground copy button ([#3141](https://github.com/wundergraph/cosmo/issues/3141)) ([6b57d4c](https://github.com/wundergraph/cosmo/commit/6b57d4c4a0a84d8d9eb3e3d543987c4847fa1d8e)) (@JivusAyrus)
+
 # [0.179.0](https://github.com/wundergraph/cosmo/compare/studio@0.178.7...studio@0.179.0) (2026-08-10)
 
 ### Features

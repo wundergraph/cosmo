@@ -284,6 +284,7 @@
       "Enabled": false,
       "JWKS": null,
       "AuthorizationServerURL": "",
+      "AuthorizationServerURLs": null,
       "Scopes": {
         "Initialize": null,
         "ToolsList": null,
@@ -295,7 +296,10 @@
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
     },
-    "ResourceDocumentation": ""
+    "ResourceDocumentation": "",
+    "OutputSchema": {
+      "Enabled": true
+    }
   },
   "ConnectRPC": {
     "Enabled": false,
@@ -769,7 +773,8 @@
     "ErrorExtensionCode": {
       "Enabled": true,
       "Code": "RATE_LIMIT_EXCEEDED"
-    }
+    },
+    "ExcludeSubscriptions": true
   },
   "LocalhostFallbackInsideDocker": true,
   "CDN": {
@@ -858,6 +863,21 @@
     "ItemDelay": 0,
     "Timeout": 30000000000,
     "InMemoryFallback": true
+  },
+  "ResponseCache": {
+    "Enabled": true,
+    "FallbackTTL": 30000000000,
+    "KeyPrefix": "response_cache_test:",
+    "Storage": {
+      "Provider": "redis",
+      "ProviderID": "my_redis",
+      "MaxEntries": 2048
+    },
+    "Invalidation": {
+      "CacheTag": true,
+      "Subgraph": false,
+      "Type": true
+    }
   },
   "RouterConfigPath": "latest.json",
   "RouterRegistration": true,
@@ -984,6 +1004,8 @@
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
     "EnableDefer": false,
+    "EnableMultiFetch": false,
+    "EnableScheduleFetches": false,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,

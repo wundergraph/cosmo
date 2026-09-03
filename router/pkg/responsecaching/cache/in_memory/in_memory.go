@@ -5,9 +5,10 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/dgraph-io/ristretto/v2"
-	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/entitycaching"
+	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 )
 
 const entryCost = 1
@@ -15,19 +16,24 @@ const maxSize = 100_000
 
 type InMemoryCache struct {
 	cache *ristretto.Cache[string, []byte]
+	// tags indexes entries by the tags they were stored under, so they can be
+	// found again by something other than their key.
+	tags *tagIndex
 	// closeOnce keeps Close idempotent, so two shutdown paths reaching it is
 	// not a panic on a channel ristretto has already closed.
 	closeOnce sync.Once
 }
 
+var _ enginecache.Cache = (*InMemoryCache)(nil)
+
 // NewInMemoryCache returns a cache holding at most maxEntries entries. The
 // caller owns it and must Close it.
 func NewInMemoryCache(maxEntries int64) (*InMemoryCache, error) {
 	if maxEntries <= 0 {
-		return nil, fmt.Errorf("in memory entity cache needs a positive size, got %d", maxEntries)
+		return nil, fmt.Errorf("in memory response cache needs a positive size, got %d", maxEntries)
 	}
 	if maxEntries > maxSize {
-		return nil, fmt.Errorf("in memory entity cache size is too large: %d", maxEntries)
+		return nil, fmt.Errorf("in memory response cache size is too large: %d", maxEntries)
 	}
 
 	cache, err := ristretto.NewCache(&ristretto.Config[string, []byte]{
@@ -37,10 +43,10 @@ func NewInMemoryCache(maxEntries int64) (*InMemoryCache, error) {
 		BufferItems:        64,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create in memory entity cache: %w", err)
+		return nil, fmt.Errorf("failed to create in memory response cache: %w", err)
 	}
 
-	return &InMemoryCache{cache: cache}, nil
+	return &InMemoryCache{cache: cache, tags: newTagIndex()}, nil
 }
 
 // GetMany implements enginecache.GetMany.
@@ -50,7 +56,7 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) (map[string]
 	}
 
 	if len(keys) == 0 {
-		return nil, nil
+		return nil, enginecache.ErrNoKeys
 	}
 
 	results := make(map[string]enginecache.Item, len(keys))
@@ -84,7 +90,7 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	}
 
 	if len(items) == 0 {
-		return nil
+		return enginecache.ErrNoItems
 	}
 
 	// Map used for deduplications
@@ -98,15 +104,28 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 		last[item.Key] = item
 	}
 
+	// One clock reading for the batch, and the same one the index is pruned
+	// against, so nothing written by this call is pruned by it.
+	now := time.Now()
+
+	c.tags.prune(now)
+
 	for _, item := range last {
-		c.cache.SetWithTTL(item.Key, bytes.Clone(item.Value), entryCost, item.TTL)
+		// A write ristretto turned away is not there to be found, so indexing
+		// it would leave the tag naming an entry that never existed.
+		if c.cache.SetWithTTL(item.Key, bytes.Clone(item.Value), entryCost, item.TTL) {
+			c.tags.add(item.Key, item.Tags, now.Add(item.TTL))
+		}
 	}
 
 	c.cache.Wait()
 	return nil
 }
 
-// Close closes the in memory cache
-func (c *InMemoryCache) Close() {
+// Close closes the in memory cache. The error is always nil, ristretto having
+// nothing to fail at on the way down, and is returned only so that this and the
+// redis cache close the same way and can be held behind one interface.
+func (c *InMemoryCache) Close() error {
 	c.closeOnce.Do(c.cache.Close)
+	return nil
 }
