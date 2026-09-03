@@ -2604,6 +2604,11 @@
           "type": "string",
           "description": "The expression to define a key suffix for the rate limit, e.g. by using request headers, claims, or a combination of both with a fallback strategy. The expression is specified as a string and needs to evaluate to a string. Please see https://expr-lang.org/ for more information."
         },
+        "exclude_subscriptions": {
+          "type": "boolean",
+          "default": false,
+          "description": "Exclude subscription operations from rate limiting. Be aware that disabling rate limiting for subscriptions can expose the router and subgraphs to a denial-of-service risk from unrestricted clients."
+        },
         "error_extension_code": {
           "type": "object",
           "description": "If enabled, a code will be added to the extensions.code field of error objects related to rate limiting. This allows clients to easily identify if an error happened due to rate limiting.",
