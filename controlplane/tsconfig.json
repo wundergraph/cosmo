@@ -8,6 +8,7 @@
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "module": "NodeNext",
     "resolveJsonModule": true,
     "experimentalDecorators": true
