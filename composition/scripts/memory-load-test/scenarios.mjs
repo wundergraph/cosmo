@@ -55,6 +55,31 @@ function readCustomSdls() {
 
 export const customSdlByName = readCustomSdls();
 
+/**
+ * Simulates a publish to a federated graph with feature flags: the base composition plus one composition per feature
+ * flag, in which one subgraph is replaced by a feature subgraph (the same SDL with an additional type and root field).
+ * Each composition is a `federateSubgraphsWithContracts` call, exactly like the controlplane composes.
+ */
+export function featureFlagCompositions({ sdlByName, featureFlagCount = 3, retainResults = false, noLocation = true }) {
+  const names = [...sdlByName.keys()];
+  const results = [];
+  for (let flag = 0; flag <= featureFlagCount; flag++) {
+    const replaced = flag === 0 ? undefined : names[(flag - 1) % names.length];
+    const subgraphs = names.map((name) => {
+      let sdl = sdlByName.get(name);
+      if (name === replaced) {
+        sdl += `\ntype FeatureFlag${flag}Type { id: ID! }\nextend type Query { featureFlag${flag}Field: FeatureFlag${flag}Type }\n`;
+      }
+      return { name, url: `http://${name}:4000/graphql`, definitions: parse(sdl, { noLocation }) };
+    });
+    const result = assertSuccess(composition.federateSubgraphsWithContracts({ subgraphs, tagOptionsByContractName }));
+    if (retainResults) {
+      results.push(result);
+    }
+  }
+  return results;
+}
+
 export function customSubgraphs({ noLocation = true } = {}) {
   if (customSdlByName.size < 1) {
     throw new Error('set COMPOSITION_SUBGRAPHS to a directory of *.graphql subgraph files to use the custom scenarios');
@@ -224,6 +249,12 @@ export const scenarios = {
     assertSuccess(
       composition.federateSubgraphsWithContracts({ subgraphs: customSubgraphs(), tagOptionsByContractName }),
     ),
+  // a publish with three feature flags and three contracts: 4 x federateSubgraphsWithContracts per iteration
+  'custom-featureflags': () => featureFlagCompositions({ sdlByName: customSdlByName }),
+  // the same, but all four results stay alive until the end of the iteration
+  'custom-featureflags-retained': () => featureFlagCompositions({ sdlByName: customSdlByName, retainResults: true }),
+  featureflags: () => featureFlagCompositions({ sdlByName: demoSdlByName }),
+  'featureflags-retained': () => featureFlagCompositions({ sdlByName: demoSdlByName, retainResults: true }),
   // a large synthetic graph (12 subgraphs, 480 object types, ~5800 fields)
   big: () => assertSuccess(composition.federateSubgraphs({ subgraphs: syntheticSubgraphs() })),
   // the large synthetic graph with three contracts
