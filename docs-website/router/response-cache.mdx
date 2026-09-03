@@ -103,6 +103,15 @@ response_cache:
     provider_id: 'my_redis'
     # Memory provider only. Default: 10000.
     max_entries: 10000
+  invalidation:
+    # Which secondary indexes are built over cached entries, so an entry can
+    # later be found by what it is about. Each defaults to true.
+    # Index under the cache tags a subgraph declared.
+    cache_tag: true
+    # Index under the subgraph that answered.
+    subgraph: true
+    # Index entities under their __typename.
+    type: true
 ```
 
 `storage` is required when `enabled` is `true`.
@@ -120,6 +129,32 @@ These apply to the current alpha.
 **Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
 
 **`enable_multi_fetch` disables caching for merged entity fetches.** When `engine.enable_multi_fetch` is on, the router merges entity fetches to the same subgraph within one parallel wave into a single request. A merged fetch is not cached, and nothing reports that it was skipped. An entity fetch that has nothing to merge with is still cached, and root query fetches are unaffected. Support for caching merged fetches is planned.
+
+## Cache tags
+
+A subgraph names what its response is about by returning a cache tag extension. Tags are recorded as a secondary index over the cached entries, so an entry can be found by what it is about rather than only by the key it happens to sit under.
+
+The shape depends on what was fetched, because an entity fetch caches one entry per entity while a root query fetch caches its whole answer as one.
+
+**Entity fetches** return `apolloEntityCacheTags`, an array of arrays holding one list per entity, in the same order as the `_entities` answered:
+
+```json
+{
+  "data": { "_entities": [{ "__typename": "User", "id": "1" }, { "__typename": "User", "id": "2" }] },
+  "extensions": { "apolloEntityCacheTags": [["users", "user-1"], ["users", "user-2"]] }
+}
+```
+
+**Root query fetches** return `apolloCacheTags`, one flat array:
+
+```json
+{
+  "data": { "homepage": { "title": "Hello" } },
+  "extensions": { "apolloCacheTags": ["homepage", "featured"] }
+}
+```
+
+An outer array whose length does not match the entities answered costs the whole response its tags, rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and never forwarded to clients.
 
 ## Observability
 
