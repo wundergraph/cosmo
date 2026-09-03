@@ -81,6 +81,13 @@ export const envVariables = z
      */
     COMPOSITION_MAX_THREADS: z.coerce.number().int().min(0).default(0),
     /**
+     * V8 old-space limit (--max-old-space-size, in MB) for each composition worker process. Composition allocates
+     * several GB of short-lived objects per run, and without a limit each worker lets its heap grow to the Node
+     * default before collecting. Size this so that COMPOSITION_MAX_THREADS x this value fits the container memory.
+     * 0 keeps the Node default.
+     */
+    COMPOSITION_WORKER_MAX_OLD_SPACE_SIZE_MB: z.coerce.number().int().min(0).default(0),
+    /**
      * Auth
      */
     AUTH_JWT_SECRET: z.string().min(32).max(32),

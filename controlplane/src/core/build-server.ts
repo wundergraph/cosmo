@@ -74,6 +74,7 @@ export interface BuildConfig {
   logger: LoggerOptions;
   composition?: {
     maxThreads: number;
+    workerMaxOldSpaceSizeMb?: number;
   };
   database: {
     url: string;
@@ -188,6 +189,7 @@ const developmentLoggerOpts: LoggerOptions = {
 export default async function build(opts: BuildConfig) {
   configureComposeGraphsPool({
     maxThreads: opts.composition?.maxThreads ?? 0,
+    workerMaxOldSpaceSizeMb: opts.composition?.workerMaxOldSpaceSizeMb ?? 0,
   });
 
   opts.logger = {

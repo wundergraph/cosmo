@@ -69,6 +69,7 @@ const {
   DEFAULT_PLAN,
   OPENAI_API_KEY,
   COMPOSITION_MAX_THREADS,
+  COMPOSITION_WORKER_MAX_OLD_SPACE_SIZE_MB,
   REDIS_HOST,
   REDIS_PORT,
   REDIS_TLS_CA,
@@ -101,6 +102,7 @@ const options: BuildConfig = {
   },
   composition: {
     maxThreads: COMPOSITION_MAX_THREADS,
+    workerMaxOldSpaceSizeMb: COMPOSITION_WORKER_MAX_OLD_SPACE_SIZE_MB,
   },
   openaiAPIKey: OPENAI_API_KEY,
   keycloak: {

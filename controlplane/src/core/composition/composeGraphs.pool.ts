@@ -27,10 +27,12 @@ import {
 let composeGraphsPool: WorkerPool | undefined;
 const composeGraphsPoolConfig = {
   maxThreads: 0,
+  workerMaxOldSpaceSizeMb: 0,
 };
 
 export interface ConfigureComposeGraphsPoolOptions {
   maxThreads: number;
+  workerMaxOldSpaceSizeMb?: number;
 }
 
 function getWorkerFilename() {
@@ -65,6 +67,14 @@ function getComposeGraphsPool() {
     runtime: 'child_process',
     concurrentTasksPerWorker: 2,
     serialization: 'advanced',
+    /* A composition allocates several GB of short-lived objects. Without a limit, V8 lets each worker's heap grow to
+     * the Node default (derived from the machine memory, not the container limit) before it collects, so a few
+     * concurrent compositions can exceed the container memory although almost nothing is live. Capping the old space
+     * makes V8 collect early and bounds each worker's memory.
+     */
+    ...(composeGraphsPoolConfig.workerMaxOldSpaceSizeMb > 0
+      ? { execArgv: [`--max-old-space-size=${composeGraphsPoolConfig.workerMaxOldSpaceSizeMb}`] }
+      : {}),
   };
 
   return Sentry.startSpan({ name: 'ComposeGraphsPool.getComposeGraphsPool', attributes: options }, () => {
@@ -184,6 +194,7 @@ export function composeGraphsInWorker(
 
 export function configureComposeGraphsPool(options: ConfigureComposeGraphsPoolOptions) {
   composeGraphsPoolConfig.maxThreads = options.maxThreads;
+  composeGraphsPoolConfig.workerMaxOldSpaceSizeMb = options.workerMaxOldSpaceSizeMb ?? 0;
 }
 
 export async function destroyComposeGraphsPool() {
