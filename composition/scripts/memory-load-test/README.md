@@ -31,20 +31,24 @@ COMPOSITION_SUBGRAPHS=/path/to/subgraphs pnpm test:memory custom 50
 
 ## Scenarios
 
-| Scenario         | Workload                                                                                                                |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `base`           | `federateSubgraphs` with the 8 demo subgraphs from `demo/pkg/subgraphs` (SDL re-parsed every iteration)                 |
-| `base-locations` | Like `base`, but the documents keep their source locations, which is how the controlplane parses SDL                    |
-| `contracts`      | `federateSubgraphsWithContracts` with three contracts (the controlplane flow when a subgraph is published)              |
-| `no-contracts`   | `federateSubgraphsWithContracts` with an empty contract map (publishing to a federated graph without contracts)         |
-| `contract`       | `federateSubgraphsContract` (the controlplane flow when a contract is created)                                          |
-| `errors`         | A composition that fails with an `@override` conflict                                                                   |
-| `normalize`      | `normalizeSubgraphFromString` for each demo subgraph (the subgraph check flow)                                          |
-| `unique`         | A different synthetic graph on every iteration (type and subgraph names change), so nothing can be cached by name       |
-| `custom`         | `federateSubgraphs` with the `*.graphql` subgraph files in `COMPOSITION_SUBGRAPHS` (a real graph kept outside the repo) |
-| `custom-*`       | `custom-locations`, `custom-no-contracts`, `custom-contracts`: the variants above for that graph                        |
-| `big`            | A synthetic graph with 12 subgraphs, 480 object types and ~5800 fields                                                  |
-| `big-contracts`  | The `big` graph with three contracts                                                                                    |
+| Scenario                               | Workload                                                                                                                |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `base`                                 | `federateSubgraphs` with the 8 demo subgraphs from `demo/pkg/subgraphs` (SDL re-parsed every iteration)                 |
+| `base-locations`                       | Like `base`, but the documents keep their source locations, which is how the controlplane parses SDL                    |
+| `contracts`                            | `federateSubgraphsWithContracts` with three contracts (the controlplane flow when a subgraph is published)              |
+| `no-contracts`                         | `federateSubgraphsWithContracts` with an empty contract map (publishing to a federated graph without contracts)         |
+| `contract`                             | `federateSubgraphsContract` (the controlplane flow when a contract is created)                                          |
+| `errors`                               | A composition that fails with an `@override` conflict                                                                   |
+| `normalize`                            | `normalizeSubgraphFromString` for each demo subgraph (the subgraph check flow)                                          |
+| `unique`                               | A different synthetic graph on every iteration (type and subgraph names change), so nothing can be cached by name       |
+| `custom`                               | `federateSubgraphs` with the `*.graphql` subgraph files in `COMPOSITION_SUBGRAPHS` (a real graph kept outside the repo) |
+| `custom-*`                             | `custom-locations`, `custom-no-contracts`, `custom-contracts`: the variants above for that graph                        |
+| `big`                                  | A synthetic graph with 12 subgraphs, 480 object types and ~5800 fields                                                  |
+| `big-contracts`                        | The `big` graph with three contracts                                                                                    |
+| Yahoo graph (52 subgraphs, 2.9 MB SDL) | 784 MB                                                                                                                  | live heap after GC 22 MB, flat over 60 compositions; ~2 s per composition |
+| Yahoo graph, no contracts (before fix) | 1,634 MB                                                                                                                | 17.6 s for 4 compositions                                                 |
+| Yahoo graph, no contracts (after fix)  | 778 MB                                                                                                                  | 7.0 s for 4 compositions                                                  |
+| Yahoo graph, 3 contracts               | 3,575 MB                                                                                                                | 39% lodash `cloneDeep`; ~11 s per composition                             |
 
 ## How to read the output
 
@@ -59,8 +63,9 @@ COMPOSITION_SUBGRAPHS=/path/to/subgraphs pnpm test:memory custom 50
 ## Findings (September 2026, composition 0.63.3, Node 22)
 
 The library does not retain memory across compositions. Every scenario above was run for 300 to 1000 back-to-back
-compositions; the heap after a full GC stayed flat (about 15 to 20 MB for the demo graph, 69 MB for `big`, growth of
-1 to 7 KB per iteration that the snapshot diff attributes entirely to JIT code). No module-level container changes size
+compositions (60 for a real 52-subgraph customer graph); the heap after a full GC stayed flat (about 15 to 20 MB for the
+demo graph, 22 MB for the customer graph, 69 MB for `big`, growth of 1 to 18 KB per iteration that the snapshot diff
+attributes entirely to JIT code). No module-level container changes size
 when compositions use unique subgraph, type, tag, and contract names.
 
 What does grow is the amount of memory allocated (and immediately garbage) per composition, and therefore the V8 heap
