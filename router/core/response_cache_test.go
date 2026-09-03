@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
@@ -151,6 +152,34 @@ func TestSetupResponseCache(t *testing.T) {
 
 		require.NoError(t, r.setupResponseCache(context.Background()))
 		require.NotNil(t, r.responseCache)
+		require.NoError(t, r.responseCache.Close())
+	})
+
+	t.Run("an invalidation endpoint bind failure aborts startup", func(t *testing.T) {
+		t.Parallel()
+
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+		defer listener.Close()
+
+		r := newRouter(&config.ResponseCacheConfiguration{
+			Enabled:     true,
+			FallbackTTL: 30 * time.Second,
+			Storage: config.ResponseCacheStorageConfig{
+				Provider:   config.ResponseCacheStorageProviderMemory,
+				MaxEntries: 128,
+			},
+			Invalidation: config.ResponseCacheInvalidationConfig{Endpoint: config.ResponseCacheInvalidationEndpointConfig{
+				Enabled:    true,
+				ListenAddr: listener.Addr().String(),
+				Path:       "/invalidation",
+				SharedKey:  "a-shared-key-that-is-long-enough-to-pass",
+			}},
+		}, config.StorageProviders{})
+
+		err = r.setupResponseCache(context.Background())
+		require.ErrorContains(t, err, "failed to bind response cache invalidation server")
+		require.Nil(t, r.responseCacheInvalidationServer)
 		require.NoError(t, r.responseCache.Close())
 	})
 }

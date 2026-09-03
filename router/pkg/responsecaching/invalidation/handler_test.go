@@ -339,3 +339,15 @@ func TestNewServerRequiresASharedKey(t *testing.T) {
 	require.Nil(t, svr)
 	require.Contains(t, err.Error(), "shared_key")
 }
+
+func TestNewServerRejectsShortSharedKey(t *testing.T) {
+	t.Parallel()
+
+	cfg := allIndexes()
+	cfg.Endpoint.SharedKey = "too-short"
+
+	svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{})
+	require.Error(t, err)
+	require.Nil(t, svr)
+	require.Contains(t, err.Error(), "at least 32 characters")
+}

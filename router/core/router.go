@@ -1236,10 +1236,14 @@ func (r *Router) startResponseCacheInvalidationServer() error {
 		return fmt.Errorf("failed to create response cache invalidation server: %w", err)
 	}
 
+	listener, err := net.Listen("tcp", svr.Addr)
+	if err != nil {
+		return fmt.Errorf("failed to bind response cache invalidation server to %s: %w", svr.Addr, err)
+	}
 	r.responseCacheInvalidationServer = svr
 
 	go func() {
-		if err := svr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := svr.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			r.logger.Error("Failed to start response cache invalidation server", zap.Error(err))
 		}
 	}()

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"time"
+	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -12,9 +13,14 @@ import (
 	"go.uber.org/zap"
 )
 
+const ResponseCacheInvalidationSharedKeyMinLength = 32
+
 func NewServer(logger *zap.Logger, cfg config.ResponseCacheInvalidationConfig, invalidator responsecaching.Invalidator) (*http.Server, error) {
 	if cfg.Endpoint.SharedKey == "" {
 		return nil, errors.New("response cache invalidation is enabled but no shared_key is set")
+	}
+	if utf8.RuneCountInString(cfg.Endpoint.SharedKey) < ResponseCacheInvalidationSharedKeyMinLength {
+		return nil, errors.New("response cache invalidation shared_key must be at least 32 characters")
 	}
 
 	serverLogger, err := zap.NewStdLogAt(
