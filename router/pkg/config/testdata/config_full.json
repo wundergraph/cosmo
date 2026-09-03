@@ -872,6 +872,11 @@
       "Provider": "redis",
       "ProviderID": "my_redis",
       "MaxEntries": 2048
+    },
+    "Invalidation": {
+      "CacheTag": true,
+      "Subgraph": false,
+      "Type": true
     }
   },
   "RouterConfigPath": "latest.json",

@@ -1,11 +1,12 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "target": "esnext",
     "lib": ["esnext"],
     "sourceMap": true,
     "outDir": "./dist",
+    "rootDir": "./src/wg/cosmo",
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "module": "ESNext"
   },
   "include": ["src/**/*"],
