@@ -9,6 +9,7 @@ metadata:
     # Support for k14s.io. This annotation will wait for the clickhouse deployments to be ready before deploying.
     kapp.k14s.io/change-rule.clickhouse: "upsert after upserting cosmo.apps.clickhouse.wundergraph.com/deployment"
     {{- end }}
+    {{- include "graphqlmetrics.additionalDeploymentAnnotations" . | nindent 4 }}
   labels:
     {{- include "graphqlmetrics.labels" . | nindent 4 }}
 spec:

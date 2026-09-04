@@ -5,6 +5,7 @@ metadata:
   annotations:
     # Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
     kapp.k14s.io/change-group: "cosmo.apps.studio.wundergraph.com/deployment"
+    {{- include "studio.additionalDeploymentAnnotations" . | nindent 4 }}
   labels:
     {{- include "studio.labels" . | nindent 4 }}
 spec:
@@ -108,4 +109,3 @@ spec:
       {{- if .Values.terminationGracePeriodSeconds }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- end }}
-
