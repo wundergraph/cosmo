@@ -2,46 +2,34 @@ import { describe, expect, test } from 'vitest';
 import { OpenAIGraphql } from '../src/core/openai-graphql/index.js';
 
 describe('OpenAI GraphQL', () => {
-  test(
-    'Should properly correct schema',
-    async () => {
-      if (!process.env.OPENAI_API_KEY) {
-        return;
-      }
-      const ai = new OpenAIGraphql({
-        openAiApiKey: process.env.OPENAI_API_KEY,
-      });
-      const result = await ai.fixSDL({
-        sdl: brokenSubgraphSDL,
-        checkResult: brokenSubgraphCheckResult,
-      });
-      expect(result.sdl).toEqual(fixedSubgraphSDL);
-    },
-    {
-      timeout: 20_000,
-    },
-  );
+  test('Should properly correct schema', { timeout: 20_000 }, async () => {
+    if (!process.env.OPENAI_API_KEY) {
+      return;
+    }
+    const ai = new OpenAIGraphql({
+      openAiApiKey: process.env.OPENAI_API_KEY,
+    });
+    const result = await ai.fixSDL({
+      sdl: brokenSubgraphSDL,
+      checkResult: brokenSubgraphCheckResult,
+    });
+    expect(result.sdl).toEqual(fixedSubgraphSDL);
+  });
 
-  test(
-    'Should properly generate a README from a GraphQL schema',
-    async () => {
-      if (!process.env.OPENAI_API_KEY) {
-        return;
-      }
-      const ai = new OpenAIGraphql({
-        openAiApiKey: process.env.OPENAI_API_KEY,
-      });
-      const result = await ai.generateReadme({
-        sdl: schemaSDL,
-        graphName: 'MyGraph',
-      });
+  test('Should properly generate a README from a GraphQL schema', { timeout: 20_000 }, async () => {
+    if (!process.env.OPENAI_API_KEY) {
+      return;
+    }
+    const ai = new OpenAIGraphql({
+      openAiApiKey: process.env.OPENAI_API_KEY,
+    });
+    const result = await ai.generateReadme({
+      sdl: schemaSDL,
+      graphName: 'MyGraph',
+    });
 
-      expect(result.readme).toBeDefined();
-    },
-    {
-      timeout: 20_000,
-    },
-  );
+    expect(result.readme).toBeDefined();
+  });
 });
 
 const brokenSubgraphCheckResult = `

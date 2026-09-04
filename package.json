@@ -126,7 +126,9 @@
       "sigstore": "4.1.1",
       "engine.io": "6.6.9",
       "glob@10.x": "10.5.0",
-      "sharp": "0.35.3"
+      "sharp": "0.35.3",
+      "eslint-plugin-import": "2.27.5",
+      "eslint-module-utils": "2.8.0"
     },
     "patchedDependencies": {
       "graphql@16.9.0": "patches/graphql@16.9.0.patch"
