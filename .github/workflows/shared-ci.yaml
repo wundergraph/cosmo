@@ -3,10 +3,10 @@ on:
   pull_request:
     paths:
       - 'pnpm-lock.yaml'
-      - '.github/workflows/shared-ci.yaml'
-      - 'composition/**/*'
-      - 'connect/**/*'
-      - 'shared/**/*'
+      - ".github/workflows/shared-ci.yaml"
+      - "composition/**/*"
+      - "connect/**/*"
+      - "shared/**/*"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

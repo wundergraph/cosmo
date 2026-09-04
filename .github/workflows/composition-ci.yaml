@@ -3,9 +3,9 @@ on:
   pull_request:
     paths:
       - 'pnpm-lock.yaml'
-      - 'composition/**/*'
-      - 'shared/**/*'
-      - '.github/workflows/composition-ci.yaml'
+      - "composition/**/*"
+      - "shared/**/*"
+      - ".github/workflows/composition-ci.yaml"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

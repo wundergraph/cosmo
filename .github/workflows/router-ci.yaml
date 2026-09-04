@@ -262,10 +262,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         env:
-          ALLOW_EMPTY_PASSWORD: 'yes'
-          REDIS_NODES: 'redis-0 redis-1 redis-2'
-          REDIS_CLUSTER_REPLICAS: '0'
-          REDIS_CLUSTER_CREATOR: 'no'
+          ALLOW_EMPTY_PASSWORD: "yes"
+          REDIS_NODES: "redis-0 redis-1 redis-2"
+          REDIS_CLUSTER_REPLICAS: "0"
+          REDIS_CLUSTER_CREATOR: "no"
         ports:
           - 7001:6379
       redis-1:
@@ -276,10 +276,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         env:
-          ALLOW_EMPTY_PASSWORD: 'yes'
-          REDIS_NODES: 'redis-0 redis-1 redis-2'
-          REDIS_CLUSTER_REPLICAS: '0'
-          REDIS_CLUSTER_CREATOR: 'no'
+          ALLOW_EMPTY_PASSWORD: "yes"
+          REDIS_NODES: "redis-0 redis-1 redis-2"
+          REDIS_CLUSTER_REPLICAS: "0"
+          REDIS_CLUSTER_CREATOR: "no"
         ports:
           - 7002:6379
       redis-2:
@@ -290,10 +290,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         env:
-          ALLOW_EMPTY_PASSWORD: 'yes'
-          REDIS_NODES: 'redis-0 redis-1 redis-2'
-          REDIS_CLUSTER_REPLICAS: '0'
-          REDIS_CLUSTER_CREATOR: 'yes'
+          ALLOW_EMPTY_PASSWORD: "yes"
+          REDIS_NODES: "redis-0 redis-1 redis-2"
+          REDIS_CLUSTER_REPLICAS: "0"
+          REDIS_CLUSTER_CREATOR: "yes"
         ports:
           - 7003:6379
       kafka:

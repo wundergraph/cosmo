@@ -55,4 +55,4 @@ jobs:
           dockerfile: cdn-server/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: cdn
-          image_description: 'Cosmo CDN Server'
+          image_description: "Cosmo CDN Server"
