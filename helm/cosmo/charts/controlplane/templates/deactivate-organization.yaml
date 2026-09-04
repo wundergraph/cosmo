@@ -31,6 +31,8 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      initContainers:
+        {{- tpl (.Values.jobs.deactivateOrganization.initContainers | toYaml) . | nindent 8 }}
       containers:
         - name: deactivate-organization
           securityContext:
