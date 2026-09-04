@@ -5,16 +5,16 @@ import { SetupTest } from '../../test-util.js';
 import { afterAllSetup, beforeAllSetup } from '../../../src/core/test-util.js';
 import { ClickHouseClient } from '../../../src/core/clickhouse/index.js';
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('router compatibility-version list tests', () => {
   let chClient: ClickHouseClient;
   let dbname = '';
-
-  vi.mock('../src/core/clickhouse/index.js', () => {
-    const ClickHouseClient = vi.fn();
-    ClickHouseClient.prototype.queryPromise = vi.fn();
-
-    return { ClickHouseClient };
-  });
 
   beforeAll(async () => {
     dbname = await beforeAllSetup();
