@@ -181,6 +181,86 @@ The MCP server exposes two kinds of tools to AI models:
 
 See the [Tools](/router/mcp/tools) page for the built-in tool reference and how to create your own.
 
+## Context Documents and Skills
+
+The MCP server can also serve markdown documentation and Agent Skills alongside your operation tools. Use this to give AI models domain knowledge, or to teach them how to combine several of your tools into one workflow.
+
+Enable the feature with `mcp.resources.enabled: true` (env `MCP_RESOURCES_ENABLED`). It is off by default. See [Configuration](/router/mcp/configuration#context-resources) for the full option reference.
+
+### Context Documents
+
+Place a `.md` or `.markdown` file anywhere in your operations directory. Each loose file becomes an MCP resource at `context:///<path-relative-to-operations-dir>`. Add optional `title` and `description` frontmatter to set the resource metadata:
+
+```markdown
+---
+title: 'Refund Policy'
+description: 'How to process customer refunds.'
+---
+
+Refunds over $500 require manager approval.
+```
+
+If the frontmatter is malformed, the router logs a warning and still serves the document, without metadata.
+
+### Skills
+
+A directory that contains a `SKILL.md` file is an Agent Skill, defined by the [Agent Skills specification](https://agentskills.io/specification). Skills are the recommended way to teach an AI model how to use several of your tools together for one workflow.
+
+`SKILL.md` requires two frontmatter fields:
+
+- `name`: must match the directory name.
+- `description`: a short summary of the skill.
+
+```markdown
+---
+name: trip-planning
+description: Plan a multi-day trip using the weather and calendar tools.
+---
+
+1. Call `get_alerts` for the destination.
+2. Call `get_forecast` for the travel dates.
+3. Check the calendar for conflicts before booking.
+```
+
+An invalid skill (missing or mismatched frontmatter) is logged as an error, and none of its files are served.
+
+Every file inside a valid skill directory is served under `skill://<skill-path>/<file-path>`, where `<skill-path>` is the directory's path relative to the operations root. A skill at the operations root has no prefix. `.graphql` files inside a skill directory are never registered as tools; use them as examples for the skill instead.
+
+### Example Directory
+
+```
+operations/
+├── GetForecast.graphql          # tool (unchanged)
+├── notes.md                     # resource: context:///notes.md
+└── weather/
+    ├── GetAlerts.graphql        # tool (unchanged)
+    ├── usage.md                 # resource: context:///weather/usage.md
+    └── trip-planning/           # skill "trip-planning"
+        ├── SKILL.md             # resource: skill://weather/trip-planning/SKILL.md
+        └── examples.md          # resource: skill://weather/trip-planning/examples.md
+```
+
+### Discovery
+
+MCP resources are application-driven: a client is not required to call `resources/list` or read `SKILL.md` on its own. Two mechanisms help AI models find your context documents and skills instead:
+
+- **Server instructions.** When `mcp.resources.enabled` is `true`, the router appends a fixed paragraph to your server instructions that points AI models at the `get_context` tool. Add your own guidance with [`mcp.server.discover.instructions`](/router/mcp/configuration#server-discovery).
+- **The `get_context` tool.** Call it without arguments to list available skills and documents, or with a `uri` to read one of them. See [Get Context Tool](/router/mcp/tools#get-context-tool) for the full reference.
+
+### Limits
+
+- A skill directory allows at most 512 files, including `SKILL.md`, and 16 MiB of total content. A skill that exceeds either limit is skipped, with an error logged.
+- A single served file allows at most 16 MiB. A loose document larger than this is skipped, with a warning logged.
+- The router serves only regular files. It skips symbolic links and special files.
+
+### Hot Reload
+
+Context documents and skills reload together with your operations directory. Reads always return the current file content from disk.
+
+<Warning>
+  Resources and skills are operator-supplied content. The router serves them verbatim and never executes skill files, including anything under a `scripts/` directory. Client applications remain responsible for deciding whether instructions or executable content from a skill is safe to run.
+</Warning>
+
 <Card title="Next: Quickstart" icon="arrow-right" href="/router/mcp/quickstart">
   Ready to get started? Follow the quickstart guide to have MCP running in 5 minutes.
 </Card>

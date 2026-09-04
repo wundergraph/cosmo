@@ -1333,6 +1333,7 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
 		mcpserver.WithOmitToolNamePrefix(r.mcp.OmitToolNamePrefix),
 		mcpserver.WithOutputSchemaEnabled(r.mcp.OutputSchema.Enabled),
+		mcpserver.WithResourcesEnabled(r.mcp.Resources.Enabled),
 		mcpserver.WithStateless(r.mcp.Session.Stateless),
 		mcpserver.WithInstructions(r.mcp.Server.Discover.Instructions),
 		mcpserver.WithServerVersion(cmp.Or(r.mcp.Server.Version, Version)),
