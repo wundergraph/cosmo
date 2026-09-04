@@ -35,6 +35,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      serviceAccountName: {{ include "controlplane.serviceAccountName" . }}
       containers:
         - name: seed
           securityContext:
