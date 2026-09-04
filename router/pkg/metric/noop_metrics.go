@@ -70,6 +70,12 @@ func (n NoopMetrics) MeasureOperationCostEstimated(ctx context.Context, cost int
 func (n NoopMetrics) MeasureOperationCostActual(ctx context.Context, cost int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
 }
 
+func (n NoopMetrics) MeasureSSEWriteDuration(context.Context, time.Duration, []attribute.KeyValue, otelmetric.RecordOption) {
+}
+
+func (n NoopMetrics) MeasureSSEWriteFailure(context.Context, []attribute.KeyValue, otelmetric.AddOption) {
+}
+
 func NewNoopMetrics() Store {
 	return &NoopMetrics{}
 }
