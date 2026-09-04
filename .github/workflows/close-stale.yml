@@ -7,14 +7,15 @@ jobs:
   stale:
     timeout-minutes: 5
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
+    permissions:
+      actions: write
+      issues: write
+      pull-requests: write
     steps:
       - name: Check rate_limit before
         run: gh api /rate_limit
-      - uses: actions/stale@v8
+      - uses: actions/stale@v11
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
           stale-pr-message: 'This PR was marked stale due to lack of activity. It will be closed in 14 days.'
           close-pr-message: 'Closed as inactive. Feel free to reopen if this PR is still being worked on.'
           close-issue-message: 'This issue has been closed as inactive because it has been stale for 120 days with no activity.'
