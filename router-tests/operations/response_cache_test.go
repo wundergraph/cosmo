@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/freeport"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -860,6 +861,226 @@ func TestResponseCacheTags(t *testing.T) {
 	})
 }
 
+func TestResponseCacheInvalidation(t *testing.T) {
+	t.Parallel()
+
+	const entity = `{"__typename":"Employee","currentMood":"HAPPY"},`
+	const taggedMoodBatch = `{"data":{"_entities":[` +
+		entity + entity + entity + entity + entity +
+		entity + entity + entity + entity +
+		`{"__typename":"Employee","currentMood":"HAPPY"}` +
+		`]},"extensions":{"apolloEntityCacheTags":[` +
+		`["moods","employee-1"],["moods","employee-2"],["moods","employee-3"],` +
+		`["moods","employee-4"],["moods","employee-5"],["moods","employee-6"],` +
+		`["moods","employee-7"],["moods","employee-8"],["moods","employee-9"],` +
+		`["moods","employee-10"]` +
+		`]}}`
+
+	const moodQuery = `query { employees { id currentMood } }`
+
+	// invalidate posts an array of requests and returns the status and count.
+	invalidate := func(t *testing.T, addr, key, body string) (int, int) {
+		t.Helper()
+
+		req, err := http.NewRequest(http.MethodPost, "http://"+addr+"/invalidation", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		if key != "" {
+			req.Header.Set("Authorization", key)
+		}
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer func() { _ = res.Body.Close() }()
+
+		var decoded struct {
+			Count int `json:"count"`
+		}
+		require.NoError(t, json.NewDecoder(res.Body).Decode(&decoded))
+
+		return res.StatusCode, decoded.Count
+	}
+
+	// invalidatableConfig is a response cache whose entries may be invalidated
+	// with responseCacheSharedKey, on a port of this test's own.
+	invalidatableConfig := func(t *testing.T) (*config.ResponseCacheConfiguration, string) {
+		t.Helper()
+
+		cfg := responseCacheConfig(t, time.Minute)
+		addr := fmt.Sprintf("127.0.0.1:%d", freeport.GetOne(t))
+
+		cfg.Invalidation.Endpoint = config.ResponseCacheInvalidationEndpointConfig{
+			Enabled:    true,
+			ListenAddr: addr,
+			Path:       "/invalidation",
+			SharedKey:  responseCacheSharedKey,
+		}
+
+		return cfg, addr
+	}
+
+	moodEnv := func(cfg *config.ResponseCacheConfiguration) *testenv.Config {
+		return &testenv.Config{
+			RouterOptions: []core.Option{responseCacheStorageProviders(), core.WithResponseCache(cfg)},
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{
+					Middleware: fixedResponseMiddleware("public, max-age=60", taggedMoodBatch),
+				},
+			},
+		}
+	}
+
+	t.Run("a cache tag drops the entry it names and no other", func(t *testing.T) {
+		t.Parallel()
+		cfg, addr := invalidatableConfig(t)
+
+		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+
+			entries, _ := responseCacheStored(t, cfg.KeyPrefix)
+			require.Len(t, entries, 10)
+
+			status, count := invalidate(t, addr, responseCacheSharedKey,
+				`[{"kind":"cache_tag","subgraphs":["mood"],"cache_tag":"employee-1"}]`)
+			require.Equal(t, http.StatusAccepted, status)
+			require.Equal(t, 1, count, "one entity carried that tag")
+
+			entries, tags := responseCacheStored(t, cfg.KeyPrefix)
+			require.Len(t, entries, 9, "the other nine are untouched")
+			require.NotContains(t, tags, "declared:mood:employee-1", "the tag goes with the entry")
+		})
+	})
+
+	t.Run("a subgraph request empties everything that subgraph answered", func(t *testing.T) {
+		t.Parallel()
+		cfg, addr := invalidatableConfig(t)
+
+		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(), "the second was a hit")
+
+			status, count := invalidate(t, addr, responseCacheSharedKey,
+				`[{"kind":"subgraph","subgraph":"mood"}]`)
+			require.Equal(t, http.StatusAccepted, status)
+			require.Equal(t, 10, count)
+
+			entries, _ := responseCacheStored(t, cfg.KeyPrefix)
+			require.Empty(t, entries)
+
+			// The point of all of it: the next query goes to the subgraph.
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(),
+				"the entries are gone, so the subgraph is asked again")
+		})
+	})
+
+	t.Run("a type request is scoped to the subgraph that answered", func(t *testing.T) {
+		t.Parallel()
+		cfg, addr := invalidatableConfig(t)
+
+		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+
+			status, count := invalidate(t, addr, responseCacheSharedKey,
+				`[{"kind":"type","subgraph":"mood","type":"Employee"}]`)
+			require.Equal(t, http.StatusAccepted, status)
+			require.Equal(t, 10, count)
+
+			entries, _ := responseCacheStored(t, cfg.KeyPrefix)
+			require.Empty(t, entries)
+		})
+	})
+
+	t.Run("naming another subgraph's type leaves this one alone", func(t *testing.T) {
+		t.Parallel()
+		cfg, addr := invalidatableConfig(t)
+
+		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+
+			// Employee is cached from mood. Asking employees to drop its
+			// Employees must not touch mood's, which is the whole reason the
+			// type index is scoped by subgraph.
+			status, count := invalidate(t, addr, responseCacheSharedKey,
+				`[{"kind":"type","subgraph":"employees","type":"Employee"}]`)
+			require.Equal(t, http.StatusAccepted, status)
+			require.Zero(t, count)
+
+			entries, _ := responseCacheStored(t, cfg.KeyPrefix)
+			require.Len(t, entries, 10, "mood's entries are not employees' to drop")
+		})
+	})
+
+	t.Run("a wrong shared key invalidates nothing", func(t *testing.T) {
+		t.Parallel()
+		cfg, addr := invalidatableConfig(t)
+
+		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+
+			status, _ := invalidate(t, addr, "not-the-shared-key-but-long-enough-yes",
+				`[{"kind":"subgraph","subgraph":"mood"}]`)
+			require.Equal(t, http.StatusUnauthorized, status)
+
+			entries, _ := responseCacheStored(t, cfg.KeyPrefix)
+			require.Len(t, entries, 10)
+		})
+	})
+
+	t.Run("a disabled index is refused rather than answered with nothing", func(t *testing.T) {
+		t.Parallel()
+		cfg, addr := invalidatableConfig(t)
+		cfg.Invalidation.Type = false
+
+		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+
+			status, _ := invalidate(t, addr, responseCacheSharedKey,
+				`[{"kind":"type","subgraph":"mood","type":"Employee"}]`)
+			require.Equal(t, http.StatusBadRequest, status)
+
+			// And the index really was not built, which is why it was refused.
+			_, tags := responseCacheStored(t, cfg.KeyPrefix)
+			require.NotContains(t, tags, "type:mood:Employee")
+		})
+	})
+
+	t.Run("one bad element leaves the rest of the array unapplied", func(t *testing.T) {
+		t.Parallel()
+		cfg, addr := invalidatableConfig(t)
+
+		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+
+			status, _ := invalidate(t, addr, responseCacheSharedKey,
+				`[{"kind":"subgraph","subgraph":"mood"},{"kind":"nonsense"}]`)
+			require.Equal(t, http.StatusBadRequest, status)
+
+			entries, _ := responseCacheStored(t, cfg.KeyPrefix)
+			require.Len(t, entries, 10, "the valid element must not have been applied either")
+		})
+	})
+
+	t.Run("nothing listens when the endpoint is not enabled", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := responseCacheConfig(t, time.Minute)
+		addr := fmt.Sprintf("127.0.0.1:%d", freeport.GetOne(t))
+
+		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+
+			req, err := http.NewRequest(http.MethodPost, "http://"+addr+"/invalidation",
+				strings.NewReader(`[{"kind":"subgraph","subgraph":"mood"}]`))
+			require.NoError(t, err)
+
+			_, err = http.DefaultClient.Do(req)
+			require.Error(t, err, "the endpoint must not be listening at all")
+		})
+	})
+}
+
 func fixedResponseMiddleware(cacheControl, body string) func(http.Handler) http.Handler {
 	return func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -910,6 +1131,8 @@ func cacheControlMiddleware(value string) func(http.Handler) http.Handler {
 		})
 	}
 }
+
+const responseCacheSharedKey = "a-shared-key-that-is-long-enough-to-pass"
 
 const (
 	responseCacheRedisAddr       = "localhost:6379"
