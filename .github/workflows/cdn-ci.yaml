@@ -56,3 +56,4 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: cdn
           image_description: "Cosmo CDN Server"
+
