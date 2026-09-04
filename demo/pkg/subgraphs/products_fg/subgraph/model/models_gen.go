@@ -87,7 +87,21 @@ func (this MiscellaneousFact) GetFactType() *TopSecretFactType { return this.Fac
 type Mutation struct {
 }
 
+type ProductSearchInput struct {
+	Pagination *ProductSearchPagination `json:"pagination,omitempty"`
+	Query      *string                  `json:"query,omitempty"`
+}
+
+type ProductSearchPagination struct {
+	First *int    `json:"first,omitempty"`
+	After *string `json:"after,omitempty"`
+}
+
 type Queries struct {
+}
+
+type Thing struct {
+	A string `json:"a"`
 }
 
 type TopSecretFactInput struct {
