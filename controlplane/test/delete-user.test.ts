@@ -177,7 +177,7 @@ vi.mock('../src/core/clickhouse/index.js', () => {
   return { ClickHouseClient };
 });
 
-describe.sequential('Delete user tests', (ctx) => {
+describe('Delete user tests', () => {
   let chClient: ClickHouseClient;
 
   beforeEach(() => {
