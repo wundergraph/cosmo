@@ -6,6 +6,7 @@ import {
   ASSUMED_SIZE,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
+  CACHE_TAG,
   CHANNEL,
   CHANNELS,
   COMPOSE_DIRECTIVE,
@@ -33,6 +34,7 @@ import {
   FIELD_DEFINITION_UPPER,
   FIELDS,
   FOR,
+  FORMAT,
   FROM,
   IMPORT,
   INACCESSIBLE,
@@ -869,6 +871,20 @@ export const OPENFED_ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   locations: stringArrayToNameNodeArray([OBJECT_UPPER]),
   name: stringToNameNode(OPENFED_ENTITY_CACHE),
   repeatable: false,
+};
+
+export const CACHE_TAG_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(FORMAT),
+      type: REQUIRED_STRING_TYPE_NODE,
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(CACHE_TAG),
+  repeatable: true,
 };
 
 // @openfed__cacheInvalidate on FIELD_DEFINITION
