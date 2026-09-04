@@ -29,6 +29,18 @@ export const updatePlaygroundScript = PlatformService.method.updatePlaygroundScr
 export const getPlaygroundScripts = PlatformService.method.getPlaygroundScripts;
 
 /**
+ * Playground default headers
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetPlaygroundDefaultHeaders
+ */
+export const getPlaygroundDefaultHeaders = PlatformService.method.getPlaygroundDefaultHeaders;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundDefaultHeaders
+ */
+export const updatePlaygroundDefaultHeaders = PlatformService.method.updatePlaygroundDefaultHeaders;
+
+/**
  * Namespaces
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateNamespace

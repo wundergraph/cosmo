@@ -9,6 +9,7 @@ import {
   PreFlightScript,
 } from '@/components/playground/custom-scripts';
 import { CopyOperation } from '@/components/playground/copy-operation';
+import { DefaultHeadersDialog } from '@/components/playground/default-headers-dialog';
 import { PlanView } from '@/components/playground/plan-view';
 import { SharePlaygroundModal } from '@/components/playground/share-playground-modal';
 import { TraceContext, TraceView } from '@/components/playground/trace-view';
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Loader } from '@/components/ui/loader';
 import {
   Select,
   SelectContent,
@@ -43,7 +45,7 @@ import { useHydratePlaygroundStateFromUrl } from '@/hooks/use-hydrate-playground
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE, PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
 import { NextPageWithLayout } from '@/lib/page';
-import { substituteHeadersFromEnv, validateHeaders } from '@/lib/playground-headers';
+import { effectiveDefaultHeadersString, substituteHeadersFromEnv, validateHeaders } from '@/lib/playground-headers';
 import { parseSchema } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
@@ -57,6 +59,7 @@ import {
   getClients,
   getFeatureFlagsInLatestCompositionByFederatedGraph,
   getFederatedGraphSDLByName,
+  getPlaygroundDefaultHeaders,
   getSubgraphSDLFromLatestComposition,
   publishPersistedOperations,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
@@ -687,6 +690,7 @@ const PlaygroundPortal = () => {
   const preFlightScriptSection = document.getElementById('pre-flight-script-section');
   const shareButton = document.getElementById('share-button');
   const copyButton = document.getElementById('copy-button');
+  const defaultHeadersButton = document.getElementById('default-headers-button');
 
   if (
     !responseToolbar ||
@@ -697,7 +701,8 @@ const PlaygroundPortal = () => {
     !scriptsSection ||
     !shareButton ||
     !copyButton ||
-    !preFlightScriptSection
+    !preFlightScriptSection ||
+    !defaultHeadersButton
   ) {
     return null;
   }
@@ -713,6 +718,7 @@ const PlaygroundPortal = () => {
       {createPortal(<PreFlightScript />, preFlightScriptSection)}
       {createPortal(<SharePlaygroundModal />, shareButton)}
       {createPortal(<CopyOperation />, copyButton)}
+      {createPortal(<DefaultHeadersDialog />, defaultHeadersButton)}
     </>
   );
 };
@@ -752,6 +758,28 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
   const isLoading = isLoadingGraphSchema || isLoadingSubgraphSchema;
 
+  const { data: defaultHeadersData, isLoading: isLoadingDefaultHeaders } = useQuery(
+    getPlaygroundDefaultHeaders,
+    {
+      federatedGraphName: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+    },
+    {
+      enabled: !!graphContext?.graph?.name,
+      retry: 1,
+      // These change only when someone edits them in the dialog (which
+      // refetches explicitly); no need to re-fetch on every window focus.
+      staleTime: 5 * 60 * 1000,
+    },
+  );
+
+  const effectiveDefaultHeaders = useMemo(() => {
+    return effectiveDefaultHeadersString(
+      (defaultHeadersData?.graphHeaders ?? []).map((h) => ({ key: h.key, value: h.value })),
+      (defaultHeadersData?.personalHeaders ?? []).map((h) => ({ key: h.key, value: h.value })),
+    );
+  }, [defaultHeadersData]);
+
   const schema = useMemo(() => {
     return parseSchema(subgraphData?.sdl || data?.clientSchema)?.ast ?? null;
   }, [data?.clientSchema, subgraphData?.sdl]);
@@ -790,7 +818,17 @@ const PlaygroundPage: NextPageWithLayout = () => {
     setStoredHeaders(tempHeaders);
   }, [setStoredHeaders, tempHeaders]);
 
-  const [headers, setHeaders] = useState(PLAYGROUND_DEFAULT_HEADERS_TEMPLATE);
+  // `headers` mirrors GraphiQL's header editor for the two consumers below that are
+  // not GraphiQL (the query plan request and TraceContext). GraphiQL does not report
+  // the editor's initial value - its change handler is attached after construction -
+  // so seed the mirror from the same place the editor restores from: the active tab.
+  // Guarded because this page server-renders and localStorage is client-only.
+  const [headers, setHeaders] = useState(() =>
+    typeof window === 'undefined'
+      ? effectiveDefaultHeaders
+      : (graphiqlStorage.getItem('graphiql:headers') ?? effectiveDefaultHeaders),
+  );
+
   const [response, setResponse] = useState<string>('');
 
   const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
@@ -821,6 +859,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    if (isLoadingDefaultHeaders) {
+      return;
+    }
+
     const responseToolbar = document.getElementById('response-toolbar');
     if (responseToolbar && isMounted) {
       return;
@@ -938,6 +980,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
       const shareButton = document.createElement('div');
       shareButton.id = 'share-button';
       toolbar.append(shareButton);
+
+      const defaultHeadersButton = document.createElement('div');
+      defaultHeadersButton.id = 'default-headers-button';
+      toolbar.append(defaultHeadersButton);
     }
 
     // remove settings button
@@ -1149,28 +1195,34 @@ const PlaygroundPage: NextPageWithLayout = () => {
         }}
       >
         <div className="hidden h-full flex-1 pl-2.5 md:flex">
-          <GraphiQL
-            key={graphId}
-            shouldPersistHeaders
-            showPersistHeadersSettings={false}
-            fetcher={fetcher}
-            query={shouldPassEditorStateProps ? query : undefined}
-            variables={shouldPassEditorStateProps || variables ? updatedVariables : undefined}
-            onEditQuery={setQuery}
-            headers={headers === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE ? undefined : headers}
-            defaultHeaders={PLAYGROUND_DEFAULT_HEADERS_TEMPLATE}
-            onEditHeaders={setHeaders}
-            plugins={[
-              explorerPlugin({
-                showAttribution: false,
-              }),
-            ]}
-            // null stops introspection and undefined forces introspection if schema is null
-            schema={isLoading ? null : (schema ?? undefined)}
-            storage={graphiqlStorage}
-            onTabChange={setTabsState}
-          />
-          {isMounted && <PlaygroundPortal />}
+          {isLoadingDefaultHeaders ? (
+            <Loader fullscreen />
+          ) : (
+            <>
+              <GraphiQL
+                key={graphId}
+                shouldPersistHeaders
+                showPersistHeadersSettings={false}
+                fetcher={fetcher}
+                query={shouldPassEditorStateProps ? query : undefined}
+                variables={shouldPassEditorStateProps || variables ? updatedVariables : undefined}
+                onEditQuery={setQuery}
+                headers={headers === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE ? undefined : headers}
+                defaultHeaders={effectiveDefaultHeaders}
+                onEditHeaders={setHeaders}
+                plugins={[
+                  explorerPlugin({
+                    showAttribution: false,
+                  }),
+                ]}
+                // null stops introspection and undefined forces introspection if schema is null
+                schema={isLoading ? null : (schema ?? undefined)}
+                storage={graphiqlStorage}
+                onTabChange={setTabsState}
+              />
+              {isMounted && <PlaygroundPortal />}
+            </>
+          )}
         </div>
         <div className="flex flex-1 items-center justify-center md:hidden">
           <Alert className="m-8">
