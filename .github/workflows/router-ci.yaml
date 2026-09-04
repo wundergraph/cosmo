@@ -49,7 +49,10 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
+        with:
+          cache: true
+          install: false
 
       - name: Install Cli Node Dependencies
         run: |
@@ -102,7 +105,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        docker_build_target: [ '', 'nonroot' ]
+        docker_build_target: ['', 'nonroot']
     steps:
       - uses: actions/checkout@v4
 
@@ -145,7 +148,10 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
+        with:
+          cache: true
+          install: false
 
       - name: Install Cli Node Dependencies
         run: |
@@ -256,10 +262,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         env:
-          ALLOW_EMPTY_PASSWORD: "yes"
-          REDIS_NODES: "redis-0 redis-1 redis-2"
-          REDIS_CLUSTER_REPLICAS: "0"
-          REDIS_CLUSTER_CREATOR: "no"
+          ALLOW_EMPTY_PASSWORD: 'yes'
+          REDIS_NODES: 'redis-0 redis-1 redis-2'
+          REDIS_CLUSTER_REPLICAS: '0'
+          REDIS_CLUSTER_CREATOR: 'no'
         ports:
           - 7001:6379
       redis-1:
@@ -270,10 +276,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         env:
-          ALLOW_EMPTY_PASSWORD: "yes"
-          REDIS_NODES: "redis-0 redis-1 redis-2"
-          REDIS_CLUSTER_REPLICAS: "0"
-          REDIS_CLUSTER_CREATOR: "no"
+          ALLOW_EMPTY_PASSWORD: 'yes'
+          REDIS_NODES: 'redis-0 redis-1 redis-2'
+          REDIS_CLUSTER_REPLICAS: '0'
+          REDIS_CLUSTER_CREATOR: 'no'
         ports:
           - 7002:6379
       redis-2:
@@ -284,10 +290,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         env:
-          ALLOW_EMPTY_PASSWORD: "yes"
-          REDIS_NODES: "redis-0 redis-1 redis-2"
-          REDIS_CLUSTER_REPLICAS: "0"
-          REDIS_CLUSTER_CREATOR: "yes"
+          ALLOW_EMPTY_PASSWORD: 'yes'
+          REDIS_NODES: 'redis-0 redis-1 redis-2'
+          REDIS_CLUSTER_REPLICAS: '0'
+          REDIS_CLUSTER_CREATOR: 'yes'
         ports:
           - 7003:6379
       kafka:
@@ -360,7 +366,10 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
+        with:
+          cache: true
+          install: false
 
       - name: Install Cli Node Dependencies
         run: |
@@ -421,7 +430,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        docker_build_target: [ '', 'nonroot' ]
+        docker_build_target: ['', 'nonroot']
     steps:
       - uses: actions/checkout@v4
 
@@ -454,7 +463,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        docker_build_target: [ '', 'nonroot' ]
+        docker_build_target: ['', 'nonroot']
     steps:
       - uses: actions/checkout@v4
 

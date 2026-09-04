@@ -3,13 +3,13 @@ on:
   pull_request:
     paths:
       - 'pnpm-lock.yaml'
-      - "controlplane/**/*"
-      - "connect/**/*"
-      - "composition/**/*"
-      - "shared/**/*"
-      - ".github/workflows/controlplane-ci.yaml"
-      - ".github/compose/controlplane-ci.yaml"
-      - ".github/scripts/setup-keycloak.sh"
+      - 'controlplane/**/*'
+      - 'connect/**/*'
+      - 'composition/**/*'
+      - 'shared/**/*'
+      - '.github/workflows/controlplane-ci.yaml'
+      - '.github/compose/controlplane-ci.yaml'
+      - '.github/scripts/setup-keycloak.sh'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -43,7 +43,10 @@ jobs:
       - name: Start service containers
         run: docker compose --project-name controlplane-ci --file .github/compose/controlplane-ci.yaml up --detach --wait --wait-timeout 60
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
+        with:
+          cache: true
+          install: false
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -85,7 +88,7 @@ jobs:
       - name: Test
         run: pnpm run --filter controlplane test:coverage
         env:
-          DB_URL: "postgresql://postgres:changeme@localhost:5432/controlplane"
+          DB_URL: 'postgresql://postgres:changeme@localhost:5432/controlplane'
 
       - name: Upload Coverage to Codecov
         uses: ./.github/actions/codecov-upload-pr
@@ -119,4 +122,4 @@ jobs:
           dockerfile: controlplane/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: controlplane
-          image_description: "Cosmo Controlplane"
+          image_description: 'Cosmo Controlplane'

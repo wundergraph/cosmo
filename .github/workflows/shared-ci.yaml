@@ -3,10 +3,10 @@ on:
   pull_request:
     paths:
       - 'pnpm-lock.yaml'
-      - ".github/workflows/shared-ci.yaml"
-      - "composition/**/*"
-      - "connect/**/*"
-      - "shared/**/*"
+      - '.github/workflows/shared-ci.yaml'
+      - 'composition/**/*'
+      - 'connect/**/*'
+      - 'shared/**/*'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -23,7 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
+        with:
+          cache: true
+          install: false
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
