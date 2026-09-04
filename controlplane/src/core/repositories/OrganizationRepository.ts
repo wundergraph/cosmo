@@ -1438,6 +1438,7 @@ export class OrganizationRepository {
       support: false,
       'split-config-loading': false,
       'login-method-restrictions': false,
+      'prompt-to-query': false,
     };
 
     for (const feature of features) {
@@ -1725,7 +1726,7 @@ export class OrganizationRepository {
     const orgFeatures = await this.getFeatures({ organizationId });
     for (const feature of orgFeatures) {
       if (feature.enabled && graphTokenFeatures.includes(feature.id)) {
-        features.push('split-config-loading');
+        features.push(feature.id);
       }
     }
 
