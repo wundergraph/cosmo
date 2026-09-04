@@ -75,6 +75,12 @@ function getComposeGraphsPool() {
       filename,
       ...(options as Options),
       env: {
+        // The worker environment replaces (rather than extends) the parent environment, so operator
+        // supplied Node flags such as `--max-old-space-size` would otherwise not apply to the child
+        // processes. Composition is the most memory intensive part of the controlplane, so make sure
+        // the same heap limits apply to the workers, otherwise they can grow unbounded and get the
+        // whole pod OOM killed even though the main process stays within its own limit.
+        ...(process.env.NODE_OPTIONS ? { NODE_OPTIONS: process.env.NODE_OPTIONS } : {}),
         SENTRY_ENABLED: env.SENTRY_ENABLED ? 'true' : 'false',
         SENTRY_DSN: env.SENTRY_DSN || '',
         SENTRY_SEND_DEFAULT_PII: env.SENTRY_SEND_DEFAULT_PII ? 'true' : 'false',

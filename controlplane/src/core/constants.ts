@@ -58,3 +58,15 @@ export const organizationSchema = z.object({
 export const defaultRetentionLimitInDays = 7;
 
 export const graphTokenFeatures: FeatureIds[] = ['split-config-loading'];
+
+/**
+ * Number of rows inserted per statement when bulk inserting. The Postgres wire protocol allows at most
+ * 65535 bind parameters per statement, so a single multi-row insert of a large result set (e.g. the
+ * schema changes of a deleted subgraph or the graph pruning issues of a large schema) would otherwise fail.
+ */
+export const DB_INSERT_BATCH_SIZE = 1000;
+
+/**
+ * Maximum number of values passed to a single `IN (...)` clause when looking up rows in bulk.
+ */
+export const DB_IN_CLAUSE_BATCH_SIZE = 5000;
