@@ -44,6 +44,8 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "del-cli": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-unjs": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
