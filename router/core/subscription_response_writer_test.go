@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 type deadlineRecorder struct {
@@ -244,16 +246,21 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		assert.Nil(t, writer)
 	})
 
-	t.Run("fails closed when an SSE deadline is configured but unsupported", func(t *testing.T) {
+	t.Run("disables the SSE timeout when write deadlines are unsupported", func(t *testing.T) {
 		recorder := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
 		req.Header.Set("Accept", sseMimeType)
+		logCore, logs := observer.New(zap.WarnLevel)
 
-		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{SSEWriteTimeout: time.Second})
-		require.Error(t, err)
-		assert.ErrorIs(t, err, http.ErrNotSupported)
-		assert.ErrorContains(t, err, "set SSE write deadline")
-		assert.Nil(t, writer)
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{
+			SSEWriteTimeout: time.Second,
+			Logger:          zap.New(logCore),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, writer)
+		require.NoError(t, writer.Heartbeat())
+		assert.True(t, recorder.Flushed)
+		assert.Equal(t, 1, logs.FilterMessage("SSE write timeout disabled because response writer does not support write deadlines").Len())
 	})
 
 	t.Run("does not require deadline support when the timeout is disabled", func(t *testing.T) {

@@ -14,6 +14,7 @@ import (
 
 	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 const (
@@ -37,6 +38,7 @@ type withFlushWriter interface {
 type SubscriptionResponseWriterOptions struct {
 	ApolloSubscriptionMultipartPrintBoundary bool
 	SSEWriteTimeout                          time.Duration
+	Logger                                   *zap.Logger
 }
 
 type HttpFlushWriter struct {
@@ -51,6 +53,7 @@ type HttpFlushWriter struct {
 	buf             *bytes.Buffer
 	firstMessage    bool
 	sseWriteTimeout time.Duration
+	logger          *zap.Logger
 	// apolloSubscriptionMultipartPrintBoundary if set to true will send the multipart boundary at the end of the message to allow
 	// misbehaving client (like apollo client) to read the message just sent before the next one or the heartbeat
 	apolloSubscriptionMultipartPrintBoundary bool
@@ -189,16 +192,25 @@ func (f *HttpFlushWriter) Flush() (err error) {
 
 func (f *HttpFlushWriter) writeAndFlushSSE(write func() error) (err error) {
 	if f.sseWriteTimeout > 0 {
-		if err := f.responseControl.SetWriteDeadline(time.Now().Add(f.sseWriteTimeout)); err != nil {
-			// Failing closed prevents a response writer without deadline support from
-			// reintroducing an unbounded shared-trigger stall.
-			return fmt.Errorf("set SSE write deadline: %w", err)
-		}
-		defer func() {
-			if clearErr := f.responseControl.SetWriteDeadline(time.Time{}); clearErr != nil {
-				err = errors.Join(err, fmt.Errorf("clear SSE write deadline: %w", clearErr))
+		if deadlineErr := f.responseControl.SetWriteDeadline(time.Now().Add(f.sseWriteTimeout)); deadlineErr != nil {
+			if !errors.Is(deadlineErr, http.ErrNotSupported) {
+				return fmt.Errorf("set SSE write deadline: %w", deadlineErr)
 			}
-		}()
+
+			f.sseWriteTimeout = 0
+			if f.logger != nil {
+				f.logger.Warn(
+					"SSE write timeout disabled because response writer does not support write deadlines",
+					zap.Error(deadlineErr),
+				)
+			}
+		} else {
+			defer func() {
+				if clearErr := f.responseControl.SetWriteDeadline(time.Time{}); clearErr != nil {
+					err = errors.Join(err, fmt.Errorf("clear SSE write deadline: %w", clearErr))
+				}
+			}()
+		}
 	}
 
 	if err := write(); err != nil {
@@ -231,6 +243,7 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 		buf:                                      &bytes.Buffer{},
 		firstMessage:                             true,
 		sseWriteTimeout:                          opts.SSEWriteTimeout,
+		logger:                                   opts.Logger,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
 	}
 

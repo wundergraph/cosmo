@@ -614,7 +614,9 @@ func testSSENonFlusherWriter(t *testing.T) {
 			require.Equal(
 				t,
 				`event: next
-data: {"errors":[{"message":"subscription response writer does not support flushing"}]}`,
+data: {"errors":[{"message":"subscription response writer does not support flushing"}]}
+
+`,
 				string(body),
 			)
 		})

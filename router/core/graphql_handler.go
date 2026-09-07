@@ -330,6 +330,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		resolveCtx, writer, writerErr = GetSubscriptionResponseWriter(resolveCtx, r, w, SubscriptionResponseWriterOptions{
 			ApolloSubscriptionMultipartPrintBoundary: h.apolloSubscriptionMultipartPrintBoundary,
 			SSEWriteTimeout:                          h.sseServerWriteTimeout,
+			Logger:                                   reqCtx.logger,
 		})
 		if writerErr != nil {
 			reqCtx.logger.Error("unable to get subscription response writer", zap.Error(writerErr))
