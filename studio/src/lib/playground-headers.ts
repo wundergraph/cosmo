@@ -117,3 +117,56 @@ export const effectiveDefaultHeadersString = (graph: DefaultHeaderEntry[], perso
 
   return merged.length === 0 ? PLAYGROUND_DEFAULT_HEADERS_TEMPLATE : defaultHeadersToJsonString(merged);
 };
+
+export type ParsedDefaultHeaders = { success: true; entries: DefaultHeaderEntry[] } | { success: false; error: string };
+
+/**
+ * Parses the JSON object shape the default headers editor holds - the same shape
+ * GraphiQL's own headers tab uses - into entries.
+ *
+ * Everything the controlplane would reject is rejected here too, so the user sees
+ * the problem next to the text that caused it rather than as a failed save.
+ */
+export const parseDefaultHeadersJson = (text: string): ParsedDefaultHeaders => {
+  if (text.trim() === '') {
+    return { success: true, entries: [] };
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { success: false, error: 'Not valid JSON' };
+  }
+
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return { success: false, error: 'Headers must be a JSON object' };
+  }
+
+  const entries: DefaultHeaderEntry[] = [];
+  // JSON.parse collapses exactly-duplicated keys, but not ones that differ only in
+  // case, and HTTP header names are case-insensitive.
+  const seenLoweredKeys = new Set<string>();
+
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!isValidHeaderName(key)) {
+      return { success: false, error: `"${key}" is not a valid HTTP header name` };
+    }
+
+    if (typeof value !== 'string') {
+      return { success: false, error: `The value of "${key}" must be a string` };
+    }
+
+    const loweredKey = key.toLowerCase();
+
+    if (seenLoweredKeys.has(loweredKey)) {
+      return { success: false, error: `"${key}" is listed more than once` };
+    }
+
+    seenLoweredKeys.add(loweredKey);
+    entries.push({ key, value });
+  }
+
+  return { success: true, entries };
+};

@@ -2,12 +2,7 @@ import { useApplyParams } from '@/components/analytics/use-apply-params';
 import { CodeViewer } from '@/components/code-viewer';
 import { getGraphLayout, GraphContext, GraphPageLayout } from '@/components/layout/graph-layout';
 import { PageHeader } from '@/components/layout/head';
-import {
-  attachPlaygroundAPI,
-  CustomScripts,
-  detachPlaygroundAPI,
-  PreFlightScript,
-} from '@/components/playground/custom-scripts';
+import { attachPlaygroundAPI, CustomScripts, detachPlaygroundAPI } from '@/components/playground/custom-scripts';
 import { CopyOperation } from '@/components/playground/copy-operation';
 import { DefaultHeadersDialog } from '@/components/playground/default-headers/default-headers-dialog';
 import { PlanView } from '@/components/playground/plan-view';
@@ -687,10 +682,9 @@ const PlaygroundPortal = () => {
   const saveDiv = document.getElementById('save-button');
   const toggleClientValidation = document.getElementById('toggle-client-validation');
   const scriptsSection = document.getElementById('scripts-section');
-  const preFlightScriptSection = document.getElementById('pre-flight-script-section');
+  const defaultHeadersSection = document.getElementById('default-headers-section');
   const shareButton = document.getElementById('share-button');
   const copyButton = document.getElementById('copy-button');
-  const defaultHeadersButton = document.getElementById('default-headers-button');
 
   if (
     !responseToolbar ||
@@ -701,8 +695,7 @@ const PlaygroundPortal = () => {
     !scriptsSection ||
     !shareButton ||
     !copyButton ||
-    !preFlightScriptSection ||
-    !defaultHeadersButton
+    !defaultHeadersSection
   ) {
     return null;
   }
@@ -715,10 +708,9 @@ const PlaygroundPortal = () => {
       {createPortal(<PersistOperation />, saveDiv)}
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
       {createPortal(<CustomScripts />, scriptsSection)}
-      {createPortal(<PreFlightScript />, preFlightScriptSection)}
       {createPortal(<SharePlaygroundModal />, shareButton)}
       {createPortal(<CopyOperation />, copyButton)}
-      {createPortal(<DefaultHeadersDialog />, defaultHeadersButton)}
+      {createPortal(<DefaultHeadersDialog />, defaultHeadersSection)}
     </>
   );
 };
@@ -895,6 +887,16 @@ const PlaygroundPage: NextPageWithLayout = () => {
       }
     }
 
+    const editors = document.getElementsByClassName('graphiql-editors')[0] as any as HTMLDivElement;
+
+    const defaultHeadersSection = document.getElementById('default-headers-section') ?? document.createElement('div');
+
+    if (editors && !defaultHeadersSection.isConnected) {
+      defaultHeadersSection.id = 'default-headers-section';
+      defaultHeadersSection.className = 'invisible';
+      editors.appendChild(defaultHeadersSection);
+    }
+
     const editorToolsTabBar = document.getElementsByClassName('graphiql-editor-tools')[0] as any as HTMLDivElement;
 
     const editorToolsSection = document.getElementsByClassName('graphiql-editor-tool')[0] as any as HTMLDivElement;
@@ -912,13 +914,21 @@ const PlaygroundPage: NextPageWithLayout = () => {
       scriptsSection.id = 'scripts-section';
       scriptsSection.className = 'graphiql-editor hidden';
 
+      // childNodes[1] is the Headers tab; the default headers row belongs to it alone.
+      const HEADERS_TAB_INDEX = 1;
+
       tabs.forEach((e, index) =>
         e.addEventListener('click', () => {
           (e as HTMLButtonElement).className = 'graphiql-un-styled active';
           (sections[index] as HTMLDivElement).className = 'graphiql-editor';
           scriptsSection.className = 'graphiql-editor hidden';
+          defaultHeadersSection.className = index === HEADERS_TAB_INDEX ? '' : 'invisible';
         }),
       );
+
+      if ((tabs[HEADERS_TAB_INDEX] as HTMLButtonElement).classList.contains('active')) {
+        defaultHeadersSection.className = '';
+      }
 
       scriptsButton.onclick = (e) => {
         (tabs[0] as HTMLButtonElement).className = 'graphiql-un-styled';
@@ -926,6 +936,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
         (sections[0] as HTMLDivElement).className = 'graphiql-editor hidden';
         (sections[1] as HTMLDivElement).className = 'graphiql-editor hidden';
         scriptsSection.className = 'graphiql-editor';
+        defaultHeadersSection.className = 'invisible';
 
         scriptsButton.className = 'graphiql-un-styled active';
       };
@@ -938,14 +949,6 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
       editorToolsTabBar.insertBefore(scriptsButton, editorToolsTabBar.childNodes[2]);
       editorToolsSection.appendChild(scriptsSection);
-    }
-
-    const editors = document.getElementsByClassName('graphiql-editors')[0] as any as HTMLDivElement;
-
-    if (editors) {
-      const preFlightScriptSection = document.createElement('div');
-      preFlightScriptSection.id = 'pre-flight-script-section';
-      editors.appendChild(preFlightScriptSection);
     }
 
     const responseSection = document.getElementsByClassName('graphiql-response')[0];
@@ -994,10 +997,6 @@ const PlaygroundPage: NextPageWithLayout = () => {
       const shareButton = document.createElement('div');
       shareButton.id = 'share-button';
       toolbar.append(shareButton);
-
-      const defaultHeadersButton = document.createElement('div');
-      defaultHeadersButton.id = 'default-headers-button';
-      toolbar.append(defaultHeadersButton);
     }
 
     // remove settings button

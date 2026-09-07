@@ -1,5 +1,4 @@
 import { GraphContext } from '@/components/layout/graph-layout';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,24 +10,27 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Loader } from '@/components/ui/loader';
-import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
-import { DefaultHeaderEntry, effectiveDefaultHeadersString } from '@/lib/playground-headers';
+import {
+  DefaultHeaderEntry,
+  defaultHeadersToJsonString,
+  effectiveDefaultHeadersString,
+  parseDefaultHeadersJson,
+} from '@/lib/playground-headers';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
-import { InfoCircledIcon } from '@radix-ui/react-icons';
-import { TooltipContent, TooltipTrigger } from '@radix-ui/react-tooltip';
+import { ChevronRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getPlaygroundDefaultHeaders,
   updatePlaygroundDefaultHeaders,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { useContext, useState } from 'react';
-import { LuSettings2 } from 'react-icons/lu';
-import { HeaderRows, isInvalidKey } from './header-rows';
+import { LuLayoutList } from 'react-icons/lu';
+import { HeaderEditor } from './header-editor';
 
-/** Strips the protobuf message wrapper down to the plain entries the editor uses. */
-const fromServer = (headers?: { key: string; value: string }[]): DefaultHeaderEntry[] =>
-  (headers ?? []).map((h) => ({ key: h.key, value: h.value }));
+/** Renders the stored headers as the JSON document the editor holds. */
+const fromServer = (headers?: { key: string; value: string }[]): string =>
+  defaultHeadersToJsonString((headers ?? []).map((h) => ({ key: h.key, value: h.value })));
 
 export const DefaultHeadersDialog = () => {
   const graphContext = useContext(GraphContext);
@@ -40,8 +42,8 @@ export const DefaultHeadersDialog = () => {
   // shown. Any edit replaces the draft, and from then on nothing but the user can
   // change it - so a background refetch cannot clobber work in progress. Both are
   // reset to null on close, so the next open starts from fresh server data.
-  const [personalDraft, setPersonalDraft] = useState<DefaultHeaderEntry[] | null>(null);
-  const [graphDraft, setGraphDraft] = useState<DefaultHeaderEntry[] | null>(null);
+  const [personalDraft, setPersonalDraft] = useState<string | null>(null);
+  const [graphDraft, setGraphDraft] = useState<string | null>(null);
 
   const federatedGraphName = graphContext?.graph?.name ?? '';
   const namespace = graphContext?.graph?.namespace ?? '';
@@ -59,16 +61,23 @@ export const DefaultHeadersDialog = () => {
 
   const { mutate, isPending } = useMutation(updatePlaygroundDefaultHeaders);
 
-  const personalEntries = personalDraft ?? fromServer(data?.personalHeaders);
-  const graphEntries = graphDraft ?? fromServer(data?.graphHeaders);
+  const personalText = personalDraft ?? fromServer(data?.personalHeaders);
+  const graphText = graphDraft ?? fromServer(data?.graphHeaders);
+
+  const personal = parseDefaultHeadersJson(personalText);
+  const graph = parseDefaultHeadersJson(graphText);
 
   const canEditGraphHeaders = data?.canEditGraphHeaders ?? false;
-  const preview = effectiveDefaultHeadersString(graphEntries, personalEntries);
 
-  // Only gate Save on rows the user can actually fix. The graph rows are read-only
-  // for a non-admin and `save` omits them from the request entirely, so letting them
-  // disable Save would strand the user with no way to save their own headers.
-  const hasInvalidKey = personalEntries.some(isInvalidKey) || (canEditGraphHeaders && graphEntries.some(isInvalidKey));
+  // Only gate Save on text the user can actually fix. The graph editor is read-only
+  // for a non-admin and `save` omits that scope from the request entirely, so letting
+  // it disable Save would strand the user with no way to save their own headers.
+  const hasBlockingError = !personal.success || (canEditGraphHeaders && !graph.success);
+
+  // Nothing sensible to preview while either side is unparseable.
+  const preview = hasBlockingError
+    ? null
+    : effectiveDefaultHeadersString(graph.success ? graph.entries : [], personal.success ? personal.entries : []);
 
   const closeDialog = () => {
     setPersonalDraft(null);
@@ -77,16 +86,18 @@ export const DefaultHeadersDialog = () => {
   };
 
   const save = () => {
-    const toHeaders = (entries: DefaultHeaderEntry[]) => ({
-      headers: entries.filter((entry) => entry.key.trim() !== ''),
-    });
+    if (!personal.success || (canEditGraphHeaders && !graph.success)) {
+      return;
+    }
+
+    const toHeaders = (entries: DefaultHeaderEntry[]) => ({ headers: entries });
 
     mutate(
       {
         federatedGraphName,
         namespace,
-        personalHeaders: toHeaders(personalEntries),
-        ...(canEditGraphHeaders ? { graphHeaders: toHeaders(graphEntries) } : {}),
+        personalHeaders: toHeaders(personal.entries),
+        ...(canEditGraphHeaders && graph.success ? { graphHeaders: toHeaders(graph.entries) } : {}),
       },
       {
         onSuccess: ({ response }) => {
@@ -119,16 +130,16 @@ export const DefaultHeadersDialog = () => {
         closeDialog();
       }}
     >
-      <Tooltip delayDuration={100}>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="graphiql-toolbar-button">
-              <LuSettings2 className="graphiql-toolbar-icon" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent className="rounded-md border bg-background px-2 py-1">Default Headers</TooltipContent>
-      </Tooltip>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center gap-x-3 border-t px-4 py-3 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <LuLayoutList className="h-4 w-4 flex-shrink-0" />
+          <span className="flex-1">Set up your default headers</span>
+          <ChevronRightIcon className="h-4 w-4 flex-shrink-0" />
+        </button>
+      </DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader className="space-y-2">
           <DialogTitle className="select-none">Default Headers</DialogTitle>
@@ -143,36 +154,56 @@ export const DefaultHeadersDialog = () => {
             <Loader />
           </div>
         ) : (
-          <div className="flex flex-col gap-y-6">
-            <div className="space-y-3">
-              <h3 className="select-none text-sm font-medium">My defaults</h3>
-              <p className="text-xs text-muted-foreground">
-                Only you can see these. They override the graph defaults for headers with the same name.
+          <div className="flex flex-col gap-y-5">
+            <section className="space-y-2">
+              <div className="space-y-1">
+                <div className="flex select-none items-baseline gap-x-2">
+                  <h3 className="text-sm font-medium">Graph defaults</h3>
+                  {!canEditGraphHeaders && <span className="text-xs text-muted-foreground">read only</span>}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {canEditGraphHeaders
+                    ? 'Shared with everyone in this organization who can view this graph.'
+                    : 'Shared with everyone in this organization. Only a graph admin can change these.'}
+                </p>
+              </div>
+              <HeaderEditor
+                value={graphText}
+                error={graph.success ? null : graph.error}
+                readOnly={!canEditGraphHeaders}
+                onChange={setGraphDraft}
+              />
+              <p className="flex items-start gap-x-1.5 text-xs text-muted-foreground">
+                <InfoCircledIcon className="mt-0.5 h-3 w-3 flex-shrink-0" />
+                <span>Everyone in the organization can read these, so keep personal credentials out of them.</span>
               </p>
-              <HeaderRows entries={personalEntries} onChange={setPersonalDraft} />
-            </div>
+            </section>
 
-            <div className="space-y-3">
-              <h3 className="select-none text-sm font-medium">Graph defaults</h3>
-              <p className="text-xs text-muted-foreground">
-                {canEditGraphHeaders
-                  ? 'Shared with everyone in this organization who can view this graph.'
-                  : 'Shared with everyone in this organization. Only a graph admin can change these.'}
-              </p>
-              <HeaderRows entries={graphEntries} disabled={!canEditGraphHeaders} onChange={setGraphDraft} />
-              <Alert>
-                <InfoCircledIcon className="h-4 w-4" />
-                <AlertDescription className="text-xs">
-                  Graph defaults are visible to everyone in the organization, so do not put personal credentials here.
-                  Add them under My defaults instead - a personal header replaces the graph one with the same name.
-                </AlertDescription>
-              </Alert>
-            </div>
+            <section className="space-y-2">
+              <div className="space-y-1">
+                <h3 className="select-none text-sm font-medium">My defaults</h3>
+                <p className="text-xs text-muted-foreground">
+                  Only you can see these. They override the graph defaults for headers with the same name.
+                </p>
+              </div>
+              <HeaderEditor
+                value={personalText}
+                error={personal.success ? null : personal.error}
+                onChange={setPersonalDraft}
+              />
+            </section>
 
-            <div className="space-y-2">
-              <h3 className="select-none text-sm font-medium">Effective on new tabs</h3>
-              <pre className="max-h-48 overflow-auto rounded-md border bg-muted p-3 font-mono text-xs">{preview}</pre>
-            </div>
+            <section className="space-y-2">
+              <div className="flex select-none items-baseline gap-x-2">
+                <h3 className="text-sm font-medium">Effective on new tabs</h3>
+                <span className="text-xs text-muted-foreground">read only</span>
+              </div>
+              {/* Deliberately unlike the editors above: filled, borderless and without
+                  line numbers, so it does not read as another thing to type into. */}
+              <pre className="max-h-48 overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs leading-5">
+                {preview ?? 'Fix the errors above to see the result.'}
+              </pre>
+            </section>
           </div>
         )}
 
@@ -180,7 +211,7 @@ export const DefaultHeadersDialog = () => {
           <Button variant="secondary" onClick={closeDialog}>
             Cancel
           </Button>
-          <Button onClick={save} disabled={isPending || isLoading || isError || hasInvalidKey}>
+          <Button onClick={save} disabled={isPending || isLoading || isError || hasBlockingError}>
             Save
           </Button>
         </DialogFooter>

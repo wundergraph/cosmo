@@ -3,6 +3,7 @@ import {
   defaultHeadersToJsonString,
   effectiveDefaultHeadersString,
   mergeDefaultHeaders,
+  parseDefaultHeadersJson,
 } from '@/lib/playground-headers';
 import { describe, expect, test } from 'vitest';
 
@@ -126,5 +127,68 @@ describe('effectiveDefaultHeadersString', () => {
     );
 
     expect(result).toBe('{\n  "x-tenant-id": "acme",\n  "Authorization": "Bearer me"\n}');
+  });
+});
+
+describe('parseDefaultHeadersJson', () => {
+  test('parses a JSON object into ordered entries', () => {
+    expect(parseDefaultHeadersJson('{"x-tenant-id": "acme", "Authorization": "Bearer me"}')).toEqual({
+      success: true,
+      entries: [
+        { key: 'x-tenant-id', value: 'acme' },
+        { key: 'Authorization', value: 'Bearer me' },
+      ],
+    });
+  });
+
+  test.each(['', '   ', '\n'])('treats blank text (%j) as no headers', (text) => {
+    expect(parseDefaultHeadersJson(text)).toEqual({ success: true, entries: [] });
+  });
+
+  test('accepts an empty object', () => {
+    expect(parseDefaultHeadersJson('{}')).toEqual({ success: true, entries: [] });
+  });
+
+  test('rejects text that is not JSON', () => {
+    expect(parseDefaultHeadersJson('{"a": }')).toEqual({ success: false, error: 'Not valid JSON' });
+  });
+
+  test.each(['[]', '"a string"', '42', 'null'])('rejects JSON that is not an object (%s)', (text) => {
+    expect(parseDefaultHeadersJson(text)).toEqual({ success: false, error: 'Headers must be a JSON object' });
+  });
+
+  test('rejects a key that is not a valid header name', () => {
+    expect(parseDefaultHeadersJson('{"bad header": "1"}')).toEqual({
+      success: false,
+      error: '"bad header" is not a valid HTTP header name',
+    });
+  });
+
+  test.each([
+    ['a number', '{"X-A": 1}'],
+    ['a boolean', '{"X-A": true}'],
+    ['null', '{"X-A": null}'],
+    ['an object', '{"X-A": {}}'],
+  ])('rejects a value that is %s', (_label, text) => {
+    expect(parseDefaultHeadersJson(text)).toEqual({
+      success: false,
+      error: 'The value of "X-A" must be a string',
+    });
+  });
+
+  test('rejects two keys that differ only in case', () => {
+    expect(parseDefaultHeadersJson('{"X-A": "1", "x-a": "2"}')).toEqual({
+      success: false,
+      error: '"x-a" is listed more than once',
+    });
+  });
+
+  test('round-trips what defaultHeadersToJsonString produces', () => {
+    const entries = [
+      { key: 'x-tenant-id', value: 'acme' },
+      { key: 'Authorization', value: 'Bearer me' },
+    ];
+
+    expect(parseDefaultHeadersJson(defaultHeadersToJsonString(entries))).toEqual({ success: true, entries });
   });
 });
