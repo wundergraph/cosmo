@@ -818,16 +818,30 @@ const PlaygroundPage: NextPageWithLayout = () => {
     setStoredHeaders(tempHeaders);
   }, [setStoredHeaders, tempHeaders]);
 
-  // `headers` mirrors GraphiQL's header editor for the two consumers below that are
-  // not GraphiQL (the query plan request and TraceContext). GraphiQL does not report
-  // the editor's initial value - its change handler is attached after construction -
-  // so seed the mirror from the same place the editor restores from: the active tab.
+  // What GraphiQL will restore into the header editor, or null on a first visit.
   // Guarded because this page server-renders and localStorage is client-only.
-  const [headers, setHeaders] = useState(() =>
-    typeof window === 'undefined'
-      ? effectiveDefaultHeaders
-      : (graphiqlStorage.getItem('graphiql:headers') ?? effectiveDefaultHeaders),
+  const persistedHeaders = useMemo(
+    () => (typeof window === 'undefined' ? null : graphiqlStorage.getItem('graphiql:headers')),
+    [graphiqlStorage],
   );
+
+  // `headers` mirrors GraphiQL's header editor for the two consumers below that are not
+  // GraphiQL (the query plan request and TraceContext). GraphiQL never reports the
+  // editor's initial value - its change handler is attached after construction - so the
+  // mirror has to be seeded rather than waited for.
+  const [headers, setHeaders] = useState<string>(() => persistedHeaders ?? effectiveDefaultHeaders);
+
+  // The defaults query is usually still in flight on the first render, so the seed above
+  // falls back to the built-in template. Adopt the real defaults once they resolve, but
+  // only on a first visit and only while untouched: a restored tab and anything the user
+  // has typed both take precedence over a default.
+  useEffect(() => {
+    if (persistedHeaders !== null) {
+      return;
+    }
+
+    setHeaders((current) => (current === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE ? effectiveDefaultHeaders : current));
+  }, [persistedHeaders, effectiveDefaultHeaders]);
 
   const [response, setResponse] = useState<string>('');
 
