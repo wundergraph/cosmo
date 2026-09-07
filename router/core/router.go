@@ -1222,7 +1222,7 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 		return err
 	}
 
-	if err = r.startResponseCacheInvalidationServer(); err != nil {
+	if err = r.startResponseCacheInvalidationServer(ctx); err != nil {
 		if closeErr := r.responseCache.Close(); closeErr != nil {
 			r.logger.Error("failed to close response cache after invalidation server setup failed", zap.Error(closeErr))
 		}
@@ -1234,7 +1234,7 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 }
 
 // startResponseCacheInvalidationServer listens for invalidation requests.
-func (r *Router) startResponseCacheInvalidationServer() error {
+func (r *Router) startResponseCacheInvalidationServer(ctx context.Context) error {
 	if r.responseCache == nil || !r.responseCacheConfig.Invalidation.Endpoint.Enabled {
 		return nil
 	}
@@ -1244,7 +1244,8 @@ func (r *Router) startResponseCacheInvalidationServer() error {
 		return fmt.Errorf("failed to create response cache invalidation server: %w", err)
 	}
 
-	listener, err := net.Listen("tcp", svr.Addr)
+	lc := &net.ListenConfig{}
+	listener, err := lc.Listen(ctx, "tcp", svr.Addr)
 	if err != nil {
 		return fmt.Errorf("failed to bind response cache invalidation server to %s: %w", svr.Addr, err)
 	}
