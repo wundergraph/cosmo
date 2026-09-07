@@ -85,7 +85,7 @@ describe('Playground Default Headers', () => {
     ]);
   });
 
-  test('Updating the same scope twice replaces rather than duplicates', async () => {
+  test('Updating the graph scope twice replaces rather than duplicates', async () => {
     const { client, server } = await SetupTest({ dbname });
     onTestFinished(() => server.close());
 
@@ -441,7 +441,7 @@ describe('Playground Default Headers', () => {
     },
   );
 
-  test('Clearing one scope leaves the other scope untouched', async () => {
+  test('Clearing the personal scope leaves the graph scope untouched', async () => {
     const { client, server } = await SetupTest({ dbname });
     onTestFinished(() => server.close());
 
@@ -455,7 +455,6 @@ describe('Playground Default Headers', () => {
       personalHeaders: { headers: [{ key: 'Authorization', value: 'Bearer alice' }] },
     });
 
-    // Clearing the personal scope must not touch the graph row.
     const clearPersonalRes = await client.updatePlaygroundDefaultHeaders({
       federatedGraphName: graphName,
       namespace: 'default',
@@ -463,19 +462,25 @@ describe('Playground Default Headers', () => {
     });
     expect(clearPersonalRes.response?.code).toBe(EnumStatusCode.OK);
 
-    const afterPersonalCleared = await client.getPlaygroundDefaultHeaders({
+    const res = await client.getPlaygroundDefaultHeaders({
       federatedGraphName: graphName,
       namespace: 'default',
     });
-    expect(afterPersonalCleared.graphHeaders.map(({ key, value }) => ({ key, value }))).toEqual([
-      { key: 'x-tenant-id', value: 'acme' },
-    ]);
-    expect(afterPersonalCleared.personalHeaders).toEqual([]);
+    expect(res.graphHeaders.map(({ key, value }) => ({ key, value }))).toEqual([{ key: 'x-tenant-id', value: 'acme' }]);
+    expect(res.personalHeaders).toEqual([]);
+  });
 
-    // And the symmetric case: restore the personal scope, then clear the graph one.
+  test('Clearing the graph scope leaves the personal scope untouched', async () => {
+    const { client, server } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
+
+    const graphName = genID('fedGraph');
+    await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+
     await client.updatePlaygroundDefaultHeaders({
       federatedGraphName: graphName,
       namespace: 'default',
+      graphHeaders: { headers: [{ key: 'x-tenant-id', value: 'acme' }] },
       personalHeaders: { headers: [{ key: 'Authorization', value: 'Bearer alice' }] },
     });
 
@@ -486,12 +491,12 @@ describe('Playground Default Headers', () => {
     });
     expect(clearGraphRes.response?.code).toBe(EnumStatusCode.OK);
 
-    const afterGraphCleared = await client.getPlaygroundDefaultHeaders({
+    const res = await client.getPlaygroundDefaultHeaders({
       federatedGraphName: graphName,
       namespace: 'default',
     });
-    expect(afterGraphCleared.graphHeaders).toEqual([]);
-    expect(afterGraphCleared.personalHeaders.map(({ key, value }) => ({ key, value }))).toEqual([
+    expect(res.graphHeaders).toEqual([]);
+    expect(res.personalHeaders.map(({ key, value }) => ({ key, value }))).toEqual([
       { key: 'Authorization', value: 'Bearer alice' },
     ]);
   });
