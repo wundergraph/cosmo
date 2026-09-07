@@ -165,14 +165,20 @@ describe('parseDefaultHeadersJson', () => {
   });
 
   test.each([
-    ['a number', '{"X-A": 1}'],
-    ['a boolean', '{"X-A": true}'],
+    ['a number', '{"X-A": 3}', '3'],
+    ['a boolean', '{"X-A": true}', 'true'],
+  ])('stores a value that is %s as its text', (_label, text, expected) => {
+    expect(parseDefaultHeadersJson(text)).toEqual({ success: true, entries: [{ key: 'X-A', value: expected }] });
+  });
+
+  test.each([
     ['null', '{"X-A": null}'],
     ['an object', '{"X-A": {}}'],
+    ['an array', '{"X-A": []}'],
   ])('rejects a value that is %s', (_label, text) => {
     expect(parseDefaultHeadersJson(text)).toEqual({
       success: false,
-      error: 'The value of "X-A" must be a string',
+      error: 'The value of "X-A" must be a string, number or boolean',
     });
   });
 

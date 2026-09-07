@@ -154,8 +154,10 @@ export const parseDefaultHeadersJson = (text: string): ParsedDefaultHeaders => {
       return { success: false, error: `"${key}" is not a valid HTTP header name` };
     }
 
-    if (typeof value !== 'string') {
-      return { success: false, error: `The value of "${key}" must be a string` };
+    // Header values are strings on the wire, so a number or boolean is accepted and
+    // stored as its text - the same latitude GraphiQL's own headers tab allows.
+    if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
+      return { success: false, error: `The value of "${key}" must be a string, number or boolean` };
     }
 
     const loweredKey = key.toLowerCase();
@@ -165,7 +167,7 @@ export const parseDefaultHeadersJson = (text: string): ParsedDefaultHeaders => {
     }
 
     seenLoweredKeys.add(loweredKey);
-    entries.push({ key, value });
+    entries.push({ key, value: String(value) });
   }
 
   return { success: true, entries };
