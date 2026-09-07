@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/wundergraph/cosmo/router/internal/unique"
@@ -95,6 +96,12 @@ func (h *Handler) decode(r *http.Request) ([]Request, error) {
 			return nil, fmt.Errorf("invalidation request is larger than %d bytes", maxBodyBytes)
 		}
 		return nil, fmt.Errorf("invalidation expects an array of requests: %w", err)
+	}
+
+	// Decode reads one value and stops, so anything after the array would
+	// otherwise be accepted unread.
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		return nil, errors.New("invalidation expects a single array of requests, got trailing data")
 	}
 
 	if len(requests) == 0 {

@@ -251,6 +251,8 @@ func TestHandlerValidation(t *testing.T) {
 		{"an object rather than an array", `{"kind":"subgraph","subgraph":"accounts"}`, "array of requests"},
 		{"an empty array", `[]`, "at least one request"},
 		{"nothing at all", ``, "array of requests"},
+		{"trailing data after the array", `[{"kind":"subgraph","subgraph":"accounts"}] {}`, "trailing data"},
+		{"two arrays", `[{"kind":"subgraph","subgraph":"accounts"}][]`, "trailing data"},
 	}
 
 	for _, tc := range testCases {
@@ -349,4 +351,18 @@ func TestNewServerRejectsShortSharedKey(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, svr)
 	require.Contains(t, err.Error(), "at least 32 characters")
+}
+
+func TestNewServerRejectsAnInvalidPath(t *testing.T) {
+	t.Parallel()
+
+	for _, path := range []string{"", "invalidation"} {
+		cfg := allIndexes()
+		cfg.Endpoint.Path = path
+
+		svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{})
+		require.Error(t, err)
+		require.Nil(t, svr)
+		require.Contains(t, err.Error(), "must start with '/'")
+	}
 }

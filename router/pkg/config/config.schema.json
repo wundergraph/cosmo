@@ -3399,7 +3399,7 @@
             },
             "provider_id": {
               "type": "string",
-              "description": "The ID of a Redis storage provider declared under 'storage_providers.redis'. Required when 'provider' is 'redis', which is the default; an unknown ID fails startup. Ignored by the 'memory' provider."
+              "description": "The ID of a Redis storage provider declared under 'storage_providers.redis'. Required when 'provider' is 'redis', which is the default; an unknown ID fails startup. The instance must run Redis 7.0 or newer: tagged writes use EXPIRE options that older versions reject. Ignored by the 'memory' provider."
             },
             "max_entries": {
               "type": "integer",

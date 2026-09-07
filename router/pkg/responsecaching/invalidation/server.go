@@ -2,7 +2,9 @@ package invalidation
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -21,6 +23,11 @@ func NewServer(logger *zap.Logger, cfg config.ResponseCacheInvalidationConfig, i
 	}
 	if utf8.RuneCountInString(cfg.Endpoint.SharedKey) < ResponseCacheInvalidationSharedKeyMinLength {
 		return nil, errors.New("response cache invalidation shared_key must be at least 32 characters")
+	}
+	// chi panics on a route that is empty or does not start with a slash, so
+	// this is checked here as a configuration error instead.
+	if !strings.HasPrefix(cfg.Endpoint.Path, "/") {
+		return nil, fmt.Errorf("response cache invalidation path must start with '/', got %q", cfg.Endpoint.Path)
 	}
 
 	serverLogger, err := zap.NewStdLogAt(

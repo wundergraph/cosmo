@@ -43,6 +43,8 @@ A response carrying GraphQL errors is never cached, whatever its `Cache-Control`
 
 Every router replica shares one cache and entries outlive the process. Define a [storage provider](/router/storage-providers), then reference it by `provider_id`.
 
+Redis 7.0 or newer is required. Cache tag indexes are maintained with `EXPIRE` options that older versions reject, so writes fail on Redis 6.
+
 <CodeGroup>
 ```yaml config.yaml
 storage_providers:
