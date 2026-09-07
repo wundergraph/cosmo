@@ -104,7 +104,7 @@ func TestDeferTestDataQueries(t *testing.T) {
 						defer func() { require.NoError(t, res.Body.Close()) }()
 						require.Equal(t, http.StatusOK, res.StatusCode)
 
-						// defer could be fully discarded in case query has duplicate field which are not deffered
+						// defer could be fully discarded in case query has duplicate field which are not deferred
 						isMultipart := strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed")
 
 						body, err := io.ReadAll(res.Body)
