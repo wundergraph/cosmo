@@ -74,12 +74,11 @@ export const mergeDefaultHeaders = (
   graph: DefaultHeaderEntry[],
   personal: DefaultHeaderEntry[],
 ): DefaultHeaderEntry[] => {
-  const withNonEmptyKeys = (entries: DefaultHeaderEntry[]) => entries.filter((entry) => entry.key.trim() !== '');
-
-  const merged = withNonEmptyKeys(graph);
+  const merged = graph.filter((entry) => entry.key.trim().length > 0);
+  const overrides = personal.filter((entry) => entry.key.trim().length > 0);
   const indexByLoweredKey = new Map(merged.map((entry, index) => [entry.key.toLowerCase(), index]));
 
-  for (const entry of withNonEmptyKeys(personal)) {
+  for (const entry of overrides) {
     const existingIndex = indexByLoweredKey.get(entry.key.toLowerCase());
 
     if (existingIndex === undefined) {
@@ -98,13 +97,9 @@ export const mergeDefaultHeaders = (
  * expects.
  */
 export const defaultHeadersToJsonString = (entries: DefaultHeaderEntry[]): string => {
-  const asObject: Record<string, string> = {};
-
-  for (const entry of entries) {
-    if (entry.key.trim() !== '') {
-      asObject[entry.key] = entry.value;
-    }
-  }
+  const asObject = Object.fromEntries(
+    entries.filter((entry) => entry.key.trim().length > 0).map((entry) => [entry.key, entry.value]),
+  );
 
   return JSON.stringify(asObject, null, 2);
 };
