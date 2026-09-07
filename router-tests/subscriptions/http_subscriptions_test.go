@@ -453,7 +453,9 @@ func testSSEWriteTimeout(t *testing.T) {
 				false,
 				eventIntervalMilliseconds,
 			)
-			defer response.Body.Close()
+			defer func() {
+				_ = response.Body.Close()
+			}()
 			require.Equal(t, 2, response.ProtoMajor)
 			reader := bufio.NewReader(response.Body)
 
@@ -490,9 +492,13 @@ func testSSEWriteTimeout(t *testing.T) {
 
 			client := &http.Client{}
 			blockedResponse := openCountEmpSSESubscription(t, ctx, client, xEnv.GraphQLRequestURL(), true, 250)
-			defer blockedResponse.Body.Close()
+			defer func() {
+				_ = blockedResponse.Body.Close()
+			}()
 			healthyResponse := openCountEmpSSESubscription(t, ctx, client, xEnv.GraphQLRequestURL(), false, 250)
-			defer healthyResponse.Body.Close()
+			defer func() {
+				_ = healthyResponse.Body.Close()
+			}()
 			healthyReader := bufio.NewReader(healthyResponse.Body)
 
 			xEnv.WaitForSubscriptionCount(2, eventWaitTimeout)
