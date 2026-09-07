@@ -177,7 +177,7 @@ vi.mock('../src/core/clickhouse/index.js', () => {
   return { ClickHouseClient };
 });
 
-describe('Delete user tests', () => {
+describe('Delete user tests', { concurrent: false }, () => {
   let chClient: ClickHouseClient;
 
   beforeEach(() => {
