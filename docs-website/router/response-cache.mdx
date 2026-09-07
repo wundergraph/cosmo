@@ -114,6 +114,16 @@ response_cache:
     subgraph: true
     # Index entities under their __typename.
     type: true
+    endpoint:
+      # Serve the invalidation endpoint. Default: false.
+      enabled: false
+      # Its own address, not a route on the router's port. Default: localhost:5027.
+      listen_addr: 'localhost:5027'
+      # Default: /invalidation.
+      path: '/invalidation'
+      # Sent as the Authorization header, no Bearer prefix. At least 32
+      # characters. Required when the endpoint is enabled.
+      shared_key: ''
 ```
 
 `storage` is required when `enabled` is `true`.
@@ -157,6 +167,63 @@ The shape depends on what was fetched, because an entity fetch caches one entry 
 ```
 
 An outer array whose length does not match the entities answered costs the whole response its tags, rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and never forwarded to clients.
+
+## Invalidation
+
+Entries leave the cache on their own TTL. The invalidation endpoint drops them earlier, by naming what they are about rather than the keys they sit under.
+
+### Enable the endpoint
+
+```yaml config.yaml
+response_cache:
+  invalidation:
+    endpoint:
+      enabled: true
+      shared_key: 'a-random-string-of-at-least-32-characters'
+```
+
+### Send a request
+
+`POST` a JSON array to the endpoint, with the shared key as the `Authorization` header. There is no `Bearer` prefix.
+
+```bash
+curl -X POST "http://localhost:5027/invalidation" \
+  -H "Authorization: ${INVALIDATION_SHARED_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '[
+    { "kind": "subgraph", "subgraph": "products" },
+    { "kind": "type", "subgraph": "products", "type": "Product" },
+    { "kind": "cache_tag", "subgraphs": ["products", "reviews"], "cache_tag": "product-42" }
+  ]'
+```
+
+Each element names one of three kinds.
+
+| `kind` | Removes | Fields |
+| --- | --- | --- |
+| `subgraph` | Every entry the subgraph answered | `subgraph` |
+| `type` | Every entity of that `__typename` the subgraph answered | `subgraph`, `type` |
+| `cache_tag` | Every entry the listed subgraphs tagged with it | `subgraphs`, `cache_tag` |
+
+A successful request answers `202` with the number of cache keys removed:
+
+```json
+{ "count": 12 }
+```
+
+The whole array is validated before anything is removed. One bad element refuses the request with `400` and removes nothing, so it can be corrected and resent as a whole. Each error names the element it is about:
+
+```json
+{ "errors": [{ "index": 1, "kind": "type", "message": "a \"type\" request requires a type" }] }
+```
+
+### Restrictions
+
+**Tags can be outdated.** With the Redis provider, an entry cached again under different tags stays listed under its earlier tags until it expires. Invalidating a tag the entry no longer carries still removes it. With the memory provider, an entry is listed under the tags of its latest write only.
+
+**Everything is scoped to a subgraph.** A type or a cache tag is indexed per subgraph that answered, so every request names one. There is no way to invalidate a type or a tag across all subgraphs in one element. List the subgraphs instead.
+
+**The memory provider is per replica.** Each router holds its own cache, so an invalidation reaches only the replica it was sent to. Send it to every replica, or use Redis, where one request covers all of them.
 
 ## Observability
 
