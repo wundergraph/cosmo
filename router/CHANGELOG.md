@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.345.0](https://github.com/wundergraph/cosmo/compare/router@0.344.1...router@0.345.0) (2026-09-02)
+
+### Bug Fixes
+
+* grpc dependency bump ([#3210](https://github.com/wundergraph/cosmo/issues/3210)) ([f92ec25](https://github.com/wundergraph/cosmo/commit/f92ec259c39453a006ae54fc4d19fd5103217edd)) (@SkArchon)
+
+### Features
+
+* allow subscriptions to be excluded from rate limiting ([#3143](https://github.com/wundergraph/cosmo/issues/3143)) ([98f328a](https://github.com/wundergraph/cosmo/commit/98f328a881eb0330a9b3b725e23ca80da78f1407)) (@alepane21)
+* propagate ttl to client ([#3203](https://github.com/wundergraph/cosmo/issues/3203)) ([ae8bace](https://github.com/wundergraph/cosmo/commit/ae8bace8dd9c7cc4c4e84338c8979283feec1e33)) (@Noroth)
+
 ## [0.344.1](https://github.com/wundergraph/cosmo/compare/router@0.344.0...router@0.344.1) (2026-08-31)
 
 ### Bug Fixes

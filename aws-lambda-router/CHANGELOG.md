@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.42.5](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.42.4...aws-lambda-router@0.42.5) (2026-09-02)
+
+### Bug Fixes
+
+* grpc dependency bump ([#3210](https://github.com/wundergraph/cosmo/issues/3210)) ([f92ec25](https://github.com/wundergraph/cosmo/commit/f92ec259c39453a006ae54fc4d19fd5103217edd)) (@SkArchon)
+
 ## [0.42.4](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.42.3...aws-lambda-router@0.42.4) (2026-08-12)
 
 ### Bug Fixes

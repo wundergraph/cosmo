@@ -95,7 +95,7 @@ export class RequiredFieldsVisitor {
   private readonly fieldSetDoc: DocumentNode;
 
   private ancestors: GraphQLObjectType[] = [];
-  private currentType: GraphQLObjectType | undefined = this.objectType;
+  private currentType: GraphQLObjectType | undefined;
   private keyDirectives: DirectiveNode[] = [];
   private currentKeyFieldsString = '';
 
@@ -138,6 +138,7 @@ export class RequiredFieldsVisitor {
     private readonly requiredField: GraphQLField<any, any, any>,
     fieldSet: string,
   ) {
+    this.currentType = objectType;
     this.resolveKeyDirectives();
     this.fieldSetDoc = parse(`{ ${fieldSet} }`);
     this.normalizeSelectionSet();
