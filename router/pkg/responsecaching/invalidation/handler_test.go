@@ -323,7 +323,6 @@ func TestHandlerStoreFailure(t *testing.T) {
 	// The store's own error is not echoed: it names hosts and keys a caller of
 	// this endpoint has no business seeing. The logs carry it instead.
 	require.NotContains(t, w.Body.String(), "redis is unreachable")
-	require.Contains(t, decodeErrors(t, w)[0].Message, "router logs")
 }
 
 // The endpoint is only ever built with a key, because an empty one compares

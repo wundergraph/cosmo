@@ -71,9 +71,8 @@ func (r Request) tags(indexes config.ResponseCacheInvalidationConfig) ([]string,
 		return nil, fmt.Errorf("unknown kind %q, expected one of %q, %q or %q", r.Kind, KindSubgraph, KindType, KindCacheTag)
 	}
 
-	// We don't return an error, so nothing will happen essentially
 	if !indexed {
-		return nil, nil
+		return nil, fmt.Errorf("the %q index is not maintained", r.Kind)
 	}
 
 	tags := make([]string, 0, len(subgraphs))
