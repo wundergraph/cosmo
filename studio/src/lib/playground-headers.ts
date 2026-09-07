@@ -76,7 +76,7 @@ export const mergeDefaultHeaders = (
 ): DefaultHeaderEntry[] => {
   const withNonEmptyKeys = (entries: DefaultHeaderEntry[]) => entries.filter((entry) => entry.key.trim() !== '');
 
-  const merged = withNonEmptyKeys(graph).map((entry) => ({ ...entry }));
+  const merged = withNonEmptyKeys(graph);
   const indexByLoweredKey = new Map(merged.map((entry, index) => [entry.key.toLowerCase(), index]));
 
   for (const entry of withNonEmptyKeys(personal)) {
@@ -84,9 +84,9 @@ export const mergeDefaultHeaders = (
 
     if (existingIndex === undefined) {
       indexByLoweredKey.set(entry.key.toLowerCase(), merged.length);
-      merged.push({ ...entry });
+      merged.push(entry);
     } else {
-      merged[existingIndex] = { ...entry };
+      merged[existingIndex] = entry;
     }
   }
 
