@@ -10,7 +10,13 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { PlaygroundDefaultHeadersRepository } from '../../repositories/PlaygroundDefaultHeadersRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, validatePlaygroundHeaders } from '../../util.js';
+import {
+  enrichLogger,
+  getLogger,
+  handleError,
+  toPlaygroundHeaderEntries,
+  validatePlaygroundHeaders,
+} from '../../util.js';
 
 export function updatePlaygroundDefaultHeaders(
   opts: RouterOptions,
@@ -39,7 +45,10 @@ export function updatePlaygroundDefaultHeaders(
     }
 
     // Validate every present list up front so an invalid entry in one scope can
-    // never leave the other scope's write persisted.
+    // never leave the other scope's write persisted. Both scopes are checked before
+    // returning, so the caller sees every problem rather than one scope at a time.
+    const headerErrors: string[] = [];
+
     for (const [headerList, scopeLabel] of [
       [req.graphHeaders, 'graph'],
       [req.personalHeaders, 'personal'],
@@ -48,15 +57,19 @@ export function updatePlaygroundDefaultHeaders(
         continue;
       }
 
-      const error = validatePlaygroundHeaders(headerList.headers, scopeLabel);
-      if (error) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: error,
-          },
-        };
+      const result = validatePlaygroundHeaders(headerList.headers, scopeLabel);
+      if (!result.success) {
+        headerErrors.push(...result.errors);
       }
+    }
+
+    if (headerErrors.length > 0) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: headerErrors.join('; '),
+        },
+      };
     }
 
     const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
@@ -84,8 +97,8 @@ export function updatePlaygroundDefaultHeaders(
     await playgroundRepo.update({
       federatedGraphId: federatedGraph.id,
       userId: authContext.userId,
-      graphHeaders: req.graphHeaders?.headers.map((h) => ({ key: h.key, value: h.value })),
-      personalHeaders: req.personalHeaders?.headers.map((h) => ({ key: h.key, value: h.value })),
+      graphHeaders: req.graphHeaders && toPlaygroundHeaderEntries(req.graphHeaders.headers),
+      personalHeaders: req.personalHeaders && toPlaygroundHeaderEntries(req.personalHeaders.headers),
     });
 
     return {

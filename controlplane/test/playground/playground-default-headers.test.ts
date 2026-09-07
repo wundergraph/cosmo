@@ -225,7 +225,7 @@ describe('Playground Default Headers', () => {
     expect(after.personalHeaders).toEqual([]);
   });
 
-  test('A case-only duplicate in the personal list must not persist a valid graph list', async () => {
+  test('duplicates in the personal list leaves both scopes unwritten', async () => {
     const { client, server } = await SetupTest({ dbname });
     onTestFinished(() => server.close());
 

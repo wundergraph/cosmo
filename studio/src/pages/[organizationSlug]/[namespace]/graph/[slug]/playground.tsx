@@ -9,7 +9,7 @@ import {
   PreFlightScript,
 } from '@/components/playground/custom-scripts';
 import { CopyOperation } from '@/components/playground/copy-operation';
-import { DefaultHeadersDialog } from '@/components/playground/default-headers-dialog';
+import { DefaultHeadersDialog } from '@/components/playground/default-headers/default-headers-dialog';
 import { PlanView } from '@/components/playground/plan-view';
 import { SharePlaygroundModal } from '@/components/playground/share-playground-modal';
 import { TraceContext, TraceView } from '@/components/playground/trace-view';

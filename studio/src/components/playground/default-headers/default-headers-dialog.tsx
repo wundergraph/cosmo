@@ -10,13 +10,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/ui/loader';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
-import { DefaultHeaderEntry, effectiveDefaultHeadersString, isValidHeaderName } from '@/lib/playground-headers';
+import { DefaultHeaderEntry, effectiveDefaultHeadersString } from '@/lib/playground-headers';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
-import { InfoCircledIcon, PlusIcon, TrashIcon } from '@radix-ui/react-icons';
+import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { TooltipContent, TooltipTrigger } from '@radix-ui/react-tooltip';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -25,78 +24,11 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { useContext, useState } from 'react';
 import { LuSettings2 } from 'react-icons/lu';
+import { HeaderRows, isInvalidKey } from './header-rows';
 
-interface HeaderRowsProps {
-  entries: DefaultHeaderEntry[];
-  disabled?: boolean;
-  onChange: (entries: DefaultHeaderEntry[]) => void;
-}
-
-// A blank key is a row the user has not filled in yet, not an error - it is
-// filtered out before saving.
-// Strips the protobuf message wrapper down to the plain entries the editor uses.
+/** Strips the protobuf message wrapper down to the plain entries the editor uses. */
 const fromServer = (headers?: { key: string; value: string }[]): DefaultHeaderEntry[] =>
   (headers ?? []).map((h) => ({ key: h.key, value: h.value }));
-
-const isInvalidKey = (entry: DefaultHeaderEntry) => entry.key.trim() !== '' && !isValidHeaderName(entry.key);
-
-const HeaderRows = ({ entries, disabled = false, onChange }: HeaderRowsProps) => {
-  const update = (index: number, patch: Partial<DefaultHeaderEntry>) => {
-    onChange(entries.map((entry, i) => (i === index ? { ...entry, ...patch } : entry)));
-  };
-
-  return (
-    <div className="flex flex-col gap-y-2">
-      {entries.map((entry, index) => {
-        const isInvalid = isInvalidKey(entry);
-
-        return (
-          <div key={index} className="flex items-start gap-x-2">
-            <div className="flex-1">
-              <Input
-                aria-label="Header name"
-                placeholder="Header name"
-                value={entry.key}
-                disabled={disabled}
-                onChange={(e) => update(index, { key: e.target.value })}
-                className={isInvalid ? 'border-destructive' : undefined}
-              />
-              {isInvalid && <p className="mt-1 text-xs text-destructive">Not a valid HTTP header name</p>}
-            </div>
-            <Input
-              aria-label="Header value"
-              placeholder="Value"
-              value={entry.value}
-              disabled={disabled}
-              onChange={(e) => update(index, { value: e.target.value })}
-              className="flex-1"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Remove header"
-              disabled={disabled}
-              onClick={() => onChange(entries.filter((_, i) => i !== index))}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </Button>
-          </div>
-        );
-      })}
-      <div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          onClick={() => onChange([...entries, { key: '', value: '' }])}
-        >
-          <PlusIcon className="mr-2 h-4 w-4" />
-          Add header
-        </Button>
-      </div>
-    </div>
-  );
-};
 
 export const DefaultHeadersDialog = () => {
   const graphContext = useContext(GraphContext);

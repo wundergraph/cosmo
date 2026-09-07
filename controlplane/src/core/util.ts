@@ -25,6 +25,7 @@ import {
   SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole, ProposalOrigin as ProposalOriginEnum, WebsocketSubprotocol } from '../db/models.js';
+import { PlaygroundHeaderEntry } from '../db/schema.js';
 import {
   AuthContext,
   DateRange,
@@ -387,30 +388,48 @@ export const isValidHeaderName = (name: string): boolean => {
 };
 
 /**
- * Returns the first problem found in a playground header list, or undefined when it is valid.
- * `scopeLabel` names the list in the returned message, e.g. 'graph' or 'personal'.
+ * Strips a header list down to the plain rows the `headers` json column stores.
+ * This is NOT a no-op: protobuf-es messages carry a `$typeName` field, and TypeScript
+ * will happily assign `PlaygroundHeader[]` to `PlaygroundHeaderEntry[]` (excess
+ * properties are only rejected on object literals), so without this the type name
+ * would be serialised into the database and handed back on every read.
  */
-export const validatePlaygroundHeaders = (headers: PlaygroundHeader[], scopeLabel: string): string | undefined => {
+export const toPlaygroundHeaderEntries = (headers: PlaygroundHeader[]): PlaygroundHeaderEntry[] =>
+  headers.map(({ key, value }) => ({ key, value }));
+
+export type PlaygroundHeaderValidation = { success: true } | { success: false; errors: string[] };
+
+/**
+ * Checks one playground header list. Reports every problem it finds rather than only the
+ * first, so a caller fixing a form is told about all of them at once. `scopeLabel` names
+ * the list in each message, e.g. 'graph' or 'personal'.
+ */
+export const validatePlaygroundHeaders = (
+  headers: PlaygroundHeader[],
+  scopeLabel: string,
+): PlaygroundHeaderValidation => {
+  const errors: string[] = [];
   const seen = new Set<string>();
 
   for (const header of headers) {
     if (!isValidHeaderName(header.key)) {
-      return `Header name must be a valid HTTP token [${header.key}] in ${scopeLabel} headers`;
+      errors.push(`Header name must be a valid HTTP token [${header.key}] in ${scopeLabel} headers`);
+      continue;
     }
 
     // The offending value is deliberately not echoed back - it holds control characters.
     if (hasControlCharacter(header.value)) {
-      return `Header value must not contain control characters [${header.key}] in ${scopeLabel} headers`;
+      errors.push(`Header value must not contain control characters [${header.key}] in ${scopeLabel} headers`);
     }
 
     const lowered = header.key.toLowerCase();
     if (seen.has(lowered)) {
-      return `Duplicate header name [${header.key}] in ${scopeLabel} headers`;
+      errors.push(`Duplicate header name [${header.key}] in ${scopeLabel} headers`);
     }
     seen.add(lowered);
   }
 
-  return undefined;
+  return errors.length === 0 ? { success: true } : { success: false, errors };
 };
 
 export const validateDateRanges = ({
