@@ -1222,7 +1222,15 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 		return err
 	}
 
-	return r.startResponseCacheInvalidationServer()
+	if err = r.startResponseCacheInvalidationServer(); err != nil {
+		if closeErr := r.responseCache.Close(); closeErr != nil {
+			r.logger.Error("failed to close response cache after invalidation server setup failed", zap.Error(closeErr))
+		}
+		r.responseCache = nil
+		return err
+	}
+
+	return nil
 }
 
 // startResponseCacheInvalidationServer listens for invalidation requests.
@@ -2045,6 +2053,12 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	if r.responseCacheInvalidationServer != nil {
+		if subErr := r.responseCacheInvalidationServer.Shutdown(ctx); subErr != nil {
+			err.Append(fmt.Errorf("failed to shutdown response cache invalidation server: %w", subErr))
+		}
+	}
+
 	if subErr := r.shutdownConnectionMetrics(ctx); subErr != nil {
 		err.Append(fmt.Errorf("failed to shutdown connection metrics: %w", subErr))
 	}
@@ -2055,14 +2069,6 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		wg.Go(func() {
 			if subErr := r.prometheusServer.Close(); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
-			}
-		})
-	}
-
-	if r.responseCacheInvalidationServer != nil {
-		wg.Go(func() {
-			if subErr := r.responseCacheInvalidationServer.Close(); subErr != nil {
-				err.Append(fmt.Errorf("failed to shutdown response cache invalidation server: %w", subErr))
 			}
 		})
 	}

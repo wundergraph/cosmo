@@ -180,6 +180,6 @@ func TestSetupResponseCache(t *testing.T) {
 		err = r.setupResponseCache(context.Background())
 		require.ErrorContains(t, err, "failed to bind response cache invalidation server")
 		require.Nil(t, r.responseCacheInvalidationServer)
-		require.NoError(t, r.responseCache.Close())
+		require.Nil(t, r.responseCache, "the cache opened before the failure must be released with it")
 	})
 }
