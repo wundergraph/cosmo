@@ -80,9 +80,7 @@ describe('Playground Default Headers', () => {
       namespace: 'default',
     });
     expect(res.graphHeaders).toEqual([{ key: 'x-tenant-id', value: 'acme' }]);
-    expect(res.personalHeaders).toEqual([
-      { key: 'Authorization', value: 'Bearer alice' },
-    ]);
+    expect(res.personalHeaders).toEqual([{ key: 'Authorization', value: 'Bearer alice' }]);
   });
 
   test('Updating the graph scope twice replaces rather than duplicates', async () => {
@@ -162,9 +160,7 @@ describe('Playground Default Headers', () => {
       namespace: 'default',
     });
     expect(res.graphHeaders).toEqual([{ key: 'x-tenant-id', value: 'acme' }]);
-    expect(res.personalHeaders).toEqual([
-      { key: 'Authorization', value: 'Bearer bob' },
-    ]);
+    expect(res.personalHeaders).toEqual([{ key: 'Authorization', value: 'Bearer bob' }]);
   });
 
   test('Should reject an invalid header name', async () => {
@@ -521,9 +517,7 @@ describe('Playground Default Headers', () => {
       namespace: 'default',
     });
     expect(res.graphHeaders).toEqual([]);
-    expect(res.personalHeaders).toEqual([
-      { key: 'Authorization', value: 'Bearer alice' },
-    ]);
+    expect(res.personalHeaders).toEqual([{ key: 'Authorization', value: 'Bearer alice' }]);
   });
 
   test.each(['graph', 'personal'] as const)(
@@ -608,9 +602,7 @@ describe('Playground Default Headers', () => {
       federatedGraphName: graphName,
       namespace: 'default',
     });
-    expect(bobRes.personalHeaders).toEqual([
-      { key: 'Authorization', value: 'Bearer bob' },
-    ]);
+    expect(bobRes.personalHeaders).toEqual([{ key: 'Authorization', value: 'Bearer bob' }]);
 
     // A conflict target that omitted user_id would have overwritten Alice's row here.
     authenticator.changeUserWithSuppliedContext(users.adminAliceCompanyA);
@@ -618,9 +610,7 @@ describe('Playground Default Headers', () => {
       federatedGraphName: graphName,
       namespace: 'default',
     });
-    expect(aliceRes.personalHeaders).toEqual([
-      { key: 'Authorization', value: 'Bearer alice' },
-    ]);
+    expect(aliceRes.personalHeaders).toEqual([{ key: 'Authorization', value: 'Bearer alice' }]);
   });
 
   test('Updating both scopes at once replaces both when both already exist', async () => {
