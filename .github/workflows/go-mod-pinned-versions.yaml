@@ -37,7 +37,7 @@ jobs:
                 fi
               done
               # active replace directive pointing at a local checkout
-              if grep -nE "^[[:space:]]*(replace[[:space:]]+)?${mod}(/v[0-9]+)?[[:space:]]*=>" "$dir/go.mod"; then
+              if grep -nE "^[[:space:]]*(replace[[:space:]]+)?${mod}(/v[0-9]+)?([[:space:]]+v[^[:space:]]+)?[[:space:]]*=>" "$dir/go.mod"; then
                 echo "::error file=$dir/go.mod::$mod has an active replace directive"
                 failed=1
               fi
