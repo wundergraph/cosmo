@@ -1,12 +1,15 @@
 package events_test
 
 import (
+	"net/http"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 // TestEDFSTriggerDeduplication verifies trigger ID generation for Cosmo Streams subscriptions.
@@ -33,8 +36,9 @@ func TestEDFSTriggerDeduplication(t *testing.T) {
 				// provider ID, so they must resolve to the same trigger ID — wait for exactly
 				// one trigger to be initialized before asserting.
 				xEnv.WaitForTriggerCount(1, time.Second*10)
-				xEnv.RequireTriggerCount(1)
 				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename":"Employee"}`), 2, time.Second*10)
+				// Assert the exact count only after both subscriptions have been served
+				xEnv.RequireTriggerCount(1)
 			}()
 
 			// Subscription 1: selects only id.
@@ -104,14 +108,23 @@ func TestEDFSTriggerDeduplication(t *testing.T) {
 		})
 	})
 
-	// Two subscriptions with the same query but different initial_payload (headers) should
+	// Two subscriptions with the same query but different headers should
 	// still share a single NATS trigger because the trigger ID is based on the NATS subject,
 	// not on connection-level metadata like headers.
-	t.Run("same subject different initial payload shares one trigger", func(t *testing.T) {
+	t.Run("same subject different headers shares one trigger", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{Operation: config.HeaderRuleOperationPropagate, Named: "Authorization"},
+						},
+					},
+				}),
+			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			var done sync.WaitGroup
 			done.Add(2)
@@ -119,14 +132,19 @@ func TestEDFSTriggerDeduplication(t *testing.T) {
 			go func() {
 				xEnv.WaitForSubscriptionCount(2, time.Second*10)
 				xEnv.WaitForTriggerCount(1, time.Second*10)
-				xEnv.RequireTriggerCount(1)
 				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename":"Employee"}`), 2, time.Second*10)
+				// Asserted after both subscriptions have been served, see the comment in the
+				// "different selected fields" subtest above.
+				xEnv.RequireTriggerCount(1)
 			}()
 
-			// Subscription 1: sends Authorization header A in connection_init.
+			// Subscription 1: sends Authorization header A
 			go func() {
 				defer done.Done()
-				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"headers":{"Authorization":"Bearer token-a"}}`))
+				conn := xEnv.InitGraphQLWebSocketConnection(
+					http.Header{"Authorization": []string{"Bearer token-a"}}, nil,
+					[]byte(`{"headers":{"Authorization":"Bearer token-a"}}`),
+				)
 				defer conn.Close()
 
 				err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
@@ -154,10 +172,13 @@ func TestEDFSTriggerDeduplication(t *testing.T) {
 				require.Equal(t, "1", complete.ID)
 			}()
 
-			// Subscription 2: sends a different Authorization header in connection_init.
+			// Subscription 2: sends Authorization header B
 			go func() {
 				defer done.Done()
-				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"headers":{"Authorization":"Bearer token-b"}}`))
+				conn := xEnv.InitGraphQLWebSocketConnection(
+					http.Header{"Authorization": []string{"Bearer token-b"}}, nil,
+					[]byte(`{"headers":{"Authorization":"Bearer token-b"}}`),
+				)
 				defer conn.Close()
 
 				err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{

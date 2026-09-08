@@ -5,13 +5,22 @@
 Release the full monorepo with all packages and services can be done by triggering a single GitHub Action workflow.
 
 1. [Trigger the Release workflow](https://github.com/wundergraph/cosmo/actions/workflows/release.yaml): This will create GitHub releases and tags for all components. For services that are not published to NPM but to GitHub container registry, Lerna will trigger a `postversion` npm hooks that triggers the [Build and Release Image](https://github.com/wundergraph/cosmo/actions/workflows/image-release.yml) workflow. This workflow will build and tag all images:
-    - `latest`: Only when the workflow was triggered on the default branch, the `latest` tag will be created.
-    - `short-sha`: The short SHA of the commit that triggered the release workflow will be tagged e.g `sha-d7f7524`.
-    - `git-tag`: The git tag that was updated by Lerna in the `package.json` will be tagged e.g. `0.4.2`
-    - `buildcache`: This tag will be used by the Docker GitHub Action to cache the build step. This tag will be overwritten on every release.
+   - `latest`: Only when the workflow was triggered on the default branch, the `latest` tag will be created.
+   - `short-sha`: The short SHA of the commit that triggered the release workflow will be tagged e.g `sha-d7f7524`.
+   - `git-tag`: The git tag that was updated by Lerna in the `package.json` will be tagged e.g. `0.4.2`
+   - `buildcache`: This tag will be used by the Docker GitHub Action to cache the build step. This tag will be overwritten on every release.
 2. After the release, you can validate the release by:
-    1. checking the [GitHub Cosmo Packages](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
-    2. checking the [GitHub Cosmo Releases](https://github.com/wundergraph/cosmo/releases)
+   1. checking the [GitHub Cosmo Packages](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
+   2. checking the [GitHub Cosmo Releases](https://github.com/wundergraph/cosmo/releases)
+   3. checking that each npm package is published at the released version, e.g. `npm view wgc version`
+
+### If a release fails halfway
+
+Versioning and publishing to npm are separate steps. The version step bumps versions, creates the tags and GitHub releases, and (through the `postversion` hooks) kicks off the image builds; the publish step pushes the npm packages.
+
+If the publish step fails (sigstore's transparency log occasionally rejects a provenance write, which aborts the publish for every remaining package), trigger the [Release workflow](https://github.com/wundergraph/cosmo/actions/workflows/release.yaml) again exactly as you started it: "Run workflow" against `main`, or `gh workflow run release.yaml --ref main`. The version step finds nothing new to version and no-ops, and the publish step publishes only the versions still missing from the registry. It also retries three times on its own before failing the run.
+
+Do this before anything else lands on main. The publish step works from the versions in the tree, so once a later release bumps them the versions that were never published cannot be recovered. Their tags and GitHub releases stay, but npm skips straight to the newer version.
 
 ## Release Automation
 

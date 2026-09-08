@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	pubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
@@ -322,6 +324,109 @@ func TestSubgraphHeadersBuilder_SubscriptionPlan_IncludesTriggerAndResponse(t *t
 	// Hashes should be stable
 	assert.Equal(t, hashResp, hashResp2)
 	assert.Equal(t, hashTrig, hashTrig2)
+}
+
+func TestSubgraphHeadersBuilder_SubscriptionPlan_SkipsPubSubTriggerSource(t *testing.T) {
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+		All: &config.GlobalHeaderRule{
+			Request: []*config.RequestHeaderRule{
+				{Operation: "propagate", Named: "X-A"},
+				{Operation: "set", Name: "X-Static", Value: "static"},
+			},
+		},
+	}, nil)
+	require.NoError(t, err)
+
+	newCtx := func(headerValue string) *requestContext {
+		clientReq := httptest.NewRequest("POST", "http://localhost", nil)
+		clientReq.Header.Set("X-A", headerValue)
+
+		return &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   httptest.NewRecorder(),
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+	}
+
+	newPlan := func(source resolve.SubscriptionDataSource) *plan.SubscriptionResponsePlan {
+		return &plan.SubscriptionResponsePlan{
+			Response: &resolve.GraphQLSubscription{
+				Response: &resolve.GraphQLResponse{
+					DataSources: []resolve.DataSourceInfo{{Name: "sg-resp"}},
+				},
+				Trigger: resolve.GraphQLSubscriptionTrigger{
+					SourceName: "sg-trigger",
+					Source:     source,
+				},
+			},
+		}
+	}
+
+	t.Run("pubsub trigger source gets no headers", func(t *testing.T) {
+		ctx := newCtx("va")
+		pubSubDS := &pubsub.PubSubSubscriptionDataSource[pubsub.SubscriptionEventConfiguration]{}
+
+		hb := SubgraphHeadersBuilder(ctx, ht, newPlan(pubSubDS))
+		require.NotNil(t, hb)
+
+		// The trigger source is a pubsub data source, so no header rules are built for it.
+		hTrig, hashTrig := hb.HeadersForSubgraph("sg-trigger")
+		assert.Nil(t, hTrig)
+		assert.Zero(t, hashTrig)
+
+		// Regular response data sources are unaffected.
+		hResp, hashResp := hb.HeadersForSubgraph("sg-resp")
+		require.NotNil(t, hResp)
+		assert.Equal(t, "va", hResp.Get("X-A"))
+		assert.Equal(t, "static", hResp.Get("X-Static"))
+		require.NotZero(t, hashResp)
+	})
+
+	t.Run("pubsub trigger source is excluded from the all hash", func(t *testing.T) {
+		pubSubDS := &pubsub.PubSubSubscriptionDataSource[pubsub.SubscriptionEventConfiguration]{}
+		nonPubSubDS := &graphql_datasource.SubscriptionSource{}
+
+		pubSubHash := SubgraphHeadersBuilder(newCtx("va"), ht,
+			newPlan(pubSubDS)).HashAll()
+
+		// A plan containing only the response data source must produce the same hash, proving
+		// the trigger source no longer contributes to it.
+		responseOnlyHash := SubgraphHeadersBuilder(newCtx("va"), ht, &plan.SynchronousResponsePlan{
+			Response: &resolve.GraphQLResponse{
+				DataSources: []resolve.DataSourceInfo{{Name: "sg-resp"}},
+			},
+		}).HashAll()
+		assert.Equal(t, responseOnlyHash, pubSubHash)
+
+		// A non-pubsub trigger source still contributes to the hash.
+		regularHash := SubgraphHeadersBuilder(newCtx("va"), ht,
+			newPlan(nonPubSubDS)).HashAll()
+		assert.NotEqual(t, regularHash, pubSubHash)
+	})
+
+	t.Run("pubsub all hash is independent of propagated client headers", func(t *testing.T) {
+		pubSubDS := &pubsub.PubSubSubscriptionDataSource[pubsub.SubscriptionEventConfiguration]{}
+		pubSubOnlyPlan := func() *plan.SubscriptionResponsePlan {
+			return &plan.SubscriptionResponsePlan{
+				Response: &resolve.GraphQLSubscription{
+					Response: &resolve.GraphQLResponse{},
+					Trigger: resolve.GraphQLSubscriptionTrigger{
+						SourceName: "sg-trigger",
+						Source:     pubSubDS,
+					},
+				},
+			}
+		}
+
+		// Two clients sending different values for a propagated header must produce the same
+		// hash, so they share a single trigger instead of each creating their own.
+		assert.Equal(t,
+			SubgraphHeadersBuilder(newCtx("va"), ht, pubSubOnlyPlan()).HashAll(),
+			SubgraphHeadersBuilder(newCtx("vb"), ht, pubSubOnlyPlan()).HashAll(),
+		)
+	})
 }
 
 func TestSubgraphHeadersBuilder_MissingPrePopulatedCache(t *testing.T) {

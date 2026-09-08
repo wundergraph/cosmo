@@ -2,6 +2,8 @@ package integration
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
@@ -23,7 +25,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 	t.Run("local cache", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("Sha without query fails", func(t *testing.T) {
+		t.Run("returns not found when an unknown hash has no query", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
@@ -32,6 +34,9 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 				},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: true,
+					Cache: config.AutomaticPersistedQueriesCacheConfig{
+						Size: 1024 * 1024,
+					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -353,13 +358,20 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			})
 		})
 
-		t.Run("query renews ttl time", func(t *testing.T) {
+		t.Run("renews ttl without changing the stored query after variable-based normalization", func(t *testing.T) {
 			t.Parallel()
 
-			key := uuid.New().String()
+			const query = `query SkipRenewal($skip: Boolean!) { a: __typename b: __typename @skip(if: $skip) }`
+			sum := sha256.Sum256([]byte(query))
+			sha := hex.EncodeToString(sum[:])
+			extensions := fmt.Sprintf(`{"persistedQuery": {"version": 1, "sha256Hash": %q}}`, sha)
+
+			prefix := uuid.New().String()
+			operationKey := prefix + sha
 			t.Cleanup(func() {
-				del := client.Del(context.Background(), key)
-				require.NoError(t, del.Err())
+				deleted, err := client.Del(context.Background(), operationKey).Result()
+				require.NoError(t, err)
+				require.Equal(t, int64(1), deleted)
 			})
 
 			testenv.Run(t, &testenv.Config{
@@ -380,7 +392,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					},
 					Storage: config.AutomaticPersistedQueriesStorageConfig{
 						ProviderID:   "redis",
-						ObjectPrefix: key,
+						ObjectPrefix: prefix,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -388,27 +400,41 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 				header.Add("graphql-client-name", "my-client")
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query:      `{__typename}`,
-					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Query:      query,
+					Variables:  []byte(`{"skip":true}`),
+					Extensions: []byte(extensions),
 					Header:     header,
 				})
-				require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+				require.Equal(t, `{"data":{"a":"Query"}}`, res.Body)
 
-				time.Sleep(3 * time.Second)
+				var ttlBeforeRenewal time.Duration
+				require.Eventually(t, func() bool {
+					ttl, err := client.PTTL(t.Context(), operationKey).Result()
+					ttlBeforeRenewal = ttl
+					return err == nil && ttl > 0 && ttl <= 3*time.Second
+				}, 4*time.Second, 50*time.Millisecond, "APQ entry did not reach the TTL renewal window")
 
 				res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Variables:  []byte(`{"skip":true}`),
+					Extensions: []byte(extensions),
 					Header:     header,
 				})
-				require.Equal(t, `{"data":{"__typename":"Query"}}`, res2.Body)
+				require.Equal(t, `{"data":{"a":"Query"}}`, res2.Body)
 
-				time.Sleep(3 * time.Second)
+				renewedTTL, err := client.PTTL(t.Context(), operationKey).Result()
+				require.NoError(t, err)
+				require.Greater(t, renewedTTL, ttlBeforeRenewal)
+
+				storedQuery, err := client.Get(t.Context(), operationKey).Result()
+				require.NoError(t, err)
+				require.Equal(t, query, storedQuery)
 
 				res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Variables:  []byte(`{"skip":false}`),
+					Extensions: []byte(extensions),
 					Header:     header,
 				})
-				require.Equal(t, `{"data":{"__typename":"Query"}}`, res3.Body)
+				require.Equal(t, `{"data":{"a":"Query","b":"Query"}}`, res3.Body)
 			})
 		})
 

@@ -5,8 +5,21 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 )
+
+// cacheControl is put on every subgraph response when it is set, and nothing is
+// sent when it is not.
+//
+// The router's response cache is opt-in per response: one carrying no
+// Cache-Control header is never cached, however the router is configured. These
+// subgraphs have no caching opinion of their own and should not acquire one just
+// by existing, so this stays off unless SUBGRAPH_CACHE_CONTROL is set, which is
+// how the demo is pointed at a router that is caching.
+//
+//	SUBGRAPH_CACHE_CONTROL="public, max-age=60" ./run_subgraphs.sh
+var cacheControl = os.Getenv("SUBGRAPH_CACHE_CONTROL")
 
 func HTTP(next http.Handler) http.Handler {
 	return HTTPFunc(next.ServeHTTP)
@@ -14,6 +27,12 @@ func HTTP(next http.Handler) http.Handler {
 
 func HTTPFunc(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Before the handler runs, because it is the one that writes the body
+		// and a header set after that is a header nobody receives.
+		if cacheControl != "" {
+			w.Header().Set("Cache-Control", cacheControl)
+		}
+
 		r = r.WithContext(NewContextWithHeader(r.Context(), r.Header))
 		body, err := io.ReadAll(r.Body)
 		if err != nil {

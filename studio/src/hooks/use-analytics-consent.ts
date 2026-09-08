@@ -11,6 +11,8 @@ declare global {
       cm?: {
         getConsent?: () => OsanoConsent;
         addEventListener: (event: string, callback: (consent?: OsanoConsent) => void) => void;
+        hideWidget(): void;
+        showDrawer(id: 'osano-cm-dom-info-dialog-open'): void;
       };
     };
   }

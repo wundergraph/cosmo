@@ -39,6 +39,7 @@ import { buildUrl } from '@/lib/build-url';
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse['graph'];
   subgraphs: GetFederatedGraphByNameResponse['subgraphs'];
+  featureSubgraphs: GetFederatedGraphByNameResponse['featureSubgraphs'];
   graphs: GetFederatedGraphsResponse['graphs'];
   graphRequestToken: string;
 }
@@ -205,6 +206,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
     return {
       graph: data.graph,
       subgraphs: data.subgraphs,
+      featureSubgraphs: data.featureSubgraphs,
       graphRequestToken: data.graphRequestToken,
       graphs: graphsData.graphs,
     };

@@ -82,8 +82,6 @@ export const Step1 = () => {
   const { toast } = useToast();
   const { setStep, setSkipped, setOnboarding, initialized, setInitialized } = useOnboarding();
   const [pulse, setPulse] = useState<PulseState>({ key: null, tick: 0 });
-  // Referrer can be `wgc` when onboarding is opened via `wgc demo` command
-  const referrer = normalizeReferrer(router.query.referrer || document?.referrer);
 
   function handleLabelClick(key: string) {
     setPulse((p) => ({ key, tick: p.tick + 1 }));
@@ -148,13 +146,16 @@ export const Step1 = () => {
     // fire it again.
     if (initialized) return;
 
+    // Referrer can be `wgc` when onboarding is opened via `wgc demo` command
+    const referrer = normalizeReferrer(router.query.referrer || document.referrer);
+
     captureOnboardingEvent(posthog, {
       name: 'onboarding_started',
       options: {
         entry_source: referrer,
       },
     });
-  }, [initialized, referrer, posthog]);
+  }, [initialized, posthog, router.query.referrer]);
 
   return (
     <OnboardingContainer>

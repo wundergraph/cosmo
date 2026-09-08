@@ -3,7 +3,7 @@ import { Command, program } from 'commander';
 import Spinner from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { ProtoOption } from '@wundergraph/protographic';
+import type { ProtoOption } from '@wundergraph/protographic';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { renderResultTree } from '../helper.js';
 import {

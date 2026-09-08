@@ -2,7 +2,9 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -190,6 +192,98 @@ func TestMCPOAuthPerToolScopes(t *testing.T) {
 			})
 			require.NoError(t, err, "should succeed after reconnecting with upgraded scopes")
 			require.NotNil(t, result)
+		})
+	})
+}
+
+func TestMCPOAuthMultipleAuthorizationServers(t *testing.T) {
+	oauthServerA, err := testutil.NewOAuthTestServer(t, &testutil.OAuthTestServerOptions{KeyID: "server_a_rsa"})
+	require.NoError(t, err, "failed to start OAuth server A")
+	defer oauthServerA.Close() //nolint:errcheck
+
+	oauthServerB, err := testutil.NewOAuthTestServer(t, &testutil.OAuthTestServerOptions{KeyID: "server_b_rsa"})
+	require.NoError(t, err, "failed to start OAuth server B")
+	defer oauthServerB.Close() //nolint:errcheck
+
+	oauthServerUnknown, err := testutil.NewOAuthTestServer(t, &testutil.OAuthTestServerOptions{KeyID: "server_unknown_rsa"})
+	require.NoError(t, err, "failed to start unknown OAuth server")
+	defer oauthServerUnknown.Close() //nolint:errcheck
+
+	tokenFromA, err := oauthServerA.CreateTokenWithScopes("test-user", []string{"mcp:tools:read"})
+	require.NoError(t, err, "failed to create token on server A")
+
+	testenv.Run(t, &testenv.Config{
+		MCP: config.MCPConfiguration{
+			Enabled: true,
+			OAuth: config.MCPOAuthConfiguration{
+				Enabled: true,
+				JWKS: []config.JWKSConfiguration{
+					{URL: oauthServerA.JWKSURL()},
+					{URL: oauthServerB.JWKSURL()},
+				},
+				AuthorizationServerURLs: []string{
+					oauthServerA.Issuer(),
+					oauthServerB.Issuer(),
+				},
+			},
+		},
+		MCPAuthToken:      tokenFromA,
+		MCPOperationsPath: "testdata/mcp_operations",
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		// The subtests run sequentially on purpose. Concurrent MCP sessions keep
+		// the MCP HTTP server busy, and its graceful shutdown then exceeds the
+		// 5 second budget. See the flake analysis on PR 3148.
+		t.Run("metadata endpoint advertises all authorization servers", func(t *testing.T) {
+			metadataURL := strings.TrimSuffix(xEnv.GetMCPServerAddr(), "/mcp") + "/.well-known/oauth-protected-resource/mcp"
+
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, metadataURL, nil)
+			require.NoError(t, err)
+
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close() //nolint:errcheck
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
+			var metadata struct {
+				AuthorizationServers []string `json:"authorization_servers"`
+			}
+			require.NoError(t, json.NewDecoder(resp.Body).Decode(&metadata))
+			assert.Equal(t, []string{oauthServerA.Issuer(), oauthServerB.Issuer()}, metadata.AuthorizationServers)
+		})
+
+		t.Run("accepts tokens from the first authorization server", func(t *testing.T) {
+			client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), tokenFromA)
+
+			require.NoError(t, client.Connect(t.Context()), "should connect with a token from server A")
+			defer client.Close() //nolint:errcheck
+		})
+
+		t.Run("accepts tokens from the second authorization server", func(t *testing.T) {
+			tokenFromB, err := oauthServerB.CreateTokenWithScopes("test-user", []string{"mcp:tools:read"})
+			require.NoError(t, err, "failed to create token on server B")
+
+			client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), tokenFromB)
+
+			require.NoError(t, client.Connect(t.Context()), "should connect with a token from server B")
+			defer client.Close() //nolint:errcheck
+		})
+
+		t.Run("rejects tokens from an unknown authorization server", func(t *testing.T) {
+			// Trust is anchored in the configured JWKS signing keys, not in the
+			// token's iss claim. The unknown server signs with a key that is in
+			// no configured JWKS, so signature verification fails with 401.
+			tokenFromUnknown, err := oauthServerUnknown.CreateTokenWithScopes("test-user", []string{"mcp:tools:read"})
+			require.NoError(t, err, "failed to create token on unknown server")
+
+			client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), tokenFromUnknown)
+
+			err = client.Connect(t.Context())
+			require.Error(t, err, "should fail to connect with a token from an unknown issuer")
+
+			authErr, ok := err.(*AuthError)
+			require.True(t, ok, "expected *AuthError but got %T: %v", err, err)
+			assert.Equal(t, http.StatusUnauthorized, authErr.StatusCode, "should return HTTP 401")
 		})
 	})
 }

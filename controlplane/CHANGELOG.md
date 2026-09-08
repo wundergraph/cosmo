@@ -4,6 +4,53 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.249.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.248.0...controlplane@0.249.0) (2026-08-31)
+
+### Features
+
+* add migration scripts for otel_spans_by_trace table and materialized view ([#3186](https://github.com/wundergraph/cosmo/issues/3186)) ([5f85878](https://github.com/wundergraph/cosmo/commit/5f85878984d451455009a10fc3dee961afc903e9)) (@JivusAyrus)
+* add traces_detail_by_time table and materialized view for enhanced trace data retrieval ([#3093](https://github.com/wundergraph/cosmo/issues/3093)) ([8d60ddb](https://github.com/wundergraph/cosmo/commit/8d60ddbce9440fc415c893a0c652ec938ea39497)) (@JivusAyrus)
+
+# [0.248.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.247.1...controlplane@0.248.0) (2026-08-30)
+
+### Bug Fixes
+
+* allow AWS default credential chain for S3 storage ([#3116](https://github.com/wundergraph/cosmo/issues/3116)) ([7530061](https://github.com/wundergraph/cosmo/commit/7530061b6171b55d2ef51a516a92f405f2d05b70)) (@davideugui1)
+
+### Features
+
+* upgrade keycloak to 26.7.2 ([#3181](https://github.com/wundergraph/cosmo/issues/3181)) ([23daace](https://github.com/wundergraph/cosmo/commit/23daaced53bda57c52673aef2dc38e0398dd6c42)) (@JivusAyrus)
+
+## [0.247.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.247.0...controlplane@0.247.1) (2026-08-26)
+
+### Bug Fixes
+
+* show feature flags for a federated graph under split config ([#3129](https://github.com/wundergraph/cosmo/issues/3129)) ([6a8da18](https://github.com/wundergraph/cosmo/commit/6a8da18dffcb02d012ae9491c017293e78efda39)) (@JivusAyrus)
+
+# [0.247.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.246.0...controlplane@0.247.0) (2026-08-11)
+
+### Features
+
+* **controlplane:** add CreateFederatedSubgraphs batch rpc ([#3152](https://github.com/wundergraph/cosmo/issues/3152)) ([9543225](https://github.com/wundergraph/cosmo/commit/95432255e3391369c617712e7c04e1762d122a39)) (@thisisnithin)
+
+# [0.246.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.245.4...controlplane@0.246.0) (2026-08-10)
+
+### Features
+
+* resolve feature subgraphs in federated graph field usage ([#3144](https://github.com/wundergraph/cosmo/issues/3144)) ([e81b5fa](https://github.com/wundergraph/cosmo/commit/e81b5fa984e8496aab8042f351372b239358099a)) (@JivusAyrus)
+
+## [0.245.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.245.3...controlplane@0.245.4) (2026-07-31)
+
+**Note:** Version bump only for package controlplane
+
+## [0.245.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.245.2...controlplane@0.245.3) (2026-07-30)
+
+**Note:** Version bump only for package controlplane
+
+## [0.245.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.245.1...controlplane@0.245.2) (2026-07-29)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.245.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.245.0...controlplane@0.245.1) (2026-07-27)
 
 **Note:** Version bump only for package controlplane

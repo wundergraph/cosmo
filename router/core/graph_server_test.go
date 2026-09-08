@@ -12,6 +12,7 @@ import (
 	"time"
 	"weak"
 
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
 
 	"github.com/go-chi/chi/v5"
@@ -19,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 )
@@ -1006,4 +1008,86 @@ func toKeys[K cmp.Ordered, V any](m map[K]V) []K {
 	}
 	slices.Sort(keys)
 	return keys
+}
+
+// The connection metric store is router-scoped and unregistered exactly once, by
+// Router.Shutdown, which can race with an in-flight config reload.
+func TestConnectionMetricStoreLifetime(t *testing.T) {
+	t.Parallel()
+
+	newTestRouter := func() *Router {
+		r := &Router{}
+		r.logger = zap.NewNop()
+		r.metricConfig = &rmetric.Config{
+			OpenTelemetry: rmetric.OpenTelemetry{ConnectionStats: true},
+		}
+		r.otlpMeterProvider = sdkmetric.NewMeterProvider()
+		r.promMeterProvider = sdkmetric.NewMeterProvider()
+		return r
+	}
+
+	t.Run("successive graph servers share one dialer and one store", func(t *testing.T) {
+		t.Parallel()
+
+		r := newTestRouter()
+
+		firstDialer := r.connectionTraceDialer()
+		require.NotNil(t, firstDialer)
+		firstStore, err := r.connectionMetricStore(t.Context(), firstDialer)
+		require.NoError(t, err)
+		require.NotNil(t, firstStore)
+
+		// A mux reused across a reload counts into the first server's stats.
+		secondDialer := r.connectionTraceDialer()
+		secondStore, err := r.connectionMetricStore(t.Context(), secondDialer)
+		require.NoError(t, err)
+
+		require.Same(t, firstDialer, secondDialer, "the trace dialer must survive a graph server swap")
+		require.Same(t, firstStore, secondStore, "the connection metric store must survive a graph server swap")
+	})
+
+	t.Run("a build losing the race with shutdown gets no store", func(t *testing.T) {
+		t.Parallel()
+
+		r := newTestRouter()
+
+		dialer := r.connectionTraceDialer()
+		store, err := r.connectionMetricStore(t.Context(), dialer)
+		require.NoError(t, err)
+		require.NotNil(t, store)
+
+		// Mirrors Router.Shutdown: the flag is set before the teardown runs.
+		r.shutdown.Store(true)
+		require.NoError(t, r.shutdownConnectionMetrics(context.Background()))
+
+		late, err := r.connectionMetricStore(t.Context(), dialer)
+		require.NoError(t, err)
+		require.Nil(t, late, "a graph server built after shutdown must not create a new store")
+	})
+
+	t.Run("shutdown before any graph server was built still blocks creation", func(t *testing.T) {
+		t.Parallel()
+
+		r := newTestRouter()
+
+		r.shutdown.Store(true)
+		require.NoError(t, r.shutdownConnectionMetrics(context.Background()))
+
+		store, err := r.connectionMetricStore(t.Context(), r.connectionTraceDialer())
+		require.NoError(t, err)
+		require.Nil(t, store)
+	})
+
+	t.Run("connection stats disabled yields no dialer and no store", func(t *testing.T) {
+		t.Parallel()
+
+		r := newTestRouter()
+		r.metricConfig = &rmetric.Config{}
+
+		require.Nil(t, r.connectionTraceDialer())
+
+		store, err := r.connectionMetricStore(t.Context(), nil)
+		require.NoError(t, err)
+		require.Nil(t, store)
+	})
 }

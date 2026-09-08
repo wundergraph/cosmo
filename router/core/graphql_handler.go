@@ -10,10 +10,12 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -21,6 +23,7 @@ import (
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource/subscriptionclient/transport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -88,6 +91,10 @@ type HandlerOptions struct {
 
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
+
+	ResponseCache             caching.Cache
+	ResponseCacheFallbackTTL  time.Duration
+	ResponseCacheInvalidation config.ResponseCacheInvalidationConfig
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -110,8 +117,31 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		engineLoaderHooks:                        opts.EngineLoaderHooks,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
 		headerPropagation:                        opts.HeaderPropagation,
+		responseCacheStore:                       opts.ResponseCache,
+		responseCacheFallbackTTL:                 opts.ResponseCacheFallbackTTL,
+		responseCacheInvalidation:                opts.ResponseCacheInvalidation,
+		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log),
 	}
 	return graphQLHandler
+}
+
+// newResponseCacheErrorHandler builds what the engine calls when it has swallowed
+// a cache failure in order to keep a request alive. The request was served
+// either way; this only decides whether anyone finds out that the cache is no
+// longer doing anything.
+
+func newResponseCacheErrorHandler(log *zap.Logger) func(error) {
+	if log == nil {
+		return nil
+	}
+
+	sampled := log.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+		return zapcore.NewSamplerWithOptions(core, time.Second, 1, 0)
+	}))
+
+	return func(err error) {
+		sampled.Warn("Response cache degraded, serving from the subgraph instead", zap.Error(err))
+	}
 }
 
 // Error and Status Code handling
@@ -133,10 +163,14 @@ type GraphQLHandler struct {
 	authorizer  *CosmoAuthorizer
 	rateLimiter *CosmoRateLimiter
 
-	rateLimitConfig          *config.RateLimitConfiguration
-	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
-	engineLoaderHooks        resolve.LoaderHooks
-	headerPropagation        *HeaderPropagation
+	rateLimitConfig           *config.RateLimitConfiguration
+	subgraphErrorPropagation  config.SubgraphErrorPropagationConfiguration
+	engineLoaderHooks         resolve.LoaderHooks
+	headerPropagation         *HeaderPropagation
+	responseCacheStore        caching.Cache
+	responseCacheFallbackTTL  time.Duration
+	responseCacheErrorHandler func(error)
+	responseCacheInvalidation config.ResponseCacheInvalidationConfig
 
 	enableCacheResponseHeaders      bool
 	enableResponseHeaderPropagation bool
@@ -187,7 +221,19 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.engineLoaderHooks != nil {
 		resolveCtx.SetEngineLoaderHooks(h.engineLoaderHooks)
 	}
-	resolveCtx = h.configureRateLimiting(resolveCtx)
+	resolveCtx = h.configureRateLimiting(resolveCtx, reqCtx.operation.opType)
+	if h.responseCacheStore != nil {
+		resolveCtx.SetResponseCache(resolve.ResponseCacheOptions{
+			Store:      h.responseCacheStore,
+			DefaultTTL: h.responseCacheFallbackTTL,
+			OnError:    h.responseCacheErrorHandler,
+			Invalidation: resolve.ResponseCacheTagIndexOptions{
+				CacheTag: h.responseCacheInvalidation.CacheTag,
+				Subgraph: h.responseCacheInvalidation.Subgraph,
+				Type:     h.responseCacheInvalidation.Type,
+			},
+		})
+	}
 	if reqCtx.customFieldValueRenderer != nil {
 		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)
 	}
@@ -418,7 +464,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Context {
+func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context, opType OperationType) *resolve.Context {
 	if h.rateLimiter == nil {
 		return ctx
 	}
@@ -429,6 +475,9 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Co
 		return ctx
 	}
 	if h.rateLimitConfig.Strategy != "simple" {
+		return ctx
+	}
+	if h.rateLimitConfig.ExcludeSubscriptions && opType == OperationTypeSubscription {
 		return ctx
 	}
 	ctx.SetRateLimiter(h.rateLimiter)

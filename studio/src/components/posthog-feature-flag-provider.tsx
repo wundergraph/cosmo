@@ -1,8 +1,7 @@
-import { ReactNode, createContext, useContext, useEffect, useReducer, useMemo } from 'react';
+import { ReactNode, createContext, useContext, useMemo } from 'react';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
-import { Loader } from '@/components/ui/loader';
 
-type PostHogFeatureFlagStatus = 'idle' | 'disabled' | 'pending' | 'success';
+type PostHogFeatureFlagStatus = 'disabled' | 'success';
 
 interface PostHogFeatureFlagState {
   status: PostHogFeatureFlagStatus;
@@ -11,27 +10,8 @@ interface PostHogFeatureFlagState {
   };
 }
 
-type PostHogFeatureFlagAction =
-  | { type: 'LOADING' }
-  | { type: 'LOADED'; onboardingEnabled: boolean }
-  | { type: 'DISABLED' };
-
-function postHogFeatureFlagReducer(
-  _state: PostHogFeatureFlagState,
-  action: PostHogFeatureFlagAction,
-): PostHogFeatureFlagState {
-  switch (action.type) {
-    case 'DISABLED':
-      return { status: 'disabled', onboarding: { enabled: false } };
-    case 'LOADING':
-      return { status: 'pending', onboarding: { enabled: false } };
-    case 'LOADED':
-      return { status: 'success', onboarding: { enabled: action.onboardingEnabled } };
-  }
-}
-
 const initialState: PostHogFeatureFlagState = {
-  status: 'idle',
+  status: 'disabled',
   onboarding: { enabled: false },
 };
 
@@ -40,26 +20,22 @@ export const PostHogFeatureFlagContext = createContext<PostHogFeatureFlagState>(
 export const usePostHogFeatureFlags = () => useContext(PostHogFeatureFlagContext);
 
 export const PostHogFeatureFlagProvider = ({ children, disabled }: { children: ReactNode; disabled: boolean }) => {
-  const onboardingFlag = useFeatureFlagEnabled('cosmo-onboarding-v1');
-  const [state, dispatch] = useReducer(postHogFeatureFlagReducer, initialState);
+  // Flags are a progressive enhancement, never a precondition for rendering the
+  // studio. `useFeatureFlagEnabled` yields `undefined` for as long as flags are
+  // unresolved, which includes states it never recovers from: consent rejected
+  // (PostHog then runs cookieless with persistence disabled, so nothing is
+  // cached between loads), request blocked, or PostHog unreachable. Passing an
+  // explicit default keeps those cases as "onboarding off" instead of a value
+  // the app would have to wait on.
+  const onboardingEnabled = useFeatureFlagEnabled('cosmo-onboarding-v1', false);
 
-  useEffect(() => {
-    if (disabled) {
-      dispatch({ type: 'DISABLED' });
-    } else if (onboardingFlag === undefined) {
-      dispatch({ type: 'LOADING' });
-    } else {
-      dispatch({ type: 'LOADED', onboardingEnabled: onboardingFlag });
-    }
-  }, [onboardingFlag, disabled]);
+  const value = useMemo<PostHogFeatureFlagState>(
+    () => ({
+      status: disabled ? 'disabled' : 'success',
+      onboarding: { enabled: !disabled && onboardingEnabled },
+    }),
+    [disabled, onboardingEnabled],
+  );
 
-  if (state.status !== 'success' && state.status !== 'disabled') {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <Loader />
-      </div>
-    );
-  }
-
-  return <PostHogFeatureFlagContext.Provider value={state}>{children}</PostHogFeatureFlagContext.Provider>;
+  return <PostHogFeatureFlagContext.Provider value={value}>{children}</PostHogFeatureFlagContext.Provider>;
 };

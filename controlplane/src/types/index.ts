@@ -194,6 +194,7 @@ export interface FeatureFlagDTO {
   createdAt: string;
   updatedAt: string;
   featureSubgraphs: FeatureSubgraphDTO[];
+  hasFailedLatestComposition?: boolean;
 }
 
 export interface MigrationSubgraph {

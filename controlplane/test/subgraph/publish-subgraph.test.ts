@@ -394,7 +394,7 @@ describe('Publish subgraph tests', () => {
 
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(publishFederatedSubgraphResp.response?.details).toBe(
-      'An Event-Driven Graph must not define a websocket subprotocol.',
+      'An Event-Driven Graph must not define a websocket subprotocol',
     );
   });
 
@@ -411,9 +411,7 @@ describe('Publish subgraph tests', () => {
     });
 
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(publishFederatedSubgraphResp.response?.details).toBe(
-      'A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph.',
-    );
+    expect(publishFederatedSubgraphResp.response?.details).toBe('A non-Event-Driven Graph must define a routing URL');
   });
 
   test('that an error is returned if a previously uncreated subgraph is published with an invalid routing url', async (testContext) => {
@@ -430,7 +428,7 @@ describe('Publish subgraph tests', () => {
     });
 
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(publishFederatedSubgraphResp.response?.details).toBe('Routing URL "url" is not a valid URL.');
+    expect(publishFederatedSubgraphResp.response?.details).toBe('Routing URL "url" is not a valid URL');
   });
 
   describe('Plugin subgraph publish tests', () => {
@@ -1012,9 +1010,7 @@ describe('Publish subgraph tests', () => {
       });
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
-      expect(publishResponse.response?.details).toBe(
-        'A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph.',
-      );
+      expect(publishResponse.response?.details).toBe('A non-Event-Driven Graph must define a routing URL');
     });
 
     test('Should fail to create and publish GRPC service with invalid routing URL', async (testContext) => {
@@ -1037,7 +1033,7 @@ describe('Publish subgraph tests', () => {
       });
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
-      expect(publishResponse.response?.details).toBe('Routing URL "invalid-url" is not a valid URL.');
+      expect(publishResponse.response?.details).toBe('Routing URL "invalid-url" is not a valid URL');
     });
 
     test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(

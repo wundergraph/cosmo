@@ -29,7 +29,6 @@ import {
   configureDescriptionPropagationError,
   inaccessibleQueryRootTypeError,
   inaccessibleRequiredInputValueError,
-  inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
   incompatibleFederatedFieldNamedTypeError,
   incompatibleMergedTypesError,
   incompatibleParentKindFatalError,
@@ -2536,17 +2535,6 @@ export class FederationFactory {
       return [];
     }
     let lastData: ParentDefinitionData = objectData;
-    if (this.inaccessibleCoords.has(lastData.renamedTypeName)) {
-      fieldErrorMessages.push(
-        inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage(
-          inputFieldPath,
-          conditionFieldPath,
-          paths[0],
-          lastData.renamedTypeName,
-        ),
-      );
-      return [];
-    }
     let partialConditionFieldPath = '';
     for (let i = 0; i < paths.length; i++) {
       const fieldName = paths[i];
@@ -2583,17 +2571,6 @@ export class FederationFactory {
             partialConditionFieldPath,
             fieldPath,
             directiveSubgraphName,
-          ),
-        );
-        return [];
-      }
-      if (this.inaccessibleCoords.has(fieldPath)) {
-        fieldErrorMessages.push(
-          inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage(
-            inputFieldPath,
-            conditionFieldPath,
-            partialConditionFieldPath,
-            fieldPath,
           ),
         );
         return [];

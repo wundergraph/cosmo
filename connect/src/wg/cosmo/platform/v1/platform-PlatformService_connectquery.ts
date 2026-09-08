@@ -132,6 +132,14 @@ export const migrateMonograph = PlatformService.method.migrateMonograph;
 export const createFederatedSubgraph = PlatformService.method.createFederatedSubgraph;
 
 /**
+ * CreateFederatedSubgraphs creates multiple federated subgraphs on the control plane in a single request. Either
+ * every subgraph is created or none is.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraphs
+ */
+export const createFederatedSubgraphs = PlatformService.method.createFederatedSubgraphs;
+
+/**
  * PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph

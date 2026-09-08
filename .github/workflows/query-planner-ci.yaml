@@ -164,9 +164,10 @@ jobs:
       workflow_url: ${{ steps.trigger_workflow.outputs.workflow_url }}
       workflow_id: ${{ steps.trigger_workflow.outputs.workflow_id }}
     steps:
-      - name: Authenticate
+      - uses: actions/create-github-app-token@v3
+        if: ${{ (needs.check-labels-and-engine-changes.outputs.has_label == 'true' || needs.check-labels-and-engine-changes.outputs.engine_changed == 'true') && needs.check-labels-and-engine-changes.outputs.has_skip_label != 'true' }}
         id: app-token
-        uses: actions/create-github-app-token@v3
+        name: Authenticate
         with:
           client-id: ${{ secrets.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
