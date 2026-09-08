@@ -1,0 +1,49 @@
+name: Check Go module pinned versions
+on:
+  pull_request:
+    paths:
+      - 'router/go.mod'
+      - 'router/go.sum'
+      - 'router-tests/go.mod'
+      - 'router-tests/go.sum'
+      - '.github/workflows/go-mod-pinned-versions.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail if watched modules point to a commit hash instead of a release
+        env:
+          MODULES: 'github.com/wundergraph/graphql-go-tools'
+          DIRS: 'router router-tests'
+        run: |
+          set -euo pipefail
+          # Go pseudo-version suffix: YYYYMMDDHHMMSS-<12 hex chars>, preceded by '-' or '.'
+          PSEUDO='[0-9]{14}-[0-9a-f]{12}'
+          failed=0
+          for dir in $DIRS; do
+            for mod in $MODULES; do
+              # go.mod / go.sum lines referencing a commit hash pseudo-version
+              for f in "$dir/go.mod" "$dir/go.sum"; do
+                if grep -nE "^[[:space:]]*${mod}(/v[0-9]+)?[[:space:]]+v[0-9]+\.[0-9]+\.[0-9]+(-[0-9a-zA-Z.]*)?[.-]${PSEUDO}" "$f"; then
+                  echo "::error file=$f::$mod is pinned to a commit hash, use a tagged release"
+                  failed=1
+                fi
+              done
+              # active replace directive pointing at a local checkout
+              if grep -nE "^[[:space:]]*(replace[[:space:]]+)?${mod}(/v[0-9]+)?[[:space:]]*=>" "$dir/go.mod"; then
+                echo "::error file=$dir/go.mod::$mod has an active replace directive"
+                failed=1
+              fi
+            done
+          done
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+          echo "All watched modules are pinned to tagged releases."
