@@ -130,16 +130,20 @@ export const DefaultHeadersDialog = () => {
         closeDialog();
       }}
     >
-      <DialogTrigger asChild>
-        <button
-          type="button"
-          className="flex w-full items-center gap-x-3 border-t px-4 py-3 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <LuLayoutList className="h-4 w-4 flex-shrink-0" />
-          <span className="flex-1">Set up your default headers</span>
-          <ChevronRightIcon className="h-4 w-4 flex-shrink-0" />
-        </button>
-      </DialogTrigger>
+      {/* The divider spans the full width, but the hover fill is inset and rounded so it
+          never collides with the editors pane's own rounded corners. */}
+      <div className="border-t p-1">
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center gap-x-3 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <LuLayoutList className="h-4 w-4 flex-shrink-0" />
+            <span className="flex-1">Set up your default headers</span>
+            <ChevronRightIcon className="h-4 w-4 flex-shrink-0" />
+          </button>
+        </DialogTrigger>
+      </div>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader className="space-y-2">
           <DialogTitle className="select-none">Default Headers</DialogTitle>
