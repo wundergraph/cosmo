@@ -6,7 +6,6 @@ import {
   type SubgraphName,
   type TypeName,
 } from '../../types/types';
-import { directlyProvidedInterfaceFieldError } from '../errors';
 
 export type IncompatibleMergedTypesErrorParams = {
   actualType: string;
@@ -108,4 +107,9 @@ export type InvalidArgumentValueErrorParams = {
 export type InvalidEntityReturnTypeErrorParams = {
   fieldCoords: string;
   returnTypeName: string;
+};
+
+export type InvalidCacheTagArgumentTypeErrorParams = {
+  reference: string;
+  typeString: string;
 };

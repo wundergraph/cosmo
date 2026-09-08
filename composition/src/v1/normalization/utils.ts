@@ -17,6 +17,7 @@ import {
   argumentsInKeyFieldSetErrorMessage,
   duplicateFieldInFieldSetErrorMessage,
   inlineFragmentInFieldSetErrorMessage,
+  invalidCacheTagPlaceholderErrorMessage,
   invalidDirectiveError,
   invalidEventSubjectsArgumentErrorMessage,
   invalidFieldLinkDirectiveImportObjectError,
@@ -32,6 +33,7 @@ import {
   nonIterableLinkDirectiveImportError,
   noPathLinkDirectiveUrlError,
   noVersionLinkDirectiveUrlError,
+  invalidCacheTagBraceErrorMessage,
   undefinedEventSubjectsArgumentErrorMessage,
   undefinedFieldInFieldSetErrorMessage,
   unexpectedArgumentErrorMessage,
@@ -39,13 +41,19 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
 } from '../../errors/errors';
-import { BASE_SCALARS, EDFS_ARGS_REGEXP } from '../constants/constants';
+import {
+  BASE_SCALARS,
+  CACHE_TAG_PLACEHOLDER_REGEXP,
+  CACHE_TAG_SEGMENT_REGEXP,
+  EDFS_ARGS_REGEXP,
+} from '../constants/constants';
 import { type RequiredFieldConfiguration } from '../../router-configuration/types';
 import { type CompositeOutputData, type InputValueData } from '../../schema-building/types/types';
 import { getTypeNodeNamedTypeName } from '../../schema-building/ast';
 import {
   AUTHENTICATED_DEFINITION_DATA,
   CACHE_INVALIDATE_DEFINITION_DATA,
+  CACHE_TAG_DEFINITION_DATA,
   COMPOSE_DIRECTIVE_DEFINITION_DATA,
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA,
   CONFIGURE_DESCRIPTION_DEFINITION_DATA,
@@ -83,6 +91,7 @@ import {
 import {
   AS,
   AUTHENTICATED,
+  CACHE_TAG,
   COMPOSE_DIRECTIVE,
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
@@ -128,7 +137,7 @@ import {
   URL_LOWER,
 } from '../../utils/string-constants';
 import { getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
-import { type FieldSetData, type KeyFieldSetData, type LinkImportData } from './types/types';
+import { type CacheTagPlaceholder, type FieldSetData, type KeyFieldSetData, type LinkImportData } from './types/types';
 import { type DirectiveName } from '../../types/types';
 import {
   type ExtractImportUrlSegmentsResult,
@@ -471,9 +480,33 @@ export function validateArgumentTemplateReferences(
   }
 }
 
+/* Splits a @cacheTag `format` string into its placeholders, pushing an error message for each malformed
+ * segment. Only the shape of a placeholder is assessed here — whether the namespace is supported, and
+ * whether the reference resolves, is decided by the caller, which alone knows the field upon which the
+ * directive was defined.
+ */
+export function parseCacheTagFormat(format: string, errorMessages: Array<string>): Array<CacheTagPlaceholder> {
+  const placeholders: Array<CacheTagPlaceholder> = [];
+  let remainder = format;
+  for (const match of format.matchAll(CACHE_TAG_SEGMENT_REGEXP)) {
+    remainder = remainder.replace(match[0], '');
+    const placeholderMatch = CACHE_TAG_PLACEHOLDER_REGEXP.exec(match[1]);
+    if (!placeholderMatch) {
+      errorMessages.push(invalidCacheTagPlaceholderErrorMessage(match[1]));
+      continue;
+    }
+    placeholders.push({ namespace: placeholderMatch[1], reference: placeholderMatch[2] });
+  }
+  if (remainder.includes('{') || remainder.includes('}')) {
+    errorMessages.push(invalidCacheTagBraceErrorMessage(format));
+  }
+  return placeholders;
+}
+
 export function initializeDirectiveDefinitionDatas(): Map<string, DirectiveDefinitionData> {
   return new Map<string, DirectiveDefinitionData>([
     [AUTHENTICATED, AUTHENTICATED_DEFINITION_DATA],
+    [CACHE_TAG, CACHE_TAG_DEFINITION_DATA],
     [COMPOSE_DIRECTIVE, COMPOSE_DIRECTIVE_DEFINITION_DATA],
     [CONFIGURE_DESCRIPTION, CONFIGURE_DESCRIPTION_DEFINITION_DATA],
     [CONFIGURE_CHILD_DESCRIPTIONS, CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA],

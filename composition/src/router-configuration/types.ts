@@ -138,11 +138,19 @@ export type CachePopulateConfiguration = {
   operationType: OperationTypeNode;
 };
 
+export type CacheTagConfiguration = {
+  fieldName: FieldName;
+  format: string;
+  typeName: TypeName;
+};
+
 export type EntityCachingConfiguration = {
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cacheInvalidate.
   cacheInvalidateConfigurations: Array<CacheInvalidateConfiguration>;
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cachePopulate.
   cachePopulateConfigurations: Array<CachePopulateConfiguration>;
+  // Attached to the Query root type's ConfigurationData from @cacheTag.
+  cacheTagConfigurations: Array<CacheTagConfiguration>;
   // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
   entityCacheConfigurations: Array<EntityCacheConfiguration>;
 };

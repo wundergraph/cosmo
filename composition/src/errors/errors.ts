@@ -10,6 +10,7 @@ import {
   type IncompatibleParentTypeMergeErrorParams,
   type IncompatibleTypeWithProvidesErrorMessageParams,
   type InvalidArgumentValueErrorParams,
+  type InvalidCacheTagArgumentTypeErrorParams,
   type InvalidCustomDirectiveErrorParams,
   type InvalidDirectiveLocationErrorParams,
   type InvalidEntityReturnTypeErrorParams,
@@ -2163,5 +2164,47 @@ export function intersectingExcludeAndIncludeContractTagsError(tagNames: Array<s
       ` provided to both the include and exclude tag sets (which must be mutually exclusive): "` +
       tagNames.join(QUOTATION_JOIN) +
       `".`,
+  );
+}
+
+export function emptyCacheTagFormatErrorMessage(): string {
+  return `The argument "format" must be provided a non-empty string.`;
+}
+
+export function invalidCacheTagPlaceholderErrorMessage(placeholder: string): string {
+  return (
+    `The "format" argument defines invalid placeholder "{${placeholder}}":` +
+    ` placeholders must be of the form "{$args.<argumentName>}", where a field of an Input Object argument` +
+    ` is referenced by a period-delimited path, e.g. "{$args.filter.category}".`
+  );
+}
+
+export function invalidCacheTagBraceErrorMessage(format: string): string {
+  return (
+    `The "format" argument defines a curly brace outside of a placeholder;` +
+    ` a curly brace is valid only as the delimiter of a placeholder, e.g. "{$args.id}".` +
+    ` Received "${format}".`
+  );
+}
+
+export function invalidQueryRootFieldErrorMessage(): string {
+  return `The directive is valid only upon a Query root field.`;
+}
+
+export function unsupportedFieldCacheTagNamespaceErrorMessage(namespace: string): string {
+  return `The "format" argument defines placeholder namespace "$${namespace}", but only "$args" is supported.`;
+}
+
+export function undefinedCacheTagArgumentErrorMessage(reference: string): string {
+  return `The "format" argument references "$args.${reference}", which is not an argument of the field.`;
+}
+
+export function invalidCacheTagArgumentTypeErrorMessage({
+  reference,
+  typeString,
+}: InvalidCacheTagArgumentTypeErrorParams): string {
+  return (
+    `The "format" argument references "$args.${reference}", which is of type "${typeString}".` +
+    ` A referenced argument must be a single leaf value, i.e. a nullable or non-nullable scalar or Enum.`
   );
 }
