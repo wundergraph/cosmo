@@ -136,7 +136,7 @@
     "@types/prismjs": "^1.26.3",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "catalog:",
     "autoprefixer": "10.4.14",
     "cross-env": "^7.0.3",
