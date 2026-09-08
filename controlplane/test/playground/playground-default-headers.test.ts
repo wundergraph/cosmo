@@ -56,7 +56,7 @@ describe('Playground Default Headers', () => {
       federatedGraphName: graphName,
       namespace: 'default',
     });
-    expect(res.graphHeaders.map(({ key, value }) => ({ key, value }))).toEqual([{ key: 'x-tenant-id', value: 'acme' }]);
+    expect(res.graphHeaders).toEqual([{ key: 'x-tenant-id', value: 'acme' }]);
     expect(res.personalHeaders).toEqual([]);
   });
 
@@ -79,8 +79,8 @@ describe('Playground Default Headers', () => {
       federatedGraphName: graphName,
       namespace: 'default',
     });
-    expect(res.graphHeaders.map(({ key, value }) => ({ key, value }))).toEqual([{ key: 'x-tenant-id', value: 'acme' }]);
-    expect(res.personalHeaders.map(({ key, value }) => ({ key, value }))).toEqual([
+    expect(res.graphHeaders).toEqual([{ key: 'x-tenant-id', value: 'acme' }]);
+    expect(res.personalHeaders).toEqual([
       { key: 'Authorization', value: 'Bearer alice' },
     ]);
   });
@@ -107,7 +107,7 @@ describe('Playground Default Headers', () => {
       federatedGraphName: graphName,
       namespace: 'default',
     });
-    expect(res.graphHeaders.map(({ key, value }) => ({ key, value }))).toEqual([{ key: 'b', value: '2' }]);
+    expect(res.graphHeaders).toEqual([{ key: 'b', value: '2' }]);
   });
 
   test('An empty header list clears the stored row', async () => {
@@ -161,8 +161,8 @@ describe('Playground Default Headers', () => {
       federatedGraphName: graphName,
       namespace: 'default',
     });
-    expect(res.graphHeaders.map(({ key, value }) => ({ key, value }))).toEqual([{ key: 'x-tenant-id', value: 'acme' }]);
-    expect(res.personalHeaders.map(({ key, value }) => ({ key, value }))).toEqual([
+    expect(res.graphHeaders).toEqual([{ key: 'x-tenant-id', value: 'acme' }]);
+    expect(res.personalHeaders).toEqual([
       { key: 'Authorization', value: 'Bearer bob' },
     ]);
   });
@@ -324,7 +324,7 @@ describe('Playground Default Headers', () => {
       });
       expect(getRes.response?.code).toBe(EnumStatusCode.OK);
       expect(getRes.canEditGraphHeaders).toBe(false);
-      expect(getRes.personalHeaders.map(({ key, value }) => ({ key, value }))).toEqual([{ key: 'a', value: '1' }]);
+      expect(getRes.personalHeaders).toEqual([{ key: 'a', value: '1' }]);
       expect(getRes.graphHeaders).toEqual([]);
     },
   );
@@ -491,7 +491,7 @@ describe('Playground Default Headers', () => {
       federatedGraphName: graphName,
       namespace: 'default',
     });
-    expect(res.graphHeaders.map(({ key, value }) => ({ key, value }))).toEqual([{ key: 'x-tenant-id', value: 'acme' }]);
+    expect(res.graphHeaders).toEqual([{ key: 'x-tenant-id', value: 'acme' }]);
     expect(res.personalHeaders).toEqual([]);
   });
 
@@ -521,7 +521,7 @@ describe('Playground Default Headers', () => {
       namespace: 'default',
     });
     expect(res.graphHeaders).toEqual([]);
-    expect(res.personalHeaders.map(({ key, value }) => ({ key, value }))).toEqual([
+    expect(res.personalHeaders).toEqual([
       { key: 'Authorization', value: 'Bearer alice' },
     ]);
   });
@@ -576,7 +576,7 @@ describe('Playground Default Headers', () => {
       federatedGraphName: graphName,
       namespace: 'default',
     });
-    expect(res.personalHeaders.map(({ key, value }) => ({ key, value }))).toEqual([{ key: 'b', value: '2' }]);
+    expect(res.personalHeaders).toEqual([{ key: 'b', value: '2' }]);
   });
 
   test("Upserting personal headers leaves another user's personal headers untouched", async () => {
@@ -608,7 +608,7 @@ describe('Playground Default Headers', () => {
       federatedGraphName: graphName,
       namespace: 'default',
     });
-    expect(bobRes.personalHeaders.map(({ key, value }) => ({ key, value }))).toEqual([
+    expect(bobRes.personalHeaders).toEqual([
       { key: 'Authorization', value: 'Bearer bob' },
     ]);
 
@@ -618,7 +618,7 @@ describe('Playground Default Headers', () => {
       federatedGraphName: graphName,
       namespace: 'default',
     });
-    expect(aliceRes.personalHeaders.map(({ key, value }) => ({ key, value }))).toEqual([
+    expect(aliceRes.personalHeaders).toEqual([
       { key: 'Authorization', value: 'Bearer alice' },
     ]);
   });
@@ -649,8 +649,8 @@ describe('Playground Default Headers', () => {
       federatedGraphName: graphName,
       namespace: 'default',
     });
-    expect(after.graphHeaders.map(({ key, value }) => ({ key, value }))).toEqual([{ key: 'g', value: '2' }]);
-    expect(after.personalHeaders.map(({ key, value }) => ({ key, value }))).toEqual([{ key: 'p', value: '2' }]);
+    expect(after.graphHeaders).toEqual([{ key: 'g', value: '2' }]);
+    expect(after.personalHeaders).toEqual([{ key: 'p', value: '2' }]);
   });
 
   test('Clearing both scopes at once removes both rows', async () => {
