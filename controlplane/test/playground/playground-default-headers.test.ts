@@ -199,7 +199,7 @@ describe('Playground Default Headers', () => {
     });
 
     expect(res.response?.code).toBe(EnumStatusCode.ERR);
-    expect(res.response?.details).toBe('Header name must be a valid HTTP token [] in graph headers');
+    expect(res.response?.details).toBe(`Header name must be a valid HTTP token '' in graph headers`);
 
     const after = await client.getPlaygroundDefaultHeaders({
       federatedGraphName: graphName,
