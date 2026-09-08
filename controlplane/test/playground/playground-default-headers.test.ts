@@ -183,6 +183,31 @@ describe('Playground Default Headers', () => {
     expect(res.response?.code).toBe(EnumStatusCode.ERR);
   });
 
+  test('Should reject a header whose name is empty', async () => {
+    const { client, server } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
+
+    const graphName = genID('fedGraph');
+    await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+
+    // proto3 has no presence on scalars, so an omitted or null key reaches the handler
+    // as the empty string rather than as undefined.
+    const res = await client.updatePlaygroundDefaultHeaders({
+      federatedGraphName: graphName,
+      namespace: 'default',
+      graphHeaders: { headers: [{ value: 'no key' }] },
+    });
+
+    expect(res.response?.code).toBe(EnumStatusCode.ERR);
+    expect(res.response?.details).toBe('Header name must be a valid HTTP token [] in graph headers');
+
+    const after = await client.getPlaygroundDefaultHeaders({
+      federatedGraphName: graphName,
+      namespace: 'default',
+    });
+    expect(after.graphHeaders).toEqual([]);
+  });
+
   test('Should reject a request that provides neither scope', async () => {
     const { client, server } = await SetupTest({ dbname });
     onTestFinished(() => server.close());

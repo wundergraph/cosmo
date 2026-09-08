@@ -157,6 +157,13 @@ describe('parseDefaultHeadersJson', () => {
     expect(parseDefaultHeadersJson(text)).toEqual({ success: false, error: 'Headers must be a JSON object' });
   });
 
+  test('rejects an empty key', () => {
+    expect(parseDefaultHeadersJson('{"": "1"}')).toEqual({
+      success: false,
+      error: '"" is not a valid HTTP header name',
+    });
+  });
+
   test('rejects a key that is not a valid header name', () => {
     expect(parseDefaultHeadersJson('{"bad header": "1"}')).toEqual({
       success: false,

@@ -413,18 +413,18 @@ export const validatePlaygroundHeaders = (
 
   for (const header of headers) {
     if (!isValidHeaderName(header.key)) {
-      errors.push(`Header name must be a valid HTTP token [${header.key}] in ${scopeLabel} headers`);
+      errors.push(`Header name must be a valid HTTP token '${header.key}' in ${scopeLabel} headers`);
       continue;
     }
 
     // The offending value is deliberately not echoed back - it holds control characters.
     if (hasControlCharacter(header.value)) {
-      errors.push(`Header value must not contain control characters [${header.key}] in ${scopeLabel} headers`);
+      errors.push(`Header value must not contain control characters '${header.key}' in ${scopeLabel} headers`);
     }
 
     const lowered = header.key.toLowerCase();
     if (seen.has(lowered)) {
-      errors.push(`Duplicate header name [${header.key}] in ${scopeLabel} headers`);
+      errors.push(`Duplicate header name '${header.key}' in ${scopeLabel} headers`);
     }
     seen.add(lowered);
   }
