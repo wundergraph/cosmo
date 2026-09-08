@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -49,12 +50,23 @@ func buildCacheTagHeader(headerTags []string, delimiter string, maxBytes int) st
 	return b.String()
 }
 
+// reservedCacheTagHeaderNames: set after Content-Length, so naming one of
+// these would replace framing net/http needs to write the body.
+var reservedCacheTagHeaderNames = map[string]struct{}{
+	"Content-Length":    {},
+	"Content-Type":      {},
+	"Transfer-Encoding": {},
+}
+
 func validateResponseCacheTagHeader(cfg config.ResponseCacheTagHeaderConfig) error {
 	if !cfg.Enabled {
 		return nil
 	}
 	if !httpguts.ValidHeaderFieldName(cfg.Name) {
 		return fmt.Errorf("response cache cache_tag_header.name %q is not a valid header name", cfg.Name)
+	}
+	if _, reserved := reservedCacheTagHeaderNames[http.CanonicalHeaderKey(cfg.Name)]; reserved {
+		return fmt.Errorf("response cache cache_tag_header.name %q would replace a header the response depends on", cfg.Name)
 	}
 	if cfg.Delimiter == "" || !httpguts.ValidHeaderFieldValue(cfg.Delimiter) {
 		return fmt.Errorf("response cache cache_tag_header.delimiter %q must be non-empty and valid in a header", cfg.Delimiter)

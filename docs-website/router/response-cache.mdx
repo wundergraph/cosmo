@@ -174,13 +174,18 @@ Entries leave the cache on their own TTL. The invalidation endpoint drops them e
 
 ### Enable the endpoint
 
+The endpoint only starts when the response cache itself is enabled.
+
 ```yaml config.yaml
 response_cache:
+  enabled: true
   invalidation:
     endpoint:
       enabled: true
       shared_key: 'a-random-string-of-at-least-32-characters'
 ```
+
+The endpoint speaks plain HTTP. Keep `listen_addr` on the loopback interface, or terminate TLS in front of it, so the shared key is not sent in the clear.
 
 ### Send a request
 
