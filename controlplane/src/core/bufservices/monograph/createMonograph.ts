@@ -133,22 +133,24 @@ export function createMonograph(
 
       const labelMatchers = [joinLabel(label)];
 
-      const subgraph = await subgraphRepo.create({
-        name: req.name,
-        namespace: req.namespace,
-        namespaceId: namespace.id,
-        createdBy: authContext.userId,
-        labels: [label],
-        routingUrl: req.graphUrl,
-        isEventDrivenGraph: false,
-        readme: req.readme,
-        subscriptionUrl: req.subscriptionUrl,
-        subscriptionProtocol:
-          req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
-        websocketSubprotocol:
-          req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
-        type: 'standard',
-      });
+      const [subgraph] = await subgraphRepo.create([
+        {
+          name: req.name,
+          namespace: req.namespace,
+          namespaceId: namespace.id,
+          createdBy: authContext.userId,
+          labels: [label],
+          routingUrl: req.graphUrl,
+          isEventDrivenGraph: false,
+          readme: req.readme,
+          subscriptionUrl: req.subscriptionUrl,
+          subscriptionProtocol:
+            req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
+          websocketSubprotocol:
+            req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
+          type: 'standard',
+        },
+      ]);
 
       if (!subgraph) {
         return {

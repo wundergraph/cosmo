@@ -241,7 +241,7 @@ describe('Publish feature subgraph tests', () => {
 
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
-      'A valid, non-empty routing URL is required to create and publish a feature subgraph.',
+      'A valid, non-empty routing URL is required to create and publish a feature subgraph',
     );
   });
 
@@ -268,7 +268,7 @@ describe('Publish feature subgraph tests', () => {
     });
 
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(publishFeatureSubgraphResponse.response?.details).toBe('Routing URL "invalid-url" is not a valid URL.');
+    expect(publishFeatureSubgraphResponse.response?.details).toBe('Routing URL "invalid-url" is not a valid URL');
   });
 
   test('that publishFederatedSubgraph validates subscription URL for feature subgraphs', async (testContext) => {

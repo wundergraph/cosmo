@@ -456,8 +456,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	}
 	if fromCache {
 		if fromCacheHasTTL, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.Name, includeOperationName); fromCacheHasTTL {
-			// if it is an APQ request, we need to save it again to renew the TTL expiration
-			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.NormalizedRepresentation); err != nil {
+			if err := o.renewAPQTTL(ctx); err != nil {
 				return false, false, err
 			}
 		}
@@ -469,7 +468,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		isAPQ = true
 
 		// If the operation was fetched with APQ, save it again to renew the TTL
-		err := o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query)
+		err := o.operationProcessor.persistedOperationClient.SaveOperation(ctx, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query)
 		if err != nil {
 			return false, true, err
 		}
@@ -502,13 +501,18 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 
 		// If the operation was fetched with APQ, save it again to renew the TTL
 		if isAPQ {
-			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
+			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
 				return false, true, err
 			}
 		}
 	}
 
 	return false, isAPQ, nil
+}
+
+func (o *OperationKit) renewAPQTTL(ctx context.Context) error {
+	sha256Hash := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
+	return o.operationProcessor.persistedOperationClient.RenewOperation(ctx, sha256Hash)
 }
 
 const (

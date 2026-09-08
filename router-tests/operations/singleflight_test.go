@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -521,7 +520,11 @@ func TestSingleFlight(t *testing.T) {
 			require.Less(t, actualSubgraphRequests, numOfOperations)
 		})
 	})
-	t.Run("subscription deduplication with multiple subgraphs - different headers", func(t *testing.T) {
+	// All subscriptions share a single EDFS trigger regardless of their headers, because the
+	// trigger ID of a pubsub source is derived from the subject and provider only. The nested
+	// fetches each subscription performs to resolve its response are still built from the
+	// per-request propagated headers, so those must not be de-duplicated by single flight.
+	t.Run("subscription with different headers does not deduplicate subgraph fetches", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
@@ -556,24 +559,14 @@ func TestSingleFlight(t *testing.T) {
 			)
 			done.Add(int(numOfOperations))
 
-			// Continuously publish until all consumers have received their message.
-			// NATSPublishUntilMinMessagesSent is insufficient here because cumulative
-			// MessagesSent can reach 10 before all 10 consumers are served (retries
-			// deliver to already-served consumers, inflating the count).
-			publishCtx, publishCancel := context.WithCancel(xEnv.Context)
+			// Wait for all subscriptions to be established before triggering. The differing
+			// Authorization headers do not split the trigger, so a single message fans out
+			// to all subscriptions.
 			go func() {
 				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
-				xEnv.WaitForTriggerCount(uint64(numOfOperations), time.Second*15)
-				for {
-					select {
-					case <-publishCtx.Done():
-						return
-					default:
-					}
-					_ = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-					_ = xEnv.NatsConnectionDefault.Flush()
-					time.Sleep(500 * time.Millisecond)
-				}
+				xEnv.WaitForTriggerCount(1, time.Second*15)
+				// Trigger the subscription via NATS to get updates for all subscriptions
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 			}()
 
 			for i := int64(0); i < numOfOperations; i++ {
@@ -606,29 +599,26 @@ func TestSingleFlight(t *testing.T) {
 					})
 					require.NoError(t, err)
 
-					// Read messages until we get "complete", draining any extra
-					// "next" messages that may arrive from publish retries
-					for {
-						var reply testenv.WebSocketMessage
-						err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-						require.NoError(t, err)
-						err = testenv.WSReadJSON(t, conn, &reply)
-						require.NoError(t, err)
-						if reply.Type == "complete" {
-							require.Equal(t, "1", reply.ID)
-							break
-						}
-					}
+					// Read the complete message
+					var complete testenv.WebSocketMessage
+					err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+					require.NoError(t, err)
+					err = testenv.WSReadJSON(t, conn, &complete)
+					require.NoError(t, err)
+					require.Equal(t, "complete", complete.Type)
+					require.Equal(t, "1", complete.ID)
 				}(i)
 			}
 			done.Wait()
-			publishCancel()
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 
-			// We expect no request de-duplication because different headers must not be de-duplicated
-			// Publish retries may increase the count, so check >= not ==
+			// We expect no request de-duplication because the fetches carry different headers.
+			// The NATS event itself supplies __typename and id — the only fields the pubsub
+			// data source owns — so resolving details.forename and details.surname costs one
+			// entity fetch to the employees subgraph per subscription: 10 in total.
 			actualSubgraphRequests := xEnv.SubgraphRequestCount.Global.Load()
-			require.GreaterOrEqual(t, actualSubgraphRequests, numOfOperations)
+			require.Equal(t, numOfOperations, actualSubgraphRequests)
+			require.Equal(t, numOfOperations, xEnv.SubgraphRequestCount.Employees.Load())
 		})
 	})
 	t.Run("mutation with multiple subgraphs deduplication", func(t *testing.T) {

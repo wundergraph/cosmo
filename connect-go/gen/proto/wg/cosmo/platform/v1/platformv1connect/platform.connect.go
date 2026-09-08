@@ -98,6 +98,9 @@ const (
 	// PlatformServiceCreateFederatedSubgraphProcedure is the fully-qualified name of the
 	// PlatformService's CreateFederatedSubgraph RPC.
 	PlatformServiceCreateFederatedSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateFederatedSubgraph"
+	// PlatformServiceCreateFederatedSubgraphsProcedure is the fully-qualified name of the
+	// PlatformService's CreateFederatedSubgraphs RPC.
+	PlatformServiceCreateFederatedSubgraphsProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateFederatedSubgraphs"
 	// PlatformServicePublishFederatedSubgraphProcedure is the fully-qualified name of the
 	// PlatformService's PublishFederatedSubgraph RPC.
 	PlatformServicePublishFederatedSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraph"
@@ -651,6 +654,9 @@ type PlatformServiceClient interface {
 	MigrateMonograph(context.Context, *connect.Request[v1.MigrateMonographRequest]) (*connect.Response[v1.MigrateMonographResponse], error)
 	// CreateFederatedSubgraph creates a federated subgraph on the control plane.
 	CreateFederatedSubgraph(context.Context, *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error)
+	// CreateFederatedSubgraphs creates multiple federated subgraphs on the control plane in a single request. Either
+	// every subgraph is created or none is.
+	CreateFederatedSubgraphs(context.Context, *connect.Request[v1.CreateFederatedSubgraphsRequest]) (*connect.Response[v1.CreateFederatedSubgraphsResponse], error)
 	// PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
 	PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error)
 	// PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
@@ -1124,6 +1130,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceCreateFederatedSubgraphProcedure,
 			connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraph")),
+			connect.WithClientOptions(opts...),
+		),
+		createFederatedSubgraphs: connect.NewClient[v1.CreateFederatedSubgraphsRequest, v1.CreateFederatedSubgraphsResponse](
+			httpClient,
+			baseURL+PlatformServiceCreateFederatedSubgraphsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraphs")),
 			connect.WithClientOptions(opts...),
 		),
 		publishFederatedSubgraph: connect.NewClient[v1.PublishFederatedSubgraphRequest, v1.PublishFederatedSubgraphResponse](
@@ -2197,6 +2209,7 @@ type platformServiceClient struct {
 	updateMonograph                                    *connect.Client[v1.UpdateMonographRequest, v1.UpdateMonographResponse]
 	migrateMonograph                                   *connect.Client[v1.MigrateMonographRequest, v1.MigrateMonographResponse]
 	createFederatedSubgraph                            *connect.Client[v1.CreateFederatedSubgraphRequest, v1.CreateFederatedSubgraphResponse]
+	createFederatedSubgraphs                           *connect.Client[v1.CreateFederatedSubgraphsRequest, v1.CreateFederatedSubgraphsResponse]
 	publishFederatedSubgraph                           *connect.Client[v1.PublishFederatedSubgraphRequest, v1.PublishFederatedSubgraphResponse]
 	publishFederatedSubgraphs                          *connect.Client[v1.PublishFederatedSubgraphsRequest, v1.PublishFederatedSubgraphsResponse]
 	getBatchPublishJobStatus                           *connect.Client[v1.GetBatchPublishJobStatusRequest, v1.GetBatchPublishJobStatusResponse]
@@ -2475,6 +2488,11 @@ func (c *platformServiceClient) MigrateMonograph(ctx context.Context, req *conne
 // CreateFederatedSubgraph calls wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraph.
 func (c *platformServiceClient) CreateFederatedSubgraph(ctx context.Context, req *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error) {
 	return c.createFederatedSubgraph.CallUnary(ctx, req)
+}
+
+// CreateFederatedSubgraphs calls wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraphs.
+func (c *platformServiceClient) CreateFederatedSubgraphs(ctx context.Context, req *connect.Request[v1.CreateFederatedSubgraphsRequest]) (*connect.Response[v1.CreateFederatedSubgraphsResponse], error) {
+	return c.createFederatedSubgraphs.CallUnary(ctx, req)
 }
 
 // PublishFederatedSubgraph calls wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph.
@@ -3417,6 +3435,9 @@ type PlatformServiceHandler interface {
 	MigrateMonograph(context.Context, *connect.Request[v1.MigrateMonographRequest]) (*connect.Response[v1.MigrateMonographResponse], error)
 	// CreateFederatedSubgraph creates a federated subgraph on the control plane.
 	CreateFederatedSubgraph(context.Context, *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error)
+	// CreateFederatedSubgraphs creates multiple federated subgraphs on the control plane in a single request. Either
+	// every subgraph is created or none is.
+	CreateFederatedSubgraphs(context.Context, *connect.Request[v1.CreateFederatedSubgraphsRequest]) (*connect.Response[v1.CreateFederatedSubgraphsResponse], error)
 	// PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
 	PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error)
 	// PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
@@ -3886,6 +3907,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceCreateFederatedSubgraphProcedure,
 		svc.CreateFederatedSubgraph,
 		connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraph")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceCreateFederatedSubgraphsHandler := connect.NewUnaryHandler(
+		PlatformServiceCreateFederatedSubgraphsProcedure,
+		svc.CreateFederatedSubgraphs,
+		connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraphs")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServicePublishFederatedSubgraphHandler := connect.NewUnaryHandler(
@@ -4977,6 +5004,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceMigrateMonographHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateFederatedSubgraphProcedure:
 			platformServiceCreateFederatedSubgraphHandler.ServeHTTP(w, r)
+		case PlatformServiceCreateFederatedSubgraphsProcedure:
+			platformServiceCreateFederatedSubgraphsHandler.ServeHTTP(w, r)
 		case PlatformServicePublishFederatedSubgraphProcedure:
 			platformServicePublishFederatedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServicePublishFederatedSubgraphsProcedure:
@@ -5414,6 +5443,10 @@ func (UnimplementedPlatformServiceHandler) MigrateMonograph(context.Context, *co
 
 func (UnimplementedPlatformServiceHandler) CreateFederatedSubgraph(context.Context, *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CreateFederatedSubgraphs(context.Context, *connect.Request[v1.CreateFederatedSubgraphsRequest]) (*connect.Response[v1.CreateFederatedSubgraphsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraphs is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error) {

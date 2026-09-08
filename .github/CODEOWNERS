@@ -14,7 +14,7 @@
 /connect/           @wundergraph/Router
 /connect-go/        @wundergraph/Router
 /controlplane/      @wundergraph/Cosmo
-/graphqlmetrics/    @wundergraph/Platform
+/graphqlmetrics/    @wundergraph/Platform @wundergraph/Router
 /helm/              @wundergraph/Platform
 /infrastructure/    @wundergraph/Platform
 /keycloak/          @wundergraph/Cosmo

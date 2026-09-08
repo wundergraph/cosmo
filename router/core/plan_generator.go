@@ -39,16 +39,26 @@ func (e *PlannerOperationValidationError) Error() string {
 }
 
 type PlanGenerator struct {
-	planConfiguration *plan.Configuration
-	clientDefinition  *ast.Document
-	definition        *ast.Document
+	planConfiguration    *plan.Configuration
+	clientDefinition     *ast.Document
+	definition           *ast.Document
+	postprocessorOptions []postprocess.ProcessorOption
+}
+
+type PlanGeneratorOptions struct {
+	// MaxDataSourceCollectorsConcurrency limits the number of concurrent data source
+	// collectors during planning. Zero means no limit.
+	MaxDataSourceCollectorsConcurrency uint
+	EnableMultiFetch                   bool
+	EnableScheduleFetches              bool
 }
 
 type Planner struct {
-	planner            *plan.Planner
-	definition         *ast.Document
-	clientDefinition   *ast.Document
-	operationValidator *astvalidation.OperationValidator
+	planner              *plan.Planner
+	definition           *ast.Document
+	clientDefinition     *ast.Document
+	operationValidator   *astvalidation.OperationValidator
+	postprocessorOptions []postprocess.ProcessorOption
 }
 
 type OperationTimes struct {
@@ -79,16 +89,17 @@ const (
 	PlanOutputFormatJSON  PlanOutputFormat = "json"
 )
 
-func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document, clientDefinition *ast.Document) (*Planner, error) {
+func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document, clientDefinition *ast.Document, postprocessorOptions ...postprocess.ProcessorOption) (*Planner, error) {
 	planner, err := plan.NewPlanner(*planConfiguration)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create planner: %w", err)
 	}
 
 	return &Planner{
-		planner:          planner,
-		definition:       definition,
-		clientDefinition: clientDefinition,
+		planner:              planner,
+		definition:           definition,
+		clientDefinition:     clientDefinition,
+		postprocessorOptions: postprocessorOptions,
 	}, nil
 }
 
@@ -289,7 +300,7 @@ func (pl *Planner) PlanPreparedOperation(operation *ast.Document) (planNode *Pla
 		return nil, opTimes, errors.New(report.Error())
 	}
 
-	post := postprocess.NewProcessor()
+	post := postprocess.NewProcessor(pl.postprocessorOptions...)
 	post.Process(preparedPlan)
 	// measure postprocessing time as part of planning time
 	opTimes.PlanTime = time.Since(start)
@@ -329,7 +340,7 @@ func (pl *Planner) parseOperation(operationFilePath string) (*ast.Document, erro
 	return &doc, nil
 }
 
-func NewPlanGenerator(configFilePath string, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) (*PlanGenerator, error) {
+func NewPlanGenerator(configFilePath string, logger *zap.Logger, opts PlanGeneratorOptions) (*PlanGenerator, error) {
 	pg := &PlanGenerator{}
 	routerConfig, err := pg.buildRouterConfig(configFilePath)
 	if err != nil {
@@ -339,7 +350,7 @@ func NewPlanGenerator(configFilePath string, logger *zap.Logger, maxDataSourceCo
 	if err := pg.loadConfiguration(
 		routerConfig,
 		logger,
-		maxDataSourceCollectorsConcurrency,
+		opts,
 	); err != nil {
 		return nil, err
 	}
@@ -347,9 +358,9 @@ func NewPlanGenerator(configFilePath string, logger *zap.Logger, maxDataSourceCo
 	return pg, nil
 }
 
-func NewPlanGeneratorFromConfig(config *nodev1.RouterConfig, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) (*PlanGenerator, error) {
+func NewPlanGeneratorFromConfig(config *nodev1.RouterConfig, logger *zap.Logger, opts PlanGeneratorOptions) (*PlanGenerator, error) {
 	pg := &PlanGenerator{}
-	if err := pg.loadConfiguration(config, logger, maxDataSourceCollectorsConcurrency); err != nil {
+	if err := pg.loadConfiguration(config, logger, opts); err != nil {
 		return nil, err
 	}
 
@@ -357,7 +368,7 @@ func NewPlanGeneratorFromConfig(config *nodev1.RouterConfig, logger *zap.Logger,
 }
 
 func (pg *PlanGenerator) GetPlanner() (*Planner, error) {
-	return NewPlanner(pg.planConfiguration, pg.definition, pg.clientDefinition)
+	return NewPlanner(pg.planConfiguration, pg.definition, pg.clientDefinition, pg.postprocessorOptions...)
 }
 
 func (pg *PlanGenerator) buildRouterConfig(configFilePath string) (*nodev1.RouterConfig, error) {
@@ -369,9 +380,19 @@ func (pg *PlanGenerator) buildRouterConfig(configFilePath string) (*nodev1.Route
 	return routerConfig, nil
 }
 
-func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) error {
+func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, logger *zap.Logger, opts PlanGeneratorOptions) error {
 	routerEngineConfig := RouterEngineConfiguration{
 		StreamMetricStore: metric.NewNoopStreamMetricStore(),
+	}
+	// EnableMultiFetch has to be known at planning time, the planner records the subgraph
+	// operation artifacts the postprocessor's multi-fetch merge stage consumes.
+	routerEngineConfig.Execution.EnableMultiFetch = opts.EnableMultiFetch
+
+	if opts.EnableMultiFetch {
+		pg.postprocessorOptions = append(pg.postprocessorOptions, postprocess.EnableMultiFetch())
+	}
+	if opts.EnableScheduleFetches {
+		pg.postprocessorOptions = append(pg.postprocessorOptions, postprocess.EnableScheduleFetches())
 	}
 	natSources := map[string]*nats.ProviderAdapter{}
 	kafkaSources := map[string]*kafka.ProviderAdapter{}
@@ -433,7 +454,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 		DatasourceVisitor:             false,
 	}
 
-	planConfig.MaxDataSourceCollectorsConcurrency = maxDataSourceCollectorsConcurrency
+	planConfig.MaxDataSourceCollectorsConcurrency = opts.MaxDataSourceCollectorsConcurrency
 
 	if logger != nil {
 		planConfig.Logger = log.NewZapLogger(logger, log.DebugLevel)

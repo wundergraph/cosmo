@@ -51,6 +51,8 @@ func PlanGenerator(args []string) {
 		return fmt.Errorf("must be one of: text, json (got %q)", s)
 	})
 	f.UintVar(&cfg.MaxDataSourceCollectorsConcurrency, "max-collectors", 0, "max number of concurrent data source collectors, if unset or 0, no limit will be enforced")
+	f.BoolVar(&cfg.EnableMultiFetch, "enable-multi-fetch", false, "plan as if engine.enable_multi_fetch is enabled, merging entity fetches to the same subgraph in the same wave")
+	f.BoolVar(&cfg.EnableScheduleFetches, "enable-schedule-fetches", false, "plan as if engine.enable_schedule_fetches is enabled, using the dependency-aware fetch scheduler")
 
 	if err := f.Parse(args[1:]); err != nil {
 		f.PrintDefaults()

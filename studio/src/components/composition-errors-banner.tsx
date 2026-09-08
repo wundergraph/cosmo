@@ -2,8 +2,18 @@ import { BoltSlashIcon } from '@heroicons/react/24/outline';
 import { CompositionErrorsDialog } from '@/components/composition-errors-dialog';
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
-export const CompositionErrorsBanner = ({ errors, className }: { errors?: string; className?: string }) => {
+export const CompositionErrorsBanner = ({
+  errors,
+  className,
+  viewCompositionsHref,
+}: {
+  errors?: string;
+  className?: string;
+  viewCompositionsHref?: string;
+}) => {
   return (
     <div
       className={cn(
@@ -21,6 +31,11 @@ export const CompositionErrorsBanner = ({ errors, className }: { errors?: string
         </div>
       </div>
       {errors && <CompositionErrorsDialog errors={errors} />}
+      {viewCompositionsHref && (
+        <Button variant="destructive" size="xs" asChild>
+          <Link href={viewCompositionsHref}>View compositions</Link>
+        </Button>
+      )}
     </div>
   );
 };

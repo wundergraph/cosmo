@@ -24,6 +24,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
+	pubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
@@ -333,6 +334,15 @@ func SubgraphHeadersBuilder(ctx *requestContext, headerPropagation *HeaderPropag
 	case *plan.SubscriptionResponsePlan:
 		headers := make(map[string]*HeaderWithHash, len(p.Response.Response.DataSources)+1)
 		makeHeaders(headers, p.Response.Response.DataSources)
+
+		// avoid adding header rules for pubsub triggers sources, as no headers are passed to them.
+		_, isPubSub := p.Response.Trigger.Source.(pubsub.SubscriptionDataSource)
+		if isPubSub {
+			return &headerBuilder{
+				headers: headers,
+				allHash: keyGen.Sum64(),
+			}
+		}
 
 		h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.Trigger.SourceName, ctx)
 		headers[p.Response.Trigger.SourceName] = &HeaderWithHash{
