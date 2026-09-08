@@ -3,7 +3,7 @@
     "declaration": true,
     "allowJs": true,
     "strict": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "esModuleInterop": true,
     "sourceMap": true,
     "skipLibCheck": true,

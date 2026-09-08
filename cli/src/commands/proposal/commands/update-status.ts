@@ -1,5 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import type { UpdateProposalResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
+import type { UpdateProposalResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Command, InvalidArgumentError } from 'commander';
 import pc from 'picocolors';
 import { getBaseHeaders } from '../../../core/config.js';
