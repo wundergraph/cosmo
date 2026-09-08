@@ -545,6 +545,10 @@ response_cache:
     provider: 'redis'
     provider_id: 'my_redis'
     max_entries: 2048
+  invalidation:
+    cache_tag: true
+    subgraph: false
+    type: true
 
 security:
   complexity_calculation_cache:

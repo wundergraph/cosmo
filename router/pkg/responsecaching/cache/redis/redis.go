@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
@@ -30,6 +31,17 @@ type RedisCache struct {
 }
 
 var _ caching.Cache = (*RedisCache)(nil)
+
+const (
+	entryNamespace = "e:"
+	tagNamespace   = "t:"
+)
+
+// entryKey is where an entry's value lives.
+func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamespace + key }
+
+// tagKey is where the set of entries carrying tag lives.
+func (c *RedisCache) tagKey(tag string) string { return c.prefix + tagNamespace + tag }
 
 // NewRedisCache returns a cache backed by client, namespacing every key with
 // prefix. On success the cache takes ownership of client and closes it in
@@ -66,7 +78,7 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 	values := make([]*redis.StringCmd, len(keys))
 	ttls := make([]*redis.DurationCmd, len(keys))
 	for i, key := range keys {
-		prefixed := c.prefix + key
+		prefixed := c.entryKey(key)
 		values[i] = pipe.Get(ctx, prefixed)
 		ttls[i] = pipe.PTTL(ctx, prefixed)
 	}
@@ -115,21 +127,40 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 		return caching.ErrNoItems
 	}
 
-	// Queuing writes nothing to redis, only Exec below does, so validating as
-	// we go is enough: returning early abandons the whole pipeline unsent, and
-	// a batch rejected for a missing TTL is the one case where nothing at all
-	// was written.
-	//
-	// Each command is kept alongside the item that queued it, rather than read
-	// back off Exec, so which key a reply belongs to is not a question of the
-	// two orders still agreeing.
-	pipe := c.client.Pipeline()
-	cmds := make([]*redis.StatusCmd, len(items))
-	for i, item := range items {
+	for _, item := range items {
 		if item.TTL <= 0 {
 			return fmt.Errorf("%w: key %q", caching.ErrMissingTTL, item.Key)
 		}
-		cmds[i] = pipe.Set(ctx, c.prefix+item.Key, item.Value, item.TTL)
+	}
+
+	// One clock reading for the batch. Scoring two items written together as if
+	// they were written at different moments would be a distinction without a
+	// source.
+	now := time.Now()
+
+	pipe := c.client.Pipeline()
+
+	for _, item := range items {
+		if len(item.Tags) == 0 {
+			continue
+		}
+
+		expireAt := now.Add(item.TTL)
+		member := redis.Z{Score: float64(expireAt.UnixMilli()), Member: item.Key}
+		for _, tag := range item.Tags {
+			tagKey := c.tagKey(tag)
+			pipe.ZAdd(ctx, tagKey, member)
+			pipe.ExpireNX(ctx, tagKey, item.TTL)
+			pipe.ExpireGT(ctx, tagKey, item.TTL)
+		}
+	}
+
+	// Each command is kept alongside the item that queued it, rather than read
+	// back off Exec, so which key a reply belongs to is not a question of the
+	// two orders still agreeing.
+	cmds := make([]*redis.StatusCmd, len(items))
+	for i, item := range items {
+		cmds[i] = pipe.Set(ctx, c.entryKey(item.Key), item.Value, item.TTL)
 	}
 
 	_, err := pipe.Exec(ctx)
