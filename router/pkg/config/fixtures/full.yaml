@@ -554,6 +554,11 @@ response_cache:
       listen_addr: 'localhost:5027'
       path: '/invalidation'
       shared_key: 'a-shared-key-that-is-long-enough-to-pass'
+  cache_tag_header:
+    enabled: true
+    name: 'Surrogate-Key'
+    delimiter: ' '
+    max_bytes: 1024
 
 security:
   complexity_calculation_cache:

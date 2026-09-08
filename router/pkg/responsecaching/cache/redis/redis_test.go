@@ -19,6 +19,11 @@ const testPrefix = "entity:"
 func entryKey(key string) string    { return testPrefix + entryNamespace + key }
 func tagIndexKey(tag string) string { return testPrefix + tagNamespace + tag }
 
+// rawEntry is value as SetMany stores it, for cases that seed redis by hand.
+func rawEntry(value string) string {
+	return string(enginecache.EncodeEntry([]byte(value), nil))
+}
+
 // newTestRedisCache returns a cache backed by an in-process Redis, plus the
 // server itself so tests can inspect raw keys and drive expiry.
 func newTestRedisCache(t *testing.T) (*RedisCache, *miniredis.Miniredis) {
@@ -167,6 +172,37 @@ func TestRedisCache(t *testing.T) {
 				"a": {Key: "a", Value: []byte("value"), TTL: time.Hour},
 			}, results)
 		})
+
+		t.Run("headerTags come back with the entry", func(t *testing.T) {
+			t.Parallel()
+
+			c, _ := newTestRedisCache(t)
+
+			headerTags := []string{"subgraph-accounts", "type-accounts-User", "user-42"}
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "a", Value: []byte("value"), TTL: time.Hour, HeaderTags: headerTags},
+			})
+			require.NoError(t, err)
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.Equal(t, map[string]enginecache.Item{
+				"a": {Key: "a", Value: []byte("value"), TTL: time.Hour, HeaderTags: headerTags},
+			}, results)
+		})
+
+		t.Run("a value not in the entry format fails the batch", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newTestRedisCache(t)
+
+			require.NoError(t, mr.Set(c.entryKey("raw"), `{"id":42}`))
+			mr.SetTTL(c.entryKey("raw"), time.Hour)
+
+			results, err := c.GetMany(ctx, []string{"raw"})
+			require.ErrorIs(t, err, enginecache.ErrEntryFormat)
+			require.Nil(t, results)
+		})
 	})
 
 	t.Run("Close", func(t *testing.T) {
@@ -235,7 +271,9 @@ func TestRedisCache(t *testing.T) {
 
 			stored, err := mr.Get(entryKey("a"))
 			require.NoError(t, err)
-			require.Equal(t, "1", stored)
+			value, _, err := enginecache.DecodeEntry([]byte(stored))
+			require.NoError(t, err)
+			require.Equal(t, "1", string(value))
 
 			require.Equal(t, time.Minute, mr.TTL(entryKey("a")))
 			require.Equal(t, 2*time.Minute, mr.TTL(entryKey("b")))
@@ -476,7 +514,7 @@ func TestRedisCache(t *testing.T) {
 
 			// Written straight to redis, bypassing SetMany. The expiry has to be
 			// set by hand too, a key without one is never served.
-			require.NoError(t, mr.Set(entryKey("a"), "value"))
+			require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
 			mr.SetTTL(entryKey("a"), time.Minute)
 
 			results, err := c.GetMany(ctx, []string{"a"})
@@ -751,7 +789,7 @@ func TestRedisCache(t *testing.T) {
 			// SetMany refuses an item without a TTL, so a key sitting in the
 			// namespace with no expiry was put there by something else and is
 			// not this cache's to serve.
-			require.NoError(t, mr.Set(entryKey("a"), "value"))
+			require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -769,7 +807,7 @@ func TestRedisCache(t *testing.T) {
 			// PTTL answers in whole milliseconds, so anything shorter rounds
 			// down to nothing left. Seeded by hand because a SetMany of this
 			// TTL would be rounded up to a millisecond on the way out.
-			require.NoError(t, mr.Set(entryKey("a"), "value"))
+			require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
 			mr.SetTTL(entryKey("a"), 500*time.Microsecond)
 
 			results, err := c.GetMany(ctx, []string{"a"})

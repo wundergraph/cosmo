@@ -3472,6 +3472,38 @@
               }
             }
           }
+        },
+        "cache_tag_header": {
+          "type": "object",
+          "description": "Returns the cache tags of a response in a header a CDN or reverse proxy can purge by: 'subgraph-{name}' per subgraph touched, 'type-{subgraph}-{type}' per entity type touched, and every tag a subgraph declared in its 'apolloCacheTags' or 'apolloEntityCacheTags' extension, unchanged. Sent on cache hits and misses alike; fetches that were not cacheable contribute nothing. Independent of the 'invalidation' indexes. Not sent on subscriptions, deferred or batched responses, or responses carrying subgraph errors. Off by default.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Emit the header.",
+              "default": false
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the header. Use 'Surrogate-Key' for Fastly.",
+              "default": "Cache-Tag",
+              "examples": ["Cache-Tag", "Surrogate-Key"]
+            },
+            "delimiter": {
+              "type": "string",
+              "minLength": 1,
+              "description": "What separates tags in the header value. Use a space for Fastly. A tag containing the delimiter cannot be sent and is left out.",
+              "default": ",",
+              "examples": [",", " "]
+            },
+            "max_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The largest header value emitted, in bytes. When the tags do not fit they are grouped coarsest first, subgraph then type then declared, and the finest that do not fit are left out. The default matches Cloudflare's Cache-Tag limit.",
+              "default": 16384
+            }
+          }
         }
       },
       "if": {
