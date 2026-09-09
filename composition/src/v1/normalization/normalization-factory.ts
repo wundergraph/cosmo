@@ -303,6 +303,7 @@ import {
   EXTERNAL,
   FIELDS,
   FIRST_ORDINAL,
+  FROM_CONTEXT,
   HYPHEN_JOIN,
   INACCESSIBLE,
   INCLUDE_HEADERS,
@@ -1365,9 +1366,11 @@ export class NormalizationFactory {
       ? `${federatedParentTypeName}${fieldName ? `.${fieldName}` : ''}(${name}: ...)`
       : `${federatedParentTypeName}.${name}`;
     const namedTypeName = getTypeNodeNamedTypeName(node.type);
+    const directivesByName = this.extractDirectives(node, new Map<string, ConstDirectiveNode[]>());
     const inputValueData: InputValueData = {
       configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
-      directivesByName: this.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
+      contextSubgraphNames: new Set<SubgraphName>(directivesByName.has(FROM_CONTEXT) ? [this.subgraphName] : []),
+      directivesByName,
       federatedCoords,
       fieldName,
       includeDefaultValue: !!node.defaultValue,
