@@ -170,7 +170,11 @@ An outer array whose length does not match the entities answered costs the whole
 
 ## Invalidation
 
-Entries leave the cache on their own TTL. The invalidation endpoint drops them earlier, by naming what they are about rather than the keys they sit under.
+Entries leave the cache on their own, when the TTL expires. However users might want to actively invalidate the cached data. In order to do this the router provides an invalidation endpoint on a different port, which can get called to invalidate entries.
+
+<Danger>
+**Tags may not be invalidated**. This is a known bug we are working on a fix for, essentially under certain circumstances certain entries belonging to a tag may not be invalidated, which leads to an issue of correctness.
+</Danger>
 
 ### Enable the endpoint
 
@@ -181,7 +185,6 @@ response_cache:
       enabled: true
       shared_key: 'a-random-string-of-at-least-32-characters'
 ```
-
 ### Send a request
 
 `POST` a JSON array to the endpoint, with the shared key as the `Authorization` header. There is no `Bearer` prefix.
