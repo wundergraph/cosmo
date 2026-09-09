@@ -1,18 +1,18 @@
 import process from 'node:process';
 import { pino } from 'pino';
+import postgres, { Sql } from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { S3Client } from '@aws-sdk/client-s3';
+import { and, eq } from 'drizzle-orm';
+import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
+import { OrganizationRepository } from '../core/repositories/OrganizationRepository.js';
+import * as schema from '../db/schema.js';
+import { FederatedGraphRepository } from '../core/repositories/FederatedGraphRepository.js';
+import { FeatureFlagRepository } from '../core/repositories/FeatureFlagRepository.js';
+import { CompositionService } from '../core/services/CompositionService.js';
+import { createS3ClientConfig, extractS3BucketName } from '../core/util.js';
+import { DualBlobStorage, S3BlobStorage } from '../core/blobstorage/index.js';
 import { getConfig } from './get-config.js';
-import { buildDatabaseConnectionConfig } from "../core/plugins/database.js";
-import postgres, { Sql } from "postgres";
-import { OrganizationRepository } from "../core/repositories/OrganizationRepository.js";
-import { drizzle } from "drizzle-orm/postgres-js";
-import * as schema from "../db/schema.js";
-import { FederatedGraphRepository } from "../core/repositories/FederatedGraphRepository.js";
-import { FeatureFlagRepository } from "../core/repositories/FeatureFlagRepository.js";
-import { CompositionService } from "../core/services/CompositionService.js";
-import { createS3ClientConfig, extractS3BucketName } from "../core/util.js";
-import { S3Client } from "@aws-sdk/client-s3";
-import { DualBlobStorage, S3BlobStorage } from "../core/blobstorage/index.js";
-import { and, eq } from "drizzle-orm";
 
 const {
   databaseConnectionUrl,
@@ -29,6 +29,7 @@ const {
 const organizationId = process.env.ORGANIZATION_ID || '';
 if (!organizationId) {
   console.error('ORGANIZATION_ID is required');
+  // eslint-disable-next-line unicorn/no-process-exit
   process.exit(1);
 }
 
@@ -52,6 +53,7 @@ try {
   const org = await orgRepo.byId(organizationId);
   if (!org) {
     console.log(`Organization with ID "${organizationId}" not found`);
+    // eslint-disable-next-line unicorn/no-process-exit
     process.exit(1);
   }
 
@@ -63,6 +65,7 @@ try {
 
   if (feature?.enabled) {
     console.log(`The feature has already been enable for "${org.name}" (${org.id})`);
+    // eslint-disable-next-line unicorn/no-process-exit
     process.exit(1);
   }
 
@@ -103,7 +106,9 @@ try {
       });
 
       if (compositionErrors.length > 0) {
-        console.error(`Failed to compose and deploy federated graph ${federatedGraph.id} in namespace ${federatedGraph.namespace}: ${compositionErrors[0].message}`);
+        console.error(
+          `Failed to compose and deploy federated graph ${federatedGraph.id} in namespace ${federatedGraph.namespace}: ${compositionErrors[0].message}`,
+        );
       }
     }
 
@@ -115,10 +120,7 @@ try {
         namespaceId: schema.featureFlags.namespaceId,
       })
       .from(schema.featureFlags)
-      .where(and(
-        eq(schema.featureFlags.organizationId, org.id),
-        eq(schema.featureFlags.isEnabled, true)
-      ))
+      .where(and(eq(schema.featureFlags.organizationId, org.id), eq(schema.featureFlags.isEnabled, true)))
       .execute();
 
     for (const { id, namespaceId } of orgFeatureFlags) {
@@ -138,7 +140,9 @@ try {
       });
 
       if (compositionErrors.length > 0) {
-        console.error(`Failed to compose and deploy feature flag ${featureFlag.id} in namespace ${featureFlag.namespace}: ${compositionErrors[0].message}`);
+        console.error(
+          `Failed to compose and deploy feature flag ${featureFlag.id} in namespace ${featureFlag.namespace}: ${compositionErrors[0].message}`,
+        );
       }
     }
 
@@ -146,6 +150,7 @@ try {
   });
 } catch (e) {
   console.error(e);
+  // eslint-disable-next-line unicorn/no-process-exit
   process.exit(1);
 } finally {
   if (queryConnection) {
