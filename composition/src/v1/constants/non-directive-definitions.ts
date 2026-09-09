@@ -9,8 +9,10 @@ import {
   AND_UPPER,
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
+  CONTEXT_FIELD_VALUE,
   EDFS_NATS_STREAM_CONFIGURATION,
   EXECUTION,
+  FEDERATION_POLICY,
   FIELD_PATH,
   FIELD_SET_SCALAR,
   IN_UPPER,
@@ -29,6 +31,12 @@ import {
   VALUES,
 } from '../../utils/string-constants';
 import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from './integers';
+
+// scalar ContextFieldValue
+export const CONTEXT_FIELD_VALUE_DEFINITION: ScalarTypeDefinitionNode = {
+  kind: Kind.SCALAR_TYPE_DEFINITION,
+  name: stringToNameNode(CONTEXT_FIELD_VALUE),
+};
 
 /*
  * input edfs__NatsStreamConfiguration {
@@ -70,6 +78,12 @@ export const EDFS_NATS_STREAM_CONFIGURATION_DEFINITION: InputObjectTypeDefinitio
       },
     },
   ],
+};
+
+// scalar federation__Policy
+export const FEDERATION_POLICY_DEFINITION: ScalarTypeDefinitionNode = {
+  kind: Kind.SCALAR_TYPE_DEFINITION,
+  name: stringToNameNode(FEDERATION_POLICY),
 };
 
 // scalar openfed__FieldSet
