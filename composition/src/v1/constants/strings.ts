@@ -13,14 +13,12 @@ import {
   EDFS_KAFKA_SUBSCRIBE,
   EDFS_NATS_PUBLISH,
   EDFS_NATS_REQUEST,
-  EDFS_NATS_STREAM_CONFIGURATION,
   EDFS_NATS_SUBSCRIBE,
   EDFS_REDIS_PUBLISH,
   EDFS_REDIS_SUBSCRIBE,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
   FIELD_DEFINITION_UPPER,
-  FIELD_SET_SCALAR,
   FLOAT_SCALAR,
   FROM_CONTEXT,
   ID_SCALAR,
@@ -32,8 +30,6 @@ import {
   INTERFACE_UPPER,
   KEY,
   LINK,
-  LINK_IMPORT,
-  LINK_PURPOSE,
   NOT_UPPER,
   OBJECT_UPPER,
   ONE_OF,
@@ -47,14 +43,11 @@ import {
   SEMANTIC_NON_NULL,
   STREAM_NAME,
   STRING_SCALAR,
-  SUBSCRIPTION_FIELD_CONDITION,
   SUBSCRIPTION_FILTER,
-  SUBSCRIPTION_FILTER_CONDITION,
-  SUBSCRIPTION_FILTER_VALUE,
   TAG,
   UNION_UPPER,
 } from '../../utils/string-constants';
-import { type DefinitionNode, Kind } from 'graphql';
+import { Kind, type TypeDefinitionNode } from 'graphql';
 import { type DirectiveName, type FieldName, type TypeName } from '../../types/types';
 import {
   CONTEXT_FIELD_VALUE_DEFINITION,
@@ -114,9 +107,9 @@ export const COMPOSITE_OUTPUT_NODE_KINDS: ReadonlySet<Kind> = new Set<Kind>([
   Kind.OBJECT_TYPE_EXTENSION,
 ]);
 
-export const DEPENDENCIES_BY_DIRECTIVE_NAME: ReadonlyMap<DirectiveName, Array<DefinitionNode>> = new Map<
+export const DEPENDENCIES_BY_DIRECTIVE_NAME: ReadonlyMap<DirectiveName, Array<TypeDefinitionNode>> = new Map<
   DirectiveName,
-  Array<DefinitionNode>
+  Array<TypeDefinitionNode>
 >([
   [CONNECT_FIELD_RESOLVER, [FIELD_SET_SCALAR_DEFINITION]],
   [EDFS_NATS_SUBSCRIBE, [EDFS_NATS_STREAM_CONFIGURATION_DEFINITION]],
@@ -139,17 +132,11 @@ export const DEPENDENCIES_BY_DIRECTIVE_NAME: ReadonlyMap<DirectiveName, Array<De
 
 export const IGNORED_FEDERATED_TYPE_NAMES: ReadonlySet<TypeName> = new Set<TypeName>([
   BOOLEAN_SCALAR,
-  EDFS_NATS_STREAM_CONFIGURATION,
-  FIELD_SET_SCALAR,
+  FLOAT_SCALAR,
   ID_SCALAR,
   INT_SCALAR,
-  FLOAT_SCALAR,
-  LINK_IMPORT,
-  LINK_PURPOSE,
   STRING_SCALAR,
-  SUBSCRIPTION_FIELD_CONDITION,
-  SUBSCRIPTION_FILTER_CONDITION,
-  SUBSCRIPTION_FILTER_VALUE,
+  ...[...DEPENDENCIES_BY_DIRECTIVE_NAME.values()].flat().map(({ name }) => name.value),
 ]);
 
 export const ROUTER_FEDERATED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new Set<DirectiveName>([
