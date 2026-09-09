@@ -38,7 +38,10 @@ export default ({ mode }) => {
           }
         : undefined,
     },
-    plugins: [react(), !singleFileOutput ? dts() : viteSingleFile()],
+    plugins: [
+      react(),
+      !singleFileOutput ? dts({ compilerOptions: { rootDir: path.resolve(__dirname, 'src') } }) : viteSingleFile(),
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

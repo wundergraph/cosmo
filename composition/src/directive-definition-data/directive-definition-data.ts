@@ -6,6 +6,7 @@ import {
   ASSUMED_SIZE,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
+  CACHE_TAG,
   CHANNEL,
   CHANNELS,
   COMPOSE_DIRECTIVE,
@@ -14,6 +15,7 @@ import {
   CONFIGURE_DESCRIPTION,
   CONNECT_FIELD_RESOLVER,
   CONTEXT,
+  CONTEXT_FIELD_VALUE,
   COST,
   DEFAULT_EDFS_PROVIDER_ID,
   DEPRECATED,
@@ -30,27 +32,41 @@ import {
   ENUM_VALUE_UPPER,
   EXTENDS,
   EXTERNAL,
+  FEDERATION_POLICY,
+  FIELD,
   FIELD_DEFINITION_UPPER,
   FIELDS,
   FOR,
+  FORMAT,
   FROM,
+  FROM_CONTEXT,
   IMPORT,
   INACCESSIBLE,
+  INCLUDE_HEADERS,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
   INT_SCALAR,
   INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
+  LABEL,
   LEVELS,
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
   LIST_SIZE,
+  MAX_AGE,
   NAME,
+  NEGATIVE_CACHE_TTL,
   OBJECT_UPPER,
   ONE_OF,
+  OPENFED_CACHE_INVALIDATE,
+  OPENFED_CACHE_POPULATE,
+  OPENFED_ENTITY_CACHE,
   OVERRIDE,
+  PARTIAL_CACHE_LOAD,
+  POLICIES,
+  POLICY,
   PROPAGATE,
   PROVIDER_ID,
   PROVIDES,
@@ -65,6 +81,7 @@ import {
   SCOPE_SCALAR,
   SCOPES,
   SEMANTIC_NON_NULL,
+  SHADOW_MODE,
   SHAREABLE,
   SIZED_FIELDS,
   SLICING_ARGUMENTS,
@@ -81,21 +98,15 @@ import {
   UNION_UPPER,
   URL_LOWER,
   WEIGHT,
-  OPENFED_CACHE_INVALIDATE,
-  OPENFED_CACHE_POPULATE,
-  OPENFED_ENTITY_CACHE,
-  INCLUDE_HEADERS,
-  MAX_AGE,
-  NEGATIVE_CACHE_TTL,
-  PARTIAL_CACHE_LOAD,
-  SHADOW_MODE,
 } from '../utils/string-constants';
 import {
   AUTHENTICATED_DEFINITION,
+  CACHE_TAG_DEFINITION,
   COMPOSE_DIRECTIVE_DEFINITION,
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION,
   CONFIGURE_DESCRIPTION_DEFINITION,
   CONNECT_FIELD_RESOLVER_DEFINITION,
+  CONTEXT_DEFINITION,
   COST_DEFINITION,
   DEPRECATED_DEFINITION,
   EDFS_KAFKA_PUBLISH_DEFINITION,
@@ -107,22 +118,24 @@ import {
   EDFS_REDIS_SUBSCRIBE_DEFINITION,
   EXTENDS_DEFINITION,
   EXTERNAL_DEFINITION,
+  FROM_CONTEXT_DEFINITION,
   INACCESSIBLE_DEFINITION,
   INTERFACE_OBJECT_DEFINITION,
   KEY_DEFINITION,
   LINK_DEFINITION,
   LIST_SIZE_DEFINITION,
   ONE_OF_DEFINITION,
+  OPENFED_CACHE_INVALIDATE_DEFINITION,
+  OPENFED_CACHE_POPULATE_DEFINITION,
+  OPENFED_ENTITY_CACHE_DEFINITION,
   OVERRIDE_DEFINITION,
+  POLICY_DEFINITION,
   PROVIDES_DEFINITION,
   REQUIRE_FETCH_REASONS_DEFINITION,
   REQUIRES_DEFINITION,
   REQUIRES_SCOPES_DEFINITION,
   SEMANTIC_NON_NULL_DEFINITION,
   SHAREABLE_DEFINITION,
-  OPENFED_CACHE_INVALIDATE_DEFINITION,
-  OPENFED_CACHE_POPULATE_DEFINITION,
-  OPENFED_ENTITY_CACHE_DEFINITION,
   SPECIFIED_BY_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
   TAG_DEFINITION,
@@ -135,7 +148,7 @@ import {
 } from '../v1/constants/type-nodes';
 import { type ArgumentName, type DirectiveLocation } from '../types/types';
 import { newDirectiveArgumentData, newDirectiveDefinitionData } from './utils';
-import { type DirectiveArgumentData, DirectiveDefinitionData } from './types/types';
+import { type DirectiveArgumentData } from './types/types';
 
 // Note that arguments with default values are classed as optional and should be placed into `optionalArgumentNames`.
 
@@ -149,6 +162,25 @@ export const AUTHENTICATED_DEFINITION_DATA = newDirectiveDefinitionData({
   ]),
   name: AUTHENTICATED,
   node: AUTHENTICATED_DEFINITION,
+});
+
+export const CACHE_TAG_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      FORMAT,
+      newDirectiveArgumentData({
+        directive: `@${CACHE_TAG}`,
+        name: FORMAT,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      }),
+    ],
+  ]),
+  isRepeatable: true,
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
+  name: CACHE_TAG,
+  node: CACHE_TAG_DEFINITION,
+  requiredArgumentNames: new Set<ArgumentName>([FORMAT]),
 });
 
 export const COMPOSE_DIRECTIVE_DEFINITION_DATA = newDirectiveDefinitionData({
@@ -259,6 +291,24 @@ export const CONNECT_FIELD_RESOLVER_DEFINITION_DATA = newDirectiveDefinitionData
   requiredArgumentNames: new Set<ArgumentName>([CONTEXT]),
 });
 
+export const CONTEXT_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      NAME,
+      newDirectiveArgumentData({
+        directive: `@${CONTEXT}`,
+        name: NAME,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([INTERFACE_UPPER, OBJECT_UPPER, UNION_UPPER]),
+  name: CONTEXT,
+  node: CONTEXT_DEFINITION,
+  requiredArgumentNames: new Set<ArgumentName>([NAME]),
+});
+
 export const COST_DEFINITION_DATA = newDirectiveDefinitionData({
   argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
     [
@@ -324,6 +374,24 @@ export const EXTERNAL_DEFINITION_DATA = newDirectiveDefinitionData({
   locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
   name: EXTERNAL,
   node: EXTERNAL_DEFINITION,
+});
+
+export const FROM_CONTEXT_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      FIELD,
+      newDirectiveArgumentData({
+        directive: `@${FROM_CONTEXT}`,
+        name: FIELD,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(CONTEXT_FIELD_VALUE),
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([ARGUMENT_DEFINITION_UPPER]),
+  name: FROM_CONTEXT,
+  node: FROM_CONTEXT_DEFINITION,
+  optionalArgumentNames: new Set<ArgumentName>([FIELD]),
 });
 
 export const INACCESSIBLE_DEFINITION_DATA = newDirectiveDefinitionData({
@@ -417,142 +485,6 @@ export const KAFKA_SUBSCRIBE_DEFINITION_DATA = newDirectiveDefinitionData({
   node: EDFS_KAFKA_SUBSCRIBE_DEFINITION,
   optionalArgumentNames: new Set<ArgumentName>([PROVIDER_ID]),
   requiredArgumentNames: new Set<ArgumentName>([TOPICS]),
-});
-
-export const NATS_PUBLISH_DEFINITION_DATA = newDirectiveDefinitionData({
-  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
-    [
-      SUBJECT,
-      newDirectiveArgumentData({
-        directive: `@${EDFS_NATS_PUBLISH}`,
-        name: SUBJECT,
-        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
-        typeNode: REQUIRED_STRING_TYPE_NODE,
-      }),
-    ],
-    [
-      PROVIDER_ID,
-      newDirectiveArgumentData({
-        defaultValue: {
-          kind: Kind.STRING,
-          value: DEFAULT_EDFS_PROVIDER_ID,
-        },
-        directive: `@${EDFS_NATS_PUBLISH}`,
-        name: PROVIDER_ID,
-        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
-        typeNode: REQUIRED_STRING_TYPE_NODE,
-      }),
-    ],
-  ]),
-  isComposed: true,
-  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
-  name: EDFS_NATS_PUBLISH,
-  node: EDFS_NATS_PUBLISH_DEFINITION,
-  optionalArgumentNames: new Set<ArgumentName>([PROVIDER_ID]),
-  requiredArgumentNames: new Set<ArgumentName>([SUBJECT]),
-});
-
-export const NATS_REQUEST_DEFINITION_DATA = newDirectiveDefinitionData({
-  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
-    [
-      SUBJECT,
-      newDirectiveArgumentData({
-        directive: `@${EDFS_NATS_REQUEST}`,
-        name: SUBJECT,
-        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
-        typeNode: REQUIRED_STRING_TYPE_NODE,
-      }),
-    ],
-    [
-      PROVIDER_ID,
-      newDirectiveArgumentData({
-        defaultValue: {
-          kind: Kind.STRING,
-          value: DEFAULT_EDFS_PROVIDER_ID,
-        },
-        directive: `@${EDFS_NATS_REQUEST}`,
-        name: PROVIDER_ID,
-        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
-        typeNode: REQUIRED_STRING_TYPE_NODE,
-      }),
-    ],
-  ]),
-  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
-  name: EDFS_NATS_REQUEST,
-  node: EDFS_NATS_REQUEST_DEFINITION,
-  optionalArgumentNames: new Set<ArgumentName>([PROVIDER_ID]),
-  requiredArgumentNames: new Set<ArgumentName>([SUBJECT]),
-});
-
-export const NATS_SUBSCRIBE_DEFINITION_DATA = newDirectiveDefinitionData({
-  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
-    [
-      SUBJECTS,
-      newDirectiveArgumentData({
-        directive: `@${EDFS_NATS_SUBSCRIBE}`,
-        name: SUBJECTS,
-        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
-        typeNode: {
-          kind: Kind.NON_NULL_TYPE,
-          type: {
-            kind: Kind.LIST_TYPE,
-            type: REQUIRED_STRING_TYPE_NODE,
-          },
-        },
-      }),
-    ],
-    [
-      PROVIDER_ID,
-      newDirectiveArgumentData({
-        directive: `@${EDFS_NATS_SUBSCRIBE}`,
-        defaultValue: {
-          kind: Kind.STRING,
-          value: DEFAULT_EDFS_PROVIDER_ID,
-        },
-        name: PROVIDER_ID,
-        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
-        typeNode: REQUIRED_STRING_TYPE_NODE,
-      }),
-    ],
-    [
-      STREAM_CONFIGURATION,
-      newDirectiveArgumentData({
-        directive: `@${EDFS_NATS_SUBSCRIBE}`,
-        name: STREAM_CONFIGURATION,
-        namedTypeKind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
-        typeNode: stringToNamedTypeNode(EDFS_NATS_STREAM_CONFIGURATION),
-      }),
-    ],
-  ]),
-  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
-  name: EDFS_NATS_SUBSCRIBE,
-  node: EDFS_NATS_SUBSCRIBE_DEFINITION,
-  optionalArgumentNames: new Set<ArgumentName>([PROVIDER_ID, STREAM_CONFIGURATION]),
-  requiredArgumentNames: new Set<ArgumentName>([SUBJECTS]),
-});
-
-export const ONE_OF_DEFINITION_DATA = newDirectiveDefinitionData({
-  locations: new Set<DirectiveLocation>([INPUT_OBJECT_UPPER]),
-  name: ONE_OF,
-  node: ONE_OF_DEFINITION,
-});
-
-export const OVERRIDE_DEFINITION_DATA = newDirectiveDefinitionData({
-  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
-    [
-      FROM,
-      newDirectiveArgumentData({
-        directive: `@${OVERRIDE}`,
-        name: FROM,
-        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
-        typeNode: REQUIRED_STRING_TYPE_NODE,
-      }),
-    ],
-  ]),
-  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
-  name: OVERRIDE,
-  node: OVERRIDE_DEFINITION,
-  requiredArgumentNames: new Set<ArgumentName>([FROM]),
 });
 
 export const KEY_DEFINITION_DATA = newDirectiveDefinitionData({
@@ -696,6 +628,191 @@ export const LIST_SIZE_DEFINITION_DATA = newDirectiveDefinitionData({
     SIZED_FIELDS,
     REQUIRE_ONE_SLICING_ARGUMENT,
   ]),
+});
+
+export const NATS_PUBLISH_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      SUBJECT,
+      newDirectiveArgumentData({
+        directive: `@${EDFS_NATS_PUBLISH}`,
+        name: SUBJECT,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      }),
+    ],
+    [
+      PROVIDER_ID,
+      newDirectiveArgumentData({
+        defaultValue: {
+          kind: Kind.STRING,
+          value: DEFAULT_EDFS_PROVIDER_ID,
+        },
+        directive: `@${EDFS_NATS_PUBLISH}`,
+        name: PROVIDER_ID,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      }),
+    ],
+  ]),
+  isComposed: true,
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: EDFS_NATS_PUBLISH,
+  node: EDFS_NATS_PUBLISH_DEFINITION,
+  optionalArgumentNames: new Set<ArgumentName>([PROVIDER_ID]),
+  requiredArgumentNames: new Set<ArgumentName>([SUBJECT]),
+});
+
+export const NATS_REQUEST_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      SUBJECT,
+      newDirectiveArgumentData({
+        directive: `@${EDFS_NATS_REQUEST}`,
+        name: SUBJECT,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      }),
+    ],
+    [
+      PROVIDER_ID,
+      newDirectiveArgumentData({
+        defaultValue: {
+          kind: Kind.STRING,
+          value: DEFAULT_EDFS_PROVIDER_ID,
+        },
+        directive: `@${EDFS_NATS_REQUEST}`,
+        name: PROVIDER_ID,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: EDFS_NATS_REQUEST,
+  node: EDFS_NATS_REQUEST_DEFINITION,
+  optionalArgumentNames: new Set<ArgumentName>([PROVIDER_ID]),
+  requiredArgumentNames: new Set<ArgumentName>([SUBJECT]),
+});
+
+export const NATS_SUBSCRIBE_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      SUBJECTS,
+      newDirectiveArgumentData({
+        directive: `@${EDFS_NATS_SUBSCRIBE}`,
+        name: SUBJECTS,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: {
+          kind: Kind.NON_NULL_TYPE,
+          type: {
+            kind: Kind.LIST_TYPE,
+            type: REQUIRED_STRING_TYPE_NODE,
+          },
+        },
+      }),
+    ],
+    [
+      PROVIDER_ID,
+      newDirectiveArgumentData({
+        directive: `@${EDFS_NATS_SUBSCRIBE}`,
+        defaultValue: {
+          kind: Kind.STRING,
+          value: DEFAULT_EDFS_PROVIDER_ID,
+        },
+        name: PROVIDER_ID,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      }),
+    ],
+    [
+      STREAM_CONFIGURATION,
+      newDirectiveArgumentData({
+        directive: `@${EDFS_NATS_SUBSCRIBE}`,
+        name: STREAM_CONFIGURATION,
+        namedTypeKind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(EDFS_NATS_STREAM_CONFIGURATION),
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: EDFS_NATS_SUBSCRIBE,
+  node: EDFS_NATS_SUBSCRIBE_DEFINITION,
+  optionalArgumentNames: new Set<ArgumentName>([PROVIDER_ID, STREAM_CONFIGURATION]),
+  requiredArgumentNames: new Set<ArgumentName>([SUBJECTS]),
+});
+
+export const ONE_OF_DEFINITION_DATA = newDirectiveDefinitionData({
+  locations: new Set<DirectiveLocation>([INPUT_OBJECT_UPPER]),
+  name: ONE_OF,
+  node: ONE_OF_DEFINITION,
+});
+
+export const OVERRIDE_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      FROM,
+      newDirectiveArgumentData({
+        directive: `@${OVERRIDE}`,
+        name: FROM,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      }),
+    ],
+    [
+      LABEL,
+      newDirectiveArgumentData({
+        directive: `@${OVERRIDE}`,
+        name: LABEL,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(STRING_SCALAR),
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
+  name: OVERRIDE,
+  node: OVERRIDE_DEFINITION,
+  optionalArgumentNames: new Set<ArgumentName>([LABEL]),
+  requiredArgumentNames: new Set<ArgumentName>([FROM]),
+});
+
+export const POLICY_DEFINITION_DATA = newDirectiveDefinitionData({
+  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
+    [
+      POLICIES,
+      newDirectiveArgumentData({
+        directive: `@${POLICY}`,
+        name: POLICIES,
+        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
+        typeNode: {
+          kind: Kind.NON_NULL_TYPE,
+          type: {
+            kind: Kind.LIST_TYPE,
+            type: {
+              kind: Kind.NON_NULL_TYPE,
+              type: {
+                kind: Kind.LIST_TYPE,
+                type: {
+                  kind: Kind.NON_NULL_TYPE,
+                  type: stringToNamedTypeNode(FEDERATION_POLICY),
+                },
+              },
+            },
+          },
+        },
+      }),
+    ],
+  ]),
+  locations: new Set<DirectiveLocation>([
+    ENUM_UPPER,
+    FIELD_DEFINITION_UPPER,
+    INTERFACE_UPPER,
+    OBJECT_UPPER,
+    SCALAR_UPPER,
+  ]),
+  name: POLICY,
+  node: POLICY_DEFINITION,
+  requiredArgumentNames: new Set<ArgumentName>([POLICIES]),
 });
 
 export const PROVIDES_DEFINITION_DATA = newDirectiveDefinitionData({

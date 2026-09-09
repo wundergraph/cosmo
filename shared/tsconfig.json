@@ -6,7 +6,10 @@
     "moduleResolution": "NodeNext",
     "declarationDir": "./dist",
     "outDir": "./dist",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "sourceMap": true,
+    "types": ["node"],
     "typeRoots": ["./node_modules/@types", "./src/typedefinitions"]
   },
   "include": ["src/**/*"],

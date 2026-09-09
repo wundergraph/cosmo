@@ -25,7 +25,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 	t.Run("local cache", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("Sha without query fails", func(t *testing.T) {
+		t.Run("returns not found when an unknown hash has no query", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
@@ -34,6 +34,9 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 				},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: true,
+					Cache: config.AutomaticPersistedQueriesCacheConfig{
+						Size: 1024 * 1024,
+					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{

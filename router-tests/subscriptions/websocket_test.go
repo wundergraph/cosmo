@@ -2383,12 +2383,15 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 
-	t.Run("cache poisoning is tried but prevented", func(t *testing.T) {
+	t.Run("rejects cache poisoning when query and hash differ", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			ApqConfig: config.AutomaticPersistedQueriesConfig{
 				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))

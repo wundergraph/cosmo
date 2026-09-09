@@ -54,11 +54,10 @@ func (c *OperationsCache) Get(clientName string, operationHash string) []byte {
 	return item
 }
 
-func (c *OperationsCache) Set(clientName, operationHash string, operationBody []byte, ttl int) {
+func (c *OperationsCache) Set(clientName, operationHash string, operationBody []byte, ttl time.Duration) {
 	if ttl > 0 {
-		ttlD := time.Duration(float64(ttl)) * time.Second
 		c.cacheLock.Lock()
-		c.Cache.SetWithTTL(c.key(clientName, operationHash), operationBody, int64(len(operationBody)), ttlD)
+		c.Cache.SetWithTTL(c.key(clientName, operationHash), operationBody, int64(len(operationBody)), ttl)
 		c.cacheLock.Unlock()
 		return
 	}
