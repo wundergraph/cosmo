@@ -12,6 +12,7 @@ import { CompositionService } from "../core/services/CompositionService.js";
 import { createS3ClientConfig, extractS3BucketName } from "../core/util.js";
 import { S3Client } from "@aws-sdk/client-s3";
 import { DualBlobStorage, S3BlobStorage } from "../core/blobstorage/index.js";
+import { and, eq } from "drizzle-orm";
 
 const {
   databaseConnectionUrl,
@@ -108,14 +109,25 @@ try {
 
     // Recompose all feature flags
     const featureFlagsRepo = new FeatureFlagRepository(logger, tx, org.id);
-    const featureFlags = await featureFlagsRepo.getFeatureFlags({ limit: 0, offset: 0 });
+    const orgFeatureFlags = await tx
+      .select({
+        id: schema.featureFlags.id,
+        namespaceId: schema.featureFlags.namespaceId,
+      })
+      .from(schema.featureFlags)
+      .where(and(
+        eq(schema.featureFlags.organizationId, org.id),
+        eq(schema.featureFlags.isEnabled, true)
+      ))
+      .execute();
 
-    for (const { id, namespace, isEnabled } of featureFlags) {
-      if (!isEnabled) {
-        continue;
-      }
+    for (const { id, namespaceId } of orgFeatureFlags) {
+      const featureFlag = await featureFlagsRepo.getFeatureFlagById({
+        featureFlagId: id,
+        namespaceId,
+        includeSubgraphs: true,
+      });
 
-      const featureFlag = await featureFlagsRepo.getFeatureFlagById({ featureFlagId: id, namespaceId: namespace });
       if (!featureFlag) {
         continue;
       }
