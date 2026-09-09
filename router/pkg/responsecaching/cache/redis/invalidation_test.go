@@ -102,9 +102,19 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, []string{"v1:a"}, members, "still named by the tag that did not take it")
 
+		// Missing entry, expiry still ahead: indistinguishable from a write in
+		// flight, so it is left until its expiry passes.
 		removed, err = c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
 		require.NoError(t, err)
 		require.Zero(t, removed, "counted from what redis removed, and the entry was already gone")
+		members, err = mr.ZMembers(tagIndexKey("subgraph:accounts"))
+		require.NoError(t, err)
+		require.Equal(t, []string{"v1:a"}, members)
+
+		advance(c, 2*time.Minute)
+		removed, err = c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
+		require.NoError(t, err)
+		require.Zero(t, removed)
 		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
 	})
 
@@ -116,10 +126,69 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 			item("v1:a", "declared:accounts:users"),
 		}))
 		mr.FastForward(2 * time.Minute)
+		advance(c, 2*time.Minute)
 
 		removed, err := c.InvalidateByTags(t.Context(), []string{"declared:accounts:users"})
 		require.NoError(t, err)
 		require.Zero(t, removed)
+		require.False(t, mr.Exists(tagIndexKey("declared:accounts:users")), "expired member is dropped with nothing to wait for")
+	})
+
+	t.Run("a member whose entry has not landed yet is left for the next call", func(t *testing.T) {
+		// SetMany writes the index ahead of the entry and the two are not
+		// atomic. Dropping the member here would leave the entry, once it
+		// lands, where no invalidation could find it.
+		t.Parallel()
+		c, mr := newTestRedisCache(t)
+
+		expireAt := float64(c.now().Add(time.Minute).UnixMilli())
+		mr.ZAdd(tagIndexKey("subgraph:accounts"), expireAt, "v1:a")
+
+		removed, err := c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
+		require.NoError(t, err)
+		require.Zero(t, removed)
+		members, err := mr.ZMembers(tagIndexKey("subgraph:accounts"))
+		require.NoError(t, err)
+		require.Equal(t, []string{"v1:a"}, members, "kept: nothing to remove yet, and something may be coming")
+
+		// The entry lands. Its ZADD is a no-op on the member already there.
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item("v1:a", "subgraph:accounts")}))
+
+		removed, err = c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
+		require.NoError(t, err)
+		require.Equal(t, 1, removed)
+		require.False(t, mr.Exists(entryKey("v1:a")))
+		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
+	})
+
+	t.Run("members left in place do not stop the walk reaching later pages", func(t *testing.T) {
+		// Kept members sort ahead of what is unread, so paging has to step
+		// past them or it would read the same page forever.
+		t.Parallel()
+		c, mr := newTestRedisCache(t)
+
+		const count = invalidationPageSize*2 + 1
+		items := make([]enginecache.Item, 0, count)
+		for i := range count {
+			items = append(items, item(fmt.Sprintf("v1:%d", i), "subgraph:accounts"))
+		}
+		require.NoError(t, c.SetMany(t.Context(), items))
+
+		// Entries gone but members not: indistinguishable from writes in flight.
+		for i := 0; i < count; i += 2 {
+			mr.Del(entryKey(fmt.Sprintf("v1:%d", i)))
+		}
+
+		removed, err := c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
+		require.NoError(t, err)
+		require.Equal(t, count/2, removed)
+
+		members, err := mr.ZMembers(tagIndexKey("subgraph:accounts"))
+		require.NoError(t, err)
+		require.Len(t, members, count-count/2)
+		for i := range count {
+			require.False(t, mr.Exists(entryKey(fmt.Sprintf("v1:%d", i))))
+		}
 	})
 
 	t.Run("a tag naming more entries than one page still takes all of them", func(t *testing.T) {
@@ -161,6 +230,39 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
 	})
 
+	t.Run("an entry written during invalidation is left for the next one", func(t *testing.T) {
+		// The index is read, then its entries removed, and a write can land in
+		// between. Taking the index whole would drop that write's member while
+		// its entry survives, unreachable by any later invalidation.
+		t.Parallel()
+		interposer := &afterCommand{name: "zrevrange"}
+		c, mr := newTestRedisCacheWithHook(t, interposer)
+
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item("v1:a", "subgraph:accounts")}))
+
+		interposer.fn = func() {
+			advance(c, time.Second)
+			require.NoError(t, c.SetMany(context.Background(), []enginecache.Item{item("v1:b", "subgraph:accounts")}))
+		}
+
+		removed, err := c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
+		require.NoError(t, err)
+		require.Equal(t, 1, removed)
+		require.False(t, mr.Exists(entryKey("v1:a")))
+		require.True(t, mr.Exists(entryKey("v1:b")))
+
+		members, err := mr.ZMembers(tagIndexKey("subgraph:accounts"))
+		require.NoError(t, err)
+		require.Equal(t, []string{"v1:b"}, members, "still indexed, so the next call takes it")
+
+		interposer.fn = nil
+		removed, err = c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
+		require.NoError(t, err)
+		require.Equal(t, 1, removed)
+		require.False(t, mr.Exists(entryKey("v1:b")))
+		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
+	})
+
 	t.Run("no tags removes nothing", func(t *testing.T) {
 		t.Parallel()
 		c, mr := newTestRedisCache(t)
@@ -198,7 +300,7 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 				require.Equal(t, 1, cmd.keys, "one key per UNLINK, or a cluster answers CROSSSLOT")
 			}
 		}
-		require.Equal(t, 3, unlinks, "one per entry, plus the tag index itself")
+		require.Equal(t, 2, unlinks, "one per entry; the index empties itself")
 	})
 }
 
@@ -250,4 +352,40 @@ func (r *recordCommands) ProcessPipelineHook(next redis.ProcessPipelineHook) red
 		r.note(cmds...)
 		return next(ctx, cmds)
 	}
+}
+
+// afterCommand runs fn once the named command has been answered, for the
+// cases that need a write to land in the middle of a multi step call. It
+// does not fire for the commands fn itself sends.
+type afterCommand struct {
+	name string
+	fn   func()
+	mu   sync.Mutex
+	busy bool
+}
+
+func (a *afterCommand) DialHook(next redis.DialHook) redis.DialHook { return next }
+
+func (a *afterCommand) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
+	return func(ctx context.Context, cmd redis.Cmder) error {
+		err := next(ctx, cmd)
+		if cmd.Name() != a.name {
+			return err
+		}
+		a.mu.Lock()
+		fn, busy := a.fn, a.busy
+		a.busy = true
+		a.mu.Unlock()
+		if fn != nil && !busy {
+			fn()
+		}
+		a.mu.Lock()
+		a.busy = false
+		a.mu.Unlock()
+		return err
+	}
+}
+
+func (a *afterCommand) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
+	return next
 }
