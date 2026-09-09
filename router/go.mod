@@ -52,7 +52,7 @@ require (
 	go.withmatt.com/connect-brotli v0.4.0
 	golang.org/x/sync v0.22.0
 	golang.org/x/sys v0.47.0 // indirect
-	google.golang.org/grpc v1.83.1
+	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.11
 )
 
@@ -87,7 +87,7 @@ require (
 	github.com/wundergraph/go-arena v1.3.0
 	go.uber.org/goleak v1.3.0
 	go.uber.org/ratelimit v0.3.1
-	golang.org/x/net v0.57.0
+	golang.org/x/net v0.58.0
 	golang.org/x/text v0.41.0
 	golang.org/x/time v0.15.0
 )
