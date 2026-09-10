@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { isSchemaLoading, SchemaLoadingInput } from '../lib/schema-loading';
+import { isSchemaLoading, SchemaLoadingInput, SchemaSdls, selectSchemaSdl } from '../lib/schema-loading';
 
 const settled: SchemaLoadingInput = {
   isLoadingGraphSchema: false,
@@ -29,5 +29,32 @@ describe('isSchemaLoading', () => {
 
   test('that a graph selection does not wait for the feature flag list', () => {
     expect(isSchemaLoading({ ...settled, isLoadingCompositionFlags: true })).toBe(false);
+  });
+});
+
+describe('selectSchemaSdl', () => {
+  const sdls: SchemaSdls = {
+    featureSubgraph: 'type Query { featureSubgraph: String }',
+    subgraph: 'type Query { subgraph: String }',
+    graph: 'type Query { graph: String }',
+  };
+
+  test('that a feature subgraph selection uses the feature subgraph schema', () => {
+    expect(selectSchemaSdl('featureSubgraph', sdls)).toBe(sdls.featureSubgraph);
+  });
+
+  test('that a subgraph selection uses the subgraph schema', () => {
+    expect(selectSchemaSdl('subgraph', sdls)).toBe(sdls.subgraph);
+  });
+
+  // A feature flag composes the whole graph, so its schema comes from the federated graph query.
+  test.each(['graph', 'featureFlag'] as const)('that a %s selection uses the graph schema', (configType) => {
+    expect(selectSchemaSdl(configType, sdls)).toBe(sdls.graph);
+  });
+
+  // The endpoint stays the feature subgraph's, so any other schema would have GraphiQL validate
+  // operations against something that endpoint does not serve.
+  test('that a feature subgraph without a schema does not fall back to the graph schema', () => {
+    expect(selectSchemaSdl('featureSubgraph', { ...sdls, featureSubgraph: undefined })).toBeUndefined();
   });
 });

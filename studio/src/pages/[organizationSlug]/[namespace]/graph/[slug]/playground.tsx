@@ -41,7 +41,7 @@ import { useLocalStorage } from '@/hooks/use-local-storage';
 import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE, PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
 import { NextPageWithLayout } from '@/lib/page';
 import { effectiveDefaultHeadersString, substituteHeadersFromEnv, validateHeaders } from '@/lib/playground-headers';
-import { isSchemaLoading } from '@/lib/schema-loading';
+import { ConfigType, isSchemaLoading, selectSchemaSdl } from '@/lib/schema-loading';
 import { parseSchema } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
@@ -604,8 +604,6 @@ const ToggleClientValidation = () => {
   );
 };
 
-type ConfigType = 'graph' | 'featureFlag' | 'featureSubgraph' | 'subgraph';
-
 const CONFIG_TYPE_LABELS: Record<ConfigType, string> = {
   graph: 'Graph',
   featureFlag: 'Feature flag',
@@ -864,8 +862,14 @@ const PlaygroundPage: NextPageWithLayout = () => {
   }, [defaultHeadersData]);
 
   const schema = useMemo(() => {
-    return parseSchema(featureSubgraphData?.sdl || subgraphData?.sdl || data?.clientSchema)?.ast ?? null;
-  }, [data?.clientSchema, featureSubgraphData?.sdl, subgraphData?.sdl]);
+    const sdl = selectSchemaSdl(configType, {
+      featureSubgraph: featureSubgraphData?.sdl,
+      subgraph: subgraphData?.sdl,
+      graph: data?.clientSchema,
+    });
+
+    return parseSchema(sdl)?.ast ?? null;
+  }, [configType, data?.clientSchema, featureSubgraphData?.sdl, subgraphData?.sdl]);
 
   const [query, setQuery] = useState<string | undefined>(operation ? decodeURIComponent(operation) : undefined);
 

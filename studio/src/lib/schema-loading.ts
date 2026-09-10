@@ -1,3 +1,6 @@
+/** What the playground's schema selector is pointed at. */
+export type ConfigType = 'graph' | 'featureFlag' | 'featureSubgraph' | 'subgraph';
+
 export interface SchemaLoadingInput {
   isLoadingGraphSchema: boolean;
   isLoadingSubgraphSchema: boolean;
@@ -23,3 +26,31 @@ export const isSchemaLoading = ({
   isLoadingSubgraphSchema ||
   isLoadingFeatureSubgraphSchema ||
   (isFeatureSubgraphSelected && isLoadingCompositionFlags);
+
+export interface SchemaSdls {
+  featureSubgraph: string | undefined;
+  subgraph: string | undefined;
+  /** The federated graph's client schema, which also covers a feature flag selection. */
+  graph: string | undefined;
+}
+
+/**
+ * The SDL for the current selection, or undefined when it has none. Each selection has exactly one
+ * schema and its own endpoint, so falling back to another selection's schema would validate
+ * operations against something the chosen endpoint does not serve.
+ */
+export const selectSchemaSdl = (configType: ConfigType, sdls: SchemaSdls): string | undefined => {
+  switch (configType) {
+    case 'featureSubgraph': {
+      return sdls.featureSubgraph;
+    }
+    case 'subgraph': {
+      return sdls.subgraph;
+    }
+    // A feature flag composes the whole graph, so its schema comes from the federated graph query.
+    case 'graph':
+    case 'featureFlag': {
+      return sdls.graph;
+    }
+  }
+};
