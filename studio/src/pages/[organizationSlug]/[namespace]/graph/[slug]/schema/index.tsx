@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/empty-state';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { EmptySchema } from '@/components/schema/empty-schema-state';
 import { SchemaToolbar } from '@/components/schema/toolbar';
+import { toSchemaType } from '@/components/schema/schema-selection';
 import { SchemaSelector } from '@/components/schema/schema-selector';
 import { SchemaTypeSelect } from '@/components/schema/schema-type-select';
 import { Badge, badgeVariants } from '@/components/ui/badge';
@@ -852,7 +853,7 @@ export const GraphSelector = () => {
   const router = useRouter();
   const activeFeatureFlag = router.query.featureFlag as string;
   const graphName = router.query.slug as string;
-  const schemaType = router.query.schemaType === 'router' ? 'router' : 'client';
+  const schemaType = toSchemaType(router.query.schemaType as string);
   const {
     namespace: { name: namespace },
   } = useWorkspace();
@@ -882,6 +883,7 @@ export const GraphSelector = () => {
   return (
     <SchemaSelector
       title={activeFeatureFlag || graphName}
+      graphName={graphName}
       supportsFederation
       featureFlags={featureFlags}
       selection={{ featureFlag: activeFeatureFlag, schemaType }}

@@ -1,6 +1,5 @@
-import { GraphContext } from '@/components/layout/graph-layout';
 import { FeatureFlagMenuItem } from '@/components/schema/feature-flag-menu-item';
-import { SchemaSelection } from '@/components/schema/schema-selection';
+import { SchemaSelection, toSchemaType } from '@/components/schema/schema-selection';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,12 +19,12 @@ import { Separator } from '@/components/ui/separator';
 import { ChevronUpDownIcon } from '@heroicons/react/24/outline';
 import { Component2Icon } from '@radix-ui/react-icons';
 import { FeatureFlag, FeatureSubgraphInFlagComposition } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { useContext } from 'react';
 import { MdOutlineFeaturedPlayList } from 'react-icons/md';
 import { PiGraphLight } from 'react-icons/pi';
 
 export interface SchemaSelectorProps {
   title: string;
+  graphName: string;
   supportsFederation: boolean;
   featureFlags: FeatureFlag[];
   selection: SchemaSelection;
@@ -36,6 +35,7 @@ export interface SchemaSelectorProps {
 
 export const SchemaSelector = ({
   title,
+  graphName,
   supportsFederation,
   featureFlags,
   selection,
@@ -43,29 +43,24 @@ export const SchemaSelector = ({
   subgraphNames,
   featureSubgraphsOfFlag,
 }: SchemaSelectorProps) => {
-  const graphData = useContext(GraphContext);
   const activeSchemaType = selection.schemaType ?? 'client';
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger value={title} className="w-full md:ml-auto md:w-max md:min-w-[200px]" asChild>
-        <div className="flex items-center justify-center">
-          <Button className="flex w-[220px] text-sm" variant="outline" asChild>
-            <div className="flex justify-between">
-              <div className="flex">
-                <p className="max-w-[120px] truncate">
-                  {supportsFederation ? title : selection.subgraph ? 'Published SDL' : 'Router SDL'}
-                </p>
-                {!selection.subgraph && (
-                  <Badge variant="secondary" className="ml-2">
-                    {activeSchemaType}
-                  </Badge>
-                )}
-              </div>
-              <ChevronUpDownIcon className="h-4 w-4" />
-            </div>
-          </Button>
-        </div>
+      <DropdownMenuTrigger asChild>
+        <Button className="flex w-[220px] justify-between text-sm" variant="outline">
+          <div className="flex">
+            <p className="max-w-[120px] truncate">
+              {supportsFederation ? title : selection.subgraph ? 'Published SDL' : 'Router SDL'}
+            </p>
+            {!selection.subgraph && (
+              <Badge variant="secondary" className="ml-2">
+                {activeSchemaType}
+              </Badge>
+            )}
+          </div>
+          <ChevronUpDownIcon className="h-4 w-4" />
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-[220px]">
         {supportsFederation ? (
@@ -75,11 +70,11 @@ export const SchemaSelector = ({
                 <PiGraphLight className="h-3 w-3" /> Graph
               </DropdownMenuLabel>
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger>{graphData?.graph?.name}</DropdownMenuSubTrigger>
+                <DropdownMenuSubTrigger>{graphName}</DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent>
                     <DropdownMenuRadioGroup
-                      onValueChange={(value) => onSelect({ schemaType: value })}
+                      onValueChange={(value) => onSelect({ schemaType: toSchemaType(value) })}
                       value={!selection.featureFlag && !selection.subgraph ? activeSchemaType : ''}
                     >
                       <DropdownMenuRadioItem className="w-[150px] items-center justify-between pl-2" value="client">

@@ -44,7 +44,7 @@ import { useLocalStorage } from '@/hooks/use-local-storage';
 import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE, PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
 import { NextPageWithLayout } from '@/lib/page';
 import { substituteHeadersFromEnv, validateHeaders } from '@/lib/playground-headers';
-import { isPlaygroundSchemaLoading } from '@/lib/playground-schema-loading';
+import { isSchemaLoading } from '@/lib/schema-loading';
 import { parseSchema } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
@@ -835,7 +835,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     },
   );
 
-  const isLoading = isPlaygroundSchemaLoading({
+  const isLoading = isSchemaLoading({
     isLoadingGraphSchema,
     isLoadingSubgraphSchema,
     isLoadingFeatureSubgraphSchema,

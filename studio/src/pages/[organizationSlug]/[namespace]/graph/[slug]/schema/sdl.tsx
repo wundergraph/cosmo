@@ -1,18 +1,21 @@
 import { CompositionErrorsBanner } from '@/components/composition-errors-banner';
+import { EmptyState } from '@/components/empty-state';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { PageHeader } from '@/components/layout/head';
 import { EmptySchema } from '@/components/schema/empty-schema-state';
 import { SDLViewerActions } from '@/components/schema/sdl-viewer';
 import { SDLViewerMonaco } from '@/components/schema/sdl-viewer-monaco';
 import { SchemaToolbar } from '@/components/schema/toolbar';
-import { SchemaSelection } from '@/components/schema/schema-selection';
+import { SchemaSelection, toSchemaType } from '@/components/schema/schema-selection';
 import { SchemaSelector } from '@/components/schema/schema-selector';
 import { Loader } from '@/components/ui/loader';
 import useHash from '@/hooks/use-hash';
 import { buildUrl } from '@/lib/build-url';
 import { formatDateTime } from '@/lib/format-date';
 import { NextPageWithLayout } from '@/lib/page';
+import { isSchemaLoading } from '@/lib/schema-loading';
 import { useQuery } from '@connectrpc/connect-query';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getFederatedGraphSDLByName,
@@ -69,7 +72,7 @@ const SDLPage: NextPageWithLayout = () => {
       )
     : undefined;
 
-  const activeSchemaType = schemaType === 'router' ? 'router' : 'client';
+  const activeSchemaType = toSchemaType(schemaType);
 
   /** Only one schema can be selected, so every selection clears the other two params. */
   const selectSchema = (next: SchemaSelection) =>
@@ -157,17 +160,28 @@ const SDLPage: NextPageWithLayout = () => {
           time: graphData?.graph?.lastUpdatedAt ?? '',
         };
 
-  const isLoading =
-    loadingGraphSDL ||
-    loadingSubgraphSDL ||
-    loadingFeatureSubgraphSDL ||
-    // Which SDL to fetch is unknown until the flag list has loaded.
-    (isFeatureSubgraphSelected && loadingCompositionFlags);
+  const isLoading = isSchemaLoading({
+    isLoadingGraphSchema: loadingGraphSDL,
+    isLoadingSubgraphSchema: loadingSubgraphSDL,
+    isLoadingFeatureSubgraphSchema: loadingFeatureSubgraphSDL,
+    isLoadingCompositionFlags: loadingCompositionFlags,
+    isFeatureSubgraphSelected,
+  });
 
   let content: React.ReactNode;
 
   if (isLoading) {
     content = <Loader fullscreen />;
+  } else if (isFeatureSubgraphSelected && !activeFeatureSubgraph) {
+    // A renamed flag or a stale link leaves the selection unresolvable, which is not the same as a
+    // feature subgraph that exists but has no published schema.
+    content = (
+      <EmptyState
+        icon={<ExclamationTriangleIcon />}
+        title="Schema not found"
+        description={`${activeSubgraph} is not part of the latest composition of feature flag ${activeFeatureFlag}. The flag may have been renamed, or the feature subgraph removed from it.`}
+      />
+    );
   } else if (isFeatureSubgraphSelected && !featureSubgraphSdl?.sdl) {
     content = <EmptySchema subgraphName={activeSubgraph} />;
   } else if (
@@ -216,6 +230,7 @@ const SDLPage: NextPageWithLayout = () => {
             <div className="mt-2 flex flex-1 flex-row flex-wrap gap-2 md:mt-0">
               <SchemaSelector
                 title={activeGraphWithSDL.title}
+                graphName={graphName}
                 supportsFederation={!!graphData?.graph?.supportsFederation}
                 featureFlags={featureFlags}
                 selection={{ featureFlag: activeFeatureFlag, subgraph: activeSubgraph, schemaType: activeSchemaType }}

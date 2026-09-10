@@ -1,4 +1,4 @@
-export interface PlaygroundSchemaLoadingInput {
+export interface SchemaLoadingInput {
   isLoadingGraphSchema: boolean;
   isLoadingSubgraphSchema: boolean;
   isLoadingFeatureSubgraphSchema: boolean;
@@ -8,17 +8,17 @@ export interface PlaygroundSchemaLoadingInput {
 }
 
 /**
- * Whether the playground should withhold the schema from GraphiQL. A feature subgraph selection is
- * resolved from the feature flag list, so it is not yet known which schema to fetch until that has
- * loaded. Handing GraphiQL a schema before then would give it the federated graph's.
+ * Whether the selected schema is still being resolved. A feature subgraph selection is resolved
+ * from the feature flag list, so which schema to fetch is not known until that has loaded, and
+ * anything shown before then would be the federated graph's schema.
  */
-export const isPlaygroundSchemaLoading = ({
+export const isSchemaLoading = ({
   isLoadingGraphSchema,
   isLoadingSubgraphSchema,
   isLoadingFeatureSubgraphSchema,
   isLoadingCompositionFlags,
   isFeatureSubgraphSelected,
-}: PlaygroundSchemaLoadingInput): boolean =>
+}: SchemaLoadingInput): boolean =>
   isLoadingGraphSchema ||
   isLoadingSubgraphSchema ||
   isLoadingFeatureSubgraphSchema ||

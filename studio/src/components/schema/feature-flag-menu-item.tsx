@@ -1,4 +1,4 @@
-import { SchemaSelection } from '@/components/schema/schema-selection';
+import { SchemaSelection, toSchemaType } from '@/components/schema/schema-selection';
 import { StaleCompositionIcon } from '@/components/schema/stale-composition-warning';
 import {
   DropdownMenuLabel,
@@ -41,7 +41,7 @@ export const FeatureFlagMenuItem = ({
         <DropdownMenuSubContent>
           <DropdownMenuRadioGroup
             value={isActive && !selection.subgraph ? (selection.schemaType ?? 'client') : ''}
-            onValueChange={(value) => onSelect({ featureFlag: name, schemaType: value })}
+            onValueChange={(value) => onSelect({ featureFlag: name, schemaType: toSchemaType(value) })}
           >
             <DropdownMenuRadioItem className="w-[170px] items-center justify-between pl-2" value="client">
               Client Schema

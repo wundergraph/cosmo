@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import { isPlaygroundSchemaLoading, PlaygroundSchemaLoadingInput } from '../lib/playground-schema-loading';
+import { isSchemaLoading, SchemaLoadingInput } from '../lib/schema-loading';
 
-const settled: PlaygroundSchemaLoadingInput = {
+const settled: SchemaLoadingInput = {
   isLoadingGraphSchema: false,
   isLoadingSubgraphSchema: false,
   isLoadingFeatureSubgraphSchema: false,
@@ -9,10 +9,10 @@ const settled: PlaygroundSchemaLoadingInput = {
   isFeatureSubgraphSelected: false,
 };
 
-describe('isPlaygroundSchemaLoading', () => {
+describe('isSchemaLoading', () => {
   test('that a feature subgraph selection waits for the feature flag list', () => {
     expect(
-      isPlaygroundSchemaLoading({
+      isSchemaLoading({
         ...settled,
         isFeatureSubgraphSelected: true,
         isLoadingCompositionFlags: true,
@@ -24,10 +24,10 @@ describe('isPlaygroundSchemaLoading', () => {
   // selection unresolvable. Gating on the resolved value rather than the request kept the schema
   // withheld forever.
   test('that an unresolvable feature subgraph stops waiting once the flag list settles', () => {
-    expect(isPlaygroundSchemaLoading({ ...settled, isFeatureSubgraphSelected: true })).toBe(false);
+    expect(isSchemaLoading({ ...settled, isFeatureSubgraphSelected: true })).toBe(false);
   });
 
   test('that a graph selection does not wait for the feature flag list', () => {
-    expect(isPlaygroundSchemaLoading({ ...settled, isLoadingCompositionFlags: true })).toBe(false);
+    expect(isSchemaLoading({ ...settled, isLoadingCompositionFlags: true })).toBe(false);
   });
 });
