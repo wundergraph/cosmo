@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newTestRouter(config Config) *chi.Mux {
@@ -227,6 +228,154 @@ func TestCustomOriginRequests(t *testing.T) {
 				assert.Equal(t, allowOrigin, response.Header().Get("Access-Control-Allow-Origin"))
 			})
 		}
+	}
+}
+
+func TestMatchOrigins(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		pattern string
+		allowed []string
+		denied  []string
+	}{
+		{
+			pattern: `https://([a-z0-9-]+\.)*example\.com`,
+			allowed: []string{"https://example.com", "https://app.example.com", "https://a.b.example.com"},
+			denied:  []string{"https://app.example.com.evil.com", "https://evil.com/https://app.example.com", "http://app.example.com", "https://appexample.com", "https://app.example.com:443"},
+		},
+		{
+			pattern: `^https://(.+\.)?aol\.(de|ca|co\.uk|com)$`,
+			allowed: []string{"https://aol.com", "https://app.aol.co.uk", "https://aol.de", "https://app.aol.ca"},
+			denied:  []string{"https://aol.com.evil.com", "https://aol.org", "http://aol.com"},
+		},
+		{
+			pattern: `https://one\.example|https://two\.example`,
+			allowed: []string{"https://one.example", "https://two.example"},
+			denied:  []string{"https://one.example.evil.com", "https://evil.com/https://two.example"},
+		},
+		{
+			pattern: `(?m)^https://example\.com$`,
+			allowed: []string{"https://example.com"},
+			denied:  []string{"https://example.com\nhttps://evil.com", "https://evil.com\nhttps://example.com"},
+		},
+		{
+			pattern: `https://\D{1,3}\.example\.com`,
+			allowed: []string{"https://APP.example.com", "https://app.example.com"},
+			denied:  []string{"https://123.example.com", "https://long.example.com", "https://app.EXAMPLE.com"},
+		},
+		{
+			pattern: `(?i)https://app\.example\.com`,
+			allowed: []string{"https://APP.EXAMPLE.COM"},
+			denied:  []string{"https://APP.EXAMPLE.COM.evil.com"},
+		},
+		{
+			pattern: `\Qhttps://example.com`,
+			allowed: []string{"https://example.com"},
+			denied:  []string{"https://example.com.evil.com"},
+		},
+		{
+			pattern: `custom://[a-z]+\.example`,
+			allowed: []string{"custom://app.example"},
+			denied:  []string{"other://app.example", "custom://app.example.evil.com"},
+		},
+	} {
+		t.Run(tt.pattern, func(t *testing.T) {
+			t.Parallel()
+
+			c := newCors(nil, Config{MatchOrigins: []string{tt.pattern}})
+			for _, origin := range tt.allowed {
+				assert.True(t, c.validateOrigin(origin), origin)
+			}
+			for _, origin := range tt.denied {
+				assert.False(t, c.validateOrigin(origin), origin)
+			}
+		})
+	}
+}
+
+func TestInvalidMatchOrigins(t *testing.T) {
+	t.Parallel()
+
+	for _, pattern := range []string{`[`, `*`, `https://example\.com(`, `(?=https://)`, `https://example.com)|(?:`} {
+		t.Run(pattern, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := Config{AllowOrigins: []string{"*"}, MatchOrigins: []string{`https://example\.com`, pattern}}
+			err := cfg.Validate()
+			require.ErrorContains(t, err, "match_origins")
+			assert.Contains(t, err.Error(), fmt.Sprintf("%q", pattern))
+			assert.PanicsWithValue(t, err.Error(), func() { New(cfg)(nil) })
+		})
+	}
+
+	cfg := Config{AllowAllOrigins: true, MatchOrigins: []string{`https://example\.com`}}
+	assert.ErrorContains(t, cfg.Validate(), "conflict settings")
+}
+
+func TestMatchOriginRequests(t *testing.T) {
+	t.Parallel()
+
+	router := newTestRouter(Config{
+		Enabled:          true,
+		AllowOrigins:     []string{"https://literal.example", "https://*.wildcard.example", "https://literal.example/(foo|bar)"},
+		MatchOrigins:     []string{`https://([a-z0-9-]+\.)*example\.com`, `https://app\.example\.org`},
+		AllowMethods:     []string{http.MethodPost},
+		AllowCredentials: true,
+	})
+	for _, tt := range []struct {
+		origin  string
+		allowed bool
+	}{
+		{"https://example.com", true},
+		{"https://app.example.com", true},
+		{"https://app.example.org", true},
+		{"https://literal.example", true},
+		{"https://app.wildcard.example", true},
+		{"https://literal.example/(foo|bar)", true},
+		{"https://literal.example/foo", false},
+		{"https://app.example.com.evil.com", false},
+		{"https://evil.com", false},
+	} {
+		for _, method := range []string{http.MethodPost, http.MethodOptions} {
+			t.Run(method+"/"+tt.origin, func(t *testing.T) {
+				t.Parallel()
+
+				response := performRequestWithHeaders(router, method, tt.origin, http.Header{
+					"Access-Control-Request-Method": {http.MethodPost},
+				})
+				if !tt.allowed {
+					assert.Equal(t, http.StatusForbidden, response.Code)
+					assert.Empty(t, response.Header().Get("Access-Control-Allow-Origin"))
+					assert.Empty(t, response.Body.String())
+					return
+				}
+				status := http.StatusOK
+				if method == http.MethodOptions {
+					status = http.StatusNoContent
+					assert.Equal(t, "POST", response.Header().Get("Access-Control-Allow-Methods"))
+				}
+				assert.Equal(t, status, response.Code)
+				assert.Equal(t, tt.origin, response.Header().Get("Access-Control-Allow-Origin"))
+				assert.Equal(t, "true", response.Header().Get("Access-Control-Allow-Credentials"))
+				assert.Contains(t, response.Header().Values("Vary"), "Origin")
+			})
+		}
+	}
+}
+
+func TestMatchOriginsWithAllowAllWildcard(t *testing.T) {
+	t.Parallel()
+
+	router := newTestRouter(Config{
+		Enabled:      true,
+		AllowOrigins: []string{"*"},
+		MatchOrigins: []string{`https://example\.com`},
+	})
+	for _, method := range []string{http.MethodPost, http.MethodOptions} {
+		response := performRequest(router, method, "https://other.example")
+		assert.NotEqual(t, http.StatusForbidden, response.Code)
+		assert.Equal(t, "*", response.Header().Get("Access-Control-Allow-Origin"))
 	}
 }
 

@@ -134,6 +134,7 @@ demo_mode: true
 # Cross-Origin Resource Sharing (CORS)
 cors:
   allow_origins: ['https://app.example.com', 'custom://localhost']
+  match_origins: ['https://([a-z0-9-]+\.)*example\.com']
   custom_schemas: ['custom://']
   allow_methods:
     - HEAD

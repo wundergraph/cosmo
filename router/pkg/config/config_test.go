@@ -44,6 +44,15 @@ func TestCORSCustomSchemas(t *testing.T) {
 	}
 }
 
+func TestCORSMatchOriginsFromEnv(t *testing.T) {
+	// A semicolon separates patterns so commas in repetition counts are preserved.
+	t.Setenv("CORS_MATCH_ORIGINS", `https://app[0-9]{1,3}\.example\.com;https://example\.org`)
+	f := createTempFileFromFixture(t, "version: \"1\"\n")
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	assert.Equal(t, []string{`https://app[0-9]{1,3}\.example\.com`, `https://example\.org`}, cfg.Config.CORS.MatchOrigins)
+}
+
 func TestTokenNotRequiredWhenPassingStaticConfig(t *testing.T) {
 	t.Parallel()
 
