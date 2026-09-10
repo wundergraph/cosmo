@@ -6,6 +6,7 @@ import {
   createTestGroup,
   createTestRBACEvaluator,
   genID,
+  TestUser,
 } from '../../src/core/test-util.js';
 import { createFederatedGraph, DEFAULT_ROUTER_URL, SetupTest } from '../test-util.js';
 
@@ -284,6 +285,110 @@ describe('Playground Default Headers', () => {
     });
 
     expect(res.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+  });
+
+  test('A member of another organization can neither read nor write the headers', async () => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname, enableMultiUsers: true });
+    onTestFinished(() => server.close());
+
+    const graphName = genID('fedGraph');
+    await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+
+    await client.updatePlaygroundDefaultHeaders({
+      federatedGraphName: graphName,
+      namespace: 'default',
+      graphHeaders: { headers: [{ key: 'x-tenant-id', value: 'company-a-secret' }] },
+      personalHeaders: { headers: [{ key: 'Authorization', value: 'Bearer alice' }] },
+    });
+
+    // Jim is an organization admin, but of a different organization. The graph must not
+    // even resolve for him, so neither scope is reachable.
+    authenticator.changeUser(TestUser.adminJimCompanyB);
+
+    const readRes = await client.getPlaygroundDefaultHeaders({
+      federatedGraphName: graphName,
+      namespace: 'default',
+    });
+    expect(readRes.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    expect(readRes.graphHeaders).toEqual([]);
+    expect(readRes.personalHeaders).toEqual([]);
+
+    const writeRes = await client.updatePlaygroundDefaultHeaders({
+      federatedGraphName: graphName,
+      namespace: 'default',
+      graphHeaders: { headers: [{ key: 'x-tenant-id', value: 'overwritten-by-company-b' }] },
+    });
+    expect(writeRes.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+
+    // Back as Alice: nothing Jim sent touched company A's rows.
+    authenticator.changeUser(TestUser.adminAliceCompanyA);
+
+    const after = await client.getPlaygroundDefaultHeaders({
+      federatedGraphName: graphName,
+      namespace: 'default',
+    });
+    expect(after.graphHeaders).toMatchObject([{ key: 'x-tenant-id', value: 'company-a-secret' }]);
+    expect(after.personalHeaders).toMatchObject([{ key: 'Authorization', value: 'Bearer alice' }]);
+  });
+
+  test("Headers set on one graph do not leak into another graph's defaults", async () => {
+    const { client, server } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
+
+    const graphA = genID('fedGraph');
+    const graphB = genID('fedGraph');
+    await createFederatedGraph(client, graphA, 'default', [], DEFAULT_ROUTER_URL);
+    await createFederatedGraph(client, graphB, 'default', [], DEFAULT_ROUTER_URL);
+
+    await client.updatePlaygroundDefaultHeaders({
+      federatedGraphName: graphA,
+      namespace: 'default',
+      graphHeaders: { headers: [{ key: 'x-tenant-id', value: 'only-on-a' }] },
+      personalHeaders: { headers: [{ key: 'Authorization', value: 'Bearer only-on-a' }] },
+    });
+
+    const resB = await client.getPlaygroundDefaultHeaders({
+      federatedGraphName: graphB,
+      namespace: 'default',
+    });
+    expect(resB.response?.code).toBe(EnumStatusCode.OK);
+    expect(resB.graphHeaders).toEqual([]);
+    expect(resB.personalHeaders).toEqual([]);
+  });
+
+  test('A graph-viewer scoped to one graph cannot read another graph in the same organization', async () => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
+
+    const graphA = genID('fedGraph');
+    const graphB = genID('fedGraph');
+    await createFederatedGraph(client, graphA, 'default', [], DEFAULT_ROUTER_URL);
+    await createFederatedGraph(client, graphB, 'default', [], DEFAULT_ROUTER_URL);
+
+    await client.updatePlaygroundDefaultHeaders({
+      federatedGraphName: graphB,
+      namespace: 'default',
+      graphHeaders: { headers: [{ key: 'x-tenant-id', value: 'only-on-b' }] },
+    });
+
+    const graphAResponse = await client.getFederatedGraphByName({ name: graphA, namespace: 'default' });
+    expect(graphAResponse.graph?.targetId).toBeDefined();
+
+    // Read access is granted for graph A's target only.
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(
+        createTestGroup({ role: 'graph-viewer', resources: [graphAResponse.graph!.targetId] }),
+      ),
+    });
+
+    const allowed = await client.getPlaygroundDefaultHeaders({ federatedGraphName: graphA, namespace: 'default' });
+    expect(allowed.response?.code).toBe(EnumStatusCode.OK);
+
+    const denied = await client.getPlaygroundDefaultHeaders({ federatedGraphName: graphB, namespace: 'default' });
+    expect(denied.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+    expect(denied.graphHeaders).toEqual([]);
+    expect(denied.personalHeaders).toEqual([]);
   });
 
   test.each(['graph-viewer', 'organization-viewer'])(
