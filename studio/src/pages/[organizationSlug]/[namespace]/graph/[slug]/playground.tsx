@@ -1169,6 +1169,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
             schema={isLoading ? null : (schema ?? undefined)}
             storage={graphiqlStorage}
             onTabChange={setTabsState}
+            // Required for the fallback introspection path: without it GraphiQL omits
+            // includeDeprecated for inputFields and args, so deprecated input fields and
+            // arguments are filtered out by the server and buildClientSchema can throw.
+            inputValueDeprecation
           />
           {isMounted && <PlaygroundPortal />}
         </div>

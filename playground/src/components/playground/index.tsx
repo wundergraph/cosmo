@@ -711,6 +711,11 @@ export const Playground = (input: {
             shouldPersistHeaders
             showPersistHeadersSettings={false}
             fetcher={fetcher}
+            // GraphiQL runs its own introspection query for the docs/autocomplete. Without this,
+            // includeDeprecated is omitted for inputFields and args, so the router filters out
+            // deprecated input fields and arguments (spec default is false). An input object whose
+            // fields are all deprecated then comes back empty and buildClientSchema throws.
+            inputValueDeprecation
             onEditQuery={setQuery}
             defaultHeaders={`{
   "X-WG-TRACE" : "true"
