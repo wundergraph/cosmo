@@ -2,7 +2,10 @@ package cors
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"regexp"
+	"regexp/syntax"
 	"strings"
 	"time"
 )
@@ -18,6 +21,10 @@ type Config struct {
 	// If the special "*" value is present in the list, all origins will be allowed.
 	// Default value is []
 	AllowOrigins []string
+
+	// MatchOrigins is a list of Go regular expressions matched against the entire
+	// origin. An origin is allowed if it matches AllowOrigins or MatchOrigins.
+	MatchOrigins []string
 
 	// AllowOriginFunc is a custom function to validate the origin. It take the origin
 	// as argument and returns true if allowed or false otherwise. If this option is
@@ -62,13 +69,34 @@ func (c *Config) AddExposeHeaders(headers ...string) {
 
 // Validate is check configuration of user defined.
 func (c *Config) Validate() error {
-	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0) {
-		return errors.New("conflict settings: all origins are allowed. AllowOriginFunc or AllowOrigins is not needed")
+	_, err := c.validate()
+	return err
+}
+
+func (c *Config) validate() ([]*regexp.Regexp, error) {
+	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0 || len(c.MatchOrigins) > 0) {
+		return nil, errors.New("conflict settings: all origins are allowed. AllowOriginFunc, AllowOrigins or MatchOrigins is not needed")
 	}
-	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 {
-		return errors.New("conflict settings: all origins disabled")
+	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 && len(c.MatchOrigins) == 0 {
+		return nil, errors.New("conflict settings: all origins disabled")
 	}
-	return nil
+	var patterns []*regexp.Regexp
+	for _, pattern := range c.MatchOrigins {
+		// syntax.Perl is the same set of syntax flags used by regexp.Compile.
+		parsed, err := syntax.Parse(pattern, syntax.Perl)
+		if err != nil {
+			return nil, fmt.Errorf("bad origin regex in match_origins %q: %w", pattern, err)
+		}
+		// Group alternatives and use text anchors so inline multiline flags cannot
+		// turn a full-origin match into a match of just one line. Serializing the
+		// parsed expression also prevents a trailing \Q from quoting the anchors.
+		re, err := regexp.Compile(`\A(?:` + parsed.String() + `)\z`)
+		if err != nil {
+			return nil, fmt.Errorf("bad origin regex in match_origins %q: %w", pattern, err)
+		}
+		patterns = append(patterns, re)
+	}
+	return patterns, nil
 }
 
 func (c *Config) parseNewWildcardRules() []*WildcardPattern {

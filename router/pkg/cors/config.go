@@ -3,6 +3,7 @@ package cors
 import (
 	"maps"
 	"net/http"
+	"regexp"
 	"slices"
 )
 
@@ -14,13 +15,15 @@ type cors struct {
 	normalHeaders    http.Header
 	preflightHeaders http.Header
 	wildcardOrigins  []*WildcardPattern
+	matchOrigins     []*regexp.Regexp
 	handler          http.Handler
 }
 
 var maxWildcardOriginLength = 4096 // Maximum length of an origin string for it to be eligible for wildcard matching
 
 func newCors(handler http.Handler, config Config) *cors {
-	if err := config.Validate(); err != nil {
+	matchOrigins, err := config.validate()
+	if err != nil {
 		panic(err.Error())
 	}
 
@@ -38,6 +41,7 @@ func newCors(handler http.Handler, config Config) *cors {
 		normalHeaders:    generateNormalHeaders(config),
 		preflightHeaders: generatePreflightHeaders(config),
 		wildcardOrigins:  config.parseNewWildcardRules(),
+		matchOrigins:     matchOrigins,
 		handler:          handler,
 	}
 }
@@ -89,6 +93,11 @@ func (cors *cors) validateOrigin(origin string) bool {
 	}
 	if len(cors.wildcardOrigins) > 0 && cors.validateWildcardOrigin(origin) {
 		return true
+	}
+	for _, pattern := range cors.matchOrigins {
+		if pattern.MatchString(origin) {
+			return true
+		}
 	}
 	if cors.allowOriginFunc != nil {
 		return cors.allowOriginFunc(origin)
