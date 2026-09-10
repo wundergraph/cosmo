@@ -348,6 +348,12 @@ export interface OrganizationGroupDTO {
   }[];
 }
 
+export interface OrganizationAcceptedFeatureTermDTO {
+  featureId: FeatureIds;
+  lastAcceptedBy?: string;
+  lastAcceptedAt?: Date;
+}
+
 export interface OrganizationMemberDTO {
   userID: string;
   orgMemberID: string;

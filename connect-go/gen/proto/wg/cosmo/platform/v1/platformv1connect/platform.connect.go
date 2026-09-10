@@ -400,6 +400,9 @@ const (
 	// PlatformServiceUpdateFeatureSettingsProcedure is the fully-qualified name of the
 	// PlatformService's UpdateFeatureSettings RPC.
 	PlatformServiceUpdateFeatureSettingsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateFeatureSettings"
+	// PlatformServiceAcceptFeatureTermsProcedure is the fully-qualified name of the PlatformService's
+	// AcceptFeatureTerms RPC.
+	PlatformServiceAcceptFeatureTermsProcedure = "/wg.cosmo.platform.v1.PlatformService/AcceptFeatureTerms"
 	// PlatformServiceGetSubgraphMembersProcedure is the fully-qualified name of the PlatformService's
 	// GetSubgraphMembers RPC.
 	PlatformServiceGetSubgraphMembersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetSubgraphMembers"
@@ -855,8 +858,10 @@ type PlatformServiceClient interface {
 	GetChangelogBySchemaVersion(context.Context, *connect.Request[v1.GetChangelogBySchemaVersionRequest]) (*connect.Response[v1.GetChangelogBySchemaVersionResponse], error)
 	// GetUserAccessibleResources returns all the federated and subgraphs where the user has write permissions
 	GetUserAccessibleResources(context.Context, *connect.Request[v1.GetUserAccessibleResourcesRequest]) (*connect.Response[v1.GetUserAccessibleResourcesResponse], error)
-	// UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
+	// UpdateFeatureSettings updates the settings of features of the organization
 	UpdateFeatureSettings(context.Context, *connect.Request[v1.UpdateFeatureSettingsRequest]) (*connect.Response[v1.UpdateFeatureSettingsResponse], error)
+	// AcceptFeatureTerms accepts the terms for an organization feature
+	AcceptFeatureTerms(context.Context, *connect.Request[v1.AcceptFeatureTermsRequest]) (*connect.Response[v1.AcceptFeatureTermsResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
@@ -1738,6 +1743,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("UpdateFeatureSettings")),
 			connect.WithClientOptions(opts...),
 		),
+		acceptFeatureTerms: connect.NewClient[v1.AcceptFeatureTermsRequest, v1.AcceptFeatureTermsResponse](
+			httpClient,
+			baseURL+PlatformServiceAcceptFeatureTermsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("AcceptFeatureTerms")),
+			connect.WithClientOptions(opts...),
+		),
 		getSubgraphMembers: connect.NewClient[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse](
 			httpClient,
 			baseURL+PlatformServiceGetSubgraphMembersProcedure,
@@ -2310,6 +2321,7 @@ type platformServiceClient struct {
 	getChangelogBySchemaVersion                        *connect.Client[v1.GetChangelogBySchemaVersionRequest, v1.GetChangelogBySchemaVersionResponse]
 	getUserAccessibleResources                         *connect.Client[v1.GetUserAccessibleResourcesRequest, v1.GetUserAccessibleResourcesResponse]
 	updateFeatureSettings                              *connect.Client[v1.UpdateFeatureSettingsRequest, v1.UpdateFeatureSettingsResponse]
+	acceptFeatureTerms                                 *connect.Client[v1.AcceptFeatureTermsRequest, v1.AcceptFeatureTermsResponse]
 	getSubgraphMembers                                 *connect.Client[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse]
 	addReadme                                          *connect.Client[v1.AddReadmeRequest, v1.AddReadmeResponse]
 	getUserAccessiblePermissions                       *connect.Client[v1.GetUserAccessiblePermissionsRequest, v1.GetUserAccessiblePermissionsResponse]
@@ -3013,6 +3025,11 @@ func (c *platformServiceClient) UpdateFeatureSettings(ctx context.Context, req *
 	return c.updateFeatureSettings.CallUnary(ctx, req)
 }
 
+// AcceptFeatureTerms calls wg.cosmo.platform.v1.PlatformService.AcceptFeatureTerms.
+func (c *platformServiceClient) AcceptFeatureTerms(ctx context.Context, req *connect.Request[v1.AcceptFeatureTermsRequest]) (*connect.Response[v1.AcceptFeatureTermsResponse], error) {
+	return c.acceptFeatureTerms.CallUnary(ctx, req)
+}
+
 // GetSubgraphMembers calls wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers.
 func (c *platformServiceClient) GetSubgraphMembers(ctx context.Context, req *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error) {
 	return c.getSubgraphMembers.CallUnary(ctx, req)
@@ -3636,8 +3653,10 @@ type PlatformServiceHandler interface {
 	GetChangelogBySchemaVersion(context.Context, *connect.Request[v1.GetChangelogBySchemaVersionRequest]) (*connect.Response[v1.GetChangelogBySchemaVersionResponse], error)
 	// GetUserAccessibleResources returns all the federated and subgraphs where the user has write permissions
 	GetUserAccessibleResources(context.Context, *connect.Request[v1.GetUserAccessibleResourcesRequest]) (*connect.Response[v1.GetUserAccessibleResourcesResponse], error)
-	// UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
+	// UpdateFeatureSettings updates the settings of features of the organization
 	UpdateFeatureSettings(context.Context, *connect.Request[v1.UpdateFeatureSettingsRequest]) (*connect.Response[v1.UpdateFeatureSettingsResponse], error)
+	// AcceptFeatureTerms accepts the terms for an organization feature
+	AcceptFeatureTerms(context.Context, *connect.Request[v1.AcceptFeatureTermsRequest]) (*connect.Response[v1.AcceptFeatureTermsResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
@@ -4515,6 +4534,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("UpdateFeatureSettings")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceAcceptFeatureTermsHandler := connect.NewUnaryHandler(
+		PlatformServiceAcceptFeatureTermsProcedure,
+		svc.AcceptFeatureTerms,
+		connect.WithSchema(platformServiceMethods.ByName("AcceptFeatureTerms")),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetSubgraphMembersHandler := connect.NewUnaryHandler(
 		PlatformServiceGetSubgraphMembersProcedure,
 		svc.GetSubgraphMembers,
@@ -5206,6 +5231,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetUserAccessibleResourcesHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateFeatureSettingsProcedure:
 			platformServiceUpdateFeatureSettingsHandler.ServeHTTP(w, r)
+		case PlatformServiceAcceptFeatureTermsProcedure:
+			platformServiceAcceptFeatureTermsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetSubgraphMembersProcedure:
 			platformServiceGetSubgraphMembersHandler.ServeHTTP(w, r)
 		case PlatformServiceAddReadmeProcedure:
@@ -5847,6 +5874,10 @@ func (UnimplementedPlatformServiceHandler) GetUserAccessibleResources(context.Co
 
 func (UnimplementedPlatformServiceHandler) UpdateFeatureSettings(context.Context, *connect.Request[v1.UpdateFeatureSettingsRequest]) (*connect.Response[v1.UpdateFeatureSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateFeatureSettings is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) AcceptFeatureTerms(context.Context, *connect.Request[v1.AcceptFeatureTermsRequest]) (*connect.Response[v1.AcceptFeatureTermsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.AcceptFeatureTerms is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error) {

@@ -2213,6 +2213,7 @@ enum Feature {
   rbac = 0;
   ai = 1;
   scim = 2;
+  promptToQuery = 3;
 }
 
 message UpdateFeatureSettingsRequest {
@@ -2221,6 +2222,14 @@ message UpdateFeatureSettingsRequest {
 }
 
 message UpdateFeatureSettingsResponse {
+  Response response = 1;
+}
+
+message AcceptFeatureTermsRequest {
+  optional Feature featureId = 1;
+}
+
+message AcceptFeatureTermsResponse {
   Response response = 1;
 }
 
@@ -3773,8 +3782,10 @@ service PlatformService {
   rpc GetChangelogBySchemaVersion(GetChangelogBySchemaVersionRequest) returns (GetChangelogBySchemaVersionResponse) {}
   // GetUserAccessibleResources returns all the federated and subgraphs where the user has write permissions
   rpc GetUserAccessibleResources(GetUserAccessibleResourcesRequest) returns (GetUserAccessibleResourcesResponse) {}
-  // UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
+  // UpdateFeatureSettings updates the settings of features of the organization
   rpc UpdateFeatureSettings(UpdateFeatureSettingsRequest) returns (UpdateFeatureSettingsResponse) {}
+  // AcceptFeatureTerms accepts the terms for an organization feature
+  rpc AcceptFeatureTerms(AcceptFeatureTermsRequest) returns (AcceptFeatureTermsResponse) {}
   // GetSubgraphMembers gets all the members of the subgraph
   rpc GetSubgraphMembers(GetSubgraphMembersRequest) returns (GetSubgraphMembersResponse) {}
   // AddReadme adds a readme of a target, can be a subgraph or a federated graph

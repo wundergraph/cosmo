@@ -1037,6 +1037,13 @@
       "when": 1784141494014,
       "tag": "0147_worried_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 148,
+      "version": "7",
+      "when": 1789073263750,
+      "tag": "0148_bright_red_hulk",
+      "breakpoints": true
     }
   ]
 }

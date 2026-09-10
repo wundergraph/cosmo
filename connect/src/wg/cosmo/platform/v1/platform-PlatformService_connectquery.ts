@@ -831,11 +831,18 @@ export const getChangelogBySchemaVersion = PlatformService.method.getChangelogBy
 export const getUserAccessibleResources = PlatformService.method.getUserAccessibleResources;
 
 /**
- * UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
+ * UpdateFeatureSettings updates the settings of features of the organization
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateFeatureSettings
  */
 export const updateFeatureSettings = PlatformService.method.updateFeatureSettings;
+
+/**
+ * AcceptFeatureTerms accepts the terms for an organization feature
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.AcceptFeatureTerms
+ */
+export const acceptFeatureTerms = PlatformService.method.acceptFeatureTerms;
 
 /**
  * GetSubgraphMembers gets all the members of the subgraph

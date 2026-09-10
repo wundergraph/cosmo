@@ -66,6 +66,11 @@ export interface Organization {
     plan: string;
     email?: string;
   };
+  acceptedFeatureTerms: {
+    featureId: string;
+    lastAcceptedBy?: string;
+    lastAcceptedAt?: string;
+  }[];
   subscription?: {
     status: 'active' | 'canceled' | 'trialing' | 'incomplete' | 'incomplete_expired' | 'past_due';
     currentPeriodEnd: string;

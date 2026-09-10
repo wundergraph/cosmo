@@ -1662,6 +1662,27 @@ export const organizationFeatures = pgTable(
   },
 );
 
+export const organizationFeatureTermsAcceptance = pgTable(
+  'organization_feature_terms_acceptance',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    feature: text('feature').notNull(),
+    lastAcceptedBy: uuid('last_accepted_by_id').references(() => users.id, { onDelete: 'set null' }),
+    lastAcceptedAt: timestamp('last_accepted_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      nameIndex: uniqueIndex('organization_fta_idx').on(t.organizationId, t.feature),
+      organizationIdIndex: index('org_fta_organization_id_idx').on(t.organizationId),
+    };
+  },
+);
+
 export const organizationInvitations = pgTable(
   'organization_invitations', // orginv
   {

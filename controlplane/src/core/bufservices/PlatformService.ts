@@ -122,6 +122,7 @@ import { getPendingOrganizationMembers } from './organization/getPendingOrganiza
 import { isMemberLimitReached } from './organization/isMemberLimitReached.js';
 import { leaveOrganization } from './organization/leaveOrganization.js';
 import { updateFeatureSettings } from './organization/updateFeatureSettings.js';
+import { acceptFeatureTerms } from './organization/acceptFeatureTerms.js';
 import { updateOrganizationDetails } from './organization/updateOrganizationDetails.js';
 import { whoAmI } from './organization/whoAmI.js';
 import { getClients } from './persisted-operation/getClients.js';
@@ -477,6 +478,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     updateFeatureSettings: (req, ctx) => {
       return updateFeatureSettings(opts, req, ctx);
+    },
+
+    acceptFeatureTerms: (req, ctx) => {
+      return acceptFeatureTerms(opts, req, ctx);
     },
 
     addReadme: (req, ctx) => {
