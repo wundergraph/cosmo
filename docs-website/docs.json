@@ -328,7 +328,8 @@
                 "pages": [
                   "studio/playground",
                   "studio/playground/custom-scripts",
-                  "studio/playground/shared-playground-state"
+                  "studio/playground/shared-playground-state",
+                  "studio/playground/default-headers"
                 ]
               },
               "studio/studio",
