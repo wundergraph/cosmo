@@ -12,8 +12,37 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/sebdah/goldie/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestCORSCustomSchemas(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		scheme  string
+		isValid bool
+	}{
+		{scheme: "custom://", isValid: true},
+		{scheme: "my-app.v2+test://", isValid: true},
+		{scheme: ""},
+		{scheme: "custom"},
+		{scheme: "custom://host"},
+	}
+	for _, tt := range cases {
+		t.Run(tt.scheme, func(t *testing.T) {
+			t.Parallel()
+
+			f := createTempFileFromFixture(t, fmt.Sprintf("version: \"1\"\ncors:\n  custom_schemas: [%q]\n", tt.scheme))
+			_, err := LoadConfig([]string{f})
+			if tt.isValid {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, "custom_schemas")
+			}
+		})
+	}
+}
 
 func TestTokenNotRequiredWhenPassingStaticConfig(t *testing.T) {
 	t.Parallel()

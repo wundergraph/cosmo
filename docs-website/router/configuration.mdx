@@ -942,10 +942,23 @@ pyroscope:
 | ---------------------- | ----------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | CORS_ENABLED           | enabled           | <Icon icon="square" /> | Set this to enable/disable the CORS middleware. It is enabled by default. When disabled, the rest of the properties for CORS have no effect. | true                                 |
 | CORS_ALLOW_ORIGINS     | allow_origins     | <Icon icon="square" /> | This is a list of origins which are allowed. You can provide origins with wildcards                                                          | \*                                   |
+| CORS_CUSTOM_SCHEMAS    | custom_schemas    | <Icon icon="square" /> | Additional URL schemes permitted in `allow_origins`, including the `://` suffix.                                                               | []                                   |
 | CORS_ALLOW_METHODS     | allow_methods     | <Icon icon="square" /> |                                                                                                                                              | HEAD,GET,POST                        |
 | CORS_ALLOW_HEADERS     | allow_headers     | <Icon icon="square" /> |                                                                                                                                              | Origin, Content-Length, Content-Type |
 | CORS_ALLOW_CREDENTIALS | allow_credentials | <Icon icon="square" /> |                                                                                                                                              | true                                 |
 | CORS_MAX_AGE           | max_age           | <Icon icon="square" /> |                                                                                                                                              | 5m                                   |
+
+Wildcard origins retain their existing validation and matching behavior. Patterns containing `*`, including `*.example.com`, bypass scheme validation and do not require `custom_schemas`.
+
+To allow a literal origin with a custom URL scheme, add the scheme to `custom_schemas` and the origin to `allow_origins`. Adding a scheme does not allow every origin using that scheme. For example:
+
+```yaml
+cors:
+  custom_schemas: ["custom://"]
+  allow_origins:
+    - "https://app.example.com"
+    - "custom://localhost"
+```
 
 ### Example YAML config:
 

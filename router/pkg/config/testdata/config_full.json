@@ -177,7 +177,11 @@
   "CORS": {
     "Enabled": true,
     "AllowOrigins": [
-      "*"
+      "https://app.example.com",
+      "custom://localhost"
+    ],
+    "CustomSchemas": [
+      "custom://"
     ],
     "AllowMethods": [
       "HEAD",

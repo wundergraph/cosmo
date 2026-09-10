@@ -103,6 +103,133 @@ func TestBadConfig(t *testing.T) {
 	})
 }
 
+func TestCustomSchemas(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		scheme string
+		origin string
+	}{
+		{scheme: "custom://", origin: "custom://localhost"},
+		{scheme: "tauri://", origin: "tauri://localhost"},
+		{scheme: "CUSTOM://", origin: "custom://localhost"},
+		{scheme: "CuStOm://", origin: "custom://localhost"},
+		{scheme: "custom://", origin: "CUSTOM://localhost"},
+	}
+	for _, tt := range cases {
+		t.Run(tt.scheme+"/"+tt.origin, func(t *testing.T) {
+			t.Parallel()
+
+			config := Config{AllowOrigins: []string{tt.origin}}
+			assert.Error(t, config.Validate())
+			config.CustomSchemas = []string{tt.scheme}
+			config.AllowOrigins = append(config.AllowOrigins, "http://localhost", "https://localhost")
+			assert.NoError(t, config.Validate())
+			config.AllowOrigins = []string{"anothercustom://localhost"}
+			assert.Error(t, config.Validate())
+		})
+	}
+}
+
+func TestWildcardOriginCompatibility(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		pattern string
+		origin  string
+	}{
+		{name: "HTTP without a scheme", pattern: "*.example.com", origin: "http://app.example.com"},
+		{name: "HTTPS without a scheme", pattern: "*.example.com", origin: "https://app.example.com"},
+		{name: "custom origin without a scheme", pattern: "*.example.com", origin: "anothercustom://app.example.com"},
+		{name: "wildcard scheme", pattern: "*://*.example.com", origin: "anothercustom://app.example.com"},
+		{name: "custom scheme without opt-in", pattern: "anothercustom://*.example.com", origin: "anothercustom://app.example.com"},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			router := newTestRouter(Config{
+				Enabled:      true,
+				AllowOrigins: []string{tt.pattern},
+			})
+			response := performRequest(router, http.MethodPost, tt.origin)
+			assert.Equal(t, http.StatusOK, response.Code)
+			assert.Equal(t, tt.origin, response.Header().Get("Access-Control-Allow-Origin"))
+		})
+	}
+}
+
+func TestValidateCustomSchemas(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		scheme  string
+		isValid bool
+	}{
+		{scheme: "custom://", isValid: true},
+		{scheme: "my-app.v2+test://", isValid: true},
+		{scheme: "CUSTOM://", isValid: true},
+		{scheme: ""},
+		{scheme: "custom"},
+		{scheme: "custom://host"},
+		{scheme: "1custom://"},
+		{scheme: "custom_://"},
+	}
+	for _, tt := range cases {
+		t.Run(tt.scheme, func(t *testing.T) {
+			t.Parallel()
+
+			config := Config{AllowOrigins: []string{"https://example.com"}, CustomSchemas: []string{tt.scheme}}
+			if tt.isValid {
+				assert.NoError(t, config.Validate())
+			} else {
+				assert.ErrorContains(t, config.Validate(), "bad custom schema")
+			}
+		})
+	}
+}
+
+func TestCustomOriginRequests(t *testing.T) {
+	t.Parallel()
+
+	router := newTestRouter(Config{
+		Enabled:       true,
+		CustomSchemas: []string{"CUSTOM://"},
+		AllowOrigins:  []string{"custom://localhost", "custom://*.example.com"},
+		AllowMethods:  []string{http.MethodPost},
+	})
+	cases := []struct {
+		origin  string
+		allowed bool
+	}{
+		{"custom://localhost", true},
+		{"custom://app.example.com", true},
+		{"custom://other-host", false},
+		{"anothercustom://localhost", false},
+	}
+	for _, tt := range cases {
+		for _, method := range []string{http.MethodPost, http.MethodOptions} {
+			t.Run(method+"/"+tt.origin, func(t *testing.T) {
+				t.Parallel()
+
+				status, allowOrigin := http.StatusForbidden, ""
+				if tt.allowed {
+					status, allowOrigin = http.StatusOK, tt.origin
+					if method == http.MethodOptions {
+						status = http.StatusNoContent
+					}
+				}
+				response := performRequestWithHeaders(router, method, tt.origin, http.Header{
+					"Access-Control-Request-Method": {http.MethodPost},
+				})
+				assert.Equal(t, status, response.Code)
+				assert.Equal(t, allowOrigin, response.Header().Get("Access-Control-Allow-Origin"))
+			})
+		}
+	}
+}
+
 func TestNormalize(t *testing.T) {
 	values := normalize([]string{
 		"http-Access ", "Post", "POST", " poSt  ",
