@@ -33,7 +33,7 @@ cors:
 	handler := cors.New(*router.corsOptions)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
-	for _, tt := range []struct {
+	cases := []struct {
 		name                 string
 		method               string
 		origin               string
@@ -69,7 +69,8 @@ cors:
 			origin:     "https://app.example.com.evil.com",
 			wantStatus: http.StatusForbidden,
 		},
-	} {
+	}
+	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
