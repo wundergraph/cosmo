@@ -3363,7 +3363,7 @@
     },
     "response_cache": {
       "type": "object",
-      "description": "Caches subgraph responses, either in Redis or in this router's own memory. Two things are cached: each entity of a federation entity fetch, per selection set, so asking for different fields of the same entity does not share a cache entry, and a batch is served from the cache only when every entity in it is present; and the whole answer of a root query fetch, keyed by the request that produced it, so any difference in the operation or its variables sends the request to the subgraph unchanged. Neither key covers the headers the router forwards, so a subgraph whose answer varies by request header must not mark it public. Only subgraph responses whose Cache-Control header asks to be cached are stored. NOTE: This option is experimental and may change in future versions.",
+      "description": "Caches subgraph responses, either in Redis or in this router's own memory. Two things are cached: each entity of a federation entity fetch, per selection set, so asking for different fields of the same entity does not share a cache entry, and a batch is served from the cache only when every entity in it is present; and the whole answer of a root query fetch, keyed by the request that produced it, so any difference in the operation or its variables sends the request to the subgraph unchanged. Neither key covers the headers the router forwards, so a subgraph whose answer varies by request header must use private or no-store. Only subgraph responses whose Cache-Control header asks to be cached are stored; public is not required. NOTE: This option is experimental and may change in future versions.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
@@ -3374,7 +3374,7 @@
         "fallback_ttl": {
           "type": "string",
           "format": "go-duration",
-          "description": "How long an entity is kept when the subgraph response sends Cache-Control: public but does not say for how long. A subgraph that sends max-age or s-maxage gets the last word either way, including refusing with no-store, no-cache or private. A subgraph response with no Cache-Control header is never cached, whatever this is set to. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
+          "description": "How long a response is kept when its Cache-Control header contains public, must-revalidate, proxy-revalidate, stale-if-error or stale-while-revalidate without max-age or s-maxage. The stale directives require valid durations. An explicit s-maxage takes precedence over max-age, and both override this fallback. No-store, no-cache, private, invalid durations or a zero selected lifetime prevent caching. Missing, empty or unrecognized-only Cache-Control headers never use this fallback. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
           "default": "30s",
           "duration": {
             "minimum": "1s"
@@ -3399,7 +3399,7 @@
             },
             "provider_id": {
               "type": "string",
-              "description": "The ID of a Redis storage provider declared under 'storage_providers.redis'. Required when 'provider' is 'redis', which is the default; an unknown ID fails startup. Ignored by the 'memory' provider."
+              "description": "The ID of a Redis storage provider declared under 'storage_providers.redis'. Required when 'provider' is 'redis', which is the default; an unknown ID fails startup. The instance must run Redis 7.0 or newer: tagged writes use EXPIRE options that older versions reject. Ignored by the 'memory' provider."
             },
             "max_entries": {
               "type": "integer",
@@ -3440,8 +3440,36 @@
             },
             "type": {
               "type": "boolean",
-              "description": "Index every cached entity under its __typename. Requires the typename to be present in what is cached, which a root query fetch has no single one of. Set to false to stop maintaining the by-type index.",
+              "description": "Index every cached entity under its __typename, scoped to the subgraph that answered so invalidating one subgraph's type leaves the others alone. Requires the typename to be present in what is cached, which a root query fetch has no single one of. Set to false to stop maintaining the by-type index.",
               "default": true
+            },
+            "endpoint": {
+              "type": "object",
+              "description": "An HTTP endpoint that drops cached entries before their TTL. It listens on an address of its own rather than as a route on the router's port, so that reaching the graph does not by itself reach the thing that empties its cache. It accepts a POST carrying a JSON array of invalidation requests, each naming a 'kind' of 'subgraph', 'type' or 'cache_tag' together with the subgraph it applies to, and answers 202 with the number of cache keys removed.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Start the invalidation listener. When disabled, entries are still indexed and still expire on their own TTL; they simply cannot be dropped early.",
+                  "default": false
+                },
+                "listen_addr": {
+                  "type": "string",
+                  "format": "hostname-port",
+                  "description": "The address the invalidation endpoint listens on. Defaults to loopback, because an endpoint that empties the cache should be exposed on purpose rather than by inheriting whatever the router itself is exposed on. Expose it to internal networks only.",
+                  "default": "localhost:5027"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "The path the invalidation endpoint is served at.",
+                  "default": "/invalidation"
+                },
+                "shared_key": {
+                  "type": "string",
+                  "minLength": 32,
+                  "description": "Compared in full against the 'Authorization' header of an invalidation request, with no 'Bearer' prefix expected. Required when the endpoint is enabled: an enabled endpoint without a key fails startup rather than accepting unauthenticated requests."
+                }
+              }
             }
           }
         }
