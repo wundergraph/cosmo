@@ -107,11 +107,11 @@ func (c *Config) validateAllowedSchemas(origin string) bool {
 
 // Validate is check configuration of user defined.
 func (c *Config) Validate() error {
-	_, err := c.validate()
+	_, err := c.validateAndCompile()
 	return err
 }
 
-func (c *Config) validate() ([]*regexp.Regexp, error) {
+func (c *Config) validateAndCompile() ([]*regexp.Regexp, error) {
 	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0 || len(c.MatchOrigins) > 0) {
 		return nil, errors.New("conflict settings: all origins are allowed. AllowOriginFunc, AllowOrigins or MatchOrigins is not needed")
 	}

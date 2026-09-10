@@ -41,7 +41,7 @@ var (
 )
 
 func newCors(handler http.Handler, config Config) *cors {
-	matchOrigins, err := config.validate()
+	matchOrigins, err := config.validateAndCompile()
 	if err != nil {
 		panic(err.Error())
 	}

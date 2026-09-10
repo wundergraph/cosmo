@@ -965,12 +965,11 @@ cors:
   match_origins:
     - 'https://([a-z0-9-]+\.)*example\.com'
     - '^https://(.+\.)?aol\.(de|ca|co\.uk|com)$'
-  allow_credentials: true
 ```
 
 Use single-quoted YAML strings to preserve regex backslashes. `CORS_MATCH_ORIGINS` uses semicolons to separate patterns so commas in repetition counts such as `{1,3}` are preserved. For regex-only matching with this environment variable, set `allow_origins: []` in YAML. An empty `CORS_ALLOW_ORIGINS` environment variable uses the default `*`.
 
-Requests allowed by a regex receive their exact `Origin` in `Access-Control-Allow-Origin`, including preflight responses. This supports credentialed requests when `allow_credentials` is enabled. Cross-origin requests that match neither list receive `403 Forbidden`.
+Requests allowed by a regex receive their exact `Origin` in `Access-Control-Allow-Origin`, including preflight responses. Cross-origin requests that match neither list receive `403 Forbidden`.
 
 ### Custom URL schemes
 

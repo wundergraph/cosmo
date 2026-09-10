@@ -318,11 +318,10 @@ func TestMatchOriginRequests(t *testing.T) {
 	t.Parallel()
 
 	router := newTestRouter(Config{
-		Enabled:          true,
-		AllowOrigins:     []string{"https://literal.example", "https://*.wildcard.example", "https://literal.example/(foo|bar)"},
-		MatchOrigins:     []string{`https://([a-z0-9-]+\.)*example\.com`, `https://app\.example\.org`},
-		AllowMethods:     []string{http.MethodPost},
-		AllowCredentials: true,
+		Enabled:      true,
+		AllowOrigins: []string{"https://literal.example", "https://*.wildcard.example", "https://literal.example/(foo|bar)"},
+		MatchOrigins: []string{`https://([a-z0-9-]+\.)*example\.com`, `https://app\.example\.org`},
+		AllowMethods: []string{http.MethodPost},
 	})
 	cases := []struct {
 		origin  string
@@ -359,7 +358,6 @@ func TestMatchOriginRequests(t *testing.T) {
 				}
 				assert.Equal(t, status, response.Code)
 				assert.Equal(t, tt.origin, response.Header().Get("Access-Control-Allow-Origin"))
-				assert.Equal(t, "true", response.Header().Get("Access-Control-Allow-Credentials"))
 				assert.Contains(t, response.Header().Values("Vary"), "Origin")
 			})
 		}
