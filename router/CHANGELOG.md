@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.346.1](https://github.com/wundergraph/cosmo/compare/router@0.346.0...router@0.346.1) (2026-09-09)
+
+### Bug Fixes
+
+* **router:** cache responses without public directive ([#3221](https://github.com/wundergraph/cosmo/issues/3221)) ([dbf5c7a](https://github.com/wundergraph/cosmo/commit/dbf5c7abb3645e9bd5881a81c486c4aff0c50b62)) (@fiam)
+
+# [0.346.0](https://github.com/wundergraph/cosmo/compare/router@0.345.0...router@0.346.0) (2026-09-08)
+
+### Bug Fixes
+
+* **router:** prevent data races in batched validation error responses ([#3217](https://github.com/wundergraph/cosmo/issues/3217)) ([aa703ec](https://github.com/wundergraph/cosmo/commit/aa703eca12aca333b03902b41cede702f45fdef5)) (@endigma)
+
+### Features
+
+* cache tags ([#3200](https://github.com/wundergraph/cosmo/issues/3200)) ([be25b5e](https://github.com/wundergraph/cosmo/commit/be25b5e295784dcd90c68c48b4fa3ab3ea23cd21)) (@SkArchon)
+
 # [0.345.0](https://github.com/wundergraph/cosmo/compare/router@0.344.1...router@0.345.0) (2026-09-02)
 
 ### Bug Fixes

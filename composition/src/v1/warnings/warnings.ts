@@ -2,10 +2,12 @@ import { Warning } from '../../warnings/types';
 import { QUOTATION_JOIN } from '../../utils/string-constants';
 import {
   type InvalidRepeatedComposedDirectiveWarningParams,
+  OverrideDirectiveLabelArgumentWarningParams,
   type ProvidesOnUnionWarningParams,
   type ProvidesWithInterfaceFieldSelectionWarningParams,
   type SingleFederatedInputFieldOneOfWarningParams,
   type SingleSubgraphInputFieldOneOfWarningParams,
+  UnsupportedDirectiveWarningParams,
 } from './params';
 import { type SubgraphName } from '../../types/types';
 
@@ -271,6 +273,36 @@ export function providesWithInterfaceFieldSelectionWarning({
       `A "@provides" directive field set with a direct Interface field selection, in this case "${selection}"` +
       ` corresponding to "${fieldCoords}", is only supported by router version` +
       ` 0.326.3+. Please note that older router versions do not support this functionality.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function unsupportedDirectiveWarning({
+  directiveName,
+  subgraphName,
+}: UnsupportedDirectiveWarningParams): Warning {
+  return new Warning({
+    message:
+      `The directive "${directiveName}" is currently unsupported (but support is planned); consequently,` +
+      ` the directive may be defined, but it will not function until support is complete.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function overrideDirectiveLabelArgumentWarning({
+  coords,
+  subgraphName,
+}: OverrideDirectiveLabelArgumentWarningParams): Warning {
+  return new Warning({
+    message:
+      `The "@override" directive defined on field coordinates "${coords}" provides a value to the "label" argument.` +
+      ` The "label" argument is currently unsupported and will be ignored.` +
+      ` However, please note the same functionality can be achieved through Feature Flags:` +
+      ` https://wundergraph.com/learn/feature-flags-foundations`,
     subgraph: {
       name: subgraphName,
     },
