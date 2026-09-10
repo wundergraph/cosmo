@@ -97,7 +97,7 @@ func TestCORSInvalidMatchOriginsFailsStartup(t *testing.T) {
 		}}
 		_, err := NewRouter(t.Context(), optionsFromResources(zap.NewNop(), &loaded, nil)...)
 		if enabled {
-			require.ErrorContains(t, err, "invalid CORS configuration")
+			assert.ErrorContains(t, err, "invalid CORS configuration")
 			assert.ErrorContains(t, err, `match_origins "https://["`)
 		} else {
 			assert.NoError(t, err)
