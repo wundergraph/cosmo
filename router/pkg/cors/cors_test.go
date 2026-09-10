@@ -234,7 +234,7 @@ func TestCustomOriginRequests(t *testing.T) {
 func TestMatchOrigins(t *testing.T) {
 	t.Parallel()
 
-	for _, tt := range []struct {
+	cases := []struct {
 		pattern string
 		allowed []string
 		denied  []string
@@ -279,7 +279,8 @@ func TestMatchOrigins(t *testing.T) {
 			allowed: []string{"custom://app.example"},
 			denied:  []string{"other://app.example", "custom://app.example.evil.com"},
 		},
-	} {
+	}
+	for _, tt := range cases {
 		t.Run(tt.pattern, func(t *testing.T) {
 			t.Parallel()
 
@@ -323,7 +324,7 @@ func TestMatchOriginRequests(t *testing.T) {
 		AllowMethods:     []string{http.MethodPost},
 		AllowCredentials: true,
 	})
-	for _, tt := range []struct {
+	cases := []struct {
 		origin  string
 		allowed bool
 	}{
@@ -336,7 +337,8 @@ func TestMatchOriginRequests(t *testing.T) {
 		{"https://literal.example/foo", false},
 		{"https://app.example.com.evil.com", false},
 		{"https://evil.com", false},
-	} {
+	}
+	for _, tt := range cases {
 		for _, method := range []string{http.MethodPost, http.MethodOptions} {
 			t.Run(method+"/"+tt.origin, func(t *testing.T) {
 				t.Parallel()
