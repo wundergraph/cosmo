@@ -303,6 +303,7 @@ export const CONTEXT_DEFINITION_DATA = newDirectiveDefinitionData({
       }),
     ],
   ]),
+  isRepeatable: true,
   locations: new Set<DirectiveLocation>([INTERFACE_UPPER, OBJECT_UPPER, UNION_UPPER]),
   name: CONTEXT,
   node: CONTEXT_DEFINITION,
