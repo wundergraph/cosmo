@@ -12,8 +12,18 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/sebdah/goldie/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestCORSMatchOriginsFromEnv(t *testing.T) {
+	// A semicolon separates patterns so commas in repetition counts are preserved.
+	t.Setenv("CORS_MATCH_ORIGINS", `https://app[0-9]{1,3}\.example\.com;https://example\.org`)
+	f := createTempFileFromFixture(t, "version: \"1\"\n")
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	assert.Equal(t, []string{`https://app[0-9]{1,3}\.example\.com`, `https://example\.org`}, cfg.Config.CORS.MatchOrigins)
+}
 
 func TestTokenNotRequiredWhenPassingStaticConfig(t *testing.T) {
 	t.Parallel()
