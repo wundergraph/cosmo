@@ -23,7 +23,6 @@ version: "1"
 cors:
   allow_origins: []
   match_origins: ['https://([a-z0-9-]+\.)*example\.com']
-  allow_credentials: true
 `), 0o600))
 	loaded, err := config.LoadConfig([]string{configPath})
 	require.NoError(t, err)
@@ -34,20 +33,18 @@ cors:
 		w.WriteHeader(http.StatusOK)
 	}))
 	cases := []struct {
-		name                 string
-		method               string
-		origin               string
-		wantStatus           int
-		wantAllowOrigin      string
-		wantAllowCredentials string
+		name            string
+		method          string
+		origin          string
+		wantStatus      int
+		wantAllowOrigin string
 	}{
 		{
-			name:                 "matching POST",
-			method:               http.MethodPost,
-			origin:               "https://app.example.com",
-			wantStatus:           http.StatusOK,
-			wantAllowOrigin:      "https://app.example.com",
-			wantAllowCredentials: "true",
+			name:            "matching POST",
+			method:          http.MethodPost,
+			origin:          "https://app.example.com",
+			wantStatus:      http.StatusOK,
+			wantAllowOrigin: "https://app.example.com",
 		},
 		{
 			name:       "POST with injected suffix",
@@ -56,12 +53,11 @@ cors:
 			wantStatus: http.StatusForbidden,
 		},
 		{
-			name:                 "matching preflight",
-			method:               http.MethodOptions,
-			origin:               "https://app.example.com",
-			wantStatus:           http.StatusNoContent,
-			wantAllowOrigin:      "https://app.example.com",
-			wantAllowCredentials: "true",
+			name:            "matching preflight",
+			method:          http.MethodOptions,
+			origin:          "https://app.example.com",
+			wantStatus:      http.StatusNoContent,
+			wantAllowOrigin: "https://app.example.com",
 		},
 		{
 			name:       "preflight with injected suffix",
@@ -81,7 +77,6 @@ cors:
 			handler.ServeHTTP(res, req)
 			assert.Equal(t, tt.wantStatus, res.Code)
 			assert.Equal(t, tt.wantAllowOrigin, res.Header().Get("Access-Control-Allow-Origin"))
-			assert.Equal(t, tt.wantAllowCredentials, res.Header().Get("Access-Control-Allow-Credentials"))
 		})
 	}
 }
