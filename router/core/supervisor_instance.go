@@ -65,6 +65,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 			SkipIntrospectionQueries: cfg.Authentication.IgnoreIntrospection,
 			IntrospectionSkipSecret:  cfg.IntrospectionConfig.Secret,
 			ScopeClaim:               cfg.Authentication.JWT.ScopeClaim,
+			JWTOnError:               cfg.Authentication.JWT.OnError,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("could not create access controller: %w", err)

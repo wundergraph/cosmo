@@ -2416,6 +2416,12 @@
                 ]
               }
             },
+            "on_error": {
+              "type": "string",
+              "enum": ["reject", "continue"],
+              "default": "reject",
+              "description": "Controls request-time authentication failures. The default 'reject' returns a generic 401 Unauthorized response. With 'continue', failed authentication proceeds as unauthenticated, including credential extraction, JWT validation, and custom authenticator errors. Required authentication and field authorization still apply. Configuration and authenticator initialization errors are not ignored. Use 'continue' only when a custom module or downstream service validates credentials before protected work or side effects. This does not affect MCP OAuth authentication."
+            },
             "scope_claim": {
               "type": "string",
               "description": "The JWT claim to use when reading scopes for authorization. Only top level claims are supported. The default value is 'scope'.",
