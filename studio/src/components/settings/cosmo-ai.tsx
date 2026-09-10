@@ -8,7 +8,11 @@ import { Feature } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb
 import Link from 'next/link';
 import { docsBaseURL } from '@/lib/constants';
 import { ReactNode, useState } from 'react';
-import { COSMO_AI_TERMS_OF_SERVICE_MARKDOWN, COSMO_AI_TERMS_OF_SERVICE_REVISION_DATE } from './cosmo-ai-terms-of-service';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import {
+  COSMO_AI_TERMS_OF_SERVICE_MARKDOWN,
+  COSMO_AI_TERMS_OF_SERVICE_REVISION_DATE,
+} from './cosmo-ai-terms-of-service';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { SafeMarkdown } from '@/components/safe-markdown';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,6 +20,7 @@ import { Organization } from '@/components/app-provider';
 import { acceptFeatureTerms } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { useMutation } from '@connectrpc/connect-query';
 import { parseJSON, startOfDay, isBefore } from 'date-fns';
+import { useToast } from '@/components/ui/use-toast';
 
 type SimpleSegmentProps = {
   organization: Organization;
@@ -88,10 +93,13 @@ function Segment({ children, organization, feature, isEnabled, docsLink }: Segme
     setShowAcceptTermsDialog(false);
   });
 
+  const { toast } = useToast();
+
   const featureId = getFeatureId(feature);
   const isPending = isUpdatingFeatureSettings || isAcceptingFeatureTerms;
   const featureAcceptance = organization.acceptedFeatureTerms.find((aft) => aft.featureId === featureId);
-  const needsToAcceptTermsForFeature = !featureAcceptance || shouldReacceptTermsForFeature(featureAcceptance.lastAcceptedAt);
+  const needsToAcceptTermsForFeature =
+    !featureAcceptance || shouldReacceptTermsForFeature(featureAcceptance.lastAcceptedAt);
 
   const onDialogOpenChange = (open: boolean) => {
     if (isPending) {
@@ -111,10 +119,22 @@ function Segment({ children, organization, feature, isEnabled, docsLink }: Segme
     mutate(
       { featureId: organization.acceptedFeatureTerms.length === 0 ? undefined : feature },
       {
-        onSuccess() {
-          enable();
+        onSuccess(d) {
+          if (d.response?.code === EnumStatusCode.OK) {
+            enable();
+          } else {
+            toast({
+              description: 'Failed to accept the terms for the feature.',
+              duration: 3000,
+            });
+          }
         },
-        onError() {},
+        onError() {
+          toast({
+            description: 'Failed to accept the terms for the feature.',
+            duration: 3000,
+          });
+        },
       },
     );
   };
