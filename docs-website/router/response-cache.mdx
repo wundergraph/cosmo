@@ -43,7 +43,7 @@ A response carrying GraphQL errors is never cached, whatever its `Cache-Control`
 
 Every router replica shares one cache and entries outlive the process. Define a [storage provider](/router/storage-providers), then reference it by `provider_id`.
 
-Redis 7.0 or newer is required. Cache tag indexes are maintained with `EXPIRE` options that older versions reject, so writes fail on Redis 6.
+Redis 7.0 or newer is required to use this feature.
 
 <CodeGroup>
 ```yaml config.yaml
@@ -170,7 +170,7 @@ An outer array whose length does not match the entities answered costs the whole
 
 ## Invalidation
 
-Entries leave the cache on their own, when the TTL expires. However users might want to actively invalidate the cached data. In order to do this the router provides an invalidation endpoint on a different port, which can get called to invalidate entries.
+Entries leave the cache on their own, when the TTL expires. However users might want to invalidate the cached data before this happens. In order to do this the router provides an invalidation endpoint on a different port, which can get called to invalidate entries.
 
 <Danger>
 **Tags may not be invalidated**. This is a known bug we are working on a fix for, essentially under certain circumstances certain entries belonging to a tag may not be invalidated, which leads to an issue of correctness.
@@ -226,7 +226,7 @@ The whole array is validated before anything is removed. One bad element refuses
 
 **Everything is scoped to a subgraph.** A type or a cache tag is indexed per subgraph that answered, so every request names one. There is no way to invalidate a type or a tag across all subgraphs in one element. List the subgraphs instead.
 
-**The memory provider is per replica.** Each router holds its own cache, so an invalidation reaches only the replica it was sent to. Send it to every replica, or use Redis, where one request covers all of them.
+**The memory provider is per replica.** Each router holds its own cache, so an invalidation reaches only the replica it was sent to. We do not recommend using the in memory cache with multiple instances, and also in production.
 
 ## Observability
 
