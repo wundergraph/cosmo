@@ -28,7 +28,7 @@ func TestResponseCacheRedis(t *testing.T) {
 			RouterOptions: responseCacheOptions(t, time.Minute),
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{
-					Middleware: cacheControlMiddleware("public, max-age=60"),
+					Middleware: cacheControlMiddleware("max-age=60"),
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -178,14 +178,14 @@ func TestResponseCacheRedis(t *testing.T) {
 		})
 	})
 
-	t.Run("public with no max-age is cached for the configured ttl", func(t *testing.T) {
+	t.Run("must-revalidate without public is cached for the configured ttl", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: responseCacheOptions(t, time.Minute),
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{
-					Middleware: cacheControlMiddleware("public"),
+					Middleware: cacheControlMiddleware("must-revalidate"),
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -193,7 +193,7 @@ func TestResponseCacheRedis(t *testing.T) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { employees { id currentMood } }`})
 
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(),
-				"a bare public is cacheable and falls back to the configured ttl")
+				"must-revalidate without a freshness lifetime falls back to the configured ttl")
 		})
 	})
 
@@ -348,14 +348,14 @@ func TestResponseCacheRedis(t *testing.T) {
 func TestRootFetchResponseCacheRedis(t *testing.T) {
 	t.Parallel()
 
-	t.Run("a second identical request does not reach the subgraph", func(t *testing.T) {
+	t.Run("s-maxage without public caches a root fetch", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: responseCacheOptions(t, time.Minute),
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
-					Middleware: cacheControlMiddleware("public, max-age=60"),
+					Middleware: cacheControlMiddleware("s-maxage=60"),
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -405,8 +405,8 @@ func TestRootFetchResponseCacheRedis(t *testing.T) {
 		// Pins today's behaviour rather than endorsing it. The cache key is built
 		// from the request the router renders for the subgraph, and header
 		// propagation runs after that, so a propagated header never reaches the
-		// key. A subgraph whose answer varies by header must therefore not mark
-		// that answer public, or one caller is served another caller's response.
+		// key. A subgraph whose answer varies by header must therefore use private
+		// or no-store, or one caller is served another caller's response.
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: append(responseCacheOptions(t, time.Minute),
 				core.WithHeaderRules(config.HeaderRules{
@@ -436,7 +436,7 @@ func TestRootFetchResponseCacheRedis(t *testing.T) {
 			require.Equal(t, one.Body, another.Body)
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load(),
 				"the second tenant is served the first tenant's entry, which is why a "+
-					"header dependent answer must not be marked public")
+					"header dependent answer must use private or no-store")
 		})
 	})
 
