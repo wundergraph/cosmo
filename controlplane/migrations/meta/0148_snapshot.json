@@ -1,5 +1,5 @@
 {
-  "id": "65e1b154-47fe-4c2c-80a6-2c401958366b",
+  "id": "8e8dd991-499e-4b49-a864-2d093c9660a3",
   "prevId": "482af24a-6b14-495f-95fc-7685f3612d60",
   "version": "7",
   "dialect": "postgresql",
@@ -4376,113 +4376,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "public.organization_feature_terms_acceptance": {
-      "name": "organization_feature_terms_acceptance",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "feature": {
-          "name": "feature",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "last_accepted_by_id": {
-          "name": "last_accepted_by_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_accepted_at": {
-          "name": "last_accepted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "organization_fta_idx": {
-          "name": "organization_fta_idx",
-          "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "feature",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "org_fta_organization_id_idx": {
-          "name": "org_fta_organization_id_idx",
-          "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "organization_feature_terms_acceptance_organization_id_organizations_id_fk": {
-          "name": "organization_feature_terms_acceptance_organization_id_organizations_id_fk",
-          "tableFrom": "organization_feature_terms_acceptance",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "organization_feature_terms_acceptance_last_accepted_by_id_users_id_fk": {
-          "name": "organization_feature_terms_acceptance_last_accepted_by_id_users_id_fk",
-          "tableFrom": "organization_feature_terms_acceptance",
-          "tableTo": "users",
-          "columnsFrom": [
-            "last_accepted_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "public.organization_features": {
       "name": "organization_features",
       "schema": "",
@@ -5777,6 +5670,156 @@
           "tableTo": "organizations",
           "columnsFrom": [
             "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "public.playground_default_headers": {
+      "name": "playground_default_headers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "federated_graph_id": {
+          "name": "federated_graph_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "headers": {
+          "name": "headers",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::json"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "pdh_federated_graph_id_idx": {
+          "name": "pdh_federated_graph_id_idx",
+          "columns": [
+            {
+              "expression": "federated_graph_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "pdh_unique_graph_level": {
+          "name": "pdh_unique_graph_level",
+          "columns": [
+            {
+              "expression": "federated_graph_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"playground_default_headers\".\"user_id\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "pdh_unique_personal_level": {
+          "name": "pdh_unique_personal_level",
+          "columns": [
+            {
+              "expression": "federated_graph_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"playground_default_headers\".\"user_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "playground_default_headers_organization_id_organizations_id_fk": {
+          "name": "playground_default_headers_organization_id_organizations_id_fk",
+          "tableFrom": "playground_default_headers",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "playground_default_headers_federated_graph_id_federated_graphs_id_fk": {
+          "name": "playground_default_headers_federated_graph_id_federated_graphs_id_fk",
+          "tableFrom": "playground_default_headers",
+          "tableTo": "federated_graphs",
+          "columnsFrom": [
+            "federated_graph_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "playground_default_headers_user_id_users_id_fk": {
+          "name": "playground_default_headers_user_id_users_id_fk",
+          "tableFrom": "playground_default_headers",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
           ],
           "columnsTo": [
             "id"

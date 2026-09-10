@@ -1,0 +1,103 @@
+---
+title: "Default Headers"
+description: "Configure headers that are added automatically to every new Playground tab, so you don't have to copy them between tabs. Defaults are stored with your graph, so they follow you across browsers and machines."
+icon: sliders
+---
+
+Every new tab you open in the Playground starts with a set of default headers. You can configure these at two levels:
+
+| Level            | Who can see it                              | Who can edit it                    |
+| :--------------- | :------------------------------------------ | :--------------------------------- |
+| **Graph defaults** | Everyone in the organization who can view the graph | Organization admins and graph admins |
+| **My defaults**    | Only you                                    | You                                |
+
+Both are scoped to a single federated graph — different graphs have their own defaults.
+
+## Configuring defaults
+
+<Steps>
+  <Step title="Open the Playground and select the Headers tab">
+    Under the headers editor, click **Set up your default headers**.
+  </Step>
+  <Step title="Write the headers as JSON under Graph defaults, My defaults, or both">
+    Each editor holds a JSON object of header names to values, the same shape the Playground's own
+    headers tab uses.
+  </Step>
+  <Step title="Check the Effective on new tabs preview">
+    This shows the merged result of both levels — exactly what a new tab will be seeded with.
+  </Step>
+  <Step title="Click Save">
+    Both levels are saved together in a single request.
+  </Step>
+</Steps>
+
+## How the two levels combine
+
+Your personal defaults are layered on top of the graph defaults:
+
+- A personal header **replaces** a graph header with the same name.
+- Header names are matched **case-insensitively**, so a personal `Authorization` overrides a graph `authorization`.
+- Headers you have only at the graph level are kept as-is.
+- Headers you have only in your personal set are added at the end.
+
+For example, with these configured:
+
+```json
+// Graph defaults
+{ "x-tenant-id": "acme", "Authorization": "Bearer team-token" }
+
+// My defaults
+{ "Authorization": "Bearer my-token" }
+```
+
+a new tab is seeded with:
+
+```json
+{
+  "x-tenant-id": "acme",
+  "Authorization": "Bearer my-token"
+}
+```
+
+## When defaults are applied
+
+Defaults are applied when a **new tab is created**. Tabs you already have open are never modified.
+
+This means that after changing your defaults, you need to open a new tab to see them. Your existing tabs keep whatever headers they currently have, so an in-progress request is never disturbed.
+
+<Note>
+  The headers you type into a tab are stored locally in your browser, not on the server. Default headers are stored with your graph in Cosmo, so they are available on any machine you sign in from.
+</Note>
+
+## Clearing defaults
+
+Empty a level's editor, or set it to `{}`, and save to clear it. If both levels are empty, new tabs fall back to the built-in default:
+
+```json
+{
+  "X-WG-TRACE" : "true"
+}
+```
+
+This header enables the [request trace](/studio/playground) visualization.
+
+## Keeping credentials out of graph defaults
+
+<Warning>
+  Graph defaults are visible to everyone in your organization who can view the graph. Do not put personal credentials there.
+</Warning>
+
+If your team needs the same header but each person needs their own value — an `Authorization` token, for instance — add it under **My defaults**. A personal header replaces the graph one with the same name, so the graph level can hold a shared placeholder while each person supplies their own value privately.
+
+## Validation
+
+- The contents must parse as JSON, and must be an object rather than an array or a bare value.
+- Header names must be valid HTTP tokens.
+- Values must be strings, numbers or booleans. A number or boolean is stored as its text, so `{"X-Retries": 3}` is saved and redisplayed as `{"X-Retries": "3"}`. Objects, arrays and `null` are rejected.
+- Within one level, two names cannot differ only by case.
+
+An empty editor and `{}` both mean the level has no headers.
+
+## Permissions
+
+If you are not an organization admin or a graph admin for this graph, the **Graph defaults** editor is read-only — you can see the shared headers your team has configured, but not change them. **My defaults** is always editable.

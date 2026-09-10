@@ -89,6 +89,15 @@ import {
   NEGATIVE_CACHE_TTL,
   PARTIAL_CACHE_LOAD,
   SHADOW_MODE,
+  LABEL,
+  POLICY,
+  POLICIES,
+  FIELD,
+  CONTEXT_FIELD_VALUE,
+  FORMAT,
+  CACHE_TAG,
+  FEDERATION_POLICY,
+  FROM_CONTEXT,
 } from '../../utils/string-constants';
 import {
   FALSE_BOOLEAN_VALUE_NODE,
@@ -111,6 +120,21 @@ export const AUTHENTICATED_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
+// directive @cacheTag(format: String!) repeatable on FIELD_DEFINITION | OBJECT
+export const CACHE_TAG_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(FORMAT),
+      type: REQUIRED_STRING_TYPE_NODE,
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
+  name: stringToNameNode(CACHE_TAG),
+  repeatable: true,
+};
+
 // @composeDirective is currently unimplemented
 /* directive @composeDirective(name: String!) repeatable on SCHEMA */
 export const COMPOSE_DIRECTIVE_DEFINITION: DirectiveDefinitionNode = {
@@ -126,9 +150,6 @@ export const COMPOSE_DIRECTIVE_DEFINITION: DirectiveDefinitionNode = {
   name: stringToNameNode(COMPOSE_DIRECTIVE),
   repeatable: true,
 };
-/* directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_OBJECT |
-   INPUT_FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR | UNION
-*/
 
 /*
  * directive @openfed__configureChildDescriptions(
@@ -223,10 +244,7 @@ export const COST_DEFINITION: DirectiveDefinitionNode = {
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(WEIGHT),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(INT_SCALAR),
-      },
+      type: REQUIRED_INT_TYPE_NODE,
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
@@ -240,6 +258,21 @@ export const COST_DEFINITION: DirectiveDefinitionNode = {
   ]),
   name: stringToNameNode(COST),
   repeatable: false,
+};
+
+// directive @context(name: String!) repeatable on INTERFACE | OBJECT | UNION
+export const CONTEXT_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(NAME),
+      type: REQUIRED_STRING_TYPE_NODE,
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([INTERFACE_UPPER, OBJECT_UPPER, UNION_UPPER]),
+  name: stringToNameNode(CONTEXT),
+  repeatable: true,
 };
 
 /* directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE |
@@ -349,10 +382,7 @@ export const EDFS_NATS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(PROVIDER_ID),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
-      },
+      type: REQUIRED_STRING_TYPE_NODE,
       defaultValue: {
         kind: Kind.STRING,
         value: DEFAULT_EDFS_PROVIDER_ID,
@@ -371,18 +401,12 @@ export const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(SUBJECT),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
-      },
+      type: REQUIRED_STRING_TYPE_NODE,
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(PROVIDER_ID),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
-      },
+      type: REQUIRED_STRING_TYPE_NODE,
       defaultValue: {
         kind: Kind.STRING,
         value: DEFAULT_EDFS_PROVIDER_ID,
@@ -488,6 +512,24 @@ export const EDFS_REDIS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
+// directive @fromContext(field: ContextFieldValue) on ARGUMENT_DEFINITION
+export const FROM_CONTEXT_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(FIELD),
+      type: stringToNamedTypeNode(CONTEXT_FIELD_VALUE),
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: [stringToNameNode(ARGUMENT_DEFINITION_UPPER)],
+  name: stringToNameNode(FROM_CONTEXT),
+  repeatable: false,
+};
+
+/* directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_OBJECT |
+   INPUT_FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR | UNION
+*/
 export const INACCESSIBLE_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([
@@ -538,16 +580,13 @@ export const KEY_DEFINITION: DirectiveDefinitionNode = {
   repeatable: true,
 };
 
-// directive @link(url: String!, as: String!, for: String, import: [String]) repeatable on SCHEMA
+// directive @link(url: String!, as: String!, for: link__Purpose, import: [link__Import]) repeatable on SCHEMA
 export const LINK_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(URL_LOWER),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
-      },
+      type: REQUIRED_STRING_TYPE_NODE,
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -594,10 +633,7 @@ export const LIST_SIZE_DEFINITION: DirectiveDefinitionNode = {
       name: stringToNameNode(SLICING_ARGUMENTS),
       type: {
         kind: Kind.LIST_TYPE,
-        type: {
-          kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_SCALAR),
-        },
+        type: REQUIRED_STRING_TYPE_NODE,
       },
     },
     {
@@ -605,10 +641,7 @@ export const LIST_SIZE_DEFINITION: DirectiveDefinitionNode = {
       name: stringToNameNode(SIZED_FIELDS),
       type: {
         kind: Kind.LIST_TYPE,
-        type: {
-          kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_SCALAR),
-        },
+        type: REQUIRED_STRING_TYPE_NODE,
       },
     },
     {
@@ -635,21 +668,59 @@ export const ONE_OF_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @override(from: String!) on FIELD_DEFINITION
+// directive @override(from: String!, label: String) on FIELD_DEFINITION
 export const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(FROM),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
-      },
+      type: REQUIRED_STRING_TYPE_NODE,
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(LABEL),
+      type: stringToNamedTypeNode(STRING_SCALAR),
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
   name: stringToNameNode(OVERRIDE),
+  repeatable: false,
+};
+
+// directive @policy(policies: [[federation__Policy!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+export const POLICY_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(POLICIES),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: {
+          kind: Kind.LIST_TYPE,
+          type: {
+            kind: Kind.NON_NULL_TYPE,
+            type: {
+              kind: Kind.LIST_TYPE,
+              type: {
+                kind: Kind.NON_NULL_TYPE,
+                type: stringToNamedTypeNode(FEDERATION_POLICY),
+              },
+            },
+          },
+        },
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([
+    ENUM_UPPER,
+    FIELD_DEFINITION_UPPER,
+    INTERFACE_UPPER,
+    OBJECT_UPPER,
+    SCALAR_UPPER,
+  ]),
+  name: stringToNameNode(POLICY),
   repeatable: false,
 };
 
@@ -737,10 +808,7 @@ export const SEMANTIC_NON_NULL_DEFINITION: DirectiveDefinitionNode = {
         kind: Kind.NON_NULL_TYPE,
         type: {
           kind: Kind.LIST_TYPE,
-          type: {
-            kind: Kind.NON_NULL_TYPE,
-            type: stringToNamedTypeNode(INT_SCALAR),
-          },
+          type: REQUIRED_INT_TYPE_NODE,
         },
       },
       defaultValue: {
@@ -809,10 +877,7 @@ export const TAG_DEFINITION: DirectiveDefinitionNode = {
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(NAME),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
-      },
+      type: REQUIRED_STRING_TYPE_NODE,
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
