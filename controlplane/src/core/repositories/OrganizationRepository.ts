@@ -1752,10 +1752,12 @@ export class OrganizationRepository {
     const accepted = await this.db
       .select({ id: schema.organizationFeatureTermsAcceptance.id })
       .from(schema.organizationFeatureTermsAcceptance)
-      .where(and(
-        eq(schema.organizationFeatureTermsAcceptance.organizationId, organizationId),
-        eq(schema.organizationFeatureTermsAcceptance.feature, featureId),
-      ))
+      .where(
+        and(
+          eq(schema.organizationFeatureTermsAcceptance.organizationId, organizationId),
+          eq(schema.organizationFeatureTermsAcceptance.feature, featureId),
+        ),
+      )
       .limit(1)
       .execute();
 
@@ -1766,12 +1768,12 @@ export class OrganizationRepository {
     actorId: string;
     organizationId: string;
     featureIds: FeatureIds[];
-  }): Promise<unknown> {
+  }): Promise<void> {
     if (input.featureIds.length === 0) {
-      return Promise.resolve();
+      return;
     }
 
-    return this.db
+    await this.db
       .insert(schema.organizationFeatureTermsAcceptance)
       .values(
         input.featureIds.map((featureId) => ({
@@ -1779,7 +1781,7 @@ export class OrganizationRepository {
           feature: featureId,
           lastAcceptedBy: input.actorId,
           lastAcceptedAt: new Date(),
-        }))
+        })),
       )
       .onConflictDoUpdate({
         target: [
