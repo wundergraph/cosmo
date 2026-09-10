@@ -8,6 +8,7 @@ on:
       - 'router-plugin/**/*'
       - 'router-tests/**/*'
       - 'connect/**/*'
+      - 'composition/**/*'
       - 'Makefile'
       - '.github/workflows/router-ci.yaml'
 

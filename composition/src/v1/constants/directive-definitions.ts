@@ -260,7 +260,7 @@ export const COST_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @context(name: String!) on INTERFACE | OBJECT | UNION
+// directive @context(name: String!) repeatable on INTERFACE | OBJECT | UNION
 export const CONTEXT_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -272,7 +272,7 @@ export const CONTEXT_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([INTERFACE_UPPER, OBJECT_UPPER, UNION_UPPER]),
   name: stringToNameNode(CONTEXT),
-  repeatable: false,
+  repeatable: true,
 };
 
 /* directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE |

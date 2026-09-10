@@ -18,7 +18,7 @@ export const CONNECT_FIELD_RESOLVER_DIRECTIVE = `
 `;
 
 export const CONTEXT_DIRECTIVE = `
-  directive @context(name: String!) on INTERFACE | OBJECT | UNION
+  directive @context(name: String!) repeatable on INTERFACE | OBJECT | UNION
 `;
 
 export const COST_DIRECTIVE = `
