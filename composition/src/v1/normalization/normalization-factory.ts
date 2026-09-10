@@ -181,6 +181,7 @@ import {
   DEPENDENCIES_BY_DIRECTIVE_NAME,
   EVENT_DIRECTIVE_NAMES,
   STREAM_CONFIGURATION_FIELD_NAMES,
+  UNSUPPORTED_DIRECTIVE_NAMES,
 } from '../constants/strings';
 import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
@@ -204,10 +205,12 @@ import {
   fieldAlreadyProvidedWarning,
   invalidExternalFieldWarning,
   nonExternalConditionalFieldWarning,
+  overrideDirectiveLabelArgumentWarning,
   providesOnUnionWarning,
   providesWithInterfaceFieldSelectionWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
+  unsupportedDirectiveWarning,
 } from '../warnings/warnings';
 import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
 import {
@@ -308,6 +311,7 @@ import {
   INT_SCALAR,
   INTERFACE_OBJECT,
   KEY,
+  LABEL,
   LEVELS,
   LIST_SIZE,
   LITERAL_AT,
@@ -715,6 +719,16 @@ export class NormalizationFactory {
        * The directive location validation means the node kind check should be unnecessary
        * */
       if (isOverride && isField) {
+        if (argumentNode.name.value === LABEL) {
+          this.warnings.push(
+            overrideDirectiveLabelArgumentWarning({
+              coords: `${data.originalParentTypeName}.${data.name}`,
+              subgraphName: this.subgraphName,
+            }),
+          );
+          continue;
+        }
+
         this.handleOverrideDirective({
           data,
           directiveCoords,
@@ -1610,7 +1624,7 @@ export class NormalizationFactory {
     const parentData = this.parentDefinitionDataByTypeName.get(typeName);
     const directivesByName = this.extractDirectives(
       node,
-      parentData?.directivesByName || new Map<string, ConstDirectiveNode[]>(),
+      parentData?.directivesByName || new Map<string, Array<ConstDirectiveNode>>(),
     );
     const extensionType = this.getNodeExtensionType(isRealExtension, directivesByName);
     if (parentData) {
@@ -4506,12 +4520,21 @@ export class NormalizationFactory {
       if (!definition) {
         continue;
       }
+
       this.directiveDefinitionByName.set(directiveName, definition);
       addOptionalIterableToSet({
         source: DEPENDENCIES_BY_DIRECTIVE_NAME.get(directiveName),
         target: dependencies,
       });
       definitions.push(definition);
+      if (UNSUPPORTED_DIRECTIVE_NAMES.has(directiveName)) {
+        this.warnings.push(
+          unsupportedDirectiveWarning({
+            directiveName,
+            subgraphName: this.subgraphName,
+          }),
+        );
+      }
     }
     // Always include custom directive definitions regardless of use.
     for (const definition of this.customDirectiveDefinitionByName.values()) {

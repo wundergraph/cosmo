@@ -2839,6 +2839,47 @@ message GetPlaygroundScriptsResponse {
   repeated PlaygroundScript scripts = 2;
 }
 
+message PlaygroundHeader {
+  string key = 1;
+  string value = 2;
+}
+
+message PlaygroundHeaderList {
+  repeated PlaygroundHeader headers = 1;
+}
+
+message GetPlaygroundDefaultHeadersRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+}
+
+message GetPlaygroundDefaultHeadersResponse {
+  Response response = 1;
+  repeated PlaygroundHeader graphHeaders = 2;
+  repeated PlaygroundHeader personalHeaders = 3;
+  bool canEditGraphHeaders = 4;
+}
+
+message UpdatePlaygroundDefaultHeadersRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  // Each scope is three-state. These are wrapped messages rather than plain
+  // `repeated` fields because proto3 repeated has no presence, so an omitted
+  // list and an empty one would be identical on the wire - and both meanings
+  // are needed here:
+  //   omitted            -> leave that scope's stored headers unchanged
+  //   present, empty     -> clear that scope, deleting its row
+  //   present, non-empty -> replace that scope's headers with these
+  // A caller without permission for a scope omits it; sending it is rejected
+  // rather than silently ignored.
+  PlaygroundHeaderList graphHeaders = 3;
+  PlaygroundHeaderList personalHeaders = 4;
+}
+
+message UpdatePlaygroundDefaultHeadersResponse {
+  Response response = 1;
+}
+
 message GetFederatedGraphByIdRequest {
   string id = 1;
   bool includeMetrics = 2;
@@ -3523,6 +3564,10 @@ service PlatformService {
   rpc DeletePlaygroundScript(DeletePlaygroundScriptRequest) returns (DeletePlaygroundScriptResponse) {}
   rpc UpdatePlaygroundScript(UpdatePlaygroundScriptRequest) returns (UpdatePlaygroundScriptResponse) {}
   rpc GetPlaygroundScripts(GetPlaygroundScriptsRequest) returns (GetPlaygroundScriptsResponse) {}
+
+  // Playground default headers
+  rpc GetPlaygroundDefaultHeaders(GetPlaygroundDefaultHeadersRequest) returns (GetPlaygroundDefaultHeadersResponse) {}
+  rpc UpdatePlaygroundDefaultHeaders(UpdatePlaygroundDefaultHeadersRequest) returns (UpdatePlaygroundDefaultHeadersResponse) {}
 
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}

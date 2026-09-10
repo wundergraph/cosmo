@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.64.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.64.0...@wundergraph/composition@0.64.1) (2026-09-09)
+
+### Bug Fixes
+
+* add repeatable to [@context](https://github.com/context) ([#3228](https://github.com/wundergraph/cosmo/issues/3228)) ([a19b871](https://github.com/wundergraph/cosmo/commit/a19b8712067806871f82ef033ea376a8679651fa)) (@Aenimus)
+
+# [0.64.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.63.4...@wundergraph/composition@0.64.0) (2026-09-09)
+
+### Features
+
+* add minimal support for newer federation directives ([#3223](https://github.com/wundergraph/cosmo/issues/3223)) ([adade22](https://github.com/wundergraph/cosmo/commit/adade22b3745a6645961ab5330214ab1e9c1b68b)) (@Aenimus)
+
 ## [0.63.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.63.3...@wundergraph/composition@0.63.4) (2026-09-08)
 
 **Note:** Version bump only for package @wundergraph/composition

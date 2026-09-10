@@ -43,6 +43,28 @@ func (t *tagIndex) add(key string, tags []string, expiresAt time.Time) {
 	}
 }
 
+// take removes tag from the index and returns the keys it named. Keys already
+// past their expiry are left out
+func (t *tagIndex) take(tag string, now time.Time) []string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	keys, ok := t.tags[tag]
+	if !ok {
+		return nil
+	}
+	delete(t.tags, tag)
+
+	live := make([]string, 0, len(keys))
+	for key, expiresAt := range keys {
+		if expiresAt.After(now) {
+			live = append(live, key)
+		}
+	}
+
+	return live
+}
+
 // prune drops expired members, and any tag left with none. A no-op until
 // tagIndexPruneInterval has passed.
 func (t *tagIndex) prune(now time.Time) {
