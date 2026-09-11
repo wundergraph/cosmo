@@ -260,6 +260,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithCors(&cors.Config{
 			Enabled:          config.CORS.Enabled,
 			AllowOrigins:     config.CORS.AllowOrigins,
+			MatchOrigins:     config.CORS.MatchOrigins,
 			CustomSchemas:    config.CORS.CustomSchemas,
 			AllowMethods:     config.CORS.AllowMethods,
 			AllowCredentials: config.CORS.AllowCredentials,

@@ -1834,6 +1834,14 @@
             "type": "string"
           }
         },
+        "match_origins": {
+          "type": "array",
+          "description": "Go regular expressions matched against the entire origin, in addition to allow_origins. Set allow_origins to [] to allow only regex matches; its default '*' still allows all origins. Invalid expressions fail startup.",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
         "custom_schemas": {
           "type": "array",
           "description": "Additional URL schemes permitted in allow_origins, including the '://' suffix, such as 'custom://'. Origins must still be listed in allow_origins.",

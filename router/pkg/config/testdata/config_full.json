@@ -180,6 +180,9 @@
       "https://app.example.com",
       "custom://localhost"
     ],
+    "MatchOrigins": [
+      "https://([a-z0-9-]+\\.)*example\\.com"
+    ],
     "CustomSchemas": [
       "custom://"
     ],

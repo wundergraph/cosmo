@@ -942,6 +942,7 @@ pyroscope:
 | ---------------------- | ----------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | CORS_ENABLED           | enabled           | <Icon icon="square" /> | Set this to enable/disable the CORS middleware. It is enabled by default. When disabled, the rest of the properties for CORS have no effect. | true                                 |
 | CORS_ALLOW_ORIGINS     | allow_origins     | <Icon icon="square" /> | This is a list of origins which are allowed. You can provide origins with wildcards                                                          | \*                                   |
+| CORS_MATCH_ORIGINS     | match_origins     | <Icon icon="square" /> | Go regular expressions matched against the entire origin, in addition to `allow_origins`. Separate patterns with semicolons in the environment variable. | []                            |
 | CORS_CUSTOM_SCHEMAS    | custom_schemas    | <Icon icon="square" /> | Additional URL schemes permitted in `allow_origins`, including the `://` suffix.                                                               | []                                   |
 | CORS_ALLOW_METHODS     | allow_methods     | <Icon icon="square" /> |                                                                                                                                              | HEAD,GET,POST                        |
 | CORS_ALLOW_HEADERS     | allow_headers     | <Icon icon="square" /> |                                                                                                                                              | Origin, Content-Length, Content-Type |
@@ -949,6 +950,28 @@ pyroscope:
 | CORS_MAX_AGE           | max_age           | <Icon icon="square" /> |                                                                                                                                              | 5m                                   |
 
 Wildcard origins retain their existing validation and matching behavior. Patterns containing `*`, including `*.example.com`, bypass scheme validation and do not require `custom_schemas`.
+
+### Regular expression origins
+
+Use `match_origins` to allow origins using [Go regular expressions](https://pkg.go.dev/regexp/syntax). The router compiles patterns at startup and rejects invalid patterns with an error naming the pattern. Matching uses Go's linear-time regex engine. Lookarounds and backreferences are not supported.
+
+Each pattern must match the entire origin, including its scheme and optional port. Anchors such as `^` and `$` are optional. For example, `https://([a-z0-9-]+\.)*example\.com` allows `https://example.com` and `https://app.example.com`, but rejects `https://app.example.com.evil.com`. Matching is case-sensitive unless the pattern uses `(?i)`.
+
+An origin is allowed if it matches either `allow_origins` or `match_origins`. The existing `*` wildcard syntax in `allow_origins` is unchanged. Set `allow_origins: []` for regex-only matching. Leaving `allow_origins` at its default `["*"]` allows all origins regardless of `match_origins`.
+
+```yaml
+cors:
+  allow_origins: []
+  match_origins:
+    - 'https://([a-z0-9-]+\.)*example\.com'
+    - '^https://(.+\.)?aol\.(de|ca|co\.uk|com)$'
+```
+
+Use single-quoted YAML strings to preserve regex backslashes. `CORS_MATCH_ORIGINS` uses semicolons to separate patterns so commas in repetition counts such as `{1,3}` are preserved. For regex-only matching with this environment variable, set `allow_origins: []` in YAML. An empty `CORS_ALLOW_ORIGINS` environment variable uses the default `*`.
+
+Requests allowed by a regex receive their exact `Origin` in `Access-Control-Allow-Origin`, including preflight responses. Cross-origin requests that match neither list receive `403 Forbidden`.
+
+### Custom URL schemes
 
 To allow a literal origin with a custom URL scheme, add the scheme to `custom_schemas` and the origin to `allow_origins`. Adding a scheme does not allow every origin using that scheme. For example:
 
@@ -959,6 +982,8 @@ cors:
     - "https://app.example.com"
     - "custom://localhost"
 ```
+
+Patterns in `match_origins` can also match custom URL schemes directly. `custom_schemas` applies only to entries in `allow_origins`.
 
 ### Example YAML config:
 

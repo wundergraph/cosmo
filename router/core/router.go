@@ -294,6 +294,11 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 	if r.corsOptions == nil {
 		r.corsOptions = CorsDefaultOptions()
 	}
+	if r.corsOptions.Enabled {
+		if err := r.corsOptions.Validate(); err != nil {
+			return nil, fmt.Errorf("invalid CORS configuration: %w", err)
+		}
+	}
 
 	if r.subgraphTransportOptions == nil {
 		r.subgraphTransportOptions = DefaultSubgraphTransportOptions()
