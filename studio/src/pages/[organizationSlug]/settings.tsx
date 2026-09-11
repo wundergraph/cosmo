@@ -46,7 +46,6 @@ import {
   getOIDCProvider,
   leaveOrganization,
   listOIDCProviders,
-  updateFeatureSettings,
   updateIDPMappers,
   updateOrganizationDetails,
   getOrganizationGroups,
@@ -55,11 +54,12 @@ import { Feature, OIDCProvider, OrganizationGroup } from '@wundergraph/cosmo-con
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { Dispatch, SetStateAction, useContext, useEffect, useState } from 'react';
-import { FaMagic } from 'react-icons/fa';
 import { z } from 'zod';
 import { DeleteOrganization } from '@/components/settings/delete-organization';
 import { RestoreOrganization } from '@/components/settings/restore-organization';
 import { buildUrl } from '@/lib/build-url';
+import { CosmoAi } from '@/components/settings/ai/cosmo-ai';
+import { useUpdateFeatureSettings } from '@/components/settings/use-update-feature-settings';
 
 const OrganizationDetails = () => {
   const user = useContext(UserContext);
@@ -861,188 +861,9 @@ const OpenIDConnectProviders = () => {
   );
 };
 
-const CosmoAi = () => {
-  const router = useRouter();
-  const ai = useFeature('ai');
-  const sessionQueryClient = useContext(SessionClientContext);
-  const { mutate, isPending, data } = useMutation(updateFeatureSettings);
-  const { toast } = useToast();
-
-  const disable = () => {
-    mutate(
-      {
-        enable: false,
-        featureId: Feature.ai,
-      },
-      {
-        onSuccess: async (d) => {
-          if (d.response?.code === EnumStatusCode.OK) {
-            await sessionQueryClient.invalidateQueries({
-              queryKey: ['user', router.asPath],
-            });
-            toast({
-              description: 'Disabled Cosmo AI successfully.',
-              duration: 3000,
-            });
-          } else if (d.response?.details) {
-            toast({
-              description: d.response.details,
-              duration: 4000,
-            });
-          }
-        },
-        onError: () => {
-          toast({
-            description: 'Could not disable Cosmo AI. Please try again.',
-            duration: 3000,
-          });
-        },
-      },
-    );
-  };
-
-  const enable = () => {
-    mutate(
-      {
-        enable: true,
-        featureId: Feature.ai,
-      },
-      {
-        onSuccess: async (d) => {
-          if (d.response?.code === EnumStatusCode.OK) {
-            await sessionQueryClient.invalidateQueries({
-              queryKey: ['user', router.asPath],
-            });
-            toast({
-              description: 'Enabled Cosmo AI successfully.',
-              duration: 3000,
-            });
-          } else if (d.response?.details) {
-            toast({
-              description: d.response.details,
-              duration: 4000,
-            });
-          }
-        },
-        onError: () => {
-          toast({
-            description: 'Could not enable Cosmo AI. Please try again.',
-            duration: 3000,
-          });
-        },
-      },
-    );
-  };
-
-  const action = ai?.enabled ? (
-    <Button className="md:ml-auto" type="submit" variant="destructive" isLoading={isPending} onClick={() => disable()}>
-      Disable
-    </Button>
-  ) : (
-    <Button className="md:ml-auto" type="submit" variant="default" isLoading={isPending} onClick={() => enable()}>
-      Enable
-    </Button>
-  );
-
-  return (
-    <Card>
-      <CardHeader className="gap-y-6 md:flex-row">
-        <div className="space-y-1.5">
-          <CardTitle className="flex items-center gap-x-2">
-            <FaMagic />
-            <span>Cosmo AI</span>
-            <Badge variant="outline">Beta</Badge>
-          </CardTitle>
-          <CardDescription>
-            Enable generative AI to create documentation for your GraphQL schema or fix queries.{' '}
-            <Link
-              href={docsBaseURL + '/studio/cosmo-ai'}
-              className="text-sm text-primary"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Learn more
-            </Link>
-          </CardDescription>
-        </div>
-        {action}
-      </CardHeader>
-    </Card>
-  );
-};
-
 const RBAC = () => {
-  const router = useRouter();
-  const sessionQueryClient = useContext(SessionClientContext);
   const rbac = useFeature('rbac');
-  const { mutate, isPending } = useMutation(updateFeatureSettings);
-  const { toast } = useToast();
-
-  const disable = () => {
-    mutate(
-      {
-        enable: false,
-        featureId: Feature.rbac,
-      },
-      {
-        onSuccess: async (d) => {
-          if (d.response?.code === EnumStatusCode.OK) {
-            await sessionQueryClient.invalidateQueries({
-              queryKey: ['user', router.asPath],
-            });
-            toast({
-              description: 'Disabled RBAC successfully.',
-              duration: 3000,
-            });
-          } else if (d.response?.details) {
-            toast({
-              description: d.response.details,
-              duration: 4000,
-            });
-          }
-        },
-        onError: () => {
-          toast({
-            description: 'Could not disable RBAC. Please try again.',
-            duration: 3000,
-          });
-        },
-      },
-    );
-  };
-
-  const enable = () => {
-    mutate(
-      {
-        enable: true,
-        featureId: Feature.rbac,
-      },
-      {
-        onSuccess: async (d) => {
-          if (d.response?.code === EnumStatusCode.OK) {
-            await sessionQueryClient.invalidateQueries({
-              queryKey: ['user', router.asPath],
-            });
-            toast({
-              description: 'Enabled RBAC successfully.',
-              duration: 3000,
-            });
-          } else if (d.response?.details) {
-            toast({
-              description: d.response.details,
-              duration: 4000,
-            });
-          }
-        },
-        onError: () => {
-          toast({
-            description: 'Could not enable RBAC. Please try again.',
-            duration: 3000,
-          });
-        },
-      },
-    );
-  };
+  const { enable, disable, isPending } = useUpdateFeatureSettings(Feature.rbac);
 
   const action = rbac?.enabled ? (
     <Button className="md:ml-auto" type="submit" variant="destructive" isLoading={isPending} onClick={() => disable()}>
@@ -1089,77 +910,8 @@ const RBAC = () => {
 };
 
 const Scim = () => {
-  const router = useRouter();
-  const sessionQueryClient = useContext(SessionClientContext);
   const scim = useFeature('scim');
-  const { mutate, isPending } = useMutation(updateFeatureSettings);
-  const { toast } = useToast();
-
-  const disable = () => {
-    mutate(
-      {
-        enable: false,
-        featureId: Feature.scim,
-      },
-      {
-        onSuccess: async (d) => {
-          if (d.response?.code === EnumStatusCode.OK) {
-            await sessionQueryClient.invalidateQueries({
-              queryKey: ['user', router.asPath],
-            });
-            toast({
-              description: 'Disabled Scim successfully.',
-              duration: 3000,
-            });
-          } else if (d.response?.details) {
-            toast({
-              description: d.response.details,
-              duration: 4000,
-            });
-          }
-        },
-        onError: () => {
-          toast({
-            description: 'Could not disable Scim. Please try again.',
-            duration: 3000,
-          });
-        },
-      },
-    );
-  };
-
-  const enable = () => {
-    mutate(
-      {
-        enable: true,
-        featureId: Feature.scim,
-      },
-      {
-        onSuccess: async (d) => {
-          if (d.response?.code === EnumStatusCode.OK) {
-            await sessionQueryClient.invalidateQueries({
-              queryKey: ['user', router.asPath],
-            });
-            toast({
-              description: 'Enabled Scim successfully.',
-              duration: 3000,
-            });
-          } else if (d.response?.details) {
-            toast({
-              description: d.response.details,
-              duration: 4000,
-            });
-          }
-        },
-        onError: () => {
-          toast({
-            description: 'Could not enable Scim. Please try again.',
-            duration: 3000,
-          });
-        },
-      },
-    );
-  };
+  const { enable, disable, isPending } = useUpdateFeatureSettings(Feature.scim);
 
   const action = scim?.enabled ? (
     <Button className="md:ml-auto" type="submit" variant="destructive" isLoading={isPending} onClick={() => disable()}>

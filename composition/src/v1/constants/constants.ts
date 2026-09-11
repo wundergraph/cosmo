@@ -49,7 +49,7 @@ import {
   SUBSCRIPTION_FILTER,
   TAG,
 } from '../../utils/string-constants';
-import { type DirectiveName, TypeName } from '../../types/types';
+import { type DirectiveName, type TypeName } from '../../types/types';
 import {
   AUTHENTICATED_DEFINITION,
   CACHE_TAG_DEFINITION,

@@ -75,6 +75,8 @@ describe('PromptToQueryService', () => {
       clientSchema: null,
     });
 
+    vi.spyOn(OrganizationRepository.prototype, 'isFeatureTermsAccepted').mockResolvedValueOnce(true);
+
     const response = await createService().generateQuery('federated-graph-id', schemaVersion, 'List all employees');
 
     expect(requests).toEqual(['ensure', 'get', 'prompt']);
@@ -104,6 +106,9 @@ describe('PromptToQueryService', () => {
     );
     const feature = vi.spyOn(OrganizationRepository.prototype, 'getFeature');
     feature.mockResolvedValueOnce({ id: 'prompt-to-query', enabled: false });
+
+    const isFeatureTermsAccepted = vi.spyOn(OrganizationRepository.prototype, 'isFeatureTermsAccepted');
+    isFeatureTermsAccepted.mockResolvedValueOnce(true);
 
     const service = createService();
     await service.indexSchema('type Query { disabled: Boolean! }');

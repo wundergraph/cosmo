@@ -124,6 +124,16 @@ export class PromptToQueryService {
       });
     }
 
+    // Ensure that the feature terms have been accepted for the organization
+    if (!(await orgRepo.isFeatureTermsAccepted(this.organizationId, 'prompt-to-query'))) {
+      return create(GenerateQueryResponseSchema, {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Prompt to Query not available with your current plan',
+        },
+      });
+    }
+
     const federatedGraphRepository = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
     const federatedGraph = await federatedGraphRepository.byId(federatedGraphId);
     if (!federatedGraph) {
@@ -193,6 +203,11 @@ export class PromptToQueryService {
     const orgRepo = new OrganizationRepository(this.logger, this.db, this.defaultBillingPlanId);
     const ptqFeature = await orgRepo.getFeature({ organizationId: this.organizationId, featureId: 'prompt-to-query' });
     if (!ptqFeature?.enabled || !schema) {
+      return;
+    }
+
+    // Ensure that the feature terms have been accepted for the organization
+    if (!(await orgRepo.isFeatureTermsAccepted(this.organizationId, 'prompt-to-query'))) {
       return;
     }
 
