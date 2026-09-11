@@ -18,8 +18,10 @@ import {
 } from '../../types/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { GetDiffBetweenGraphsSuccess } from '../composition/schemaCheck.js';
+import { DB_INSERT_BATCH_SIZE } from '../constants.js';
 import SchemaGraphPruner from '../services/SchemaGraphPruner.js';
 import { traced } from '../tracing.js';
+import { createBatches } from '../util.js';
 import { UsageRepository } from './analytics/UsageRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
@@ -89,22 +91,30 @@ export class SchemaGraphPruningRepository {
     graphPruningIssues: GraphPruningIssueResult[];
     schemaCheckSubgraphId: string;
   }) {
-    if (graphPruningIssues.length > 0) {
-      await this.db.insert(schemaCheckGraphPruningAction).values(
-        graphPruningIssues.map((l) => {
-          return {
-            graphPruningRuleType: l.graphPruningRuleType,
-            schemaCheckId,
-            fieldPath: l.fieldPath,
-            message: l.message,
-            location: l.issueLocation,
-            isError: l.severity === LintSeverity.error,
-            federatedGraphId: l.federatedGraphId,
-            schemaCheckSubgraphId,
-          };
-        }),
-      );
+    if (graphPruningIssues.length === 0) {
+      return;
     }
+
+    // One issue is produced per (field, federated graph) pair, so large subgraphs in many federated graphs
+    // produce a lot of rows. Insert in batches to stay below the Postgres bind parameter limit (65535).
+    await this.db.transaction(async (tx) => {
+      for (const batch of createBatches(graphPruningIssues, DB_INSERT_BATCH_SIZE)) {
+        await tx.insert(schemaCheckGraphPruningAction).values(
+          batch.map((l) => {
+            return {
+              graphPruningRuleType: l.graphPruningRuleType,
+              schemaCheckId,
+              fieldPath: l.fieldPath,
+              message: l.message,
+              location: l.issueLocation,
+              isError: l.severity === LintSeverity.error,
+              federatedGraphId: l.federatedGraphId,
+              schemaCheckSubgraphId,
+            };
+          }),
+        );
+      }
+    });
   }
 
   public async getSchemaCheckGraphPruningIsssues({

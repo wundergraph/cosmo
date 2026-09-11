@@ -11,7 +11,6 @@ import { DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import { and, eq, inArray } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { parse } from 'graphql';
 import pLimit from 'p-limit';
 import {
   CompositionOptions,
@@ -235,7 +234,6 @@ export class CompositionService {
       const baseCompositionSubgraphs = subgraphs.map((s) => ({
         name: s.name,
         url: s.routingUrl,
-        definitions: parse(s.schemaSDL),
       }));
 
       const subgraphsToCompose = featureFlagRepo.getFeatureFlagRelatedSubgraphsToCompose(
@@ -576,7 +574,6 @@ export class CompositionService {
           const baseCompositionSubgraphs = subgraphs.map((s) => ({
             name: s.name,
             url: s.routingUrl,
-            definitions: parse(s.schemaSDL),
           }));
 
           const subgraphsToCompose = featureFlagRepo.getFeatureFlagRelatedSubgraphsToCompose(
@@ -1007,7 +1004,6 @@ export class CompositionService {
       const baseCompositionSubgraphs = subgraphs.map((s) => ({
         name: s.name,
         url: s.routingUrl,
-        definitions: parse(s.schemaSDL),
       }));
 
       // Collects the base graph and applicable feature flag-related graphs

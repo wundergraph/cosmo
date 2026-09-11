@@ -296,7 +296,11 @@ export class SchemaUsageTrafficInspector {
         const schemaChangeId = ops[0].schemaChangeId;
         const existing = results.get(schemaChangeId);
         if (existing) {
-          existing.push(...ops);
+          // Avoid `push(...ops)`: spreading a very large result set into a call throws a
+          // "Maximum call stack size exceeded" RangeError.
+          for (const op of ops) {
+            existing.push(op);
+          }
         } else {
           results.set(schemaChangeId, ops);
         }
@@ -315,19 +319,34 @@ export class SchemaUsageTrafficInspector {
     schemaChanges: SchemaDiff[],
     schemaCheckActions: SchemaCheckChangeAction[],
   ): InspectorSchemaChange[] {
-    const operations = schemaChanges
-      .map((change) => {
-        // find the schema check action that matches the change
-        const schemaCheckAction = schemaCheckActions.find(
-          (action) => action.path === change.path && action.changeType === change.changeType,
-        );
-        // there must be a schema check action for every change otherwise it is a bug
-        if (!schemaCheckAction) {
-          throw new Error(`Could not find schema check action for change ${change.message}`);
-        }
-        return toInspectorChange(change, schemaCheckAction.id);
-      })
-      .filter((change) => change !== null) as InspectorSchemaChange[];
+    // Index the stored actions by (path, changeType) once instead of scanning the list for every
+    // change, which is quadratic and gets very slow when a subgraph with thousands of fields is
+    // removed or heavily modified. The first action wins, matching the previous `find` semantics.
+    const actionIdByKey = new Map<string, string>();
+    for (const action of schemaCheckActions) {
+      // A change always has a path and change type, so actions without them can never match.
+      if (action.path === null || action.changeType === null) {
+        continue;
+      }
+      const key = `${action.path} ${action.changeType}`;
+      if (!actionIdByKey.has(key)) {
+        actionIdByKey.set(key, action.id);
+      }
+    }
+
+    const operations: InspectorSchemaChange[] = [];
+    for (const change of schemaChanges) {
+      // find the schema check action that matches the change
+      const schemaCheckActionId = actionIdByKey.get(`${change.path} ${change.changeType}`);
+      // there must be a schema check action for every change otherwise it is a bug
+      if (!schemaCheckActionId) {
+        throw new Error(`Could not find schema check action for change ${change.message}`);
+      }
+      const inspectorChange = toInspectorChange(change, schemaCheckActionId);
+      if (inspectorChange !== null) {
+        operations.push(inspectorChange);
+      }
+    }
 
     return operations;
   }
