@@ -15,8 +15,23 @@ xxhash64(DataSourceID + ":" + requestBody + preComputedHeaderHash)
 ```
 
 - **DataSourceID**: identifies the target subgraph
-- **requestBody**: the complete JSON payload (query + variables)
+- **requestBody**: the complete JSON payload sent to the subgraph — query, variables, and `extensions` when present
 - **preComputedHeaderHash**: xxhash64 of all headers that will be forwarded to this subgraph, as determined by your header forwarding rules
+
+<Warning>
+**WebSocket subscriptions: forwarded data can land in the request body, not just the headers.**
+
+When `websocket.forward_initial_payload` or `websocket.forward_upgrade_headers` is enabled, the router carries that data into the `extensions` field of the subgraph request payload. Because `extensions` is part of `requestBody`, any value that differs per subscriber — an auth token, a session ID — makes every subgraph request unique and prevents deduplication. This happens even when your header forwarding rules exclude those headers, so `preComputedHeaderHash` can be identical across subscribers while deduplication still never fires.
+
+If subscribers you expect to share a fetch are not being deduplicated, compare the full subgraph request bodies, not only the forwarded headers. Both options default to `true`, so this applies unless you have explicitly turned them off:
+
+```yaml
+websocket:
+  forward_initial_payload: false
+  forward_upgrade_headers:
+    enabled: false
+```
+</Warning>
 
 Only `Query` operations are eligible. Mutations and subscriptions are never deduplicated.
 
