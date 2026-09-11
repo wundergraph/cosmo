@@ -5341,9 +5341,17 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 			require.NotNil(t, ttfb)
 			require.NotEmpty(t, ttfb.GetMetric())
 
+			ttlb := findMetricFamilyByName(mf, "router_http_client_time_to_last_byte")
+			require.NotNil(t, ttlb)
+			require.NotEmpty(t, ttlb.GetMetric())
+
 			firstRequestByte := findMetricFamilyByName(mf, "router_http_client_time_to_first_request_byte")
 			require.NotNil(t, firstRequestByte)
 			require.NotEmpty(t, firstRequestByte.GetMetric())
+
+			lastRequestByte := findMetricFamilyByName(mf, "router_http_client_time_to_last_request_byte")
+			require.NotNil(t, lastRequestByte)
+			require.NotEmpty(t, lastRequestByte.GetMetric())
 
 			tcpConnect := findMetricFamilyByName(mf, "router_http_client_tcp_connect_duration")
 			require.NotNil(t, tcpConnect)

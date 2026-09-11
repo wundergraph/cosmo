@@ -3,8 +3,11 @@ package traceclient
 import (
 	"context"
 	"crypto/tls"
+	"io"
+	"mime"
 	"net/http"
 	"net/http/httptrace"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,6 +37,7 @@ type phaseDurations struct {
 	TCPConnect             time.Duration
 	TLSHandshake           time.Duration
 	TimeToFirstRequestByte time.Duration
+	TimeToLastRequestByte  time.Duration
 	TimeToFirstByte        time.Duration
 }
 
@@ -45,7 +49,11 @@ type ClientTrace struct {
 	connectStart       map[string]time.Time
 	tlsStart           time.Time
 	wroteFirstByte     time.Time
+	attemptFirstByte   time.Time
 	wroteRequest       time.Time
+	gotFirstRespByte   time.Time
+
+	timeToLastRequestByteObserver func(time.Duration)
 
 	durations phaseDurations
 }
@@ -59,6 +67,13 @@ func (c *ClientTrace) HttpClientTrace() *httptrace.ClientTrace {
 				Time:     time.Now(),
 				HostPort: hostPort,
 			}
+			// GetConn starts a new transport attempt. Keep wroteFirstByte for the
+			// existing time-to-first-request-byte metric, but reset the
+			// first-to-last request span so retries never pair timestamps from
+			// different attempts.
+			c.attemptFirstByte = time.Time{}
+			c.wroteRequest = time.Time{}
+			c.durations.TimeToLastRequestByte = 0
 		},
 		GotConn: func(info httptrace.GotConnInfo) {
 			c.mu.Lock()
@@ -120,24 +135,45 @@ func (c *ClientTrace) HttpClientTrace() *httptrace.ClientTrace {
 		WroteHeaderField: func(_ string, _ []string) {
 			c.mu.Lock()
 			defer c.mu.Unlock()
+			now := time.Now()
+			if c.attemptFirstByte.IsZero() {
+				c.attemptFirstByte = now
+			}
 			// Only the first header field marks the first request byte written
 			if !c.wroteFirstByte.IsZero() {
 				return
 			}
-			c.wroteFirstByte = time.Now()
+			c.wroteFirstByte = now
 			if c.ConnectionGet != nil && c.wroteFirstByte.After(c.ConnectionGet.Time) {
 				c.durations.TimeToFirstRequestByte = c.wroteFirstByte.Sub(c.ConnectionGet.Time)
 			}
 		},
-		WroteRequest: func(_ httptrace.WroteRequestInfo) {
+		WroteRequest: func(info httptrace.WroteRequestInfo) {
 			c.mu.Lock()
-			defer c.mu.Unlock()
+			if info.Err != nil {
+				c.mu.Unlock()
+				return
+			}
+
 			c.wroteRequest = time.Now()
+			var duration time.Duration
+			if !c.attemptFirstByte.IsZero() && c.wroteRequest.After(c.attemptFirstByte) {
+				duration = c.wroteRequest.Sub(c.attemptFirstByte)
+				c.durations.TimeToLastRequestByte = duration
+			}
+			observer := c.timeToLastRequestByteObserver
+			c.timeToLastRequestByteObserver = nil
+			c.mu.Unlock()
+
+			if observer != nil && duration > 0 {
+				observer(duration)
+			}
 		},
 		GotFirstResponseByte: func() {
 			c.mu.Lock()
 			defer c.mu.Unlock()
 			now := time.Now()
+			c.gotFirstRespByte = now
 			if !c.wroteRequest.IsZero() && now.After(c.wroteRequest) {
 				c.durations.TimeToFirstByte = now.Sub(c.wroteRequest)
 			}
@@ -147,12 +183,26 @@ func (c *ClientTrace) HttpClientTrace() *httptrace.ClientTrace {
 
 // snapshot returns a consistent view of the observed state. The transport's
 // write loop can still fire callbacks concurrently with (and after) RoundTrip
-// returning, so readers must not access the fields directly. Phases that
-// complete after the snapshot are not recorded.
-func (c *ClientTrace) snapshot() (*GetConnection, *AcquiredConnection, phaseDurations) {
+// returning, so readers must not access the fields directly. gotFirstRespByte
+// is the baseline for the first-to-last response-byte measurement, which can
+// only be completed once the response body is fully consumed.
+func (c *ClientTrace) snapshot() (*GetConnection, *AcquiredConnection, time.Time, phaseDurations) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.ConnectionGet, c.ConnectionAcquired, c.durations
+	return c.ConnectionGet, c.ConnectionAcquired, c.gotFirstRespByte, c.durations
+}
+
+// observeTimeToLastRequestByte either returns an already-completed request
+// transfer span or installs an observer for a successful WroteRequest callback
+// that arrives after RoundTrip returns.
+func (c *ClientTrace) observeTimeToLastRequestByte(observer func(time.Duration)) time.Duration {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.durations.TimeToLastRequestByte > 0 {
+		return c.durations.TimeToLastRequestByte
+	}
+	c.timeToLastRequestByteObserver = observer
+	return 0
 }
 
 func NewClientTrace() *ClientTrace {
@@ -206,12 +256,202 @@ func (t *TraceInjectingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 	req = req.WithContext(httptrace.WithClientTrace(ctx, ec.HttpClientTrace()))
 	trip, err := t.base.RoundTrip(req)
 
-	t.processConnectionMetrics(req.Context(), req, ec)
+	recorder := t.processConnectionMetrics(req.Context(), req, ec)
+	if recorder == nil {
+		return trip, err
+	}
+
+	// httptrace has no "last response byte" callback: the last byte is only
+	// observable once the caller has fully consumed the response body. Wrap
+	// finite response bodies so the first-to-last-byte span is recorded on a
+	// clean EOF (or after the declared Content-Length has been read).
+	// This is always before the subgraph access log is written, because the
+	// engine fully reads and closes the body during the fetch load phase, which
+	// completes before the log is emitted.
+	switch {
+	case err != nil || !shouldMeasureResponseTransfer(trip):
+		// Upgraded and streaming responses are intentionally excluded. In
+		// particular, leaving HTTP 101 bodies untouched preserves their
+		// io.ReadWriteCloser contract for WebSocket clients.
+		recorder.cancel()
+	case responseHasNoBody(trip):
+		// RoundTrip returns after the response headers are read. For responses
+		// that cannot carry a body, that is also the point at which the last
+		// response byte has been consumed.
+		recorder.fire()
+	default:
+		trip.Body = &timedResponseBody{
+			ReadCloser:    trip.Body,
+			recorder:      recorder,
+			contentLength: trip.ContentLength,
+		}
+	}
 
 	return trip, err
 }
 
-func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Context, req *http.Request, trace *ClientTrace) {
+func shouldMeasureResponseTransfer(resp *http.Response) bool {
+	if resp == nil || resp.Body == nil || resp.StatusCode == http.StatusSwitchingProtocols {
+		return false
+	}
+	mediaType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+	if err == nil && strings.EqualFold(mediaType, "text/event-stream") {
+		return false
+	}
+	return true
+}
+
+func responseHasNoBody(resp *http.Response) bool {
+	if resp.Body == http.NoBody || resp.ContentLength == 0 {
+		return true
+	}
+	return resp.StatusCode >= 100 && resp.StatusCode <= 199 ||
+		resp.StatusCode == http.StatusNoContent ||
+		resp.StatusCode == http.StatusNotModified
+}
+
+// requestByteRecorder keeps request-write completion independent from response
+// completion. A successful WroteRequest callback can arrive after RoundTrip
+// returns, including after an early response. Metrics still record that valid
+// request span. Per-fetch expression results stop accepting updates when the
+// response finishes so OnFinished can read them without racing a late callback.
+type requestByteRecorder struct {
+	mu           sync.Mutex
+	recorded     bool
+	resultsOpen  bool
+	results      *expr.ClientTrace
+	recordMetric func(time.Duration)
+}
+
+func (r *requestByteRecorder) record(duration time.Duration) {
+	if r == nil || duration <= 0 {
+		return
+	}
+
+	r.mu.Lock()
+	if r.recorded {
+		r.mu.Unlock()
+		return
+	}
+	r.recorded = true
+	if r.resultsOpen {
+		r.results.TimeToLastRequestByte = duration
+	}
+	r.mu.Unlock()
+
+	r.recordMetric(duration)
+}
+
+// closeResults records a request completion already visible in the trace, then
+// prevents later callbacks from mutating the expression result. The observer
+// remains installed so a later successful WroteRequest can still emit a metric.
+func (r *requestByteRecorder) closeResults(duration time.Duration) {
+	if r == nil {
+		return
+	}
+
+	var recordMetric bool
+	r.mu.Lock()
+	if !r.recorded && duration > 0 {
+		r.recorded = true
+		if r.resultsOpen {
+			r.results.TimeToLastRequestByte = duration
+		}
+		recordMetric = true
+	}
+	r.resultsOpen = false
+	r.mu.Unlock()
+
+	if recordMetric {
+		r.recordMetric(duration)
+	}
+}
+
+// lastByteRecorder coordinates a request-write callback that may arrive after
+// RoundTrip returns with response-body completion.
+type lastByteRecorder struct {
+	mu             sync.Mutex
+	done           bool
+	trace          *ClientTrace
+	request        *requestByteRecorder
+	recordResponse func(time.Duration)
+}
+
+func (r *lastByteRecorder) fire() {
+	if r == nil {
+		return
+	}
+	_, _, firstResponseByte, durations := r.trace.snapshot()
+	r.request.closeResults(durations.TimeToLastRequestByte)
+
+	r.mu.Lock()
+	if r.done {
+		r.mu.Unlock()
+		return
+	}
+	r.done = true
+	if !firstResponseByte.IsZero() {
+		if duration := time.Since(firstResponseByte); duration > 0 {
+			r.recordResponse(duration)
+		}
+	}
+	r.mu.Unlock()
+}
+
+func (r *lastByteRecorder) cancel() {
+	if r == nil {
+		return
+	}
+	_, _, _, durations := r.trace.snapshot()
+	r.request.closeResults(durations.TimeToLastRequestByte)
+
+	r.mu.Lock()
+	r.done = true
+	r.mu.Unlock()
+}
+
+// timedResponseBody records completion only after the full response body is
+// consumed. Close by itself is cancellation, not evidence that the last byte
+// was received.
+type timedResponseBody struct {
+	io.ReadCloser
+	recorder      *lastByteRecorder
+	contentLength int64
+	bytesRead     int64
+}
+
+func (b *timedResponseBody) Read(p []byte) (int, error) {
+	n, err := b.ReadCloser.Read(p)
+	b.bytesRead += int64(n)
+
+	complete := false
+	switch {
+	case err == io.EOF:
+		// A short EOF on a response with an explicit Content-Length is a
+		// truncated response, not a successfully observed last byte.
+		complete = b.contentLength < 0 || b.bytesRead >= b.contentLength
+	case err == nil && b.contentLength > 0 && b.bytesRead >= b.contentLength:
+		// Some readers return the final bytes with a nil error and expect no
+		// subsequent read. Content-Length lets us recognize completion there.
+		complete = true
+	}
+	if complete {
+		b.recorder.fire()
+	}
+	return n, err
+}
+
+func (b *timedResponseBody) Close() error {
+	err := b.ReadCloser.Close()
+	b.recorder.cancel()
+	return err
+}
+
+// processConnectionMetrics records the connection and per-attempt request-phase
+// metrics that are already observable when RoundTrip returns. It returns a
+// recorder for the time-to-last-byte metric, which can only be measured once
+// the response body has been consumed, or nil when there is nothing to record.
+func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Context, req *http.Request, trace *ClientTrace) *lastByteRecorder {
 	var subgraph string
 	subgraphCtxVal := ctx.Value(rcontext.CurrentSubgraphContextKey{})
 	if subgraphCtxVal != nil {
@@ -226,21 +466,21 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 	}
 
 	if trace == nil {
-		return
+		return nil
 	}
 
 	results := ClientTraceResultsFromContext(ctx)
 
 	if results == nil {
-		return
+		return nil
 	}
 
-	connectionGet, connectionAcquired, durations := trace.snapshot()
+	connectionGet, connectionAcquired, _, durations := trace.snapshot()
 
 	// The transport can fail before it ever asks the pool for a connection,
 	// in which case no phase was observed and there is nothing to record.
 	if connectionGet == nil {
-		return
+		return nil
 	}
 
 	serverAttributes := rotel.GetServerAttributes(connectionGet.HostPort)
@@ -304,6 +544,36 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 			serverAttributes...,
 		)
 	}
+
+	requestRecorder := &requestByteRecorder{
+		resultsOpen: true,
+		results:     results,
+		recordMetric: func(duration time.Duration) {
+			t.connectionMetricStore.MeasureTimeToLastRequestByte(
+				ctx,
+				msFromDuration(duration),
+				serverAttributes...,
+			)
+		},
+	}
+	recorder := &lastByteRecorder{
+		trace:   trace,
+		request: requestRecorder,
+		recordResponse: func(duration time.Duration) {
+			results.TimeToLastByte = duration
+			t.connectionMetricStore.MeasureTimeToLastByte(
+				ctx,
+				msFromDuration(duration),
+				serverAttributes...,
+			)
+		},
+	}
+
+	if duration := trace.observeTimeToLastRequestByte(requestRecorder.record); duration > 0 {
+		requestRecorder.record(duration)
+	}
+
+	return recorder
 }
 
 func msFromDuration(d time.Duration) float64 {

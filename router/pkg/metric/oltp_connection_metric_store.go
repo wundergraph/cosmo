@@ -109,9 +109,21 @@ func (h *otlpConnectionMetrics) MeasureTimeToFirstRequestByte(ctx context.Contex
 	}
 }
 
+func (h *otlpConnectionMetrics) MeasureTimeToLastRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if h.instruments.timeToLastRequestByte != nil {
+		h.instruments.timeToLastRequestByte.Record(ctx, duration, opts...)
+	}
+}
+
 func (h *otlpConnectionMetrics) MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
 	if h.instruments.timeToFirstByte != nil {
 		h.instruments.timeToFirstByte.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *otlpConnectionMetrics) MeasureTimeToLastByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if h.instruments.timeToLastByte != nil {
+		h.instruments.timeToLastByte.Record(ctx, duration, opts...)
 	}
 }
 

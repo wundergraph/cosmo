@@ -154,6 +154,79 @@ func TestConnectionMetrics(t *testing.T) {
 		})
 	})
 
+	t.Run("validate transfer duration metrics are present when network metrics are enabled", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			MetricOptions: testenv.MetricOptions{
+				EnableOTLPNetworkMetrics: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			scopeMetric := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
+			require.NotNil(t, scopeMetric)
+			excludePortFromMetrics(t, rm.ScopeMetrics)
+
+			expectedAttributes := attribute.NewSet(
+				otel.ServerAddress.String("127.0.0.1"),
+				otel.WgClientReusedConnection.Bool(false),
+				otel.WgSubgraphName.String("employees"),
+			)
+
+			tests := []struct {
+				name        string
+				description string
+			}{
+				{
+					name:        "router.http.client.time_to_last_request_byte",
+					description: "Time from the first request byte write event to the successful request write completion event for outgoing subgraph requests",
+				},
+				{
+					name:        "router.http.client.time_to_last_byte",
+					description: "Time from the first response byte to the last response byte from subgraph",
+				},
+			}
+
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					actual := testutils.GetMetricByName(scopeMetric, tc.name)
+					require.NotNil(t, actual)
+
+					actualHistogram, ok := actual.Data.(metricdata.Histogram[float64])
+					require.True(t, ok)
+					require.Len(t, actualHistogram.DataPoints, 1)
+					require.Greater(t, actualHistogram.DataPoints[0].Count, uint64(0))
+					require.Greater(t, actualHistogram.DataPoints[0].Sum, 0.0)
+
+					expected := metricdata.Metrics{
+						Name:        tc.name,
+						Description: tc.description,
+						Unit:        "ms",
+						Data: metricdata.Histogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Attributes: expectedAttributes,
+								},
+							},
+						},
+					}
+
+					metricdatatest.AssertEqual(t, expected, *actual, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				})
+			}
+		})
+	})
+
 	t.Run("verify custom subgraph transport configs", func(t *testing.T) {
 		t.Parallel()
 

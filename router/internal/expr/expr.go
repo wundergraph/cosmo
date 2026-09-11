@@ -166,7 +166,9 @@ type ClientTrace struct {
 	TCPConnectDuration        time.Duration `expr:"tcpConnectDuration"`
 	TLSHandshakeDuration      time.Duration `expr:"tlsHandshakeDuration"`
 	TimeToFirstRequestByte    time.Duration `expr:"timeToFirstRequestByte"`
+	TimeToLastRequestByte     time.Duration `expr:"timeToLastRequestByte"`
 	TimeToFirstByte           time.Duration `expr:"timeToFirstByte"`
+	TimeToLastByte            time.Duration `expr:"timeToLastByte"`
 }
 
 // Subgraph Related

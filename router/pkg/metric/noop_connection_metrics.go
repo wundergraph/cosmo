@@ -28,7 +28,13 @@ func (h *noopConnectionMetricProvider) MeasureTLSHandshakeDuration(ctx context.C
 func (h *noopConnectionMetricProvider) MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
 }
 
+func (h *noopConnectionMetricProvider) MeasureTimeToLastRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+}
+
 func (h *noopConnectionMetricProvider) MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+}
+
+func (h *noopConnectionMetricProvider) MeasureTimeToLastByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
 }
 
 func (h *noopConnectionMetricProvider) Flush(ctx context.Context) error {
@@ -51,7 +57,11 @@ func (h *NoopConnectionMetricStore) MeasureTLSHandshakeDuration(ctx context.Cont
 }
 func (h *NoopConnectionMetricStore) MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
 }
+func (h *NoopConnectionMetricStore) MeasureTimeToLastRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+}
 func (h *NoopConnectionMetricStore) MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+}
+func (h *NoopConnectionMetricStore) MeasureTimeToLastByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
 }
 func (h *NoopConnectionMetricStore) Flush(ctx context.Context) error    { return nil }
 func (h *NoopConnectionMetricStore) Shutdown(ctx context.Context) error { return nil }
