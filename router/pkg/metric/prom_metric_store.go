@@ -90,6 +90,14 @@ func (h *PromMetricStore) MeasureRequestCount(ctx context.Context, opts ...otelm
 	}
 }
 
+func (h *PromMetricStore) MeasureSSEWriteDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	h.measurements.histograms[SSEWriteDurationHistogram].Record(ctx, duration, opts...)
+}
+
+func (h *PromMetricStore) MeasureSSEWriteFailure(ctx context.Context, opts ...otelmetric.AddOption) {
+	h.measurements.counters[SSEWriteFailuresCounter].Add(ctx, 1, opts...)
+}
+
 func (h *PromMetricStore) MeasureCircuitBreakerShortCircuit(ctx context.Context, opts ...otelmetric.AddOption) {
 	if !h.circuitBreakerEnabled {
 		return

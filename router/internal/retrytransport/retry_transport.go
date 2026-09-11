@@ -142,8 +142,23 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 			rt.RetryOptions.OnRetry(retries, req, resp, sleepDuration, err)
 		}
 
-		// Wait for the specified duration
-		time.Sleep(sleepDuration)
+		// Stop waiting as soon as the caller's deadline is reached. A plain
+		// time.Sleep here can make retries outlive a canceled subscription fetch.
+		timer := time.NewTimer(sleepDuration)
+		select {
+		case <-timer.C:
+		case <-req.Context().Done():
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			if resp != nil && resp.Body != nil {
+				_ = resp.Body.Close()
+			}
+			return nil, req.Context().Err()
+		}
 
 		// drain the previous response before retrying
 		rt.drainBody(resp, requestLogger)

@@ -2,15 +2,54 @@ package core
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.opentelemetry.io/otel/attribute"
+	otelmetric "go.opentelemetry.io/otel/metric"
+
+	routermetric "github.com/wundergraph/cosmo/router/pkg/metric"
 )
+
+type deadlineRecorder struct {
+	*httptest.ResponseRecorder
+	deadline time.Time
+	flushErr error
+}
+
+type sseMetricSpy struct {
+	routermetric.Store
+	durationCalls int
+	failureCalls  int
+}
+
+func (s *sseMetricSpy) MeasureSSEWriteDuration(context.Context, time.Duration, []attribute.KeyValue, otelmetric.RecordOption) {
+	s.durationCalls++
+}
+
+func (s *sseMetricSpy) MeasureSSEWriteFailure(context.Context, []attribute.KeyValue, otelmetric.AddOption) {
+	s.failureCalls++
+}
+
+func (r *deadlineRecorder) SetWriteDeadline(deadline time.Time) error {
+	r.deadline = deadline
+	return nil
+}
+
+func (r *deadlineRecorder) FlushError() error {
+	if r.flushErr != nil {
+		return r.flushErr
+	}
+	r.Flush()
+	return nil
+}
 
 func TestNegotiateSubscriptionParams(t *testing.T) {
 	type args struct {
@@ -137,10 +176,96 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
 		req.Header.Set("Accept", sseMimeType)
 
-		_, _, ok := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, false)
-		require.True(t, ok)
+		_, _, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{})
+		require.NoError(t, err)
 
 		assert.Equal(t, sseMimeType, recorder.Header().Get("Content-Type"))
 		assert.True(t, recorder.Flushed, "expected the SSE response head to be flushed before any message is written")
+	})
+
+	t.Run("sets and refreshes a deadline for SSE headers and data", func(t *testing.T) {
+		recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{SSEWriteTimeout: time.Second})
+		require.NoError(t, err)
+		headerDeadline := recorder.deadline
+		require.False(t, headerDeadline.IsZero())
+
+		time.Sleep(time.Millisecond)
+		_, err = writer.Write([]byte(`{"data":{"id":1}}`))
+		require.NoError(t, err)
+		require.NoError(t, writer.Flush())
+		assert.True(t, recorder.deadline.After(headerDeadline), "expected each SSE frame to refresh the write deadline")
+	})
+
+	t.Run("does not measure a successful heartbeat", func(t *testing.T) {
+		recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+		metrics := &sseMetricSpy{}
+
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{
+			SSEWriteTimeout: time.Second,
+			MetricStore:     metrics,
+		})
+		require.NoError(t, err)
+		metrics.durationCalls = 0
+		metrics.failureCalls = 0
+
+		require.NoError(t, writer.Heartbeat())
+		assert.Zero(t, metrics.durationCalls)
+		assert.Zero(t, metrics.failureCalls)
+	})
+
+	t.Run("measures a successful data frame", func(t *testing.T) {
+		recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+		metrics := &sseMetricSpy{}
+
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{
+			SSEWriteTimeout: time.Second,
+			MetricStore:     metrics,
+		})
+		require.NoError(t, err)
+		metrics.durationCalls = 0
+
+		_, err = writer.Write([]byte(`{"data":{"id":1}}`))
+		require.NoError(t, err)
+		require.NoError(t, writer.Flush())
+		assert.Equal(t, 1, metrics.durationCalls)
+	})
+
+	t.Run("reports a failed heartbeat", func(t *testing.T) {
+		recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+		metrics := &sseMetricSpy{}
+
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{
+			SSEWriteTimeout: time.Second,
+			MetricStore:     metrics,
+		})
+		require.NoError(t, err)
+		metrics.failureCalls = 0
+		flushErr := errors.New("flush failed")
+		recorder.flushErr = flushErr
+
+		require.ErrorIs(t, writer.Heartbeat(), flushErr)
+		assert.Equal(t, 1, metrics.failureCalls)
+	})
+
+	t.Run("fails closed when an SSE deadline is configured but unsupported", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(context.Background()), req, recorder, SubscriptionResponseWriterOptions{SSEWriteTimeout: time.Second})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, http.ErrNotSupported)
+		assert.ErrorContains(t, err, "set SSE write deadline")
+		assert.Nil(t, writer)
 	})
 }
