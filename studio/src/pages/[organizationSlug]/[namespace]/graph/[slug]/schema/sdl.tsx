@@ -9,6 +9,7 @@ import { SchemaToolbar } from '@/components/schema/toolbar';
 import { SchemaSelection, toSchemaType } from '@/components/schema/schema-selection';
 import { SchemaSelector } from '@/components/schema/schema-selector';
 import { Loader } from '@/components/ui/loader';
+import { useFeatureSubgraphSchema } from '@/hooks/use-feature-subgraph-schema';
 import useHash from '@/hooks/use-hash';
 import { buildUrl } from '@/lib/build-url';
 import { formatDateTime } from '@/lib/format-date';
@@ -20,7 +21,6 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   getFederatedGraphSDLByName,
   getFeatureFlagsInLatestCompositionByFederatedGraph,
-  getSdlBySchemaVersion,
   getSubgraphSDLFromLatestComposition,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
@@ -38,7 +38,6 @@ const SDLPage: NextPageWithLayout = () => {
   } = useWorkspace();
   const graphName = router.query.slug as string;
   const organizationSlug = router.query.organizationSlug as string;
-  const schemaType = router.query.schemaType as string;
 
   const hash = useHash();
 
@@ -58,21 +57,19 @@ const SDLPage: NextPageWithLayout = () => {
 
   const featureFlags = compositionFlagsData?.featureFlags ?? [];
 
-  const featureSubgraphsOfFlag = (featureFlagId: string) =>
-    compositionFlagsData?.featureSubgraphs.filter(
-      (featureSubgraph) => featureSubgraph.featureFlagId === featureFlagId,
-    ) ?? [];
-
   // `?featureFlag=X&subgraph=Y` addresses a feature subgraph, `?subgraph=Y` alone a base subgraph.
   const isFeatureSubgraphSelected = !!activeFeatureFlag && !!activeSubgraph;
 
-  const activeFeatureSubgraph = isFeatureSubgraphSelected
-    ? featureSubgraphsOfFlag(featureFlags.find((flag) => flag.name === activeFeatureFlag)?.id ?? '').find(
-        (featureSubgraph) => featureSubgraph.name === activeSubgraph,
-      )
-    : undefined;
+  const {
+    featureSubgraph: activeFeatureSubgraph,
+    sdl: featureSubgraphSdl,
+    isLoading: loadingFeatureSubgraphSDL,
+  } = useFeatureSubgraphSchema(
+    compositionFlagsData,
+    isFeatureSubgraphSelected ? { featureFlagName: activeFeatureFlag, subgraphName: activeSubgraph } : undefined,
+  );
 
-  const activeSchemaType = toSchemaType(schemaType);
+  const activeSchemaType = toSchemaType(router.query.schemaType as string);
 
   /** Only one schema can be selected, so every selection clears the other two params. */
   const selectSchema = (next: SchemaSelection) =>
@@ -108,19 +105,6 @@ const SDLPage: NextPageWithLayout = () => {
     },
   );
 
-  // Feature subgraphs are not in the base composition, so getSubgraphSDLFromLatestComposition
-  // cannot resolve them.
-  const { data: featureSubgraphSdl, isLoading: loadingFeatureSubgraphSDL } = useQuery(
-    getSdlBySchemaVersion,
-    {
-      schemaVersionId: activeFeatureSubgraph?.schemaVersionId,
-      targetId: activeFeatureSubgraph?.targetId,
-    },
-    {
-      enabled: !!activeFeatureSubgraph,
-    },
-  );
-
   const subgraphs = graphData?.subgraphs ?? [];
 
   // The active flag is identified by name in the URL, so resolve staleness by name for the banner
@@ -128,9 +112,7 @@ const SDLPage: NextPageWithLayout = () => {
     (flag) => flag.name === activeFeatureFlag && flag.hasFailedLatestComposition,
   );
 
-  const activeSubgraphObject = graphData?.subgraphs.find((each) => {
-    return each.name === activeSubgraph;
-  });
+  const activeSubgraphObject = subgraphs.find((each) => each.name === activeSubgraph);
 
   // downloadName becomes a filename, so it cannot contain a slash.
   const activeGraphWithSDL = isFeatureSubgraphSelected
@@ -138,7 +120,7 @@ const SDLPage: NextPageWithLayout = () => {
         title: `${activeFeatureFlag} / ${activeSubgraph}`,
         downloadName: `${activeFeatureFlag}-${activeSubgraph}`,
         routingUrl: activeFeatureSubgraph?.routingUrl ?? '',
-        sdl: featureSubgraphSdl?.sdl ?? '',
+        sdl: featureSubgraphSdl ?? '',
         time: '',
       }
     : activeSubgraph
@@ -182,7 +164,7 @@ const SDLPage: NextPageWithLayout = () => {
         description={`${activeSubgraph} is not part of the latest composition of feature flag ${activeFeatureFlag}. The flag may have been renamed, or the feature subgraph removed from it.`}
       />
     );
-  } else if (isFeatureSubgraphSelected && !featureSubgraphSdl?.sdl) {
+  } else if (isFeatureSubgraphSelected && !featureSubgraphSdl) {
     content = <EmptySchema subgraphName={activeSubgraph} />;
   } else if (
     activeSubgraph &&
@@ -236,12 +218,12 @@ const SDLPage: NextPageWithLayout = () => {
                 selection={{ featureFlag: activeFeatureFlag, subgraph: activeSubgraph, schemaType: activeSchemaType }}
                 onSelect={selectSchema}
                 subgraphNames={subgraphs.map(({ name }) => name)}
-                featureSubgraphsOfFlag={featureSubgraphsOfFlag}
+                featureSubgraphs={compositionFlagsData?.featureSubgraphs}
               />
               <SDLViewerActions
                 className="w-auto"
                 sdl={activeGraphWithSDL.sdl ?? ''}
-                targetName={activeGraphWithSDL.downloadName !== '' ? activeGraphWithSDL.downloadName : undefined}
+                targetName={activeGraphWithSDL.downloadName || undefined}
               />
             </div>
           </SchemaToolbar>

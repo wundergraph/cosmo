@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/empty-state';
 import { Loader } from '@/components/ui/loader';
 import {
   Select,
@@ -36,12 +37,13 @@ import {
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
 import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { groupFeatureSubgraphsByFlag, useFeatureSubgraphSchema } from '@/hooks/use-feature-subgraph-schema';
 import { useHydratePlaygroundStateFromUrl } from '@/hooks/use-hydrate-playground-state-from-url';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE, PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
 import { NextPageWithLayout } from '@/lib/page';
 import { effectiveDefaultHeadersString, substituteHeadersFromEnv, validateHeaders } from '@/lib/playground-headers';
-import { ConfigType, isSchemaLoading, selectSchemaSdl } from '@/lib/schema-loading';
+import { CONFIG_TYPE_LABELS, ConfigType, isSchemaLoading, selectSchemaSdl, toConfigType } from '@/lib/schema-loading';
 import { parseSchema } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
@@ -56,7 +58,6 @@ import {
   getFeatureFlagsInLatestCompositionByFederatedGraph,
   getFederatedGraphSDLByName,
   getPlaygroundDefaultHeaders,
-  getSdlBySchemaVersion,
   getSubgraphSDLFromLatestComposition,
   publishPersistedOperations,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
@@ -604,15 +605,6 @@ const ToggleClientValidation = () => {
   );
 };
 
-const CONFIG_TYPE_LABELS: Record<ConfigType, string> = {
-  graph: 'Graph',
-  featureFlag: 'Feature flag',
-  featureSubgraph: 'Feature subgraph',
-  subgraph: 'Subgraph',
-};
-
-const isConfigType = (value: string): value is ConfigType => Object.hasOwn(CONFIG_TYPE_LABELS, value);
-
 type ConfigSelection = { load: string; type: ConfigType; featureFlag?: string };
 
 /** A feature subgraph can belong to more than one flag, so `load` alone does not identify it. */
@@ -622,7 +614,7 @@ const parseConfigSelection = (value: string): ConfigSelection => {
   const { load, type, featureFlag } = JSON.parse(value) as Record<string, string | undefined>;
   return {
     load: load ?? '',
-    type: type && isConfigType(type) ? type : 'graph',
+    type: toConfigType(type),
     featureFlag,
   };
 };
@@ -634,11 +626,13 @@ const ConfigSelect = () => {
   const subgraphs = graphContext?.subgraphs;
   const { data: compositionFlagsData } = useCompositionFlags();
   const featureFlags = compositionFlagsData?.featureFlags ?? [];
-  const featureSubgraphs = compositionFlagsData?.featureSubgraphs ?? [];
+  const featureSubgraphsByFlag = useMemo(
+    () => groupFeatureSubgraphsByFlag(compositionFlagsData?.featureSubgraphs ?? []),
+    [compositionFlagsData?.featureSubgraphs],
+  );
 
   const selected = (router.query.load as string) || graphContext?.graph?.id || '';
-  const typeParam = (router.query.type as string) || 'graph';
-  const configType: ConfigType = isConfigType(typeParam) ? typeParam : 'graph';
+  const configType = toConfigType(router.query.type as string);
   const activeFeatureFlag = (router.query.featureFlag as string) || '';
 
   const applyParams = useApplyParams();
@@ -688,21 +682,19 @@ const ConfigSelect = () => {
                     <SelectItem value={configSelectionValue({ load: featureFlag.id, type: 'featureFlag' })}>
                       {featureFlag.name}
                     </SelectItem>
-                    {featureSubgraphs
-                      .filter((featureSubgraph) => featureSubgraph.featureFlagId === featureFlag.id)
-                      .map((featureSubgraph) => (
-                        <SelectItem
-                          key={`${featureFlag.id}:${featureSubgraph.id}`}
-                          className="pl-8"
-                          value={configSelectionValue({
-                            load: featureSubgraph.id,
-                            type: 'featureSubgraph',
-                            featureFlag: featureFlag.name,
-                          })}
-                        >
-                          {featureSubgraph.name}
-                        </SelectItem>
-                      ))}
+                    {(featureSubgraphsByFlag[featureFlag.id] ?? []).map((featureSubgraph) => (
+                      <SelectItem
+                        key={`${featureFlag.id}:${featureSubgraph.id}`}
+                        className="pl-8"
+                        value={configSelectionValue({
+                          load: featureSubgraph.id,
+                          type: 'featureSubgraph',
+                          featureFlag: featureFlag.name,
+                        })}
+                      >
+                        {featureSubgraph.name}
+                      </SelectItem>
+                    ))}
                   </Fragment>
                 ))}
               </SelectGroup>
@@ -777,34 +769,38 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
 
   const loadSchemaGraphId = (router.query.load as string) || graphContext?.graph?.id || '';
-  const typeParam = (router.query.type as string) || 'graph';
-  const configType: ConfigType = isConfigType(typeParam) ? typeParam : 'graph';
+  const configType = toConfigType(router.query.type as string);
 
   const { data: compositionFlagsData, isLoading: isLoadingCompositionFlags } = useCompositionFlags();
 
-  const activeFeatureSubgraph = useMemo(() => {
-    if (configType !== 'featureSubgraph') {
-      return undefined;
-    }
+  const {
+    featureSubgraph: activeFeatureSubgraph,
+    sdl: featureSubgraphSdl,
+    isLoading: isLoadingFeatureSubgraphSchema,
+  } = useFeatureSubgraphSchema(
+    compositionFlagsData,
+    configType === 'featureSubgraph'
+      ? { featureFlagName: router.query.featureFlag as string, subgraphId: loadSchemaGraphId }
+      : undefined,
+  );
 
-    const featureFlag = (compositionFlagsData?.featureFlags ?? []).find(
-      (flag) => flag.name === (router.query.featureFlag as string),
-    );
-
-    return (compositionFlagsData?.featureSubgraphs ?? []).find(
-      (featureSubgraph) =>
-        featureSubgraph.id === loadSchemaGraphId && featureSubgraph.featureFlagId === featureFlag?.id,
-    );
-  }, [compositionFlagsData, loadSchemaGraphId, router.query.featureFlag, configType]);
-
-  const { data, isLoading: isLoadingGraphSchema } = useQuery(getFederatedGraphSDLByName, {
-    name: graphContext?.graph?.name,
-    namespace: graphContext?.graph?.namespace,
-    featureFlagName:
-      configType === 'featureFlag'
-        ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
-        : undefined,
-  });
+  const { data, isLoading: isLoadingGraphSchema } = useQuery(
+    getFederatedGraphSDLByName,
+    {
+      name: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+      featureFlagName:
+        configType === 'featureFlag'
+          ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
+          : undefined,
+    },
+    {
+      // A subgraph or feature subgraph selection shows its own schema, so this response, the
+      // largest on the page, would only be fetched and discarded. A flag selection waits for the
+      // flag list, without which featureFlagName is undefined and the base graph answers instead.
+      enabled: configType === 'graph' || (configType === 'featureFlag' && !isLoadingCompositionFlags),
+    },
+  );
 
   const { data: subgraphData, isLoading: isLoadingSubgraphSchema } = useQuery(
     getSubgraphSDLFromLatestComposition,
@@ -815,19 +811,6 @@ const PlaygroundPage: NextPageWithLayout = () => {
     },
     {
       enabled: !!loadSchemaGraphId && loadSchemaGraphId !== graphContext?.graph?.id && configType === 'subgraph',
-    },
-  );
-
-  // Feature subgraphs are not in the base composition, so getSubgraphSDLFromLatestComposition
-  // cannot resolve them.
-  const { data: featureSubgraphData, isLoading: isLoadingFeatureSubgraphSchema } = useQuery(
-    getSdlBySchemaVersion,
-    {
-      schemaVersionId: activeFeatureSubgraph?.schemaVersionId,
-      targetId: activeFeatureSubgraph?.targetId,
-    },
-    {
-      enabled: !!activeFeatureSubgraph,
     },
   );
 
@@ -861,15 +844,19 @@ const PlaygroundPage: NextPageWithLayout = () => {
     );
   }, [defaultHeadersData]);
 
+  // A renamed flag or a stale link leaves the selection unresolvable. The endpoint is unknown too,
+  // so there is nothing for GraphiQL to introspect and it would fail silently.
+  const isUnresolvedFeatureSubgraph = configType === 'featureSubgraph' && !isLoading && !activeFeatureSubgraph;
+
   const schema = useMemo(() => {
     const sdl = selectSchemaSdl(configType, {
-      featureSubgraph: featureSubgraphData?.sdl,
+      featureSubgraph: featureSubgraphSdl,
       subgraph: subgraphData?.sdl,
       graph: data?.clientSchema,
     });
 
     return parseSchema(sdl)?.ast ?? null;
-  }, [configType, data?.clientSchema, featureSubgraphData?.sdl, subgraphData?.sdl]);
+  }, [configType, data?.clientSchema, featureSubgraphSdl, subgraphData?.sdl]);
 
   const [query, setQuery] = useState<string | undefined>(operation ? decodeURIComponent(operation) : undefined);
 
@@ -1312,6 +1299,12 @@ const PlaygroundPage: NextPageWithLayout = () => {
         <div className="hidden h-full flex-1 pl-2.5 md:flex">
           {isLoadingDefaultHeaders ? (
             <Loader fullscreen />
+          ) : isUnresolvedFeatureSubgraph ? (
+            <EmptyState
+              icon={<ExclamationTriangleIcon />}
+              title="Schema not found"
+              description={`The selected feature subgraph is not part of the latest composition of feature flag ${router.query.featureFlag}. The flag may have been renamed, or the feature subgraph removed from it.`}
+            />
           ) : (
             <>
               <GraphiQL

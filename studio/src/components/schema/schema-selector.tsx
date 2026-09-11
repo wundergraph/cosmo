@@ -1,5 +1,6 @@
 import { FeatureFlagMenuItem } from '@/components/schema/feature-flag-menu-item';
-import { SchemaSelection, toSchemaType } from '@/components/schema/schema-selection';
+import { SchemaSelection } from '@/components/schema/schema-selection';
+import { SchemaTypeRadioGroup } from '@/components/schema/schema-type-radio-group';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,9 +17,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
+import { groupFeatureSubgraphsByFlag } from '@/hooks/use-feature-subgraph-schema';
 import { ChevronUpDownIcon } from '@heroicons/react/24/outline';
 import { Component2Icon } from '@radix-ui/react-icons';
 import { FeatureFlag, FeatureSubgraphInFlagComposition } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { useMemo } from 'react';
 import { MdOutlineFeaturedPlayList } from 'react-icons/md';
 import { PiGraphLight } from 'react-icons/pi';
 
@@ -30,7 +33,7 @@ export interface SchemaSelectorProps {
   selection: SchemaSelection;
   onSelect: (selection: SchemaSelection) => void;
   subgraphNames?: string[];
-  featureSubgraphsOfFlag?: (featureFlagId: string) => FeatureSubgraphInFlagComposition[];
+  featureSubgraphs?: FeatureSubgraphInFlagComposition[];
 }
 
 export const SchemaSelector = ({
@@ -41,9 +44,10 @@ export const SchemaSelector = ({
   selection,
   onSelect,
   subgraphNames,
-  featureSubgraphsOfFlag,
+  featureSubgraphs,
 }: SchemaSelectorProps) => {
   const activeSchemaType = selection.schemaType ?? 'client';
+  const featureSubgraphsByFlag = useMemo(() => groupFeatureSubgraphsByFlag(featureSubgraphs ?? []), [featureSubgraphs]);
 
   return (
     <DropdownMenu>
@@ -73,17 +77,11 @@ export const SchemaSelector = ({
                 <DropdownMenuSubTrigger>{graphName}</DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent>
-                    <DropdownMenuRadioGroup
-                      onValueChange={(value) => onSelect({ schemaType: toSchemaType(value) })}
+                    <SchemaTypeRadioGroup
+                      className="w-[150px]"
                       value={!selection.featureFlag && !selection.subgraph ? activeSchemaType : ''}
-                    >
-                      <DropdownMenuRadioItem className="w-[150px] items-center justify-between pl-2" value="client">
-                        Client Schema
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem className="w-[150px] items-center justify-between pl-2" value="router">
-                        Router Schema
-                      </DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
+                      onSelect={(schemaType) => onSelect({ schemaType })}
+                    />
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
@@ -101,7 +99,7 @@ export const SchemaSelector = ({
                     <FeatureFlagMenuItem
                       key={featureFlag.id}
                       featureFlag={featureFlag}
-                      featureSubgraphs={featureSubgraphsOfFlag?.(featureFlag.id) ?? []}
+                      featureSubgraphs={featureSubgraphsByFlag[featureFlag.id] ?? []}
                       selection={selection}
                       onSelect={onSelect}
                     />

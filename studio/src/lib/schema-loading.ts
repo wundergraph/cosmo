@@ -1,5 +1,16 @@
-/** What the playground's schema selector is pointed at. */
+/** What a schema selection is pointed at. */
 export type ConfigType = 'graph' | 'featureFlag' | 'featureSubgraph' | 'subgraph';
+
+export const CONFIG_TYPE_LABELS: Record<ConfigType, string> = {
+  graph: 'Graph',
+  featureFlag: 'Feature flag',
+  featureSubgraph: 'Feature subgraph',
+  subgraph: 'Subgraph',
+};
+
+/** Query string values are plain strings, so narrow them to a `ConfigType`. */
+export const toConfigType = (value: string | undefined): ConfigType =>
+  value && Object.hasOwn(CONFIG_TYPE_LABELS, value) ? (value as ConfigType) : 'graph';
 
 export interface SchemaLoadingInput {
   isLoadingGraphSchema: boolean;
