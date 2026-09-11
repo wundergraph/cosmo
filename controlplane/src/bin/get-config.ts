@@ -40,6 +40,7 @@ const getConfig = () => {
 
     webhookUrl: process.env.WEBHOOK_URL,
     webhookSecret: process.env.WEBHOOK_SECRET,
+    webhookProxyUrl: process.env.WEBHOOK_PROXY_URL,
 
     s3Storage: {
       url: process.env.S3_STORAGE_URL || 'http://minio:changeme@localhost:10000/cosmo',
@@ -63,6 +64,9 @@ const getConfig = () => {
               : process.env.S3_FAILOVER_FORCE_PATH_STYLE === 'true',
         }
       : undefined,
+
+    cdnBaseUrl: process.env.CDN_BASE_URL,
+    admissionJwtSecret: process.env.AUTH_ADMISSION_JWT_SECRET,
   };
 };
 
