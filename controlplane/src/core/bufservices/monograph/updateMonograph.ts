@@ -145,6 +145,8 @@ export function updateMonograph(
         opts.chClient!,
         opts.webhookProxyUrl,
         false,
+        opts.promptToQueryServiceAddress,
+        opts.billingDefaultPlanId,
       );
 
       // Update the federated graph

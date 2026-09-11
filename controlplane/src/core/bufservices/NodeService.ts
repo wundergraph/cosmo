@@ -1,6 +1,6 @@
 import { ServiceImpl } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { NodeService, RegistrationInfo, SelfRegisterResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { NodeService, RegistrationInfo } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { lru } from 'tiny-lru';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';

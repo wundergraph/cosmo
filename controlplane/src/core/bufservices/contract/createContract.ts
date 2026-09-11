@@ -182,6 +182,8 @@ export function createContract(
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
+        opts.promptToQueryServiceAddress,
+        opts.billingDefaultPlanId,
       );
 
       const { deploymentErrors, compositionErrors, compositionWarnings } =

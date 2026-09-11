@@ -63,7 +63,8 @@ export type FeatureIds =
   | 'sso'
   | 'subgraph-check-extensions'
   | 'support'
-  | 'split-config-loading';
+  | 'split-config-loading'
+  | 'prompt-to-query';
 
 export type Features = {
   [key in FeatureIds]: Feature;

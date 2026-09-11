@@ -217,6 +217,8 @@ export function createFederatedGraph(
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
+        opts.promptToQueryServiceAddress,
+        opts.billingDefaultPlanId,
       );
 
       return compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph });

@@ -165,6 +165,9 @@ export interface BuildConfig {
       key?: string; // e.g. string or '/path/to/my/client-key.pem'
     };
   };
+  promptToQuery?: {
+    address: string | undefined;
+  };
 }
 
 export interface MetricsOptions {
@@ -624,6 +627,7 @@ export default async function build(opts: BuildConfig) {
       webhookProxyUrl: opts.webhook?.proxyUrl,
       cdnBaseUrl: opts.cdnBaseUrl,
       lockAdapter: fastify.lockAdapter,
+      promptToQueryServiceAddress: opts.promptToQuery?.address,
     }),
     contextValues(req) {
       const values = createContextValues().set<FastifyBaseLogger>(
