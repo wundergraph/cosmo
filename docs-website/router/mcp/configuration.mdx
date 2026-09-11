@@ -44,6 +44,7 @@ storage_providers:
 | `expose_schema`               | Enables the `get_schema` built-in tool, exposing the full GraphQL schema to MCP clients.                                                                                                                                                                                     | `false`          |
 | `omit_tool_name_prefix`       | When enabled, MCP tool names omit the `execute_operation_` prefix. For example, `GetUser` becomes `get_user` instead of `execute_operation_get_user`. See [Tools - Omitting the Tool Name Prefix](/router/mcp/tools#omitting-the-tool-name-prefix).                | `false`          |
 | `output_schema.enabled`       | When enabled, operation tools declare an output schema derived from their selection set, and successful tool results additionally carry the response as structured content. A tool whose schema cannot be derived stays registered without an output schema. Increases `tools/list` and result payload sizes. See [Tools - Structured Tool Output](/router/mcp/tools#structured-tool-output). | `false`          |
+| `resources.enabled`           | Serves markdown context documents and Agent Skills from the operations directory as MCP resources, alongside the operation tools. Also registers the `get_context` tool. See [Context Documents and Skills](/router/mcp#context-documents-and-skills).                                                                                                                                    | `false`          |
 
 For OAuth-specific configuration, see [OAuth 2.1 Authorization](/router/mcp/oauth/overview).
 
@@ -69,6 +70,7 @@ All MCP options can also be set via environment variables:
 | `MCP_EXPOSE_SCHEMA`               | `mcp.expose_schema`               |
 | `MCP_OMIT_TOOL_NAME_PREFIX`       | `mcp.omit_tool_name_prefix`       |
 | `MCP_OUTPUT_SCHEMA_ENABLED`       | `mcp.output_schema.enabled`       |
+| `MCP_RESOURCES_ENABLED`           | `mcp.resources.enabled`           |
 
 For OAuth-related environment variables, see [OAuth Configuration Reference](/router/mcp/oauth/configuration#environment-variables).
 
@@ -113,6 +115,23 @@ The server sends the instructions to every MCP client. This covers clients that 
 
 The router advertises protocol version `2026-07-28` by default. In session-based mode (`session.stateless: false`), clients negotiate `2025-11-25` or older.
 
+## Context Resources
+
+Set `resources.enabled: true` to serve markdown context documents and Agent Skills from your operations directory as MCP resources:
+
+```yaml
+mcp:
+  enabled: true
+  resources:
+    enabled: true
+  storage:
+    provider_id: 'mcp'
+```
+
+This flag is off by default. Some operations directories contain stray `.md` files. These files must not become visible to MCP clients without an explicit opt-in.
+
+See [Context Documents and Skills](/router/mcp#context-documents-and-skills) for the full feature reference, including the on-disk format, the `get_context` tool, and file size limits.
+
 ## Session Handling
 
 The MCP server uses the Streamable HTTP transport and maintains per-session state via the `Mcp-Session-Id` header. When deploying multiple Router instances, you need **sticky sessions** to ensure all requests for a session reach the same instance.
@@ -143,6 +162,8 @@ mcp:
   expose_schema: false
   omit_tool_name_prefix: false
   output_schema:
+    enabled: false
+  resources:
     enabled: false
   storage:
     provider_id: 'mcp'

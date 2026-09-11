@@ -58,8 +58,16 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 			return err
 		}
 
-		// Skip directories
+		// Skip skill directories. A subdirectory containing a SKILL.md file
+		// is an MCP Agent Skills directory (served as MCP resources, not
+		// operations); .graphql files inside it are examples, never live
+		// tools. The operations root itself is never a skill.
 		if d.IsDir() {
+			if path != dirPath {
+				if _, err := os.Stat(filepath.Join(path, "SKILL.md")); err == nil {
+					return fs.SkipDir
+				}
+			}
 			return nil
 		}
 

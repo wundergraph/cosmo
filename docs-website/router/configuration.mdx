@@ -341,6 +341,7 @@ The Model Context Protocol (MCP) server allows AI models to discover and interac
 | MCP_ENABLE_ARBITRARY_OPERATIONS | mcp.enable_arbitrary_operations | <Icon icon="square" /> | Whether to allow arbitrary GraphQL operations to be executed. <Warning>   Security risk: Should only be enabled in secure, internal environments. </Warning> | false          |
 | MCP_EXPOSE_SCHEMA               | mcp.expose_schema               | <Icon icon="square" /> | Whether to expose the full GraphQL schema. <Warning>   Security risk: Should only be enabled in secure, internal environments. </Warning>                    | false          |
 | MCP_OMIT_TOOL_NAME_PREFIX       | mcp.omit_tool_name_prefix       | <Icon icon="square" /> | When enabled, MCP tool names generated from GraphQL operations omit the `execute_operation_` prefix.                                                         | false          |
+| MCP_RESOURCES_ENABLED           | mcp.resources.enabled           | <Icon icon="square" /> | Serves markdown context documents and Agent Skills from the operations directory as MCP resources. See [Context Documents and Skills](/router/mcp#context-documents-and-skills). | false          |
 
 Example YAML config:
 

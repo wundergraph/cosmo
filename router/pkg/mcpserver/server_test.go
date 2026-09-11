@@ -114,6 +114,131 @@ func TestReload_NoToolDuplication(t *testing.T) {
 		"no tool name collision errors should be logged on reload")
 }
 
+func TestReload_RegistersContextResources(t *testing.T) {
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"FindEmployee.graphql": findEmployeeOp,
+		"notes.md":             "---\ntitle: Notes\ndescription: Team notes.\n---\n# Notes body\n",
+	})
+	skillDir := filepath.Join(tempDir, "employee-workflows")
+	require.NoError(t, os.MkdirAll(skillDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"),
+		[]byte("---\nname: employee-workflows\ndescription: How to combine employee tools.\n---\n# Guide\n"), 0o644))
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(zap.NewNop()),
+		WithOperationsDir(tempDir),
+		WithResourcesEnabled(true),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, srv.Reload(&schemaDoc, nil))
+
+	assert.ElementsMatch(t, []string{
+		"context:///notes.md",
+		"skill://employee-workflows/SKILL.md",
+	}, srv.registeredResources)
+
+	// Reload again: no duplicates.
+	require.NoError(t, srv.Reload(&schemaDoc, nil))
+	assert.Len(t, srv.registeredResources, 2)
+
+	// Read handler serves file content fresh from disk.
+	handler := srv.handleReadContextResource()
+	result, err := handler(t.Context(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: "context:///notes.md"},
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Contents, 1)
+	assert.Equal(t, "context:///notes.md", result.Contents[0].URI)
+	assert.Equal(t, "text/markdown", result.Contents[0].MIMEType)
+	assert.Contains(t, result.Contents[0].Text, "# Notes body")
+
+	_, err = handler(t.Context(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: "context:///missing.md"},
+	})
+	assert.Error(t, err)
+}
+
+func TestReload_ResourcesDisabledRegistersNothing(t *testing.T) {
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"FindEmployee.graphql": findEmployeeOp,
+		"notes.md":             "# Notes\n",
+	})
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(zap.NewNop()),
+		WithOperationsDir(tempDir),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, srv.Reload(&schemaDoc, nil))
+	assert.Empty(t, srv.registeredResources)
+
+	// A disabled server still carries a non-nil, empty scan: handlers that
+	// read s.contextScan must never see a nil map.
+	require.NotNil(t, srv.contextScan)
+	assert.Empty(t, srv.contextScan.skills)
+	assert.Empty(t, srv.contextScan.resources)
+	assert.Empty(t, srv.contextScan.byURI)
+}
+
+// TestReadContextResource_OversizedFileAtReadTimeIsRejected proves both read
+// paths (resources/read and get_context) re-check the 16 MiB cap and the
+// regular-file requirement at request time, not just at scan time: a file
+// that grows after the scan must not be served.
+func TestReadContextResource_OversizedFileAtReadTimeIsRejected(t *testing.T) {
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"notes.md": "# Notes\n",
+	})
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(zap.NewNop()),
+		WithOperationsDir(tempDir),
+		WithResourcesEnabled(true),
+	)
+	require.NoError(t, err)
+	require.NoError(t, srv.Reload(&schemaDoc, nil))
+	require.Contains(t, srv.registeredResources, "context:///notes.md")
+
+	// Grow the file past the limit on disk, after the scan already recorded it.
+	oversized := make([]byte, maxServedFileBytes+1)
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "notes.md"), oversized, 0o644))
+
+	readHandler := srv.handleReadContextResource()
+	_, err = readHandler(t.Context(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: "context:///notes.md"},
+	})
+	assert.Error(t, err)
+
+	getContextHandler := srv.handleGetContext()
+	result, err := getContextHandler(t.Context(), &mcp.CallToolRequest{
+		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{"uri":"context:///notes.md"}`)},
+	})
+	require.NoError(t, err)
+	assert.True(t, result.IsError)
+}
+
 func TestReload_ReservedToolNameCollision(t *testing.T) {
 	core, logs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
@@ -442,4 +567,94 @@ func TestExecuteGraphQLQueryStructuredContentDisabled(t *testing.T) {
 			assert.Nil(t, result.StructuredContent)
 		})
 	}
+}
+
+func TestGetContextTool(t *testing.T) {
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"FindEmployee.graphql": findEmployeeOp,
+		"notes.md":             "---\ntitle: Notes\ndescription: Team notes.\n---\n# Notes body\n",
+	})
+	skillDir := filepath.Join(tempDir, "employee-workflows")
+	require.NoError(t, os.MkdirAll(skillDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"),
+		[]byte("---\nname: employee-workflows\ndescription: How to combine employee tools.\n---\n# Guide\n"), 0o644))
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(zap.NewNop()),
+		WithOperationsDir(tempDir),
+		WithResourcesEnabled(true),
+	)
+	require.NoError(t, err)
+	require.NoError(t, srv.Reload(&schemaDoc, nil))
+
+	assert.Contains(t, srv.registeredTools, "get_context")
+
+	handler := srv.handleGetContext()
+
+	t.Run("no uri returns index", func(t *testing.T) {
+		result, err := handler(t.Context(), &mcp.CallToolRequest{
+			Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{}`)},
+		})
+		require.NoError(t, err)
+		text := result.Content[0].(*mcp.TextContent).Text
+
+		var index ContextIndex
+		require.NoError(t, json.Unmarshal([]byte(text), &index))
+		require.Len(t, index.Skills, 1)
+		assert.Equal(t, "employee-workflows", index.Skills[0].Name)
+		assert.Equal(t, "skill://employee-workflows/SKILL.md", index.Skills[0].URI)
+		require.Len(t, index.Documents, 1)
+		assert.Equal(t, "context:///notes.md", index.Documents[0].URI)
+		assert.Equal(t, "Notes", index.Documents[0].Title)
+
+		// The index is also returned as structured content (text is the
+		// backward-compatible fallback).
+		require.NotNil(t, result.StructuredContent)
+	})
+
+	t.Run("uri returns raw content", func(t *testing.T) {
+		result, err := handler(t.Context(), &mcp.CallToolRequest{
+			Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{"uri":"skill://employee-workflows/SKILL.md"}`)},
+		})
+		require.NoError(t, err)
+		text := result.Content[0].(*mcp.TextContent).Text
+		assert.Contains(t, text, "# Guide")
+	})
+
+	t.Run("unknown uri returns error", func(t *testing.T) {
+		result, err := handler(t.Context(), &mcp.CallToolRequest{
+			Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{"uri":"context:///nope.md"}`)},
+		})
+		require.NoError(t, err)
+		assert.True(t, result.IsError)
+	})
+}
+
+func TestGetContextToolNotRegisteredWhenDisabled(t *testing.T) {
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"FindEmployee.graphql": findEmployeeOp,
+	})
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(zap.NewNop()),
+		WithOperationsDir(tempDir),
+	)
+	require.NoError(t, err)
+	require.NoError(t, srv.Reload(&schemaDoc, nil))
+
+	assert.NotContains(t, srv.registeredTools, "get_context")
 }
