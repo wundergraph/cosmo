@@ -143,6 +143,12 @@ query {
 
 ---
 
+## 🔨 Contributing
+
+- **Contributing document**: [https://github.com/wundergraph/cosmo/blob/main/cli/CONTRIBUTING.md](https://github.com/wundergraph/cosmo/blob/main/cli/CONTRIBUTING.md)
+
+---
+
 ## 🌐 About WunderGraph Cosmo
 
 WunderGraph Cosmo is a comprehensive, open-source platform for managing GraphQL APIs at scale. It offers:

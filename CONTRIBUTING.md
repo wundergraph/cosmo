@@ -2,6 +2,7 @@
 
 Before contributing to the WunderGraph Cosmo repository, please open an issue to discuss the changes you would like to make. Alternatively, you can also open a discussion in the [WunderGraph Discussions](https://github.com/wundergraph/cosmo/discussions).
 We are open to all kinds of contributions, including bug fixes, new features, and documentation improvements.
+For WunderGraph CLI contributions, read the [CLI Contributing document](https://github.com/wundergraph/cosmo/blob/main/cli/CONTRIBUTING.md).
 
 This project follows the principles of the [Open Source AI Manifesto](https://human-oss.dev). Please ensure your contributions align with its principles.
 
