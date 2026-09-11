@@ -4281,6 +4281,12 @@
           "default": "30s",
           "description": "The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
+        "sse_server_write_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "default": "10s",
+          "description": "The maximum time for one SSE write and flush to a client. If a write takes longer, the router closes that subscription so it does not block other subscriptions on the same trigger. Set 0s to disable the timeout."
+        },
         "enable_defer": {
           "type": "boolean",
           "default": false,
