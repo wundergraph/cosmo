@@ -10,6 +10,7 @@ WunderGraph Cosmo Studio.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| additionalDeploymentAnnotations | object | `{}` | Pass additional annotations to the Deployment                                                                                                             |
 | affinity | object | `{}` |  |
 | autoscaling.enabled | bool | `false` |  |
 | autoscaling.maxReplicas | int | `100` |  |
@@ -46,4 +47,3 @@ WunderGraph Cosmo Studio.
 | serviceAnnotations | object | `{}` |  |
 | terminationGracePeriodSeconds | int | `5` | Sets the [termination grace period](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution) for Deployment pods |
 | tolerations | list | `[]` |  |
-

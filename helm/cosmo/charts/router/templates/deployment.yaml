@@ -5,6 +5,7 @@ metadata:
   annotations:
     # Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
     kapp.k14s.io/change-group: "cosmo.apps.router.wundergraph.com/deployment"
+    {{- include "router.additionalDeploymentAnnotations" . | nindent 4 }}
   labels:
     {{- include "router.labels" . | nindent 4 }}
     {{- include "router.additionalLabels" . | nindent 4 }}

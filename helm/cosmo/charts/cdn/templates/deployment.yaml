@@ -9,6 +9,7 @@ metadata:
     # Support for k14s.io. This annotation will wait for the postgres deployments to be ready before deploying.
     kapp.k14s.io/change-rule.minio: "upsert after upserting cosmo.apps.minio.wundergraph.com/deployment"
     {{- end }}
+    {{- include "cdn.additionalDeploymentAnnotations" . | nindent 4 }}
   labels:
     {{- include "cdn.labels" . | nindent 4 }}
 spec:

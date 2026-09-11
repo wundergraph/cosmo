@@ -20,6 +20,7 @@ metadata:
     # Only deploy the controlplane after the migrations have been applied.
     kapp.k14s.io/change-rule.ch-migration: "upsert after upserting cosmo.apps.controlplane.wundergraph.com/ch-migration"
     kapp.k14s.io/change-rule.db-migration: "upsert after upserting cosmo.apps.controlplane.wundergraph.com/db-migration"
+    {{- include "controlplane.additionalDeploymentAnnotations" . | nindent 4 }}
   labels:
     {{- include "controlplane.labels" . | nindent 4 }}
 spec:
