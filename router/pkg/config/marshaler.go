@@ -36,6 +36,21 @@ func (b *RegExArray) UnmarshalText(value []byte) error {
 	return nil
 }
 
+func (p *JWTOnError) UnmarshalYAML(unmarshal func(any) error) error {
+	// Decode the scalar before assigning to the named string type so invalid
+	// YAML types produce a configuration error instead of a decoder panic.
+	var value any
+	if err := unmarshal(&value); err != nil {
+		return err
+	}
+	policy, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("authentication.jwt.on_error must be a string")
+	}
+	*p = JWTOnError(policy)
+	return nil
+}
+
 func (b *RegExArray) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var s []string
 	if err := unmarshal(&s); err != nil {
