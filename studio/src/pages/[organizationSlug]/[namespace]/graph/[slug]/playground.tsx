@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/empty-state';
 import { Loader } from '@/components/ui/loader';
 import {
   Select,
@@ -36,11 +37,13 @@ import {
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
 import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { groupFeatureSubgraphsByFlag, useFeatureSubgraphSchema } from '@/hooks/use-feature-subgraph-schema';
 import { useHydratePlaygroundStateFromUrl } from '@/hooks/use-hydrate-playground-state-from-url';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE, PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
 import { NextPageWithLayout } from '@/lib/page';
 import { effectiveDefaultHeadersString, substituteHeadersFromEnv, validateHeaders } from '@/lib/playground-headers';
+import { CONFIG_TYPE_LABELS, ConfigType, isSchemaLoading, selectSchemaSdl, toConfigType } from '@/lib/schema-loading';
 import { parseSchema } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
@@ -71,7 +74,7 @@ import { GraphQLSchema, parse, validate } from 'graphql';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/router';
 import posthog from 'posthog-js';
-import { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, Fragment, PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { FiSave } from 'react-icons/fi';
@@ -602,28 +605,56 @@ const ToggleClientValidation = () => {
   );
 };
 
+type ConfigSelection = { load: string; type: ConfigType; featureFlag?: string };
+
+/** A feature subgraph can belong to more than one flag, so `load` alone does not identify it. */
+const configSelectionValue = (selection: ConfigSelection) => JSON.stringify(selection);
+
+const parseConfigSelection = (value: string): ConfigSelection => {
+  const { load, type, featureFlag } = JSON.parse(value) as Record<string, string | undefined>;
+  return {
+    load: load ?? '',
+    type: toConfigType(type),
+    featureFlag,
+  };
+};
+
 const ConfigSelect = () => {
   const router = useRouter();
 
   const graphContext = useContext(GraphContext);
   const subgraphs = graphContext?.subgraphs;
-  const compositionFlagsData = useCompositionFlags();
+  const { data: compositionFlagsData } = useCompositionFlags();
   const featureFlags = compositionFlagsData?.featureFlags ?? [];
+  const featureSubgraphsByFlag = useMemo(
+    () => groupFeatureSubgraphsByFlag(compositionFlagsData?.featureSubgraphs ?? []),
+    [compositionFlagsData?.featureSubgraphs],
+  );
 
   const selected = (router.query.load as string) || graphContext?.graph?.id || '';
-  const type = (router.query.type as string) || 'graph';
+  const configType = toConfigType(router.query.type as string);
+  const activeFeatureFlag = (router.query.featureFlag as string) || '';
 
   const applyParams = useApplyParams();
 
+  const currentValue = configSelectionValue({
+    load: selected,
+    type: configType,
+    featureFlag: configType === 'featureSubgraph' ? activeFeatureFlag : undefined,
+  });
+
   return (
     <div className="ml-1 flex items-center gap-x-2 pl-3">
-      <span className="text-sm text-muted-foreground">
-        Querying {type === 'featureFlag' ? 'Feature flag' : type === 'subgraph' ? 'Subgraph' : 'Graph'} :
-      </span>
+      <span className="text-sm text-muted-foreground">Querying {CONFIG_TYPE_LABELS[configType]} :</span>
       <Select
-        value={`{ "load": "${selected}", "type": "${type}" }`}
+        value={currentValue}
         onValueChange={(value) => {
-          applyParams(JSON.parse(value));
+          const selection = parseConfigSelection(value);
+          applyParams({
+            load: selection.load,
+            type: selection.type,
+            featureFlag: selection.featureFlag ?? null,
+          });
         }}
       >
         <SelectTrigger className="ml-1 mr-4 flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0 md:ml-0">
@@ -634,7 +665,7 @@ const ConfigSelect = () => {
             <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
               <PiGraphLight className="h-3 w-3" /> Graph
             </SelectLabel>
-            <SelectItem value={`{ "load": "${graphContext?.graph?.id ?? ''}", "type": "graph" }`}>
+            <SelectItem value={configSelectionValue({ load: graphContext?.graph?.id ?? '', type: 'graph' })}>
               {graphContext?.graph?.name}
             </SelectItem>
           </SelectGroup>
@@ -646,10 +677,25 @@ const ConfigSelect = () => {
                 <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
                   <MdOutlineFeaturedPlayList className="h-3 w-3" /> Feature Flags
                 </SelectLabel>
-                {featureFlags.map(({ name, id }) => (
-                  <SelectItem key={id} value={`{ "load": "${id}", "type": "featureFlag" }`}>
-                    {name}
-                  </SelectItem>
+                {featureFlags.map((featureFlag) => (
+                  <Fragment key={featureFlag.id}>
+                    <SelectItem value={configSelectionValue({ load: featureFlag.id, type: 'featureFlag' })}>
+                      {featureFlag.name}
+                    </SelectItem>
+                    {(featureSubgraphsByFlag[featureFlag.id] ?? []).map((featureSubgraph) => (
+                      <SelectItem
+                        key={`${featureFlag.id}:${featureSubgraph.id}`}
+                        className="pl-8"
+                        value={configSelectionValue({
+                          load: featureSubgraph.id,
+                          type: 'featureSubgraph',
+                          featureFlag: featureFlag.name,
+                        })}
+                      >
+                        {featureSubgraph.name}
+                      </SelectItem>
+                    ))}
+                  </Fragment>
                 ))}
               </SelectGroup>
             </>
@@ -662,7 +708,7 @@ const ConfigSelect = () => {
                   <Component2Icon className="h-3 w-3" /> Subgraphs
                 </SelectLabel>
                 {subgraphs.map(({ name, id }) => (
-                  <SelectItem key={id} value={`{ "load": "${id}", "type": "subgraph" }`}>
+                  <SelectItem key={id} value={configSelectionValue({ load: id, type: 'subgraph' })}>
                     {name}
                   </SelectItem>
                 ))}
@@ -723,18 +769,38 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
 
   const loadSchemaGraphId = (router.query.load as string) || graphContext?.graph?.id || '';
-  const type = (router.query.type as string) || 'graph';
+  const configType = toConfigType(router.query.type as string);
 
-  const compositionFlagsData = useCompositionFlags();
+  const { data: compositionFlagsData, isLoading: isLoadingCompositionFlags } = useCompositionFlags();
 
-  const { data, isLoading: isLoadingGraphSchema } = useQuery(getFederatedGraphSDLByName, {
-    name: graphContext?.graph?.name,
-    namespace: graphContext?.graph?.namespace,
-    featureFlagName:
-      type === 'featureFlag'
-        ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
-        : undefined,
-  });
+  const {
+    featureSubgraph: activeFeatureSubgraph,
+    sdl: featureSubgraphSdl,
+    isLoading: isLoadingFeatureSubgraphSchema,
+  } = useFeatureSubgraphSchema(
+    compositionFlagsData,
+    configType === 'featureSubgraph'
+      ? { featureFlagName: router.query.featureFlag as string, subgraphId: loadSchemaGraphId }
+      : undefined,
+  );
+
+  const { data, isLoading: isLoadingGraphSchema } = useQuery(
+    getFederatedGraphSDLByName,
+    {
+      name: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+      featureFlagName:
+        configType === 'featureFlag'
+          ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
+          : undefined,
+    },
+    {
+      // A subgraph or feature subgraph selection shows its own schema, so this response, the
+      // largest on the page, would only be fetched and discarded. A flag selection waits for the
+      // flag list, without which featureFlagName is undefined and the base graph answers instead.
+      enabled: configType === 'graph' || (configType === 'featureFlag' && !isLoadingCompositionFlags),
+    },
+  );
 
   const { data: subgraphData, isLoading: isLoadingSubgraphSchema } = useQuery(
     getSubgraphSDLFromLatestComposition,
@@ -744,11 +810,17 @@ const PlaygroundPage: NextPageWithLayout = () => {
       namespace: graphContext?.graph?.namespace,
     },
     {
-      enabled: !!loadSchemaGraphId && loadSchemaGraphId !== graphContext?.graph?.id && type === 'subgraph',
+      enabled: !!loadSchemaGraphId && loadSchemaGraphId !== graphContext?.graph?.id && configType === 'subgraph',
     },
   );
 
-  const isLoading = isLoadingGraphSchema || isLoadingSubgraphSchema;
+  const isLoading = isSchemaLoading({
+    isLoadingGraphSchema,
+    isLoadingSubgraphSchema,
+    isLoadingFeatureSubgraphSchema,
+    isLoadingCompositionFlags,
+    isFeatureSubgraphSelected: configType === 'featureSubgraph',
+  });
 
   const { data: defaultHeadersData, isLoading: isLoadingDefaultHeaders } = useQuery(
     getPlaygroundDefaultHeaders,
@@ -772,9 +844,19 @@ const PlaygroundPage: NextPageWithLayout = () => {
     );
   }, [defaultHeadersData]);
 
+  // A renamed flag or a stale link leaves the selection unresolvable. The endpoint is unknown too,
+  // so there is nothing for GraphiQL to introspect and it would fail silently.
+  const isUnresolvedFeatureSubgraph = configType === 'featureSubgraph' && !isLoading && !activeFeatureSubgraph;
+
   const schema = useMemo(() => {
-    return parseSchema(subgraphData?.sdl || data?.clientSchema)?.ast ?? null;
-  }, [data?.clientSchema, subgraphData?.sdl]);
+    const sdl = selectSchemaSdl(configType, {
+      featureSubgraph: featureSubgraphSdl,
+      subgraph: subgraphData?.sdl,
+      graph: data?.clientSchema,
+    });
+
+    return parseSchema(sdl)?.ast ?? null;
+  }, [configType, data?.clientSchema, featureSubgraphSdl, subgraphData?.sdl]);
 
   const [query, setQuery] = useState<string | undefined>(operation ? decodeURIComponent(operation) : undefined);
 
@@ -1021,9 +1103,16 @@ const PlaygroundPage: NextPageWithLayout = () => {
   }, [query, isGraphiqlRendered]);
 
   const { routingUrl, subscriptionUrl } = useMemo(() => {
-    if (!loadSchemaGraphId || type === 'graph' || type === 'featureFlag') {
+    if (!loadSchemaGraphId || configType === 'graph' || configType === 'featureFlag') {
       const url = graphContext?.graph?.routingURL ?? '';
       return { routingUrl: url, subscriptionUrl: url.replace('http', 'ws') };
+    }
+
+    if (configType === 'featureSubgraph') {
+      return {
+        routingUrl: activeFeatureSubgraph?.routingUrl ?? '',
+        subscriptionUrl: activeFeatureSubgraph?.subscriptionUrl ?? '',
+      };
     }
 
     const subgraph = graphContext?.subgraphs?.find((s) => s.id === loadSchemaGraphId);
@@ -1035,15 +1124,15 @@ const PlaygroundPage: NextPageWithLayout = () => {
       routingUrl: subgraph.routingURL,
       subscriptionUrl: subgraph.subscriptionUrl,
     };
-  }, [graphContext?.graph?.routingURL, graphContext?.subgraphs, loadSchemaGraphId, type]);
+  }, [activeFeatureSubgraph, graphContext?.graph?.routingURL, graphContext?.subgraphs, loadSchemaGraphId, configType]);
 
   const featureFlagName = useMemo(() => {
-    if (type !== 'featureFlag') {
+    if (configType !== 'featureFlag') {
       return undefined;
     }
 
     return (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name;
-  }, [compositionFlagsData?.featureFlags, loadSchemaGraphId, type]);
+  }, [compositionFlagsData?.featureFlags, loadSchemaGraphId, configType]);
 
   const [status, setStatus] = useState<number>();
   const [statusText, setStatusText] = useState<string>();
@@ -1118,7 +1207,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
         requestHeaders = substituteHeadersFromEnv(requestHeaders, graphContext?.graph?.id);
         validateHeaders(requestHeaders);
 
-        if (type === 'featureFlag') {
+        if (configType === 'featureFlag') {
           const featureFlag = (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId);
           if (featureFlag) {
             requestHeaders['X-Feature-Flag'] = featureFlag.name;
@@ -1157,7 +1246,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     loadSchemaGraphId,
     routingUrl,
     schema,
-    type,
+    configType,
     view,
   ]);
 
@@ -1210,6 +1299,12 @@ const PlaygroundPage: NextPageWithLayout = () => {
         <div className="hidden h-full flex-1 pl-2.5 md:flex">
           {isLoadingDefaultHeaders ? (
             <Loader fullscreen />
+          ) : isUnresolvedFeatureSubgraph ? (
+            <EmptyState
+              icon={<ExclamationTriangleIcon />}
+              title="Schema not found"
+              description={`The selected feature subgraph is not part of the latest composition of feature flag ${router.query.featureFlag}. The flag may have been renamed, or the feature subgraph removed from it.`}
+            />
           ) : (
             <>
               <GraphiQL
@@ -1251,9 +1346,12 @@ const PlaygroundPage: NextPageWithLayout = () => {
   );
 };
 
-const CompositionFlagsContext = createContext<GetFeatureFlagsInLatestCompositionByFederatedGraphResponse | undefined>(
-  undefined,
-);
+interface CompositionFlags {
+  data?: GetFeatureFlagsInLatestCompositionByFederatedGraphResponse;
+  isLoading: boolean;
+}
+
+const CompositionFlagsContext = createContext<CompositionFlags>({ isLoading: false });
 
 function useCompositionFlags() {
   return useContext(CompositionFlagsContext);
@@ -1261,7 +1359,7 @@ function useCompositionFlags() {
 
 const CompositionFlagsProvider = ({ children }: PropsWithChildren) => {
   const graphContext = useContext(GraphContext);
-  const { data: compositionFlagsData } = useQuery(
+  const { data, isLoading } = useQuery(
     getFeatureFlagsInLatestCompositionByFederatedGraph,
     {
       federatedGraphName: graphContext?.graph?.name,
@@ -1272,7 +1370,9 @@ const CompositionFlagsProvider = ({ children }: PropsWithChildren) => {
     },
   );
 
-  return <CompositionFlagsContext.Provider value={compositionFlagsData}>{children}</CompositionFlagsContext.Provider>;
+  const value = useMemo(() => ({ data, isLoading }), [data, isLoading]);
+
+  return <CompositionFlagsContext.Provider value={value}>{children}</CompositionFlagsContext.Provider>;
 };
 
 PlaygroundPage.getLayout = (page: ReactNode) => {

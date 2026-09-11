@@ -2726,10 +2726,24 @@ message GetFeatureFlagsInLatestCompositionByFederatedGraphRequest {
   string namespace = 2;
 }
 
+// Feature flags compose independently, so the same feature subgraph can appear once per flag with
+// a different schema_version_id.
+message FeatureSubgraphInFlagComposition {
+  string feature_flag_id = 1;
+  string id = 2;
+  string name = 3;
+  string target_id = 4;
+  // The version that flag's composition used, not the latest published version.
+  string schema_version_id = 5;
+  string routing_url = 6;
+  string subscription_url = 7;
+}
+
 message GetFeatureFlagsInLatestCompositionByFederatedGraphResponse {
   Response response = 1;
   // feature flags that are part of the latest valid composition of the federated graph
   repeated FeatureFlag feature_flags = 2;
+  repeated FeatureSubgraphInFlagComposition feature_subgraphs = 3;
 }
 
 message GetFeatureSubgraphsByFederatedGraphRequest {

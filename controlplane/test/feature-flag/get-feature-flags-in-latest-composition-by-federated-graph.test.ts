@@ -3,7 +3,14 @@ import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { addMinutes, formatISO, subDays } from 'date-fns';
 import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
+import {
+  afterAllSetup,
+  beforeAllSetup,
+  createTestGroup,
+  createTestRBACEvaluator,
+  genID,
+  genUniqueLabel,
+} from '../../src/core/test-util.js';
 import {
   createAndPublishSubgraph,
   createFeatureFlag,
@@ -11,11 +18,119 @@ import {
   createNamespace,
   createThenPublishFeatureSubgraph,
   DEFAULT_ROUTER_URL,
+  featureFlagIntegrationTestSetUp,
   DEFAULT_SUBGRAPH_URL_ONE,
   SetupTest,
 } from '../test-util.js';
 
 let dbname = '';
+
+async function expectFeatureSubgraphsScopedToTheirFlag(client: Awaited<ReturnType<typeof SetupTest>>['client']) {
+  const namespace = genID('namespace').toLowerCase();
+  await createNamespace(client, namespace);
+
+  const labels = [genUniqueLabel()];
+  const federatedGraphName = genID('fedGraph');
+
+  await createAndPublishSubgraph(
+    client,
+    'products',
+    namespace,
+    fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/products-standalone.graphql')).toString(),
+    labels,
+    DEFAULT_SUBGRAPH_URL_ONE,
+  );
+
+  // Two feature subgraphs over one base subgraph, which is only legal across separate flags.
+  await createThenPublishFeatureSubgraph(
+    client,
+    'products-feature-one',
+    'products',
+    namespace,
+    fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/products-standalone-feature.graphql')).toString(),
+    labels,
+    'http://localhost:4101',
+  );
+
+  await createThenPublishFeatureSubgraph(
+    client,
+    'products-feature-two',
+    'products',
+    namespace,
+    fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/products-standalone-update.graphql')).toString(),
+    labels,
+    'http://localhost:4102',
+  );
+
+  const federatedGraphLabels = labels.map(({ key, value }) => `${key}=${value}`);
+  await createFederatedGraph(client, federatedGraphName, namespace, federatedGraphLabels, DEFAULT_ROUTER_URL);
+
+  const flagOneName = genID('flag');
+  await createFeatureFlag(client, flagOneName, labels, ['products-feature-one'], namespace, true);
+
+  const flagTwoName = genID('flag');
+  await createFeatureFlag(client, flagTwoName, labels, ['products-feature-two'], namespace, true);
+
+  let resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
+    federatedGraphName,
+    namespace,
+  });
+  expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+  const flagOne = resp.featureFlags.find((flag) => flag.name === flagOneName);
+  const flagTwo = resp.featureFlags.find((flag) => flag.name === flagTwoName);
+  expect(flagOne).toBeDefined();
+  expect(flagTwo).toBeDefined();
+
+  // Exact membership, so a response that leaked either feature subgraph into both flags fails.
+  expect(resp.featureSubgraphs).toHaveLength(2);
+  const ofFlagOne = resp.featureSubgraphs.filter((sg) => sg.featureFlagId === flagOne!.id);
+  const ofFlagTwo = resp.featureSubgraphs.filter((sg) => sg.featureFlagId === flagTwo!.id);
+  expect(ofFlagOne).toHaveLength(1);
+  expect(ofFlagTwo).toHaveLength(1);
+
+  const featureSubgraphOne = ofFlagOne[0];
+  const featureSubgraphTwo = ofFlagTwo[0];
+
+  expect(featureSubgraphOne.name).toBe('products-feature-one');
+  expect(featureSubgraphOne.routingUrl).toBe('http://localhost:4101');
+  expect(featureSubgraphOne.schemaVersionId).toBeTruthy();
+
+  expect(featureSubgraphTwo.name).toBe('products-feature-two');
+  expect(featureSubgraphTwo.routingUrl).toBe('http://localhost:4102');
+  expect(featureSubgraphTwo.schemaVersionId).toBeTruthy();
+
+  // Republishing recomposes only the flag that contains it.
+  const previousVersionOne = featureSubgraphOne.schemaVersionId;
+  const previousVersionTwo = featureSubgraphTwo.schemaVersionId;
+
+  const republishResp = await client.publishFederatedSubgraph({
+    name: 'products-feature-one',
+    namespace,
+    schema: fs
+      .readFileSync(join(process.cwd(), 'test/test-data/feature-flags/products-standalone-update.graphql'))
+      .toString(),
+  });
+  expect(republishResp.response?.code).toBe(EnumStatusCode.OK);
+
+  resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
+    federatedGraphName,
+    namespace,
+  });
+  expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+  const updatedFlagOne = resp.featureFlags.find((flag) => flag.name === flagOneName);
+  const updatedFlagTwo = resp.featureFlags.find((flag) => flag.name === flagTwoName);
+
+  expect(resp.featureSubgraphs).toHaveLength(2);
+  const updatedOfFlagOne = resp.featureSubgraphs.filter((sg) => sg.featureFlagId === updatedFlagOne!.id);
+  const updatedOfFlagTwo = resp.featureSubgraphs.filter((sg) => sg.featureFlagId === updatedFlagTwo!.id);
+  expect(updatedOfFlagOne).toHaveLength(1);
+  expect(updatedOfFlagTwo).toHaveLength(1);
+
+  expect(updatedOfFlagOne[0].schemaVersionId).not.toBe(previousVersionOne);
+  expect(updatedOfFlagTwo[0].schemaVersionId).toBe(previousVersionTwo);
+}
 
 describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
   beforeAll(async () => {
@@ -769,4 +884,125 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
       expect(resp.featureFlags.map((f) => f.name)).toStrictEqual([enabledFlagName]);
     },
   );
+
+  test('that feature subgraphs are returned scoped to the flag whose composition pinned them', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    await expectFeatureSubgraphsScopedToTheirFlag(client);
+  });
+
+  test('that feature subgraphs are scoped to their flag when split config loading is enabled', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['split-config-loading'] });
+    testContext.onTestFinished(() => server.close());
+
+    await expectFeatureSubgraphsScopedToTheirFlag(client);
+  });
+
+  test('that feature subgraphs are hidden from a caller without subgraph read access', async (testContext) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const namespace = genID('namespace').toLowerCase();
+    const labels = [genUniqueLabel()];
+    const federatedGraphName = genID('fedGraph');
+
+    await createNamespace(client, namespace);
+
+    await createAndPublishSubgraph(
+      client,
+      'products',
+      namespace,
+      fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/products-standalone.graphql')).toString(),
+      labels,
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createThenPublishFeatureSubgraph(
+      client,
+      'products-feature',
+      'products',
+      namespace,
+      fs
+        .readFileSync(join(process.cwd(), 'test/test-data/feature-flags/products-standalone-feature.graphql'))
+        .toString(),
+      labels,
+      'http://localhost:4101',
+    );
+
+    const federatedGraphLabels = labels.map(({ key, value }) => `${key}=${value}`);
+    await createFederatedGraph(client, federatedGraphName, namespace, federatedGraphLabels, DEFAULT_ROUTER_URL);
+
+    const flagName = genID('flag');
+    await createFeatureFlag(client, flagName, labels, ['products-feature'], namespace, true);
+
+    const namespaceResp = await client.getNamespace({ name: namespace });
+    expect(namespaceResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // graph-viewer can read the graph and its flags, but has no subgraph role.
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(
+        createTestGroup({ role: 'graph-viewer', namespaces: [namespaceResp.namespace!.id] }),
+      ),
+    });
+
+    const resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
+      federatedGraphName,
+      namespace,
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(resp.featureFlags.some((flag) => flag.name === flagName)).toBe(true);
+    expect(resp.featureSubgraphs).toHaveLength(0);
+  });
+
+  test('that a feature subgraph removed from a flag is no longer returned', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const labels = [genUniqueLabel()];
+    const federatedGraphName = genID('fedGraph');
+
+    await featureFlagIntegrationTestSetUp(
+      client,
+      [
+        { name: 'users', hasFeatureSubgraph: true },
+        { name: 'products', hasFeatureSubgraph: true },
+      ],
+      federatedGraphName,
+      labels,
+    );
+
+    const flagName = genID('flag');
+    await createFeatureFlag(client, flagName, labels, ['users-feature', 'products-feature'], 'default', true);
+
+    let resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
+      federatedGraphName,
+      namespace: 'default',
+    });
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(new Set(resp.featureSubgraphs.map((sg) => sg.name))).toStrictEqual(
+      new Set(['users-feature', 'products-feature']),
+    );
+
+    // Recomposing after the drop records users-feature with changeType 'removed' rather than
+    // deleting the row, so it must be filtered out of the response. users-feature is the one
+    // dropped because it carries @override(from: "products-feature"), which would be orphaned.
+    const updateResp = await client.updateFeatureFlag({
+      name: flagName,
+      namespace: 'default',
+      labels,
+      featureSubgraphNames: ['products-feature'],
+    });
+    expect(updateResp.response?.code).toBe(EnumStatusCode.OK);
+
+    resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
+      federatedGraphName,
+      namespace: 'default',
+    });
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(resp.featureFlags.some((flag) => flag.name === flagName)).toBe(true);
+    expect(resp.featureSubgraphs.map((sg) => sg.name)).toStrictEqual(['products-feature']);
+  });
 });
