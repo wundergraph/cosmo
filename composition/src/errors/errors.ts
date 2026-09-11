@@ -30,6 +30,7 @@ import {
   ARGUMENT,
   FIELD,
   FIELD_PATH,
+  FROM_CONTEXT,
   IN_UPPER,
   INPUT_FIELD,
   INTERFACE,
@@ -623,6 +624,28 @@ export function invalidRequiredInputValueError(
       ` as optional on all other definitions of that ${typeString} in all other subgraphs.\n`;
   }
   return new Error(message);
+}
+
+export function contextArgumentRequiredError(
+  coords: string,
+  contextSubgraphNames: Array<string>,
+  requiredSubgraphNames: Array<string>,
+): Error {
+  return new Error(
+    `The ${ARGUMENT} "${coords}" is invalid because:\n` +
+      ` It is declared "@${FROM_CONTEXT}" in the following subgraph` +
+      (contextSubgraphNames.length > 1 ? 's' : '') +
+      ': "' +
+      contextSubgraphNames.join(QUOTATION_JOIN) +
+      `"\n` +
+      ` However, it is required in the following subgraph` +
+      (requiredSubgraphNames.length > 1 ? 's' : '') +
+      ': "' +
+      requiredSubgraphNames.join(QUOTATION_JOIN) +
+      `"\n` +
+      ` An ${ARGUMENT} declared "@${FROM_CONTEXT}" is populated by the router rather than the client, so it must` +
+      ` not be required in any subgraph in which it is not.\n`,
+  );
 }
 
 export function duplicateArgumentsError(fieldPath: string, duplicatedArguments: string[]): Error {
