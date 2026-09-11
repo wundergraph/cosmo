@@ -45,7 +45,7 @@ Command and subcommand implementations should not include `throw` statements. Se
 To have the application exit with an error, use one of these options:
 
 1. `program.error()`: Sets the exit code to `1` and accepts an error message.
-2. `process.exitCode = 1`: Sets the exit code explicitly for code paths that produce JSON output.
+2. `process.exitCode = 1`: Sets the exit code explicitly for code paths that produce JSON output. Always follow it with a `return` statement to stop execution.
 
 > [!TIP]
 > A top-level `try/catch` statement intercepts and formats unexpected runtime errors.
