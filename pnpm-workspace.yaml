@@ -18,6 +18,8 @@ packages:
   - protographic
   - playground
 
+minimumReleaseAge: 4320
+
 allowBuilds:
   '@bufbuild/buf': true
   '@sentry-internal/node-cpu-profiler': true
