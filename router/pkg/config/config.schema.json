@@ -2837,6 +2837,11 @@
                   "type": "array",
                   "description": "Scopes required to call the get_schema built-in tool. Additive to tools_call scopes. Only relevant when expose_schema is true.",
                   "items": { "type": "string" }
+                },
+                "generate_query": {
+                  "type": "array",
+                  "description": "Scopes required to call the generate_query built-in tool. Additive to tools_call scopes. Only relevant when query generation is enabled.",
+                  "items": { "type": "string" }
                 }
               }
             },

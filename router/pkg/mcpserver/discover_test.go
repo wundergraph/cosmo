@@ -36,7 +36,7 @@ func newTestSession(t *testing.T, opts ...func(*Options)) *mcp.ClientSession {
 		}, opts...)...,
 	)
 	require.NoError(t, err)
-	require.NoError(t, srv.Reload(&schemaDoc, nil))
+	require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 
