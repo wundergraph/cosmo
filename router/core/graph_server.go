@@ -1487,7 +1487,7 @@ func (s *graphServer) buildGraphMux(
 		return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 	}
 
-	enableTraceClient := s.connectionMetrics != nil || exprManager.VisitorManager.IsSubgraphTraceUsedInExpressions()
+	enableTraceClient := s.traceConfig.Enabled || s.connectionMetrics != nil || exprManager.VisitorManager.IsSubgraphTraceUsedInExpressions()
 
 	var baseConnMetricStore rmetric.ConnectionMetricStore = &rmetric.NoopConnectionMetricStore{}
 	if s.connectionMetrics != nil {

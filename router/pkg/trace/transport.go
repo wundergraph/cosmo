@@ -27,7 +27,7 @@ func NewTransport(base http.RoundTripper, otelHttpOptions []otelhttp.Option, opt
 		opt(transport)
 	}
 
-	otelHttpOptions = append(otelHttpOptions, otelhttp.WithFilter(CommonRequestFilter))
+	otelHttpOptions = append(otelHttpOptions, otelhttp.WithFilter(clientRequestFilter))
 
 	return otelhttp.NewTransport(
 		transport, otelHttpOptions...,

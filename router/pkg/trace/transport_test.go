@@ -16,12 +16,42 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func TestTransport(t *testing.T) {
+	t.Run("traces websocket upgrades", func(t *testing.T) {
+		traceparents := make(chan string, 1)
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			traceparents <- r.Header.Get("traceparent")
+			w.Header().Set("Connection", "Upgrade")
+			w.Header().Set("Upgrade", "websocket")
+			w.WriteHeader(http.StatusSwitchingProtocols)
+		}))
+		defer server.Close()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+		client := http.Client{Transport: NewTransport(http.DefaultTransport, []otelhttp.Option{
+			otelhttp.WithTracerProvider(tp),
+			otelhttp.WithPropagators(propagation.TraceContext{}),
+		})}
+		request, err := http.NewRequest(http.MethodGet, server.URL, nil)
+		require.NoError(t, err)
+		request.Header.Set("Upgrade", "websocket")
+
+		response, err := client.Do(request)
+		require.NoError(t, err)
+		require.NoError(t, response.Body.Close())
+
+		require.NotEmpty(t, <-traceparents)
+		spans := exporter.GetSpans().Snapshots()
+		require.Len(t, spans, 1)
+		require.Equal(t, trace.SpanKindClient, spans[0].SpanKind())
+	})
 
 	t.Run("create a span for every request", func(t *testing.T) {
 		content := []byte("Hello, world!")
