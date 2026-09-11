@@ -1,6 +1,21 @@
 import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, desc, eq, inArray, like, or, sql, arrayOverlaps, isNull, isNotNull } from 'drizzle-orm';
+import {
+  SQL,
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  inArray,
+  like,
+  or,
+  sql,
+  arrayOverlaps,
+  isNull,
+  isNotNull,
+} from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { validate as isValidUuid } from 'uuid';
@@ -217,7 +232,7 @@ export class FeatureFlagRepository {
       return [];
     }
 
-    if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
+    if (!this.applyRbacConditionsToQuery(rbac, conditions, 'feature-flag')) {
       return [];
     }
 
@@ -267,7 +282,7 @@ export class FeatureFlagRepository {
       return 0;
     }
 
-    if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
+    if (!this.applyRbacConditionsToQuery(rbac, conditions, 'feature-flag')) {
       return 0;
     }
 
@@ -290,11 +305,26 @@ export class FeatureFlagRepository {
    * Applies conditions based on the provided RBAC. If the actor can't access any subgraph, the
    * returned value is false; otherwise, true.
    *
+   * The conditions are expressed against the table the caller selects from, which differs per
+   * scope:
+   *
+   * - `feature-subgraph` → the query selects from `targets`, so the namespace is matched on
+   *   `targets.namespaceId` and resources directly on `targets.id`.
+   * - `feature-flag` → the query selects from `feature_flags`, which has no `targets` in its
+   *   FROM clause. The namespace is matched on `featureFlags.namespaceId` and resources through
+   *   an `EXISTS` sub-query, so a flag is visible when it contains at least one feature subgraph
+   *   the actor was granted.
+   *
    * @param rbac
    * @param conditions
+   * @param scope The table the caller selects from
    * @private
    */
-  private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
+  private applyRbacConditionsToQuery(
+    rbac: RBACEvaluator | undefined,
+    conditions: (SQL<unknown> | undefined)[],
+    scope: 'feature-flag' | 'feature-subgraph' = 'feature-subgraph',
+  ) {
     if (!rbac || rbac.isOrganizationAdminOrDeveloper || rbac.isOrganizationViewer) {
       return true;
     }
@@ -324,19 +354,44 @@ export class FeatureFlagRepository {
       resources.push(...graphViewer.resources);
     }
 
-    if (namespaces.length > 0 && resources.length > 0) {
-      conditions.push(
-        or(
-          inArray(schema.targets.namespaceId, [...new Set(namespaces)]),
-          inArray(schema.targets.id, [...new Set(resources)]),
-        ),
-      );
-    } else if (namespaces.length > 0) {
-      conditions.push(inArray(schema.targets.namespaceId, [...new Set(namespaces)]));
-    } else if (resources.length > 0) {
-      conditions.push(inArray(schema.targets.id, [...new Set(resources)]));
+    const uniqueNamespaces = [...new Set(namespaces)];
+    const uniqueResources = [...new Set(resources)];
+
+    if (uniqueNamespaces.length === 0 && uniqueResources.length === 0) {
+      // A rule without namespaces and resources grants the role for every namespace
+      return true;
     }
 
+    const clauses: SQL<unknown>[] = [];
+    if (uniqueNamespaces.length > 0) {
+      clauses.push(
+        inArray(
+          scope === 'feature-flag' ? schema.featureFlags.namespaceId : schema.targets.namespaceId,
+          uniqueNamespaces,
+        ),
+      );
+    }
+
+    if (uniqueResources.length > 0) {
+      clauses.push(
+        scope === 'feature-flag'
+          ? exists(
+              this.db
+                .select({ exists: sql`1` })
+                .from(featureFlagToFeatureSubgraphs)
+                .innerJoin(subgraphs, eq(subgraphs.id, featureFlagToFeatureSubgraphs.featureSubgraphId))
+                .where(
+                  and(
+                    eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlags.id),
+                    inArray(subgraphs.targetId, uniqueResources),
+                  ),
+                ),
+            )
+          : inArray(schema.targets.id, uniqueResources),
+      );
+    }
+
+    conditions.push(clauses.length === 1 ? clauses[0] : or(...clauses));
     return true;
   }
 
