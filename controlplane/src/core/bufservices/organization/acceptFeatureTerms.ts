@@ -43,7 +43,7 @@ export function acceptFeatureTerms(
         }
       }
     } else {
-      featureIds.push('ai', 'split-config-loading');
+      featureIds.push('ai', 'prompt-to-query');
     }
 
     if (featureIds.length === 0) {

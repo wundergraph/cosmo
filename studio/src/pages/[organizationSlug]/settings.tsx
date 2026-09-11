@@ -59,7 +59,7 @@ import { z } from 'zod';
 import { DeleteOrganization } from '@/components/settings/delete-organization';
 import { RestoreOrganization } from '@/components/settings/restore-organization';
 import { buildUrl } from '@/lib/build-url';
-import { CosmoAi } from '@/components/settings/cosmo-ai';
+import { CosmoAi } from '@/components/settings/ai/cosmo-ai';
 
 const OrganizationDetails = () => {
   const user = useContext(UserContext);
