@@ -72,9 +72,11 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:a", Value: []byte(`{"real":true}`), TTL: time.Minute, Tags: []string{"v1:a", "declared:v1:a"}},
 		}))
 
-		value, err := mr.Get(entryKey("v1:a"))
+		stored, err := mr.Get(entryKey("v1:a"))
 		require.NoError(t, err)
-		require.JSONEq(t, `{"real":true}`, value)
+		value, _, err := enginecache.DecodeEntry([]byte(stored))
+		require.NoError(t, err)
+		require.JSONEq(t, `{"real":true}`, string(value))
 
 		for _, tag := range []string{"v1:a", "declared:v1:a"} {
 			members, err := mr.ZMembers(tagIndexKey(tag))

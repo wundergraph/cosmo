@@ -173,21 +173,27 @@ An outer array whose length does not match the entities answered costs the whole
 
 ## Invalidation
 
-Entries leave the cache on their own, when the TTL expires. However users might want to invalidate the cached data before this happens. In order to do this the router provides an invalidation endpoint on a different port, which can get called to invalidate entries.
+Cached entries expire when their TTL ends. Send a request to the invalidation endpoint on its separate port to remove entries earlier.
 
 <Danger>
-**Tags may not be invalidated**. This is a known bug we are working on a fix for, essentially under certain circumstances certain entries belonging to a tag may not be invalidated, which leads to an issue of correctness.
+**An entry written while an invalidation runs can survive it.** The index lists the entry before its value lands, so the request finds nothing to remove and leaves it in place. The entry then serves data fetched before the invalidation until its TTL ends. Send the request again once in-flight writes have settled. This is a known bug and a fix is in progress.
 </Danger>
 
 ### Enable the endpoint
 
+The endpoint only starts when the response cache itself is enabled.
+
 ```yaml config.yaml
 response_cache:
+  enabled: true
   invalidation:
     endpoint:
       enabled: true
       shared_key: 'a-random-string-of-at-least-32-characters'
 ```
+
+The endpoint speaks plain HTTP. Keep `listen_addr` on the loopback interface, or terminate TLS in front of it, so the shared key is not sent in the clear.
+
 ### Send a request
 
 `POST` a JSON array to the endpoint, with the shared key as the `Authorization` header. There is no `Bearer` prefix.
@@ -229,7 +235,7 @@ The whole array is validated before anything is removed. One bad element refuses
 
 **Everything is scoped to a subgraph.** A type or a cache tag is indexed per subgraph that answered, so every request names one. There is no way to invalidate a type or a tag across all subgraphs in one element. List the subgraphs instead.
 
-**The memory provider is per replica.** Each router holds its own cache, so an invalidation reaches only the replica it was sent to. We do not recommend using the in memory cache with multiple instances, and also in production.
+**The memory provider is per replica.** Each router holds its own cache, so an invalidation reaches only the replica it was sent to. Do not use the in-memory cache with multiple router instances in production.
 
 ## Observability
 

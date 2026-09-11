@@ -100,6 +100,9 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 		if len(page) < invalidationPageSize {
 			return removed, nil
 		}
+		if len(members) == 0 {
+			return removed, nil
+		}
 	}
 }
 

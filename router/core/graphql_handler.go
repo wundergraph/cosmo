@@ -95,6 +95,7 @@ type HandlerOptions struct {
 	ResponseCache             caching.Cache
 	ResponseCacheFallbackTTL  time.Duration
 	ResponseCacheInvalidation config.ResponseCacheInvalidationConfig
+	ResponseCacheTagHeader    config.ResponseCacheTagHeaderConfig
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -120,6 +121,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		responseCacheStore:                       opts.ResponseCache,
 		responseCacheFallbackTTL:                 opts.ResponseCacheFallbackTTL,
 		responseCacheInvalidation:                opts.ResponseCacheInvalidation,
+		responseCacheTagHeader:                   opts.ResponseCacheTagHeader,
 		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log),
 	}
 	return graphQLHandler
@@ -171,6 +173,7 @@ type GraphQLHandler struct {
 	responseCacheFallbackTTL  time.Duration
 	responseCacheErrorHandler func(error)
 	responseCacheInvalidation config.ResponseCacheInvalidationConfig
+	responseCacheTagHeader    config.ResponseCacheTagHeaderConfig
 
 	enableCacheResponseHeaders      bool
 	enableResponseHeaderPropagation bool
@@ -295,6 +298,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				}
+			}
+			if h.responseCacheStore != nil && h.responseCacheTagHeader.Enabled {
+				pw.cacheTagHeader = &h.responseCacheTagHeader
 			}
 		}
 
