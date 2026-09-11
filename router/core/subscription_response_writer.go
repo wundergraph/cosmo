@@ -3,14 +3,19 @@ package core
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 const (
@@ -31,16 +36,32 @@ type withFlushWriter interface {
 	SubscriptionResponseWriter() resolve.SubscriptionResponseWriter
 }
 
+type SubscriptionResponseWriterOptions struct {
+	ApolloSubscriptionMultipartPrintBoundary bool
+	SSEWriteTimeout                          time.Duration
+	Logger                                   *zap.Logger
+	Stats                                    statistics.EngineStatistics
+	Telemetry                                subscriptionTelemetryContext
+}
+
 type HttpFlushWriter struct {
-	ctx           context.Context
-	cancel        context.CancelFunc
-	writer        io.Writer
-	flusher       http.Flusher
-	subscribeOnce bool
-	sse           bool
-	multipart     bool
-	buf           *bytes.Buffer
-	firstMessage  bool
+	ctx             context.Context
+	cancel          context.CancelFunc
+	writer          io.Writer
+	flusher         http.Flusher
+	responseControl *http.ResponseController
+	subscribeOnce   bool
+	sse             bool
+	multipart       bool
+	buf             *bytes.Buffer
+	firstMessage    bool
+	sseWriteTimeout time.Duration
+	logger          *zap.Logger
+	stats           statistics.EngineStatistics
+	telemetry       subscriptionTelemetryContext
+	requestContext  context.Context
+	disconnect      *subscriptionDisconnectTracker
+	delivery        *subscriptionDeliveryTracker
 	// apolloSubscriptionMultipartPrintBoundary if set to true will send the multipart boundary at the end of the message to allow
 	// misbehaving client (like apollo client) to read the message just sent before the next one or the heartbeat
 	apolloSubscriptionMultipartPrintBoundary bool
@@ -53,7 +74,17 @@ func (f *HttpFlushWriter) Complete() {
 		return
 	}
 	if f.sse {
-		_, _ = f.writer.Write([]byte("event: complete\ndata: \n\n"))
+		err := f.writeAndFlushSSE(func() error {
+			_, err := f.writer.Write([]byte("event: complete\ndata: \n\n"))
+			return err
+		})
+		observeSubscriptionFrame(f.stats, f.logger, f.telemetry, "complete", err)
+		if err != nil {
+			initiator, reason := disconnectReasonFromWriteError(err)
+			f.disconnect.disconnect(initiator, reason, err)
+		} else {
+			f.disconnect.disconnect("server", "normal_completion", nil)
+		}
 	} else if f.multipart {
 		// Write the final boundary in the multipart response
 		if f.apolloSubscriptionMultipartPrintBoundary {
@@ -63,15 +94,23 @@ func (f *HttpFlushWriter) Complete() {
 		}
 	}
 
-	// Flush before closing the writer to ensure all data is sent
-	f.flusher.Flush()
+	if !f.sse {
+		// Flush before closing the writer to ensure all data is sent.
+		f.flusher.Flush()
+	}
 
 	f.cancel()
 }
 
 func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
 	if err = f.ctx.Err(); err != nil {
-		return
+		err = wrapSubscriptionWriteError("buffer", err)
+		if f.sse {
+			f.delivery.observe(f.telemetry, p, 0, err)
+			initiator, reason := disconnectReasonFromWriteError(err)
+			f.disconnect.disconnect(initiator, reason, err)
+		}
+		return 0, err
 	}
 
 	return f.buf.Write(p)
@@ -85,12 +124,16 @@ func (f *HttpFlushWriter) Heartbeat() error {
 	var heartbeat []byte
 	if f.sse {
 		heartbeat = []byte(":heartbeat\n\n")
-
-		if _, err := f.writer.Write(heartbeat); err != nil {
+		err := f.writeAndFlushSSE(func() error {
+			_, err := f.writer.Write(heartbeat)
 			return err
+		})
+		observeSubscriptionFrame(f.stats, f.logger, f.telemetry, "heartbeat", err)
+		if err != nil {
+			initiator, reason := disconnectReasonFromWriteError(err)
+			f.disconnect.disconnect(initiator, reason, err)
 		}
-
-		f.flusher.Flush()
+		return err
 	} else if f.multipart {
 		if _, err := f.Write([]byte("{}")); err != nil {
 			return err
@@ -109,12 +152,42 @@ func (f *HttpFlushWriter) Error(data []byte) {
 		return
 	}
 	_, _ = f.buf.Write(data)
-	_ = f.Flush()
+	err := f.flush("terminal_error")
+	if f.sse {
+		observeSubscriptionFrame(f.stats, f.logger, f.telemetry, "terminal_error", err)
+		if err != nil {
+			initiator, reason := disconnectReasonFromWriteError(err)
+			f.disconnect.disconnect(initiator, reason, err)
+		} else {
+			f.disconnect.disconnect("server", "normal_completion", nil)
+		}
+	}
 	f.cancel()
 }
 
+func (f *HttpFlushWriter) subscriptionRequestEnded() {
+	if !f.sse {
+		return
+	}
+	if err := f.requestContext.Err(); err != nil {
+		f.disconnect.disconnect("client", "context_canceled", err)
+		return
+	}
+	f.disconnect.disconnect("server", "normal_completion", nil)
+}
+
 func (f *HttpFlushWriter) Flush() (err error) {
+	return f.flush("next")
+}
+
+func (f *HttpFlushWriter) flush(frameType string) (err error) {
 	if err = f.ctx.Err(); err != nil {
+		if f.sse && frameType == "next" {
+			err = wrapSubscriptionWriteError("buffer", err)
+			f.delivery.observe(f.telemetry, f.buf.Bytes(), 0, err)
+			initiator, reason := disconnectReasonFromWriteError(err)
+			f.disconnect.disconnect(initiator, reason, err)
+		}
 		return err
 	}
 
@@ -151,13 +224,29 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	}
 
 	full := flushBreak + string(resp) + separation
-	_, err = f.writer.Write([]byte(full))
+	if f.sse {
+		started := time.Now()
+		err = f.writeAndFlushSSE(func() error {
+			_, writeErr := f.writer.Write([]byte(full))
+			return writeErr
+		})
+		if frameType == "next" {
+			f.delivery.observe(f.telemetry, []byte(full), time.Since(started), err)
+			if err != nil {
+				initiator, reason := disconnectReasonFromWriteError(err)
+				f.disconnect.disconnect(initiator, reason, err)
+			}
+		}
+	} else {
+		_, err = f.writer.Write([]byte(full))
+		if err == nil {
+			// Flush before closing the writer to ensure all data is sent.
+			f.flusher.Flush()
+		}
+	}
 	if err != nil {
 		return err
 	}
-
-	// Flush before closing the writer to ensure all data is sent
-	f.flusher.Flush()
 
 	if f.subscribeOnce {
 		defer f.cancel()
@@ -166,15 +255,31 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	return nil
 }
 
-func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter, apolloSubscriptionMultipartPrintBoundary bool) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
+func (f *HttpFlushWriter) writeAndFlushSSE(write func() error) error {
+	if f.sseWriteTimeout > 0 {
+		if err := f.responseControl.SetWriteDeadline(time.Now().Add(f.sseWriteTimeout)); err != nil {
+			// Failing closed prevents a response writer without deadline support from
+			// reintroducing an unbounded shared-trigger stall.
+			return wrapSubscriptionWriteError("deadline", fmt.Errorf("set SSE write deadline: %w", err))
+		}
+	}
+
+	if err := write(); err != nil {
+		return wrapSubscriptionWriteError("write", err)
+	}
+
+	return wrapSubscriptionWriteError("flush", f.responseControl.Flush())
+}
+
+func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter, opts SubscriptionResponseWriterOptions) (*resolve.Context, resolve.SubscriptionResponseWriter, error) {
 	if wfw, ok := w.(withFlushWriter); ok {
-		return ctx, wfw.SubscriptionResponseWriter(), true
+		return ctx, wfw.SubscriptionResponseWriter(), nil
 	}
 	wgParams := NegotiateSubscriptionParams(r, false)
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		return ctx, nil, false
+		return ctx, nil, errors.New("subscription response writer does not support flushing")
 	}
 
 	setSubscriptionHeaders(wgParams, r, w)
@@ -182,12 +287,22 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 	flushWriter := &HttpFlushWriter{
 		writer:                                   w,
 		flusher:                                  flusher,
+		responseControl:                          http.NewResponseController(w),
 		sse:                                      wgParams.UseSse,
 		multipart:                                wgParams.UseMultipart,
 		subscribeOnce:                            wgParams.SubscribeOnce,
 		buf:                                      &bytes.Buffer{},
 		firstMessage:                             true,
-		apolloSubscriptionMultipartPrintBoundary: apolloSubscriptionMultipartPrintBoundary,
+		sseWriteTimeout:                          opts.SSEWriteTimeout,
+		logger:                                   opts.Logger,
+		stats:                                    opts.Stats,
+		telemetry:                                opts.Telemetry,
+		requestContext:                           r.Context(),
+		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
+	}
+	if flushWriter.sse {
+		flushWriter.disconnect = newSubscriptionDisconnectTracker(flushWriter.stats, flushWriter.logger, flushWriter.telemetry)
+		flushWriter.delivery = newSubscriptionDeliveryTracker(flushWriter.stats, flushWriter.logger, "")
 	}
 
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())
@@ -197,10 +312,21 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 		ctx.ExecutionOptions.SendHeartbeat = true
 		// Flush the response head immediately so the client establishes the connection
 		// before the first message, instead of blocking until one is streamed.
-		flusher.Flush()
+		if wgParams.UseSse {
+			err := flushWriter.writeAndFlushSSE(func() error { return nil })
+			observeSubscriptionFrame(flushWriter.stats, flushWriter.logger, flushWriter.telemetry, "headers", err)
+			if err != nil {
+				initiator, reason := disconnectReasonFromWriteError(err)
+				flushWriter.disconnect.disconnect(initiator, reason, err)
+				flushWriter.cancel()
+				return ctx, nil, fmt.Errorf("flush initial SSE response headers: %w", err)
+			}
+		} else {
+			flusher.Flush()
+		}
 	}
 
-	return ctx, flushWriter, true
+	return ctx, flushWriter, nil
 }
 
 func wrapMultipartMessage(resp []byte, wrapPayload bool) ([]byte, error) {

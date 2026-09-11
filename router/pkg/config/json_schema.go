@@ -27,8 +27,10 @@ const (
 )
 
 type duration struct {
-	min time.Duration
-	max time.Duration
+	min    time.Duration
+	max    time.Duration
+	hasMin bool
+	hasMax bool
 }
 
 func (d duration) Validate(ctx *jsonschema.ValidatorContext, v any) {
@@ -51,7 +53,7 @@ func (d duration) Validate(ctx *jsonschema.ValidatorContext, v any) {
 		return
 	}
 
-	if d.min > 0 {
+	if d.hasMin {
 		if duration < d.min {
 			ctx.AddError(&validationErrorKind{
 				fmt.Sprintf("duration must be greater or equal than %s", d.min),
@@ -61,7 +63,7 @@ func (d duration) Validate(ctx *jsonschema.ValidatorContext, v any) {
 		}
 	}
 
-	if d.max > 0 {
+	if d.hasMax {
 		if duration > d.max {
 			ctx.AddError(&validationErrorKind{
 				fmt.Sprintf("duration must be less or equal than %s", d.max),
@@ -118,23 +120,25 @@ func compileDuration(ctx *jsonschema.CompilerContext, m map[string]any) (jsonsch
 			var minDuration, maxDuration time.Duration
 			var err error
 
-			minDurationString, ok := mapVal["minimum"].(string)
-			if ok {
+			minDurationString, hasMin := mapVal["minimum"].(string)
+			if hasMin {
 				minDuration, err = time.ParseDuration(minDurationString)
 				if err != nil {
 					return nil, err
 				}
 			}
-			maxDurationString, ok := mapVal["maximum"].(string)
-			if ok {
+			maxDurationString, hasMax := mapVal["maximum"].(string)
+			if hasMax {
 				maxDuration, err = time.ParseDuration(maxDurationString)
 				if err != nil {
 					return nil, err
 				}
 			}
 			return duration{
-				min: minDuration,
-				max: maxDuration,
+				min:    minDuration,
+				max:    maxDuration,
+				hasMin: hasMin,
+				hasMax: hasMax,
 			}, nil
 		}
 

@@ -30,26 +30,59 @@ type EngineStatistics interface {
 	UnregisterResolver(r ResolverConcurrencyReporter)
 }
 
+type SubscriptionObservationKind string
+
+const (
+	SubscriptionObservationDeliveryAttempt SubscriptionObservationKind = "delivery_attempt"
+	SubscriptionObservationDeliveryFailure SubscriptionObservationKind = "delivery_failure"
+	SubscriptionObservationDisconnect      SubscriptionObservationKind = "disconnect"
+)
+
+// SubscriptionObservation contains only bounded values suitable for metric
+// dimensions. Event, connection, operation, and client identity belong in
+// structured logs and must not be added here.
+type SubscriptionObservation struct {
+	Kind             SubscriptionObservationKind
+	Transport        string
+	FrameType        string
+	FailureStage     string
+	FailureReason    string
+	Initiator        string
+	DisconnectReason string
+	Subprotocol      string
+}
+
+type SubscriptionObserver interface {
+	ObserveSubscription(SubscriptionObservation)
+}
+
+type SubscriptionObservationCount struct {
+	Observation SubscriptionObservation
+	Count       uint64
+}
+
 type EngineStats struct {
-	ctx           context.Context
-	logger        *zap.Logger
-	reportStats   bool
-	connections   atomic.Uint64
-	subscriptions atomic.Uint64
-	messagesSent  atomic.Uint64
-	triggers      atomic.Uint64
+	ctx                      context.Context
+	logger                   *zap.Logger
+	reportStats              bool
+	connections              atomic.Uint64
+	subscriptions            atomic.Uint64
+	messagesSent             atomic.Uint64
+	triggers                 atomic.Uint64
+	subscriptionObservations sync.Map // map[SubscriptionObservation]*atomic.Uint64
 
 	resolverMu        sync.RWMutex
 	resolverReporters map[ResolverConcurrencyReporter]struct{}
 }
 
 type UsageReport struct {
-	Connections           uint64
-	Subscriptions         uint64
-	MessagesSent          uint64
-	Triggers              uint64
-	ResolverMaxConcurrent uint64
-	ResolverInflight      uint64
+	Connections              uint64
+	Subscriptions            uint64
+	MessagesSent             uint64
+	Triggers                 uint64
+	ResolverMaxConcurrent    uint64
+	ResolverInflight         uint64
+	SubscriptionObservations []SubscriptionObservationCount
 }
 
 // NewEngineStats creates a new EngineStats instance. If reportStats is true, the stats will be reported every 5 seconds.
@@ -79,6 +112,13 @@ func (s *EngineStats) GetReport() *UsageReport {
 		report.ResolverInflight += uint64(r.InflightResolves())
 	}
 	s.resolverMu.RUnlock()
+	s.subscriptionObservations.Range(func(key, value any) bool {
+		report.SubscriptionObservations = append(report.SubscriptionObservations, SubscriptionObservationCount{
+			Observation: key.(SubscriptionObservation),
+			Count:       value.(*atomic.Uint64).Load(),
+		})
+		return true
+	})
 	return report
 }
 
@@ -106,6 +146,11 @@ func (s *EngineStats) reportConnections() {
 
 func (s *EngineStats) SubscriptionUpdateSent() {
 	s.messagesSent.Inc()
+}
+
+func (s *EngineStats) ObserveSubscription(observation SubscriptionObservation) {
+	counter, _ := s.subscriptionObservations.LoadOrStore(observation, &atomic.Uint64{})
+	counter.(*atomic.Uint64).Inc()
 }
 
 func (s *EngineStats) ConnectionsInc() {
@@ -166,6 +211,8 @@ func (s *NoopEngineStats) GetReport() *UsageReport {
 
 func (s *NoopEngineStats) SubscriptionUpdateSent() {}
 
+func (s *NoopEngineStats) ObserveSubscription(_ SubscriptionObservation) {}
+
 func (s *NoopEngineStats) ConnectionsInc() {}
 
 func (s *NoopEngineStats) ConnectionsDec() {}
@@ -187,3 +234,5 @@ func (s *NoopEngineStats) UnregisterResolver(_ ResolverConcurrencyReporter) {}
 
 var _ EngineStatistics = &EngineStats{}
 var _ EngineStatistics = &NoopEngineStats{}
+var _ SubscriptionObserver = &EngineStats{}
+var _ SubscriptionObserver = &NoopEngineStats{}
