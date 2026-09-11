@@ -1065,11 +1065,18 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// This check runs if they've configured a max query depth, and it can optionally be turned off for persisted operations
 	if h.complexityLimits != nil {
 		cacheHit, complexityCalcs, queryDepthErr := operationKit.ValidateQueryComplexity()
+		requestContext.expressionContext.Request.Operation.QueryDepth = complexityCalcs.Depth
 		engineValidateSpan.SetAttributes(otel.WgQueryDepth.Int(complexityCalcs.Depth))
+		requestContext.expressionContext.Request.Operation.QueryTotalFields = complexityCalcs.TotalFields
 		engineValidateSpan.SetAttributes(otel.WgQueryTotalFields.Int(complexityCalcs.TotalFields))
+		requestContext.expressionContext.Request.Operation.QueryRootFields = complexityCalcs.RootFields
 		engineValidateSpan.SetAttributes(otel.WgQueryRootFields.Int(complexityCalcs.RootFields))
+		requestContext.expressionContext.Request.Operation.QueryRootFieldAliases = complexityCalcs.RootFieldAliases
 		engineValidateSpan.SetAttributes(otel.WgQueryRootFieldAliases.Int(complexityCalcs.RootFieldAliases))
+		requestContext.expressionContext.Request.Operation.QueryComplexityCacheHit = cacheHit
 		engineValidateSpan.SetAttributes(otel.WgQueryDepthCacheHit.Bool(cacheHit))
+		setTelemetryAttributes(validationCtx, requestContext, expr.BucketQueryComplexity)
+
 		if queryDepthErr != nil {
 			rtrace.AttachErrToSpan(engineValidateSpan, err)
 
