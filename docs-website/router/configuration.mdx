@@ -1729,6 +1729,7 @@ Configure WebSocket handlers, protocols, and more.
 |                      | forward_upgrade_query_params     | <Icon icon="square" />                        | Forward all query parameters from the Upgrade Request in the extensions field when subscribing on a Subgraph                                 |               |
 |                      | forward_initial_payload          | <Icon icon="square" />                        | Forward the initial payload from a client subscription in the extensions field when subscribing on a Subgraph                                | true          |
 |                      | client_info_from_initial_payload | <Icon icon="square" />                        | [WebSocket Client Info Configuration](/router/configuration#websocket-client-info-configuration)                                             |               |
+|                      | compression                      | <Icon icon="square" />                        | [WebSocket Compression Configuration](/router/configuration#websocket-compression-configuration)                                             |               |
 
 ### Absinthe Protocol Configuration
 
@@ -1757,6 +1758,16 @@ Configure how to extract client info from the initial WebSocket payload. This al
 | WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_FORWARD_TO_REQUEST_HEADERS_ENABLED | forward_to_request_headers.enabled               | <Icon icon="square" /> | Enable forwarding extracted client info to request headers               | true          |
 | WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_NAME_TARGET_HEADER                 | forward_to_request_headers.name_target_header    | <Icon icon="square" /> | The header name to forward the client name to                            |               |
 | WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_VERSION_TARGET_HEADER              | forward_to_request_headers.version_target_header | <Icon icon="square" /> | The header name to forward the client version to                         |               |
+
+### WebSocket Compression Configuration
+
+Configure permessage-deflate compression (RFC 7692) for WebSocket connections between clients and the Router. When enabled, the Router negotiates compression with clients that offer the extension during the connection upgrade. Clients that do not support compression are served uncompressed messages.
+
+| Environment Variable                          | YAML                   | Required               | Description                                                                                                                                                                                             | Default Value |
+| --------------------------------------------- | ---------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| WEBSOCKETS_COMPRESSION_ENABLED                | enabled                | <Icon icon="square" /> | Enable permessage-deflate compression for WebSocket connections.                                                                                                                                       | false         |
+| WEBSOCKETS_COMPRESSION_LEVEL                  | level                  | <Icon icon="square" /> | The compression level (1-9). Level 1 is fastest with the least compression. Level 9 provides the best compression but is slowest.                                                                      | 6             |
+| WEBSOCKETS_COMPRESSION_CLIENT_MAX_WINDOW_BITS | client_max_window_bits | <Icon icon="square" /> | Limits the LZ77 sliding window size (8-15) that clients may use when compressing messages. Smaller values reduce Router memory usage for decompression at the cost of compression ratio. The parameter is only included in the negotiation response when the client offers it. | 15            |
 
 ### Example WebSocket YAML config:
 
@@ -1802,6 +1813,13 @@ websocket:
         export_token: false
         # to enable Subgraph authentication, we can export the value into a Header
         header_key: "Authorization"
+  compression:
+    # enable permessage-deflate compression for WebSocket connections
+    enabled: false
+    # the compression level (1-9)
+    level: 6
+    # limits the LZ77 sliding window size (8-15) that clients may use when compressing messages
+    client_max_window_bits: 15
 ```
 
 ## Authentication
