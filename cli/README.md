@@ -145,7 +145,7 @@ query {
 
 ## 🔨 Contributing
 
-- **Contribution document**: [https://github.com/wundergraph/cosmo/blob/main/cli/CONTRIBUTING.md](https://github.com/wundergraph/cosmo/blob/main/cli/CONTRIBUTING.md)
+- **Contributing document**: [https://github.com/wundergraph/cosmo/blob/main/cli/CONTRIBUTING.md](https://github.com/wundergraph/cosmo/blob/main/cli/CONTRIBUTING.md)
 
 ---
 
