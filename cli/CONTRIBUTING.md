@@ -38,27 +38,32 @@ Most command groups use the same layout: export a Commander command from `src/co
 
 Each command or subcommand should provide a `--json` flag. This makes it easy to combine the WunderGraph CLI with other tools and use it in CI environments. When this flag is used, return error states and messages in JSON format as well.
 
-### 2. Avoid throwing; prefer result objects
+### 2. Avoid throwing; set proper exit codes
 
-When representing an invariant violation or a specific application error, do not use `throw` statements. Instead, have your function return a _result_ object with a `success` property and either `data` or `errors`:
-
-```typescript
-{
-  success: true;
-  data: Record<string, unknown>; // <-- provide actual type
-} |
-{
-  success: false;
-  errors: Array<Error>;
-}
-```
-
-This avoids `try/catch` statements because invalid states can be checked with simple `if` blocks. Using `try/catch` leads to unwieldy code, especially when the blocks are nested.
-
-> [!TIP]
-> A top-level `try/catch` statement intercepts and formats unexpected runtime errors.
+Command and subcommand implementations should not include `throw` statements. See [Return result objects in helper functions](#3-return-result-objects-in-helper-functions) for guidance on containing errors and using control flow to model invalid states.
 
 To have the application exit with an error, use one of these options:
 
 1. `program.error()`: Sets the exit code to `1` and accepts an error message.
 2. `process.exitCode = 1`: Sets the exit code explicitly for code paths that produce JSON output.
+
+> [!TIP]
+> A top-level `try/catch` statement intercepts and formats unexpected runtime errors.
+
+### 3. Return result objects in helper functions
+
+Catch unexpected errors within helper functions. RPC helpers that use `client` to fetch backend data are a common example. These functions should return a _result_ object with a `success` property and either `data` or `errors`:
+
+```typescript
+type Result<T> =
+  | {
+      success: true;
+      data: T;
+    }
+  | {
+      success: false;
+      errors: Array<Error>;
+    };
+```
+
+This avoids `try/catch` statements at call sites. Invalid states can be checked with simple `if` statements, avoiding any nested `try/catch` blocks.
