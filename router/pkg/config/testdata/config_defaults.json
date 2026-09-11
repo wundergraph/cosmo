@@ -130,6 +130,7 @@
     "AllowOrigins": [
       "*"
     ],
+    "CustomSchemas": null,
     "AllowMethods": [
       "HEAD",
       "GET",

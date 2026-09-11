@@ -203,6 +203,7 @@ type Telemetry struct {
 type CORS struct {
 	Enabled          bool          `yaml:"enabled" envDefault:"true" env:"CORS_ENABLED"`
 	AllowOrigins     []string      `yaml:"allow_origins" envDefault:"*" env:"CORS_ALLOW_ORIGINS"`
+	CustomSchemas    []string      `yaml:"custom_schemas" env:"CORS_CUSTOM_SCHEMAS"`
 	AllowMethods     []string      `yaml:"allow_methods" envDefault:"HEAD,GET,POST" env:"CORS_ALLOW_METHODS"`
 	AllowHeaders     []string      `yaml:"allow_headers" envDefault:"Origin,Content-Length,Content-Type" env:"CORS_ALLOW_HEADERS"`
 	AllowCredentials bool          `yaml:"allow_credentials" envDefault:"true" env:"CORS_ALLOW_CREDENTIALS"`
