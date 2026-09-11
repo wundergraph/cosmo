@@ -31,16 +31,17 @@ type Cursor struct {
     // The provider-specific message position in the broker.
     Position CursorPosition
 
-    // The point in time when the cursor got created.
-    IssuedAt time.Time
+    // The point in time when the cursor got created,
+    // as a unix timestamp in milliseconds.
+    IssuedAt int64
 }
 
 type ProviderType string
 
 var (
     ProviderTypeKafka ProviderType = "kafka"
-    ProviderTypeNatsJetstream ProviderType = "nats-jetstream"
-    ProviderTypeRedisStreams ProviderType = "redis-streams"
+    ProviderTypeNatsJetstream ProviderType = "nats-jetstream" // not implemented in this rfc
+    ProviderTypeRedisStreams ProviderType = "redis-streams" // not implemented in this rfc
 )
 ```
 
@@ -112,7 +113,7 @@ The following goes into the `requestData` part of the HMAC input:
 
 If no JWT is present, then the cursor could be used by a different user.
 
-Each field is seeded with a length-boundary: `"orders" + "event" --> "6orders5events"`
+Each field is seeded with a length-boundary: `"orders" + "event" --> "6orders5event"`
 to prevent colides.
 
 The GraphQL query itself is deliberately not part of the input: a client may add or remove fields
@@ -161,12 +162,13 @@ can read the broker offsets out of a cursor.
 
 Describing message positions is highly broker specific. Some have offsets,
 other use indexes, etc. Therefore I have chosen an interface to abstract it. Any implementation
-needs to provide a way to encode the position into a compact byte sequence.
-This byte sequence is used on the cursor on the wire.
+needs to provide a way to encode the position into a compact byte sequence and to read that
+sequence back. This byte sequence is used on the cursor on the wire.
 
 ```go
 type CursorPosition interface {
     encoding.BinaryMarshaler
+    encoding.BinaryUnmarshaler
 }
 ```
 
@@ -197,6 +199,11 @@ func (p KafkaCursorPosition) MarshalBinary() ([]byte, error) {
     // do marshaling and return it
 }
 
+// Pointer receiver, so the map can be filled in place.
+func (p *KafkaCursorPosition) UnmarshalBinary(data []byte) error {
+    // do unmarshaling
+}
+
 // List of partitions with a their offsets.
 // Key = partition index, Value = offset of the last delivered message in that partition.
 type partitionPositions map[int32]partitionOffset
@@ -210,10 +217,6 @@ type partitionOffset struct {
     offset int64
 }
 ```
-
-It might be that not all partitions of a topic contained messages when the cursor was created.
-In that case `KafkaCursorPosition` has no element for that partition. The router can use
-`Cursor.IssuedAt` as a fallback to start seeking from a specific point in time in that case.
 
 ###### Leader epoch
 
