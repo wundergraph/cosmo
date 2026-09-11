@@ -7,7 +7,7 @@ import { useMutation } from '@connectrpc/connect-query';
 import { useRouter } from 'next/router';
 import { useCallback, useContext } from 'react';
 
-export function useUpdateFeatureSettings(featureId: Feature, onComplete: (success: boolean) => void) {
+export function useUpdateFeatureSettings(featureId: Feature, onComplete?: (success: boolean) => void) {
   const router = useRouter();
   const sessionQueryClient = useContext(SessionClientContext);
   const { mutate, isPending } = useMutation(updateFeatureSettings);
@@ -23,13 +23,13 @@ export function useUpdateFeatureSettings(featureId: Feature, onComplete: (succes
               queryKey: ['user', router.asPath],
             });
 
-            onComplete(true);
+            onComplete?.(true);
             toast({
               description: 'Feature enabled successfully.',
               duration: 3000,
             });
           } else if (d.response?.details) {
-            onComplete(false);
+            onComplete?.(false);
             toast({
               description: d.response.details,
               duration: 4000,
@@ -37,7 +37,7 @@ export function useUpdateFeatureSettings(featureId: Feature, onComplete: (succes
           }
         },
         onError: () => {
-          onComplete(false);
+          onComplete?.(false);
           toast({
             description: 'Could not enable the feature. Please try again.',
             duration: 3000,
