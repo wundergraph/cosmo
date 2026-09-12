@@ -9,12 +9,9 @@ Date: 2026.09.10
 ### The Cursor
 
 The cursor is a core aspect of the Cursor-Resume strategy and hence it's defined early in this RFC.
-
 They are created alongside GraphQL response messages and represent the subscriptions position
-of that message in the broker.
-
-The Cursor is designed to provide all data necessary for the router to know where to connect and
-where to resume without any outside context.
+of that message in the broker. The Cursor is designed to provide all data necessary for the router
+to know where to connect and where to resume without any outside context.
 
 A cursor is a position, not a permission. Presenting a valid cursor never confers authority. The
 resumed operation is planned and authorized exactly as a fresh subscription would be.
@@ -247,3 +244,53 @@ Within the payload the same applies one level down. `Cursor.Position` is an inte
 router needs a concrete type before it can unmarshal the position bytes, and it takes that from
 `Cursor.ProviderType`. `ProviderType` therefore has to be decoded before `Position`, which means
 it has to be written before `Position` on the wire.
+
+### Transport
+
+This section specifies how a cursor is transmitted and received between client and router.
+
+#### Foundations
+
+- Clients express their wish to receive a cursor. If that wish is not expressed the router falls back to the usual at-most-once delivery
+- Cursors are managed per subscription, not per connection (you can have multiple subscriptions on  one connection)
+- A Cursor is sent in the wire format described here [here](#wire-format)
+
+#### Official Spec Changes
+
+Its a territory where we aim to enhance official specs like
+[graphql-transport-ws](https://github.com/enisdenjo/graphql-ws),
+[graphql-sse](https://github.com/enisdenjo/graphql-sse) and maybe
+[GraphQL GAP](https://graphql.org/blog/2026-06-01-announcing-gaps/).
+We would like to include things like capability negotations ("dear server I support at-least-once
+methods XYZ, what do you support?") and ACK responses ("dear server I got your message #132").  
+However we decided not to include this aspect in At-Least-Once v1. These spec changes need a
+public, community-driven discussion with potentially huge changes to the initial design idea.
+Its also not clear how long it takes until the spec changes are accepted. We want to keep the
+project independent and be able to deliver it in a reasonably short period of time.  
+However, we want to commit to these spec changes as we think they are valuable to the GraphQL
+ecosystem. We will work on spec changes very soon and integrate them in
+At-Least-Once v2. The big endgoal is to have a public spec for at-least-once and we support it.
+
+For the time being we make use of the extensibility of current transport specs.
+
+#### Client <-> Router handshake
+
+This section specifies how a client can signal the need for cursors to the router.
+
+The handshake has to be initiated on subscription request.
+Both relevant subprotocols, graphql-transport-ws and graphql-sse, support metadata on subscription requests.
+
+- graphql-transport-ws: Specify a free-form map on `payload.extensions` on [suscribe requests](https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md#subscribe)
+- graphql-sse: Specify a free-form map on `payload.extensions` (indirectly via [GraphQL-Over-HTTP subscription requests](https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#graphql-over-http-request))
+
+On both subprotocols the client can add the key `at-least-once-capabilities`. It accepts a
+comma-seperated list of at-least-once capabilities the client supports and wishes to use.
+The only available value at this time is `cursor`. The value has to be a string.
+
+##### Negotation failure
+
+TBD
+
+#### Transmitting the cursor to clients
+
+
