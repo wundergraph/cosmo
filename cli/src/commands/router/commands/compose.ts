@@ -284,7 +284,7 @@ export default (_: BaseCommandOptions) => {
       );
     }
 
-    if (contractTagOptions && options.disableBaseContract && contractTagOptionsByFeatureFlagName.size < 1) {
+    if (contractTagOptions && options.disableBaseContract && contractTagOptionsByFeatureFlagName.size === 0) {
       program.error(
         pc.red(
           pc.bold(
