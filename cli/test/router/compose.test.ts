@@ -12,8 +12,8 @@ import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import { resolve } from 'pathe';
 import ComposeCommand from '../../src/commands/router/commands/compose.js';
 import { Client } from '../../src/core/client/client.js';
-import { FIXTURES_DIR_PATH } from './utils.js';
 import { normalizeString } from '../utils.js';
+import { FIXTURES_DIR_PATH } from './utils.js';
 
 export const mockPlatformTransport = () =>
   createRouterTransport(({ service }) => {
@@ -601,7 +601,7 @@ describe('router compose contract tests', () => {
         'process.exit',
       );
       expect(writeErrSpy.mock.calls.flat().join('')).toMatch(
-        /Defining tags also requires either "--disable-base-contract" to be removed or at least one "contract-feature-flag-names" to be defined/i,
+        /defining tags also requires either "--disable-base-contract" to be removed or at least one "contract-feature-flag-names" to be defined/i,
       );
     } finally {
       writeErrSpy.mockRestore();
