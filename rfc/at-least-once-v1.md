@@ -283,14 +283,84 @@ Both relevant subprotocols, graphql-transport-ws and graphql-sse, support metada
 - graphql-transport-ws: Specify a free-form map on `payload.extensions` on [suscribe requests](https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md#subscribe)
 - graphql-sse: Specify a free-form map on `payload.extensions` (indirectly via [GraphQL-Over-HTTP subscription requests](https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#graphql-over-http-request))
 
-On both subprotocols the client can add the key `at-least-once-capabilities`. It accepts a
-comma-seperated list of at-least-once capabilities the client supports and wishes to use.
-The only available value at this time is `cursor`. The value has to be a string.
+On both subprotocols the client can add the key `delivery-guarantee`. It accepts a
+comma-seperated list of capabilities the client supports. Priority is from left to right (highest to lowest).
+The router picks the highest priority guarantee it supports. The following values are allowed
+
+- `cursor`
+- `at-most-once`
+
+If `delivery-guarantee` is not specified or its value is null `at-most-once` is used.
+
+The value has to be a string.
+
+##### Negotation success
+
+If client and router both agree to use cursors the router will confirm this to the client
+
+- graphql-sse: via `x-cosmo-at-least-once-capabilities: cursor` response header, available before the first event
+- graphql-transport-ws: `extensions.at-least-once-capabilities` on the first `next` message, since
+  the subprotocol has no per-subscription ack frame in v1
 
 ##### Negotation failure
 
-TBD
+In case the router won't support any guarantees the client listed it will terminate the subscription with an error.
+For both subprotocols we can define two fields which indicate the nature of the error:
 
-#### Transmitting the cursor to clients
+- `code`: An error code indicating the reason why the server refused
+- `supported`: A string array with supported guarantees
 
+The only allowed value for `code` to return in this case is `DELIVERY_GUARANTEE_UNSUPPORTED`.
 
+Depending on the subprotocol they have to be delivered in different ways.
+
+###### graphql-transport-ws
+On graphql-transport-ws the router sends an [Error message](https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md#error) with two items on `payload.extensions`:
+
+Example:
+
+```json
+{
+  "id": "1",
+  "type": "error",
+  "payload": [
+    {
+      "message": "Subscription requires delivery guarantee 'cursor', which this router cannot provide.",
+      "extensions": {
+        "code": "DELIVERY_GUARANTEE_UNSUPPORTED",
+        "supported": ["at-most-once"]
+      }
+    }
+  ]
+}
+```
+
+###### graphql-sse
+
+On graphql-sse there is no distinct error message type. The error has to be carried as a `next`
+event with the error in the GraphQL error response of `data`, followed by a `complete` event to terminate the subscription.
+
+Example:
+
+```
+event: next
+data: {"errors":[{"message":"Subscription requires delivery guarantee 'cursor', which this router cannot provide.","extensions":{"code":"DELIVERY_GUARANTEE_UNSUPPORTED", "supported": ["at-most-once"]}}]}
+
+event: complete
+data:
+```
+
+#### Sending cursors to clients
+
+When a client successfully negotiated to use cursors the server will attach the cursor as
+metadata to each message it sends to the clients subscriptions. It will do so by adding a field
+to the GraphQL [Execution Results](https://spec.graphql.org/September2025/#sec-Execution-Result) [`extensions`](https://spec.graphql.org/September2025/#sec-Extensions) field.
+The field is called `cursor`. Its value is the cursor wire format described [here](#wire-format).
+
+This works independently of any transport protocol as it relies on the GraphQL spec itself.
+
+# Todos
+- [ ] Check or make cursors usable as message ids
+- [ ] Add a section for seekable adapters on the router
+- [ ] Add a general package hierarchy
+- [ ] Add a section for router config parameters
