@@ -133,7 +133,9 @@ import { previewDeleteClient } from './persisted-operation/previewDeleteClient.j
 import { deleteClient } from './persisted-operation/deleteClient.js';
 import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
 import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
+import { getPlaygroundDefaultHeaders } from './playground/getPlaygroundDefaultHeaders.js';
 import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
+import { updatePlaygroundDefaultHeaders } from './playground/updatePlaygroundDefaultHeaders.js';
 import { updatePlaygroundScript } from './playground/updatePlaygroundScript.js';
 import { listRouterCompatibilityVersions } from './router/listRouterCompatibilityVersions.js';
 import { getChangelogBySchemaVersion } from './schema-version/getChangelogBySchemaVersion.js';
@@ -838,6 +840,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     deletePlaygroundScript: (req, ctx) => {
       return deletePlaygroundScript(opts, req, ctx);
+    },
+
+    getPlaygroundDefaultHeaders: (req, ctx) => {
+      return getPlaygroundDefaultHeaders(opts, req, ctx);
+    },
+
+    updatePlaygroundDefaultHeaders: (req, ctx) => {
+      return updatePlaygroundDefaultHeaders(opts, req, ctx);
     },
 
     getCacheWarmerOperations: (req, ctx) => {

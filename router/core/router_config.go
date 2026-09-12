@@ -21,6 +21,7 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/profile/pyroscope"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"go.opentelemetry.io/otel/propagation"
@@ -64,6 +65,7 @@ type beforeEventsDispatchHooks struct {
 
 type ResponseCache interface {
 	caching.Cache
+	responsecaching.Invalidator
 	io.Closer
 }
 
@@ -136,6 +138,7 @@ type Config struct {
 	redisClient                     rd.RDCloser
 	responseCacheConfig             *config.ResponseCacheConfiguration
 	responseCache                   ResponseCache
+	responseCacheInvalidationServer *http.Server
 	mcpServer                       *mcpserver.GraphQLSchemaServer
 	connectRPCServer                *connectrpc.Server
 	processStartTime                time.Time

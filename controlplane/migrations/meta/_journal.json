@@ -1037,6 +1037,13 @@
       "when": 1784141494014,
       "tag": "0147_worried_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 148,
+      "version": "7",
+      "when": 1787817891509,
+      "tag": "0148_huge_strong_guy",
+      "breakpoints": true
     }
   ]
 }
