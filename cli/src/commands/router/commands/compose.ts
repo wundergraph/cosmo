@@ -252,6 +252,10 @@ export default (_: BaseCommandOptions) => {
       );
     }
 
+    const fileContent = (await readFile(inputFile)).toString();
+    const config = yaml.load(fileContent) as Config;
+
+    const validFeatureFlagNames = new Set<string>(config.feature_flags?.map((ff) => ff.name));
     const contractTagOptions = toContractTagOptions(options.exclude, options.include);
     const contractTagOptionsByFeatureFlagName = new Map<string, ContractTagOptions>();
     if (typeof options.contractFeatureFlagNames === 'boolean') {
@@ -261,6 +265,13 @@ export default (_: BaseCommandOptions) => {
     }
     if (contractTagOptions) {
       for (const featureFlagName of options.contractFeatureFlagNames ?? []) {
+        if (!validFeatureFlagNames.has(featureFlagName)) {
+          program.error(
+            pc.red(
+              pc.bold(`The "contract-feature-flag-names" option specifies unknown feature flag "${featureFlagName}".`),
+            ),
+          );
+        }
         contractTagOptionsByFeatureFlagName.set(featureFlagName, contractTagOptions);
       }
     } else if (options.disableBaseContract) {
@@ -279,9 +290,6 @@ export default (_: BaseCommandOptions) => {
         await mkdir(options.out, { recursive: true });
       }
     }
-
-    const fileContent = (await readFile(inputFile)).toString();
-    const config = yaml.load(fileContent) as Config;
 
     const subgraphs: SubgraphMetaData[] = [];
 

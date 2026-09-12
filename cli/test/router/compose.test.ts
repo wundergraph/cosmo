@@ -590,6 +590,23 @@ describe('router compose contract tests', () => {
     }
   });
 
+  test('that an unkown feature flag name is rejected', async () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit');
+    });
+    const writeErrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    try {
+      await expect(composeContract(['--exclude', 'internal', '--contract-feature-flag-names', 'test'])).rejects.toThrow(
+        'process.exit',
+      );
+      expect(writeErrSpy.mock.calls.flat().join('')).toMatch(/specifies unknown feature flag "test"/i);
+    } finally {
+      writeErrSpy.mockRestore();
+      exitSpy.mockRestore();
+    }
+  });
+
   test('that an exclude tag option without any tags is rejected', async () => {
     const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit');
