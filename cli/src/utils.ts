@@ -3,7 +3,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { access } from 'node:fs/promises';
 import {
   CompositionOptions,
+  ContractTagOptions,
   federateSubgraphs,
+  federateSubgraphsContract,
   FederationResult,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
@@ -181,9 +183,24 @@ export const introspectSubgraph = async ({
 
 /**
  * Composes a list of subgraphs into a single schema.
+ * If contract tag options are provided, the resulting schema is a contract of the supergraph
+ * rather than the full supergraph.
  */
-export function composeSubgraphs(subgraphs: Subgraph[], options?: CompositionOptions): FederationResult {
+export function composeSubgraphs(
+  subgraphs: Subgraph[],
+  options?: CompositionOptions,
+  contractTagOptions?: ContractTagOptions,
+): FederationResult {
   // @TODO get router compatibility version programmatically
+  if (contractTagOptions) {
+    return federateSubgraphsContract({
+      contractTagOptions,
+      options,
+      subgraphs,
+      version: ROUTER_COMPATIBILITY_VERSION_ONE,
+    });
+  }
+
   return federateSubgraphs({
     options,
     subgraphs,

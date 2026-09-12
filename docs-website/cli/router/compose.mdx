@@ -28,6 +28,18 @@ The `npx wgc router compose` command allows you to compose subgraphs and build a
 
 * `--split-configs-enabled`: This flag enables splitting the router config into multiple files.
 
+* `--exclude [tags...]`: Schema elements with these tags will be excluded from the composed schema.
+Providing exclude and/or include tags produces a contract of the supergraph rather than the full supergraph.
+
+* `--include [tags...]`: Schema elements with these tags will be included in the composed schema.
+Providing exclude and/or include tags produces a contract of the supergraph rather than the full supergraph.
+
+* `--disable-base-contract`: Specifies whether a contract for the base federated graph should be created.
+Yields an error if supplied without any included or excluded tags.
+
+* `--contract-feature-fag-names [feature-flag-names...]`: Specifies that a contract for one or more specific feature flags should be created.
+Yields an error if supplied without any included or excluded tags.
+
 <Note>
   Note: The `--split-configs-enabled` flag requires Router version [0.315.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.315.0) or higher.
 </Note>
@@ -75,6 +87,44 @@ subgraphs:
       file: checkout.graphql
 ```
 
+
+## Contracts (optional)
+
+By default, `compose` produces the full supergraph.
+Passing `--exclude` and/or `--include` produces a [Schema Contract](/concepts/schema-contracts) of that supergraph instead.
+The filtering is driven by the `@tag` directives applied to your subgraph schemas.
+
+* `--exclude` removes every schema element tagged with any of the given tags.
+
+* `--include` keeps only the schema elements tagged with any of the given tags, plus the elements required to resolve them.
+
+Both options accept multiple tags and can be combined.
+The filtering applies to every config in the output, including the config generated for each feature flag.
+
+This is the local equivalent of a contract graph created with [`wgc contract create`](/cli/schema-contracts/create).
+Use it to test a contract with your router without a control plane connection.
+
+```bash
+npx wgc router compose -i graph.yaml --exclude internal experimental -o router.json
+```
+
+Compose a contract that excludes all schema elements tagged `internal` or `experimental`.
+
+```bash
+npx wgc router compose -i graph.yaml --include public -o router.json
+```
+
+Compose a contract that includes only the schema elements tagged `public`.
+
+```bash
+npx wgc router compose -i graph.yaml --include public --exclude internal --disable-base-contract --contract-feature-flag-names ff1 ff2 -o router.json
+```
+
+Compose a contract for feature flags "ff1" and "ff2" (but not the base federated graph) that includes only the schema elements tagged `public` but excludes any nested schema elements tagged 'internal.
+
+<Note>
+  Note: Contract filtering relies on the `@tag` directive. Make sure `@tag` is imported in each subgraph schema that uses it.
+</Note>
 
 ## Examples
 
