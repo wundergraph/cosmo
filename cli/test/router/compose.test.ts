@@ -10,10 +10,10 @@ import { fromJsonString } from '@bufbuild/protobuf';
 import { RouterConfigSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { resolve } from 'pathe';
-import ComposeCommand from '../../src/commands/router/commands/compose';
-import { Client } from '../../src/core/client/client';
-import { FIXTURES_DIR_PATH } from './utils';
-import { normalizeString } from '../utils';
+import ComposeCommand from '../../src/commands/router/commands/compose.js';
+import { Client } from '../../src/core/client/client.js';
+import { FIXTURES_DIR_PATH } from './utils.js';
+import { normalizeString } from '../utils.js';
 
 export const mockPlatformTransport = () =>
   createRouterTransport(({ service }) => {
