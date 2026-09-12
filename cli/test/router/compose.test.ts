@@ -590,6 +590,25 @@ describe('router compose contract tests', () => {
     }
   });
 
+  test('that specifying tag without a possible contract is rejected', async () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit');
+    });
+    const writeErrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    try {
+      await expect(composeContract(['--exclude', 'internal', '--disable-base-contract'])).rejects.toThrow(
+        'process.exit',
+      );
+      expect(writeErrSpy.mock.calls.flat().join('')).toMatch(
+        /Defining tags also requires either "--disable-base-contract" to be removed or at least one "contract-feature-flag-names" to be defined/i,
+      );
+    } finally {
+      writeErrSpy.mockRestore();
+      exitSpy.mockRestore();
+    }
+  });
+
   test('that an unkown feature flag name is rejected', async () => {
     const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit');
@@ -600,7 +619,7 @@ describe('router compose contract tests', () => {
       await expect(composeContract(['--exclude', 'internal', '--contract-feature-flag-names', 'test'])).rejects.toThrow(
         'process.exit',
       );
-      expect(writeErrSpy.mock.calls.flat().join('')).toMatch(/specifies unknown feature flag "test"/i);
+      expect(writeErrSpy.mock.calls.flat().join('')).toMatch(/defines unknown feature flag "test"/i);
     } finally {
       writeErrSpy.mockRestore();
       exitSpy.mockRestore();

@@ -268,7 +268,7 @@ export default (_: BaseCommandOptions) => {
         if (!validFeatureFlagNames.has(featureFlagName)) {
           program.error(
             pc.red(
-              pc.bold(`The "contract-feature-flag-names" option specifies unknown feature flag "${featureFlagName}".`),
+              pc.bold(`The "contract-feature-flag-names" option defines unknown feature flag "${featureFlagName}".`),
             ),
           );
         }
@@ -281,6 +281,16 @@ export default (_: BaseCommandOptions) => {
     } else if (options.contractFeatureFlagNames) {
       program.error(
         pc.red(pc.bold(`The "contract-feature-flag-names" option requires at least one included or excluded tag.`)),
+      );
+    }
+
+    if (contractTagOptions && options.disableBaseContract && contractTagOptionsByFeatureFlagName.size < 1) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `Defining tags also requires either "--disable-base-contract" to be removed or at least one "contract-feature-flag-names" to be defined.`,
+          ),
+        ),
       );
     }
 
