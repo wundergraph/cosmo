@@ -57,7 +57,8 @@ type Config struct {
 	// Allows usage of file:// schema (dangerous!) use it only when you 100% sure it's needed
 	AllowFiles bool
 
-	// CustomSchemes adds URL schemes such as custom:// to the allowed schemes.
+	// CustomSchemes permits additional schemes in literal AllowOrigins entries.
+	// Include the :// suffix, for example custom://. Wildcards bypass scheme validation.
 	CustomSchemes []string
 }
 

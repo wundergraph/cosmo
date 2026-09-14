@@ -1836,7 +1836,7 @@
         },
         "custom_schemes": {
           "type": "array",
-          "description": "Additional URL schemes permitted in allow_origins, including the '://' suffix, such as 'custom://'. Origins must still be listed in allow_origins.",
+          "description": "Additional URL schemes permitted in literal allow_origins entries, including the '://' suffix, such as 'custom://'. Scheme validation is case-insensitive. Origins must still be listed in allow_origins. Wildcard entries do not require custom_schemes.",
           "default": [],
           "items": {
             "type": "string",
