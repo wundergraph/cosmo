@@ -582,7 +582,7 @@ describe('router compose contract tests', () => {
         { from: 'user' },
       );
 
-      const stdout = logSpy.mock.calls.flat().join(', ');
+      const stdout = logSpy.mock.calls.flat().join('\n');
       const routerConfig = fromJsonString(RouterConfigSchema, stdout);
       expect(routerConfig.engineConfig?.graphqlClientSchema).not.toContain('internalReports');
     } finally {
