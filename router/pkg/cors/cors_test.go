@@ -103,7 +103,7 @@ func TestBadConfig(t *testing.T) {
 	})
 }
 
-func TestCustomSchemas(t *testing.T) {
+func TestCustomSchemes(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -122,7 +122,7 @@ func TestCustomSchemas(t *testing.T) {
 
 			config := Config{AllowOrigins: []string{tt.origin}}
 			assert.Error(t, config.Validate())
-			config.CustomSchemas = []string{tt.scheme}
+			config.CustomSchemes = []string{tt.scheme}
 			config.AllowOrigins = append(config.AllowOrigins, "http://localhost", "https://localhost")
 			assert.NoError(t, config.Validate())
 			config.AllowOrigins = []string{"anothercustom://localhost"}
@@ -160,7 +160,7 @@ func TestWildcardOriginCompatibility(t *testing.T) {
 	}
 }
 
-func TestValidateCustomSchemas(t *testing.T) {
+func TestValidateCustomSchemes(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -180,11 +180,11 @@ func TestValidateCustomSchemas(t *testing.T) {
 		t.Run(tt.scheme, func(t *testing.T) {
 			t.Parallel()
 
-			config := Config{AllowOrigins: []string{"https://example.com"}, CustomSchemas: []string{tt.scheme}}
+			config := Config{AllowOrigins: []string{"https://example.com"}, CustomSchemes: []string{tt.scheme}}
 			if tt.isValid {
 				assert.NoError(t, config.Validate())
 			} else {
-				assert.ErrorContains(t, config.Validate(), "bad custom schema")
+				assert.ErrorContains(t, config.Validate(), "bad custom scheme")
 			}
 		})
 	}
@@ -195,7 +195,7 @@ func TestCustomOriginRequests(t *testing.T) {
 
 	router := newTestRouter(Config{
 		Enabled:       true,
-		CustomSchemas: []string{"CUSTOM://"},
+		CustomSchemes: []string{"CUSTOM://"},
 		AllowOrigins:  []string{"custom://localhost", "custom://*.example.com"},
 		AllowMethods:  []string{http.MethodPost},
 	})

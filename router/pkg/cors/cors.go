@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-// Keep in sync with cors.custom_schemas in pkg/config/config.schema.json.
-var customSchemaPattern = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.-]*://$`)
+// Keep in sync with cors.custom_schemes in pkg/config/config.schema.json.
+var customSchemePattern = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.-]*://$`)
 
 // Config represents all available options for the middleware.
 type Config struct {
@@ -57,8 +57,8 @@ type Config struct {
 	// Allows usage of file:// schema (dangerous!) use it only when you 100% sure it's needed
 	AllowFiles bool
 
-	// CustomSchemas adds URL schemes such as custom:// to the allowed schemes.
-	CustomSchemas []string
+	// CustomSchemes adds URL schemes such as custom:// to the allowed schemes.
+	CustomSchemes []string
 }
 
 // AddAllowMethods is allowed to add custom methods
@@ -87,7 +87,7 @@ func (c *Config) getAllowedSchemas() []string {
 	if c.AllowFiles {
 		allowedSchemas = append(allowedSchemas, FileSchemas...)
 	}
-	return append(allowedSchemas, c.CustomSchemas...)
+	return append(allowedSchemas, c.CustomSchemes...)
 }
 
 func (c *Config) validateAllowedSchemas(origin string) bool {
@@ -108,9 +108,9 @@ func (c *Config) Validate() error {
 	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 {
 		return errors.New("conflict settings: all origins disabled")
 	}
-	for _, schema := range c.CustomSchemas {
-		if !customSchemaPattern.MatchString(schema) {
-			return fmt.Errorf("bad custom schema %q: must be a URL scheme followed by '://'", schema)
+	for _, scheme := range c.CustomSchemes {
+		if !customSchemePattern.MatchString(scheme) {
+			return fmt.Errorf("bad custom scheme %q: must be a URL scheme followed by '://'", scheme)
 		}
 	}
 	for _, origin := range c.AllowOrigins {

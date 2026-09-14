@@ -180,7 +180,7 @@
       "https://app.example.com",
       "custom://localhost"
     ],
-    "CustomSchemas": [
+    "CustomSchemes": [
       "custom://"
     ],
     "AllowMethods": [

@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCORSCustomSchemas(t *testing.T) {
+func TestCORSCustomSchemes(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -33,12 +33,12 @@ func TestCORSCustomSchemas(t *testing.T) {
 		t.Run(tt.scheme, func(t *testing.T) {
 			t.Parallel()
 
-			f := createTempFileFromFixture(t, fmt.Sprintf("version: \"1\"\ncors:\n  custom_schemas: [%q]\n", tt.scheme))
+			f := createTempFileFromFixture(t, fmt.Sprintf("version: \"1\"\ncors:\n  custom_schemes: [%q]\n", tt.scheme))
 			_, err := LoadConfig([]string{f})
 			if tt.isValid {
 				assert.NoError(t, err)
 			} else {
-				assert.ErrorContains(t, err, "custom_schemas")
+				assert.ErrorContains(t, err, "custom_schemes")
 			}
 		})
 	}
