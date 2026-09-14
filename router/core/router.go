@@ -1206,9 +1206,6 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 	if err := validateResponseCacheTagHeader(r.responseCacheConfig.TagHeader); err != nil {
 		return err
 	}
-	if err := validateResponseCachePrivateID(r.responseCacheConfig); err != nil {
-		return err
-	}
 
 	var err error
 	switch provider := r.responseCacheConfig.Storage.Provider; provider {

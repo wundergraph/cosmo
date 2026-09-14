@@ -28,17 +28,6 @@ func newResponseCachePrivateID(cfg *config.ResponseCacheConfiguration, mgr *expr
 	return &responseCachePrivateID{program: program}, nil
 }
 
-func validateResponseCachePrivateID(cfg *config.ResponseCacheConfiguration) error {
-	if cfg.PrivateID == "" {
-		return nil
-	}
-	manager := expr.CreateNewExprManager()
-	if _, err := manager.CompileExpression(cfg.PrivateID, reflect.String); err != nil {
-		return fmt.Errorf("response cache private_id: %w", err)
-	}
-	return nil
-}
-
 // resolve evaluates the expression. A nil result, such as a claim an anonymous
 // request does not carry, is no id and not an error; a non-string result is
 // reported and is no id either.

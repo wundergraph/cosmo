@@ -60,24 +60,33 @@ func TestResponseCachePrivateIDResolve(t *testing.T) {
 	})
 }
 
-func TestValidateResponseCachePrivateID(t *testing.T) {
+func TestNewResponseCachePrivateID(t *testing.T) {
 	t.Parallel()
 
 	t.Run("a bad expression is refused", func(t *testing.T) {
 		t.Parallel()
-		err := validateResponseCachePrivateID(&config.ResponseCacheConfiguration{PrivateID: "request.nope"})
+		_, err := newResponseCachePrivateID(&config.ResponseCacheConfiguration{PrivateID: "request.nope"}, expr.CreateNewExprManager())
 		require.ErrorContains(t, err, "private_id")
 	})
 
 	t.Run("a non string expression is refused", func(t *testing.T) {
 		t.Parallel()
-		err := validateResponseCachePrivateID(&config.ResponseCacheConfiguration{PrivateID: "1 + 1"})
+		_, err := newResponseCachePrivateID(&config.ResponseCacheConfiguration{PrivateID: "1 + 1"}, expr.CreateNewExprManager())
 		require.ErrorContains(t, err, "expected string")
+	})
+
+	t.Run("an empty expression yields no resolver", func(t *testing.T) {
+		t.Parallel()
+		p, err := newResponseCachePrivateID(&config.ResponseCacheConfiguration{}, expr.CreateNewExprManager())
+		require.NoError(t, err)
+		require.Nil(t, p)
 	})
 
 	t.Run("a valid expression passes", func(t *testing.T) {
 		t.Parallel()
-		require.NoError(t, validateResponseCachePrivateID(&config.ResponseCacheConfiguration{PrivateID: "request.auth.claims.sub"}))
+		p, err := newResponseCachePrivateID(&config.ResponseCacheConfiguration{PrivateID: "request.auth.claims.sub"}, expr.CreateNewExprManager())
+		require.NoError(t, err)
+		require.NotNil(t, p)
 	})
 }
 
