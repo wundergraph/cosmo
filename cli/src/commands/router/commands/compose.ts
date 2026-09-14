@@ -275,7 +275,8 @@ export default (_: BaseCommandOptions) => {
         contractTagOptionsByFeatureFlagName.set(featureFlagName, contractTagOptions);
       }
 
-      console.log(
+      // Error so that the message does appear in a shell pipe
+      console.error(
         pc.dim(
           `Composing a supergraph contract (excluded tags: [${[...contractTagOptions.tagNamesToExclude].join(', ')}], included tags:` +
             ` [${[...contractTagOptions.tagNamesToInclude].join(', ')}]).`,

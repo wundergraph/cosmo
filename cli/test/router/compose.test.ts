@@ -582,10 +582,8 @@ describe('router compose contract tests', () => {
         { from: 'user' },
       );
 
-      const stdout = logSpy.mock.calls.flat();
-      expect(stdout).toHaveLength(2);
-      expect(stdout[0]).toContain('Composing a supergraph contract');
-      const routerConfig = fromJsonString(RouterConfigSchema, stdout[1]);
+      const stdout = logSpy.mock.calls.flat().join(', ');
+      const routerConfig = fromJsonString(RouterConfigSchema, stdout);
       expect(routerConfig.engineConfig?.graphqlClientSchema).not.toContain('internalReports');
     } finally {
       logSpy.mockRestore();
