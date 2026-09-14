@@ -41,6 +41,7 @@ func Main() {
 	_ = godotenv.Load(".env.local")
 
 	// Parse flags before calling profile.Start(), since it may add flags
+	// Dummy
 	flag.Parse()
 
 	if *help {
