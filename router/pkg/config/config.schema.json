@@ -1834,7 +1834,7 @@
             "type": "string"
           }
         },
-        "custom_schemas": {
+        "custom_schemes": {
           "type": "array",
           "description": "Additional URL schemes permitted in allow_origins, including the '://' suffix, such as 'custom://'. Origins must still be listed in allow_origins.",
           "default": [],
