@@ -3,8 +3,6 @@ package core
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,20 +12,19 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestCORSMatchOriginsConfiguration(t *testing.T) {
+func TestCORSMatchOriginsOptions(t *testing.T) {
 	t.Parallel()
 
-	configPath := filepath.Join(t.TempDir(), "config.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte(`
-version: "1"
-cors:
-  allow_origins: []
-  match_origins: ['^https://([a-z0-9-]+\.)*example\.com$']
-`), 0o600))
-	loaded, err := config.LoadConfig([]string{configPath})
-	require.NoError(t, err)
-	router, err := NewRouter(t.Context(), optionsFromResources(zap.NewNop(), &loaded.Config, nil)...)
-	require.NoError(t, err)
+	cfg := config.Config{CORS: config.CORS{
+		Enabled:      true,
+		MatchOrigins: []string{`^https://([a-z0-9-]+\.)*example\.com$`},
+		AllowMethods: []string{http.MethodPost},
+	}}
+	router := &Router{}
+	for _, option := range optionsFromResources(zap.NewNop(), &cfg, nil) {
+		option(router)
+	}
+	require.NotNil(t, router.corsOptions)
 
 	handler := cors.New(*router.corsOptions)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -85,12 +82,12 @@ func TestCORSInvalidMatchOriginsFailsStartup(t *testing.T) {
 	t.Parallel()
 
 	for _, enabled := range []bool{true, false} {
-		loaded := config.Config{CORS: config.CORS{
+		cfg := cors.Config{
 			Enabled:      enabled,
 			AllowOrigins: []string{"*"},
 			MatchOrigins: []string{"https://["},
-		}}
-		_, err := NewRouter(t.Context(), optionsFromResources(zap.NewNop(), &loaded, nil)...)
+		}
+		_, err := NewRouter(t.Context(), WithCors(&cfg))
 		if enabled {
 			assert.ErrorContains(t, err, "invalid CORS configuration")
 			assert.ErrorContains(t, err, `match_origins "https://["`)
