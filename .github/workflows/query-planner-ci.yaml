@@ -220,19 +220,30 @@ jobs:
           permission-workflows: write
 
       - name: Download PR info artifact
+        id: download
         uses: actions/github-script@v7
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const fs = require('fs');
+            const runId = '${{ needs.build_test.outputs.workflow_id }}';
+            if (!runId) {
+              core.info('No query planner run was triggered, nothing to look up.');
+              core.setOutput('found', 'false');
+              return;
+            }
             const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
               owner: 'wundergraph',
               repo: 'cosmo-celestial',
-              run_id: '${{ needs.build_test.outputs.workflow_id }}'
+              run_id: runId
             });
             const artifact = artifacts.data.artifacts.find(a => a.name === 'pull-request-info');
             if (!artifact) {
-              throw new Error('Could not find pull-request-info artifact');
+              // Celestial uploads this artifact only when the query plans changed and it opened a PR.
+              // Unchanged plans are a pass, so leave the URL empty instead of failing the job.
+              core.info('No pull-request-info artifact, celestial did not open a pull request.');
+              core.setOutput('found', 'false');
+              return;
             }
             const download = await github.rest.actions.downloadArtifact({
               owner: 'wundergraph',
@@ -241,12 +252,15 @@ jobs:
               archive_format: 'zip'
             });
             fs.writeFileSync('artifact.zip', Buffer.from(download.data));
+            core.setOutput('found', 'true');
 
       - name: Unzip artifact
+        if: steps.download.outputs.found == 'true'
         run: unzip artifact.zip
 
       - name: Get PR URL
         id: get_url
+        if: steps.download.outputs.found == 'true'
         run: |
           pr_url=$(cat pr-url.txt)
           echo "pr_url=$pr_url" >> $GITHUB_OUTPUT
