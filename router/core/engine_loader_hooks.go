@@ -127,10 +127,16 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 // ttlToCacheControl renders the life a cache hit has left. A TTL of zero is
 // valid and means stale as of now, which is no-cache: max-age=0 would be dropped by
 // the most restrictive algorithm and let a longer default win instead.
-func ttlToCacheControl(ttl time.Duration) string {
+func ttlToCacheControl(ttl time.Duration, private bool) string {
 	maxAge := cache.ToDeltaSeconds(ttl)
 	if maxAge <= 0 {
+		if private {
+			return "private, " + noCache
+		}
 		return noCache
+	}
+	if private {
+		return fmt.Sprintf("private, max-age=%d", maxAge)
 	}
 	cacheControl := cache.CacheControlResponse{Public: true, MaxAge: &maxAge}
 	return cacheControl.ToHeaderString()
@@ -153,14 +159,13 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		if responseInfo.ResponseHeaders == nil {
 			responseInfo.ResponseHeaders = make(http.Header)
 		}
-		headers := responseInfo.ResponseHeaders
 		// A cache hit never reached the subgraph, so it carries no Cache-Control of
 		// its own. Present its remaining lifetime as one so the most restrictive
 		// algorithm still weighs it instead of the hit dropping out of the policy.
-		if responseInfo.ResponseCacheHit && headers.Get(cacheControlKey) == "" {
-			headers.Set(cacheControlKey, ttlToCacheControl(responseInfo.ResponseCacheTTL))
+		if responseInfo.ResponseCacheHit && responseInfo.ResponseHeaders.Get(cacheControlKey) == "" {
+			responseInfo.ResponseHeaders.Set(cacheControlKey, ttlToCacheControl(responseInfo.ResponseCacheTTL, responseInfo.ResponseCachePrivate))
 		}
-		f.headerPropagation.ApplyResponseHeaderRules(ctx, headers, ds.Name, responseInfo.StatusCode, responseInfo.Request)
+		f.headerPropagation.ApplyResponseHeaderRules(ctx, responseInfo.ResponseHeaders, ds.Name, responseInfo.StatusCode, responseInfo.Request)
 	}
 
 	reqContext := getRequestContext(ctx)
