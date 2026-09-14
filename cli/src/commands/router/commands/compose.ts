@@ -13,7 +13,7 @@ import {
   SubgraphKind,
 } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
-import { parse, printSchema } from 'graphql';
+import { parse } from 'graphql';
 import * as yaml from 'js-yaml';
 import { basename, dirname, join, resolve } from 'pathe';
 import pc from 'picocolors';
@@ -28,7 +28,12 @@ import {
 
 import type { FeatureFlagRouterExecutionConfigs } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
-import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
+import {
+  type ContractTagOptions,
+  FederationSuccess,
+  newContractTagOptionsFromArrays,
+  ROUTER_COMPATIBILITY_VERSION_ONE,
+} from '@wundergraph/composition';
 import Table from 'cli-table3';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
@@ -108,6 +113,7 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetaData,
 
 async function handleSplitRouterConfig({
   config,
+  contractTagOptionsByFeatureFlagName,
   inputFileLocation,
   options,
   routerConfig,
@@ -140,7 +146,13 @@ async function handleSplitRouterConfig({
     return;
   }
 
-  const ffConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
+  const ffConfigs = await buildFeatureFlagsConfig(
+    config,
+    inputFileLocation,
+    subgraphs,
+    options,
+    contractTagOptionsByFeatureFlagName,
+  );
   const ffDir = join(outputDir, featureFlagsDir);
   try {
     await mkdir(ffDir);
@@ -173,13 +185,20 @@ async function handleSplitRouterConfig({
 
 async function handleEmbeddedRouterConfig({
   config,
+  contractTagOptionsByFeatureFlagName,
   inputFileLocation,
   options,
   routerConfig,
   subgraphs,
 }: HandleRouterConfigParams) {
   if (!config.feature_flags || config.feature_flags.length > 0) {
-    routerConfig.featureFlagConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
+    routerConfig.featureFlagConfigs = await buildFeatureFlagsConfig(
+      config,
+      inputFileLocation,
+      subgraphs,
+      options,
+      contractTagOptionsByFeatureFlagName,
+    );
   }
 
   const routerConfigJson = toJsonString(RouterConfigSchema, routerConfig);
@@ -209,6 +228,19 @@ export default (_: BaseCommandOptions) => {
     '--split-configs-enabled',
     'This flag enables splitting the router config into multiple files. Router version 0.315.0 or higher is required.',
   );
+  command.option(
+    '--exclude [tags...]',
+    'Schema elements with these tags will be excluded from the composed schema. Providing exclude and/or include tags produces a contract of the supergraph rather than the full supergraph.',
+  );
+  command.option(
+    '--include [tags...]',
+    'Schema elements with these tags will be included in the composed schema. Providing exclude and/or include tags produces a contract of the supergraph rather than the full supergraph.',
+  );
+  command.option('--disable-base-contract', 'Specify whether a contract of the base federated graph should be made.');
+  command.option(
+    '--contract-feature-flag-names [feature-flag-names...]',
+    'Specify the feature flag name(s) for which the contract(s) should be created.',
+  );
 
   command.action(async (options) => {
     const inputFile = resolve(options.input);
@@ -220,15 +252,62 @@ export default (_: BaseCommandOptions) => {
       );
     }
 
+    const fileContent = (await readFile(inputFile)).toString();
+    const config = yaml.load(fileContent) as Config;
+
+    const validFeatureFlagNames = new Set<string>(config.feature_flags?.map((ff) => ff.name));
+    const contractTagOptions = toContractTagOptions(options.exclude, options.include);
+    const contractTagOptionsByFeatureFlagName = new Map<string, ContractTagOptions>();
+    if (typeof options.contractFeatureFlagNames === 'boolean') {
+      program.error(
+        pc.red(pc.bold(`The "contract-feature-flag-names" option requires at least one feature flag name.`)),
+      );
+    }
+    if (contractTagOptions) {
+      for (const featureFlagName of options.contractFeatureFlagNames ?? []) {
+        if (!validFeatureFlagNames.has(featureFlagName)) {
+          program.error(
+            pc.red(
+              pc.bold(`The "contract-feature-flag-names" option defines unknown feature flag "${featureFlagName}".`),
+            ),
+          );
+        }
+        contractTagOptionsByFeatureFlagName.set(featureFlagName, contractTagOptions);
+      }
+
+      // Error so that the message does appear in a shell pipe
+      console.error(
+        pc.dim(
+          `Composing a supergraph contract (excluded tags: [${[...contractTagOptions.tagNamesToExclude].join(', ')}], included tags:` +
+            ` [${[...contractTagOptions.tagNamesToInclude].join(', ')}]).`,
+        ),
+      );
+    } else if (options.disableBaseContract) {
+      program.error(
+        pc.red(pc.bold(`The "disable-base-contract" option requires at least one included or excluded tag.`)),
+      );
+    } else if (options.contractFeatureFlagNames) {
+      program.error(
+        pc.red(pc.bold(`The "contract-feature-flag-names" option requires at least one included or excluded tag.`)),
+      );
+    }
+
+    if (contractTagOptions && options.disableBaseContract && contractTagOptionsByFeatureFlagName.size === 0) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `Defining tags also requires either "--disable-base-contract" to be removed or at least one "contract-feature-flag-names" to be defined.`,
+          ),
+        ),
+      );
+    }
+
     if (options.out) {
       options.out = resolve(options.out);
       if (options.splitConfigsEnabled) {
         await mkdir(options.out, { recursive: true });
       }
     }
-
-    const fileContent = (await readFile(inputFile)).toString();
-    const config = yaml.load(fileContent) as Config;
 
     const subgraphs: SubgraphMetaData[] = [];
 
@@ -256,6 +335,7 @@ export default (_: BaseCommandOptions) => {
         disableResolvabilityValidation: options.disableResolvabilityValidation,
         ignoreExternalKeys: options.ignoreExternalKeys,
       },
+      options.disableBaseContract ? undefined : contractTagOptions,
     );
 
     if (!result.success) {
@@ -304,12 +384,63 @@ export default (_: BaseCommandOptions) => {
     });
 
     await (options.splitConfigsEnabled
-      ? handleSplitRouterConfig({ config, inputFileLocation, options, routerConfig, subgraphs })
-      : handleEmbeddedRouterConfig({ config, inputFileLocation, options, routerConfig, subgraphs }));
+      ? handleSplitRouterConfig({
+          config,
+          contractTagOptionsByFeatureFlagName,
+          inputFileLocation,
+          options,
+          routerConfig,
+          subgraphs,
+        })
+      : handleEmbeddedRouterConfig({
+          config,
+          contractTagOptionsByFeatureFlagName,
+          inputFileLocation,
+          options,
+          routerConfig,
+          subgraphs,
+        }));
   });
 
   return command;
 };
+
+/**
+ * Returns the contract tag options for the provided exclude and include tags, or undefined if
+ * neither option was provided, in which case the full supergraph is composed.
+ */
+function toContractTagOptions(exclude: unknown, include: unknown): ContractTagOptions | undefined {
+  const excludeTags = toTags(exclude, '--exclude');
+  const includeTags = toTags(include, '--include');
+
+  if (excludeTags.length === 0 && includeTags.length === 0) {
+    return undefined;
+  }
+  return newContractTagOptionsFromArrays(excludeTags, includeTags);
+}
+
+function toTags(value: unknown, optionName: string): Array<string> {
+  if (value === undefined) {
+    return [];
+  }
+
+  /**
+   * Commander parses a variadic option without values, e.g. "--exclude", as a boolean. Such an
+   * option provides no tags, so it cannot define a contract.
+   */
+  if (typeof value === 'boolean') {
+    program.error(pc.red(pc.bold(`The "${optionName}" option requires at least one tag.`)));
+  }
+
+  const tags = value as Array<string>;
+  for (const tag of tags) {
+    if (tag.trim() === '') {
+      program.error(pc.red(pc.bold(`The "${optionName}" option contains a blank tag. Tags must not be blank.`)));
+    }
+  }
+
+  return [...new Set(tags)];
+}
 
 function toSubgraphMetadata(
   inputFileLocation: string,
@@ -543,6 +674,7 @@ async function buildFeatureFlagsConfig(
   inputFileLocation: string,
   subgraphs: SubgraphMetaData[],
   options: any,
+  contractTagOptionsByFeatureFlagName?: Map<string, ContractTagOptions>,
 ): Promise<FeatureFlagRouterExecutionConfigs> {
   const ffConfigs: FeatureFlagRouterExecutionConfigs = create(FeatureFlagRouterExecutionConfigsSchema);
 
@@ -630,6 +762,7 @@ async function buildFeatureFlagsConfig(
         disableResolvabilityValidation: options.disableResolvabilityValidation,
         ignoreExternalKeys: options.ignoreExternalKeys,
       },
+      contractTagOptionsByFeatureFlagName?.get(ff.name),
     );
 
     if (!featureResult.success) {
@@ -670,7 +803,7 @@ async function buildFeatureFlagsConfig(
     }
 
     const featureFederatedClientSDL = featureResult.shouldIncludeClientSchema
-      ? printSchema(featureResult.federatedGraphClientSchema)
+      ? printSchemaWithDirectives(featureResult.federatedGraphClientSchema)
       : '';
     const featureRouterConfig = buildRouterConfig({
       federatedClientSDL: featureFederatedClientSDL,
