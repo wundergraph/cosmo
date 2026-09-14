@@ -274,6 +274,13 @@ export default (_: BaseCommandOptions) => {
         }
         contractTagOptionsByFeatureFlagName.set(featureFlagName, contractTagOptions);
       }
+
+      console.log(
+        pc.dim(
+          `Composing a supergraph contract (excluded tags: [${[...contractTagOptions.tagNamesToExclude].join(', ')}], included tags:` +
+            ` [${[...contractTagOptions.tagNamesToInclude].join(', ')}]).`,
+        ),
+      );
     } else if (options.disableBaseContract) {
       program.error(
         pc.red(pc.bold(`The "disable-base-contract" option requires at least one included or excluded tag.`)),
@@ -408,19 +415,6 @@ function toContractTagOptions(exclude: unknown, include: unknown): ContractTagOp
   if (excludeTags.length === 0 && includeTags.length === 0) {
     return undefined;
   }
-
-  /**
-   * The router config is written to stdout if no destination file is provided, so this notice is
-   * written to stderr to keep that output valid JSON.
-   */
-  console.error(
-    pc.dim(
-      `Composing a supergraph contract (excluded tags: [${excludeTags.join(', ')}], included tags: [${includeTags.join(
-        ', ',
-      )}]).`,
-    ),
-  );
-
   return newContractTagOptionsFromArrays(excludeTags, includeTags);
 }
 
