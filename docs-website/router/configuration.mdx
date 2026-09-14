@@ -942,7 +942,7 @@ pyroscope:
 | ---------------------- | ----------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | CORS_ENABLED           | enabled           | <Icon icon="square" /> | Set this to enable/disable the CORS middleware. It is enabled by default. When disabled, the rest of the properties for CORS have no effect. | true                                 |
 | CORS_ALLOW_ORIGINS     | allow_origins     | <Icon icon="square" /> | This is a list of origins which are allowed. You can provide origins with wildcards                                                          | \*                                   |
-| CORS_MATCH_ORIGINS     | match_origins     | <Icon icon="square" /> | Go regular expressions matched against the entire origin, in addition to `allow_origins`. Separate patterns with semicolons in the environment variable. | []                            |
+| CORS_MATCH_ORIGINS     | match_origins     | <Icon icon="square" /> | Go regular expressions matched against the entire origin in addition to `allow_origins`. Matching is case-insensitive by default. Separate patterns with semicolons in the environment variable. | []                            |
 | CORS_ALLOW_METHODS     | allow_methods     | <Icon icon="square" /> |                                                                                                                                              | HEAD,GET,POST                        |
 | CORS_ALLOW_HEADERS     | allow_headers     | <Icon icon="square" /> |                                                                                                                                              | Origin, Content-Length, Content-Type |
 | CORS_ALLOW_CREDENTIALS | allow_credentials | <Icon icon="square" /> |                                                                                                                                              | true                                 |
@@ -954,7 +954,9 @@ Origins in `allow_origins` can use any URL scheme. Wildcard patterns are support
 
 Use `match_origins` to allow origins using [Go regular expressions](https://pkg.go.dev/regexp/syntax). The router compiles patterns at startup and rejects invalid patterns with an error naming the pattern. Matching uses Go's linear-time regex engine. Lookarounds and backreferences are not supported.
 
-Each pattern must match the entire origin, including its scheme and optional port. Anchors such as `^` and `$` are optional. For example, `https://([a-z0-9-]+\.)*example\.com` allows `https://example.com` and `https://app.example.com`, but rejects `https://app.example.com.evil.com`. Matching is case-sensitive unless the pattern uses `(?i)`.
+Each pattern must match the entire origin, including its scheme and optional port. Anchors such as `^` and `$` are optional. For example, `https://([a-z0-9-]+\.)*example\.com` allows `https://example.com` and `https://app.example.com`, but rejects `https://app.example.com.evil.com`.
+
+Matching is case-insensitive by default. Prefix a pattern with `(?-i)` for case-sensitive matching, for example `(?-i)https://app\.example\.com`. Use `(?-i:...)` to make only a group case-sensitive.
 
 An origin is allowed if it matches either `allow_origins` or `match_origins`. The existing `*` wildcard syntax in `allow_origins` is unchanged. Set `allow_origins: []` for regex-only matching. Leaving `allow_origins` at its default `["*"]` allows all origins regardless of `match_origins`.
 
@@ -981,7 +983,7 @@ cors:
     - "custom://localhost"
 ```
 
-Patterns in `match_origins` can also match custom URL schemes directly. `custom_schemes` applies only to entries in `allow_origins`.
+Patterns in `match_origins` can also match custom URL schemes directly.
 
 ### Example YAML config:
 
