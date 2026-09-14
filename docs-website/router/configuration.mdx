@@ -952,13 +952,13 @@ Origins in `allow_origins` can use any URL scheme. Wildcard patterns are support
 
 ### Regular expression origins
 
-Use `match_origins` to allow origins using [Go regular expressions](https://pkg.go.dev/regexp/syntax). The router compiles patterns at startup and rejects invalid patterns with an error naming the pattern. Matching uses Go's linear-time regex engine. Lookarounds and backreferences are not supported.
+Use `match_origins` to allow origins using [Go regular expressions](https://pkg.go.dev/regexp/syntax). When CORS is enabled, invalid patterns prevent router startup and the error identifies the pattern. Lookarounds and backreferences are not supported.
 
-Patterns match any substring of the origin unless you add anchors. Use `^` and `$` to match the entire origin, including its scheme and optional port. For example, `^https://([a-z0-9-]+\.)*example\.com$` allows `https://example.com` and `https://app.example.com`, but rejects `https://app.example.com.evil.com`. Without the anchors, that pattern also matches `https://app.example.com.evil.com`.
+The `allow_origins` and `match_origins` lists are additive. Set `allow_origins: []` for regex-only matching. Its default `["*"]` allows every origin, even when `match_origins` is set.
 
-Matching is case-insensitive by default. Prefix a pattern with `(?-i)` for case-sensitive matching, for example `(?-i)^https://app\.example\.com$`. Use `(?-i:...)` to make only a group case-sensitive.
+Patterns match any substring of the origin unless you add anchors. Use `^` and `$` to match the entire origin. For example, `^https://([a-z0-9-]+\.)*example\.com$` allows `https://example.com` and `https://app.example.com`, but rejects `https://app.example.com.evil.com`. Without the anchors, that pattern also matches `https://app.example.com.evil.com`. Include any allowed port explicitly in the pattern.
 
-An origin is allowed if it matches either `allow_origins` or `match_origins`. The existing `*` wildcard syntax in `allow_origins` is unchanged. Set `allow_origins: []` for regex-only matching. Leaving `allow_origins` at its default `["*"]` allows all origins regardless of `match_origins`.
+Regex matching is case-insensitive by default and uses the original `Origin` header value without URL normalization. Prefix a pattern with `(?-i)` for case-sensitive matching, for example `(?-i)^https://app\.example\.com$`. Use `(?-i:...)` to make only a group case-sensitive.
 
 ```yaml
 cors:
@@ -968,9 +968,9 @@ cors:
     - '^https://(.+\.)?aol\.(de|ca|co\.uk|com)$'
 ```
 
-Use single-quoted YAML strings to preserve regex backslashes. `CORS_MATCH_ORIGINS` uses semicolons to separate patterns so commas in repetition counts such as `{1,3}` are preserved. For regex-only matching with this environment variable, set `allow_origins: []` in YAML. An empty `CORS_ALLOW_ORIGINS` environment variable uses the default `*`.
+Use single-quoted YAML strings to preserve regex backslashes. Separate patterns in `CORS_MATCH_ORIGINS` with semicolons (`;`) so commas in repetition counts such as `{1,3}` are preserved. For regex-only matching with this environment variable, set `allow_origins: []` in YAML. Leaving `CORS_ALLOW_ORIGINS` empty does not clear its default.
 
-Requests allowed by a regex receive their exact `Origin` in `Access-Control-Allow-Origin`, including preflight responses. Cross-origin requests that match neither list receive `403 Forbidden`.
+Requests and preflights allowed by a regex echo the original `Origin` header in `Access-Control-Allow-Origin`, preserving its casing. Cross-origin requests that match neither list receive `403 Forbidden`.
 
 ### Custom URL schemes
 
@@ -983,7 +983,7 @@ cors:
     - "custom://localhost"
 ```
 
-Patterns in `match_origins` can also match custom URL schemes directly.
+Patterns in `match_origins` can also match custom URL schemes, for example `^custom://localhost$`.
 
 ### Example YAML config:
 
