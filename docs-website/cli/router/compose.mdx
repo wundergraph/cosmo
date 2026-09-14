@@ -99,7 +99,10 @@ The filtering is driven by the `@tag` directives applied to your subgraph schema
 * `--include` keeps only the schema elements tagged with any of the given tags, plus the elements required to resolve them.
 
 Both options accept multiple tags and can be combined.
-The filtering applies to every config in the output, including the config generated for each feature flag.
+By default, only a contract of the base federated graph will be generated, which can be be disabled by `--disable-base-contract`.
+In addition (or alternatively), contract can be generated for specific feature flag names if passed to `--contract-feature-flag-names`.
+Only feature flags passed as an argument to this option will generate contracts.
+Defining tags but disabling the base contract and not providing any feature flag names will produce an error.
 
 This is the local equivalent of a contract graph created with [`wgc contract create`](/cli/schema-contracts/create).
 Use it to test a contract with your router without a control plane connection.

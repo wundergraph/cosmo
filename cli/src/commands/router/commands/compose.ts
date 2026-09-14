@@ -13,7 +13,7 @@ import {
   SubgraphKind,
 } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
-import { parse, printSchema } from 'graphql';
+import { parse } from 'graphql';
 import * as yaml from 'js-yaml';
 import { basename, dirname, join, resolve } from 'pathe';
 import pc from 'picocolors';
