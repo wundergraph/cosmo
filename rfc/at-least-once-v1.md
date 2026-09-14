@@ -392,7 +392,36 @@ commit point reduces duplicate messages.
 
 ### Adapters
 
-TBD - Add seekability to provider adapter types and interfaces
+Not every broker can start reading at a position a client asks for. To keep that difference
+visible in the code, resuming is not added to the existing `Adapter` interface. Instead there is
+a second interface which extends it.
+
+```go
+// SeekableAdapter is implemented by adapters that can resume a subscription
+// from a position that was already delivered to a client.
+type SeekableAdapter interface {
+    Adapter
+
+    // SubscribeFrom works like Subscribe, but starts with the message that
+    // follows position. A nil position behaves like Subscribe.
+    SubscribeFrom(ctx context.Context, cfg SubscriptionEventConfiguration, position CursorPosition, updater SubscriptionEventUpdater) error
+
+    // DecodePosition reads the position bytes of a cursor back into the
+    // position type of this provider.
+    DecodePosition(payload []byte) (CursorPosition, error)
+}
+```
+
+An adapter that does not implement `SeekableAdapter` cannot serve the `cursor` guarantee. The
+router finds this out with a type assertion when it plans the subscription, and answers the
+handshake with `DELIVERY_GUARANTEE_UNSUPPORTED` if the assertion fails.
+
+`DecodePosition` is used when we need to unmarshal a cursor from wire format into a concrete type.
+
+For example Kafka will be a seekable adapter, so there is a concrete type called `kafka.SeekableProviderAdapter`,
+which implements `SeekableAdapter`.
+
+
 
 ### Package Hierarchy
 
@@ -410,7 +439,7 @@ TBD - How can we provide extentions to commonly used GraphQL subscription client
 # Todos
 - [x] Cursors
 - [x] Transport
-- [ ] Adapters
+- [x] Adapters
 - [ ] Package Hierarchy
 - [ ] Config
 - [ ] Client Middleware
