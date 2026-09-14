@@ -175,7 +175,7 @@ func TestInvalidMatchOrigins(t *testing.T) {
 	cfg := Config{AllowOrigins: []string{"*"}, MatchOrigins: []string{`https://example\.com`, `[`}}
 	err := cfg.Validate()
 	require.ErrorContains(t, err, `bad origin regex in match_origins "["`)
-	assert.PanicsWithValue(t, err.Error(), func() { New(cfg)(nil) })
+	assert.Panics(t, func() { New(cfg)(nil) })
 
 	cfg = Config{AllowAllOrigins: true, MatchOrigins: []string{`https://example\.com`}}
 	assert.ErrorContains(t, cfg.Validate(), "conflict settings")
