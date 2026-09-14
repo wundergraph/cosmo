@@ -3251,9 +3251,8 @@ export class FederationFactory {
   }
 
   buildFederationContractResult(contractTagOptions: ContractTagOptions): FederationResult {
-    if (!this.isVersionTwo) {
-      /* If all the subgraphs are version one, the @inaccessible directive won't be present.
-       ** However, contracts require @inaccessible to exclude applicable tagged types. */
+    if (!this.referencedFederatedDirectiveNames.has(INACCESSIBLE)) {
+      // Even if all the subgraphs are version one, the @inaccessible directive needs to be defined.
       this.routerDefinitions.push(INACCESSIBLE_DEFINITION);
     }
     const tagIntersection = contractTagOptions.tagNamesToExclude.intersection(contractTagOptions.tagNamesToInclude);
@@ -3269,6 +3268,7 @@ export class FederationFactory {
         if (isNodeDataInaccessible(parentDefinitionData)) {
           continue;
         }
+
         const parentTagData = this.parentTagDataByTypeName.get(parentTypeName);
         if (!parentTagData) {
           parentDefinitionData.federatedDirectivesData.directivesByName.set(INACCESSIBLE, [

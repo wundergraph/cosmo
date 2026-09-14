@@ -1282,6 +1282,10 @@ Use the `rediss://` scheme instead of `redis://` to connect over TLS. There is n
   A parameter the client does not recognise makes the router fail at startup with `redis: unexpected option: <name>`, so a typo in a pool setting cannot be silently ignored. This also means options from other Redis clients (for example `ssl=true` or `connectTimeout`) are not accepted.
 </Note>
 
+### Valkey
+
+[Valkey](https://valkey.io) works as a drop-in replacement for Redis in every place the router accepts a Redis URL: rate limiting, automatic persisted queries, the response cache, and the Redis event provider, in both standalone and cluster mode. Keep the `redis://` and `rediss://` schemes; there is no `valkey://` scheme.
+
 ### Connection pool options
 
 | Parameter          | Description                                                                                                                                          | Default Value       |

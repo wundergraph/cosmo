@@ -1139,6 +1139,15 @@ type ResponseCacheInvalidationConfig struct {
 	Subgraph bool `yaml:"subgraph" envDefault:"true" env:"SUBGRAPH"`
 	// Type indexes entities under their __typename.
 	Type bool `yaml:"type" envDefault:"true" env:"TYPE"`
+	// Endpoint serves invalidation requests against the indexes above.
+	Endpoint ResponseCacheInvalidationEndpointConfig `yaml:"endpoint,omitempty" envPrefix:"ENDPOINT_"`
+}
+
+type ResponseCacheInvalidationEndpointConfig struct {
+	Enabled    bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	ListenAddr string `yaml:"listen_addr,omitempty" envDefault:"localhost:5027" env:"LISTEN_ADDR"`
+	Path       string `yaml:"path,omitempty" envDefault:"/invalidation" env:"PATH"`
+	SharedKey  string `yaml:"shared_key,omitempty" env:"SHARED_KEY"`
 }
 
 // ResponseCacheStorageProvider names the backend a response cache is built on.
