@@ -5,6 +5,7 @@ import { afterAllSetup, beforeAllSetup } from '../src/core/test-util.js';
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { SetupTest } from './test-util.js';
+import { TEST_DIRECT_GRANT_CLIENT_ID } from './keycloak-test-utils.js';
 
 let dbname = '';
 
@@ -138,7 +139,7 @@ function createSignInFn({ keycloakBaseUrl, realm }: { keycloakBaseUrl: string; r
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         grant_type: 'password',
-        client_id: 'admin-cli',
+        client_id: TEST_DIRECT_GRANT_CLIENT_ID,
         username,
         password,
         scope: 'openid',

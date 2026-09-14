@@ -9,8 +9,8 @@ import { GRPCMappingSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_
 import {
   compileGraphQLToMapping,
   compileGraphQLToProto,
-  ProtoLock,
-  ProtoOption,
+  type ProtoLock,
+  type ProtoOption,
   validateGraphQLSDL,
 } from '@wundergraph/protographic';
 import prompts from 'prompts';

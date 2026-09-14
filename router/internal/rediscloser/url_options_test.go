@@ -64,7 +64,7 @@ func TestURLQueryParamsSurviveClusterURLRewrite(t *testing.T) {
 			"redis://localhost:7001?pool_size=11&min_idle_conns=3&max_idle_conns=6" +
 				"&max_active_conns=13&pool_timeout=5s&conn_max_idle_time=4m&conn_max_lifetime=25m" +
 				"&dial_timeout=3s&read_timeout=8s&write_timeout=9s&max_retries=4" +
-				"&max_redirects=6&route_by_latency=true",
+				"&max_redirects=6&route_by_latency=true&read_only=true",
 			"redis://localhost:7002",
 			"redis://localhost:7003",
 		},
@@ -93,6 +93,7 @@ func TestURLQueryParamsSurviveClusterURLRewrite(t *testing.T) {
 	require.Equal(t, 4, clusterOpts.MaxRetries)
 	require.Equal(t, 6, clusterOpts.MaxRedirects)
 	require.True(t, clusterOpts.RouteByLatency)
+	require.True(t, clusterOpts.ReadOnly)
 }
 
 // TestClusterQueryParamsOnlyReadFromFirstURL documents a sharp edge of the cluster branch: only
