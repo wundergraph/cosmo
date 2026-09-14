@@ -285,7 +285,7 @@ Both relevant subprotocols, graphql-transport-ws and graphql-sse, support metada
 
 On both subprotocols the client can add the key `delivery-guarantee`. It accepts a
 comma-seperated list of capabilities the client supports. Priority is from left to right (highest to lowest).
-The router picks the highest priority guarantee it supports. The following values are allowed
+The router picks the highest priority guarantee it supports (configureable). The following values are allowed
 
 - `cursor`
 - `at-most-once`
@@ -359,8 +359,58 @@ The field is called `cursor`. Its value is the cursor wire format described [her
 
 This works independently of any transport protocol as it relies on the GraphQL spec itself.
 
+#### Resuming clients
+
+When a client wants to receive messages where it left off it has to provide the cursor upon reconnect.
+Specifically during handshake the client adds the field `cursor` to `payload.extensions`, similar
+to how it adds `delivery-guarantee`, see [handshake](#client---router-handshake).
+The value of this field contains the last processed cursor as chosen by the client in [wire format](#wire-format).
+
+The `cursor` field is independent of `delivery-guarantee`. A client may choose to resume from a
+specific event without getting new cursors.
+
+##### Replay speed
+
+When a client resumes the router fetches messages from the broker as fast as the broker supports.
+This means clients will get messages as fast as the broker supports. This comes with some challenges.
+
+- Subgraph load: Every incoming event from the broker need to be resolved into a GraphQL response.
+- Client TCP blocks: If a client reads slower than the router wants to write it reaches a 10s default timeout and the WS/SSE connection is dropped
+
+Since resuming clients live off their own trigger a regression for other clients is not expected.
+
+To help users manage this situation a router config parameter will be introduced to allow
+message pacing. The router will read messages no faster than this pacing.
+
+##### A word on commit points
+A client provides the cursor of its last processed message when it reconnects and wants to
+resume where it left off. It means the commit is basically happening at the client.
+In my opinion the optimal commit point is when a client has successfully processed the event,
+and thats not necessarily when it received it. Sometimes it needs to be transformed, enriched or
+processed in different ways until it was successfully rendered on displays. Using this as the
+commit point reduces duplicate messages.
+
+### Adapters
+
+TBD - Add seekability to provider adapter types and interfaces
+
+### Package Hierarchy
+
+TBD - How to structure packages and types
+
+### Config
+
+TBD - What router config options should change or be invented
+
+### Client Middleware
+
+TBD - How can we provide extentions to commonly used GraphQL subscription client SDKs
+
+
 # Todos
-- [ ] Check or make cursors usable as message ids
-- [ ] Add a section for seekable adapters on the router
-- [ ] Add a general package hierarchy
-- [ ] Add a section for router config parameters
+- [x] Cursors
+- [x] Transport
+- [ ] Adapters
+- [ ] Package Hierarchy
+- [ ] Config
+- [ ] Client Middleware
