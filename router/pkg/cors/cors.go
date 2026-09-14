@@ -23,7 +23,8 @@ type Config struct {
 	AllowOrigins []string
 
 	// MatchOrigins is a list of Go regular expressions matched against the entire
-	// origin. An origin is allowed if it matches AllowOrigins or MatchOrigins.
+	// origin, case-insensitively by default. Use (?-i) for case-sensitive matching.
+	// An origin is allowed if it matches AllowOrigins or MatchOrigins.
 	MatchOrigins []string
 
 	// AllowOriginFunc is a custom function to validate the origin. It take the origin
@@ -82,8 +83,9 @@ func (c *Config) validateAndCompile() ([]*regexp.Regexp, error) {
 	}
 	var patterns []*regexp.Regexp
 	for _, pattern := range c.MatchOrigins {
-		// syntax.Perl is the same set of syntax flags used by regexp.Compile.
-		parsed, err := syntax.Parse(pattern, syntax.Perl)
+		// Use Go's regexp syntax with case-insensitive matching by default.
+		// Inline flags such as (?-i) and (?-i:...) can override this default.
+		parsed, err := syntax.Parse(pattern, syntax.Perl|syntax.FoldCase)
 		if err != nil {
 			return nil, fmt.Errorf("bad origin regex in match_origins %q: %w", pattern, err)
 		}
