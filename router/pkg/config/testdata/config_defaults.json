@@ -463,7 +463,8 @@
       "Name": "Cache-Tag",
       "Delimiter": ",",
       "MaxBytes": 16384
-    }
+    },
+    "PrivateID": ""
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,

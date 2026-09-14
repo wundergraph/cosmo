@@ -138,6 +138,24 @@ func TestSetupResponseCache(t *testing.T) {
 		require.Nil(t, r.responseCache)
 	})
 
+	t.Run("a bad private_id expression is refused before any store is built", func(t *testing.T) {
+		t.Parallel()
+
+		r := newRouter(&config.ResponseCacheConfiguration{
+			Enabled:     true,
+			FallbackTTL: 30 * time.Second,
+			Storage: config.ResponseCacheStorageConfig{
+				Provider:   config.ResponseCacheStorageProviderMemory,
+				MaxEntries: 128,
+			},
+			PrivateID: "request.nope",
+		}, config.StorageProviders{})
+
+		err := r.setupResponseCache(context.Background())
+		require.ErrorContains(t, err, "private_id")
+		require.Nil(t, r.responseCache)
+	})
+
 	t.Run("the memory provider builds a cache and needs no provider_id", func(t *testing.T) {
 		t.Parallel()
 
