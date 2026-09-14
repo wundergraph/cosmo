@@ -140,6 +140,11 @@ func TestMatchOrigins(t *testing.T) {
 	}{
 		{
 			pattern: `https://([a-z0-9-]+\.)*example\.com`,
+			allowed: []string{"https://example.com", "HTTPS://APP.EXAMPLE.COM", "https://app.example.com.evil.com", "https://evil.com/https://app.example.com", "https://app.example.com:443"},
+			denied:  []string{"http://app.example.com", "https://appexample.com"},
+		},
+		{
+			pattern: `^https://([a-z0-9-]+\.)*example\.com$`,
 			allowed: []string{"https://example.com", "https://app.example.com", "https://a.b.example.com", "HTTPS://APP.EXAMPLE.COM"},
 			denied:  []string{"https://app.example.com.evil.com", "https://evil.com/https://app.example.com", "http://app.example.com", "https://appexample.com", "https://app.example.com:443"},
 		},
@@ -150,13 +155,18 @@ func TestMatchOrigins(t *testing.T) {
 		},
 		{
 			pattern: `https://one\.example|https://two\.example`,
+			allowed: []string{"https://one.example", "https://two.example", "https://one.example.evil.com", "https://evil.com/https://two.example"},
+			denied:  []string{"https://three.example"},
+		},
+		{
+			pattern: `^(https://one\.example|https://two\.example)$`,
 			allowed: []string{"https://one.example", "https://two.example"},
 			denied:  []string{"https://one.example.evil.com", "https://evil.com/https://two.example"},
 		},
 		{
 			pattern: `(?m)^https://example\.com$`,
-			allowed: []string{"https://example.com"},
-			denied:  []string{"https://example.com\nhttps://evil.com", "https://evil.com\nhttps://example.com"},
+			allowed: []string{"https://example.com", "https://example.com\nhttps://evil.com", "https://evil.com\nhttps://example.com"},
+			denied:  []string{"https://example.com.evil.com"},
 		},
 		{
 			pattern: `https://\D{1,3}\.example\.com`,
@@ -164,32 +174,32 @@ func TestMatchOrigins(t *testing.T) {
 			denied:  []string{"https://123.example.com", "https://long.example.com"},
 		},
 		{
-			pattern: `HTTPS://APP\.EXAMPLE\.COM`,
+			pattern: `^HTTPS://APP\.EXAMPLE\.COM$`,
 			allowed: []string{"https://app.example.com"},
 			denied:  []string{"https://app.example.com.evil.com"},
 		},
 		{
-			pattern: `(?i)https://app\.example\.com`,
+			pattern: `(?i)^https://app\.example\.com$`,
 			allowed: []string{"https://APP.EXAMPLE.COM"},
 			denied:  []string{"https://APP.EXAMPLE.COM.evil.com"},
 		},
 		{
-			pattern: `(?-i)https://app\.example\.com`,
+			pattern: `(?-i)^https://app\.example\.com$`,
 			allowed: []string{"https://app.example.com"},
 			denied:  []string{"HTTPS://app.example.com", "https://APP.EXAMPLE.COM", "https://app.example.com.evil.com"},
 		},
 		{
-			pattern: `https://(?-i:app)\.example\.com`,
+			pattern: `^https://(?-i:app)\.example\.com$`,
 			allowed: []string{"https://app.example.com", "HTTPS://app.EXAMPLE.COM"},
 			denied:  []string{"https://APP.example.com", "https://app.example.com.evil.com"},
 		},
 		{
 			pattern: `\Qhttps://example.com`,
-			allowed: []string{"https://example.com", "HTTPS://EXAMPLE.COM"},
-			denied:  []string{"https://example.com.evil.com"},
+			allowed: []string{"https://example.com", "HTTPS://EXAMPLE.COM", "https://example.com.evil.com"},
+			denied:  []string{"https://exampleXcom"},
 		},
 		{
-			pattern: `custom://[a-z]+\.example`,
+			pattern: `^custom://[a-z]+\.example$`,
 			allowed: []string{"custom://app.example", "CUSTOM://APP.EXAMPLE"},
 			denied:  []string{"other://app.example", "custom://app.example.evil.com"},
 		},
@@ -234,7 +244,7 @@ func TestMatchOriginRequests(t *testing.T) {
 	router := newTestRouter(Config{
 		Enabled:      true,
 		AllowOrigins: []string{"https://literal.example", "https://*.wildcard.example", "https://literal.example/(foo|bar)"},
-		MatchOrigins: []string{`https://([a-z0-9-]+\.)*example\.com`, `https://app\.example\.org`, `(?-i)https://sensitive\.example`},
+		MatchOrigins: []string{`^https://([a-z0-9-]+\.)*example\.com$`, `^https://app\.example\.org$`, `(?-i)^https://sensitive\.example$`, `substring\.example`},
 		AllowMethods: []string{http.MethodPost},
 	})
 	cases := []struct {
@@ -247,6 +257,7 @@ func TestMatchOriginRequests(t *testing.T) {
 		{"https://app.example.org", true},
 		{"https://sensitive.example", true},
 		{"https://SENSITIVE.example", false},
+		{"https://SUBSTRING.example.evil.com", true},
 		{"https://literal.example", true},
 		{"https://app.wildcard.example", true},
 		{"https://literal.example/(foo|bar)", true},

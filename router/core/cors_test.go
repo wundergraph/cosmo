@@ -22,7 +22,7 @@ func TestCORSMatchOriginsConfiguration(t *testing.T) {
 version: "1"
 cors:
   allow_origins: []
-  match_origins: ['https://([a-z0-9-]+\.)*example\.com']
+  match_origins: ['^https://([a-z0-9-]+\.)*example\.com$']
 `), 0o600))
 	loaded, err := config.LoadConfig([]string{configPath})
 	require.NoError(t, err)

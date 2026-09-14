@@ -134,7 +134,7 @@ demo_mode: true
 # Cross-Origin Resource Sharing (CORS)
 cors:
   allow_origins: ['*']
-  match_origins: ['https://([a-z0-9-]+\.)*example\.com']
+  match_origins: ['^https://([a-z0-9-]+\.)*example\.com$']
   allow_methods:
     - HEAD
     - GET
