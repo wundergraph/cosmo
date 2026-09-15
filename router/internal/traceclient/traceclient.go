@@ -13,6 +13,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 type AcquiredConnection struct {
@@ -211,7 +212,7 @@ func (t *TraceInjectingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 	return trip, err
 }
 
-func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Context, req *http.Request, trace *ClientTrace) {
+func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Context, req *http.Request, clientTrace *ClientTrace) {
 	var subgraph string
 	subgraphCtxVal := ctx.Value(rcontext.CurrentSubgraphContextKey{})
 	if subgraphCtxVal != nil {
@@ -225,7 +226,7 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		subgraph = activeSubgraphName
 	}
 
-	if trace == nil {
+	if clientTrace == nil {
 		return
 	}
 
@@ -235,7 +236,8 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		return
 	}
 
-	connectionGet, connectionAcquired, durations := trace.snapshot()
+	connectionGet, connectionAcquired, durations := clientTrace.snapshot()
+	span := oteltrace.SpanFromContext(ctx)
 
 	// The transport can fail before it ever asks the pool for a connection,
 	// in which case no phase was observed and there is nothing to record.
@@ -254,6 +256,7 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 	if connectionAcquired != nil {
 		if duration := connectionAcquired.Time.Sub(connectionGet.Time); duration >= 0 {
 			results.ConnectionAcquireDuration = duration
+			span.SetAttributes(rotel.WgClientConnectionAcquireDuration.Float64(msFromDuration(duration)))
 			t.connectionMetricStore.MeasureConnectionAcquireDuration(
 				ctx,
 				msFromDuration(duration),
@@ -264,6 +267,7 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 
 	if dur := durations.DNSLookup; dur > 0 {
 		results.DNSLookupDuration = dur
+		span.SetAttributes(rotel.WgClientDNSLookupDuration.Float64(msFromDuration(dur)))
 		t.connectionMetricStore.MeasureDNSLookupDuration(
 			ctx,
 			msFromDuration(dur),
@@ -272,6 +276,7 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 	}
 	if dur := durations.TCPConnect; dur > 0 {
 		results.TCPConnectDuration = dur
+		span.SetAttributes(rotel.WgClientTCPConnectDuration.Float64(msFromDuration(dur)))
 		t.connectionMetricStore.MeasureTCPConnectDuration(
 			ctx,
 			msFromDuration(dur),
@@ -280,6 +285,7 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 	}
 	if dur := durations.TLSHandshake; dur > 0 {
 		results.TLSHandshakeDuration = dur
+		span.SetAttributes(rotel.WgClientTLSHandshakeDuration.Float64(msFromDuration(dur)))
 		t.connectionMetricStore.MeasureTLSHandshakeDuration(
 			ctx,
 			msFromDuration(dur),
@@ -289,6 +295,7 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 
 	if dur := durations.TimeToFirstRequestByte; dur > 0 {
 		results.TimeToFirstRequestByte = dur
+		span.SetAttributes(rotel.WgClientTimeToFirstRequestByte.Float64(msFromDuration(dur)))
 		t.connectionMetricStore.MeasureTimeToFirstRequestByte(
 			ctx,
 			msFromDuration(dur),
@@ -298,6 +305,7 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 
 	if dur := durations.TimeToFirstByte; dur > 0 {
 		results.TimeToFirstByte = dur
+		span.SetAttributes(rotel.WgClientTimeToFirstByte.Float64(msFromDuration(dur)))
 		t.connectionMetricStore.MeasureTimeToFirstByte(
 			ctx,
 			msFromDuration(dur),
