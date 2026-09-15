@@ -48,6 +48,7 @@
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "del-cli": "catalog:",
+    "eslint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
