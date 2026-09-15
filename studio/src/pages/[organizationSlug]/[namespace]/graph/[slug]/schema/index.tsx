@@ -6,7 +6,7 @@ import { EmptyState } from '@/components/empty-state';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { EmptySchema } from '@/components/schema/empty-schema-state';
 import { SchemaToolbar } from '@/components/schema/toolbar';
-import { toSchemaType } from '@/components/schema/schema-selection';
+import { SchemaSelection, toSchemaType } from '@/components/schema/schema-selection';
 import { SchemaSelector } from '@/components/schema/schema-selector';
 import { SchemaTypeSelect } from '@/components/schema/schema-type-select';
 import { Badge, badgeVariants } from '@/components/ui/badge';
@@ -860,6 +860,17 @@ export const GraphSelector = () => {
 
   const applyParams = useApplyParams();
 
+  const selectSchema = (next: SchemaSelection) =>
+    applyParams({
+      typename: null,
+      category: null,
+      fieldName: null,
+      showUsage: null,
+      isNamedType: null,
+      featureFlag: next.featureFlag ?? null,
+      schemaType: next.schemaType ?? null,
+    });
+
   const { data: compositionFlagsData } = useQuery(
     getFeatureFlagsInLatestCompositionByFederatedGraph,
     {
@@ -875,7 +886,7 @@ export const GraphSelector = () => {
 
   if (featureFlags.length === 0) {
     return (
-      <SchemaTypeSelect className="w-max" value={schemaType} onValueChange={(v) => applyParams({ schemaType: v })} />
+      <SchemaTypeSelect className="w-max" value={schemaType} onValueChange={(v) => selectSchema({ schemaType: v })} />
     );
   }
 
@@ -887,7 +898,7 @@ export const GraphSelector = () => {
       supportsFederation
       featureFlags={featureFlags}
       selection={{ featureFlag: activeFeatureFlag, schemaType }}
-      onSelect={(next) => applyParams({ featureFlag: next.featureFlag ?? null, schemaType: next.schemaType ?? null })}
+      onSelect={selectSchema}
     />
   );
 };
