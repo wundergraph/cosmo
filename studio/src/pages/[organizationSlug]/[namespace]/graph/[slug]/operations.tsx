@@ -564,10 +564,10 @@ const OperationsPage: NextPageWithLayout = () => {
   const noOfPages = Math.ceil((operationsData?.totalCount ?? 0) / pageSize);
 
   // Use URL params as single source of truth for selected operation
-  const selectedOperation = useMemo(() => {
-    const operationHash = router.query.operationHash as string | undefined;
-    const operationName = router.query.operationName as string | undefined;
+  const operationHash = useQueryParam('operationHash');
+  const operationName = useQueryParam('operationName');
 
+  const selectedOperation = useMemo(() => {
     // If operationHash exists but operationName doesn't, it's an unnamed operation (fallback to '')
     if (!operationHash) {
       return undefined;
@@ -577,7 +577,7 @@ const OperationsPage: NextPageWithLayout = () => {
       hash: operationHash,
       name: operationName ?? '',
     };
-  }, [router.query.operationHash, router.query.operationName]);
+  }, [operationHash, operationName]);
 
   // Update URL params when operation is selected
   const handleOperationSelect = (operationHash: string, operationName: string) => {

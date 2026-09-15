@@ -5,6 +5,7 @@ import { GraphSelector } from './graph-selector';
 import { useSubgraph } from '@/hooks/use-subgraph';
 import { useMemo } from 'react';
 import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { cn } from '@/lib/utils';
 import { WorkspaceSubgraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -18,12 +19,14 @@ export function WorkspaceSelector({ children, truncateNamespace = true }: Worksp
   const router = useRouter();
   const subgraphContext = useSubgraph();
   const { namespace } = useWorkspace();
+  const slug = useRouteParam('slug');
+  const subgraphSlug = useRouteParam('subgraphSlug');
 
   const [activeGraph, activeSubgraph, baseSubgraph] = useMemo(() => {
     const routePathSegments = router.asPath.split('/');
     const routeSegment = routePathSegments[3]?.toLowerCase();
-    const currentSlug = (router.query.slug as string)?.toLowerCase();
-    const currentSubgraphSlug = (router.query.subgraphSlug as string)?.toLowerCase();
+    const currentSlug = slug?.toLowerCase();
+    const currentSubgraphSlug = subgraphSlug?.toLowerCase();
 
     const activeGraph =
       routeSegment === 'graph' ? namespace.graphs.find((graph) => graph.name.toLowerCase() === currentSlug) : undefined;
@@ -44,14 +47,7 @@ export function WorkspaceSelector({ children, truncateNamespace = true }: Worksp
     }
 
     return [activeGraph, activeSubgraph, baseSubgraph];
-  }, [
-    namespace.subgraphs,
-    namespace.graphs,
-    router.asPath,
-    router.query.slug,
-    router.query.subgraphSlug,
-    subgraphContext?.subgraph?.id,
-  ]);
+  }, [namespace.subgraphs, namespace.graphs, router.asPath, slug, subgraphSlug, subgraphContext?.subgraph?.id]);
 
   const isViewingGraphOrSubgraph = !!activeGraph || !!activeSubgraph;
   return (
