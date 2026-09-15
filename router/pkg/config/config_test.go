@@ -478,6 +478,36 @@ telemetry:
 	require.Equal(t, "at '/telemetry/tracing/exporters/0/export_timeout': duration must be less or equal than 2m0s", js.Causes[0].Error())
 }
 
+func TestSSEServerWriteTimeoutRejectsNegativeValues(t *testing.T) {
+	t.Run("config file", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+engine:
+  sse_server_write_timeout: -1s
+`)
+
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "duration must be greater or equal than 0s")
+	})
+
+	t.Run("environment variable", func(t *testing.T) {
+		t.Setenv("ENGINE_SSE_SERVER_WRITE_TIMEOUT", "-1s")
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+
+		_, err := LoadConfig([]string{f})
+		require.EqualError(t, err, "engine.sse_server_write_timeout must be greater or equal to 0s")
+	})
+}
+
 func TestLoadFullConfig(t *testing.T) {
 	t.Parallel()
 
