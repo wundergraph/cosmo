@@ -385,6 +385,7 @@ const Type = (props: {
   endLineNo?: number;
 }) => {
   const router = useRouter();
+  const fieldName = useQueryParam('fieldName');
   const isAuthenticatedType = props.authenticated || !!props.requiresScopes?.length;
 
   return (
@@ -446,12 +447,12 @@ const Type = (props: {
           </p>
         </div>
       </div>
-      {router.query.fieldName && (
+      {fieldName && (
         <div className="mt-6 flex flex-wrap items-center gap-2">
           <div className="flex w-full max-w-lg items-center gap-x-2 rounded-md border border-dashed px-2 py-1.5 text-sm lg:w-auto lg:max-w-none">
             <div>Filter:</div>
             <Badge variant="muted" className="w-full overflow-hidden">
-              <p className="w-full overflow-hidden truncate">{router.query.fieldName}</p>
+              <p className="w-full overflow-hidden truncate">{fieldName}</p>
             </Badge>
           </div>
           <Button
