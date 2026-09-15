@@ -504,10 +504,12 @@ type EngineExecutionConfiguration struct {
 
 	// EnableMultiFetch merges entity fetches to the same subgraph that execute
 	// in the same wave into a single batched request with aliased _entities fields.
-	EnableMultiFetch bool `envDefault:"false" env:"ENGINE_ENABLE_MULTI_FETCH" yaml:"enable_multi_fetch"`
+	// Enabled by default, set to false to send one request per entity fetch.
+	EnableMultiFetch bool `envDefault:"true" env:"ENGINE_ENABLE_MULTI_FETCH" yaml:"enable_multi_fetch"`
 	// EnableScheduleFetches replaces the legacy wave-based fetch organizers with the
 	// dependency-aware fetch scheduler (component-split, chain-inlined execution trees).
-	EnableScheduleFetches bool `envDefault:"false" env:"ENGINE_ENABLE_SCHEDULE_FETCHES" yaml:"enable_schedule_fetches"`
+	// Enabled by default, set to false to fall back to the wave-based organizers.
+	EnableScheduleFetches bool `envDefault:"true" env:"ENGINE_ENABLE_SCHEDULE_FETCHES" yaml:"enable_schedule_fetches"`
 
 	// Server-side WebSocket handler options (router accepting client connections)
 	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`
