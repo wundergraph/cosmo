@@ -8,6 +8,7 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| additionalDeploymentAnnotations | object | `{}` | Pass additional annotations to the Deployment                                                                                                             |
 | additionalLabels | object | `{}` | Add labels to deployment (metadata.labels) |
 | additionalPodLabels | object | `{}` | Add labels to deployment pod template (spec.template.metadata.labels) |
 | affinity | object | `{}` |  |
@@ -82,4 +83,3 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | serviceAnnotations | object | `{}` |  |
 | terminationGracePeriodSeconds | int | `30` | Sets the [termination grace period](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution) for Deployment pods |
 | tolerations | list | `[]` |  |
-
