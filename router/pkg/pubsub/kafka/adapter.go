@@ -2,8 +2,10 @@ package kafka
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/kmsg"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"go.uber.org/zap"
 )
@@ -48,7 +51,9 @@ type ProviderAdapter struct {
 }
 
 type PollerOpts struct {
-	providerId string
+	providerId  string
+	emitCursors bool
+	tracker     *positionTracker
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
@@ -109,12 +114,33 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 					DestinationName:     r.Topic,
 				})
 
+				var cursor string
+				if pollerOpts.emitCursors {
+					pollerOpts.tracker.advance(r.Topic, r.Partition, r.Offset, r.LeaderEpoch)
+					pos, err := pollerOpts.tracker.snapshot()
+					if err != nil {
+						p.logger.Error("failed to snapshot cursor position, delivering event without a cursor", zap.Error(err))
+					} else {
+						cursor, err = datasource.EncodeCursor(datasource.Cursor{
+							ProviderType: datasource.ProviderTypeKafka,
+							ProviderID:   pollerOpts.providerId,
+							IssuedAt:     time.Now().UnixMilli(),
+							Position:     pos,
+						})
+						if err != nil {
+							p.logger.Error("failed to encode cursor, delivering event without a cursor", zap.Error(err))
+							cursor = ""
+						}
+					}
+				}
+
 				updater.Update([]datasource.StreamEvent{
 					&Event{
 						evt: &MutableEvent{
 							Data:    r.Value,
 							Headers: headers,
 							Key:     r.Key,
+							Cursor:  cursor,
 						},
 					},
 				})
@@ -137,22 +163,38 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		zap.Strings("topics", subConf.Topics),
 	)
 
+	tracker := newPositionTracker()
+
 	// Create a new client for the topic
 	// Copy opts to avoid data race when multiple goroutines call Subscribe concurrently
 	opts := make([]kgo.Opt, len(p.opts), len(p.opts)+3)
 	copy(opts, p.opts)
-	client, err := kgo.NewClient(append(opts,
-		kgo.ConsumeTopics(subConf.Topics...),
-		// We want to consume the events produced after the first subscription was created
-		// Messages are shared among all subscriptions, therefore old events are not redelivered
-		// This replicates a stateless publish-subscribe model
-		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
+	opts = append(opts,
 		// For observability, we set the client ID to "router"
 		kgo.ClientID(fmt.Sprintf("cosmo.router.consumer.%s", strings.Join(subConf.Topics, "-"))),
 		// FIXME: the client id should have some unique identifier, like in nats
 		// What if we have multiple subscriptions for the same topics?
 		// What if we have more router instances?
-	)...)
+	)
+
+	if resumeCursor := subConf.ResumeCursor(); resumeCursor != "" {
+		assignOpt, err := p.buildResumeAssignment(ctx, resumeCursor, subConf, tracker)
+		if err != nil {
+			log.Error("failed to resume subscription from cursor", zap.Error(err))
+			return err
+		}
+		opts = append(opts, assignOpt)
+	} else {
+		opts = append(opts,
+			kgo.ConsumeTopics(subConf.Topics...),
+			// We want to consume the events produced after the first subscription was created
+			// Messages are shared among all subscriptions, therefore old events are not redelivered
+			// This replicates a stateless publish-subscribe model
+			kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
+		)
+	}
+
+	client, err := kgo.NewClient(opts...)
 	if err != nil {
 		log.Error("failed to create client", zap.Error(err))
 		return err
@@ -173,7 +215,11 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		stop := context.AfterFunc(p.ctx, cancel)
 		defer stop()
 
-		err := p.topicPoller(pollerCtx, client, updater, PollerOpts{providerId: conf.ProviderID()})
+		err := p.topicPoller(pollerCtx, client, updater, PollerOpts{
+			providerId:  conf.ProviderID(),
+			emitCursors: subConf.WantsCursors(),
+			tracker:     tracker,
+		})
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
 				log.Debug("poller canceled", zap.Error(err))
@@ -191,6 +237,98 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	})
 
 	return nil
+}
+
+// buildResumeAssignment decodes and validates a client-presented resume cursor, enumerates
+// every partition of every subscribed topic, and returns a kgo.ConsumePartitions option that
+// resumes each known partition right after its cursor offset and starts any newly-seen
+// partition at the cursor's issue time. It also seeds tracker so cursors emitted after resume
+// stay complete. franz-go's direct consumer treats a topic named in ConsumePartitions as
+// exactly those partitions -- any partition left out would be silently dropped for the life of
+// the resumed subscription, hence the metadata enumeration.
+func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, resumeCursor string, subConf *SubscriptionEventConfiguration, tracker *positionTracker) (kgo.Opt, error) {
+	cur, err := datasource.DecodeCursor(resumeCursor)
+	if err != nil {
+		return nil, datasource.NewError("invalid resume cursor", err)
+	}
+	if cur.ProviderType != datasource.ProviderTypeKafka {
+		return nil, datasource.NewError("resume cursor was not issued for a Kafka provider", nil)
+	}
+	if cur.ProviderID != subConf.Provider {
+		return nil, datasource.NewError("resume cursor was issued for a different provider", nil)
+	}
+
+	var pos cursorPosition
+	if err := json.Unmarshal(cur.Position, &pos); err != nil {
+		return nil, datasource.NewError("invalid resume cursor position", err)
+	}
+	for topic := range pos {
+		if !slices.Contains(subConf.Topics, topic) {
+			return nil, datasource.NewError(fmt.Sprintf("resume cursor names topic %q which is not part of this subscription", topic), nil)
+		}
+	}
+
+	allPartitions, err := p.fetchTopicPartitions(ctx, subConf.Topics)
+	if err != nil {
+		return nil, datasource.NewError("failed to enumerate topic partitions to resume subscription", err)
+	}
+
+	assign := make(map[string]map[int32]kgo.Offset, len(allPartitions))
+	for topic, partitions := range allPartitions {
+		partAssign := make(map[int32]kgo.Offset, len(partitions))
+		for _, partition := range partitions {
+			if po, ok := pos[topic][partition]; ok {
+				// Records written with an old message format report LeaderEpoch == -1,
+				// which is exactly franz-go's "no epoch" value, so it passes through
+				// unchanged here.
+				partAssign[partition] = kgo.NewOffset().At(po.Offset + 1).WithEpoch(po.Epoch)
+			} else {
+				partAssign[partition] = kgo.NewOffset().AfterMilli(cur.IssuedAt)
+			}
+		}
+		assign[topic] = partAssign
+	}
+
+	tracker.seed(pos)
+
+	return kgo.ConsumePartitions(assign), nil
+}
+
+// fetchTopicPartitions enumerates every partition of every given topic via a single Kafka
+// metadata request issued over the adapter's producer client.
+func (p *ProviderAdapter) fetchTopicPartitions(ctx context.Context, topics []string) (map[string][]int32, error) {
+	req := kmsg.NewPtrMetadataRequest()
+	for _, topic := range topics {
+		rt := kmsg.NewMetadataRequestTopic()
+		rt.Topic = kmsg.StringPtr(topic)
+		req.Topics = append(req.Topics, rt)
+	}
+
+	kresp, err := p.writeClient.Request(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	resp, ok := kresp.(*kmsg.MetadataResponse)
+	if !ok {
+		return nil, fmt.Errorf("unexpected metadata response type %T", kresp)
+	}
+
+	result := make(map[string][]int32, len(resp.Topics))
+	for _, t := range resp.Topics {
+		var topicName string
+		if t.Topic != nil {
+			topicName = *t.Topic
+		}
+		if t.ErrorCode != 0 {
+			return nil, fmt.Errorf("metadata error for topic %q: %w", topicName, kerr.ErrorForCode(t.ErrorCode))
+		}
+		partitions := make([]int32, 0, len(t.Partitions))
+		for _, part := range t.Partitions {
+			partitions = append(partitions, part.Partition)
+		}
+		result[topicName] = partitions
+	}
+	return result, nil
 }
 
 // Publish publishes the given events to the Kafka topic in a non-blocking way.

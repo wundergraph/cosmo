@@ -81,7 +81,29 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 		}
 
 		_, err = xxh.Write(val)
-		return err
+		if err != nil {
+			return err
+		}
+
+		// Cursor-resume clients must never share a trigger with an at-most-once
+		// client: a shared trigger would deliver the cursor to subscribers who
+		// never asked for it, and a resuming client needs its own consumer seeked
+		// to its cursor position. Both keys are optional request extensions, so a
+		// missing value is tolerated rather than treated as an error.
+		if cursor, err := jsonparser.GetString(input, "body", "extensions", "cursor"); err == nil {
+			_, err = xxh.WriteString(cursor)
+			if err != nil {
+				return err
+			}
+		}
+		if guarantee, err := jsonparser.GetString(input, "body", "extensions", "delivery-guarantee"); err == nil {
+			_, err = xxh.WriteString(guarantee)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}
 
 	eventCreateFn := func(data []byte) datasource.MutableStreamEvent {
