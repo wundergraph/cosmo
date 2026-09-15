@@ -19,6 +19,7 @@ import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platfo
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { useEffect, useState } from 'react';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { SafeMarkdown } from '@/components/safe-markdown';
@@ -55,6 +56,7 @@ export const Empty = ({ subgraphName }: { subgraphName: string }) => {
 
 const SubgraphOverviewPage = () => {
   const router = useRouter();
+  const organizationSlug = useRouteParam('organizationSlug');
   const graph = useSubgraph();
   const { data } = useQuery(getOrganizationMembers);
 
@@ -147,7 +149,7 @@ const SubgraphOverviewPage = () => {
               <dd className="flex gap-x-2">
                 <Link
                   href={buildUrl('/:organizationSlug/:namespace/subgraph/:name', {
-                    organizationSlug: router.query.organizationSlug as string,
+                    organizationSlug,
                     namespace: linkedSubgraph.namespace,
                     name: linkedSubgraph.name,
                   })}

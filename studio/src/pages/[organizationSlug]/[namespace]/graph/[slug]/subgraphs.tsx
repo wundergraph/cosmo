@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NextPageWithLayout } from '@/lib/page';
 import { Cross1Icon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
-import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext, useEffect, useState } from 'react';
 import Fuse from 'fuse.js';
 import { Subgraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -19,18 +20,14 @@ import { cn } from '@/lib/utils';
 
 const SubGraphsPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
-  const router = useRouter();
-  const tab = router.query.tab as string;
+  const tab = useQueryParam('tab');
 
   const {
     namespace: { name: namespace },
   } = useWorkspace();
 
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || '10');
-  const limit = pageSize > 50 ? 50 : pageSize;
-  const offset = (pageNumber - 1) * limit;
-  const [search, setSearch] = useState(router.query.search as string);
+  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
+  const [search, setSearch] = useState(useQueryParam('search', ''));
   const applyParams = useApplyParams();
 
   const { data: featureSubgraphsData, isFetching } = useQuery(

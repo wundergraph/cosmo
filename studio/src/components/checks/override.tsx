@@ -20,6 +20,7 @@ import {
 import copy from 'copy-to-clipboard';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { useContext } from 'react';
 import { useApplyParams } from '../analytics/use-apply-params';
 import {
@@ -173,9 +174,8 @@ export const ConfigureOverride = () => {
   const checkUserAccess = useCheckUserAccess();
   const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
 
-  const router = useRouter();
-  const operationHash = router.query.override as string;
-  const operationName = router.query.overrideName as string;
+  const operationHash = useQueryParam('override');
+  const operationName = useQueryParam('overrideName');
 
   const client = useQueryClient();
 
@@ -320,7 +320,7 @@ export const ConfigureOverride = () => {
                     <Override
                       key={i}
                       {...c}
-                      operationHash={operationHash}
+                      operationHash={operationHash ?? ''}
                       isAdminOrDeveloper={isAdminOrDeveloper}
                       refresh={() => {
                         refetch();
@@ -368,7 +368,7 @@ export const ConfigureOverride = () => {
                 variant="secondary"
                 className=""
                 onClick={() => {
-                  copy(operationHash);
+                  copy(operationHash ?? '');
                   toast({
                     description: 'Copied operation hash',
                   });
@@ -378,7 +378,7 @@ export const ConfigureOverride = () => {
                 Copy Hash
               </Button>
               <OperationContentDialog
-                hash={operationHash}
+                hash={operationHash ?? ''}
                 trigger={
                   <Button className="w-max" variant="secondary">
                     View Operation Content

@@ -17,6 +17,7 @@ import { FederatedGraph } from '@wundergraph/cosmo-connect/dist/platform/v1/plat
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { PiWarningCircle } from 'react-icons/pi';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { buildUrl } from '@/lib/build-url';
@@ -165,8 +166,7 @@ export const FederatedGraphsTable = ({
 };
 
 const FederatedGraphsPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const subgraphSlug = router.query.subgraphSlug as string;
+  const subgraphSlug = useRouteParam('subgraphSlug');
   const {
     namespace: { name: namespace },
   } = useWorkspace();

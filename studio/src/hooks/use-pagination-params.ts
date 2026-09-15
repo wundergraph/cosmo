@@ -1,12 +1,11 @@
-import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { clamp } from '@/lib/utils';
 
-export const usePaginationParams = () => {
-  const router = useRouter();
-  const pageNumber = Math.max(Number.parseInt((router.query.page as string) || '1'), 1);
-  const pageSize = clamp(Number.parseInt((router.query.pageSize as string) || '20'), 10, 50);
+export const usePaginationParams = ({ defaultPageSize = 10 }: { defaultPageSize?: number } = {}) => {
+  const pageNumber = clamp(Number.parseInt(useQueryParam('page', '1')), 1, Number.MAX_SAFE_INTEGER);
+  const pageSize = clamp(Number.parseInt(useQueryParam('pageSize', String(defaultPageSize))), 10, 50);
   const offset = (pageNumber - 1) * pageSize;
-  const search = (router.query.search as string) || '';
+  const search = useQueryParam('search', '');
 
   return {
     pageNumber,

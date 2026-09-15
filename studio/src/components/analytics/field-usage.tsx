@@ -14,6 +14,7 @@ import { differenceInHours, format, formatISO, fromUnixTime } from 'date-fns';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { useContext, useId, useMemo } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { DatePickerWithRange, DateRangePickerChangeHandler, getRange } from '../date-picker-with-range';
@@ -308,9 +309,9 @@ export const FieldUsageSheet = () => {
   const [type, field] = showUsage?.split('.') ?? [];
 
   const graph = useContext(GraphContext);
-  const featureFlagName = router.query.featureFlag as string;
+  const featureFlagName = useQueryParam('featureFlag');
 
-  const category = router.query.category as string;
+  const category = useQueryParam('category');
   const isInput = category === 'inputs';
 
   const { data, error, isLoading, refetch } = useQuery(

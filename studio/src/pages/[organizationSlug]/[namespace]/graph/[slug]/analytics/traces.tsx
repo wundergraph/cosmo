@@ -26,6 +26,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { formatISO } from 'date-fns';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { useContext, useRef, useState } from 'react';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
 
@@ -125,8 +126,8 @@ const sizes = {
 const TraceSheet: React.FC<any> = (props) => {
   const router = useRouter();
 
-  const traceId = router.query.traceID as string;
-  const spanId = router.query.spanID as string;
+  const traceId = useQueryParam('traceID');
+  const spanId = useQueryParam('spanID');
 
   const index = props.data.findIndex((r: any) => r.traceId === traceId && r.spanId === spanId);
 
@@ -225,7 +226,7 @@ const TraceSheet: React.FC<any> = (props) => {
 
           <SheetTitle className="m-0 flex flex-wrap items-center gap-x-1.5 text-sm">
             <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">{traceId}</code>
-            <CopyButton tooltip="Copy trace id" value={router.query.traceID?.toString() || ''} />
+            <CopyButton tooltip="Copy trace id" value={traceId ?? ''} />
           </SheetTitle>
 
           <Spacer />

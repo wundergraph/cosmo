@@ -18,6 +18,8 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import debounce from 'debounce';
 import { useRouter } from 'next/router';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { docsBaseURL } from '@/lib/constants';
@@ -27,7 +29,7 @@ import { buildUrl } from '@/lib/build-url';
 
 const CacheOperationsPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const federatedGraphName = router.query.slug as string;
+  const federatedGraphName = useRouteParam('slug');
   const {
     namespace: { name: namespace },
   } = useWorkspace();
@@ -35,10 +37,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
   const checkUserAccess = useCheckUserAccess();
   const plan = user?.currentOrganization?.billing?.plan;
 
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || '10');
-  const limit = pageSize > 50 ? 50 : pageSize;
-  const offset = (pageNumber - 1) * limit;
+  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
 
   const { toast } = useToast();
 

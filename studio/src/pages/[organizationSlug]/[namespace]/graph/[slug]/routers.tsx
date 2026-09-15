@@ -15,6 +15,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Router } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { getRouters } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { useRouter } from 'next/router';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import React, { useContext, useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
 import { formatDistanceToNow, subSeconds } from 'date-fns';
@@ -48,7 +49,7 @@ const RouterSheet: React.FC<any> = (props) => {
   const router = useRouter();
   const [size, setSize] = useState<keyof typeof sizes>('default');
 
-  const serviceInstanceId = router.query.serviceInstanceId as string;
+  const serviceInstanceId = useQueryParam('serviceInstanceId');
 
   const index = props.data.findIndex((r: any) => r.serviceInstanceId === serviceInstanceId);
 
@@ -145,7 +146,7 @@ const RouterSheet: React.FC<any> = (props) => {
 
           <SheetTitle className="m-0 flex flex-wrap items-center gap-x-1.5 text-sm">
             <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">{serviceInstanceId}</code>
-            <CopyButton tooltip="Copy instance id" value={serviceInstanceId} />
+            <CopyButton tooltip="Copy instance id" value={serviceInstanceId ?? ''} />
           </SheetTitle>
 
           <Spacer />
@@ -298,8 +299,8 @@ const RoutersPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const namespace = router.query.namespace as string;
-  const slug = router.query.slug as string;
+  const namespace = useRouteParam('namespace');
+  const slug = useRouteParam('slug');
 
   const { data, isLoading, error, refetch } = useQuery(
     getRouters,

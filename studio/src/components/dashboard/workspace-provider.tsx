@@ -7,6 +7,7 @@ import {
   WorkspaceNamespaceSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { useApplyParams } from '@/components/analytics/use-apply-params';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useOnboardingNavigation } from '@/hooks/use-onboarding-navigation';
@@ -29,7 +30,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
   const { data, isLoading } = useQuery(getWorkspace, {});
 
   // Initialize the namespace
-  const namespaceParam = router.query.namespace as string;
+  const namespaceParam = useRouteParam('namespace');
   const [storedNamespace, setStoredNamespace] = useLocalStorage('wg-namespace', DEFAULT_NAMESPACE_NAME);
   const [namespace, setNamespace] = useState(namespaceParam || storedNamespace || DEFAULT_NAMESPACE_NAME);
   const [namespaces, setNamespaces] = useState([DEFAULT_NAMESPACE_NAME]);

@@ -27,6 +27,8 @@ import { getChecksByFederatedGraphName } from '@wundergraph/cosmo-connect/dist/p
 import { formatDistanceToNow, formatISO } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext } from 'react';
 import { cn } from '@/lib/utils';
 import { useFeature } from '@/hooks/use-feature';
@@ -58,13 +60,13 @@ const getCheckSubgraphDisplayName = ({
 
 const ChecksPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
+  const { pageNumber, pageSize: limit } = usePaginationParams();
 
-  const limit = Number.parseInt((router.query.pageSize as string) || '10');
   const selectedSubgraphs = parseSelectedSubgraphs(router.query.subgraphs);
   const {
     namespace: { name: namespace },
   } = useWorkspace();
+  const graphName = useRouteParam('slug');
 
   const {
     dateRange: { start, end },
@@ -82,7 +84,7 @@ const ChecksPage: NextPageWithLayout = () => {
   const { data, isLoading, error, refetch } = useQuery(
     getChecksByFederatedGraphName,
     {
-      name: router.query.slug as string,
+      name: graphName,
       namespace,
       limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,

@@ -54,6 +54,7 @@ import Fuse from 'fuse.js';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/router';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import { useContext, useState } from 'react';
 import { BiAnalyse } from 'react-icons/bi';
 import { IoBarcodeSharp } from 'react-icons/io5';
@@ -178,11 +179,11 @@ const deletePersistedOperationReducer = (
 
 const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAdminOrDeveloper: boolean }) => {
   const router = useRouter();
-  const slug = router.query.slug as string;
+  const slug = useRouteParam('slug');
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const organizationSlug = router.query.organizationSlug as string;
+  const organizationSlug = useRouteParam('organizationSlug');
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const clientId = searchParams.get('clientId');
@@ -208,7 +209,7 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
 
   const { ast } = useParseSchema(sdlData?.sdl);
 
-  const [search, setSearch] = useState(router.query.search as string);
+  const [search, setSearch] = useState(useQueryParam('search', ''));
   const applyParams = (search: string) => {
     const query = { ...router.query };
     query.search = search;
@@ -612,11 +613,10 @@ type Input = z.infer<typeof FormSchema>;
 
 const CreateClient = ({ refresh }: { refresh: () => void }) => {
   const checkUserAccess = useCheckUserAccess();
-  const router = useRouter();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
+  const slug = useRouteParam('slug');
   const [isOpen, setIsOpen] = useState(false);
 
   const { toast } = useToast();
@@ -706,7 +706,7 @@ const ClientsPage: NextPageWithLayout = () => {
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
+  const slug = useRouteParam('slug');
 
   const constructLink = (name: string, mode: 'metrics' | 'traces') => {
     const filters = [];

@@ -43,6 +43,7 @@ import { sentenceCase } from 'change-case';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import { useContext, useState } from 'react';
 import { MdNearbyError, MdVerifiedUser } from 'react-icons/md';
 import { PiGitBranch } from 'react-icons/pi';
@@ -205,9 +206,9 @@ export const CompositionDetails = ({
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
-  const id = router.query.compositionId as string;
-  const subgraph = router.query.subgraph as string;
+  const slug = useRouteParam('slug');
+  const id = useRouteParam('compositionId');
+  const subgraph = useQueryParam('subgraph');
 
   let tab = router.query.tab as string;
   tab = isFeatureFlagComposition && tab === 'ffCompostions' ? 'output' : tab;
@@ -597,14 +598,12 @@ export const CompositionDetails = ({
 };
 
 const CompositionDetailsPage: NextPageWithLayout = () => {
-  const router = useRouter();
-
   const organizationSlug = useCurrentOrganization()?.slug;
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
-  const id = router.query.compositionId as string;
+  const slug = useRouteParam('slug');
+  const id = useRouteParam('compositionId');
 
   const { data, isLoading, error, refetch } = useQuery(getCompositionDetails, {
     compositionId: id,

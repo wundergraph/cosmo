@@ -12,7 +12,7 @@ import { CodeViewer } from '@/components/code-viewer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PlayIcon } from '@radix-ui/react-icons';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -32,12 +32,11 @@ export const OperationContentModal = ({
   onClose,
 }: OperationContentModalProps) => {
   const graphContext = useContext(GraphContext);
-  const router = useRouter();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
-  const slug = router.query.slug as string;
+  const slug = useRouteParam('slug');
 
   const { data, isLoading, error, refetch } = useQuery(
     getOperationContent,

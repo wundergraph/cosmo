@@ -2,7 +2,7 @@ import { formatDateTime } from '@/lib/format-date';
 import { MinusIcon, PlusIcon } from '@radix-ui/react-icons';
 import { FederatedGraphChangelogOutput } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { PiCubeFocus } from 'react-icons/pi';
 import { Changes, getDiffCount } from './changes';
 import { useWorkspace } from '@/hooks/use-workspace';
@@ -10,8 +10,7 @@ import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { buildUrl } from '@/lib/build-url';
 
 export const Changelog = ({ entries }: { entries: FederatedGraphChangelogOutput[] }) => {
-  const router = useRouter();
-  const slug = router.query.slug as string;
+  const slug = useRouteParam('slug');
   const {
     namespace: { name: namespace },
   } = useWorkspace();

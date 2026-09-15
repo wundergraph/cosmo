@@ -14,11 +14,12 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { ExclamationTriangleIcon, InfoCircledIcon } from '@radix-ui/react-icons';
 import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { buildUrl } from '@/lib/build-url';
 
 const LoginMethodsPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const organizationSlug = router.query.organizationSlug as string;
+  const organizationSlug = useRouteParam('organizationSlug');
   const isAdmin = useIsAdmin();
   // Both shared queries are owned here and passed to the sections. The login
   // methods query is also the entitlement source of truth: a non-entitled org

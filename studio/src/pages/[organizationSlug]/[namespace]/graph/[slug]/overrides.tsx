@@ -37,7 +37,8 @@ import { getAllOverrides } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import { GetAllOverridesResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext } from 'react';
 import { BiAnalyse } from 'react-icons/bi';
 import { IoBarcodeSharp } from 'react-icons/io5';
@@ -45,15 +46,12 @@ import { buildUrl } from '@/lib/build-url';
 
 const OverridesPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
-  const router = useRouter();
 
-  const organizationSlug = router.query.organizationSlug as string;
-  const namespace = router.query.namespace as string;
-  const slug = router.query.slug as string;
+  const organizationSlug = useRouteParam('organizationSlug');
+  const namespace = useRouteParam('namespace');
+  const slug = useRouteParam('slug');
 
-  const pageNumber = router.query.page ? parseInt(router.query.page as string, 10) : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || '10');
-  const offset = (pageNumber - 1) * pageSize;
+  const { pageNumber, pageSize, offset } = usePaginationParams();
 
   const constructLink = (name: string, hash: string, mode: 'metrics' | 'traces') => {
     const filterState = createFilterState({

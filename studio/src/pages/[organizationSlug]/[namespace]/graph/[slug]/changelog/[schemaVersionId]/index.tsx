@@ -10,6 +10,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { getChangelogBySchemaVersion } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { buildUrl } from '@/lib/build-url';
@@ -20,8 +21,8 @@ const SchemaVersionChangelogPage: NextPageWithLayout = () => {
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
-  const id = router.query.schemaVersionId as string;
+  const slug = useRouteParam('slug');
+  const id = useRouteParam('schemaVersionId');
 
   const { data, isLoading, error, refetch } = useQuery(getChangelogBySchemaVersion, {
     schemaVersionId: id,

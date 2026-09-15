@@ -21,6 +21,7 @@ import { getFederatedGraphChangelog } from '@wundergraph/cosmo-connect/dist/plat
 import { FederatedGraphChangelogOutput } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { endOfDay, formatISO, startOfDay } from 'date-fns';
 import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { useWorkspace } from '@/hooks/use-workspace';
 
@@ -71,6 +72,7 @@ const ChangelogPage: NextPageWithLayout = () => {
   const {
     namespace: { name: namespace },
   } = useWorkspace();
+  const graphName = useRouteParam('slug');
 
   const graphData = useContext(GraphContext);
 
@@ -87,7 +89,7 @@ const ChangelogPage: NextPageWithLayout = () => {
   const { data, isLoading, isSuccess, error, refetch } = useQuery(
     getFederatedGraphChangelog,
     {
-      name: router.query.slug as string,
+      name: graphName,
       namespace,
       pagination: {
         limit,
