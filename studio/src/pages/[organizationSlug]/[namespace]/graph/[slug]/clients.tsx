@@ -218,6 +218,7 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
     }
 
     router.replace({
+      pathname: router.pathname,
       query,
     });
   };
