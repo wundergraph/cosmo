@@ -29,6 +29,8 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      initContainers:
+        {{- tpl (.Values.jobs.seedOrganization.initContainers | toYaml) . | nindent 8 }}
       containers:
         - name: seed
           securityContext:

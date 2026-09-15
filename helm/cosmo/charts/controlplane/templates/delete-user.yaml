@@ -30,6 +30,8 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      initContainers:
+        {{- tpl (.Values.jobs.deleteUser.initContainers | toYaml) . | nindent 8 }}
       containers:
         - name: delete-user
           securityContext:
