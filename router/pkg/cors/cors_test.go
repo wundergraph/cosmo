@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newTestRouter(config Config) *chi.Mux {
@@ -127,6 +128,83 @@ func TestWildcardOriginCompatibility(t *testing.T) {
 			assert.True(t, c.validateOrigin(tt.origin))
 		})
 	}
+}
+
+func TestMatchOrigins(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		pattern string
+		allowed []string
+		denied  []string
+	}{
+		{
+			pattern: `example\.com`,
+			allowed: []string{"https://APP.EXAMPLE.COM.evil.com"},
+			denied:  []string{"https://other.com"},
+		},
+		{
+			pattern: `^https://(.+\.)?aol\.(de|ca|co\.uk|com)$`,
+			allowed: []string{"https://aol.com", "https://app.aol.co.uk"},
+			denied:  []string{"https://aol.com.evil.com", "https://evil.com/https://aol.com"},
+		},
+		{
+			pattern: `(?-i)^https://app\.example\.com$`,
+			allowed: []string{"https://app.example.com"},
+			denied:  []string{"https://APP.EXAMPLE.COM"},
+		},
+	}
+	for _, tt := range cases {
+		t.Run(tt.pattern, func(t *testing.T) {
+			t.Parallel()
+
+			c := newCors(nil, Config{MatchOrigins: []string{tt.pattern}})
+			for _, origin := range tt.allowed {
+				assert.True(t, c.validateOrigin(origin), origin)
+			}
+			for _, origin := range tt.denied {
+				assert.False(t, c.validateOrigin(origin), origin)
+			}
+		})
+	}
+}
+
+func TestInvalidMatchOrigins(t *testing.T) {
+	t.Parallel()
+
+	cfg := Config{AllowOrigins: []string{"*"}, MatchOrigins: []string{`https://example\.com`, `[`}}
+	err := cfg.Validate()
+	require.ErrorContains(t, err, `bad origin regex in match_origins "["`)
+
+	cfg = Config{AllowAllOrigins: true, MatchOrigins: []string{`https://example\.com`}}
+	assert.ErrorContains(t, cfg.Validate(), "conflict settings")
+}
+
+func TestMatchOriginsWithAllowOrigins(t *testing.T) {
+	t.Parallel()
+
+	t.Run("literal and wildcard origins", func(t *testing.T) {
+		t.Parallel()
+
+		c := newCors(nil, Config{
+			AllowOrigins: []string{"https://literal.example", "https://*.wildcard.example"},
+			MatchOrigins: []string{`^https://one\.example$`, `^https://two\.example$`},
+		})
+		for _, origin := range []string{"https://literal.example", "https://app.wildcard.example", "https://one.example", "https://two.example"} {
+			assert.True(t, c.validateOrigin(origin), origin)
+		}
+		assert.False(t, c.validateOrigin("https://other.example"))
+	})
+
+	t.Run("all origins", func(t *testing.T) {
+		t.Parallel()
+
+		c := newCors(nil, Config{
+			AllowOrigins: []string{"*"},
+			MatchOrigins: []string{`^https://example\.com$`},
+		})
+		assert.True(t, c.validateOrigin("https://other.example"))
+	})
 }
 
 func TestNormalize(t *testing.T) {

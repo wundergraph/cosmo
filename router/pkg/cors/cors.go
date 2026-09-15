@@ -2,7 +2,9 @@ package cors
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -18,6 +20,12 @@ type Config struct {
 	// If the special "*" value is present in the list, all origins will be allowed.
 	// Default value is []
 	AllowOrigins []string
+
+	// MatchOrigins is a list of Go regular expressions matched against the origin,
+	// case-insensitively by default. Patterns are unanchored; use ^ and $ to match
+	// the entire origin. Use (?-i) for case-sensitive matching.
+	// An origin is allowed if it matches AllowOrigins or MatchOrigins.
+	MatchOrigins []string
 
 	// AllowOriginFunc is a custom function to validate the origin. It take the origin
 	// as argument and returns true if allowed or false otherwise. If this option is
@@ -62,13 +70,28 @@ func (c *Config) AddExposeHeaders(headers ...string) {
 
 // Validate is check configuration of user defined.
 func (c *Config) Validate() error {
-	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0) {
-		return errors.New("conflict settings: all origins are allowed. AllowOriginFunc or AllowOrigins is not needed")
+	_, err := c.validateAndCompile()
+	return err
+}
+
+func (c *Config) validateAndCompile() ([]*regexp.Regexp, error) {
+	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0 || len(c.MatchOrigins) > 0) {
+		return nil, errors.New("conflict settings: all origins are allowed. AllowOriginFunc, AllowOrigins or MatchOrigins is not needed")
 	}
-	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 {
-		return errors.New("conflict settings: all origins disabled")
+	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 && len(c.MatchOrigins) == 0 {
+		return nil, errors.New("conflict settings: all origins disabled")
 	}
-	return nil
+	var patterns []*regexp.Regexp
+	for _, pattern := range c.MatchOrigins {
+		// Enable case-insensitive matching without adding implicit anchors.
+		// Inline flags such as (?-i) and (?-i:...) can override this default.
+		re, err := regexp.Compile("(?i)" + pattern)
+		if err != nil {
+			return nil, fmt.Errorf("bad origin regex in match_origins %q: %w", pattern, err)
+		}
+		patterns = append(patterns, re)
+	}
+	return patterns, nil
 }
 
 func (c *Config) parseNewWildcardRules() []*WildcardPattern {
