@@ -1,8 +1,8 @@
 import { CompositionErrorsBanner } from '@/components/composition-errors-banner';
-import { EmptyState } from '@/components/empty-state';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { PageHeader } from '@/components/layout/head';
 import { EmptySchema } from '@/components/schema/empty-schema-state';
+import { SchemaNotFound } from '@/components/schema/schema-not-found';
 import { SDLViewerActions } from '@/components/schema/sdl-viewer';
 import { SDLViewerMonaco } from '@/components/schema/sdl-viewer-monaco';
 import { SchemaToolbar } from '@/components/schema/toolbar';
@@ -16,7 +16,6 @@ import { formatDateTime } from '@/lib/format-date';
 import { NextPageWithLayout } from '@/lib/page';
 import { isSchemaLoading } from '@/lib/schema-loading';
 import { useQuery } from '@connectrpc/connect-query';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getFederatedGraphSDLByName,
@@ -157,13 +156,7 @@ const SDLPage: NextPageWithLayout = () => {
   } else if (isFeatureSubgraphSelected && !activeFeatureSubgraph) {
     // A flag that left the latest composition leaves the selection unresolvable, which is not the
     // same as a feature subgraph that exists but has no published schema.
-    content = (
-      <EmptyState
-        icon={<ExclamationTriangleIcon />}
-        title="Schema not found"
-        description={`${activeSubgraph} is not part of the latest composition of feature flag ${activeFeatureFlag}. The flag may have been deleted or disabled, its latest composition may have failed, or the feature subgraph may have been removed from it.`}
-      />
-    );
+    content = <SchemaNotFound featureFlagName={activeFeatureFlag} featureSubgraphName={activeSubgraph} />;
   } else if (isFeatureSubgraphSelected && !featureSubgraphSdl) {
     content = <EmptySchema subgraphName={activeSubgraph} />;
   } else if (

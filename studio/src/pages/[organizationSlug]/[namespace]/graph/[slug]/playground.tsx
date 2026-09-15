@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { EmptyState } from '@/components/empty-state';
+import { SchemaNotFound } from '@/components/schema/schema-not-found';
 import { Loader } from '@/components/ui/loader';
 import {
   Select,
@@ -798,6 +798,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
   const loadSchemaGraphId = (router.query.load as string) || graphContext?.graph?.id || '';
   const configType = toConfigType(router.query.type as string);
+  const activeFeatureFlag = router.query.featureFlag as string;
 
   const { data: compositionFlagsData, isLoading: isLoadingCompositionFlags } = useCompositionFlags();
 
@@ -808,7 +809,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   } = useFeatureSubgraphSchema(
     compositionFlagsData,
     configType === 'featureSubgraph'
-      ? { featureFlagName: router.query.featureFlag as string, subgraphId: loadSchemaGraphId }
+      ? { featureFlagName: activeFeatureFlag, subgraphId: loadSchemaGraphId }
       : undefined,
   );
 
@@ -1328,11 +1329,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
           {isLoadingDefaultHeaders ? (
             <Loader fullscreen />
           ) : isUnresolvedFeatureSubgraph ? (
-            <EmptyState
-              icon={<ExclamationTriangleIcon />}
-              title="Schema not found"
-              description={`The selected feature subgraph is not part of the latest composition of feature flag ${router.query.featureFlag}. The flag may have been deleted or disabled, its latest composition may have failed, or the feature subgraph may have been removed from it.`}
-            />
+            <SchemaNotFound featureFlagName={activeFeatureFlag} />
           ) : (
             <>
               <GraphiQL
