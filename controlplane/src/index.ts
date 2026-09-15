@@ -79,6 +79,7 @@ const {
   CDN_BASE_URL,
   SENTRY_ENABLED,
   SENTRY_DSN,
+  PROMPT_TO_QUERY_SERVICE_ENDPOINT,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -181,6 +182,9 @@ const options: BuildConfig = {
             ca: REDIS_TLS_CA,
           }
         : undefined,
+  },
+  promptToQuery: {
+    address: PROMPT_TO_QUERY_SERVICE_ENDPOINT,
   },
 };
 

@@ -115,6 +115,8 @@ export function updateFederatedGraph(
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
+        opts.promptToQueryServiceAddress,
+        opts.billingDefaultPlanId,
       );
 
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);

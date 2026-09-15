@@ -150,6 +150,8 @@ export function moveFederatedGraph(
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
+        opts.promptToQueryServiceAddress,
+        opts.billingDefaultPlanId,
       );
 
       // Only call `composeAndDeployFederatedGraph` after all contracts have been moved

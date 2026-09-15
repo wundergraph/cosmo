@@ -157,6 +157,8 @@ export function migrateFromApollo(
         opts.chClient,
         opts.webhookProxyUrl,
         true,
+        opts.promptToQueryServiceAddress,
+        opts.billingDefaultPlanId,
       );
 
       await compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph });
