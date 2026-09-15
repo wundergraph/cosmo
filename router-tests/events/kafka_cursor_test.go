@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
+	"github.com/twmb/franz-go/pkg/kgo"
 
 	"github.com/wundergraph/cosmo/router-tests/events"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -107,6 +108,33 @@ func readNextCursorPayload(t *testing.T, conn *websocket.Conn, subscriptionID st
 	return payload
 }
 
+// subscribeWithCursorResume opens a graphql-transport-ws connection and sends
+// a subscribe message for the given query, opting in to cursor-resume
+// delivery and presenting the given cursor to resume from.
+func subscribeWithCursorResume(t *testing.T, xEnv *testenv.Environment, resumeCursor string) *websocket.Conn {
+	t.Helper()
+
+	conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+
+	payload, err := json.Marshal(map[string]any{
+		"query": "subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename } } }",
+		"extensions": map[string]any{
+			"delivery-guarantee": "cursor",
+			"cursor":             resumeCursor,
+		},
+	})
+	require.NoError(t, err)
+
+	err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+		ID:      "1",
+		Type:    "subscribe",
+		Payload: payload,
+	})
+	require.NoError(t, err)
+
+	return conn
+}
+
 // subscribeWithoutCursorGuarantee opens a graphql-transport-ws connection and
 // sends a subscribe message for the given query without opting in to
 // cursor-resume delivery.
@@ -146,6 +174,23 @@ func readNextPayloadWithoutCursor(t *testing.T, conn *websocket.Conn, subscripti
 	require.Empty(t, payload.Extensions.Cursor)
 
 	return payload
+}
+
+// publishEmployeeEventWithoutSubscriber produces a single default Kafka
+// employee event directly, without waiting for a subscriber to receive it.
+// Use this when no subscription is active at publish time, e.g. while a
+// client is disconnected between publishes.
+func publishEmployeeEventWithoutSubscriber(t *testing.T, xEnv *testenv.Environment, employeeID int) {
+	t.Helper()
+
+	errCh := make(chan error, 1)
+	xEnv.KafkaClient.Produce(xEnv.Context, &kgo.Record{
+		Topic: xEnv.GetPubSubName("employeeUpdated"),
+		Value: fmt.Appendf(nil, `{"__typename":"Employee","id": %d,"update":{"name":"foo"}}`, employeeID),
+	}, func(_ *kgo.Record, err error) {
+		errCh <- err
+	})
+	require.NoError(t, <-errCh)
 }
 
 // completeSubscription sends a "complete" message for the given subscription id.
@@ -206,6 +251,58 @@ func TestKafkaCursor(t *testing.T) {
 			require.Equal(t, firstOffset.Offset+1, secondOffset.Offset)
 
 			completeSubscription(t, conn, "1")
+		})
+	})
+
+	t.Run("ws subscription can reconnect with a cursor and receive messages that arrived while disconnected", func(t *testing.T) {
+		// subscribe one client to the router with cursor negotiation,
+		// receive one message and remember its cursor,
+		// disconnect the client,
+		// publish three more messages while nobody is subscribed,
+		// reconnect a new client presenting the remembered cursor,
+		// verify all three pending messages are delivered.
+		t.Parallel()
+
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
+
+			conn := subscribeWithCursorGuarantee(t, xEnv)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
+
+			publishDefaultEmployeeEvent(xEnv, 1)
+
+			firstReceivedEvent := readNextCursorPayload(t, conn, "1")
+			resumeCursor := firstReceivedEvent.Extensions.Cursor
+
+			completeSubscription(t, conn, "1")
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, EventWaitTimeout)
+
+			for range 3 {
+				publishEmployeeEventWithoutSubscriber(t, xEnv, 1)
+			}
+
+			reconnected := subscribeWithCursorResume(t, xEnv, resumeCursor)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
+
+			var previousOffset int64 = -1
+			for range 3 {
+				event := readNextCursorPayload(t, reconnected, "1")
+				_, offset := decodeKafkaCursor(t, event.Extensions.Cursor)
+				if previousOffset >= 0 {
+					require.Equal(t, previousOffset+1, offset.Offset)
+				}
+				previousOffset = offset.Offset
+			}
+
+			completeSubscription(t, reconnected, "1")
 		})
 	})
 
