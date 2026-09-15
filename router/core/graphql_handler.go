@@ -90,6 +90,7 @@ type HandlerOptions struct {
 	EnableCostResponseHeaders       bool
 
 	ApolloSubscriptionMultipartPrintBoundary bool
+	SSEServerWriteTimeout                    time.Duration
 	HeaderPropagation                        *HeaderPropagation
 
 	ResponseCache             caching.Cache
@@ -116,6 +117,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		subgraphErrorPropagation:                 opts.SubgraphErrorPropagation,
 		engineLoaderHooks:                        opts.EngineLoaderHooks,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
+		sseServerWriteTimeout:                    opts.SSEServerWriteTimeout,
 		headerPropagation:                        opts.HeaderPropagation,
 		responseCacheStore:                       opts.ResponseCache,
 		responseCacheFallbackTTL:                 opts.ResponseCacheFallbackTTL,
@@ -177,6 +179,7 @@ type GraphQLHandler struct {
 	enableCostResponseHeaders       bool
 
 	apolloSubscriptionMultipartPrintBoundary bool
+	sseServerWriteTimeout                    time.Duration
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -336,7 +339,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.setDebugCacheHeaders(w, reqCtx.operation)
 
 		defer propagateSubgraphErrors(resolveCtx)
-		resolveCtx, writer, ok = GetSubscriptionResponseWriter(resolveCtx, r, w, h.apolloSubscriptionMultipartPrintBoundary)
+		resolveCtx, writer, ok = GetSubscriptionResponseWriter(resolveCtx, r, w, h.apolloSubscriptionMultipartPrintBoundary, h.sseServerWriteTimeout)
 		if !ok {
 			reqCtx.logger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
 			trackFinalResponseError(r.Context(), errCouldNotFlushResponse)
