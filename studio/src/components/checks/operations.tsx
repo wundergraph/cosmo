@@ -121,7 +121,7 @@ export const CheckOperations = () => {
 
   const id = useRouteParam('checkId');
 
-  const [search, setSearch] = useState(router.query.search as string);
+  const [search, setSearch] = useState(useQueryParam('search', ''));
   const [debouncedSearch] = useDebounce(search, 500);
   const [applyOnlyFiltered, setApplyOnlyFiltered] = useState(false);
 

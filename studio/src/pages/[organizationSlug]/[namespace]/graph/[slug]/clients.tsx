@@ -54,7 +54,7 @@ import Fuse from 'fuse.js';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/router';
-import { useRouteParam } from '@/hooks/use-query-param';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import { useContext, useState } from 'react';
 import { BiAnalyse } from 'react-icons/bi';
 import { IoBarcodeSharp } from 'react-icons/io5';
@@ -209,7 +209,7 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
 
   const { ast } = useParseSchema(sdlData?.sdl);
 
-  const [search, setSearch] = useState(router.query.search as string);
+  const [search, setSearch] = useState(useQueryParam('search', ''));
   const applyParams = (search: string) => {
     const query = { ...router.query };
     query.search = search;

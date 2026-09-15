@@ -31,7 +31,7 @@ const SubGraphsPage: NextPageWithLayout = () => {
   const pageSize = Number.parseInt(useQueryParam('pageSize', '10'));
   const limit = pageSize > 50 ? 50 : pageSize;
   const offset = (pageNumber - 1) * limit;
-  const [search, setSearch] = useState(router.query.search as string);
+  const [search, setSearch] = useState(useQueryParam('search', ''));
   const applyParams = useApplyParams();
 
   const { data: featureSubgraphsData, isFetching } = useQuery(

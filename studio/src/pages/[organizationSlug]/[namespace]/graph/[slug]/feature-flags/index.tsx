@@ -29,7 +29,7 @@ const FeatureFlagsPage: NextPageWithLayout = () => {
   const limit = pageSize > 50 ? 50 : pageSize;
   const offset = (pageNumber - 1) * limit;
 
-  const [search, setSearch] = useState(router.query.search as string);
+  const [search, setSearch] = useState(useQueryParam('search', ''));
   const [query] = useDebounce(search, 500);
 
   const applyParams = useApplyParams();
