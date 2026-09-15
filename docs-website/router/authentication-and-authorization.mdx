@@ -59,6 +59,36 @@ Use `scope_claim` when your provider stores authorization scopes in a claim othe
 
 For more information on the attributes, visit the auth configuration parameter section page [here](/router/configuration#authentication).
 
+### Configuring JWT validation error handling
+
+Use `authentication.jwt.on_error` to control how the router handles request-time authentication errors:
+
+- `reject` (default): return a generic `401 Unauthorized` response.
+- `continue`: proceed as unauthenticated so a custom module or downstream service can validate credentials such as opaque OAuth tokens. Required authentication and field authorization still apply.
+
+```yaml
+authentication:
+  jwt:
+    jwks:
+      - url: https://example.com/.well-known/jwks.json
+    on_error: continue
+
+authorization:
+  require_authentication: false
+```
+
+<Warning>
+  This option permits unauthenticated traffic after authentication fails. A custom module or downstream service must validate the original credential before protected work or side effects. Header presence alone does not authenticate a request.
+</Warning>
+
+An ignored failure leaves `request.auth.isAuthenticated` false, `request.auth.type` empty, and claims and scopes unset. No `X-Authenticated-By` header is added for that failure. A valid credential from another configured source still authenticates the request normally. The original credential remains available to custom modules and configured header propagation.
+
+The policy applies to all errors returned by the request's authenticators, including JWT validation failures, unsupported header prefixes, empty tokens, missing or malformed WebSocket authentication payloads, and custom authenticator failures. It does not require credentials to be present.
+
+`authorization.require_authentication: true` still rejects unauthenticated requests. Field authorization through `@authenticated` and `@requiresScopes` remains effective. Configuration and authenticator initialization errors are not ignored.
+
+The setting applies to GraphQL HTTP headers, WebSocket handshake headers, and configured WebSocket initial-payload tokens. It does not affect MCP OAuth authentication. Setting `on_error: continue` does not emit a startup warning or warnings for ignored authentication failures.
+
 ### Disabling Authentication for Introspection Operations
 
 Cosmo Router supports bypassing authentication for introspection queries.
