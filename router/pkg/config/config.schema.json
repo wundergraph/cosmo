@@ -2724,6 +2724,18 @@
           },
           "required": ["provider_id"]
         },
+        "resources": {
+          "type": "object",
+          "description": "Configuration for serving user-provided context documents and Agent Skills as MCP resources. Markdown files in the MCP operations directory are served via resources/list and resources/read. Directories containing a SKILL.md file (Agent Skills format, see https://agentskills.io/specification) are served as skills under skill:// URIs.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable serving context documents and skills as MCP resources. When enabled, a get_context tool is also registered so agents without MCP resource support can read the same content."
+            }
+          }
+        },
         "session": {
           "type": "object",
           "description": "Session configuration for the MCP server. This controls how the MCP server handles client sessions.",
