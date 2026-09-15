@@ -9819,7 +9819,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
 						TotalFields: &config.ComplexityLimit{
 							Enabled: true,
-							Limit:   1,
+							Limit:   2,
 						},
 					}
 				},
@@ -9828,10 +9828,10 @@ func TestFlakyTelemetry(t *testing.T) {
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
 				})
 				require.Equal(t, 400, failedRes.Response.StatusCode)
-				require.Equal(t, `{"errors":[{"message":"The total number of fields 2 exceeds the limit allowed (1)"}]}`, failedRes.Body)
+				require.Equal(t, `{"errors":[{"message":"The total number of fields 5 exceeds the limit allowed (2)"}]}`, failedRes.Body)
 
 				testSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
-				require.Contains(t, testSpan.Attributes(), otel.WgQueryTotalFields.Int(2))
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryTotalFields.Int(5))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
 
@@ -9839,10 +9839,10 @@ func TestFlakyTelemetry(t *testing.T) {
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
 				})
 				require.Equal(t, 400, failedRes2.Response.StatusCode)
-				require.Equal(t, `{"errors":[{"message":"The total number of fields 2 exceeds the limit allowed (1)"}]}`, failedRes2.Body)
+				require.Equal(t, `{"errors":[{"message":"The total number of fields 5 exceeds the limit allowed (2)"}]}`, failedRes2.Body)
 
 				testSpan2 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
-				assert.Contains(t, testSpan2.Attributes(), otel.WgQueryTotalFields.Int(2))
+				assert.Contains(t, testSpan2.Attributes(), otel.WgQueryTotalFields.Int(5))
 				assert.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 				assert.Equal(t, codes.Unset, testSpan2.Status().Code)
 				assert.Equal(t, []sdktrace.Event(nil), testSpan2.Events())
@@ -9853,7 +9853,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				})
 				require.JSONEq(t, employeesIDData, successRes.Body)
 				testSpan3 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
-				require.Contains(t, testSpan3.Attributes(), otel.WgQueryTotalFields.Int(1))
+				require.Contains(t, testSpan3.Attributes(), otel.WgQueryTotalFields.Int(2))
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
 
@@ -9862,7 +9862,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				})
 				require.JSONEq(t, employeesIDData, successRes2.Body)
 				testSpan4 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
-				require.Contains(t, testSpan4.Attributes(), otel.WgQueryTotalFields.Int(1))
+				require.Contains(t, testSpan4.Attributes(), otel.WgQueryTotalFields.Int(2))
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 			})
 		})

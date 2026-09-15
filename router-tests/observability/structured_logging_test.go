@@ -4449,9 +4449,9 @@ func TestAccessLogs(t *testing.T) {
 						require.Equal(t, cacheHit, logContext["query_complexity_cache_hit"])
 					}
 
-					assertComplexityFields(requestLogs[0].ContextMap(), 3, 5, 2, 1, false)
-					assertComplexityFields(requestLogs[1].ContextMap(), 3, 5, 2, 1, true)
-					assertComplexityFields(requestLogs[2].ContextMap(), 4, 3, 1, 0, false)
+					assertComplexityFields(requestLogs[0].ContextMap(), 3, 11, 2, 1, false)
+					assertComplexityFields(requestLogs[1].ContextMap(), 3, 11, 2, 1, true)
+					assertComplexityFields(requestLogs[2].ContextMap(), 4, 4, 1, 0, false)
 				},
 			)
 		})
