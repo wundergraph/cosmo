@@ -146,7 +146,7 @@ const RouterSheet: React.FC<any> = (props) => {
 
           <SheetTitle className="m-0 flex flex-wrap items-center gap-x-1.5 text-sm">
             <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">{serviceInstanceId}</code>
-            <CopyButton tooltip="Copy instance id" value={serviceInstanceId} />
+            <CopyButton tooltip="Copy instance id" value={serviceInstanceId ?? ''} />
           </SheetTitle>
 
           <Spacer />
