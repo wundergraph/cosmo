@@ -155,13 +155,13 @@ const SDLPage: NextPageWithLayout = () => {
   if (isLoading) {
     content = <Loader fullscreen />;
   } else if (isFeatureSubgraphSelected && !activeFeatureSubgraph) {
-    // A renamed flag or a stale link leaves the selection unresolvable, which is not the same as a
-    // feature subgraph that exists but has no published schema.
+    // A flag that left the latest composition leaves the selection unresolvable, which is not the
+    // same as a feature subgraph that exists but has no published schema.
     content = (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Schema not found"
-        description={`${activeSubgraph} is not part of the latest composition of feature flag ${activeFeatureFlag}. The flag may have been renamed, or the feature subgraph removed from it.`}
+        description={`${activeSubgraph} is not part of the latest composition of feature flag ${activeFeatureFlag}. The flag may have been deleted or disabled, its latest composition may have failed, or the feature subgraph may have been removed from it.`}
       />
     );
   } else if (isFeatureSubgraphSelected && !featureSubgraphSdl) {

@@ -20,9 +20,9 @@ describe('isSchemaLoading', () => {
     ).toBe(true);
   });
 
-  // A stale bookmark, a renamed flag, or a feature subgraph dropped from the flag leaves the
-  // selection unresolvable. Gating on the resolved value rather than the request kept the schema
-  // withheld forever.
+  // A deleted or disabled flag, a flag whose latest composition failed, or a feature subgraph
+  // dropped from the flag leaves the selection unresolvable. Gating on the resolved value rather
+  // than the request kept the schema withheld forever.
   test('that an unresolvable feature subgraph stops waiting once the flag list settles', () => {
     expect(isSchemaLoading({ ...settled, isFeatureSubgraphSelected: true })).toBe(false);
   });

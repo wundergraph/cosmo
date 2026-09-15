@@ -18,7 +18,7 @@ export interface FeatureSubgraphSelection {
 }
 
 export interface FeatureSubgraphSchema {
-  /** Undefined when the selection does not resolve, such as a renamed flag or a stale link. */
+  /** Undefined when the selection does not resolve, such as a flag that left the latest composition. */
   featureSubgraph?: FeatureSubgraphInFlagComposition;
   sdl?: string;
   isLoading: boolean;

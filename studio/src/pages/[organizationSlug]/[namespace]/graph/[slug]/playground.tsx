@@ -872,8 +872,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
     );
   }, [defaultHeadersData]);
 
-  // A renamed flag or a stale link leaves the selection unresolvable. The endpoint is unknown too,
-  // so there is nothing for GraphiQL to introspect and it would fail silently.
+  // A flag that left the latest composition leaves the selection unresolvable. The endpoint is
+  // unknown too, so there is nothing for GraphiQL to introspect and it would fail silently.
   const isUnresolvedFeatureSubgraph = configType === 'featureSubgraph' && !isLoading && !activeFeatureSubgraph;
 
   const schema = useMemo(() => {
@@ -1331,7 +1331,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
             <EmptyState
               icon={<ExclamationTriangleIcon />}
               title="Schema not found"
-              description={`The selected feature subgraph is not part of the latest composition of feature flag ${router.query.featureFlag}. The flag may have been renamed, or the feature subgraph removed from it.`}
+              description={`The selected feature subgraph is not part of the latest composition of feature flag ${router.query.featureFlag}. The flag may have been deleted or disabled, its latest composition may have failed, or the feature subgraph may have been removed from it.`}
             />
           ) : (
             <>
