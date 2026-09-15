@@ -478,7 +478,7 @@ const Type = (props: {
   );
 };
 
-const TypeWrapper = ({ typename, category }: { typename: string; category: GraphQLTypeCategory }) => {
+const TypeWrapper = ({ typename, category }: { typename?: string; category: GraphQLTypeCategory }) => {
   const router = useRouter();
 
   const { ast } = useContext(ExplorerContext);
