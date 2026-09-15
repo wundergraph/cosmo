@@ -183,4 +183,132 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		// item queues commands against keys other than its own.
 		require.Empty(t, mr.Keys())
 	})
+
+	// A tag key lives as long as its longest lived member, so these hold one that
+	// outlives the fast forwards. Without it the key would expire and take the
+	// members with it, and what the prune does would never be visible.
+	keeper := func(tags ...string) enginecache.Item {
+		return enginecache.Item{Key: "v1:keeper:" + tags[0], Value: []byte(`{}`), TTL: 24 * time.Hour, Tags: tags}
+	}
+
+	t.Run("a member whose entry expired past the grace is dropped by the next write", func(t *testing.T) {
+		t.Parallel()
+		c, mr := newTestRedisCache(t)
+
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
+			keeper("declared:users"),
+			{Key: "v1:gone", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
+		}))
+
+		// Both clocks, because a member is only dead once redis has dropped the
+		// entry and this router agrees enough time has passed.
+		elapsed := time.Minute + tagIndexPruneGrace + time.Second
+		mr.FastForward(elapsed)
+		advance(c, elapsed)
+
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
+			{Key: "v1:live", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
+		}))
+
+		members, err := mr.ZMembers(tagIndexKey("declared:users"))
+		require.NoError(t, err)
+		require.ElementsMatch(t, []string{"v1:keeper:declared:users", "v1:live"}, members)
+	})
+
+	t.Run("a member inside the grace is kept, its entry could still be there", func(t *testing.T) {
+		t.Parallel()
+		c, mr := newTestRedisCache(t)
+
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
+			keeper("declared:users"),
+			{Key: "v1:recent", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
+		}))
+
+		// Expired by this router's clock but only just: a redis running a minute
+		// behind would still be serving it.
+		elapsed := time.Minute + time.Second
+		mr.FastForward(elapsed)
+		advance(c, elapsed)
+
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
+			{Key: "v1:live", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
+		}))
+
+		members, err := mr.ZMembers(tagIndexKey("declared:users"))
+		require.NoError(t, err)
+		require.ElementsMatch(t, []string{"v1:keeper:declared:users", "v1:recent", "v1:live"}, members)
+	})
+
+	t.Run("a member is dead by its latest score, not its first", func(t *testing.T) {
+		t.Parallel()
+		c, mr := newTestRedisCache(t)
+
+		item := enginecache.Item{Key: "v1:a", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}}
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{keeper("declared:users"), item}))
+
+		// Re-cached a second in, which scores the member a second further out.
+		mr.FastForward(time.Second)
+		advance(c, time.Second)
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
+
+		// Far enough that the first score is past the cutoff and the second is
+		// not, so only the re-scoring keeps the member.
+		gap := time.Minute + tagIndexPruneGrace + 500*time.Millisecond - time.Second
+		mr.FastForward(gap)
+		advance(c, gap)
+
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
+			{Key: "v1:b", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
+		}))
+
+		members, err := mr.ZMembers(tagIndexKey("declared:users"))
+		require.NoError(t, err)
+		require.Contains(t, members, "v1:a")
+
+		// Past the second score too, and it goes.
+		advance(c, time.Second)
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
+			{Key: "v1:c", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
+		}))
+
+		members, err = mr.ZMembers(tagIndexKey("declared:users"))
+		require.NoError(t, err)
+		require.NotContains(t, members, "v1:a")
+	})
+
+	t.Run("the prune leaves the tags a write does not name alone", func(t *testing.T) {
+		t.Parallel()
+		c, mr := newTestRedisCache(t)
+
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
+			keeper("declared:users"),
+			keeper("declared:untouched"),
+			{Key: "v1:gone", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users", "declared:untouched"}},
+		}))
+
+		elapsed := time.Minute + tagIndexPruneGrace + time.Second
+		mr.FastForward(elapsed)
+		advance(c, elapsed)
+
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
+			{Key: "v1:live", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
+		}))
+
+		members, err := mr.ZMembers(tagIndexKey("declared:users"))
+		require.NoError(t, err)
+		require.ElementsMatch(t, []string{"v1:keeper:declared:users", "v1:live"}, members)
+
+		// Nothing was written to it, so its dead member is still there and its
+		// own key TTL is what will clear it.
+		members, err = mr.ZMembers(tagIndexKey("declared:untouched"))
+		require.NoError(t, err)
+		require.ElementsMatch(t, []string{"v1:keeper:declared:untouched", "v1:gone"}, members)
+	})
+}
+
+// advance moves the clock the cache scores index members from forward by d,
+// leaving redis' own clock to the test.
+func advance(c *RedisCache, d time.Duration) {
+	previous := c.now
+	c.now = func() time.Time { return previous().Add(d) }
 }

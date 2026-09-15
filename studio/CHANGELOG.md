@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.181.0](https://github.com/wundergraph/cosmo/compare/studio@0.180.5...studio@0.181.0) (2026-09-14)
+
+### Features
+
+* add an option to set default headers ([#3208](https://github.com/wundergraph/cosmo/issues/3208)) ([fd12221](https://github.com/wundergraph/cosmo/commit/fd12221ef769fea0920941b47acf151655d82223)) (@JivusAyrus)
+
+## [0.180.5](https://github.com/wundergraph/cosmo/compare/studio@0.180.4...studio@0.180.5) (2026-09-09)
+
+**Note:** Version bump only for package studio
+
+## [0.180.4](https://github.com/wundergraph/cosmo/compare/studio@0.180.3...studio@0.180.4) (2026-09-09)
+
+**Note:** Version bump only for package studio
+
+## [0.180.3](https://github.com/wundergraph/cosmo/compare/studio@0.180.2...studio@0.180.3) (2026-09-08)
+
+**Note:** Version bump only for package studio
+
 ## [0.180.2](https://github.com/wundergraph/cosmo/compare/studio@0.180.1...studio@0.180.2) (2026-08-26)
 
 ### Bug Fixes

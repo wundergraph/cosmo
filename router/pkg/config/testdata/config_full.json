@@ -876,7 +876,13 @@
     "Invalidation": {
       "CacheTag": true,
       "Subgraph": false,
-      "Type": true
+      "Type": true,
+      "Endpoint": {
+        "Enabled": true,
+        "ListenAddr": "localhost:5027",
+        "Path": "/invalidation",
+        "SharedKey": "a-shared-key-that-is-long-enough-to-pass"
+      }
     }
   },
   "RouterConfigPath": "latest.json",
@@ -1004,8 +1010,8 @@
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
     "EnableDefer": false,
-    "EnableMultiFetch": false,
-    "EnableScheduleFetches": false,
+    "EnableMultiFetch": true,
+    "EnableScheduleFetches": true,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,

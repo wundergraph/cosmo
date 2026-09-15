@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.250.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.249.3...controlplane@0.250.0) (2026-09-14)
+
+### Features
+
+* add an option to set default headers ([#3208](https://github.com/wundergraph/cosmo/issues/3208)) ([fd12221](https://github.com/wundergraph/cosmo/commit/fd12221ef769fea0920941b47acf151655d82223)) (@JivusAyrus)
+
+## [0.249.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.249.2...controlplane@0.249.3) (2026-09-09)
+
+**Note:** Version bump only for package controlplane
+
+## [0.249.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.249.1...controlplane@0.249.2) (2026-09-09)
+
+**Note:** Version bump only for package controlplane
+
+## [0.249.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.249.0...controlplane@0.249.1) (2026-09-08)
+
+**Note:** Version bump only for package controlplane
+
 # [0.249.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.248.0...controlplane@0.249.0) (2026-08-31)
 
 ### Features
