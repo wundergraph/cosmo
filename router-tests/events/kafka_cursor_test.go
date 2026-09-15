@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
@@ -193,6 +194,25 @@ func publishEmployeeEventWithoutSubscriber(t *testing.T, xEnv *testenv.Environme
 	require.NoError(t, <-errCh)
 }
 
+// requireStableMessagesSent asserts that the engine's total messages-sent
+// counter stays at expectedTotal for the given window, i.e. no subscriber
+// received any further message during that time. This is checked via the
+// engine statistics rather than by reading from a websocket connection,
+// since a manual read-with-deadline on a connection that is expected to
+// receive nothing can desynchronize the frame reader and break later reads
+// on that same connection (see router-tests/CLAUDE.md).
+func requireStableMessagesSent(t *testing.T, xEnv *testenv.Environment, expectedTotal uint64, window time.Duration) {
+	t.Helper()
+
+	sr, ok := xEnv.Router.EngineStats.(*testenv.SyncReporter)
+	require.True(t, ok, "EngineStats is not a *testenv.SyncReporter; test environment misconfigured")
+
+	require.Equal(t, expectedTotal, sr.GetReport().MessagesSent)
+	require.Never(t, func() bool {
+		return sr.GetReport().MessagesSent != expectedTotal
+	}, window, 50*time.Millisecond)
+}
+
 // completeSubscription sends a "complete" message for the given subscription id.
 func completeSubscription(t *testing.T, conn *websocket.Conn, id string) {
 	t.Helper()
@@ -303,6 +323,89 @@ func TestKafkaCursor(t *testing.T) {
 			}
 
 			completeSubscription(t, reconnected, "1")
+		})
+	})
+
+	t.Run("ws subscriptions with cursor support are independent across clients", func(t *testing.T) {
+		// subscribe two clients to the router with cursor negotiation,
+		// verify both receive a cursor for the same message,
+		// disconnect client 2 and remember its cursor,
+		// publish three more messages while only client 1 is subscribed,
+		// verify client 1 receives all three,
+		// reconnect client 2 with its remembered cursor and verify it resumes
+		// correctly, receiving exactly the three missed messages,
+		// verify client 1 did not receive any of the resumed messages,
+		// then publish one more message and verify both clients receive it.
+		t.Parallel()
+
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
+
+			client1 := subscribeWithCursorGuarantee(t, xEnv)
+			client2 := subscribeWithCursorGuarantee(t, xEnv)
+			xEnv.WaitForSubscriptionCount(2, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
+
+			publishDefaultEmployeeEvent(xEnv, 1)
+
+			client1Event := readNextCursorPayload(t, client1, "1")
+			client2Event := readNextCursorPayload(t, client2, "1")
+
+			client2ResumeCursor := client2Event.Extensions.Cursor
+			_, client2ResumeOffset := decodeKafkaCursor(t, client2ResumeCursor)
+
+			completeSubscription(t, client2, "1")
+			require.NoError(t, client2.Close())
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+
+			for range 3 {
+				publishDefaultEmployeeEvent(xEnv, 1)
+			}
+
+			_, client1PreviousOffset := decodeKafkaCursor(t, client1Event.Extensions.Cursor)
+			for range 3 {
+				event := readNextCursorPayload(t, client1, "1")
+				_, offset := decodeKafkaCursor(t, event.Extensions.Cursor)
+				require.Equal(t, client1PreviousOffset.Offset+1, offset.Offset)
+				client1PreviousOffset = offset
+			}
+
+			reconnectedClient2 := subscribeWithCursorResume(t, xEnv, client2ResumeCursor)
+			xEnv.WaitForSubscriptionCount(2, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(2, EventWaitTimeout)
+
+			client2PreviousOffset := client2ResumeOffset
+			for range 3 {
+				event := readNextCursorPayload(t, reconnectedClient2, "1")
+				_, offset := decodeKafkaCursor(t, event.Extensions.Cursor)
+				require.Equal(t, client2PreviousOffset.Offset+1, offset.Offset)
+				client2PreviousOffset = offset
+			}
+
+			// client 1 already consumed the initial message plus the three
+			// interim ones, so the total messages-sent count (2 for the
+			// initial message to both clients, 3 for the interim messages to
+			// client 1 only, 3 for the catch-up messages to client 2 only)
+			// must not move while client 1 has nothing new to receive.
+			requireStableMessagesSent(t, xEnv, 8, 2*time.Second)
+
+			publishDefaultEmployeeEvent(xEnv, 1)
+
+			finalClient1Event := readNextCursorPayload(t, client1, "1")
+			_, finalClient1Offset := decodeKafkaCursor(t, finalClient1Event.Extensions.Cursor)
+			require.Equal(t, client1PreviousOffset.Offset+1, finalClient1Offset.Offset)
+
+			finalClient2Event := readNextCursorPayload(t, reconnectedClient2, "1")
+			_, finalClient2Offset := decodeKafkaCursor(t, finalClient2Event.Extensions.Cursor)
+			require.Equal(t, client2PreviousOffset.Offset+1, finalClient2Offset.Offset)
+
+			completeSubscription(t, client1, "1")
+			completeSubscription(t, reconnectedClient2, "1")
 		})
 	})
 
