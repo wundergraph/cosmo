@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.347.1](https://github.com/wundergraph/cosmo/compare/router@0.347.0...router@0.347.1) (2026-09-15)
+
+### Bug Fixes
+
+* enable multi-fetch and scheduling ([#3243](https://github.com/wundergraph/cosmo/issues/3243)) ([ce3eec1](https://github.com/wundergraph/cosmo/commit/ce3eec17ab6ac993cb281989dfe8b6f9a35be391)) (@ysmolski)
+
 # [0.347.0](https://github.com/wundergraph/cosmo/compare/router@0.346.1...router@0.347.0) (2026-09-14)
 
 ### Features
