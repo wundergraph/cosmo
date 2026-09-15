@@ -89,7 +89,7 @@ const ProposalsPage: NextPageWithLayout = () => {
               router.push(
                 `${buildUrl('/:organizationSlug/policies', {
                   organizationSlug: user?.currentOrganization.slug,
-                  namespace: router.query.namespace as string,
+                  namespace,
                 })}#proposals`,
               );
             }}

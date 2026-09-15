@@ -1014,10 +1014,10 @@ export const GraphSelector = () => {
             schemaType: v,
           });
         }}
-        value={(router.query.schemaType as string) || 'client'}
+        value={schemaType || 'client'}
       >
         <SelectTrigger className="w-max">
-          <SelectValue>{sentenceCase((router.query.schemaType as string) || 'client')} Schema</SelectValue>
+          <SelectValue>{sentenceCase(schemaType || 'client')} Schema</SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="client">
@@ -1291,7 +1291,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
           organizationSlug,
           namespace,
           graphName,
-          schemaType: (router.query.schemaType as string) || 'client',
+          schemaType: schemaType || 'client',
         })}
       >
         Schema
@@ -1309,7 +1309,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
             namespace,
             graphName,
             category: selectedCategory,
-            schemaType: (router.query.schemaType as string) || 'client',
+            schemaType: schemaType || 'client',
           })}
         >
           {sentenceCase(selectedCategory)}
