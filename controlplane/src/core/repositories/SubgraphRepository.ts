@@ -13,7 +13,7 @@ import { and, arrayOverlaps, asc, count, desc, eq, gt, inArray, like, lt, notInA
 import { validate as isValidUuid } from 'uuid';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { GraphQLSchema, parse } from 'graphql';
+import { GraphQLSchema } from 'graphql';
 import { CompositionOptions } from '@wundergraph/composition';
 import { DBSubgraphType, SchemaCheckChangeAction, WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
@@ -2651,7 +2651,6 @@ export class SubgraphRepository {
         const baseCompositionSubgraphs = composableBaseSubgraphs.map((s) => ({
           name: s.name,
           url: s.routingUrl,
-          definitions: parse(s.schemaSDL),
         }));
 
         const plan = await featureFlagRepo.getSubgraphsToCompose({
@@ -2846,7 +2845,9 @@ export class SubgraphRepository {
 
           // Collect inspected operations
           for (const resultElement of subgraphOverrideCheck.result.values()) {
-            inspectedOperations.push(...resultElement);
+            for (const op of resultElement) {
+              inspectedOperations.push(op);
+            }
           }
         }
       }
@@ -2874,7 +2875,9 @@ export class SubgraphRepository {
 
           // Collect inspected operations
           for (const resultElement of fedGraphOverrideCheck.result.values()) {
-            inspectedOperations.push(...resultElement);
+            for (const op of resultElement) {
+              inspectedOperations.push(op);
+            }
           }
         }
       }
