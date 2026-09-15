@@ -15,7 +15,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Router } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { getRouters } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { useRouter } from 'next/router';
-import { useQueryParam } from '@/hooks/use-query-param';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import React, { useContext, useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
 import { formatDistanceToNow, subSeconds } from 'date-fns';
@@ -299,8 +299,8 @@ const RoutersPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const namespace = router.query.namespace as string;
-  const slug = router.query.slug as string;
+  const namespace = useRouteParam('namespace');
+  const slug = useRouteParam('slug');
 
   const { data, isLoading, error, refetch } = useQuery(
     getRouters,

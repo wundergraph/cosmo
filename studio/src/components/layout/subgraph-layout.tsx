@@ -5,7 +5,7 @@ import { ExclamationTriangleIcon, FileTextIcon, HomeIcon } from '@radix-ui/react
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { getSubgraphByName } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { GetSubgraphByNameResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { Fragment, createContext, useMemo } from 'react';
 import { PiGraphLight } from 'react-icons/pi';
 import { EmptyState } from '../empty-state';
@@ -29,12 +29,11 @@ export interface SubgraphContextProps {
 export const SubgraphContext = createContext<SubgraphContextProps | undefined>(undefined);
 
 export const SubgraphLayout = ({ children }: LayoutProps) => {
-  const router = useRouter();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
-  const slug = router.query.subgraphSlug as string;
+  const slug = useRouteParam('subgraphSlug');
 
   const { data, isLoading, error, refetch } = useQuery(getSubgraphByName, {
     name: slug,

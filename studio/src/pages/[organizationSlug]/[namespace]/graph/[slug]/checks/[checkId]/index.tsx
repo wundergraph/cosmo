@@ -74,7 +74,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatDistanceToNow, subDays } from 'date-fns';
 import { useRouter } from 'next/router';
-import { useQueryParam } from '@/hooks/use-query-param';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import React, { useContext, useMemo } from 'react';
 import { HiOutlineScissors } from 'react-icons/hi2';
 import { PiBracketsCurlyBold, PiCubeFocus } from 'react-icons/pi';
@@ -214,14 +214,13 @@ const ProposedSchemas = ({
 
 const CheckOverviewPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
-  const router = useRouter();
 
   const organizationSlug = useCurrentOrganization()?.slug;
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
-  const id = router.query.checkId as string;
+  const slug = useRouteParam('slug');
+  const id = useRouteParam('checkId');
 
   const { data, isLoading, error, refetch } = useQuery(
     getCheckSummary,
@@ -347,8 +346,8 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
-  const id = router.query.checkId as string;
+  const slug = useRouteParam('slug');
+  const id = useRouteParam('checkId');
   const tab = useQueryParam('tab');
 
   const { mutate: forceSuccess } = useMutation(forceCheckSuccess, {

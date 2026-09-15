@@ -86,7 +86,7 @@ import { formatISO } from 'date-fns';
 import { GraphQLSchema, buildASTSchema, parse } from 'graphql';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useQueryParam } from '@/hooks/use-query-param';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import { Dispatch, SetStateAction, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { MdOutlineFeaturedPlayList } from 'react-icons/md';
 import { PiGraphLight } from 'react-icons/pi';
@@ -871,7 +871,7 @@ export const GraphSelector = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
   const activeFeatureFlag = useQueryParam('featureFlag');
-  const graphName = router.query.slug as string;
+  const graphName = useRouteParam('slug');
   const schemaType = useQueryParam('schemaType');
   const {
     namespace: { name: namespace },
@@ -1238,7 +1238,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const graphName = router.query.slug as string;
+  const graphName = useRouteParam('slug');
   const selectedCategory = (router.query.category as string) ?? 'query';
   const typename = useQueryParam('typename');
   const category = router.query.category as GraphQLTypeCategory;

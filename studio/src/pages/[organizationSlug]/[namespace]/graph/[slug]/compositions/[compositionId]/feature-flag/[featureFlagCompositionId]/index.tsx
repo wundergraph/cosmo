@@ -5,7 +5,7 @@ import { NextPageWithLayout } from '@/lib/page';
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { Button } from '@/components/ui/button';
 import { CompositionDetails } from '../..';
 import { getCompositionDetails } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
@@ -15,15 +15,13 @@ import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { buildUrl } from '@/lib/build-url';
 
 const FeatureFlagCompositionDetailsPage: NextPageWithLayout = () => {
-  const router = useRouter();
-
   const organizationSlug = useCurrentOrganization()?.slug;
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
-  const id = router.query.compositionId as string;
-  const featureFlagCompositionId = router.query.featureFlagCompositionId as string;
+  const slug = useRouteParam('slug');
+  const id = useRouteParam('compositionId');
+  const featureFlagCompositionId = useRouteParam('featureFlagCompositionId');
 
   const { data, isLoading, error, refetch } = useQuery(getCompositionDetails, {
     compositionId: featureFlagCompositionId,

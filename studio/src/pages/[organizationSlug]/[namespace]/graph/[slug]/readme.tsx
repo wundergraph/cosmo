@@ -5,6 +5,7 @@ import { CLI } from '@/components/ui/cli';
 import { docsBaseURL } from '@/lib/constants';
 import { CommandLineIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { useContext } from 'react';
 import { SafeMarkdown } from '@/components/safe-markdown';
 
@@ -41,8 +42,7 @@ const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
 };
 
 const FederatedGraphReadmePage = () => {
-  const router = useRouter();
-  const slug = router.query.slug as string;
+  const slug = useRouteParam('slug');
   const graph = useContext(GraphContext);
   if (!graph || !graph.graph) {
     return null;

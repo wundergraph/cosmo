@@ -16,7 +16,7 @@ import { useQuery } from '@connectrpc/connect-query';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { getOrganizationRequestsCount } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { useContext, useEffect } from 'react';
 import { CgDanger } from 'react-icons/cg';
 import { IoWarningOutline } from 'react-icons/io5';
@@ -209,8 +209,7 @@ const UsagesPage: NextPageWithLayout = () => {
 };
 
 const IncreaseLimits = () => {
-  const router = useRouter();
-  const slug = router.query.organizationSlug as string;
+  const slug = useRouteParam('organizationSlug');
 
   return (
     <Button asChild variant="outline">

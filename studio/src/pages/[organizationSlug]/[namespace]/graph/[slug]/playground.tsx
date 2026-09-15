@@ -69,8 +69,7 @@ import crypto from 'crypto';
 import { GraphiQL } from 'graphiql';
 import { GraphQLSchema, parse, validate } from 'graphql';
 import { useTheme } from 'next-themes';
-import { useRouter } from 'next/router';
-import { useQueryParam } from '@/hooks/use-query-param';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import posthog from 'posthog-js';
 import { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -283,9 +282,8 @@ const FormSchema = z.object({
 type Input = z.infer<typeof FormSchema>;
 
 const PersistOperation = () => {
-  const router = useRouter();
-  const slug = router.query.slug as string;
-  const namespace = router.query.namespace as string;
+  const slug = useRouteParam('slug');
+  const namespace = useRouteParam('namespace');
 
   const { query } = useContext(TraceContext);
 

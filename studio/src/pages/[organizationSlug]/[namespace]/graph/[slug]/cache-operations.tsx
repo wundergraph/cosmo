@@ -18,7 +18,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import debounce from 'debounce';
 import { useRouter } from 'next/router';
-import { useQueryParam } from '@/hooks/use-query-param';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { docsBaseURL } from '@/lib/constants';
@@ -28,7 +28,7 @@ import { buildUrl } from '@/lib/build-url';
 
 const CacheOperationsPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const federatedGraphName = router.query.slug as string;
+  const federatedGraphName = useRouteParam('slug');
   const {
     namespace: { name: namespace },
   } = useWorkspace();

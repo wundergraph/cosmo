@@ -35,7 +35,7 @@ import { OverrideChangeSchema } from '@wundergraph/cosmo-connect/dist/platform/v
 import copy from 'copy-to-clipboard';
 import Fuse from 'fuse.js';
 import { useRouter } from 'next/router';
-import { useQueryParam } from '@/hooks/use-query-param';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useApplyParams } from '../analytics/use-apply-params';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -119,7 +119,7 @@ export const CheckOperations = () => {
   const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
   const limit = Number.parseInt(useQueryParam('pageSize', '10'));
 
-  const id = router.query.checkId as string;
+  const id = useRouteParam('checkId');
 
   const [search, setSearch] = useState(router.query.search as string);
   const [debouncedSearch] = useDebounce(search, 500);

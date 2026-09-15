@@ -26,7 +26,7 @@ import { getProposalsByFederatedGraph } from '@wundergraph/cosmo-connect/dist/pl
 import { formatDistanceToNow, formatISO } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useQueryParam } from '@/hooks/use-query-param';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { buildUrl } from '@/lib/build-url';
 
@@ -34,7 +34,7 @@ const ProposalsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const user = useUser();
   const proposalsFeature = useFeature('proposals');
-  const federatedGraphName = router.query.slug as string;
+  const federatedGraphName = useRouteParam('slug');
   const {
     namespace: { name: namespace },
   } = useWorkspace();

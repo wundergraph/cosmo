@@ -34,7 +34,7 @@ import {
 import { IntegrationConfig } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useQueryParam } from '@/hooks/use-query-param';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import { useEffect, useState } from 'react';
 import { FiSlack } from 'react-icons/fi';
 import { z } from 'zod';
@@ -431,12 +431,11 @@ const Integration = ({
 };
 
 const IntegrationsPage: NextPageWithLayout = () => {
-  const router = useRouter();
   const checkUserAccess = useCheckUserAccess();
 
   const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
 
-  const organizationSlug = router.query.organizationSlug as string;
+  const organizationSlug = useRouteParam('organizationSlug');
   const code = useQueryParam('code');
   const slackRedirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}/${encodeURIComponent(organizationSlug)}/integrations`;
   const [shouldCreate, setShouldCreate] = useState(false);

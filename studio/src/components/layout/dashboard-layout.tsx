@@ -7,6 +7,7 @@ import { Component2Icon, Cross1Icon, EnvelopeClosedIcon, ExclamationTriangleIcon
 import { getBillingPlans } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { addDays } from 'date-fns';
 import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { Dispatch, SetStateAction, useMemo } from 'react';
 import { AiOutlineAudit } from 'react-icons/ai';
 import { MdOutlineFeaturedPlayList, MdOutlinePolicy, MdOutlineExtension } from 'react-icons/md';
@@ -107,7 +108,7 @@ export const OrganizationBanner = () => {
 export const DashboardLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const user = useUser();
-  const organizationSlug = router.query.organizationSlug as string;
+  const organizationSlug = useRouteParam('organizationSlug');
   const checkUserAccess = useCheckUserAccess();
   const [isStarBannerDisabled, setDisableStarBanner] = useStarBannerDisabled();
   const { namespace, namespaceByName, isLoading: isWorkspaceLoading } = useWorkspace();

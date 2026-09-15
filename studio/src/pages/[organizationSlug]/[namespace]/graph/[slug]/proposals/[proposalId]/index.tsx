@@ -44,7 +44,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useQueryParam } from '@/hooks/use-query-param';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import { useContext, useState } from 'react';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { buildUrl } from '@/lib/build-url';
@@ -65,8 +65,8 @@ export const ProposalDetails = ({
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
-  const id = router.query.proposalId as string;
+  const slug = useRouteParam('slug');
+  const id = useRouteParam('proposalId');
   const tab = useQueryParam('tab');
   const subgraph = useQueryParam('subgraph');
   const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
@@ -670,14 +670,13 @@ export const ProposalDetails = ({
 };
 
 const ProposalDetailsPage: NextPageWithLayout = () => {
-  const router = useRouter();
   const user = useUser();
   const graphData = useContext(GraphContext);
 
   const organizationSlug = user?.currentOrganization.slug;
   const namespace = graphData?.graph?.namespace;
   const slug = graphData?.graph?.name;
-  const id = router.query.proposalId as string;
+  const id = useRouteParam('proposalId');
 
   const { data, isLoading, error, refetch } = useQuery(getProposal, {
     proposalId: id,

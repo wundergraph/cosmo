@@ -8,21 +8,19 @@ import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { getFeatureFlagByName } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { useRouteParam } from '@/hooks/use-query-param';
 import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { buildUrl } from '@/lib/build-url';
 
 const FeatureFlagDetailsPage: NextPageWithLayout = () => {
-  const router = useRouter();
-
   const organizationSlug = useCurrentOrganization()?.slug;
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
-  const featureFlagSlug = router.query.featureFlagSlug as string;
+  const slug = useRouteParam('slug');
+  const featureFlagSlug = useRouteParam('featureFlagSlug');
 
   const { data, isLoading, error, refetch } = useQuery(getFeatureFlagByName, {
     name: featureFlagSlug,
