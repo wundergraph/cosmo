@@ -1,13 +1,13 @@
 import { Warning } from '../../warnings/types';
 import { QUOTATION_JOIN } from '../../utils/string-constants';
-import {
-  type InvalidRepeatedComposedDirectiveWarningParams,
-  type OverrideDirectiveLabelArgumentWarningParams,
-  type ProvidesOnUnionWarningParams,
-  type ProvidesWithInterfaceFieldSelectionWarningParams,
-  type SingleFederatedInputFieldOneOfWarningParams,
-  type SingleSubgraphInputFieldOneOfWarningParams,
-  type UnsupportedDirectiveWarningParams,
+import type {
+  InvalidRepeatedComposedDirectiveWarningParams,
+  OverrideDirectiveLabelArgumentWarningParams,
+  ProvidesOnUnionWarningParams,
+  ProvidesWithInterfaceFieldSelectionWarningParams,
+  SingleFederatedInputFieldOneOfWarningParams,
+  SingleSubgraphInputFieldOneOfWarningParams,
+  UnsupportedDirectiveWarningParams,
 } from './params';
 import { type SubgraphName } from '../../types/types';
 

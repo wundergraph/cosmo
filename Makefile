@@ -115,6 +115,9 @@ generate:
 	pnpm generate
 	make generate-go
 
+generate-ptq:
+	pnpm generate:ptq
+
 generate-go:
 	rm -rf router/gen && buf generate --path proto/wg/cosmo/node --path proto/wg/cosmo/ai --path proto/wg/cosmo/common --path proto/wg/cosmo/graphqlmetrics --template buf.router.go.gen.yaml
 	rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml

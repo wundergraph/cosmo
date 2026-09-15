@@ -61,7 +61,7 @@ const COMPOSITION_DEPLOY_CONCURRENCY = 5;
 
 @traced
 export class CompositionService {
-  #ptqService: PromptToQueryService;
+  readonly #ptqService: PromptToQueryService | undefined;
 
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
@@ -75,16 +75,18 @@ export class CompositionService {
     private chClient: ClickHouseClient | undefined,
     private webhookProxyUrl: string | undefined,
     private disableResolvabilityValidation: boolean | undefined,
-    private promptToQueryServiceAddress: string | undefined,
+    promptToQueryServiceAddress: string | undefined,
     private defaultBillingPlanId: string | undefined,
   ) {
-    this.#ptqService = new PromptToQueryService(
-      this.db,
-      this.logger,
-      this.promptToQueryServiceAddress,
-      this.organizationId,
-      this.defaultBillingPlanId,
-    );
+    this.#ptqService = promptToQueryServiceAddress
+      ? new PromptToQueryService(
+          this.db,
+          this.logger,
+          promptToQueryServiceAddress,
+          this.organizationId,
+          this.defaultBillingPlanId,
+        )
+      : undefined;
   }
 
   public async composeAndDeployFederatedGraph({

@@ -4117,13 +4117,13 @@
         },
         "enable_multi_fetch": {
           "type": "boolean",
-          "description": "Enables merging entity fetches to the same subgraph that execute in the same wave into a single batched request with aliased _entities fields. Merging reduces the number of subgraph requests.",
-          "default": false
+          "description": "Merges entity fetches to the same subgraph that execute in the same wave into a single batched request with aliased _entities fields. Merging reduces the number of subgraph requests. Set to false to send one request per entity fetch.",
+          "default": true
         },
         "enable_schedule_fetches": {
           "type": "boolean",
-          "description": "Enables the dependency-aware fetch scheduler, which organizes fetches into component-split, chain-inlined execution trees instead of the legacy wave-based structure.",
-          "default": false
+          "description": "Uses the dependency-aware fetch scheduler, which organizes fetches into component-split, chain-inlined execution trees instead of the legacy wave-based structure. Set to false to fall back to the wave-based structure.",
+          "default": true
         },
         "websocket_client_write_timeout": {
           "type": "string",
