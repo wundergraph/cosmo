@@ -622,6 +622,52 @@ describe('FederationFactory tests', () => {
     );
   });
 
+  test('that a manually defined federation__Policy scalar is not included in the federated graph', () => {
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphWithManualPolicyScalar],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    const expected = normalizeString(
+      SCHEMA_QUERY_DEFINITION +
+        `
+      type Query {
+        a: ID
+      }
+    `,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expected);
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expected);
+  });
+
+  test('that a manually defined openfed__Scope scalar is not included in the client schema', () => {
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphWithManualScopeScalar],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          REQUIRES_SCOPES_DIRECTIVE +
+          `
+      type Query {
+        a: ID @requiresScopes(scopes: [["read"]])
+      }
+    ` +
+          OPENFED_SCOPE,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+      type Query {
+        a: ID
+      }
+    `,
+      ),
+    );
+  });
+
   test('that @tag and @inaccessible persist correctly #1.1', () => {
     const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
       [subgraphI, subgraphJ],
@@ -1476,6 +1522,28 @@ const subgraphF: Subgraph = {
     }
   `),
 };
+
+const subgraphWithManualPolicyScalar = createSubgraph(
+  'policy-scalar',
+  `
+    scalar federation__Policy
+
+    type Query {
+      a: ID @policy(policies: [["read"]])
+    }
+  `,
+);
+
+const subgraphWithManualScopeScalar = createSubgraph(
+  'scope-scalar',
+  `
+    scalar openfed__Scope
+
+    type Query {
+      a: ID @requiresScopes(scopes: [["read"]])
+    }
+  `,
+);
 
 const subgraphG: Subgraph = {
   name: 'subgraph-g',

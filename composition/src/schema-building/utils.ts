@@ -30,6 +30,7 @@ import {
   type FederatedDirectivesData,
   type FieldData,
   type InputObjectDefinitionData,
+  type InputValueData,
   type InterfaceDefinitionData,
   type NodeData,
   type ObjectDefinitionData,
@@ -55,6 +56,7 @@ import {
   DIRECTIVE_DEFINITION,
   EXTERNAL,
   FLOAT_SCALAR,
+  FROM_CONTEXT,
   INACCESSIBLE,
   INPUT_FIELD,
   INPUT_NODE_KINDS,
@@ -557,7 +559,7 @@ export function getClientSchemaFieldNodeByFieldData(fieldData: FieldData): Mutab
   const directives = getClientFederatedDirectiveNodes(fieldData);
   const argumentNodes: MutableInputValueNode[] = [];
   for (const inputValueData of fieldData.argumentDataByName.values()) {
-    if (isNodeDataInaccessible(inputValueData)) {
+    if (isNodeDataInaccessible(inputValueData) || isInputValueDataFromContext(inputValueData)) {
       continue;
     }
     argumentNodes.push({
@@ -856,6 +858,10 @@ export function isTypeValidImplementation({
 
 export function isNodeDataInaccessible(data: NodeData): boolean {
   return data.federatedDirectivesData.directivesByName.has(INACCESSIBLE) || data.directivesByName.has(INACCESSIBLE);
+}
+
+export function isInputValueDataFromContext(data: InputValueData): boolean {
+  return data.contextSubgraphNames.size > 0;
 }
 
 export function isLeafKind(kind: Kind): boolean {

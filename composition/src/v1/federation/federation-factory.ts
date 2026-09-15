@@ -27,6 +27,7 @@ import {
   allChildDefinitionsAreInaccessibleError,
   allExternalFieldInstancesError,
   configureDescriptionPropagationError,
+  contextArgumentRequiredError,
   inaccessibleQueryRootTypeError,
   inaccessibleRequiredInputValueError,
   incompatibleFederatedFieldNamedTypeError,
@@ -145,6 +146,7 @@ import {
   getDefinitionDataCoords,
   getInitialFederatedDescription,
   getSubscriptionFilterValue,
+  isInputValueDataFromContext,
   isLeafKind,
   isNodeDataInaccessible,
   isParentDataCompositeOutputType,
@@ -769,6 +771,10 @@ export class FederationFactory {
     );
     setLongestDescription(targetData, incomingData);
     addIterableToSet({
+      source: incomingData.contextSubgraphNames,
+      target: targetData.contextSubgraphNames,
+    });
+    addIterableToSet({
       source: incomingData.requiredSubgraphNames,
       target: targetData.requiredSubgraphNames,
     });
@@ -1119,6 +1125,7 @@ export class FederationFactory {
   copyInputValueData(sourceData: InputValueData): InputValueData {
     return {
       configureDescriptionDataBySubgraphName: copyObjectValueMap(sourceData.configureDescriptionDataBySubgraphName),
+      contextSubgraphNames: new Set(sourceData.contextSubgraphNames),
       directivesByName: copyArrayValueMap(sourceData.directivesByName),
       federatedCoords: sourceData.federatedCoords,
       fieldName: sourceData.fieldName,
@@ -1934,6 +1941,22 @@ export class FederationFactory {
     const invalidRequiredArguments: InvalidRequiredInputValueData[] = [];
     const fieldCoords = `${fieldData.renamedParentTypeName}.${fieldData.name}`;
     for (const [argumentName, inputValueData] of fieldData.argumentDataByName) {
+      if (isInputValueDataFromContext(inputValueData)) {
+        const requiredSubgraphNames = getEntriesNotInHashSet(
+          inputValueData.requiredSubgraphNames,
+          inputValueData.contextSubgraphNames,
+        );
+        if (requiredSubgraphNames.length > 0) {
+          this.errors.push(
+            contextArgumentRequiredError(
+              inputValueData.federatedCoords,
+              [...inputValueData.contextSubgraphNames],
+              requiredSubgraphNames,
+            ),
+          );
+        }
+        continue;
+      }
       if (fieldData.subgraphNames.size === inputValueData.subgraphNames.size) {
         argumentNames.push(argumentName);
         const argumentNodeResult = routerSchemaInputValueNodeFromData({
