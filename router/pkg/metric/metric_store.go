@@ -27,6 +27,9 @@ const (
 	CircuitBreakerStateGauge           = "router.circuit_breaker.state"
 	CircuitBreakerShortCircuitsCounter = "router.circuit_breaker.short_circuits"
 
+	SSEWriteDurationHistogram = "router.http.server.sse.write.duration"
+	SSEWriteFailuresCounter   = "router.http.server.sse.write.failures"
+
 	SchemaFieldUsageCounter = "router.graphql.schema_field_usage" // Total field usage
 
 	OperationPlanningTime = "router.graphql.operation.planning_time" // Time taken to plan the operation
@@ -69,6 +72,13 @@ var (
 	InFlightRequestsUpDownCounterDescription = "Number of requests in flight"
 	InFlightRequestsUpDownCounterOptions     = []otelmetric.Int64UpDownCounterOption{
 		otelmetric.WithDescription(InFlightRequestsUpDownCounterDescription),
+	}
+	SSEWriteDurationHistogramOptions = []otelmetric.Float64HistogramOption{
+		otelmetric.WithUnit("ms"),
+		otelmetric.WithDescription("SSE write and flush duration in milliseconds"),
+	}
+	SSEWriteFailuresCounterOptions = []otelmetric.Int64CounterOption{
+		otelmetric.WithDescription("SSE writes that failed or exceeded their deadline"),
 	}
 
 	// GraphQL operation metrics
@@ -173,6 +183,8 @@ type (
 		MeasureCircuitBreakerShortCircuit(ctx context.Context, opts ...otelmetric.AddOption)
 		MeasureOperationCostEstimated(ctx context.Context, cost int64, opts ...otelmetric.RecordOption)
 		MeasureOperationCostActual(ctx context.Context, cost int64, opts ...otelmetric.RecordOption)
+		MeasureSSEWriteDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
+		MeasureSSEWriteFailure(ctx context.Context, opts ...otelmetric.AddOption)
 		Flush(ctx context.Context) error
 		Shutdown() error
 	}
@@ -193,6 +205,8 @@ type (
 		SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureOperationCostEstimated(ctx context.Context, cost int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureOperationCostActual(ctx context.Context, cost int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
+		MeasureSSEWriteDuration(ctx context.Context, duration time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
+		MeasureSSEWriteFailure(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		Flush(ctx context.Context) error
 		Shutdown(ctx context.Context) error
 	}
@@ -258,6 +272,39 @@ func (h *Metrics) MeasureInFlight(ctx context.Context, sliceAttr []attribute.Key
 			h()
 		}
 	}
+}
+
+func (h *Metrics) MeasureSSEWriteFailure(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
+	h.measureAdd(ctx, sliceAttr, opt, func(provider Provider, ctx context.Context, opts ...otelmetric.AddOption) {
+		provider.MeasureSSEWriteFailure(ctx, opts...)
+	})
+}
+
+func (h *Metrics) MeasureSSEWriteDuration(ctx context.Context, duration time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
+	opts := []otelmetric.RecordOption{h.baseAttributesOpt, opt}
+	durationMs := float64(duration) / float64(time.Millisecond)
+	if len(sliceAttr) == 0 {
+		h.promRequestMetrics.MeasureSSEWriteDuration(ctx, durationMs, opts...)
+	} else {
+		explodeRecordInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.RecordOption) {
+			h.promRequestMetrics.MeasureSSEWriteDuration(ctx, durationMs, append(newOpts, opts...)...)
+		})
+	}
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+	h.otlpRequestMetrics.MeasureSSEWriteDuration(ctx, durationMs, opts...)
+}
+
+func (h *Metrics) measureAdd(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption, measure func(Provider, context.Context, ...otelmetric.AddOption)) {
+	opts := []otelmetric.AddOption{h.baseAttributesOpt, opt}
+	if len(sliceAttr) == 0 {
+		measure(h.promRequestMetrics, ctx, opts...)
+	} else {
+		explodeAddInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.AddOption) {
+			measure(h.promRequestMetrics, ctx, append(newOpts, opts...)...)
+		})
+	}
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+	measure(h.otlpRequestMetrics, ctx, opts...)
 }
 
 func (h *Metrics) MeasureRequestCount(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
