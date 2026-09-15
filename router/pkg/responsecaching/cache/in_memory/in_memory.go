@@ -15,10 +15,12 @@ import (
 const entryCost = 1
 const maxSize = 100_000
 
-// entry is what ristretto holds: the value and the headerTags a hit hands back.
+// entry is what ristretto holds: the value and the headerTags a hit hands back,
+// or the vary names of a record.
 type entry struct {
 	value      []byte
 	headerTags []string
+	vary       []string
 }
 
 type InMemoryCache struct {
@@ -89,6 +91,7 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) (map[string]
 			Value:      bytes.Clone(value.value),
 			TTL:        ttl,
 			HeaderTags: slices.Clone(value.headerTags),
+			Vary:       slices.Clone(value.vary),
 		}
 	}
 
@@ -125,7 +128,7 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	for _, item := range last {
 		// A write ristretto turned away is not there to be found, so indexing
 		// it would leave the tag naming an entry that never existed.
-		stored := entry{value: bytes.Clone(item.Value), headerTags: slices.Clone(item.HeaderTags)}
+		stored := entry{value: bytes.Clone(item.Value), headerTags: slices.Clone(item.HeaderTags), vary: slices.Clone(item.Vary)}
 		if c.cache.SetWithTTL(item.Key, stored, entryCost, item.TTL) {
 			c.tags.add(item.Key, item.Tags, now.Add(item.TTL))
 		}

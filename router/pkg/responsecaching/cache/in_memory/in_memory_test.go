@@ -145,6 +145,22 @@ func TestInMemoryCache(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, []string{"subgraph-accounts", "user-42"}, again["a"].HeaderTags)
 		})
+
+		t.Run("a vary record comes back as a record and is not shared", func(t *testing.T) {
+			t.Parallel()
+
+			c := newTestCache(t)
+
+			vary := []string{"accept-language"}
+			err := c.SetMany(ctx, []enginecache.Item{{Key: "a", Vary: vary, TTL: time.Hour}})
+			require.NoError(t, err)
+			vary[0] = "changed-after-write"
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.Empty(t, results["a"].Value)
+			require.Equal(t, []string{"accept-language"}, results["a"].Vary)
+		})
 	})
 
 	t.Run("SetMany", func(t *testing.T) {
