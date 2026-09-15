@@ -133,7 +133,7 @@ demo_mode: true
 
 # Cross-Origin Resource Sharing (CORS)
 cors:
-  allow_origins: ['https://app.example.com', 'custom://localhost']
+  allow_origins: ['*']
   allow_methods:
     - HEAD
     - GET
