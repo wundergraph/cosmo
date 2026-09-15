@@ -192,6 +192,48 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		}
 	})
 
+	t.Run("a page of only kept members ends the walk instead of repeating it", func(t *testing.T) {
+		// The offset is how many members were kept. Writes with shorter TTLs
+		// landing mid-walk sort ahead of those, so the next page can be the kept
+		// members again. Without a progress guard that page is read forever.
+		t.Parallel()
+		interposer := &afterCommand{name: "zrangebyscore"}
+		c, mr := newTestRedisCacheWithHook(t, interposer)
+
+		// A full page of members whose entries have not landed, so all are kept.
+		later := float64(c.now().Add(time.Minute).UnixMilli())
+		for i := range invalidationPageSize {
+			_, err := mr.ZAdd(tagIndexKey("subgraph:accounts"), later, fmt.Sprintf("v1:kept:%d", i))
+			require.NoError(t, err)
+		}
+
+		// Once the first page is read, a full page with shorter TTLs lands ahead of it.
+		sooner := float64(c.now().Add(30 * time.Second).UnixMilli())
+		var landed bool
+		interposer.fn = func() {
+			if landed {
+				return
+			}
+			landed = true
+			for i := range invalidationPageSize {
+				_, err := mr.ZAdd(tagIndexKey("subgraph:accounts"), sooner, fmt.Sprintf("v1:new:%d", i))
+				require.NoError(t, err)
+			}
+		}
+
+		// A regression spins on the same page; the deadline turns that into a failure.
+		ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+		defer cancel()
+		removed, err := c.InvalidateByTags(ctx, []string{"subgraph:accounts"})
+		require.NoError(t, err)
+		require.Zero(t, removed)
+		require.True(t, landed)
+
+		members, err := mr.ZMembers(tagIndexKey("subgraph:accounts"))
+		require.NoError(t, err)
+		require.Len(t, members, invalidationPageSize*2, "nothing dropped: all may still be landing")
+	})
+
 	t.Run("a tag naming more entries than one page still takes all of them", func(t *testing.T) {
 		// The index is walked in pages, so the boundary is where an off by one
 		// would leave entries behind that the caller was told were gone.

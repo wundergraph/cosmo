@@ -1203,6 +1203,9 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 	if r.responseCacheConfig.FallbackTTL <= 0 {
 		return fmt.Errorf("response cache is enabled but its fallback_ttl is %s, which must be greater than zero", r.responseCacheConfig.FallbackTTL)
 	}
+	if err := validateResponseCacheTagHeader(r.responseCacheConfig.TagHeader); err != nil {
+		return err
+	}
 
 	var err error
 	switch provider := r.responseCacheConfig.Storage.Provider; provider {

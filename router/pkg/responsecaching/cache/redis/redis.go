@@ -117,9 +117,14 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 			continue
 		}
 
+		decoded, headerTags, err := caching.DecodeEntry(value)
+		if err != nil {
+			return nil, fmt.Errorf("redis adapter decode %q: %w", key, err)
+		}
+
 		// Keyed by what the caller asked with, not the prefixed key it was
 		// stored under: the namespace is this cache's business, not theirs.
-		results[key] = caching.Item{Key: key, Value: bytes.Clone(value), TTL: ttl}
+		results[key] = caching.Item{Key: key, Value: bytes.Clone(decoded), TTL: ttl, HeaderTags: headerTags}
 	}
 
 	return results, nil
@@ -173,7 +178,7 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	// two orders still agreeing.
 	cmds := make([]*redis.StatusCmd, len(items))
 	for i, item := range items {
-		cmds[i] = pipe.Set(ctx, c.entryKey(item.Key), item.Value, item.TTL)
+		cmds[i] = pipe.Set(ctx, c.entryKey(item.Key), caching.EncodeEntry(item.Value, item.HeaderTags), item.TTL)
 	}
 
 	_, err := pipe.Exec(ctx)

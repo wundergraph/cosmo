@@ -111,6 +111,7 @@ type headerPropagationWriter struct {
 	didApplyRouterRespHeaders bool
 	costHeaderSetter          func(typeStats map[string]resolve.TypeNameStats)
 	didSetCostHeaders         bool
+	cacheTagHeader            *config.ResponseCacheTagHeaderConfig
 }
 
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
@@ -144,6 +145,12 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 	if h.costHeaderSetter != nil && !h.didSetCostHeaders {
 		h.didSetCostHeaders = true
 		h.costHeaderSetter(h.resolveCtx.TypeNameStats)
+	}
+	// Not on a response carrying subgraph errors: it was just marked no-store.
+	if h.cacheTagHeader != nil && !h.didSetSubgraphErrors {
+		if value := buildCacheTagHeader(h.resolveCtx.ResponseCacheHeaderTags(), h.cacheTagHeader.Delimiter, h.cacheTagHeader.MaxBytes); value != "" {
+			h.writer.Header().Set(h.cacheTagHeader.Name, value)
+		}
 	}
 	return h.writer.Write(p)
 }
