@@ -34,8 +34,8 @@ import { create } from '@bufbuild/protobuf';
 import { OverrideChangeSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import copy from 'copy-to-clipboard';
 import Fuse from 'fuse.js';
-import { useRouter } from 'next/router';
 import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useApplyParams } from '../analytics/use-apply-params';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -114,10 +114,8 @@ const CopyableOperationHash = ({ hash }: { hash: string }) => {
 
 export const CheckOperations = () => {
   const graphContext = useContext(GraphContext);
-  const router = useRouter();
   const { toast } = useToast();
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const limit = Number.parseInt(useQueryParam('pageSize', '10'));
+  const { pageNumber, pageSize: limit } = usePaginationParams();
 
   const id = useRouteParam('checkId');
 

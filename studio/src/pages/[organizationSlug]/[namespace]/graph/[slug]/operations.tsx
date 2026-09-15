@@ -49,6 +49,7 @@ import { formatISO } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useQueryParam } from '@/hooks/use-query-param';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 
@@ -509,9 +510,7 @@ const OperationsPage: NextPageWithLayout = () => {
     }
   }, [debouncedSearchQuery, urlSearchQuery, applyParams]);
 
-  const pageNumber = router.query.page ? parseInt(router.query.page as string, 10) : 1;
-  const pageSize = Number.parseInt(useQueryParam('pageSize', '10'));
-  const offset = (pageNumber - 1) * pageSize;
+  const { pageNumber, pageSize, offset } = usePaginationParams();
 
   const {
     data: operationsData,

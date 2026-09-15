@@ -46,6 +46,7 @@ import copy from 'copy-to-clipboard';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useQueryParam } from '@/hooks/use-query-param';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { Dispatch, SetStateAction, useEffect, useId, useState } from 'react';
 import { FiCheck, FiCopy } from 'react-icons/fi';
 import { z } from 'zod';
@@ -602,9 +603,7 @@ const APIKeysPage: NextPageWithLayout = () => {
   const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
 
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-
-  const limit = Number.parseInt(useQueryParam('pageSize', '10'));
+  const { pageNumber, pageSize: limit } = usePaginationParams();
 
   const { data, isLoading, error, refetch } = useQuery(getAPIKeys, {
     limit: limit > 50 ? 50 : limit,

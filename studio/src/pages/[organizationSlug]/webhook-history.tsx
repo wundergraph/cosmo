@@ -35,12 +35,12 @@ import { GetOrganizationWebhookHistoryResponse } from '@wundergraph/cosmo-connec
 import { formatISO } from 'date-fns';
 import { useRouter } from 'next/router';
 import { useQueryParam } from '@/hooks/use-query-param';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { WebhookDeliveryDetails } from '@/components/webhook-delivery-details';
 
 const WebhookHistoryPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const limit = Number.parseInt(useQueryParam('pageSize', '10'));
+  const { pageNumber, pageSize: limit } = usePaginationParams();
   const {
     dateRange: { start, end },
     range,

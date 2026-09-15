@@ -27,6 +27,7 @@ import { formatDistanceToNow, formatISO } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { buildUrl } from '@/lib/build-url';
 
@@ -38,9 +39,7 @@ const ProposalsPage: NextPageWithLayout = () => {
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-
-  const limit = Number.parseInt(useQueryParam('pageSize', '10'));
+  const { pageNumber, pageSize: limit } = usePaginationParams();
 
   const {
     dateRange: { start, end },

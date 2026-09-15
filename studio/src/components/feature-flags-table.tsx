@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useQueryParam } from '@/hooks/use-query-param';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { EmptyState } from './empty-state';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -78,8 +79,7 @@ export const FeatureFlagsTable = ({
   const router = useRouter();
   const organizationSlug = user?.currentOrganization.slug;
 
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const limit = Number.parseInt(useQueryParam('pageSize', '10'));
+  const { pageNumber, pageSize: limit } = usePaginationParams();
   const noOfPages = Math.ceil(totalCount / limit);
 
   if (!featureFlags || featureFlags.length === 0) return <Empty graph={graph} />;

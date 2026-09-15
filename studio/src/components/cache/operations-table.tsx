@@ -3,6 +3,7 @@ import { CacheWarmerOperation } from '@wundergraph/cosmo-connect/dist/platform/v
 import { formatDistanceToNow, isValid } from 'date-fns';
 import { useRouter } from 'next/router';
 import { useQueryParam } from '@/hooks/use-query-param';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { Button } from '../ui/button';
 import { Pagination } from '../ui/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '../ui/table';
@@ -37,8 +38,7 @@ export const CacheOperationsTable = ({
   const [operationId, setOperationId] = useState<string | undefined>();
   const { mutate, isPending } = useMutation(deleteCacheWarmerOperation);
 
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const limit = Number.parseInt(useQueryParam('pageSize', '10'));
+  const { pageNumber, pageSize: limit } = usePaginationParams();
   const noOfPages = Math.ceil(totalCount / limit);
 
   return (
