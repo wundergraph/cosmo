@@ -180,9 +180,6 @@
       "https://app.example.com",
       "custom://localhost"
     ],
-    "CustomSchemes": [
-      "custom://"
-    ],
     "AllowMethods": [
       "HEAD",
       "GET",

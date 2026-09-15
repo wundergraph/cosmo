@@ -95,25 +95,18 @@ func TestBadConfig(t *testing.T) {
 			AllowOriginFunc: func(origin string) bool { return false },
 		})(nil)
 	})
-	assert.Panics(t, func() {
-		New(Config{
-			Enabled:      true,
-			AllowOrigins: []string{"google.com"},
-		})(nil)
-	})
 }
 
-func TestCustomSchemes(t *testing.T) {
+func TestCustomOrigin(t *testing.T) {
 	t.Parallel()
 
-	cfg := Config{AllowOrigins: []string{"custom://localhost", "http://localhost", "https://localhost"}}
-	assert.Error(t, cfg.Validate())
-
-	cfg.CustomSchemes = []string{"CUSTOM://"}
+	cfg := Config{AllowOrigins: []string{"custom://localhost"}}
 	assert.NoError(t, cfg.Validate())
 
-	cfg.AllowOrigins = []string{"anothercustom://localhost"}
-	assert.Error(t, cfg.Validate())
+	c := newCors(nil, cfg)
+	assert.True(t, c.validateOrigin("custom://localhost"))
+	assert.False(t, c.validateOrigin("custom://otherhost"))
+	assert.False(t, c.validateOrigin("https://localhost"))
 }
 
 func TestWildcardOriginCompatibility(t *testing.T) {
@@ -132,32 +125,6 @@ func TestWildcardOriginCompatibility(t *testing.T) {
 
 			c := newCors(nil, Config{AllowOrigins: []string{tt.pattern}})
 			assert.True(t, c.validateOrigin(tt.origin))
-		})
-	}
-}
-
-func TestValidateCustomSchemes(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		scheme  string
-		isValid bool
-	}{
-		{scheme: "my-app.v2+test://", isValid: true},
-		{scheme: "custom"},
-		{scheme: "custom://host"},
-		{scheme: "1custom://"},
-	}
-	for _, tt := range cases {
-		t.Run(tt.scheme, func(t *testing.T) {
-			t.Parallel()
-
-			cfg := Config{AllowOrigins: []string{"https://example.com"}, CustomSchemes: []string{tt.scheme}}
-			if tt.isValid {
-				assert.NoError(t, cfg.Validate())
-			} else {
-				assert.ErrorContains(t, cfg.Validate(), "bad custom scheme")
-			}
 		})
 	}
 }
@@ -319,7 +286,6 @@ func TestValidateOrigin(t *testing.T) {
 		AllowOriginFunc: func(origin string) bool {
 			return (origin == "http://news.ycombinator.com")
 		},
-		AllowBrowserExtensions: true,
 	})
 	assert.False(t, cors.validateOrigin("http://google.com"))
 	assert.True(t, cors.validateOrigin("https://google.com"))
@@ -344,7 +310,6 @@ func TestValidateOrigin(t *testing.T) {
 			"safari-extension://my-extension-*-app",
 			"*.some-domain.com",
 		},
-		AllowBrowserExtensions: true,
 	})
 	assert.True(t, cors.validateOrigin("chrome-extension://random-extension-id"))
 	assert.True(t, cors.validateOrigin("chrome-extension://another-one"))
@@ -355,10 +320,8 @@ func TestValidateOrigin(t *testing.T) {
 	assert.False(t, cors.validateOrigin("http://api.another-domain.com"))
 
 	cors = newCors(nil, Config{
-		Enabled:         true,
-		AllowOrigins:    []string{"file://safe-file.js", "wss://some-session-layer-connection"},
-		AllowFiles:      true,
-		AllowWebSockets: true,
+		Enabled:      true,
+		AllowOrigins: []string{"file://safe-file.js", "wss://some-session-layer-connection"},
 	})
 	assert.True(t, cors.validateOrigin("file://safe-file.js"))
 	assert.False(t, cors.validateOrigin("file://some-dangerous-file.js"))
