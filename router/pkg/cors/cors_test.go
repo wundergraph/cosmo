@@ -95,12 +95,38 @@ func TestBadConfig(t *testing.T) {
 			AllowOriginFunc: func(origin string) bool { return false },
 		})(nil)
 	})
-	assert.Panics(t, func() {
-		New(Config{
-			Enabled:      true,
-			AllowOrigins: []string{"google.com"},
-		})(nil)
-	})
+}
+
+func TestCustomOrigin(t *testing.T) {
+	t.Parallel()
+
+	cfg := Config{AllowOrigins: []string{"custom://localhost"}}
+	assert.NoError(t, cfg.Validate())
+
+	c := newCors(nil, cfg)
+	assert.True(t, c.validateOrigin("custom://localhost"))
+	assert.False(t, c.validateOrigin("custom://otherhost"))
+	assert.False(t, c.validateOrigin("https://localhost"))
+}
+
+func TestWildcardOriginCompatibility(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		pattern string
+		origin  string
+	}{
+		{pattern: "*.example.com", origin: "https://app.example.com"},
+		{pattern: "anothercustom://*.example.com", origin: "anothercustom://app.example.com"},
+	}
+	for _, tt := range cases {
+		t.Run(tt.pattern, func(t *testing.T) {
+			t.Parallel()
+
+			c := newCors(nil, Config{AllowOrigins: []string{tt.pattern}})
+			assert.True(t, c.validateOrigin(tt.origin))
+		})
+	}
 }
 
 func TestNormalize(t *testing.T) {
@@ -260,7 +286,6 @@ func TestValidateOrigin(t *testing.T) {
 		AllowOriginFunc: func(origin string) bool {
 			return (origin == "http://news.ycombinator.com")
 		},
-		AllowBrowserExtensions: true,
 	})
 	assert.False(t, cors.validateOrigin("http://google.com"))
 	assert.True(t, cors.validateOrigin("https://google.com"))
@@ -285,7 +310,6 @@ func TestValidateOrigin(t *testing.T) {
 			"safari-extension://my-extension-*-app",
 			"*.some-domain.com",
 		},
-		AllowBrowserExtensions: true,
 	})
 	assert.True(t, cors.validateOrigin("chrome-extension://random-extension-id"))
 	assert.True(t, cors.validateOrigin("chrome-extension://another-one"))
@@ -296,10 +320,8 @@ func TestValidateOrigin(t *testing.T) {
 	assert.False(t, cors.validateOrigin("http://api.another-domain.com"))
 
 	cors = newCors(nil, Config{
-		Enabled:         true,
-		AllowOrigins:    []string{"file://safe-file.js", "wss://some-session-layer-connection"},
-		AllowFiles:      true,
-		AllowWebSockets: true,
+		Enabled:      true,
+		AllowOrigins: []string{"file://safe-file.js", "wss://some-session-layer-connection"},
 	})
 	assert.True(t, cors.validateOrigin("file://safe-file.js"))
 	assert.False(t, cors.validateOrigin("file://some-dangerous-file.js"))

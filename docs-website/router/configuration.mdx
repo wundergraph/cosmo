@@ -947,6 +947,15 @@ pyroscope:
 | CORS_ALLOW_CREDENTIALS | allow_credentials | <Icon icon="square" /> |                                                                                                                                              | true                                 |
 | CORS_MAX_AGE           | max_age           | <Icon icon="square" /> |                                                                                                                                              | 5m                                   |
 
+Origins in `allow_origins` can use any URL scheme. List the full origin, such as `custom://localhost`, to allow that origin. Wildcard patterns are supported. The default `["*"]` allows all origins, regardless of scheme.
+
+```yaml
+cors:
+  allow_origins:
+    - "https://app.example.com"
+    - "custom://localhost"
+```
+
 ### Example YAML config:
 
 ```yaml config.yaml

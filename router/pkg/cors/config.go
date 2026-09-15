@@ -17,26 +17,7 @@ type cors struct {
 	handler          http.Handler
 }
 
-var (
-	maxWildcardOriginLength = 4096 // Maximum length of an origin string for it to be eligible for wildcard matching
-	DefaultSchemas          = []string{
-		"http://",
-		"https://",
-	}
-	ExtensionSchemas = []string{
-		"chrome-extension://",
-		"safari-extension://",
-		"moz-extension://",
-		"ms-browser-extension://",
-	}
-	FileSchemas = []string{
-		"file://",
-	}
-	WebSocketSchemas = []string{
-		"ws://",
-		"wss://",
-	}
-)
+var maxWildcardOriginLength = 4096 // Maximum length of an origin string for it to be eligible for wildcard matching
 
 func newCors(handler http.Handler, config Config) *cors {
 	if err := config.Validate(); err != nil {
