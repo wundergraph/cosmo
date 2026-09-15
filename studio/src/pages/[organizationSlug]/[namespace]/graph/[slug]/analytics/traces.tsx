@@ -226,7 +226,7 @@ const TraceSheet: React.FC<any> = (props) => {
 
           <SheetTitle className="m-0 flex flex-wrap items-center gap-x-1.5 text-sm">
             <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">{traceId}</code>
-            <CopyButton tooltip="Copy trace id" value={router.query.traceID?.toString() || ''} />
+            <CopyButton tooltip="Copy trace id" value={traceId ?? ''} />
           </SheetTitle>
 
           <Spacer />
