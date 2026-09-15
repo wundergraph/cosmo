@@ -320,7 +320,7 @@ export const ConfigureOverride = () => {
                     <Override
                       key={i}
                       {...c}
-                      operationHash={operationHash}
+                      operationHash={operationHash ?? ''}
                       isAdminOrDeveloper={isAdminOrDeveloper}
                       refresh={() => {
                         refetch();
@@ -368,7 +368,7 @@ export const ConfigureOverride = () => {
                 variant="secondary"
                 className=""
                 onClick={() => {
-                  copy(operationHash);
+                  copy(operationHash ?? '');
                   toast({
                     description: 'Copied operation hash',
                   });
@@ -378,7 +378,7 @@ export const ConfigureOverride = () => {
                 Copy Hash
               </Button>
               <OperationContentDialog
-                hash={operationHash}
+                hash={operationHash ?? ''}
                 trigger={
                   <Button className="w-max" variant="secondary">
                     View Operation Content
