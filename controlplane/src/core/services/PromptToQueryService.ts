@@ -8,14 +8,14 @@ import {
 import { create } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import * as z from 'zod';
-import { Client, createClient } from '@connectrpc/connect';
+import { Client, Code, ConnectError, createClient } from '@connectrpc/connect';
 import { createConnectTransport } from '@connectrpc/connect-node';
 import {
   OperationType,
   PromptToQueryService as PtQService,
   ResolveResponse,
-  SchemaStatus,
   Schema,
+  SchemaStatus,
 } from '@wundergraph/cosmo-connect/dist/yoko/v1/prompt_to_query_pb';
 import { traced } from '../tracing.js';
 import * as schema from '../../db/schema.js';
@@ -181,12 +181,23 @@ export class PromptToQueryService {
           maxInterval: 1000,
           jitter: true,
           signal,
-          shouldRetry: (err) => err instanceof StillIndexingError,
+          shouldRetry: PromptToQueryService.isRetryableError,
         },
       );
     }
 
     return schemaId;
+  }
+
+  private static isRetryableError(error: unknown) {
+    if (error instanceof StillIndexingError) {
+      return true;
+    }
+    if (error instanceof ConnectError) {
+      return error.code === Code.Unknown;
+    }
+
+    return false;
   }
 
   private static getOperationType(type: OperationType): SatisfiedOperationType {
