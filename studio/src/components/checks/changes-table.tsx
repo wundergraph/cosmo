@@ -11,7 +11,7 @@ import {
 import { SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useQueryParam } from '@/hooks/use-query-param';
+import { useQueryParam, useRouteParam } from '@/hooks/use-query-param';
 import { useContext } from 'react';
 import { GraphContext } from '../layout/graph-layout';
 import { Button } from '../ui/button';
@@ -97,6 +97,7 @@ const Row = ({
   openUsage: (changeType: string, path?: string) => void;
 }) => {
   const router = useRouter();
+  const checkId = useRouteParam('checkId');
   const { toast } = useToast();
   const {
     namespace: { name: namespace },
@@ -112,7 +113,7 @@ const Row = ({
     const key = createConnectQueryKey({
       schema: getCheckOperations,
       input: {
-        checkId: router.query.checkId as string,
+        checkId,
         graphName: graphContext?.graph?.name,
         namespace: graphContext?.graph?.namespace,
         limit: limit > 200 ? 200 : limit,
