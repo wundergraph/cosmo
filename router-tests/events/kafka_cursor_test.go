@@ -107,6 +107,47 @@ func readNextCursorPayload(t *testing.T, conn *websocket.Conn, subscriptionID st
 	return payload
 }
 
+// subscribeWithoutCursorGuarantee opens a graphql-transport-ws connection and
+// sends a subscribe message for the given query without opting in to
+// cursor-resume delivery.
+func subscribeWithoutCursorGuarantee(t *testing.T, xEnv *testenv.Environment) *websocket.Conn {
+	t.Helper()
+
+	conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+
+	payload, err := json.Marshal(map[string]any{
+		"query": "subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename } } }",
+	})
+	require.NoError(t, err)
+
+	err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+		ID:      "1",
+		Type:    "subscribe",
+		Payload: payload,
+	})
+	require.NoError(t, err)
+
+	return conn
+}
+
+// readNextPayloadWithoutCursor reads one "next" websocket message for the
+// given subscription id and asserts it does not carry a cursor.
+func readNextPayloadWithoutCursor(t *testing.T, conn *websocket.Conn, subscriptionID string) kafkaCursorPayload {
+	t.Helper()
+
+	var msg testenv.WebSocketMessage
+	err := testenv.WSReadJSON(t, conn, &msg)
+	require.NoError(t, err)
+	require.Equal(t, "next", msg.Type)
+	require.Equal(t, subscriptionID, msg.ID)
+
+	var payload kafkaCursorPayload
+	require.NoError(t, json.Unmarshal(msg.Payload, &payload))
+	require.Empty(t, payload.Extensions.Cursor)
+
+	return payload
+}
+
 // completeSubscription sends a "complete" message for the given subscription id.
 func completeSubscription(t *testing.T, conn *websocket.Conn, id string) {
 	t.Helper()
@@ -164,6 +205,30 @@ func TestKafkaCursor(t *testing.T) {
 			require.Equal(t, firstOffset.Epoch, secondOffset.Epoch)
 			require.Equal(t, firstOffset.Offset+1, secondOffset.Offset)
 
+			completeSubscription(t, conn, "1")
+		})
+	})
+
+	t.Run("ws subscription without delivery-guarantee cursor does not receive a cursor", func(t *testing.T) {
+		// subscribe one client to the router without cursor negotiation,
+		// receive a message,
+		// verify that the message does not have a cursor in the GraphQL response extensions.
+		t.Parallel()
+
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
+
+			conn := subscribeWithoutCursorGuarantee(t, xEnv)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
+
+			publishDefaultEmployeeEvent(xEnv, 1)
+			readNextPayloadWithoutCursor(t, conn, "1")
 			completeSubscription(t, conn, "1")
 		})
 	})
