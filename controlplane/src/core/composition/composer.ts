@@ -461,7 +461,7 @@ export class Composer {
     routerExecutionConfig?: RouterConfig;
     featureFlagId: string;
     splitConfigEnabled: boolean;
-    promptToQueryService: PromptToQueryService;
+    promptToQueryService: PromptToQueryService | undefined;
   }): Promise<CompositionDeployResult> {
     // For a feature-flag composition the baseline is the previous composition of the same feature flag (not the base
     // graph's latest valid version, which would produce a meaningless base-vs-feature-flag diff). Computed before
@@ -517,7 +517,10 @@ export class Composer {
       );
     }
 
-    await promptToQueryService.indexSchema(composedGraph.composedSchema);
+    if (promptToQueryService) {
+      await promptToQueryService.indexSchema(composedGraph.composedSchema);
+    }
+
     if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {
       await this.federatedGraphRepo.createFederatedGraphChangelog({
         schemaVersionID: updatedFederatedGraph.composedSchemaVersionId,
