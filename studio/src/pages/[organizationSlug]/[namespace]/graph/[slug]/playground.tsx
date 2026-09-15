@@ -624,7 +624,7 @@ const ConfigSelect = () => {
 
   const graphContext = useContext(GraphContext);
   const subgraphs = graphContext?.subgraphs;
-  const { data: compositionFlagsData } = useCompositionFlags();
+  const { data: compositionFlagsData, isLoading: isLoadingCompositionFlags } = useCompositionFlags();
   const featureFlags = compositionFlagsData?.featureFlags ?? [];
   const featureSubgraphsByFlag = useMemo(
     () => groupFeatureSubgraphsByFlag(compositionFlagsData?.featureSubgraphs ?? []),
@@ -643,6 +643,34 @@ const ConfigSelect = () => {
     featureFlag: configType === 'featureSubgraph' ? activeFeatureFlag : undefined,
   });
 
+  const selectedName = useMemo(() => {
+    switch (configType) {
+      case 'graph': {
+        return graphContext?.graph?.name;
+      }
+      case 'featureFlag': {
+        return featureFlags.find((featureFlag) => featureFlag.id === selected)?.name;
+      }
+      case 'featureSubgraph': {
+        const featureFlag = featureFlags.find(({ name }) => name === activeFeatureFlag);
+        return (featureSubgraphsByFlag[featureFlag?.id ?? ''] ?? []).find(({ id }) => id === selected)?.name;
+      }
+      case 'subgraph': {
+        return subgraphs?.find((subgraph) => subgraph.id === selected)?.name;
+      }
+    }
+  }, [
+    configType,
+    graphContext?.graph?.name,
+    featureFlags,
+    featureSubgraphsByFlag,
+    subgraphs,
+    selected,
+    activeFeatureFlag,
+  ]);
+
+  const selectedLabel = selectedName ?? (isLoadingCompositionFlags ? '' : 'Unavailable');
+
   return (
     <div className="ml-1 flex items-center gap-x-2 pl-3">
       <span className="text-sm text-muted-foreground">Querying {CONFIG_TYPE_LABELS[configType]} :</span>
@@ -658,7 +686,7 @@ const ConfigSelect = () => {
         }}
       >
         <SelectTrigger className="ml-1 mr-4 flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0 md:ml-0">
-          <SelectValue />
+          <SelectValue aria-label={selectedLabel}>{selectedLabel}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
