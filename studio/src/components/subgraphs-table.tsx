@@ -19,6 +19,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { useEffect, useState } from 'react';
 import { IoPersonAdd } from 'react-icons/io5';
 import { EmptyState } from './empty-state';
@@ -209,7 +210,7 @@ const AddSubgraphUsers = ({
 
 export const SubgraphPageTabs = () => {
   const router = useRouter();
-  const tab = router.query.tab as string;
+  const tab = useQueryParam('tab');
 
   return (
     <Tabs value={tab ?? 'subgraphs'} className="flex min-h-0 flex-col">
@@ -254,7 +255,7 @@ export const SubgraphsTable = ({
   const organizationSlug = user?.currentOrganization.slug;
 
   const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const limit = Number.parseInt((router.query.pageSize as string) || '10');
+  const limit = Number.parseInt(useQueryParam('pageSize', '10'));
   const noOfPages = Math.ceil(totalCount / limit);
 
   if (!subgraphs || subgraphs.length === 0) return <Empty graph={graph} tab={tab} />;

@@ -38,6 +38,7 @@ import { GetAllOverridesResponse } from '@wundergraph/cosmo-connect/dist/platfor
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { useContext } from 'react';
 import { BiAnalyse } from 'react-icons/bi';
 import { IoBarcodeSharp } from 'react-icons/io5';
@@ -52,7 +53,7 @@ const OverridesPage: NextPageWithLayout = () => {
   const slug = router.query.slug as string;
 
   const pageNumber = router.query.page ? parseInt(router.query.page as string, 10) : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || '10');
+  const pageSize = Number.parseInt(useQueryParam('pageSize', '10'));
   const offset = (pageNumber - 1) * pageSize;
 
   const constructLink = (name: string, hash: string, mode: 'metrics' | 'traces') => {

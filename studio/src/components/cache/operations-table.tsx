@@ -2,6 +2,7 @@ import { CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
 import { CacheWarmerOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatDistanceToNow, isValid } from 'date-fns';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { Button } from '../ui/button';
 import { Pagination } from '../ui/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '../ui/table';
@@ -37,7 +38,7 @@ export const CacheOperationsTable = ({
   const { mutate, isPending } = useMutation(deleteCacheWarmerOperation);
 
   const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const limit = Number.parseInt((router.query.pageSize as string) || '10');
+  const limit = Number.parseInt(useQueryParam('pageSize', '10'));
   const noOfPages = Math.ceil(totalCount / limit);
 
   return (

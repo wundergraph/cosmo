@@ -24,6 +24,7 @@ import { getCompositions } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import { formatDistanceToNow, formatISO } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { MdNearbyError, MdVerifiedUser } from 'react-icons/md';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useFeature } from '@/hooks/use-feature';
@@ -32,7 +33,7 @@ const CompositionsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
 
-  const limit = Number.parseInt((router.query.pageSize as string) || '10');
+  const limit = Number.parseInt(useQueryParam('pageSize', '10'));
   const {
     namespace: { name: namespace },
   } = useWorkspace();

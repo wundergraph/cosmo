@@ -45,6 +45,7 @@ import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_
 import copy from 'copy-to-clipboard';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { Dispatch, SetStateAction, useEffect, useId, useState } from 'react';
 import { FiCheck, FiCopy } from 'react-icons/fi';
 import { z } from 'zod';
@@ -603,7 +604,7 @@ const APIKeysPage: NextPageWithLayout = () => {
 
   const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
 
-  const limit = Number.parseInt((router.query.pageSize as string) || '10');
+  const limit = Number.parseInt(useQueryParam('pageSize', '10'));
 
   const { data, isLoading, error, refetch } = useQuery(getAPIKeys, {
     limit: limit > 50 ? 50 : limit,

@@ -11,6 +11,7 @@ import {
 import { SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { useContext } from 'react';
 import { GraphContext } from '../layout/graph-layout';
 import { Button } from '../ui/button';
@@ -103,7 +104,7 @@ const Row = ({
   const organizationSlug = useCurrentOrganization()?.slug;
   const graphContext = useContext(GraphContext);
   const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const limit = Number.parseInt((router.query.pageSize as string) || '10');
+  const limit = Number.parseInt(useQueryParam('pageSize', '10'));
 
   const client = useQueryClient();
 

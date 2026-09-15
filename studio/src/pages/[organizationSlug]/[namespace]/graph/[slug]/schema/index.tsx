@@ -86,6 +86,7 @@ import { formatISO } from 'date-fns';
 import { GraphQLSchema, buildASTSchema, parse } from 'graphql';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { Dispatch, SetStateAction, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { MdOutlineFeaturedPlayList } from 'react-icons/md';
 import { PiGraphLight } from 'react-icons/pi';
@@ -142,8 +143,7 @@ const TypeLink = ({ name, isHeading = false }: { name: string; isHeading?: boole
 const FieldUsageColumn = ({ fieldName, typename }: { typename: string; fieldName: string }) => {
   const { range, dateRange } = useAnalyticsQueryState();
   const graph = useContext(GraphContext);
-  const router = useRouter();
-  const featureFlagName = router.query.featureFlag as string;
+  const featureFlagName = useQueryParam('featureFlag');
   const { ast } = useContext(ExplorerContext);
 
   const category = getCategoryForType(ast, typename);
@@ -212,7 +212,7 @@ const Fields = (props: { typename: string; category: GraphQLTypeCategory; fields
     });
   };
 
-  const fieldName = router.query.fieldName as string;
+  const fieldName = useQueryParam('fieldName');
   const filteredFields = useMemo(() => {
     return props.fields.filter((f) => (fieldName ? f.name === fieldName : true));
   }, [fieldName, props.fields]);
@@ -870,9 +870,9 @@ const SearchType = ({ open, setOpen }: { open: boolean; setOpen: Dispatch<SetSta
 export const GraphSelector = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
-  const activeFeatureFlag = router.query.featureFlag as string;
+  const activeFeatureFlag = useQueryParam('featureFlag');
   const graphName = router.query.slug as string;
-  const schemaType = router.query.schemaType as string;
+  const schemaType = useQueryParam('schemaType');
   const {
     namespace: { name: namespace },
   } = useWorkspace();
@@ -1240,9 +1240,9 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   } = useWorkspace();
   const graphName = router.query.slug as string;
   const selectedCategory = (router.query.category as string) ?? 'query';
-  const typename = router.query.typename as string;
+  const typename = useQueryParam('typename');
   const category = router.query.category as GraphQLTypeCategory;
-  const featureFlagName = router.query.featureFlag as string;
+  const featureFlagName = useQueryParam('featureFlag');
 
   const { data, isLoading, error, refetch } = useQuery(getFederatedGraphSDLByName, {
     name: graphName,
@@ -1266,7 +1266,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     (flag) => flag.name === featureFlagName && flag.hasFailedLatestComposition,
   );
 
-  const schemaType = router.query.schemaType as string;
+  const schemaType = useQueryParam('schemaType');
   const schema = schemaType === 'router' ? data?.sdl : data?.clientSchema || data?.sdl;
 
   const { ast, doc, isParsing } = useParseSchema(schema);

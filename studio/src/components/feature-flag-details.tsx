@@ -6,6 +6,7 @@ import { FeatureFlag, FederatedGraph, Subgraph } from '@wundergraph/cosmo-connec
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { PiGraphLight } from 'react-icons/pi';
 import { EmptyState } from './empty-state';
 import { SubgraphsTable } from './subgraphs-table';
@@ -146,7 +147,7 @@ export const FeatureFlagDetails = ({
 }) => {
   const router = useRouter();
   const slug = router.query.slug as string;
-  const tab = router.query.tab as string;
+  const tab = useQueryParam('tab');
   const { name, labels, createdAt, createdBy, isEnabled } = featureFlag;
 
   return (

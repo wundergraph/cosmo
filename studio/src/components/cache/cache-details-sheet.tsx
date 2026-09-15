@@ -3,6 +3,7 @@ import { useHotkeys } from '@saas-ui/use-hotkeys';
 import { CacheWarmerOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { CodeViewer } from '../code-viewer';
 import { Button } from '../ui/button';
@@ -18,7 +19,7 @@ import { buildUrl } from '@/lib/build-url';
 
 export const CacheDetailsSheet: React.FC<any> = ({ operations }: { operations: CacheWarmerOperation[] }) => {
   const router = useRouter();
-  const operationId = router.query.operationId as string;
+  const operationId = useQueryParam('operationId');
 
   const [index, setIndex] = useState(operations.findIndex((r: CacheWarmerOperation) => r.id === operationId));
 

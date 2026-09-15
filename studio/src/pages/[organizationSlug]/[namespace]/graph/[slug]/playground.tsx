@@ -70,6 +70,7 @@ import { GraphiQL } from 'graphiql';
 import { GraphQLSchema, parse, validate } from 'graphql';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import posthog from 'posthog-js';
 import { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -603,15 +604,13 @@ const ToggleClientValidation = () => {
 };
 
 const ConfigSelect = () => {
-  const router = useRouter();
-
   const graphContext = useContext(GraphContext);
   const subgraphs = graphContext?.subgraphs;
   const compositionFlagsData = useCompositionFlags();
   const featureFlags = compositionFlagsData?.featureFlags ?? [];
 
-  const selected = (router.query.load as string) || graphContext?.graph?.id || '';
-  const type = (router.query.type as string) || 'graph';
+  const selected = useQueryParam('load', graphContext?.graph?.id || '');
+  const type = useQueryParam('type', 'graph');
 
   const applyParams = useApplyParams();
 
@@ -716,14 +715,13 @@ const PlaygroundPortal = () => {
 };
 
 const PlaygroundPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const operation = router.query.operation as string;
-  const variables = router.query.variables as string;
+  const operation = useQueryParam('operation');
+  const variables = useQueryParam('variables');
 
   const graphContext = useContext(GraphContext);
 
-  const loadSchemaGraphId = (router.query.load as string) || graphContext?.graph?.id || '';
-  const type = (router.query.type as string) || 'graph';
+  const loadSchemaGraphId = useQueryParam('load', graphContext?.graph?.id || '');
+  const type = useQueryParam('type', 'graph');
 
   const compositionFlagsData = useCompositionFlags();
 

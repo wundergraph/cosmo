@@ -34,20 +34,21 @@ import { getOrganizationWebhookHistory } from '@wundergraph/cosmo-connect/dist/p
 import { GetOrganizationWebhookHistoryResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatISO } from 'date-fns';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { WebhookDeliveryDetails } from '@/components/webhook-delivery-details';
 
 const WebhookHistoryPage: NextPageWithLayout = () => {
   const router = useRouter();
   const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const limit = Number.parseInt((router.query.pageSize as string) || '10');
+  const limit = Number.parseInt(useQueryParam('pageSize', '10'));
   const {
     dateRange: { start, end },
     range,
   } = useDateRangeQueryState();
   const { refreshInterval } = useAnalyticsQueryState();
-  const type = (router.query.type as string) || '';
+  const type = useQueryParam('type', '');
 
-  const deliveryId = router.query.details as string;
+  const deliveryId = useQueryParam('details');
   const { data, isLoading, error, isFetching, refetch } = useQuery(
     getOrganizationWebhookHistory,
     {

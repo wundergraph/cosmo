@@ -43,6 +43,7 @@ import { sentenceCase } from 'change-case';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { useContext, useState } from 'react';
 import { MdNearbyError, MdVerifiedUser } from 'react-icons/md';
 import { PiGitBranch } from 'react-icons/pi';
@@ -207,7 +208,7 @@ export const CompositionDetails = ({
   } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.compositionId as string;
-  const subgraph = router.query.subgraph as string;
+  const subgraph = useQueryParam('subgraph');
 
   let tab = router.query.tab as string;
   tab = isFeatureFlagComposition && tab === 'ffCompostions' ? 'output' : tab;

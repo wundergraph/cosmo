@@ -38,6 +38,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { useContext } from 'react';
 import { MdOutlineFeaturedPlayList } from 'react-icons/md';
 import { PiGraphLight } from 'react-icons/pi';
@@ -45,14 +46,14 @@ import { useWorkspace } from '@/hooks/use-workspace';
 
 const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const activeSubgraph = router.query.subgraph as string;
-  const activeFeatureFlag = router.query.featureFlag as string;
+  const activeSubgraph = useQueryParam('subgraph');
+  const activeFeatureFlag = useQueryParam('featureFlag');
   const {
     namespace: { name: namespace },
   } = useWorkspace();
   const graphName = router.query.slug as string;
   const organizationSlug = router.query.organizationSlug as string;
-  const schemaType = router.query.schemaType as string;
+  const schemaType = useQueryParam('schemaType');
 
   const fullPath = router.asPath;
   const pathWithHash = fullPath.split('?')[0];

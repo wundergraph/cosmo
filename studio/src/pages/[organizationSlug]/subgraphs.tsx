@@ -15,6 +15,7 @@ import {
   getSubgraphs,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { WorkspaceSelector } from '@/components/dashboard/workspace-selector';
@@ -25,10 +26,10 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const tab = router.query.tab as string;
+  const tab = useQueryParam('tab');
 
   const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || '10');
+  const pageSize = Number.parseInt(useQueryParam('pageSize', '10'));
   const limit = pageSize > 50 ? 50 : pageSize;
   const offset = (pageNumber - 1) * limit;
 

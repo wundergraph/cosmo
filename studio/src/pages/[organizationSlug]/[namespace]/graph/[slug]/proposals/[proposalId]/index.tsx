@@ -44,6 +44,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { useContext, useState } from 'react';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { buildUrl } from '@/lib/build-url';
@@ -66,10 +67,10 @@ export const ProposalDetails = ({
   } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.proposalId as string;
-  const tab = router.query.tab as string;
-  const subgraph = router.query.subgraph as string;
+  const tab = useQueryParam('tab');
+  const subgraph = useQueryParam('subgraph');
   const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const limit = Number.parseInt((router.query.pageSize as string) || '10');
+  const limit = Number.parseInt(useQueryParam('pageSize', '10'));
   const { toast } = useToast();
 
   const [reviewAction, setReviewAction] = useState<'APPROVED' | 'CLOSED' | null>(null);

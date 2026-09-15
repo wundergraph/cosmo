@@ -18,6 +18,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import debounce from 'debounce';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { docsBaseURL } from '@/lib/constants';
@@ -36,7 +37,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
   const plan = user?.currentOrganization?.billing?.plan;
 
   const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || '10');
+  const pageSize = Number.parseInt(useQueryParam('pageSize', '10'));
   const limit = pageSize > 50 ? 50 : pageSize;
   const offset = (pageNumber - 1) * limit;
 

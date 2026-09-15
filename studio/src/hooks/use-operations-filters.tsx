@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import { OperationsFetchBasedOn } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { useApplyParams } from '@/components/analytics/use-apply-params';
 
@@ -65,12 +66,12 @@ export const useOperationsFilters = () => {
 
   // Get current values from URL
   const includeOperationsWithDeprecatedFieldsOnly = router.query.includeOperationsWithDeprecatedFieldsOnly === 'true';
-  const clientNamesParam = (router.query.clientNames as string) || null;
+  const clientNamesParam = useQueryParam('clientNames');
   const clientNames = clientNamesParam ? clientNamesParam.split(',').filter((name) => name.length > 0) : [];
-  const searchQuery = (router.query.searchQuery as string) || '';
-  const fetchBasedOnStr = (router.query.fetchBasedOn as string) || 'requests';
+  const searchQuery = useQueryParam('searchQuery', '');
+  const fetchBasedOnStr = useQueryParam('fetchBasedOn', 'requests');
   const fetchBasedOn = stringToEnum(fetchBasedOnStr);
-  const sortDirection = (router.query.sortDirection as string) || 'desc';
+  const sortDirection = useQueryParam('sortDirection', 'desc');
 
   return {
     applyDeprecatedFieldsFilter,

@@ -15,6 +15,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Router } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { getRouters } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { useRouter } from 'next/router';
+import { useQueryParam } from '@/hooks/use-query-param';
 import React, { useContext, useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
 import { formatDistanceToNow, subSeconds } from 'date-fns';
@@ -48,7 +49,7 @@ const RouterSheet: React.FC<any> = (props) => {
   const router = useRouter();
   const [size, setSize] = useState<keyof typeof sizes>('default');
 
-  const serviceInstanceId = router.query.serviceInstanceId as string;
+  const serviceInstanceId = useQueryParam('serviceInstanceId');
 
   const index = props.data.findIndex((r: any) => r.serviceInstanceId === serviceInstanceId);
 
