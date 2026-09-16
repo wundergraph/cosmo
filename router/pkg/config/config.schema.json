@@ -1834,6 +1834,14 @@
             "type": "string"
           }
         },
+        "match_origins": {
+          "type": "array",
+          "description": "Go regular expressions matched against the original Origin header, in addition to allow_origins. Patterns are unanchored; use ^ and $ to match the entire origin. Matching is case-insensitive by default; prefix a pattern with (?-i) for case-sensitive matching. Set allow_origins to [] to allow only regex matches; its default '*' still allows all origins. Invalid expressions fail startup when CORS is enabled.",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
         "allow_methods": {
           "type": "array",
           "default": ["GET", "POST", "HEAD"],

@@ -129,6 +129,53 @@ func TestWildcardOriginCompatibility(t *testing.T) {
 	}
 }
 
+func TestMatchOrigins(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		pattern, origin string
+		allowed         bool
+	}{
+		{`example\.com`, "https://app.example.com.evil.com", true},
+		{`^https://(.+\.)?aol\.(de|ca|co\.uk|com)$`, "HTTPS://APP.AOL.CO.UK", true},
+		{`^https://aol\.com$`, "https://aol.com.evil.com", false},
+		{`^https://aol\.com$`, "https://evil.com/https://aol.com", false},
+	}
+	for _, tt := range cases {
+		c := newCors(nil, Config{MatchOrigins: []string{tt.pattern}})
+		assert.Equal(t, tt.allowed, c.validateOrigin(tt.origin), tt.origin)
+	}
+}
+
+func TestInvalidMatchOrigins(t *testing.T) {
+	t.Parallel()
+
+	cfg := Config{AllowOrigins: []string{"*"}, MatchOrigins: []string{`[`}}
+	assert.ErrorContains(t, cfg.Validate(), `bad origin regex in match_origins "["`)
+
+	cfg = Config{AllowAllOrigins: true, MatchOrigins: []string{`https://example\.com`}}
+	assert.ErrorContains(t, cfg.Validate(), "conflict settings")
+}
+
+func TestMatchOriginsWithAllowOrigins(t *testing.T) {
+	t.Parallel()
+
+	c := newCors(nil, Config{
+		AllowOrigins: []string{"https://literal.example", "https://*.wildcard.example"},
+		MatchOrigins: []string{`^https://one\.example$`, `^https://two\.example$`},
+	})
+	for _, origin := range []string{"https://literal.example", "https://app.wildcard.example", "https://one.example", "https://two.example"} {
+		assert.True(t, c.validateOrigin(origin), origin)
+	}
+	assert.False(t, c.validateOrigin("https://other.example"))
+
+	c = newCors(nil, Config{
+		AllowOrigins: []string{"*"},
+		MatchOrigins: []string{`^https://example\.com$`},
+	})
+	assert.True(t, c.validateOrigin("https://other.example"))
+}
+
 func TestNormalize(t *testing.T) {
 	values := normalize([]string{
 		"http-Access ", "Post", "POST", " poSt  ",
