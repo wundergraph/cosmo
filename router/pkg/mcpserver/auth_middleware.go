@@ -227,14 +227,13 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 }
 
 // sendUnauthorizedResponse sends a 401 with WWW-Authenticate per RFC 6750 and RFC 9728. It carries
-// no error code: RFC 6750 Section 3.1 reserves that for requests that did present credentials.
+// no error code, which RFC 6750 Section 3.1 reserves for requests that did present credentials.
 func (m *MCPAuthMiddleware) sendUnauthorizedResponse(w http.ResponseWriter, errorDescription string) {
 	m.writeUnauthorized(w, "", errorDescription)
 }
 
-// sendInvalidTokenResponse sends a 401 for a token that was presented but cannot be read, carrying
-// the invalid_token error code of RFC 6750 Section 3.1 so the client can tell it apart from a token
-// that is merely underscoped.
+// sendInvalidTokenResponse sends a 401 with the invalid_token code of RFC 6750 Section 3.1, for a
+// token that was presented but cannot be read.
 func (m *MCPAuthMiddleware) sendInvalidTokenResponse(w http.ResponseWriter, errorDescription string) {
 	m.writeUnauthorized(w, "invalid_token", errorDescription)
 }
@@ -281,8 +280,8 @@ func (m *MCPAuthMiddleware) sendPerToolInsufficientScopeResponse(w http.Response
 
 // writeScopeChallenge writes a 403 with a WWW-Authenticate Bearer challenge.
 func (m *MCPAuthMiddleware) writeScopeChallenge(w http.ResponseWriter, claims authentication.Claims, scopes []string, errorDescription string) {
-	// Record how the claim was encoded and how much was read from it, so a 403 that comes down to
-	// the claim's shape rather than the token's actual grants is diagnosable from the logs.
+	// A 403 that comes down to the claim's encoding rather than the token's grants is otherwise
+	// invisible to an operator.
 	tokenScopes, _ := extractScopes(claims)
 	m.logger.Warn("MCP request rejected with insufficient scope",
 		zap.String("scope_claim_shape", scopeClaimShape(claims)),
@@ -366,9 +365,7 @@ func scopeClaimShape(claims authentication.Claims) string {
 	}
 }
 
-// extractScopes extracts the scope values from the OAuth 2.0 "scope" claim. An unreadable claim
-// is an error rather than an empty scope set, so the request is rejected as an invalid token
-// instead of being reported as merely missing scopes.
+// extractScopes extracts the scope values from the OAuth 2.0 "scope" claim.
 func extractScopes(claims authentication.Claims) ([]string, error) {
 	return authentication.ScopesFromClaims(claims, authentication.DefaultScopeClaim)
 }

@@ -70,8 +70,8 @@ func (a *authentication) SetScopes(scopes []string) {
 	a.claims[a.scopeClaim] = strings.Join(scopes, " ")
 }
 
-// Scopes returns the scopes of the request, or nil if the scope claim could not be read. Callers
-// that need to tell an unreadable claim from an absent one should use [ScopesFromClaims].
+// Scopes returns the scopes of the request, or nil if the scope claim could not be read. Use
+// [ScopesFromClaims] to tell an unreadable claim from an absent one.
 func (a *authentication) Scopes() []string {
 	if a == nil {
 		return nil
@@ -86,11 +86,8 @@ func (a *authentication) Scopes() []string {
 // ErrInvalidScopeClaim is returned when the scope claim is present but not in a readable encoding.
 var ErrInvalidScopeClaim = errors.New("invalid scope claim")
 
-// ScopesFromClaims reads the scope claim. RFC 8693 defines it as a space delimited string, but
-// some IdPs (Duende IdentityServer and others in the .NET ecosystem) emit a JSON array instead,
-// so both encodings are accepted. An absent claim yields no scopes and no error; a claim in any
-// other encoding, including an array holding a non-string member, is rejected rather than read
-// partially, since silently dropping a scope grants less access than the token was issued for.
+// ScopesFromClaims reads the scope claim. RFC 8693 defines it as a space delimited string, but some
+// IdPs (Duende IdentityServer and others in the .NET ecosystem) emit a JSON array instead.
 func ScopesFromClaims(claims Claims, scopeClaim string) ([]string, error) {
 	if scopeClaim == "" {
 		scopeClaim = DefaultScopeClaim

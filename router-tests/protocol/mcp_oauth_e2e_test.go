@@ -196,8 +196,6 @@ func TestMCPOAuthPerToolScopes(t *testing.T) {
 	})
 }
 
-// Some IdPs (Duende IdentityServer and others in the .NET ecosystem) emit the scope claim as a
-// JSON array once a token carries more than one scope, rather than as a space delimited string.
 func TestMCPOAuthArrayScopeClaim(t *testing.T) {
 	oauthServer, err := testutil.NewOAuthTestServer(t, nil)
 	require.NoError(t, err, "failed to start OAuth server")
@@ -240,8 +238,7 @@ func TestMCPOAuthArrayScopeClaim(t *testing.T) {
 	})
 }
 
-// A scope claim that cannot be read is rejected outright: dropping the unreadable members would
-// silently authorize the request for less than the token was issued for.
+// Dropping the unreadable members would authorize the request for less than the token was issued for.
 func TestMCPOAuthUnreadableScopeClaim(t *testing.T) {
 	oauthServer, err := testutil.NewOAuthTestServer(t, nil)
 	require.NoError(t, err, "failed to start OAuth server")
