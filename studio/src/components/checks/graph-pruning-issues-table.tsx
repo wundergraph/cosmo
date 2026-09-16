@@ -1,4 +1,5 @@
 import { GraphContext } from '@/components/layout/graph-layout';
+import { useParams } from 'next/navigation';
 import { useUser } from '@/hooks/use-user';
 import { cn } from '@/lib/utils';
 import { CheckCircleIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
@@ -28,6 +29,7 @@ export const GraphPruningIssuesTable = ({
   hasGraphPruningErrors: boolean;
 }) => {
   const router = useRouter();
+  const { slug, checkId } = useParams<{ slug: string; checkId: string }>();
   const user = useUser();
   const graphContext = useContext(GraphContext);
   const {
@@ -106,8 +108,8 @@ export const GraphPruningIssuesTable = ({
                           href={buildUrl('/:organizationSlug/:namespace/graph/:slug/checks/:checkId', {
                             organizationSlug,
                             namespace,
-                            slug: router.query.slug as string,
-                            checkId: router.query.checkId as string,
+                            slug,
+                            checkId,
                             tab: 'schema',
                             subgraph: l.subgraphName,
                           })}

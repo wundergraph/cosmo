@@ -1,4 +1,5 @@
 import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { useParams } from 'next/navigation';
 import { useDateRangeQueryState } from '@/components/analytics/useAnalyticsQueryState';
 import { getCheckIcon } from '@/components/check-badge-icon';
 import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
@@ -26,6 +27,7 @@ import { getProposalsByFederatedGraph } from '@wundergraph/cosmo-connect/dist/pl
 import { formatDistanceToNow, formatISO } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { buildUrl } from '@/lib/build-url';
 
@@ -33,13 +35,11 @@ const ProposalsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const user = useUser();
   const proposalsFeature = useFeature('proposals');
-  const federatedGraphName = router.query.slug as string;
+  const { slug: federatedGraphName } = useParams<{ slug: string }>();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-
-  const limit = Number.parseInt((router.query.pageSize as string) || '10');
+  const { pageNumber, pageSize: limit } = usePaginationParams();
 
   const {
     dateRange: { start, end },
@@ -89,7 +89,7 @@ const ProposalsPage: NextPageWithLayout = () => {
               router.push(
                 `${buildUrl('/:organizationSlug/policies', {
                   organizationSlug: user?.currentOrganization.slug,
-                  namespace: router.query.namespace as string,
+                  namespace,
                 })}#proposals`,
               );
             }}

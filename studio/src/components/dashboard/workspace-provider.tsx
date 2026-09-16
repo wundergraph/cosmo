@@ -1,4 +1,5 @@
 import { useQuery } from '@connectrpc/connect-query';
+import { useParams } from 'next/navigation';
 import { create } from '@bufbuild/protobuf';
 import { getWorkspace } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
@@ -29,7 +30,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
   const { data, isLoading } = useQuery(getWorkspace, {});
 
   // Initialize the namespace
-  const namespaceParam = router.query.namespace as string;
+  const { namespace: namespaceParam } = useParams<{ namespace: string }>();
   const [storedNamespace, setStoredNamespace] = useLocalStorage('wg-namespace', DEFAULT_NAMESPACE_NAME);
   const [namespace, setNamespace] = useState(namespaceParam || storedNamespace || DEFAULT_NAMESPACE_NAME);
   const [namespaces, setNamespaces] = useState([DEFAULT_NAMESPACE_NAME]);
