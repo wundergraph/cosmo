@@ -4,11 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
+	"github.com/wundergraph/cosmo/router-tests/jwks"
 	authdeny "github.com/wundergraph/cosmo/router-tests/modules/custom-auth-deny"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router-tests/testutils"
@@ -48,6 +55,147 @@ func ignoredTokenHeaderRules() config.HeaderRules {
 				{Operation: config.HeaderRuleOperationSet, Name: "X-Test-Authenticated", Expression: "request.auth.isAuthenticated ? 'true' : 'false'"},
 			},
 		},
+	}
+}
+
+func TestJWTOnErrorHeaderForwarding(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name     string
+		onError  config.JWTOnError
+		required bool
+		forward  bool
+	}{
+		{name: "default rejects", forward: true},
+		{name: "reject", onError: config.JWTOnErrorReject, forward: true},
+		{name: "continue forwards", onError: config.JWTOnErrorContinue, forward: true},
+		{name: "continue without forwarding rules", onError: config.JWTOnErrorContinue},
+		{name: "continue with required authentication", onError: config.JWTOnErrorContinue, required: true, forward: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			authServer, err := jwks.NewServer(t)
+			require.NoError(t, err)
+			t.Cleanup(authServer.Close)
+			valid, err := authServer.Token(map[string]any{"sub": "test-user", "scope": "read:all"})
+			require.NoError(t, err)
+			expired, err := authServer.Token(map[string]any{"sub": "test-user", "scope": "read:all", "exp": time.Now().Add(-time.Hour).Unix()})
+			require.NoError(t, err)
+
+			var forwarded atomic.Pointer[http.Header]
+			subgraph := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				headers := r.Header.Clone()
+				forwarded.Store(&headers)
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(employeesExpectedData))
+			}))
+			t.Cleanup(subgraph.Close)
+
+			dir := t.TempDir()
+			routerConfig := strings.ReplaceAll(testenv.ConfigJSONTemplate, subgraphs.EmployeesDefaultDemoURL, subgraph.URL)
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "config.json"), []byte(routerConfig), 0o600))
+			yamlConfig := fmt.Sprintf(`
+version: "1"
+router_config_path: config.json
+authentication:
+  jwt:
+    jwks:
+      - url: %q
+    header_sources:
+      - type: header
+        name: X-Token
+        value_prefixes: [Token]
+`, authServer.JWKSURL())
+			if tt.onError != "" {
+				yamlConfig += fmt.Sprintf("    on_error: %s\n", tt.onError)
+			}
+			yamlConfig += fmt.Sprintf(`
+authorization:
+  require_authentication: %t
+headers:
+  all:
+    request:
+      - op: set
+        name: X-Test-Authenticated
+        expression: "request.auth.isAuthenticated ? 'true' : 'false'"
+      - op: set
+        name: X-Test-Subject
+        expression: "request.auth.isAuthenticated ? request.auth.claims.sub : 'anonymous'"
+`, tt.required)
+			if tt.forward {
+				yamlConfig += `
+      - op: propagate
+        named: Authorization
+  subgraphs:
+    employees:
+      request:
+        - op: propagate
+          named: X-Token
+          rename: X-Forwarded-Token
+`
+			}
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(yamlConfig), 0o600))
+
+			// Start from YAML to exercise configuration loading and access-controller wiring.
+			err = testenv.RunRouterBinary(t, &testenv.Config{}, testenv.RunRouterBinConfigOptions{
+				OverrideDirectory: dir,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				for _, source := range []struct{ header, prefix, target string }{
+					{"Authorization", "Bearer", "Authorization"},
+					{"X-Token", "Token", "X-Forwarded-Token"},
+				} {
+					for _, credential := range []struct {
+						name, value string
+						valid       bool
+					}{
+						{name: "missing"},
+						{name: "opaque", value: source.prefix + " opaque-private-token"},
+						{name: "malformed JWT", value: source.prefix + " private.invalid.jwt"},
+						{name: "unsupported prefix", value: "Basic opaque-private-token"},
+						{name: "empty token", value: source.prefix},
+						{name: "expired JWT", value: source.prefix + " " + expired},
+						{name: "valid JWT", value: source.prefix + " " + valid, valid: true},
+					} {
+						t.Run(source.header+"/"+credential.name, func(t *testing.T) {
+							forwarded.Store(nil)
+							headers := map[string]string{}
+							if credential.value != "" {
+								headers[source.header] = credential.value
+							}
+							res, err := xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{Query: `{ employees { id } }`}, headers)
+							require.NoError(t, err)
+							allowed := credential.valid || !tt.required && (credential.value == "" || tt.onError == config.JWTOnErrorContinue)
+							if !allowed {
+								require.Equal(t, http.StatusUnauthorized, res.Response.StatusCode)
+								require.JSONEq(t, unauthorizedExpectedData, res.Body)
+								require.Nil(t, forwarded.Load(), "rejected requests must not reach the subgraph")
+								return
+							}
+							require.Equal(t, http.StatusOK, res.Response.StatusCode)
+							require.JSONEq(t, employeesExpectedData, res.Body)
+							received := forwarded.Load()
+							require.NotNil(t, received, "expected an executed subgraph request")
+							if tt.forward {
+								require.Equal(t, credential.value, received.Get(source.target))
+							} else {
+								require.Empty(t, received.Get(source.target))
+							}
+							require.Empty(t, received.Get("X-Token"), "custom credential is only forwarded under its configured name")
+							require.Equal(t, strconv.FormatBool(credential.valid), received.Get("X-Test-Authenticated"))
+							if credential.valid {
+								require.Equal(t, "test-user", received.Get("X-Test-Subject"))
+								require.Equal(t, "jwks", res.Response.Header.Get(xAuthenticatedByHeader))
+							} else {
+								require.Equal(t, "anonymous", received.Get("X-Test-Subject"))
+								require.Empty(t, res.Response.Header.Get(xAuthenticatedByHeader))
+							}
+						})
+					}
+				}
+			})
+			require.NoError(t, err)
+		})
 	}
 }
 

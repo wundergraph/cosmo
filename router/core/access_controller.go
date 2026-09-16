@@ -66,6 +66,8 @@ func (a *AccessController) Access(w http.ResponseWriter, r *http.Request) (*http
 	if err != nil && a.jwtOnError != config.JWTOnErrorContinue {
 		return nil, errors.Join(err, ErrUnauthorized)
 	}
+	// Ignored failures do not authenticate the request. Keep the original headers
+	// available to custom modules and the configured subgraph header rules.
 	if auth != nil {
 		w.Header().Set("X-Authenticated-By", auth.Authenticator())
 		return r.WithContext(authentication.NewContext(r.Context(), auth)), nil
