@@ -94,7 +94,7 @@ func GetDeferResponseWriter(ctx *resolve.Context, _ *http.Request, w http.Respon
 	}
 
 	// Standard headers for Apollo Client @defer support
-	w.Header().Set("Content-Type", "multipart/mixed; deferSpec=20220824; boundary=\""+multipartBoundary+"\"")
+	w.Header().Set("Content-Type", multipartMime+"; boundary=\""+multipartBoundary+"\"; incrementalSpec="+deferIncrementalSpec)
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -114,28 +114,70 @@ func GetDeferResponseWriter(ctx *resolve.Context, _ *http.Request, w http.Respon
 	return ctx, flushWriter, true
 }
 
-// clientAcceptsMultipartMixed reports whether the request's Accept header allows
-// a multipart/mixed response, which @defer requires to stream incremental
-// payloads. The check is lenient: it accepts "multipart/mixed" with any
-// parameters (e.g. with or without deferSpec), the "multipart/*" and "*/*"
-// wildcards, and a missing/empty Accept header (which per RFC 9110 means the
-// client accepts anything).
-func clientAcceptsMultipartMixed(r *http.Request) bool {
+// deferIncrementalSpec is the version of the incremental delivery format the
+// router implements. It is advertised in the response Content-Type and matched
+// against the incrementalSpec parameter of the request Accept header.
+const deferIncrementalSpec = "v0.2"
+
+type deferAcceptVerdict int
+
+const (
+	// deferAcceptCompatible: the client accepts multipart/mixed in the format
+	// the router produces, or accepts anything.
+	deferAcceptCompatible deferAcceptVerdict = iota
+	// deferAcceptNoMultipart: the Accept header allows neither multipart/mixed
+	// nor a matching wildcard.
+	deferAcceptNoMultipart
+	// deferAcceptUnsupportedSpec: every multipart/mixed element names an
+	// incremental delivery format the router does not produce.
+	deferAcceptUnsupportedSpec
+)
+
+// deferAccept inspects the Accept header of a request whose operation contains
+// @defer. A multipart/mixed element without a format parameter, or with
+// incrementalSpec set to the supported version, is compatible. An element with
+// deferSpec (the pre-2023 Apollo format) or another incrementalSpec version is
+// not, and wins over "multipart/*" and "*/*" wildcards: a client that names the
+// format it can parse is more specific than a wildcard next to it. A missing
+// Accept header means the client accepts anything (RFC 9110).
+// For an unsupported format the offending parameter is returned as "name=value".
+func deferAccept(r *http.Request) (deferAcceptVerdict, string) {
 	acceptHeader := r.Header.Get("Accept")
 	if acceptHeader == "" {
-		return true
+		return deferAcceptCompatible, ""
 	}
 
+	var (
+		wildcard    bool
+		unsupported string
+	)
 	for _, element := range strings.Split(acceptHeader, ",") {
-		mediaType, _, err := mime.ParseMediaType(element)
+		mediaType, params, err := mime.ParseMediaType(element)
 		if err != nil {
 			continue
 		}
 		switch mediaType {
-		case multipartMime, "multipart/*", "*/*":
-			return true
+		case "multipart/*", "*/*":
+			wildcard = true
+		case multipartMime:
+			// mime.ParseMediaType lowercases parameter names.
+			if v, ok := params["deferspec"]; ok {
+				unsupported = "deferSpec=" + v
+				continue
+			}
+			if v, ok := params["incrementalspec"]; ok && v != deferIncrementalSpec {
+				unsupported = "incrementalSpec=" + v
+				continue
+			}
+			return deferAcceptCompatible, ""
 		}
 	}
 
-	return false
+	switch {
+	case unsupported != "":
+		return deferAcceptUnsupportedSpec, unsupported
+	case wildcard:
+		return deferAcceptCompatible, ""
+	}
+	return deferAcceptNoMultipart, ""
 }
