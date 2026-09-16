@@ -97,6 +97,7 @@
     "monaco-graphql": "^1.4.0",
     "next": "15.5.24",
     "next-themes": "^0.2.1",
+    "nuqs": "^2.10.1",
     "posthog-js": "^1.395.0",
     "prettier": "catalog:",
     "pretty-bytes": "^6.1.1",

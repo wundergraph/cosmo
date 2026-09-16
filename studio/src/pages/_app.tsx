@@ -25,6 +25,7 @@ import { hasAnalyticsConsent } from '@/hooks/use-analytics-consent';
 import { withErrorBoundary } from '@sentry/nextjs';
 import { Footer } from '@/components/layout/footer';
 import { OnboardingProvider } from '@/components/onboarding/onboarding-provider';
+import { NuqsAdapter } from 'nuqs/adapters/next/pages';
 
 const queryClient = new QueryClient();
 
@@ -108,22 +109,24 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
 
   return (
     <>
-      <PostHogProvider client={posthog}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <QueryClientProvider client={queryClient}>
-            <PostHogFeatureFlagProvider disabled={!process.env.NEXT_PUBLIC_POSTHOG_KEY}>
-              <OnboardingProvider>
-                <AppProvider>
-                  <TooltipProvider>
-                    <Toaster />
-                    {getLayout(<Component {...pageProps} />)}
-                  </TooltipProvider>
-                </AppProvider>
-              </OnboardingProvider>
-            </PostHogFeatureFlagProvider>
-          </QueryClientProvider>
-        </ThemeProvider>
-      </PostHogProvider>
+      <NuqsAdapter>
+        <PostHogProvider client={posthog}>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+            <QueryClientProvider client={queryClient}>
+              <PostHogFeatureFlagProvider disabled={!process.env.NEXT_PUBLIC_POSTHOG_KEY}>
+                <OnboardingProvider>
+                  <AppProvider>
+                    <TooltipProvider>
+                      <Toaster />
+                      {getLayout(<Component {...pageProps} />)}
+                    </TooltipProvider>
+                  </AppProvider>
+                </OnboardingProvider>
+              </PostHogFeatureFlagProvider>
+            </QueryClientProvider>
+          </ThemeProvider>
+        </PostHogProvider>
+      </NuqsAdapter>
       <Footer />
     </>
   );
