@@ -1,4 +1,4 @@
-import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { parseAsString, useQueryState } from 'nuqs';
 import { EmptyState } from '@/components/empty-state';
 import { FeatureFlagsTable } from '@/components/feature-flags-table';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
@@ -10,28 +10,23 @@ import { useQuery } from '@connectrpc/connect-query';
 import { Cross1Icon, ExclamationTriangleIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { getFeatureFlagsByFederatedGraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { useRouter } from 'next/router';
-import { useContext, useState } from 'react';
+
+import { usePaginationParams } from '@/hooks/use-pagination-params';
+import { useContext } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useWorkspace } from '@/hooks/use-workspace';
 
 const FeatureFlagsPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
-  const router = useRouter();
 
   const {
     namespace: { name: namespace },
   } = useWorkspace();
 
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || '10');
-  const limit = pageSize > 50 ? 50 : pageSize;
-  const offset = (pageNumber - 1) * limit;
+  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
 
-  const [search, setSearch] = useState(router.query.search as string);
+  const [search, setSearch] = useQueryState('search', parseAsString.withDefault(''));
   const [query] = useDebounce(search, 500);
-
-  const applyParams = useApplyParams();
 
   const { data, isLoading, error, refetch } = useQuery(
     getFeatureFlagsByFederatedGraph,
@@ -79,19 +74,13 @@ const FeatureFlagsPage: NextPageWithLayout = () => {
           placeholder="Search by name"
           className="pl-8 pr-10"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            applyParams({ search: e.target.value });
-          }}
+          onChange={(e) => setSearch(e.target.value)}
         />
         {search && (
           <Button
             variant="ghost"
             className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-            onClick={() => {
-              setSearch('');
-              applyParams({ search: null });
-            }}
+            onClick={() => setSearch(null)}
           >
             <Cross1Icon />
           </Button>

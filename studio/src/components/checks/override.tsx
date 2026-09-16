@@ -1,4 +1,5 @@
 import { EmptyState } from '@/components/empty-state';
+import { useQueryState } from 'nuqs';
 import { GraphContext } from '@/components/layout/graph-layout';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
@@ -173,9 +174,8 @@ export const ConfigureOverride = () => {
   const checkUserAccess = useCheckUserAccess();
   const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
 
-  const router = useRouter();
-  const operationHash = router.query.override as string;
-  const operationName = router.query.overrideName as string;
+  const [operationHash] = useQueryState('override');
+  const [operationName] = useQueryState('overrideName');
 
   const client = useQueryClient();
 
@@ -187,7 +187,7 @@ export const ConfigureOverride = () => {
     {
       graphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
-      operationHash,
+      operationHash: operationHash ?? undefined,
     },
     {
       enabled: !!operationHash,
@@ -281,11 +281,11 @@ export const ConfigureOverride = () => {
                     ? removeIgnoreAll({
                         graphName: graphContext?.graph?.name,
                         namespace: graphContext?.graph?.namespace,
-                        operationHash,
+                        operationHash: operationHash ?? undefined,
                       })
                     : createIgnoreAll({
-                        operationHash,
-                        operationName,
+                        operationHash: operationHash ?? undefined,
+                        operationName: operationName ?? undefined,
                         graphName: graphContext?.graph?.name,
                         namespace: graphContext?.graph?.namespace,
                       })
@@ -320,7 +320,7 @@ export const ConfigureOverride = () => {
                     <Override
                       key={i}
                       {...c}
-                      operationHash={operationHash}
+                      operationHash={operationHash ?? ''}
                       isAdminOrDeveloper={isAdminOrDeveloper}
                       refresh={() => {
                         refetch();
@@ -368,7 +368,7 @@ export const ConfigureOverride = () => {
                 variant="secondary"
                 className=""
                 onClick={() => {
-                  copy(operationHash);
+                  copy(operationHash ?? '');
                   toast({
                     description: 'Copied operation hash',
                   });
@@ -378,7 +378,7 @@ export const ConfigureOverride = () => {
                 Copy Hash
               </Button>
               <OperationContentDialog
-                hash={operationHash}
+                hash={operationHash ?? ''}
                 trigger={
                   <Button className="w-max" variant="secondary">
                     View Operation Content

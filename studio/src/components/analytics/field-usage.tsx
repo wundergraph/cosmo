@@ -1,4 +1,5 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useQueryState } from 'nuqs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
 import useWindowSize from '@/hooks/use-window-size';
@@ -308,9 +309,9 @@ export const FieldUsageSheet = () => {
   const [type, field] = showUsage?.split('.') ?? [];
 
   const graph = useContext(GraphContext);
-  const featureFlagName = router.query.featureFlag as string;
+  const [featureFlagName] = useQueryState('featureFlag');
 
-  const category = router.query.category as string;
+  const [category] = useQueryState('category');
   const isInput = category === 'inputs';
 
   const { data, error, isLoading, refetch } = useQuery(
@@ -326,7 +327,7 @@ export const FieldUsageSheet = () => {
         start: formatISO(dateRange.start),
         end: formatISO(dateRange.end),
       },
-      featureFlagName,
+      featureFlagName: featureFlagName ?? undefined,
       isInput,
     },
     {

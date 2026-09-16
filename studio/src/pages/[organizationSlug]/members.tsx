@@ -275,7 +275,7 @@ const PendingInvitations = () => {
   const user = useUser();
   const isAdmin = useIsAdmin();
 
-  const { pageSize, offset, pageNumber, search } = usePaginationParams();
+  const { pageSize, offset, pageNumber, search } = usePaginationParams({ defaultPageSize: 20 });
 
   const [debouncedSearch] = useDebounce(search, 500);
 
@@ -342,7 +342,7 @@ const AcceptedMembers = () => {
   const isAdmin = useIsAdmin();
   const [selectedMember, setSelectedMember] = useState<OrgMember | undefined>();
 
-  const { pageSize, offset, pageNumber, search } = usePaginationParams();
+  const { pageSize, offset, pageNumber, search } = usePaginationParams({ defaultPageSize: 20 });
 
   const [debouncedSearch] = useDebounce(search, 500);
 
@@ -426,7 +426,7 @@ const MembersToolbar = () => {
   const isAdmin = useIsAdmin();
   const client = useQueryClient();
 
-  const { pageSize, offset, search } = usePaginationParams();
+  const { pageSize, offset, search } = usePaginationParams({ defaultPageSize: 20 });
 
   const { data } = useQuery(isMemberLimitReached);
 
@@ -492,7 +492,7 @@ const MembersPage: NextPageWithLayout = () => {
   const [search, setSearch] = useState('');
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { pageSize, offset } = usePaginationParams();
+  const { pageSize, offset } = usePaginationParams({ defaultPageSize: 20 });
 
   const { data } = useQuery(getPendingOrganizationMembers, {
     pagination: {

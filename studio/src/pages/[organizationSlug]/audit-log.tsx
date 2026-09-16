@@ -17,13 +17,10 @@ import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { getAuditLogs } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { formatISO } from 'date-fns';
-import { useRouter } from 'next/router';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 
 const AuditLogPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-
-  const limit = Number.parseInt((router.query.pageSize as string) || '10');
+  const { pageNumber, pageSize: limit } = usePaginationParams();
 
   const {
     dateRange: { start, end },

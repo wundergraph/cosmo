@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { parseAsString, useQueryState } from 'nuqs';
 import { useRouter } from 'next/router';
 import { OperationsFetchBasedOn } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { useApplyParams } from '@/components/analytics/use-apply-params';
@@ -65,12 +66,12 @@ export const useOperationsFilters = () => {
 
   // Get current values from URL
   const includeOperationsWithDeprecatedFieldsOnly = router.query.includeOperationsWithDeprecatedFieldsOnly === 'true';
-  const clientNamesParam = (router.query.clientNames as string) || null;
+  const [clientNamesParam] = useQueryState('clientNames');
   const clientNames = clientNamesParam ? clientNamesParam.split(',').filter((name) => name.length > 0) : [];
-  const searchQuery = (router.query.searchQuery as string) || '';
-  const fetchBasedOnStr = (router.query.fetchBasedOn as string) || 'requests';
+  const [searchQuery] = useQueryState('searchQuery', parseAsString.withDefault(''));
+  const [fetchBasedOnStr] = useQueryState('fetchBasedOn', parseAsString.withDefault('requests'));
   const fetchBasedOn = stringToEnum(fetchBasedOnStr);
-  const sortDirection = (router.query.sortDirection as string) || 'desc';
+  const [sortDirection] = useQueryState('sortDirection', parseAsString.withDefault('desc'));
 
   return {
     applyDeprecatedFieldsFilter,

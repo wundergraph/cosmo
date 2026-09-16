@@ -1,4 +1,6 @@
 import { EmptyState } from '@/components/empty-state';
+import { useParams } from 'next/navigation';
+import { useQueryState } from 'nuqs';
 import { GraphPageLayout, getGraphLayout, GraphContext } from '@/components/layout/graph-layout';
 import Link from 'next/link';
 import { ArrowRightIcon, SizeIcon } from '@radix-ui/react-icons';
@@ -48,7 +50,7 @@ const RouterSheet: React.FC<any> = (props) => {
   const router = useRouter();
   const [size, setSize] = useState<keyof typeof sizes>('default');
 
-  const serviceInstanceId = router.query.serviceInstanceId as string;
+  const [serviceInstanceId] = useQueryState('serviceInstanceId');
 
   const index = props.data.findIndex((r: any) => r.serviceInstanceId === serviceInstanceId);
 
@@ -145,7 +147,7 @@ const RouterSheet: React.FC<any> = (props) => {
 
           <SheetTitle className="m-0 flex flex-wrap items-center gap-x-1.5 text-sm">
             <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">{serviceInstanceId}</code>
-            <CopyButton tooltip="Copy instance id" value={serviceInstanceId} />
+            <CopyButton tooltip="Copy instance id" value={serviceInstanceId ?? ''} />
           </SheetTitle>
 
           <Spacer />
@@ -298,8 +300,7 @@ const RoutersPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const namespace = router.query.namespace as string;
-  const slug = router.query.slug as string;
+  const { namespace, slug } = useParams<{ namespace: string; slug: string }>();
 
   const { data, isLoading, error, refetch } = useQuery(
     getRouters,

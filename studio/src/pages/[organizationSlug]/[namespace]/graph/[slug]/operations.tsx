@@ -1,4 +1,5 @@
 import { FieldUsageSheet } from '@/components/analytics/field-usage';
+import { useQueryState } from 'nuqs';
 import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
 import { ErrorMetricsCard, LatencyMetricsCard, RequestMetricsCard } from '@/components/analytics/metrics';
 import { RefreshInterval } from '@/components/analytics/refresh-interval';
@@ -48,6 +49,7 @@ import {
 import { formatISO } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 
@@ -479,7 +481,6 @@ const OperationsRightPanel = ({
 };
 
 const OperationsPage: NextPageWithLayout = () => {
-  const router = useRouter();
   const applyParams = useApplyParams();
   const graphContext = useContext(GraphContext);
   const { range, dateRange } = useAnalyticsQueryState();
@@ -508,9 +509,7 @@ const OperationsPage: NextPageWithLayout = () => {
     }
   }, [debouncedSearchQuery, urlSearchQuery, applyParams]);
 
-  const pageNumber = router.query.page ? parseInt(router.query.page as string, 10) : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || '10');
-  const offset = (pageNumber - 1) * pageSize;
+  const { pageNumber, pageSize, offset } = usePaginationParams();
 
   const {
     data: operationsData,
@@ -564,10 +563,10 @@ const OperationsPage: NextPageWithLayout = () => {
   const noOfPages = Math.ceil((operationsData?.totalCount ?? 0) / pageSize);
 
   // Use URL params as single source of truth for selected operation
-  const selectedOperation = useMemo(() => {
-    const operationHash = router.query.operationHash as string | undefined;
-    const operationName = router.query.operationName as string | undefined;
+  const [operationHash] = useQueryState('operationHash');
+  const [operationName] = useQueryState('operationName');
 
+  const selectedOperation = useMemo(() => {
     // If operationHash exists but operationName doesn't, it's an unnamed operation (fallback to '')
     if (!operationHash) {
       return undefined;
@@ -577,7 +576,7 @@ const OperationsPage: NextPageWithLayout = () => {
       hash: operationHash,
       name: operationName ?? '',
     };
-  }, [router.query.operationHash, router.query.operationName]);
+  }, [operationHash, operationName]);
 
   // Update URL params when operation is selected
   const handleOperationSelect = (operationHash: string, operationName: string) => {

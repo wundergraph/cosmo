@@ -1,4 +1,5 @@
 import { PlayIcon } from '@radix-ui/react-icons';
+import { useQueryState } from 'nuqs';
 import { useHotkeys } from '@saas-ui/use-hotkeys';
 import { CacheWarmerOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
@@ -18,7 +19,7 @@ import { buildUrl } from '@/lib/build-url';
 
 export const CacheDetailsSheet: React.FC<any> = ({ operations }: { operations: CacheWarmerOperation[] }) => {
   const router = useRouter();
-  const operationId = router.query.operationId as string;
+  const [operationId] = useQueryState('operationId');
 
   const [index, setIndex] = useState(operations.findIndex((r: CacheWarmerOperation) => r.id === operationId));
 

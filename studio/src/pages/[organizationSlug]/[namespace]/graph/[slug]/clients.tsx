@@ -1,4 +1,5 @@
 import { useReducer } from 'react';
+import { parseAsString, useQueryState } from 'nuqs';
 import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
 import { CodeViewer } from '@/components/code-viewer';
 import { EmptyState } from '@/components/empty-state';
@@ -52,7 +53,7 @@ import copy from 'copy-to-clipboard';
 import { formatDistanceToNow } from 'date-fns';
 import Fuse from 'fuse.js';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/router';
 import { useContext, useState } from 'react';
 import { BiAnalyse } from 'react-icons/bi';
@@ -178,11 +179,11 @@ const deletePersistedOperationReducer = (
 
 const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAdminOrDeveloper: boolean }) => {
   const router = useRouter();
-  const slug = router.query.slug as string;
+  const { slug } = useParams<{ slug: string }>();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const organizationSlug = router.query.organizationSlug as string;
+  const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const clientId = searchParams.get('clientId');
@@ -208,7 +209,7 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
 
   const { ast } = useParseSchema(sdlData?.sdl);
 
-  const [search, setSearch] = useState(router.query.search as string);
+  const [search, setSearch] = useQueryState('search', parseAsString.withDefault(''));
   const applyParams = (search: string) => {
     const query = { ...router.query };
     query.search = search;
@@ -612,11 +613,10 @@ type Input = z.infer<typeof FormSchema>;
 
 const CreateClient = ({ refresh }: { refresh: () => void }) => {
   const checkUserAccess = useCheckUserAccess();
-  const router = useRouter();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
+  const { slug } = useParams<{ slug: string }>();
   const [isOpen, setIsOpen] = useState(false);
 
   const { toast } = useToast();
@@ -706,7 +706,7 @@ const ClientsPage: NextPageWithLayout = () => {
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
+  const { slug } = useParams<{ slug: string }>();
 
   const constructLink = (name: string, mode: 'metrics' | 'traces') => {
     const filters = [];
