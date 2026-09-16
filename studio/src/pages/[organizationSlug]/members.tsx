@@ -332,7 +332,7 @@ const PendingInvitations = () => {
           </TableBody>
         </Table>
       </TableWrapper>
-      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} />
+      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} defaultPageSize={20} />
     </>
   );
 };
@@ -414,7 +414,7 @@ const AcceptedMembers = () => {
           )}
         </Table>
       </TableWrapper>
-      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} />
+      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} defaultPageSize={20} />
     </>
   );
 };

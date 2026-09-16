@@ -8,15 +8,17 @@ export const Pagination = ({
   noOfPages,
   pageNumber,
   options,
+  defaultPageSize = 10,
 }: {
   limit: number;
   noOfPages: number;
   pageNumber: number;
   options?: number[];
+  /** Must match the caller's `usePaginationParams`, so a size equal to it clears the param. */
+  defaultPageSize?: number;
 }) => {
-  /** Undefaulted so a page size matching a caller's default is still written rather than cleared. */
   const [, setPagination] = useQueryStates(
-    { page: parseAsInteger, pageSize: parseAsInteger },
+    { page: parseAsInteger.withDefault(1), pageSize: parseAsInteger.withDefault(defaultPageSize) },
     { history: 'push', scroll: true },
   );
 
