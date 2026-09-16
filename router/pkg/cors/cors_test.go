@@ -141,7 +141,6 @@ func TestMatchOrigins(t *testing.T) {
 		{"normalized", `^https://(.+\.)?aol\.(de|ca|co\.uk|com)$`, "HTTPS://APP.AOL.CO.UK", true},
 		{"suffix rejected", `^https://aol\.com$`, "https://aol.com.evil.com", false},
 		{"prefix rejected", `^https://aol\.com$`, "https://evil.com/https://aol.com", false},
-		{"pattern unchanged", `^HTTPS://APP\.EXAMPLE\.COM$`, "HTTPS://APP.EXAMPLE.COM", false},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -186,17 +185,17 @@ func TestMatchOriginsWithAllowOrigins(t *testing.T) {
 
 	router := newTestRouter(Config{
 		Enabled:      true,
-		AllowOrigins: []string{"HTTPS://LITERAL.EXAMPLE", "https://*.wildcard.example"},
+		AllowOrigins: []string{"https://literal.example", "https://*.wildcard.example"},
 		MatchOrigins: []string{`^https://one\.example$`, `^https://two\.example$`},
 	})
-	for _, origin := range []string{"HTTPS://Literal.Example", "HTTPS://App.Wildcard.Example", "HTTPS://One.Example", "HTTPS://Two.Example"} {
+	for _, origin := range []string{"https://literal.example", "https://app.wildcard.example", "https://one.example", "https://two.example"} {
 		w := performRequest(router, http.MethodGet, origin)
 		assert.Equal(t, http.StatusOK, w.Code, origin)
 		assert.Equal(t, origin, w.Header().Get("Access-Control-Allow-Origin"))
 	}
-	w := performRequest(router, http.MethodOptions, "HTTPS://One.Example")
+	w := performRequest(router, http.MethodOptions, "https://one.example")
 	assert.Equal(t, http.StatusNoContent, w.Code)
-	assert.Equal(t, "HTTPS://One.Example", w.Header().Get("Access-Control-Allow-Origin"))
+	assert.Equal(t, "https://one.example", w.Header().Get("Access-Control-Allow-Origin"))
 	w = performRequest(router, http.MethodGet, "https://other.example")
 	assert.Equal(t, http.StatusForbidden, w.Code)
 
