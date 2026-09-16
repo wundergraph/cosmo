@@ -1,9 +1,10 @@
 import process from 'node:process';
 import { pino } from 'pino';
 import postgres, { Sql } from 'postgres';
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { S3Client } from '@aws-sdk/client-s3';
 import { and, eq } from 'drizzle-orm';
+import { validate } from 'uuid';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import { OrganizationRepository } from '../core/repositories/OrganizationRepository.js';
 import * as schema from '../db/schema.js';
@@ -48,13 +49,55 @@ try {
   queryConnection = postgres(databaseConnectionUrl, { ...connectionConfig });
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
-  // Ensure the organization exists in the database
+  // Assume the given organization id is a space separated list of ids and process each valid id one at a time
+  for (const orgId of organizationId.split(' ')) {
+    if (orgId.length === 0 || !validate(orgId)) {
+      // Skip invalid organization ids
+      continue;
+    }
+
+    await enableFeatureForOrganization(db, orgId);
+  }
+} catch (e) {
+  console.error(e);
+  // eslint-disable-next-line unicorn/no-process-exit
+  process.exit(1);
+} finally {
+  if (queryConnection) {
+    await queryConnection.end({ timeout: 1 });
+  }
+}
+
+function getS3Storage() {
+  const bucketName = extractS3BucketName(s3Storage);
+  const s3Config = createS3ClientConfig(bucketName, s3Storage);
+
+  const s3Client = new S3Client(s3Config);
+  const primaryBlobStorage = new S3BlobStorage(s3Client, bucketName, {
+    useIndividualDeletes: true,
+  });
+
+  if (!s3StorageFailover?.url) {
+    return primaryBlobStorage;
+  }
+
+  const failoverBucketName = extractS3BucketName(s3StorageFailover);
+  const failoverS3Config = createS3ClientConfig(failoverBucketName, s3StorageFailover);
+  const failoverS3Client = new S3Client(failoverS3Config);
+  const failoverBlobStorage = new S3BlobStorage(failoverS3Client, failoverBucketName, {
+    useIndividualDeletes: true,
+  });
+
+  return new DualBlobStorage(primaryBlobStorage, failoverBlobStorage);
+}
+
+async function enableFeatureForOrganization(db: PostgresJsDatabase<typeof schema>, organizationId: string) {
   const orgRepo = new OrganizationRepository(logger, db);
+
   const org = await orgRepo.byId(organizationId);
   if (!org) {
     console.log(`Organization with ID "${organizationId}" not found`);
-    // eslint-disable-next-line unicorn/no-process-exit
-    process.exit(1);
+    return;
   }
 
   // Ensure that the feature has not been
@@ -64,10 +107,11 @@ try {
   });
 
   if (feature?.enabled) {
-    console.log(`The feature has already been enable for "${org.name}" (${org.id})`);
-    // eslint-disable-next-line unicorn/no-process-exit
-    process.exit(1);
+    console.log(`The feature has already been enable for "${org.name}"`);
+    return;
   }
+
+  console.log(`Enabling 'split-config-loading' for organization "${org.name}"`);
 
   await db.transaction(async (tx) => {
     // Enable the feature for the organization before recomposing all the graphs/feature flags
@@ -146,37 +190,6 @@ try {
       }
     }
 
-    console.log('Feature enabled successfully');
+    console.log(`Feature enabled successfully for organization "${org.name}"`);
   });
-} catch (e) {
-  console.error(e);
-  // eslint-disable-next-line unicorn/no-process-exit
-  process.exit(1);
-} finally {
-  if (queryConnection) {
-    await queryConnection.end({ timeout: 1 });
-  }
-}
-
-function getS3Storage() {
-  const bucketName = extractS3BucketName(s3Storage);
-  const s3Config = createS3ClientConfig(bucketName, s3Storage);
-
-  const s3Client = new S3Client(s3Config);
-  const primaryBlobStorage = new S3BlobStorage(s3Client, bucketName, {
-    useIndividualDeletes: true,
-  });
-
-  if (!s3StorageFailover?.url) {
-    return primaryBlobStorage;
-  }
-
-  const failoverBucketName = extractS3BucketName(s3StorageFailover);
-  const failoverS3Config = createS3ClientConfig(failoverBucketName, s3StorageFailover);
-  const failoverS3Client = new S3Client(failoverS3Config);
-  const failoverBlobStorage = new S3BlobStorage(failoverS3Client, failoverBucketName, {
-    useIndividualDeletes: true,
-  });
-
-  return new DualBlobStorage(primaryBlobStorage, failoverBlobStorage);
 }
