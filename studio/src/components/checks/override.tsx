@@ -1,5 +1,5 @@
 import { EmptyState } from '@/components/empty-state';
-import { useQueryState } from 'nuqs';
+import { parseAsString, useQueryStates } from 'nuqs';
 import { GraphContext } from '@/components/layout/graph-layout';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
@@ -22,7 +22,6 @@ import copy from 'copy-to-clipboard';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useContext } from 'react';
-import { useApplyParams } from '../analytics/use-apply-params';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -169,25 +168,28 @@ const Override = ({
   );
 };
 
+export const overrideParams = {
+  override: parseAsString.withDefault(''),
+  overrideName: parseAsString.withDefault(''),
+};
+
 export const ConfigureOverride = () => {
   const graphContext = useContext(GraphContext);
   const checkUserAccess = useCheckUserAccess();
   const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
 
-  const [operationHash] = useQueryState('override');
-  const [operationName] = useQueryState('overrideName');
+  const [{ override: operationHash, overrideName: operationName }, setOverride] = useQueryStates(overrideParams);
 
   const client = useQueryClient();
 
   const { toast } = useToast();
-  const applyParams = useApplyParams();
 
   const { data, error, isLoading, refetch } = useQuery(
     getOperationOverrides,
     {
       graphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
-      operationHash: operationHash ?? undefined,
+      operationHash: operationHash,
     },
     {
       enabled: !!operationHash,
@@ -281,11 +283,11 @@ export const ConfigureOverride = () => {
                     ? removeIgnoreAll({
                         graphName: graphContext?.graph?.name,
                         namespace: graphContext?.graph?.namespace,
-                        operationHash: operationHash ?? undefined,
+                        operationHash: operationHash,
                       })
                     : createIgnoreAll({
-                        operationHash: operationHash ?? undefined,
-                        operationName: operationName ?? undefined,
+                        operationHash: operationHash,
+                        operationName: operationName,
                         graphName: graphContext?.graph?.name,
                         namespace: graphContext?.graph?.namespace,
                       })
@@ -320,7 +322,7 @@ export const ConfigureOverride = () => {
                     <Override
                       key={i}
                       {...c}
-                      operationHash={operationHash ?? ''}
+                      operationHash={operationHash}
                       isAdminOrDeveloper={isAdminOrDeveloper}
                       refresh={() => {
                         refetch();
@@ -342,10 +344,7 @@ export const ConfigureOverride = () => {
       open={!!operationHash}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
-          applyParams({
-            override: null,
-            overrideName: null,
-          });
+          setOverride({ override: null, overrideName: null });
         }
       }}
     >
@@ -368,7 +367,7 @@ export const ConfigureOverride = () => {
                 variant="secondary"
                 className=""
                 onClick={() => {
-                  copy(operationHash ?? '');
+                  copy(operationHash);
                   toast({
                     description: 'Copied operation hash',
                   });
@@ -378,7 +377,7 @@ export const ConfigureOverride = () => {
                 Copy Hash
               </Button>
               <OperationContentDialog
-                hash={operationHash ?? ''}
+                hash={operationHash}
                 trigger={
                   <Button className="w-max" variant="secondary">
                     View Operation Content

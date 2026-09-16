@@ -863,7 +863,10 @@ export const GraphSelector = () => {
   const router = useRouter();
   const [activeFeatureFlag] = useQueryState('featureFlag');
   const { slug: graphName } = useParams<{ slug: string }>();
-  const [schemaType] = useQueryState('schemaType', parseAsString.withDefault('client'));
+  const [schemaType, setSchemaType] = useQueryState(
+    'schemaType',
+    parseAsString.withDefault('client').withOptions({ history: 'push' }),
+  );
   const {
     namespace: { name: namespace },
   } = useWorkspace();
@@ -871,8 +874,6 @@ export const GraphSelector = () => {
   const fullPath = router.asPath;
   const pathWithHash = fullPath.split('?')[0];
   const pathname = pathWithHash.split('#')[0];
-
-  const applyParams = useApplyParams();
 
   const { data: compositionFlagsData } = useQuery(
     getFeatureFlagsInLatestCompositionByFederatedGraph,
@@ -999,14 +1000,7 @@ export const GraphSelector = () => {
     );
   } else {
     return (
-      <Select
-        onValueChange={(v) => {
-          applyParams({
-            schemaType: v,
-          });
-        }}
-        value={schemaType}
-      >
+      <Select onValueChange={setSchemaType} value={schemaType}>
         <SelectTrigger className="w-max">
           <SelectValue>{sentenceCase(schemaType)} Schema</SelectValue>
         </SelectTrigger>

@@ -1,86 +1,59 @@
 import { useCallback } from 'react';
-import { parseAsString, useQueryState } from 'nuqs';
-import { useRouter } from 'next/router';
+import { parseAsArrayOf, parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryStates } from 'nuqs';
 import { OperationsFetchBasedOn } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { useApplyParams } from '@/components/analytics/use-apply-params';
+
+const fetchBasedOnValues = ['requests', 'latency', 'errors'] as const;
+
+type FetchBasedOn = (typeof fetchBasedOnValues)[number];
+
+const fetchBasedOnEnum: Record<FetchBasedOn, OperationsFetchBasedOn> = {
+  requests: OperationsFetchBasedOn.REQUESTS,
+  latency: OperationsFetchBasedOn.LATENCY,
+  errors: OperationsFetchBasedOn.ERRORS,
+};
+
+const enumToString = (enumValue: OperationsFetchBasedOn): FetchBasedOn =>
+  (Object.keys(fetchBasedOnEnum) as FetchBasedOn[]).find((key) => fetchBasedOnEnum[key] === enumValue) ?? 'requests';
+
+export const operationsFilterParams = {
+  includeOperationsWithDeprecatedFieldsOnly: parseAsBoolean.withDefault(false),
+  operationHash: parseAsString,
+  operationName: parseAsString,
+  clientNames: parseAsArrayOf(parseAsString).withDefault([]),
+  searchQuery: parseAsString.withDefault(''),
+  fetchBasedOn: parseAsStringLiteral(fetchBasedOnValues).withDefault('requests'),
+  sortDirection: parseAsString.withDefault('desc'),
+};
 
 export const useOperationsFilters = () => {
-  const router = useRouter();
-  const applyNewParams = useApplyParams();
+  const [filters, setFilters] = useQueryStates(operationsFilterParams);
 
-  // Operations-specific filter management
   const applyDeprecatedFieldsFilter = useCallback(
     (includeOperationsWithDeprecatedFieldsOnly: boolean) => {
-      const params: Record<string, string | null> = {
-        includeOperationsWithDeprecatedFieldsOnly: includeOperationsWithDeprecatedFieldsOnly ? 'true' : null,
-      };
-
-      // When enabling deprecated fields filter, clear operation selection
-      if (includeOperationsWithDeprecatedFieldsOnly) {
-        // Clear operationHash and operationName from URL params
-        params.operationHash = null;
-        params.operationName = null;
-      }
-
-      applyNewParams(params);
+      setFilters({
+        includeOperationsWithDeprecatedFieldsOnly,
+        // Enabling the filter can hide the selected operation, so the selection goes with it.
+        ...(includeOperationsWithDeprecatedFieldsOnly ? { operationHash: null, operationName: null } : {}),
+      });
     },
-    [applyNewParams],
+    [setFilters],
   );
-
-  // Helper functions to convert between enum and string for URL params
-  const enumToString = (enumValue: OperationsFetchBasedOn): string => {
-    switch (enumValue) {
-      case OperationsFetchBasedOn.REQUESTS:
-        return 'requests';
-      case OperationsFetchBasedOn.LATENCY:
-        return 'latency';
-      case OperationsFetchBasedOn.ERRORS:
-        return 'errors';
-      default:
-        return 'requests';
-    }
-  };
-
-  const stringToEnum = (str: string): OperationsFetchBasedOn => {
-    switch (str) {
-      case 'requests':
-        return OperationsFetchBasedOn.REQUESTS;
-      case 'latency':
-        return OperationsFetchBasedOn.LATENCY;
-      case 'errors':
-        return OperationsFetchBasedOn.ERRORS;
-      default:
-        return OperationsFetchBasedOn.REQUESTS;
-    }
-  };
 
   const applySorting = useCallback(
     (fetchBasedOn: OperationsFetchBasedOn, sortDirection: string) => {
-      applyNewParams({
-        fetchBasedOn: enumToString(fetchBasedOn) || null,
-        sortDirection: sortDirection || null,
-      });
+      setFilters({ fetchBasedOn: enumToString(fetchBasedOn), sortDirection: sortDirection || null });
     },
-    [applyNewParams],
+    [setFilters],
   );
-
-  // Get current values from URL
-  const includeOperationsWithDeprecatedFieldsOnly = router.query.includeOperationsWithDeprecatedFieldsOnly === 'true';
-  const [clientNamesParam] = useQueryState('clientNames');
-  const clientNames = clientNamesParam ? clientNamesParam.split(',').filter((name) => name.length > 0) : [];
-  const [searchQuery] = useQueryState('searchQuery', parseAsString.withDefault(''));
-  const [fetchBasedOnStr] = useQueryState('fetchBasedOn', parseAsString.withDefault('requests'));
-  const fetchBasedOn = stringToEnum(fetchBasedOnStr);
-  const [sortDirection] = useQueryState('sortDirection', parseAsString.withDefault('desc'));
 
   return {
     applyDeprecatedFieldsFilter,
     applySorting,
-    includeOperationsWithDeprecatedFieldsOnly,
-    clientNames,
-    searchQuery,
-    fetchBasedOn,
-    fetchBasedOnStr, // Keep string version for backward compatibility
-    sortDirection,
+    includeOperationsWithDeprecatedFieldsOnly: filters.includeOperationsWithDeprecatedFieldsOnly,
+    clientNames: filters.clientNames,
+    searchQuery: filters.searchQuery,
+    fetchBasedOn: fetchBasedOnEnum[filters.fetchBasedOn],
+    fetchBasedOnStr: filters.fetchBasedOn,
+    sortDirection: filters.sortDirection,
   };
 };

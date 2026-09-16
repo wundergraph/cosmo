@@ -1,5 +1,5 @@
 import { FieldUsageSheet } from '@/components/analytics/field-usage';
-import { useQueryState } from 'nuqs';
+import { useQueryState, useQueryStates } from 'nuqs';
 import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
 import { ErrorMetricsCard, LatencyMetricsCard, RequestMetricsCard } from '@/components/analytics/metrics';
 import { RefreshInterval } from '@/components/analytics/refresh-interval';
@@ -24,7 +24,7 @@ import { Spacer } from '@/components/ui/spacer';
 import { Toolbar } from '@/components/ui/toolbar';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { useFeatureLimit } from '@/hooks/use-feature-limit';
-import { useOperationsFilters } from '@/hooks/use-operations-filters';
+import { operationsFilterParams, useOperationsFilters } from '@/hooks/use-operations-filters';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { NextPageWithLayout } from '@/lib/page';
 import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query';
@@ -563,8 +563,10 @@ const OperationsPage: NextPageWithLayout = () => {
   const noOfPages = Math.ceil((operationsData?.totalCount ?? 0) / pageSize);
 
   // Use URL params as single source of truth for selected operation
-  const [operationHash] = useQueryState('operationHash');
-  const [operationName] = useQueryState('operationName');
+  const [{ operationHash, operationName }, setOperation] = useQueryStates({
+    operationHash: operationsFilterParams.operationHash,
+    operationName: operationsFilterParams.operationName,
+  });
 
   const selectedOperation = useMemo(() => {
     // If operationHash exists but operationName doesn't, it's an unnamed operation (fallback to '')
@@ -582,19 +584,7 @@ const OperationsPage: NextPageWithLayout = () => {
   const handleOperationSelect = (operationHash: string, operationName: string) => {
     // For unnamed operations, only set operationHash (don't include operationName in URL)
     const normalizedOperationName = operationName || '';
-    const params: Record<string, string | null> = {
-      operationHash: operationHash || null,
-    };
-
-    // Only include operationName if it's not empty (named operations)
-    if (normalizedOperationName) {
-      params.operationName = normalizedOperationName;
-    } else {
-      // Remove operationName from URL for unnamed operations
-      params.operationName = null;
-    }
-
-    applyParams(params);
+    setOperation({ operationHash: operationHash || null, operationName: normalizedOperationName || null });
   };
 
   // Check and clear operation selection when operations data changes (after filters change or refetch)
@@ -616,10 +606,7 @@ const OperationsPage: NextPageWithLayout = () => {
 
     // If operation doesn't exist in the filtered list, clear it from URL params
     if (!operationExists) {
-      applyParams({
-        operationHash: null,
-        operationName: null,
-      });
+      setOperation({ operationHash: null, operationName: null });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [operationsData?.operations]);

@@ -1,6 +1,7 @@
 import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
+import { overrideParams } from '@/components/checks/override';
+import { useQueryStates } from 'nuqs';
 import { useParams } from 'next/navigation';
-import { useApplyParams } from '@/components/analytics/use-apply-params';
 import { ConfigureOverride } from '@/components/checks/override';
 import { EmptyState } from '@/components/empty-state';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
@@ -53,6 +54,7 @@ const OverridesPage: NextPageWithLayout = () => {
     slug: string;
   }>();
 
+  const [, setOverride] = useQueryStates(overrideParams);
   const { pageNumber, pageSize, offset } = usePaginationParams();
 
   const constructLink = (name: string, hash: string, mode: 'metrics' | 'traces') => {
@@ -87,8 +89,6 @@ const OverridesPage: NextPageWithLayout = () => {
       enabled: !!graphContext?.graph?.name,
     },
   );
-
-  const applyParams = useApplyParams();
 
   const columnHelper = createColumnHelper<GetAllOverridesResponse['overrides'][number]>();
 
@@ -158,10 +158,7 @@ const OverridesPage: NextPageWithLayout = () => {
               size="sm"
               className="table-action"
               onClick={() => {
-                applyParams({
-                  override: hash,
-                  overrideName: name,
-                });
+                setOverride({ override: hash, overrideName: name });
               }}
             >
               Configure
@@ -245,10 +242,7 @@ const OverridesPage: NextPageWithLayout = () => {
                 <TableRow
                   key={row.id}
                   onClick={() => {
-                    applyParams({
-                      override: row.getValue('hash'),
-                      overrideName: row.getValue('name'),
-                    });
+                    setOverride({ override: row.getValue('hash'), overrideName: row.getValue('name') });
                   }}
                   className="group cursor-pointer hover:bg-secondary/30"
                   data-state={row.getIsSelected() && 'selected'}

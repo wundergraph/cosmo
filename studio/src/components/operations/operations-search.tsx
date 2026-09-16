@@ -1,4 +1,5 @@
 import { Input } from '@/components/ui/input';
+import { parseAsInteger, useQueryStates } from 'nuqs';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -11,8 +12,7 @@ import type { AnalyticsFilter } from '@/components/analytics/filters';
 import { GraphContext } from '@/components/layout/graph-layout';
 import { useQuery } from '@connectrpc/connect-query';
 import { getClientsFromAnalytics } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { useOperationsFilters } from '@/hooks/use-operations-filters';
-import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { operationsFilterParams, useOperationsFilters } from '@/hooks/use-operations-filters';
 import { useRouter } from 'next/router';
 
 interface OperationsSearchProps {
@@ -46,8 +46,8 @@ export const OperationsSearch = ({
 }: OperationsSearchProps) => {
   const graphContext = useContext(GraphContext);
   const router = useRouter();
-  const applyParams = useApplyParams();
   const { clientNames } = useOperationsFilters();
+  const [, setFilters] = useQueryStates({ ...operationsFilterParams, page: parseAsInteger });
 
   // Fetch clients for the filter
   const { data: clientsData } = useQuery(
@@ -87,14 +87,12 @@ export const OperationsSearch = ({
 
   const handleClientNameFilterSelect = useCallback(
     (value?: string[]) => {
-      const clientNamesValue = value && value.length > 0 ? value.join(',') : null;
-
-      applyParams({
-        clientNames: clientNamesValue,
-        page: pageNumber !== 1 ? '1' : null,
+      setFilters({
+        clientNames: value && value.length > 0 ? value : null,
+        page: pageNumber !== 1 ? 1 : null,
       });
     },
-    [pageNumber, applyParams],
+    [pageNumber, setFilters],
   );
 
   const filtersList: AnalyticsFilter[] = useMemo(
@@ -140,14 +138,14 @@ export const OperationsSearch = ({
   // Reset all filters and operation selection
   const handleResetFilters = useCallback(() => {
     // Clear all filters and operation selection in a single update
-    applyParams({
+    setFilters({
       clientNames: null,
       includeOperationsWithDeprecatedFieldsOnly: null,
       operationHash: null,
       operationName: null,
-      page: pageNumber !== 1 ? '1' : null,
+      page: pageNumber !== 1 ? 1 : null,
     });
-  }, [applyParams, pageNumber]);
+  }, [setFilters, pageNumber]);
 
   return (
     <div className={`w-full space-y-4 ${className}`}>
