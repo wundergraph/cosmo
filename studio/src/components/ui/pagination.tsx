@@ -1,6 +1,5 @@
 import { ChevronLeftIcon, ChevronRightIcon, DoubleArrowLeftIcon, DoubleArrowRightIcon } from '@radix-ui/react-icons';
-import { useRouter } from 'next/router';
-import { useCallback } from 'react';
+import { parseAsInteger, useQueryStates } from 'nuqs';
 import { Button } from './button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 
@@ -15,17 +14,10 @@ export const Pagination = ({
   pageNumber: number;
   options?: number[];
 }) => {
-  const router = useRouter();
-  const applyNewParams = useCallback(
-    (newParams: Record<string, string>) => {
-      router.push({
-        query: {
-          ...router.query,
-          ...newParams,
-        },
-      });
-    },
-    [router],
+  /** Undefaulted so a page size matching a caller's default is still written rather than cleared. */
+  const [, setPagination] = useQueryStates(
+    { page: parseAsInteger, pageSize: parseAsInteger },
+    { history: 'push', scroll: true },
   );
 
   const pageSizeOptions = options ?? [10, 20, 30, 40, 50];
@@ -38,7 +30,7 @@ export const Pagination = ({
           value={`${limit}`}
           onValueChange={(value) => {
             // Reset page when size changes because the number of pages may not be the same
-            applyNewParams({ pageSize: value, page: '1' });
+            setPagination({ pageSize: Number(value), page: 1 });
           }}
         >
           <SelectTrigger className="h-8 w-[70px]">
@@ -61,7 +53,7 @@ export const Pagination = ({
           variant="outline"
           className="hidden h-8 w-8 p-0 lg:flex"
           onClick={() => {
-            applyNewParams({ page: '1' });
+            setPagination({ page: 1 });
           }}
           disabled={pageNumber === 1}
         >
@@ -72,7 +64,7 @@ export const Pagination = ({
           variant="outline"
           className="h-8 w-8 p-0"
           onClick={() => {
-            applyNewParams({ page: (pageNumber - 1).toString() });
+            setPagination({ page: pageNumber - 1 });
           }}
           disabled={pageNumber === 1}
         >
@@ -83,7 +75,7 @@ export const Pagination = ({
           variant="outline"
           className="h-8 w-8 p-0"
           onClick={() => {
-            applyNewParams({ page: (pageNumber + 1).toString() });
+            setPagination({ page: pageNumber + 1 });
           }}
           disabled={pageNumber === noOfPages || noOfPages === 0}
         >
@@ -94,7 +86,7 @@ export const Pagination = ({
           variant="outline"
           className="hidden h-8 w-8 p-0 lg:flex"
           onClick={() => {
-            applyNewParams({ page: noOfPages.toString() });
+            setPagination({ page: noOfPages });
           }}
           disabled={pageNumber === noOfPages || noOfPages === 0}
         >
