@@ -90,9 +90,6 @@ func (cors *cors) validateOrigin(origin string) bool {
 	if cors.allowAllOrigins {
 		return true
 	}
-	// Serialized origins contain a scheme, host and optional port. Normalize
-	// their casing for matching, retaining the original value for callbacks
-	// and Access-Control-Allow-Origin.
 	normalizedOrigin := strings.ToLower(origin)
 	if slices.Contains(cors.allowOrigins, normalizedOrigin) {
 		return true
