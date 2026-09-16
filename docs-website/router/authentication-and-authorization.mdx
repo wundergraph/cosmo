@@ -61,7 +61,7 @@ For more information on the attributes, visit the auth configuration parameter s
 
 ### Configuring JWT validation error handling
 
-By default, the router returns `401 Unauthorized` when authentication fails. Set `authentication.jwt.on_error: continue` to continue unauthenticated instead. This is useful when a custom module or subgraph validates opaque OAuth tokens.
+`authentication.jwt.on_error` accepts `reject` (default) and `continue`. The default returns `401 Unauthorized` for invalid JWT credentials. Use `continue` when a custom module or subgraph validates opaque OAuth tokens.
 
 ```yaml
 authentication:
@@ -74,13 +74,15 @@ authorization:
   require_authentication: false
 ```
 
-The original credential remains available to custom modules and [configured header forwarding](/router/proxy-capabilities/subgraph-request-header-operations).
+With `continue`, invalid credentials, including unsupported header prefixes and empty tokens, leave the request unauthenticated. The original credential remains available to custom modules and [configured header forwarding](/router/proxy-capabilities/subgraph-request-header-operations).
 
 <Warning>
   Your module or downstream service must validate the credential before allowing protected operations.
 </Warning>
 
 With `authorization.require_authentication: true`, the router still rejects unauthenticated requests. Fields protected by `@authenticated` or `@requiresScopes` also keep their authorization checks.
+
+This option does not ignore custom authenticator errors, malformed WebSocket payloads, or startup errors.
 
 ### Disabling Authentication for Introspection Operations
 

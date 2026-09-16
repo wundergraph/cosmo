@@ -708,7 +708,7 @@ type HeaderSource struct {
 	ValuePrefixes []string `yaml:"value_prefixes"`
 }
 
-// JWTOnError controls how request-time authentication failures are handled.
+// JWTOnError controls how JWT credential failures are handled.
 type JWTOnError string
 
 const (
@@ -722,7 +722,7 @@ type JWTAuthenticationConfiguration struct {
 	HeaderName        string              `yaml:"header_name" envDefault:"Authorization"`
 	HeaderValuePrefix string              `yaml:"header_value_prefix" envDefault:"Bearer"`
 	HeaderSources     []HeaderSource      `yaml:"header_sources"`
-	// OnError controls whether authentication failures reject the request or allow it to proceed unauthenticated.
+	// OnError controls whether invalid JWT credentials reject the request or are ignored.
 	// Required authentication and field authorization still apply.
 	OnError JWTOnError `yaml:"on_error" envDefault:"reject"`
 }

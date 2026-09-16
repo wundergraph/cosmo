@@ -3,12 +3,10 @@ package core
 import (
 	"crypto/subtle"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 var (
@@ -25,7 +23,6 @@ type AccessControllerOptions struct {
 	SkipIntrospectionQueries bool
 	IntrospectionSkipSecret  string
 	ScopeClaim               string
-	JWTOnError               config.JWTOnError
 }
 
 // AccessController handles both authentication and authorization for the Router
@@ -35,26 +32,16 @@ type AccessController struct {
 	skipIntrospectionQueries bool
 	introspectionSkipSecret  string
 	scopeClaim               string
-	jwtOnError               config.JWTOnError
 }
 
 // NewAccessController creates a new AccessController.
-// It returns an error if the JWT error policy is invalid.
 func NewAccessController(opts AccessControllerOptions) (*AccessController, error) {
-	switch opts.JWTOnError {
-	case "":
-		opts.JWTOnError = config.JWTOnErrorReject
-	case config.JWTOnErrorReject, config.JWTOnErrorContinue:
-	default:
-		return nil, fmt.Errorf("invalid JWT on_error policy %q: expected reject or continue", opts.JWTOnError)
-	}
 	return &AccessController{
 		authenticationRequired:   opts.AuthenticationRequired,
 		skipIntrospectionQueries: opts.SkipIntrospectionQueries,
 		authenticators:           opts.Authenticators,
 		introspectionSkipSecret:  opts.IntrospectionSkipSecret,
 		scopeClaim:               opts.ScopeClaim,
-		jwtOnError:               opts.JWTOnError,
 	}, nil
 }
 
@@ -63,11 +50,9 @@ func NewAccessController(opts AccessControllerOptions) (*AccessController, error
 // is returned.
 func (a *AccessController) Access(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
 	auth, err := authentication.AuthenticateHTTPRequest(r.Context(), a.authenticators, r, a.scopeClaim)
-	if err != nil && a.jwtOnError != config.JWTOnErrorContinue {
+	if err != nil {
 		return nil, errors.Join(err, ErrUnauthorized)
 	}
-	// Ignored failures do not authenticate the request. Keep the original headers
-	// available to custom modules and the configured subgraph header rules.
 	if auth != nil {
 		w.Header().Set("X-Authenticated-By", auth.Authenticator())
 		return r.WithContext(authentication.NewContext(r.Context(), auth)), nil

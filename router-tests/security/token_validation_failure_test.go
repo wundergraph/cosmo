@@ -1,7 +1,9 @@
 package integration
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -18,7 +20,6 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	authdeny "github.com/wundergraph/cosmo/router-tests/modules/custom-auth-deny"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -56,6 +57,28 @@ func ignoredTokenHeaderRules() config.HeaderRules {
 			},
 		},
 	}
+}
+
+func configureJWTOnErrorContinue(t *testing.T, fromPayload bool) ([]authentication.Authenticator, *jwks.Server) {
+	t.Helper()
+	authServer, err := jwks.NewServer(t)
+	require.NoError(t, err)
+	t.Cleanup(authServer.Close)
+	decoder, err := authentication.NewJwksTokenDecoder(t.Context(), zap.NewNop(), []authentication.JWKSConfig{{URL: authServer.JWKSURL()}})
+	require.NoError(t, err)
+	authenticator, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
+		Name: "jwks", TokenDecoder: decoder, IgnoreInvalidCredentials: true,
+	})
+	require.NoError(t, err)
+	authenticators := []authentication.Authenticator{authenticator}
+	if fromPayload {
+		authenticator, err = authentication.NewWebsocketInitialPayloadAuthenticator(authentication.WebsocketInitialPayloadAuthenticatorOptions{
+			TokenDecoder: decoder, Key: "Authorization", IgnoreInvalidCredentials: true,
+		})
+		require.NoError(t, err)
+		authenticators = append(authenticators, authenticator)
+	}
+	return authenticators, authServer
 }
 
 func TestJWTOnErrorHeaderForwarding(t *testing.T) {
@@ -204,9 +227,9 @@ func TestJWTOnErrorContinueModule(t *testing.T) {
 	for _, preFetch := range []bool{false, true} {
 		t.Run(fmt.Sprintf("pre_fetch_authorization=%t", preFetch), func(t *testing.T) {
 			t.Parallel()
-			authenticators, authServer := testutils.ConfigureAuth(t)
+			authenticators, authServer := configureJWTOnErrorContinue(t, false)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
-				Authenticators: authenticators, JWTOnError: config.JWTOnErrorContinue,
+				Authenticators: authenticators,
 			})
 			require.NoError(t, err)
 			var fetches atomic.Int32
@@ -280,24 +303,18 @@ func TestJWTOnErrorContinueWebsocket(t *testing.T) {
 	for _, fromPayload := range []bool{false, true} {
 		t.Run(fmt.Sprintf("initial_payload=%t", fromPayload), func(t *testing.T) {
 			t.Parallel()
-			authenticators, authServer := testutils.ConfigureAuth(t)
-			if fromPayload {
-				decoder, err := authentication.NewJwksTokenDecoder(t.Context(), zap.NewNop(), []authentication.JWKSConfig{{URL: authServer.JWKSURL()}})
-				require.NoError(t, err)
-				authenticator, err := authentication.NewWebsocketInitialPayloadAuthenticator(authentication.WebsocketInitialPayloadAuthenticatorOptions{
-					TokenDecoder: decoder, Key: "Authorization",
-				})
-				require.NoError(t, err)
-				authenticators = append(authenticators, authenticator)
-			}
+			authenticators, _ := configureJWTOnErrorContinue(t, fromPayload)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
-				Authenticators: authenticators, JWTOnError: config.JWTOnErrorContinue,
+				Authenticators: authenticators,
 			})
 			require.NoError(t, err)
+			var fetches atomic.Int32
 			forwardedHeaders := make(chan http.Header, 16)
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{core.WithAccessController(accessController), core.WithHeaderRules(ignoredTokenHeaderRules())},
 				ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+					// Let authentication validate the payload before other payload consumers.
+					cfg.ClientInfoFromInitialPayload.Enabled = false
 					cfg.Authentication.FromInitialPayload.Enabled = fromPayload
 					cfg.Authentication.FromInitialPayload.Key = "Authorization"
 					cfg.Authentication.FromInitialPayload.ExportToken.Enabled = fromPayload
@@ -306,6 +323,7 @@ func TestJWTOnErrorContinueWebsocket(t *testing.T) {
 				Subgraphs: testenv.SubgraphsConfig{
 					GlobalMiddleware: func(next http.Handler) http.Handler {
 						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							fetches.Add(1)
 							select {
 							case forwardedHeaders <- r.Header.Clone():
 							default:
@@ -347,7 +365,55 @@ func TestJWTOnErrorContinueWebsocket(t *testing.T) {
 					require.Equal(t, id, complete.ID)
 				}
 				require.NoError(t, conn.Close())
+
+				if fromPayload {
+					for _, payload := range []json.RawMessage{json.RawMessage(`[]`), json.RawMessage(`{"Authorization":42}`)} {
+						before := fetches.Load()
+						conn := xEnv.InitGraphQLWebSocketConnection(http.Header{"Authorization": []string{acceptedOpaqueCredential}}, nil, payload)
+						var res testenv.WebSocketMessage
+						require.NoError(t, testenv.WSReadJSON(t, conn, &res))
+						require.Equal(t, "error", res.Type)
+						require.JSONEq(t, `[{"message":"unauthorized"}]`, string(res.Payload))
+						require.Equal(t, before, fetches.Load(), "malformed payloads must reject before subgraph execution")
+						require.NoError(t, conn.Close())
+					}
+				}
 			})
 		})
 	}
+}
+
+type failingTokenValidationAuthenticator struct{}
+
+func (*failingTokenValidationAuthenticator) Name() string { return "custom" }
+func (*failingTokenValidationAuthenticator) Authenticate(context.Context, authentication.Provider) (authentication.Claims, error) {
+	return nil, errors.New("custom authentication service unavailable")
+}
+
+func TestJWTOnErrorContinueRejectsCustomAuthenticator(t *testing.T) {
+	t.Parallel()
+	authenticators, _ := configureJWTOnErrorContinue(t, false)
+	authenticators = append(authenticators, &failingTokenValidationAuthenticator{})
+	accessController, err := core.NewAccessController(core.AccessControllerOptions{Authenticators: authenticators})
+	require.NoError(t, err)
+	var fetches atomic.Int32
+	testenv.Run(t, &testenv.Config{
+		RouterOptions: []core.Option{core.WithAccessController(accessController)},
+		Subgraphs: testenv.SubgraphsConfig{
+			GlobalMiddleware: func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					fetches.Add(1)
+					next.ServeHTTP(w, r)
+				})
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		for _, credential := range []string{"", acceptedOpaqueCredential} {
+			res, err := xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{Query: `{ employees { id } }`}, map[string]string{"Authorization": credential})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusUnauthorized, res.Response.StatusCode)
+			require.JSONEq(t, unauthorizedExpectedData, res.Body)
+			require.Zero(t, fetches.Load(), "custom authenticator errors must reject before subgraph execution")
+		}
+	})
 }

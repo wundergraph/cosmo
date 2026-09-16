@@ -78,11 +78,12 @@ func TestAccessControllerJWTOnError(t *testing.T) {
 				t.Run(fmt.Sprintf("on_error=%q/required=%t/%s", onError, required, tt.name), func(t *testing.T) {
 					t.Parallel()
 					cfg := tokenValidationTestConfig()
+					cfg.Authentication.JWT.OnError = onError
 					authenticators, err := setupAuthenticators(t.Context(), zap.NewNop(), cfg)
 					require.NoError(t, err)
 					controller, err := NewAccessController(AccessControllerOptions{
 						Authenticators: authenticators, AuthenticationRequired: required,
-						JWTOnError: onError, ScopeClaim: cfg.Authentication.JWT.ScopeClaim,
+						ScopeClaim: cfg.Authentication.JWT.ScopeClaim,
 					})
 					require.NoError(t, err)
 					req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
@@ -125,8 +126,10 @@ func TestAccessControllerJWTOnErrorSources(t *testing.T) {
 		additional  string
 		payload     json.RawMessage
 		wantError   bool // Expected with the reject policy and optional authentication.
+		alwaysError bool // Not a JWT credential failure; both policies must reject it.
 		wantAuth    string
 		customError bool
+		customLast  bool
 	}{
 		{name: "HTTP opaque token with absent WebSocket payload", header: "Bearer opaque", wantError: true},
 		{name: "alternative header", additional: "Token opaque", payload: json.RawMessage(`{}`), wantError: true},
@@ -139,12 +142,17 @@ func TestAccessControllerJWTOnErrorSources(t *testing.T) {
 		{name: "both sources invalid", header: "Bearer opaque", payload: json.RawMessage(`{"Authorization":"Bearer opaque"}`), wantError: true},
 		{name: "no credentials with absent WebSocket payload", wantError: true},
 		{name: "empty WebSocket payload", payload: json.RawMessage(`{}`)},
-		{name: "malformed WebSocket payload", header: "Bearer opaque", payload: json.RawMessage(`{`), wantError: true},
-		{name: "nonstring WebSocket credential", header: "Bearer opaque", payload: json.RawMessage(`{"Authorization":42}`), wantError: true},
+		{name: "malformed WebSocket payload", header: "Bearer opaque", payload: json.RawMessage(`{`), alwaysError: true},
+		{name: "nonobject WebSocket payload", payload: json.RawMessage(`[]`), alwaysError: true},
+		{name: "nonstring WebSocket credential", header: "Bearer opaque", payload: json.RawMessage(`{"Authorization":42}`), alwaysError: true},
+		{name: "nonstring WebSocket credential without HTTP token", payload: json.RawMessage(`{"Authorization":false}`), alwaysError: true},
+		{name: "valid HTTP credential before malformed WebSocket payload", header: "Bearer " + valid, payload: json.RawMessage(`{`), wantAuth: "jwks"},
 		{name: "empty WebSocket token", payload: json.RawMessage(`{"Authorization":"Bearer "}`), wantError: true},
-		{name: "custom authenticator error with JWT failure", header: "Bearer opaque", customError: true, wantError: true},
-		{name: "custom authenticator error without JWT failure", payload: json.RawMessage(`{}`), customError: true, wantError: true},
+		{name: "custom authenticator error with JWT failure", header: "Bearer opaque", customError: true, alwaysError: true},
+		{name: "custom authenticator error after JWT failure", header: "Bearer opaque", customError: true, customLast: true, alwaysError: true},
+		{name: "custom authenticator error without JWT failure", payload: json.RawMessage(`{}`), customError: true, alwaysError: true},
 		{name: "JWT succeeds after custom authenticator error", header: "Bearer " + valid, customError: true, wantAuth: "jwks"},
+		{name: "WebSocket JWT succeeds after custom authenticator error", payload: json.RawMessage(`{"Authorization":"Bearer ` + valid + `"}`), customError: true, wantAuth: "websocket-initial-payload"},
 	}
 	for _, onError := range []config.JWTOnError{config.JWTOnErrorReject, config.JWTOnErrorContinue} {
 		for _, required := range []bool{false, true} {
@@ -152,16 +160,21 @@ func TestAccessControllerJWTOnErrorSources(t *testing.T) {
 				t.Run(fmt.Sprintf("on_error=%s/required=%t/%s", onError, required, tt.name), func(t *testing.T) {
 					t.Parallel()
 					cfg := tokenValidationTestConfig()
+					cfg.Authentication.JWT.OnError = onError
 					cfg.WebSocket.Authentication.FromInitialPayload.Enabled = true
 					cfg.WebSocket.Authentication.FromInitialPayload.Key = "Authorization"
 					cfg.Authentication.JWT.HeaderSources = []config.HeaderSource{{Type: "header", Name: "X-Token", ValuePrefixes: []string{"Bearer", "Token", ""}}}
 					authenticators, err := setupAuthenticators(t.Context(), zap.NewNop(), cfg)
 					require.NoError(t, err)
 					if tt.customError {
-						authenticators = append([]authentication.Authenticator{&tokenValidationFailingAuthenticator{}}, authenticators...)
+						if tt.customLast {
+							authenticators = append(authenticators, &tokenValidationFailingAuthenticator{})
+						} else {
+							authenticators = append([]authentication.Authenticator{&tokenValidationFailingAuthenticator{}}, authenticators...)
+						}
 					}
 					controller, err := NewAccessController(AccessControllerOptions{
-						Authenticators: authenticators, JWTOnError: onError, AuthenticationRequired: required,
+						Authenticators: authenticators, AuthenticationRequired: required,
 					})
 					require.NoError(t, err)
 					req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
@@ -172,9 +185,12 @@ func TestAccessControllerJWTOnErrorSources(t *testing.T) {
 					}
 					response := httptest.NewRecorder()
 					validated, err := controller.Access(response, req)
-					wantError := (onError == config.JWTOnErrorReject && tt.wantError) || (required && tt.wantAuth == "")
+					wantError := tt.alwaysError || (onError == config.JWTOnErrorReject && tt.wantError) || (required && tt.wantAuth == "")
 					if wantError {
 						require.ErrorIs(t, err, ErrUnauthorized)
+						if tt.customError {
+							require.ErrorContains(t, err, "custom authentication service unavailable")
+						}
 						require.Nil(t, validated)
 						require.Empty(t, response.Header().Get("X-Authenticated-By"))
 						return
@@ -218,11 +234,4 @@ func TestSetupAuthenticatorsJWTOnError(t *testing.T) {
 			require.ErrorContains(t, err, "unsupported algorithm")
 		})
 	}
-}
-
-func TestAccessControllerJWTOnErrorInvalid(t *testing.T) {
-	t.Parallel()
-	controller, err := NewAccessController(AccessControllerOptions{JWTOnError: "unknown"})
-	require.ErrorContains(t, err, "expected reject or continue")
-	require.Nil(t, controller)
 }
