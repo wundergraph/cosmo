@@ -189,7 +189,7 @@ export const ConfigureOverride = () => {
     {
       graphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
-      operationHash: operationHash,
+      operationHash,
     },
     {
       enabled: !!operationHash,
@@ -283,11 +283,11 @@ export const ConfigureOverride = () => {
                     ? removeIgnoreAll({
                         graphName: graphContext?.graph?.name,
                         namespace: graphContext?.graph?.namespace,
-                        operationHash: operationHash,
+                        operationHash,
                       })
                     : createIgnoreAll({
-                        operationHash: operationHash,
-                        operationName: operationName,
+                        operationHash,
+                        operationName,
                         graphName: graphContext?.graph?.name,
                         namespace: graphContext?.graph?.namespace,
                       })
