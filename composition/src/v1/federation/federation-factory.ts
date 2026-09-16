@@ -403,6 +403,7 @@ export class FederationFactory {
         }
         const invalidFieldImplementation: InvalidFieldImplementation = {
           invalidAdditionalArguments: new Set<string>(),
+          invalidContextArguments: new Set<ArgumentName>(),
           invalidImplementedArguments: [],
           isInaccessible: false,
           originalResponseType: printTypeNode(interfaceField.node.type),
@@ -426,16 +427,22 @@ export class FederationFactory {
         for (const [argumentName, inputValueData] of interfaceField.argumentDataByName) {
           const interfaceArgument = inputValueData.node;
           handledArguments.add(argumentName);
-          const argumentNode = fieldData.argumentDataByName.get(argumentName)?.node;
+          const implementationArgumentData = fieldData.argumentDataByName.get(argumentName);
           // The type implementing the interface must include all arguments with no variation for that argument
-          if (!argumentNode) {
+          if (!implementationArgumentData) {
             hasErrors = true;
             hasNestedErrors = true;
             invalidFieldImplementation.unimplementedArguments.add(argumentName);
             continue;
           }
+          // A context argument is removed from the federated schema, so it must be removed from both definitions
+          if (isInputValueDataFromContext(inputValueData) !== isInputValueDataFromContext(implementationArgumentData)) {
+            hasErrors = true;
+            hasNestedErrors = true;
+            invalidFieldImplementation.invalidContextArguments.add(argumentName);
+          }
           // Implemented arguments should be the exact same type
-          const actualType = printTypeNode(argumentNode.type);
+          const actualType = printTypeNode(implementationArgumentData.node.type);
           const expectedType = printTypeNode(interfaceArgument.type);
           if (expectedType !== actualType) {
             hasErrors = true;

@@ -586,6 +586,16 @@ export function invalidInterfaceImplementationError(
           invalidFieldImplementation.originalResponseType +
           `" for "${interfaceName}.${fieldName}".\n`;
       }
+      if (invalidFieldImplementation.invalidContextArguments.size > 0) {
+        message +=
+          `   An ${ARGUMENT} that the router populates rather than the client must be declared "@${FROM_CONTEXT}" on` +
+          ` both the Interface field and its implementation.\n` +
+          `    The following argument` +
+          (invalidFieldImplementation.invalidContextArguments.size > 1 ? `s are` : ` is`) +
+          ` declared "@${FROM_CONTEXT}" on only one of the two definitions: "` +
+          [...invalidFieldImplementation.invalidContextArguments].join(`", "`) +
+          `"\n`;
+      }
       if (invalidFieldImplementation.isInaccessible) {
         message +=
           `   The field has been declared "@inaccessible"; however, the same field has not been declared "@inaccessible"` +

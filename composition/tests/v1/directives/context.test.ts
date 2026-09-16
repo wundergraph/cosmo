@@ -7,7 +7,14 @@ import {
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
-import { contextArgumentRequiredError, ROUTER_COMPATIBILITY_VERSION_ONE } from '../../../src';
+import {
+  contextArgumentRequiredError,
+  type ImplementationErrors,
+  type InvalidFieldImplementation,
+  invalidInterfaceImplementationError,
+  OBJECT,
+  ROUTER_COMPATIBILITY_VERSION_ONE,
+} from '../../../src';
 import {
   CONTEXT_DIRECTIVE,
   CONTEXT_FIELD_VALUE_SCALAR,
@@ -599,6 +606,166 @@ describe('@context and @fromContext directives', () => {
           'Wallet.apply(plan: ...)',
           ['subgraph-context-argument'],
           ['subgraph-required-argument'],
+        ),
+      );
+    });
+
+    it('strips a context argument that is declared on both an interface field and its implementation', () => {
+      const subgraph = createSubgraph(
+        'subgraph-context-interface-implementation',
+        `
+          type Query {
+            user: User!
+            profile: Profile!
+          }
+
+          type User @context(name: "userContext") {
+            id: ID!
+            locale: String!
+          }
+
+          interface Node {
+            greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
+          }
+
+          type Profile implements Node {
+            greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
+          }
+        `,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraph],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const expectedSchema = normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+
+        interface Node {
+          greeting: String!
+        }
+
+        type Profile implements Node {
+          greeting: String!
+        }
+
+        type Query {
+          profile: Profile!
+          user: User!
+        }
+
+        type User {
+          id: ID!
+          locale: String!
+        }
+      `);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expectedSchema);
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expectedSchema);
+    });
+
+    it('returns an error if an argument is a context argument on an implementation but not on the interface', () => {
+      const subgraph = createSubgraph(
+        'subgraph-context-implementation-only',
+        `
+          type Query {
+            user: User!
+            profile: Profile!
+          }
+
+          type User @context(name: "userContext") {
+            id: ID!
+            locale: String!
+          }
+
+          interface Node {
+            greeting(locale: String): String!
+          }
+
+          type Profile implements Node {
+            greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidInterfaceImplementationError(
+          'Profile',
+          OBJECT,
+          new Map<string, ImplementationErrors>([
+            [
+              'Node',
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'greeting',
+                    {
+                      invalidAdditionalArguments: new Set<string>(),
+                      invalidContextArguments: new Set<string>(['locale']),
+                      invalidImplementedArguments: [],
+                      isInaccessible: false,
+                      originalResponseType: 'String!',
+                      unimplementedArguments: new Set<string>(),
+                    },
+                  ],
+                ]),
+                unimplementedFields: [],
+              },
+            ],
+          ]),
+        ),
+      );
+    });
+
+    it('returns an error if an argument is a context argument on an interface but not on the implementation', () => {
+      const subgraph = createSubgraph(
+        'subgraph-context-interface-only',
+        `
+          type Query {
+            user: User!
+            profile: Profile!
+          }
+
+          type User @context(name: "userContext") {
+            id: ID!
+            locale: String!
+          }
+
+          interface Node {
+            greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
+          }
+
+          type Profile implements Node {
+            greeting(locale: String): String!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidInterfaceImplementationError(
+          'Profile',
+          OBJECT,
+          new Map<string, ImplementationErrors>([
+            [
+              'Node',
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'greeting',
+                    {
+                      invalidAdditionalArguments: new Set<string>(),
+                      invalidContextArguments: new Set<string>(['locale']),
+                      invalidImplementedArguments: [],
+                      isInaccessible: false,
+                      originalResponseType: 'String!',
+                      unimplementedArguments: new Set<string>(),
+                    },
+                  ],
+                ]),
+                unimplementedFields: [],
+              },
+            ],
+          ]),
         ),
       );
     });

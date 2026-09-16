@@ -260,6 +260,7 @@ describe('Interface tests', () => {
                     {
                       implementedResponseType: '[String]!',
                       invalidAdditionalArguments: new Set<string>(),
+                      invalidContextArguments: new Set<string>(),
                       invalidImplementedArguments: [
                         { actualType: 'String', argumentName: 'species', expectedType: 'String!' },
                       ],
@@ -288,6 +289,7 @@ describe('Interface tests', () => {
                     'isDog',
                     {
                       invalidAdditionalArguments: new Set<string>(),
+                      invalidContextArguments: new Set<string>(),
                       invalidImplementedArguments: [],
                       isInaccessible: true,
                       originalResponseType: 'Boolean!',
@@ -298,6 +300,7 @@ describe('Interface tests', () => {
                     'sounds',
                     {
                       invalidAdditionalArguments: new Set<string>(),
+                      invalidContextArguments: new Set<string>(),
                       invalidImplementedArguments: [],
                       isInaccessible: false,
                       originalResponseType: '[String]!',
@@ -316,6 +319,7 @@ describe('Interface tests', () => {
                     'sounds',
                     {
                       invalidAdditionalArguments: new Set<string>(),
+                      invalidContextArguments: new Set<string>(),
                       invalidImplementedArguments: [],
                       isInaccessible: false,
                       originalResponseType: '[String!]',
@@ -347,6 +351,7 @@ describe('Interface tests', () => {
                     'sound',
                     {
                       invalidAdditionalArguments: new Set<string>(),
+                      invalidContextArguments: new Set<string>(),
                       invalidImplementedArguments: [
                         { actualType: 'Int', argumentName: 'a', expectedType: 'String!' },
                         { actualType: 'String!', argumentName: 'b', expectedType: 'Int' },
@@ -376,6 +381,7 @@ describe('Interface tests', () => {
                     'sound',
                     {
                       invalidAdditionalArguments: new Set<string>(['e']),
+                      invalidContextArguments: new Set<string>(),
                       invalidImplementedArguments: [],
                       isInaccessible: false,
                       originalResponseType: 'String!',
@@ -394,6 +400,7 @@ describe('Interface tests', () => {
                     'sound',
                     {
                       invalidAdditionalArguments: new Set<string>(['e']),
+                      invalidContextArguments: new Set<string>(),
                       invalidImplementedArguments: [],
                       isInaccessible: false,
                       originalResponseType: 'String',
@@ -706,6 +713,7 @@ describe('Interface tests', () => {
                     'sounds',
                     {
                       invalidAdditionalArguments: new Set<string>(),
+                      invalidContextArguments: new Set<string>(),
                       invalidImplementedArguments: [
                         { actualType: 'String', argumentName: 'a', expectedType: 'String!' },
                         { actualType: 'Int', argumentName: 'b', expectedType: 'Int!' },
@@ -727,6 +735,7 @@ describe('Interface tests', () => {
                     'sounds',
                     {
                       invalidAdditionalArguments: new Set<string>(),
+                      invalidContextArguments: new Set<string>(),
                       invalidImplementedArguments: [
                         { actualType: 'String', argumentName: 'a', expectedType: 'String!' },
                         { actualType: 'Int', argumentName: 'b', expectedType: 'Int!' },
