@@ -2420,7 +2420,7 @@
               "type": "string",
               "enum": ["reject", "continue"],
               "default": "reject",
-              "description": "Controls JWT credential failures. The default 'reject' returns 401 Unauthorized. With 'continue', invalid tokens, unsupported header prefixes, and empty tokens are ignored. Custom authenticator errors and malformed WebSocket payloads still return errors. Required authentication and field authorization still apply."
+              "description": "Controls JWT credential failures. The default 'reject' returns HTTP 401 Unauthorized, or sends an error message and closes the connection for WebSocket initial-payload authentication. With 'continue', invalid tokens, unsupported header prefixes, and empty tokens are ignored. Custom authenticator errors and malformed WebSocket payloads still return errors. Required authentication and field authorization still apply."
             },
             "scope_claim": {
               "type": "string",

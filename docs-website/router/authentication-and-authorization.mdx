@@ -61,7 +61,11 @@ For more information on the attributes, visit the auth configuration parameter s
 
 ### Configuring JWT validation error handling
 
-`authentication.jwt.on_error` accepts `reject` (default) and `continue` for both HTTP and WebSocket authentication. Use `continue` when a custom module or subgraph validates opaque OAuth tokens.
+`authentication.jwt.on_error` accepts only `reject` (default) and `continue`. Other values prevent the router from starting.
+
+With `reject`, invalid credentials return HTTP `401 Unauthorized`. For WebSocket initial-payload authentication, the router sends an error message and closes the connection.
+
+Use `continue` for HTTP and WebSocket authentication when a custom module or subgraph validates opaque OAuth tokens.
 
 ```yaml
 authentication:
@@ -82,7 +86,7 @@ With `continue`, invalid credentials, including unsupported header prefixes and 
 
 With `authorization.require_authentication: true`, the router still rejects unauthenticated requests. Fields protected by `@authenticated` or `@requiresScopes` also keep their authorization checks.
 
-This option does not ignore custom authenticator errors, malformed WebSocket payloads, or startup errors.
+This option does not ignore custom authenticator errors, malformed WebSocket payloads, or startup errors. MCP OAuth is unaffected.
 
 ### Disabling Authentication for Introspection Operations
 
