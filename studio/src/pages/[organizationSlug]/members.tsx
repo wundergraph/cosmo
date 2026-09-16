@@ -54,6 +54,8 @@ import { formatDateTime } from '@/lib/format-date';
 import { MultiGroupSelect } from '@/components/multi-group-select';
 import { buildUrl } from '@/lib/build-url';
 
+const DEFAULT_PAGE_SIZE = 20;
+
 const emailInputSchema = z.object({
   email: z.string().email(),
   groups: z.array(z.string().uuid()).min(1),
@@ -275,7 +277,7 @@ const PendingInvitations = () => {
   const user = useUser();
   const isAdmin = useIsAdmin();
 
-  const { pageSize, offset, pageNumber, search } = usePaginationParams({ defaultPageSize: 20 });
+  const { pageSize, offset, pageNumber, search } = usePaginationParams({ defaultPageSize: DEFAULT_PAGE_SIZE });
 
   const [debouncedSearch] = useDebounce(search, 500);
 
@@ -332,7 +334,7 @@ const PendingInvitations = () => {
           </TableBody>
         </Table>
       </TableWrapper>
-      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} defaultPageSize={20} />
+      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} defaultPageSize={DEFAULT_PAGE_SIZE} />
     </>
   );
 };
@@ -342,7 +344,7 @@ const AcceptedMembers = () => {
   const isAdmin = useIsAdmin();
   const [selectedMember, setSelectedMember] = useState<OrgMember | undefined>();
 
-  const { pageSize, offset, pageNumber, search } = usePaginationParams({ defaultPageSize: 20 });
+  const { pageSize, offset, pageNumber, search } = usePaginationParams({ defaultPageSize: DEFAULT_PAGE_SIZE });
 
   const [debouncedSearch] = useDebounce(search, 500);
 
@@ -414,7 +416,7 @@ const AcceptedMembers = () => {
           )}
         </Table>
       </TableWrapper>
-      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} defaultPageSize={20} />
+      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} defaultPageSize={DEFAULT_PAGE_SIZE} />
     </>
   );
 };
@@ -426,7 +428,7 @@ const MembersToolbar = () => {
   const isAdmin = useIsAdmin();
   const client = useQueryClient();
 
-  const { pageSize, offset, search } = usePaginationParams({ defaultPageSize: 20 });
+  const { pageSize, offset, search } = usePaginationParams({ defaultPageSize: DEFAULT_PAGE_SIZE });
 
   const { data } = useQuery(isMemberLimitReached);
 
@@ -492,7 +494,7 @@ const MembersPage: NextPageWithLayout = () => {
   const [search, setSearch] = useState('');
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { pageSize, offset } = usePaginationParams({ defaultPageSize: 20 });
+  const { pageSize, offset } = usePaginationParams({ defaultPageSize: DEFAULT_PAGE_SIZE });
 
   const { data } = useQuery(getPendingOrganizationMembers, {
     pagination: {
