@@ -1,5 +1,5 @@
-import { AnalyticsDataTable } from '@/components/analytics/data-table';
-import { parseAsString, useQueryStates } from 'nuqs';
+import { AnalyticsDataTable, traceParams } from '@/components/analytics/data-table';
+import { useQueryStates } from 'nuqs';
 import { AnalyticsToolbar } from '@/components/analytics/toolbar';
 import TraceDetails from '@/components/analytics/trace-details';
 import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';
@@ -123,10 +123,7 @@ const sizes = {
 };
 
 const TraceSheet: React.FC<any> = (props) => {
-  const [{ traceID: traceId, spanID: spanId }, setTrace] = useQueryStates({
-    traceID: parseAsString,
-    spanID: parseAsString,
-  });
+  const [{ traceID: traceId, spanID: spanId }, setTrace] = useQueryStates(traceParams);
 
   const index = props.data.findIndex((r: any) => r.traceId === traceId && r.spanId === spanId);
 

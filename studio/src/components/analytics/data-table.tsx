@@ -52,6 +52,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/components/ui/use-toast';
 import { calculateUrlLength, checkFilterLimits, MAX_URL_LENGTH } from './metrics';
 
+export const traceParams = { traceID: parseAsString, spanID: parseAsString };
+
 export function AnalyticsDataTable<T>({
   tableRef,
   data,
@@ -129,7 +131,7 @@ export function AnalyticsDataTable<T>({
 
   const applyNewParams = useApplyParams();
   const { toast } = useToast();
-  const [{ traceID, spanID }, setTrace] = useQueryStates({ traceID: parseAsString, spanID: parseAsString });
+  const [{ traceID, spanID }, setTrace] = useQueryStates(traceParams);
 
   // Safety net: Validate URL on initial load (e.g., user pastes malicious URL in browser)
   // While onColumnFiltersChange (below) catches most cases via useSyncTableWithQuery,
