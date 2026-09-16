@@ -6,11 +6,11 @@ const fetchBasedOnValues = ['requests', 'latency', 'errors'] as const;
 
 type FetchBasedOn = (typeof fetchBasedOnValues)[number];
 
-const fetchBasedOnEnum: Record<FetchBasedOn, OperationsFetchBasedOn> = {
+const fetchBasedOnEnum = {
   requests: OperationsFetchBasedOn.REQUESTS,
   latency: OperationsFetchBasedOn.LATENCY,
   errors: OperationsFetchBasedOn.ERRORS,
-};
+} as const satisfies Record<FetchBasedOn, OperationsFetchBasedOn>;
 
 const enumToString = (enumValue: OperationsFetchBasedOn): FetchBasedOn =>
   (Object.keys(fetchBasedOnEnum) as FetchBasedOn[]).find((key) => fetchBasedOnEnum[key] === enumValue) ?? 'requests';
