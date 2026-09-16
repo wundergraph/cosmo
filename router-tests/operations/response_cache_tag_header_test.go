@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"net/http"
 	"strings"
 	"sync"
 	"testing"
@@ -211,6 +212,66 @@ func TestResponseCacheTagHeader(t *testing.T) {
 				require.Contains(t, headerTagsOf(t, header, ","), "employee-1", "request %d", i)
 				require.Equal(t, headers[0], header, "request %d", i)
 			}
+		})
+	})
+
+	t.Run("a deduplicated response with a subgraph error carries the header on no request", func(t *testing.T) {
+		t.Parallel()
+
+		// The leader withholds the header because its context carries the
+		// error. A follower's context carries none: it must get no tags to
+		// emit either, or the same errored bytes go out advertised as cacheable.
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: append(responseCacheTagHeaderOptions(t, nil),
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:                true,
+					EnableInboundRequestDeduplication: true,
+				})),
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: 100 * time.Millisecond,
+				Employees:   testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
+				Mood: testenv.SubgraphConfig{
+					Middleware: func(http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+							w.Header().Set("Cache-Control", "public, max-age=60")
+							w.WriteHeader(http.StatusInternalServerError)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			const n = 10
+			results := make([]*testenv.TestResponse, n)
+			var ready, done sync.WaitGroup
+			ready.Add(n)
+			done.Add(n)
+			trigger := make(chan struct{})
+			for i := 0; i < n; i++ {
+				go func() {
+					ready.Done()
+					defer done.Done()
+					<-trigger
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: moodQuery})
+					require.NoError(t, err)
+					results[i] = res
+				}()
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+
+			require.Less(t, xEnv.SubgraphRequestCount.Mood.Load(), int64(n), "some requests must have been followers")
+
+			noStore := 0
+			for i, res := range results {
+				require.Contains(t, res.Body, `"errors"`, "request %d", i)
+				require.Equal(t, results[0].Body, res.Body, "request %d", i)
+				require.Empty(t, res.Response.Header.Values("Cache-Tag"), "request %d", i)
+				if strings.Contains(res.Response.Header.Get("Cache-Control"), "no-store") {
+					noStore++
+				}
+			}
+			require.GreaterOrEqual(t, noStore, 1, "the leader marks the errored body no-store")
 		})
 	})
 
