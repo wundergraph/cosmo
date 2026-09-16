@@ -754,7 +754,8 @@ describe('openfed_FieldSet tests', () => {
           type Entity @key(fields: "id") {
             id: ID!
             name: String! @requires(fields: "__typename")
-          }` +
+          }
+        ` +
             OPENFED_FIELD_SET,
         ),
       );

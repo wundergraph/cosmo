@@ -884,7 +884,8 @@ describe('Normalization tests', () => {
       type User @key(fields: "email") {
         email: ID!
         totalProductsCreated: Int @shareable
-      }` +
+      }
+    ` +
           OPENFED_FIELD_SET,
       ),
     );
