@@ -1,11 +1,11 @@
-import { parseAsString, useQueryState } from 'nuqs';
+import { parseAsString, useQueryState, useQueryStates } from 'nuqs';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { SubgraphPageTabs, SubgraphsTable } from '@/components/subgraphs-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NextPageWithLayout } from '@/lib/page';
 import { Cross1Icon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
-import { usePaginationParams } from '@/hooks/use-pagination-params';
+import { pageParam, usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext, useEffect, useState } from 'react';
 import Fuse from 'fuse.js';
 import { Subgraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -26,7 +26,7 @@ const SubGraphsPage: NextPageWithLayout = () => {
   } = useWorkspace();
 
   const { pageSize: limit, offset } = usePaginationParams();
-  const [search, setSearch] = useQueryState('search', parseAsString.withDefault(''));
+  const [{ search }, setSearch] = useQueryStates({ search: parseAsString.withDefault(''), page: pageParam });
 
   const { data: featureSubgraphsData, isFetching } = useQuery(
     getFeatureSubgraphsByFederatedGraph,
@@ -76,13 +76,13 @@ const SubGraphsPage: NextPageWithLayout = () => {
           placeholder="Search by ID or Name"
           className="pl-8 pr-10"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => setSearch({ search: e.target.value, page: null })}
         />
         {search && (
           <Button
             variant="ghost"
             className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-            onClick={() => setSearch(null)}
+            onClick={() => setSearch({ search: null, page: null })}
           >
             <Cross1Icon />
           </Button>

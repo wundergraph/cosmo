@@ -1,6 +1,6 @@
 import { FieldUsageSheet } from '@/components/analytics/field-usage';
 import { useParams } from 'next/navigation';
-import { parseAsString, useQueryState } from 'nuqs';
+import { parseAsString, useQueryStates } from 'nuqs';
 import { ChangesTable } from '@/components/checks/changes-table';
 import { EmptyState } from '@/components/empty-state';
 import { GraphContext } from '@/components/layout/graph-layout';
@@ -36,7 +36,7 @@ import { create } from '@bufbuild/protobuf';
 import { OverrideChangeSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import copy from 'copy-to-clipboard';
 import Fuse from 'fuse.js';
-import { usePaginationParams } from '@/hooks/use-pagination-params';
+import { pageParam, usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -119,7 +119,7 @@ export const CheckOperations = () => {
 
   const { checkId: id } = useParams<{ checkId: string }>();
 
-  const [search, setSearch] = useQueryState('search', parseAsString.withDefault(''));
+  const [{ search }, setSearch] = useQueryStates({ search: parseAsString.withDefault(''), page: pageParam });
   const [debouncedSearch] = useDebounce(search, 500);
   const [applyOnlyFiltered, setApplyOnlyFiltered] = useState(false);
 
@@ -319,13 +319,13 @@ export const CheckOperations = () => {
             placeholder="Search by hash or name"
             className="pl-8 pr-10"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => setSearch({ search: e.target.value, page: null })}
           />
           {search && (
             <Button
               variant="ghost"
               className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-              onClick={() => setSearch(null)}
+              onClick={() => setSearch({ search: null, page: null })}
             >
               <Cross1Icon />
             </Button>

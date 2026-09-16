@@ -1,4 +1,4 @@
-import { parseAsString, useQueryState } from 'nuqs';
+import { parseAsString, useQueryStates } from 'nuqs';
 import { EmptyState } from '@/components/empty-state';
 import { FeatureFlagsTable } from '@/components/feature-flags-table';
 import { getDashboardLayout } from '@/components/layout/dashboard-layout';
@@ -12,7 +12,7 @@ import { Cross1Icon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { getFeatureFlags } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 
-import { usePaginationParams } from '@/hooks/use-pagination-params';
+import { pageParam, usePaginationParams } from '@/hooks/use-pagination-params';
 
 import { useDebounce } from 'use-debounce';
 import { WorkspaceSelector } from '@/components/dashboard/workspace-selector';
@@ -25,7 +25,7 @@ const FeatureFlagsDashboardPage: NextPageWithLayout = () => {
 
   const { pageSize: limit, offset } = usePaginationParams();
 
-  const [search, setSearch] = useQueryState('search', parseAsString.withDefault(''));
+  const [{ search }, setSearch] = useQueryStates({ search: parseAsString.withDefault(''), page: pageParam });
   const [query] = useDebounce(search, 500);
 
   const { data, isLoading, error, refetch } = useQuery(getFeatureFlags, {
@@ -62,13 +62,13 @@ const FeatureFlagsDashboardPage: NextPageWithLayout = () => {
           placeholder="Search by name"
           className="pl-8 pr-10"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => setSearch({ search: e.target.value, page: null })}
         />
         {search && (
           <Button
             variant="ghost"
             className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-            onClick={() => setSearch(null)}
+            onClick={() => setSearch({ search: null, page: null })}
           >
             <Cross1Icon />
           </Button>
