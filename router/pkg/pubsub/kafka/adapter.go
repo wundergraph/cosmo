@@ -178,12 +178,12 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	)
 
 	if resumeCursor := subConf.ResumeCursor(); resumeCursor != "" {
-		assignOpt, err := p.buildResumeAssignment(ctx, resumeCursor, subConf, tracker)
+		assignOpts, err := p.buildResumeAssignment(ctx, resumeCursor, subConf, tracker)
 		if err != nil {
 			log.Error("failed to resume subscription from cursor", zap.Error(err))
 			return err
 		}
-		opts = append(opts, assignOpt)
+		opts = append(opts, assignOpts...)
 	} else {
 		opts = append(opts,
 			kgo.ConsumeTopics(subConf.Topics...),
@@ -240,13 +240,20 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 }
 
 // buildResumeAssignment decodes and validates a client-presented resume cursor, enumerates
-// every partition of every subscribed topic, and returns a kgo.ConsumePartitions option that
-// resumes each known partition right after its cursor offset and starts any newly-seen
-// partition at the cursor's issue time. It also seeds tracker so cursors emitted after resume
-// stay complete. franz-go's direct consumer treats a topic named in ConsumePartitions as
-// exactly those partitions -- any partition left out would be silently dropped for the life of
-// the resumed subscription, hence the metadata enumeration.
-func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, resumeCursor string, subConf *SubscriptionEventConfiguration, tracker *positionTracker) (kgo.Opt, error) {
+// every partition of every subscribed topic, and returns kgo options that resume each known
+// partition right after its cursor offset and start any newly-seen partition at the cursor's
+// issue time. It also seeds tracker so cursors emitted after resume stay complete. franz-go's
+// direct consumer treats a topic named in ConsumePartitions as exactly those partitions -- any
+// partition left out would be silently dropped for the life of the resumed subscription, hence
+// the metadata enumeration.
+//
+// A topic that does not exist yet on the broker is not a fatal error here: a fresh (non-resume)
+// subscribe via ConsumeTopics tolerates this the same way, relying on franz-go's metadata
+// refresh loop to pick the topic up once it exists. To match that, such topics are logged as a
+// warning and consumed via ConsumeTopics instead of being assigned explicit partitions, with
+// ConsumeResetOffset set to the cursor's issue time so they start where a known partition
+// without a recorded position would.
+func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, resumeCursor string, subConf *SubscriptionEventConfiguration, tracker *positionTracker) ([]kgo.Opt, error) {
 	cur, err := datasource.DecodeCursor(resumeCursor)
 	if err != nil {
 		return nil, datasource.NewError("invalid resume cursor", err)
@@ -268,9 +275,15 @@ func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, resumeCurso
 		}
 	}
 
-	allPartitions, err := p.fetchTopicPartitions(ctx, subConf.Topics)
+	allPartitions, missingTopics, err := p.fetchTopicPartitions(ctx, subConf.Topics)
 	if err != nil {
 		return nil, datasource.NewError("failed to enumerate topic partitions to resume subscription", err)
+	}
+	for _, topic := range missingTopics {
+		p.logger.Warn("topic does not exist yet, will resume consuming it once it is created",
+			zap.String("provider_id", subConf.Provider),
+			zap.String("topic", topic),
+		)
 	}
 
 	assign := make(map[string]map[int32]kgo.Offset, len(allPartitions))
@@ -291,12 +304,23 @@ func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, resumeCurso
 
 	tracker.seed(pos)
 
-	return kgo.ConsumePartitions(assign), nil
+	opts := []kgo.Opt{kgo.ConsumePartitions(assign)}
+	if len(missingTopics) > 0 {
+		opts = append(opts,
+			kgo.ConsumeTopics(missingTopics...),
+			kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(cur.IssuedAt)),
+		)
+	}
+
+	return opts, nil
 }
 
 // fetchTopicPartitions enumerates every partition of every given topic via a single Kafka
-// metadata request issued over the adapter's producer client.
-func (p *ProviderAdapter) fetchTopicPartitions(ctx context.Context, topics []string) (map[string][]int32, error) {
+// metadata request issued over the adapter's producer client. A topic that does not exist yet
+// (UNKNOWN_TOPIC_OR_PARTITION) is not treated as an error -- it is reported back via
+// missingTopics instead, so callers can fall back to the same tolerant behavior a fresh
+// ConsumeTopics-based subscribe already has.
+func (p *ProviderAdapter) fetchTopicPartitions(ctx context.Context, topics []string) (partitions map[string][]int32, missingTopics []string, err error) {
 	req := kmsg.NewPtrMetadataRequest()
 	for _, topic := range topics {
 		rt := kmsg.NewMetadataRequestTopic()
@@ -306,11 +330,11 @@ func (p *ProviderAdapter) fetchTopicPartitions(ctx context.Context, topics []str
 
 	kresp, err := p.writeClient.Request(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	resp, ok := kresp.(*kmsg.MetadataResponse)
 	if !ok {
-		return nil, fmt.Errorf("unexpected metadata response type %T", kresp)
+		return nil, nil, fmt.Errorf("unexpected metadata response type %T", kresp)
 	}
 
 	result := make(map[string][]int32, len(resp.Topics))
@@ -320,7 +344,11 @@ func (p *ProviderAdapter) fetchTopicPartitions(ctx context.Context, topics []str
 			topicName = *t.Topic
 		}
 		if t.ErrorCode != 0 {
-			return nil, fmt.Errorf("metadata error for topic %q: %w", topicName, kerr.ErrorForCode(t.ErrorCode))
+			if errors.Is(kerr.ErrorForCode(t.ErrorCode), kerr.UnknownTopicOrPartition) {
+				missingTopics = append(missingTopics, topicName)
+				continue
+			}
+			return nil, nil, fmt.Errorf("metadata error for topic %q: %w", topicName, kerr.ErrorForCode(t.ErrorCode))
 		}
 		partitions := make([]int32, 0, len(t.Partitions))
 		for _, part := range t.Partitions {
@@ -328,7 +356,7 @@ func (p *ProviderAdapter) fetchTopicPartitions(ctx context.Context, topics []str
 		}
 		result[topicName] = partitions
 	}
-	return result, nil
+	return result, missingTopics, nil
 }
 
 // Publish publishes the given events to the Kafka topic in a non-blocking way.
