@@ -3724,7 +3724,7 @@
             },
             "depth": {
               "type": "object",
-              "description": "The configuration for adding a max depth limit for query (how many nested levels you can have in a query). This limit prevents infinite querying, and also limits the size of the data returned. If the limit is 0, this limit isn't applied.",
+              "description": "The configuration for adding a max depth limit for query (how many nested levels you can have in a query). This limit prevents infinite querying, and also limits the size of the data returned.",
               "additionalProperties": false,
               "properties": {
                 "enabled": {
@@ -3734,7 +3734,7 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "description": "The depth limit for query. If the limit is 0, this limit isn't applied.",
+                  "description": "The depth limit for query. A limit of 0 is enforced when enabled. Set enabled to false to disable this limit.",
                   "default": 0,
                   "minimum": 0
                 },
@@ -3757,7 +3757,7 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "description": "The field limit for query. If the limit is 0, this limit isn't applied.",
+                  "description": "The field limit for query. A limit of 0 is enforced when enabled. Set enabled to false to disable this limit.",
                   "default": 0,
                   "minimum": 0
                 },
@@ -3780,7 +3780,7 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "description": "The root field limit for query. If the limit is 0, this limit isn't applied.",
+                  "description": "The root field limit for query. A limit of 0 is enforced when enabled. Set enabled to false to disable this limit.",
                   "default": 0,
                   "minimum": 0
                 },
@@ -3803,7 +3803,7 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "description": "The root field alias limit for query. If the limit is 0, this limit isn't applied.",
+                  "description": "The root field alias limit for query. A limit of 0 disallows root field aliases when enabled. Set enabled to false to disable this limit.",
                   "default": 0,
                   "minimum": 0
                 },
@@ -3900,7 +3900,7 @@
             },
             "limit": {
               "type": "integer",
-              "description": "The depth limit for query. If the limit is 0, this limit isn't applied.",
+              "description": "The depth limit for query. A limit of 0 is enforced when enabled. Set enabled to false to disable this limit.",
               "default": 0,
               "minimum": 0
             },
