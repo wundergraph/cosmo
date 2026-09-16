@@ -15,7 +15,8 @@ export const Pagination = ({
   noOfPages: number;
   pageNumber: number;
   options?: number[];
-  /** Must match the caller's `usePaginationParams`, so a size equal to it clears the param. */
+  /** The page size this table falls back to. It must match the caller's `usePaginationParams`,
+   * so that choosing that size removes the param rather than writing it. */
   defaultPageSize?: number;
 }) => {
   const [, setPagination] = useQueryStates(
