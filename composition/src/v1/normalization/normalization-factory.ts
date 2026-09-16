@@ -1366,7 +1366,7 @@ export class NormalizationFactory {
       ? `${federatedParentTypeName}${fieldName ? `.${fieldName}` : ''}(${name}: ...)`
       : `${federatedParentTypeName}.${name}`;
     const namedTypeName = getTypeNodeNamedTypeName(node.type);
-    const directivesByName = this.extractDirectives(node, new Map<string, ConstDirectiveNode[]>());
+    const directivesByName = this.extractDirectives(node, new Map<DirectiveName, ConstDirectiveNode[]>());
     const inputValueData: InputValueData = {
       configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
       contextSubgraphNames: new Set<SubgraphName>(directivesByName.has(FROM_CONTEXT) ? [this.subgraphName] : []),
