@@ -1828,7 +1828,7 @@
         },
         "allow_origins": {
           "type": "array",
-          "description": "The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.",
+          "description": "The allowed origins. Origins can use any URL scheme, and wildcard patterns are supported. The default '*' allows all origins.",
           "default": ["*"],
           "items": {
             "type": "string"

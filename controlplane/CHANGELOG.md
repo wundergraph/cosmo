@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.250.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.250.0...controlplane@0.250.1) (2026-09-16)
+
+### Bug Fixes
+
+* **controlplane:** upgrade fastify to v5 ([#3193](https://github.com/wundergraph/cosmo/issues/3193)) ([86a355b](https://github.com/wundergraph/cosmo/commit/86a355bcb4ed0fce51747c4d2cedfa31c105dde3)) (@gausie)
+* restore lint autofix ([#3242](https://github.com/wundergraph/cosmo/issues/3242)) ([cd65459](https://github.com/wundergraph/cosmo/commit/cd654597c46d77fcbc0c44b2352fef177f6ccec6)) (@comatory)
+
 # [0.250.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.249.3...controlplane@0.250.0) (2026-09-14)
 
 ### Features
