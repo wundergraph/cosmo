@@ -11,7 +11,8 @@ import (
 )
 
 // buildCacheTagHeader: empty when nothing fits. Input is unique already and
-// left untouched; sorted coarsest first only when over maxBytes.
+// left untouched; sorted coarsest first only when over maxBytes. One exact
+// size allocation for the value either way.
 func buildCacheTagHeader(headerTags []string, delimiter string, maxBytes int) string {
 	usable := make([]string, 0, len(headerTags))
 	for _, headerTag := range headerTags {
@@ -21,33 +22,28 @@ func buildCacheTagHeader(headerTags []string, delimiter string, maxBytes int) st
 		}
 		usable = append(usable, headerTag)
 	}
-	if len(usable) == 0 {
-		return ""
-	}
 
-	if full := strings.Join(usable, delimiter); len(full) <= maxBytes {
-		return full
+	fit := fitCacheTagCount(usable, delimiter, maxBytes)
+	if fit < len(usable) {
+		// Counted again: the sort changes which tags come first.
+		caching.SortHeaderTags(usable)
+		fit = fitCacheTagCount(usable, delimiter, maxBytes)
 	}
+	return strings.Join(usable[:fit], delimiter)
+}
 
-	caching.SortHeaderTags(usable)
-
-	var b strings.Builder
-	for _, headerTag := range usable {
-		need := len(headerTag)
-		if b.Len() > 0 {
-			need += len(delimiter)
+func fitCacheTagCount(headerTags []string, delimiter string, maxBytes int) int {
+	size := 0
+	for i, headerTag := range headerTags {
+		if i > 0 {
+			size += len(delimiter)
 		}
-		// Stop at the first that does not fit: a finer headerTag after it must not
-		// stand in for a coarser one that was cut.
-		if b.Len()+need > maxBytes {
-			break
+		size += len(headerTag)
+		if size > maxBytes {
+			return i
 		}
-		if b.Len() > 0 {
-			b.WriteString(delimiter)
-		}
-		b.WriteString(headerTag)
 	}
-	return b.String()
+	return len(headerTags)
 }
 
 // reservedCacheTagHeaderNames: set after Content-Length, so naming one of
