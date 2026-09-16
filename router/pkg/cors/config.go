@@ -94,7 +94,7 @@ func (cors *cors) validateOrigin(origin string) bool {
 	if slices.Contains(cors.allowOrigins, normalizedOrigin) {
 		return true
 	}
-	if len(cors.wildcardOrigins) > 0 && cors.validateWildcardOrigin(normalizedOrigin) {
+	if cors.validateWildcardOrigin(normalizedOrigin) {
 		return true
 	}
 	for _, pattern := range cors.matchOrigins {
