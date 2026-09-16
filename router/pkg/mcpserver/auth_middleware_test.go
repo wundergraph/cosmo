@@ -145,6 +145,13 @@ func TestExtractScopes(t *testing.T) {
 			want: []string{},
 		},
 		{
+			name: "splits string scope claims on whitespace, not commas",
+			claims: authentication.Claims{
+				"scope": "mcp:tools,mcp:read mcp:write",
+			},
+			want: []string{"mcp:tools,mcp:read", "mcp:write"},
+		},
+		{
 			name: "reads scope claim encoded as a JSON array",
 			claims: authentication.Claims{
 				"scope": []any{"mcp:tools", "mcp:read", "mcp:write"},
