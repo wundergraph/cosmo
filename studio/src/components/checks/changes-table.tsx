@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { useParams } from 'next/navigation';
+import { useCheckParams } from '@/hooks/use-check-params';
 import { BarChartIcon, CheckIcon, Cross1Icon, GlobeIcon } from '@radix-ui/react-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
@@ -41,6 +41,7 @@ export const ChangesTable = ({
   hasIgnoreAll?: boolean;
 }) => {
   const openUsage = useOpenUsage({ trafficCheckDays, createdAt });
+  const { checkId, slug } = useCheckParams();
   const { pageSize: limit, offset } = usePaginationParams();
 
   return (
@@ -67,6 +68,8 @@ export const ChangesTable = ({
               subgraphName={c.subgraphName}
               limit={limit}
               offset={offset}
+              checkId={checkId}
+              slug={slug}
             />
           ))}
         </TableBody>
@@ -89,6 +92,8 @@ const Row = ({
   openUsage,
   limit,
   offset,
+  checkId,
+  slug,
 }: {
   changeType: string;
   message: string;
@@ -101,9 +106,10 @@ const Row = ({
   subgraphName?: string;
   limit: number;
   offset: number;
+  checkId: string;
+  slug: string;
   openUsage: (changeType: string, path?: string) => void;
 }) => {
-  const { checkId, slug } = useParams<{ checkId: string; slug: string }>();
   const { toast } = useToast();
   const {
     namespace: { name: namespace },
