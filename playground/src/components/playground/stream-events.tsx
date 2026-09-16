@@ -292,16 +292,19 @@ export const StreamEventsPanel = () => {
   } = useContext(StreamEventsContext);
   const { view } = useContext(PlaygroundContext);
 
-  const visible = cursorsEnabled && view === 'response' && (isStreaming || entries.length > 0);
+  const visible = cursorsEnabled && view === 'response';
 
   useEffect(() => {
     const parent = document.getElementById('response-parent');
+    const panel = document.getElementById('stream-events-panel');
     if (!parent) {
       return;
     }
     parent.classList.toggle('with-events-panel', visible && panelOpen);
+    panel?.classList.toggle('hidden', !visible);
     return () => {
       parent.classList.remove('with-events-panel');
+      panel?.classList.add('hidden');
     };
   }, [visible, panelOpen]);
 
