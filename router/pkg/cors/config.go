@@ -27,7 +27,6 @@ func newCors(handler http.Handler, config Config) *cors {
 		panic(err.Error())
 	}
 
-	config.AllowOrigins = normalize(config.AllowOrigins)
 	for _, origin := range config.AllowOrigins {
 		if origin == "*" {
 			config.AllowAllOrigins = true
@@ -38,7 +37,7 @@ func newCors(handler http.Handler, config Config) *cors {
 		allowOriginFunc:  config.AllowOriginFunc,
 		allowAllOrigins:  config.AllowAllOrigins,
 		allowCredentials: config.AllowCredentials,
-		allowOrigins:     config.AllowOrigins,
+		allowOrigins:     normalize(config.AllowOrigins),
 		normalHeaders:    generateNormalHeaders(config),
 		preflightHeaders: generatePreflightHeaders(config),
 		wildcardOrigins:  config.parseNewWildcardRules(),

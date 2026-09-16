@@ -186,7 +186,7 @@ func TestMatchOriginsWithAllowOrigins(t *testing.T) {
 
 	router := newTestRouter(Config{
 		Enabled:      true,
-		AllowOrigins: []string{"HTTPS://LITERAL.EXAMPLE", "HTTPS://*.WILDCARD.EXAMPLE"},
+		AllowOrigins: []string{"HTTPS://LITERAL.EXAMPLE", "https://*.wildcard.example"},
 		MatchOrigins: []string{`^https://one\.example$`, `^https://two\.example$`},
 	})
 	for _, origin := range []string{"HTTPS://Literal.Example", "HTTPS://App.Wildcard.Example", "HTTPS://One.Example", "HTTPS://Two.Example"} {
