@@ -47,6 +47,9 @@ func (p *JWTOnError) UnmarshalYAML(unmarshal func(any) error) error {
 	if !ok {
 		return fmt.Errorf("authentication.jwt.on_error must be a string")
 	}
+	if JWTOnError(policy) != JWTOnErrorReject && JWTOnError(policy) != JWTOnErrorContinue {
+		return fmt.Errorf("authentication.jwt.on_error must be reject or continue, got %q", policy)
+	}
 	*p = JWTOnError(policy)
 	return nil
 }

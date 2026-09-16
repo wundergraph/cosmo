@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,6 +26,18 @@ func TestJWTOnErrorConfig(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			var decoded struct {
+				OnError JWTOnError `yaml:"on_error"`
+			}
+			err := yaml.Unmarshal([]byte(tt.yaml), &decoded)
+			if tt.want == "" {
+				require.ErrorContains(t, err, "authentication.jwt.on_error")
+				return
+			}
+			require.NoError(t, err)
+			if tt.yaml != "" {
+				require.Equal(t, tt.want, decoded.OnError)
+			}
 			path := createTempFileFromFixture(t, fmt.Sprintf(`
 version: "1"
 router_config_path: config.json
@@ -34,10 +47,6 @@ authentication:
     %s
 `, tt.yaml))
 			result, err := LoadConfig([]string{path})
-			if tt.want == "" {
-				require.Error(t, err)
-				return
-			}
 			require.NoError(t, err)
 			require.Equal(t, tt.want, result.Config.Authentication.JWT.OnError)
 		})
