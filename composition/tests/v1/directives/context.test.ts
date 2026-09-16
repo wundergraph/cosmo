@@ -770,6 +770,36 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
+    it('returns an error if an argument is required in the subgraph that declares it a context argument', () => {
+      const subgraph = createSubgraph(
+        'subgraph-required-context-argument',
+        `
+          type Query {
+            member(id: ID!): Member
+          }
+
+          type Member @key(fields: "id") @context(name: "memberContext") {
+            id: ID!
+            plan: String!
+          }
+
+          type Wallet @key(fields: "id") {
+            id: ID!
+            apply(plan: String! @fromContext(field: "$memberContext { plan }")): Int!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        contextArgumentRequiredError(
+          'Wallet.apply(plan: ...)',
+          ['subgraph-required-context-argument'],
+          ['subgraph-required-context-argument'],
+        ),
+      );
+    });
+
     it('strips a manually defined ContextFieldValue scalar from federated graphs', () => {
       const subgraph = createSubgraph(
         'subgraph-manual-context-field-value',

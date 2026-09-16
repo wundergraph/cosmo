@@ -1949,16 +1949,12 @@ export class FederationFactory {
     const fieldCoords = `${fieldData.renamedParentTypeName}.${fieldData.name}`;
     for (const [argumentName, inputValueData] of fieldData.argumentDataByName) {
       if (isInputValueDataFromContext(inputValueData)) {
-        const requiredSubgraphNames = getEntriesNotInHashSet(
-          inputValueData.requiredSubgraphNames,
-          inputValueData.contextSubgraphNames,
-        );
-        if (requiredSubgraphNames.length > 0) {
+        if (inputValueData.requiredSubgraphNames.size > 0) {
           this.errors.push(
             contextArgumentRequiredError(
               inputValueData.federatedCoords,
               [...inputValueData.contextSubgraphNames],
-              requiredSubgraphNames,
+              [...inputValueData.requiredSubgraphNames],
             ),
           );
         }

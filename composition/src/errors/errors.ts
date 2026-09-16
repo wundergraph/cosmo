@@ -653,8 +653,7 @@ export function contextArgumentRequiredError(
       ': "' +
       requiredSubgraphNames.join(QUOTATION_JOIN) +
       `"\n` +
-      ` An ${ARGUMENT} that the router populates rather than the client must not be required in any subgraph in` +
-      ` which it is not declared "@${FROM_CONTEXT}".\n`,
+      ` An ${ARGUMENT} that the router populates rather than the client must not be required in any subgraph.\n`,
   );
 }
 
