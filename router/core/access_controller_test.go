@@ -22,7 +22,7 @@ func TestJWTOnError(t *testing.T) {
 	valid, err := token.SignedString([]byte(secret))
 	require.NoError(t, err)
 
-	for _, tt := range []struct {
+	cases := []struct {
 		name, header, payload                              string
 		reject, required, custom, authenticated, wantError bool
 	}{
@@ -39,7 +39,8 @@ func TestJWTOnError(t *testing.T) {
 		{name: "WebSocket fallback", header: "Bearer opaque", payload: `{"Authorization":"Bearer ` + valid + `"}`, authenticated: true},
 		{name: "malformed payload", header: "Bearer opaque", payload: `{`, wantError: true},
 		{name: "non-string credential", payload: `{"Authorization":42}`, wantError: true},
-	} {
+	}
+	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			cfg := &config.Config{}
