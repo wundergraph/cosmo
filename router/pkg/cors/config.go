@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
+	"strings"
 )
 
 type cors struct {
@@ -27,6 +28,7 @@ func newCors(handler http.Handler, config Config) *cors {
 		panic(err.Error())
 	}
 
+	config.AllowOrigins = normalize(config.AllowOrigins)
 	for _, origin := range config.AllowOrigins {
 		if origin == "*" {
 			config.AllowAllOrigins = true
@@ -37,7 +39,7 @@ func newCors(handler http.Handler, config Config) *cors {
 		allowOriginFunc:  config.AllowOriginFunc,
 		allowAllOrigins:  config.AllowAllOrigins,
 		allowCredentials: config.AllowCredentials,
-		allowOrigins:     normalize(config.AllowOrigins),
+		allowOrigins:     config.AllowOrigins,
 		normalHeaders:    generateNormalHeaders(config),
 		preflightHeaders: generatePreflightHeaders(config),
 		wildcardOrigins:  config.parseNewWildcardRules(),
@@ -88,14 +90,18 @@ func (cors *cors) validateOrigin(origin string) bool {
 	if cors.allowAllOrigins {
 		return true
 	}
-	if slices.Contains(cors.allowOrigins, origin) {
+	// Serialized origins contain a scheme, host and optional port. Normalize
+	// their casing for matching, retaining the original value for callbacks
+	// and Access-Control-Allow-Origin.
+	normalizedOrigin := strings.ToLower(origin)
+	if slices.Contains(cors.allowOrigins, normalizedOrigin) {
 		return true
 	}
-	if len(cors.wildcardOrigins) > 0 && cors.validateWildcardOrigin(origin) {
+	if len(cors.wildcardOrigins) > 0 && cors.validateWildcardOrigin(normalizedOrigin) {
 		return true
 	}
 	for _, pattern := range cors.matchOrigins {
-		if pattern.MatchString(origin) {
+		if pattern.MatchString(normalizedOrigin) {
 			return true
 		}
 	}

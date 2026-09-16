@@ -21,9 +21,9 @@ type Config struct {
 	// Default value is []
 	AllowOrigins []string
 
-	// MatchOrigins is a list of Go regular expressions matched against the origin,
-	// case-insensitively by default. Patterns are unanchored; use ^ and $ to match
-	// the entire origin. Use (?-i) for case-sensitive matching.
+	// MatchOrigins is a list of Go regular expressions matched against the
+	// lowercased origin. Patterns are compiled as written and are unanchored;
+	// use ^ and $ to match the entire origin.
 	// An origin is allowed if it matches AllowOrigins or MatchOrigins.
 	MatchOrigins []string
 
@@ -83,9 +83,7 @@ func (c *Config) validateAndCompile() ([]*regexp.Regexp, error) {
 	}
 	var patterns []*regexp.Regexp
 	for _, pattern := range c.MatchOrigins {
-		// Enable case-insensitive matching without adding implicit anchors.
-		// Inline flags such as (?-i) and (?-i:...) can override this default.
-		re, err := regexp.Compile("(?i)" + pattern)
+		re, err := regexp.Compile(pattern)
 		if err != nil {
 			return nil, fmt.Errorf("bad origin regex in match_origins %q: %w", pattern, err)
 		}

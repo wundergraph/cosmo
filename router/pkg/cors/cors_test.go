@@ -145,13 +145,22 @@ func TestMatchOrigins(t *testing.T) {
 		},
 		{
 			pattern: `^https://(.+\.)?aol\.(de|ca|co\.uk|com)$`,
-			allowed: []string{"https://aol.com", "https://app.aol.co.uk"},
+			allowed: []string{"https://aol.com", "https://app.aol.co.uk", "HTTPS://APP.AOL.CO.UK"},
 			denied:  []string{"https://aol.com.evil.com", "https://evil.com/https://aol.com"},
 		},
 		{
-			pattern: `(?-i)^https://app\.example\.com$`,
-			allowed: []string{"https://app.example.com"},
-			denied:  []string{"https://APP.EXAMPLE.COM"},
+			pattern: `^HTTPS://APP\.EXAMPLE\.COM$`,
+			denied:  []string{"https://app.example.com", "HTTPS://APP.EXAMPLE.COM"},
+		},
+		{
+			pattern: `(?i)^HTTPS://APP\.EXAMPLE\.COM$`,
+			allowed: []string{"https://app.example.com", "HTTPS://APP.EXAMPLE.COM"},
+			denied:  []string{"https://app.example.com.evil.com"},
+		},
+		{
+			pattern: `^https://\D+\.example\.com:8443$`,
+			allowed: []string{"HTTPS://APP.EXAMPLE.COM:8443"},
+			denied:  []string{"https://123.example.com:8443", "https://app.example.com:443"},
 		},
 	}
 	for _, tt := range cases {
@@ -167,6 +176,55 @@ func TestMatchOrigins(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestOriginCaseNormalization(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		config Config
+	}{
+		{name: "literal", config: Config{AllowOrigins: []string{"HTTPS://APP.EXAMPLE.COM:8443"}}},
+		{name: "wildcard", config: Config{AllowOrigins: []string{"HTTPS://*.EXAMPLE.COM:8443"}}},
+		{name: "regex", config: Config{MatchOrigins: []string{`^https://app\.example\.com:8443$`}}},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			const origin = "HTTPS://App.Example.COM:8443"
+			c := newCors(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, origin, r.Header.Get("Origin"))
+				w.WriteHeader(http.StatusOK)
+			}), tt.config)
+			for _, method := range []string{http.MethodGet, http.MethodOptions} {
+				w := performRequest(c, method, origin)
+				wantStatus := http.StatusOK
+				if method == http.MethodOptions {
+					wantStatus = http.StatusNoContent
+				}
+				assert.Equal(t, wantStatus, w.Code, method)
+				assert.Equal(t, origin, w.Header().Get("Access-Control-Allow-Origin"), method)
+				assert.Contains(t, w.Header().Values("Vary"), "Origin", method)
+
+				w = performRequest(c, method, "HTTPS://App.Example.COM.evil.com:8443")
+				assert.Equal(t, http.StatusForbidden, w.Code, method)
+				assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"), method)
+			}
+		})
+	}
+
+	t.Run("callback receives original origin", func(t *testing.T) {
+		t.Parallel()
+
+		const origin = "HTTPS://App.Example.COM:8443"
+		c := newCors(nil, Config{AllowOriginFunc: func(value string) bool {
+			assert.Equal(t, origin, value)
+			return true
+		}})
+		assert.True(t, c.validateOrigin(origin))
+	})
 }
 
 func TestInvalidMatchOrigins(t *testing.T) {
