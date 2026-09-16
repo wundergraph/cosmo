@@ -232,14 +232,14 @@ const positionLabel = (position: CursorPosition) =>
 const EntryRow = ({ entry }: { entry: StreamEntry }) => {
   if (entry.kind === 'marker') {
     return (
-      <div className="px-2 py-1 text-muted-foreground">
+      <div className="px-3 py-1 text-muted-foreground">
         ▶ {entry.resumedFrom ? `resumed from ${positionLabel(entry.resumedFrom.position)}` : 'live from now'}
       </div>
     );
   }
 
   if (entry.kind === 'error') {
-    return <div className="px-2 py-1 text-destructive">✖ {entry.message}</div>;
+    return <div className="px-3 py-1 text-destructive">✖ {entry.message}</div>;
   }
 
   const advance = entry.advances[0];
@@ -247,11 +247,11 @@ const EntryRow = ({ entry }: { entry: StreamEntry }) => {
   return (
     <>
       {advance && advance.skipped > 0 && (
-        <div className="px-2 py-1 text-destructive">
+        <div className="px-3 py-1 text-destructive">
           ⚠ {advance.skipped} event{advance.skipped === 1 ? '' : 's'} skipped
         </div>
       )}
-      <div className="flex items-center gap-2 px-2 py-1 hover:bg-muted/50">
+      <div className="flex items-center gap-2 px-3 py-1 hover:bg-muted/20">
         <span className="w-12 flex-shrink-0 text-muted-foreground">
           {advance ? `#${advance.offset}` : `#${entry.seq}`}
         </span>
@@ -271,7 +271,7 @@ const EntryRow = ({ entry }: { entry: StreamEntry }) => {
         )}
         <span className="flex-shrink-0 text-muted-foreground">{formatTime(entry.receivedAt)}</span>
         <span className="truncate text-muted-foreground">{JSON.stringify(entry.payload)}</span>
-        <ViewOutput output={entry.payload} asChild />
+        <ViewOutput output={entry.payload} asChild label="View" variant="default" />
       </div>
     </>
   );
@@ -314,7 +314,7 @@ export const StreamEventsPanel = () => {
 
   return (
     <div className="flex h-full w-full flex-col text-xs">
-      <div className="flex flex-wrap items-center gap-2 border-b px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-1.5">
         <span className="font-medium">Events ({eventCount})</span>
         {isStreaming && <span className="h-2 w-2 flex-shrink-0 animate-pulse rounded-full bg-success" />}
         <label className="flex items-center gap-1.5">

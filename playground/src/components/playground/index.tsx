@@ -621,7 +621,7 @@ const PlaygroundInner = (input: PlaygroundProps) => {
 
         const eventsPanel = document.createElement('div');
         eventsPanel.id = 'stream-events-panel';
-        eventsPanel.className = 'absolute bottom-0 left-0 right-0 z-10 border-t bg-background';
+        eventsPanel.className = 'absolute bottom-0 left-0 right-0 z-10';
         responseSectionParent.append(eventsPanel);
       }
     }

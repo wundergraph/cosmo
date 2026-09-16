@@ -275,4 +275,8 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 
 #stream-events-panel {
   height: var(--events-panel-height);
+  background-color: hsl(var(--color-base));
+  border-radius: var(--border-radius-12);
+  box-shadow: var(--popover-box-shadow);
+  overflow: hidden;
 }
