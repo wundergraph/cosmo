@@ -247,6 +247,14 @@ telemetry:
 
 * `router.engine.messages.sent`: The number of total messages for subscriptions sent over from the subgraph to the router.
 
+* `router.subscription.delivery.attempts`: Downstream subscription frame delivery attempts, tagged with `wg.subscription.transport`, `wg.subscription.frame_type`, and, for WebSockets, `wg.websocket.subprotocol`.
+
+* `router.subscription.delivery.write.failures`: Downstream writes that the router knows failed. The bounded `wg.subscription.failure_stage` and `wg.subscription.failure_reason` dimensions distinguish deadline, serialization, write, and flush failures without attaching client or event identifiers to metrics.
+
+* `router.subscription.disconnects`: Closed SSE requests and WebSocket connections, tagged with the transport, disconnect initiator, and disconnect reason. A WebSocket connection is counted once even when it carries multiple subscriptions.
+
+Failed event writes also produce a structured `Subscription event delivery failed` log containing request, connection, subscription, and operation identifiers; a router-local delivery sequence; the write duration; and the configured timeout. Payloads are represented by a SHA-256 hash and byte count and are not logged. The delivery sequence is scoped to one subscription and is intended to distinguish its attempted events; it is not a broker offset. A successful transport write means the router handed the frame to the connection; SSE and WebSocket do not provide application-level client acknowledgements.
+
 
 ### Resolver Metrics
 

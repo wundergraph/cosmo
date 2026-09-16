@@ -122,6 +122,12 @@ telemetry:
 
 * [`router_engine_messages_sent_total`](#router-engine-messages-sent-total): The number of total messages for subscriptions sent over from the subgraph to the router.
 
+* `router_subscription_delivery_attempts_total`: The number of downstream SSE and WebSocket subscription frame delivery attempts.
+
+* `router_subscription_delivery_write_failures_total`: The number of downstream subscription frame writes known to have failed.
+
+* `router_subscription_disconnects_total`: The number of downstream SSE requests and WebSocket connections that closed, grouped by bounded initiator and reason dimensions.
+
 ### Resolver Metrics
 
 These metrics expose usage of the GraphQL engine's resolver concurrency pool. Use them to detect when operations queue because the pool is saturated.

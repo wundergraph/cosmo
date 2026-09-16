@@ -52,6 +52,13 @@ const (
 	WgIsBatchingOperation              = attribute.Key("wg.operation.batching.is_batched")
 	WgBatchingOperationsCount          = attribute.Key("wg.operation.batching.operations_count")
 	WgBatchingOperationIndex           = attribute.Key("wg.operation.batching.operation_index")
+	WgSubscriptionTransport            = attribute.Key("wg.subscription.transport")
+	WgSubscriptionFrameType            = attribute.Key("wg.subscription.frame_type")
+	WgSubscriptionFailureStage         = attribute.Key("wg.subscription.failure_stage")
+	WgSubscriptionFailureReason        = attribute.Key("wg.subscription.failure_reason")
+	WgSubscriptionDisconnectInitiator  = attribute.Key("wg.subscription.disconnect.initiator")
+	WgSubscriptionDisconnectReason     = attribute.Key("wg.subscription.disconnect.reason")
+	WgWebSocketSubprotocol             = attribute.Key("wg.websocket.subprotocol")
 	// HTTPRequestUploadFileCount is the number of files uploaded in a request (Not specified in the OpenTelemetry specification)
 	HTTPRequestUploadFileCount = attribute.Key("http.request.upload.file_count")
 
