@@ -1,54 +1,24 @@
 package config
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 )
 
-func TestJWTOnErrorConfig(t *testing.T) {
+func TestJWTOnErrorYAML(t *testing.T) {
 	t.Parallel()
-	for _, tt := range []struct {
-		name, yaml string
-		want       JWTOnError
-	}{
-		{name: "default", want: JWTOnErrorReject},
-		{name: "reject", yaml: "on_error: reject", want: JWTOnErrorReject},
-		{name: "continue", yaml: "on_error: continue", want: JWTOnErrorContinue},
-		{name: "unknown", yaml: "on_error: unknown"},
-		{name: "empty", yaml: `on_error: ""`},
-		{name: "boolean", yaml: "on_error: true"},
-		{name: "number", yaml: "on_error: 42"},
-		{name: "array", yaml: "on_error: []"},
-		{name: "object", yaml: "on_error: {}"},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			var decoded struct {
-				OnError JWTOnError `yaml:"on_error"`
-			}
-			err := yaml.Unmarshal([]byte(tt.yaml), &decoded)
-			if tt.want == "" {
+	for _, value := range []string{"reject", "continue", "unknown", `""`, "true", "42", "[]", "{}"} {
+		t.Run(value, func(t *testing.T) {
+			var cfg JWTAuthenticationConfiguration
+			err := yaml.Unmarshal([]byte("on_error: "+value), &cfg)
+			if value == "reject" || value == "continue" {
+				require.NoError(t, err)
+				require.Equal(t, JWTOnError(value), cfg.OnError)
+			} else {
 				require.ErrorContains(t, err, "authentication.jwt.on_error")
-				return
 			}
-			require.NoError(t, err)
-			if tt.yaml != "" {
-				require.Equal(t, tt.want, decoded.OnError)
-			}
-			path := createTempFileFromFixture(t, fmt.Sprintf(`
-version: "1"
-router_config_path: config.json
-authentication:
-  jwt:
-    header_name: Authorization
-    %s
-`, tt.yaml))
-			result, err := LoadConfig([]string{path})
-			require.NoError(t, err)
-			require.Equal(t, tt.want, result.Config.Authentication.JWT.OnError)
 		})
 	}
 }

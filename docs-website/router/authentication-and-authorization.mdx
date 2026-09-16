@@ -61,7 +61,7 @@ For more information on the attributes, visit the auth configuration parameter s
 
 ### Configuring JWT validation error handling
 
-`authentication.jwt.on_error` accepts `reject` (default) and `continue`. The default returns `401 Unauthorized` for invalid JWT credentials. Use `continue` when a custom module or subgraph validates opaque OAuth tokens.
+`authentication.jwt.on_error` accepts `reject` (default) and `continue` for both HTTP and WebSocket authentication. Use `continue` when a custom module or subgraph validates opaque OAuth tokens.
 
 ```yaml
 authentication:
