@@ -58,21 +58,13 @@ const RouterSheet: React.FC<any> = (props) => {
 
   const nextServer = () => {
     if (index + 1 < props.data.length) {
-      const newQuery = { ...router.query };
-      newQuery['serviceInstanceId'] = props.data[index + 1].serviceInstanceId;
-      router.replace({
-        query: newQuery,
-      });
+      setServiceInstanceId(props.data[index + 1].serviceInstanceId);
     }
   };
 
   const previousServer = () => {
     if (index - 1 >= 0) {
-      const newQuery = { ...router.query };
-      newQuery['serviceInstanceId'] = props.data[index - 1].serviceInstanceId;
-      router.replace({
-        query: newQuery,
-      });
+      setServiceInstanceId(props.data[index - 1].serviceInstanceId);
     }
   };
 
@@ -294,7 +286,7 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
 const RoutersPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
-  const [, setServiceInstanceId] = useQueryState('serviceInstanceId');
+  const [serviceInstanceId, setServiceInstanceId] = useQueryState('serviceInstanceId');
   const [open, setOpen] = useState(false);
   const { namespace, slug } = useParams<{ namespace: string; slug: string }>();
 
@@ -529,7 +521,7 @@ const RoutersPage: NextPageWithLayout = () => {
                           'group cursor-pointer hover:bg-secondary/30',
                           'border-b transition-colors data-[state=selected]:bg-muted',
                           {
-                            'bg-secondary/50': row.original.serviceInstanceId === router.query.serviceInstanceId,
+                            'bg-secondary/50': row.original.serviceInstanceId === serviceInstanceId,
                           },
                         )}
                       >

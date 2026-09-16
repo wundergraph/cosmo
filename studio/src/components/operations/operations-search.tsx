@@ -1,5 +1,6 @@
 import { Input } from '@/components/ui/input';
-import { parseAsInteger, useQueryStates } from 'nuqs';
+import { useQueryStates } from 'nuqs';
+import { pageParam } from '@/hooks/use-pagination-params';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -13,7 +14,6 @@ import { GraphContext } from '@/components/layout/graph-layout';
 import { useQuery } from '@connectrpc/connect-query';
 import { getClientsFromAnalytics } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { operationsFilterParams, useOperationsFilters } from '@/hooks/use-operations-filters';
-import { useRouter } from 'next/router';
 
 interface OperationsSearchProps {
   searchQuery: string;
@@ -45,9 +45,10 @@ export const OperationsSearch = ({
   className,
 }: OperationsSearchProps) => {
   const graphContext = useContext(GraphContext);
-  const router = useRouter();
-  const { clientNames } = useOperationsFilters();
-  const [, setFilters] = useQueryStates({ ...operationsFilterParams, page: parseAsInteger });
+  const [{ clientNames, operationHash, page: pageNumber }, setFilters] = useQueryStates({
+    ...operationsFilterParams,
+    page: pageParam,
+  });
 
   // Fetch clients for the filter
   const { data: clientsData } = useQuery(
@@ -60,12 +61,6 @@ export const OperationsSearch = ({
       enabled: !!graphContext?.graph?.name,
     },
   );
-
-  // Get current page number
-  const pageNumber = useMemo(() => {
-    const page = parseInt(router.query.page as string, 10);
-    return isNaN(page) || page < 1 ? 1 : page;
-  }, [router.query.page]);
 
   const clients = useMemo(() => clientsData?.clients || [], [clientsData?.clients]);
 
@@ -89,10 +84,10 @@ export const OperationsSearch = ({
     (value?: string[]) => {
       setFilters({
         clientNames: value && value.length > 0 ? value : null,
-        page: pageNumber !== 1 ? 1 : null,
+        page: null,
       });
     },
-    [pageNumber, setFilters],
+    [setFilters],
   );
 
   const filtersList: AnalyticsFilter[] = useMemo(
@@ -125,10 +120,7 @@ export const OperationsSearch = ({
     ],
   );
 
-  // Check if an operation is selected
-  const hasSelectedOperation = useMemo(() => {
-    return !!router.query.operationHash;
-  }, [router.query.operationHash]);
+  const hasSelectedOperation = !!operationHash;
 
   // Check if any filters are active
   const hasActiveFilters = useMemo(() => {
@@ -143,9 +135,9 @@ export const OperationsSearch = ({
       includeOperationsWithDeprecatedFieldsOnly: null,
       operationHash: null,
       operationName: null,
-      page: pageNumber !== 1 ? 1 : null,
+      page: null,
     });
-  }, [setFilters, pageNumber]);
+  }, [setFilters]);
 
   return (
     <div className={`w-full space-y-4 ${className}`}>

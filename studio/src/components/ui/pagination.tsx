@@ -1,5 +1,6 @@
 import { ChevronLeftIcon, ChevronRightIcon, DoubleArrowLeftIcon, DoubleArrowRightIcon } from '@radix-ui/react-icons';
 import { parseAsInteger, useQueryStates } from 'nuqs';
+import { pageParam } from '@/hooks/use-pagination-params';
 import { Button } from './button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 
@@ -18,7 +19,7 @@ export const Pagination = ({
   defaultPageSize?: number;
 }) => {
   const [, setPagination] = useQueryStates(
-    { page: parseAsInteger.withDefault(1), pageSize: parseAsInteger.withDefault(defaultPageSize) },
+    { page: pageParam, pageSize: parseAsInteger.withDefault(defaultPageSize) },
     { history: 'push', scroll: true },
   );
 

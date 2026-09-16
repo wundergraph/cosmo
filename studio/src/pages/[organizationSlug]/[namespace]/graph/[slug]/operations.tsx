@@ -1,5 +1,5 @@
 import { FieldUsageSheet } from '@/components/analytics/field-usage';
-import { useQueryState, useQueryStates } from 'nuqs';
+import { useQueryStates } from 'nuqs';
 import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
 import { ErrorMetricsCard, LatencyMetricsCard, RequestMetricsCard } from '@/components/analytics/metrics';
 import { RefreshInterval } from '@/components/analytics/refresh-interval';
@@ -49,7 +49,7 @@ import {
 import { formatISO } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { usePaginationParams } from '@/hooks/use-pagination-params';
+import { pageParam, usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 
@@ -481,7 +481,6 @@ const OperationsRightPanel = ({
 };
 
 const OperationsPage: NextPageWithLayout = () => {
-  const applyParams = useApplyParams();
   const graphContext = useContext(GraphContext);
   const { range, dateRange } = useAnalyticsQueryState();
   const {
@@ -497,6 +496,8 @@ const OperationsPage: NextPageWithLayout = () => {
   const [debouncedSearchQuery] = useDebounce(localSearchQuery, 500);
 
   // Sync localSearchQuery with URL when URL changes externally (e.g., browser back/forward)
+  const [, setSearchQuery] = useQueryStates({ searchQuery: operationsFilterParams.searchQuery, page: pageParam });
+
   useEffect(() => {
     setLocalSearchQuery(urlSearchQuery);
   }, [urlSearchQuery]);
@@ -505,9 +506,9 @@ const OperationsPage: NextPageWithLayout = () => {
   // Reset to page 1 when search changes
   useEffect(() => {
     if (debouncedSearchQuery !== urlSearchQuery) {
-      applyParams({ searchQuery: debouncedSearchQuery || null, page: '1' });
+      setSearchQuery({ searchQuery: debouncedSearchQuery || null, page: null });
     }
-  }, [debouncedSearchQuery, urlSearchQuery, applyParams]);
+  }, [debouncedSearchQuery, urlSearchQuery, setSearchQuery]);
 
   const { pageNumber, pageSize, offset } = usePaginationParams();
 

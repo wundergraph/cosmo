@@ -1,8 +1,7 @@
 import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
-import { overrideParams } from '@/components/checks/override';
+import { ConfigureOverride, overrideParams } from '@/components/checks/override';
 import { useQueryStates } from 'nuqs';
 import { useParams } from 'next/navigation';
-import { ConfigureOverride } from '@/components/checks/override';
 import { EmptyState } from '@/components/empty-state';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { PageHeader } from '@/components/layout/head';

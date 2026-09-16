@@ -242,7 +242,7 @@ const Row = ({
                           query: {
                             organizationSlug,
                             namespace,
-                            slug: slug,
+                            slug,
                             typename: path?.split('.')?.[0],
                           },
                         }

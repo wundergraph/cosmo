@@ -54,7 +54,6 @@ import { formatDistanceToNow } from 'date-fns';
 import Fuse from 'fuse.js';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useRouter } from 'next/router';
 import { useContext, useState } from 'react';
 import { BiAnalyse } from 'react-icons/bi';
 import { IoBarcodeSharp } from 'react-icons/io5';
@@ -180,7 +179,6 @@ const deletePersistedOperationReducer = (
 const clientParams = { clientId: parseAsString, clientName: parseAsString };
 
 const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAdminOrDeveloper: boolean }) => {
-  const router = useRouter();
   const { slug, organizationSlug } = useParams<{ slug: string; organizationSlug: string }>();
   const {
     namespace: { name: namespace },
@@ -677,7 +675,6 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
 const ClientsPage: NextPageWithLayout = () => {
   const [, setClient] = useQueryStates(clientParams);
   const checkUserAccess = useCheckUserAccess();
-  const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
   const {
     namespace: { name: namespace },

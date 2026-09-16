@@ -1,6 +1,6 @@
 import { FieldUsageSheet } from '@/components/analytics/field-usage';
 import { useParams } from 'next/navigation';
-import { parseAsString, useQueryState } from 'nuqs';
+import { parseAsString, useQueryState, useQueryStates } from 'nuqs';
 import { useApplyParams } from '@/components/analytics/use-apply-params';
 import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';
 import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
@@ -858,15 +858,18 @@ const SearchType = ({ open, setOpen }: { open: boolean; setOpen: Dispatch<SetSta
   );
 };
 
+export const schemaSelectionParams = {
+  featureFlag: parseAsString,
+  schemaType: parseAsString.withDefault('client'),
+};
+
 export const GraphSelector = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
-  const [activeFeatureFlag] = useQueryState('featureFlag');
   const { slug: graphName } = useParams<{ slug: string }>();
-  const [schemaType, setSchemaType] = useQueryState(
-    'schemaType',
-    parseAsString.withDefault('client').withOptions({ history: 'push' }),
-  );
+  const [{ featureFlag: activeFeatureFlag, schemaType }, setSchema] = useQueryStates(schemaSelectionParams, {
+    history: 'push',
+  });
   const {
     namespace: { name: namespace },
   } = useWorkspace();
@@ -933,19 +936,13 @@ export const GraphSelector = () => {
               <DropdownMenuPortal>
                 <DropdownMenuSubContent>
                   <DropdownMenuRadioGroup
-                    onValueChange={(query) => router.push(pathname + query)}
-                    value={`${!activeFeatureFlag ? `?schemaType=${schemaType}` : undefined}`}
+                    onValueChange={(value) => setSchema({ featureFlag: null, schemaType: value })}
+                    value={activeFeatureFlag ? '' : schemaType}
                   >
-                    <DropdownMenuRadioItem
-                      className="w-[150px] items-center justify-between pl-2"
-                      value="?schemaType=client"
-                    >
+                    <DropdownMenuRadioItem className="w-[150px] items-center justify-between pl-2" value="client">
                       Client Schema
                     </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem
-                      className="w-[150px] items-center justify-between pl-2"
-                      value="?schemaType=router"
-                    >
+                    <DropdownMenuRadioItem className="w-[150px] items-center justify-between pl-2" value="router">
                       Router Schema
                     </DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
@@ -972,19 +969,13 @@ export const GraphSelector = () => {
                     <DropdownMenuPortal>
                       <DropdownMenuSubContent>
                         <DropdownMenuRadioGroup
-                          value={`?featureFlag=${activeFeatureFlag}&schemaType=${schemaType}`}
-                          onValueChange={(query) => router.push(pathname + query)}
+                          value={activeFeatureFlag === name ? schemaType : ''}
+                          onValueChange={(value) => setSchema({ featureFlag: name, schemaType: value })}
                         >
-                          <DropdownMenuRadioItem
-                            className="w-[150px] items-center justify-between pl-2"
-                            value={`${query}&schemaType=client`}
-                          >
+                          <DropdownMenuRadioItem className="w-[150px] items-center justify-between pl-2" value="client">
                             Client Schema
                           </DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem
-                            className="w-[150px] items-center justify-between pl-2"
-                            value={`${query}&schemaType=router`}
-                          >
+                          <DropdownMenuRadioItem className="w-[150px] items-center justify-between pl-2" value="router">
                             Router Schema
                           </DropdownMenuRadioItem>
                         </DropdownMenuRadioGroup>
@@ -1000,7 +991,7 @@ export const GraphSelector = () => {
     );
   } else {
     return (
-      <Select onValueChange={setSchemaType} value={schemaType}>
+      <Select onValueChange={(value) => setSchema({ schemaType: value })} value={schemaType}>
         <SelectTrigger className="w-max">
           <SelectValue>{sentenceCase(schemaType)} Schema</SelectValue>
         </SelectTrigger>
