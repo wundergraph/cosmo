@@ -445,13 +445,70 @@ func TestSSESubscriptions(t *testing.T) {
 			require.Equal(t, "event: next\ndata: {\"errors\":[{\"message\":\"could not flush response\"}]}\n\n", string(body))
 		})
 	})
+
+	t.Run("stop before starting upstream when the initial response write fails", func(t *testing.T) {
+		state := &initialSSEWriteErrorState{
+			handlerDone: make(chan struct{}),
+		}
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{Enabled: true},
+			RouterOptions: []core.Option{
+				core.WithCustomModules(&initialSSEWriteErrorModule{state: state}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			request, err := http.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				xEnv.GraphQLRequestURL(),
+				strings.NewReader(`{"query":"subscription { currentTime { unixTime timeStamp } }"}`),
+			)
+			require.NoError(t, err)
+			request.Header.Set("Content-Type", "application/json")
+			request.Header.Set("Accept", "text/event-stream")
+			request.Header.Set(failInitialSSEWriteHeader, "true")
+
+			response, err := xEnv.RouterClient.Do(request)
+			require.NoError(t, err)
+			defer func() {
+				_ = response.Body.Close()
+			}()
+
+			select {
+			case <-state.handlerDone:
+			case <-time.After(5 * time.Second):
+				t.Fatal("handler did not return after the initial SSE flush failed")
+			}
+
+			body, err := io.ReadAll(response.Body)
+			require.NoError(t, err)
+			assert.Empty(t, body)
+			assert.Equal(t, int64(1), state.writeCalls.Load())
+
+			reporter, ok := xEnv.Router.EngineStats.(*testenv.SyncReporter)
+			require.True(t, ok)
+			for {
+				select {
+				case event := <-reporter.Events():
+					assert.NotEqual(t, testenv.EventSubscriptionCountInc, event.Kind)
+				default:
+					require.Len(t, xEnv.Observer().FilterMessage("unable to get subscription response writer").All(), 1)
+					return
+				}
+			}
+		})
+	})
 }
 
-const blockSSEWriteHeader = "X-Test-Block-SSE-Write"
+const (
+	blockSSEWriteHeader       = "X-Test-Block-SSE-Write"
+	failInitialSSEWriteHeader = "X-Test-Fail-Initial-SSE-Write"
+)
 
 var (
 	_ core.Module                 = (*blockingSSEWriterModule)(nil)
 	_ core.RouterOnRequestHandler = (*blockingSSEWriterModule)(nil)
+	_ core.Module                 = (*initialSSEWriteErrorModule)(nil)
+	_ core.RouterOnRequestHandler = (*initialSSEWriteErrorModule)(nil)
 )
 
 type blockingSSEWriteState struct {
@@ -463,6 +520,20 @@ type blockingSSEWriteState struct {
 
 type blockingSSEWriterModule struct {
 	state *blockingSSEWriteState
+}
+
+type initialSSEWriteErrorState struct {
+	handlerDone chan struct{}
+	writeCalls  atomic.Int64
+}
+
+type initialSSEWriteErrorModule struct {
+	state *initialSSEWriteErrorState
+}
+
+type initialSSEWriteErrorResponseWriter struct {
+	http.ResponseWriter
+	state *initialSSEWriteErrorState
 }
 
 func (m *blockingSSEWriterModule) Module() core.ModuleInfo {
@@ -485,6 +556,41 @@ func (m *blockingSSEWriterModule) RouterOnRequest(ctx core.RequestContext, next 
 		ResponseWriter: ctx.ResponseWriter(),
 		state:          m.state,
 	}, ctx.Request())
+}
+
+func (m *initialSSEWriteErrorModule) Module() core.ModuleInfo {
+	return core.ModuleInfo{
+		ID:       "initialSSEWriteErrorModule",
+		Priority: 1,
+		New: func() core.Module {
+			return &initialSSEWriteErrorModule{state: m.state}
+		},
+	}
+}
+
+func (m *initialSSEWriteErrorModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
+	if ctx.Request().Header.Get(failInitialSSEWriteHeader) != "true" {
+		next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+		return
+	}
+
+	defer close(m.state.handlerDone)
+	next.ServeHTTP(&initialSSEWriteErrorResponseWriter{
+		ResponseWriter: ctx.ResponseWriter(),
+		state:          m.state,
+	}, ctx.Request())
+}
+
+func (w *initialSSEWriteErrorResponseWriter) Write(data []byte) (int, error) {
+	w.state.writeCalls.Add(1)
+	w.Flush()
+	return 0, errors.New("initial SSE write failed")
+}
+
+func (w *initialSSEWriteErrorResponseWriter) Flush() {
+	if flusher, ok := w.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
 }
 
 type deadlineBlockingResponseWriter struct {

@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
@@ -174,14 +175,14 @@ func (f *HttpFlushWriter) writeAndFlush(b []byte) error {
 	return f.rc.Flush()
 }
 
-func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter, apolloSubscriptionMultipartPrintBoundary bool, sseWriteTimeout time.Duration) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
+func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter, apolloSubscriptionMultipartPrintBoundary bool, sseWriteTimeout time.Duration) (*resolve.Context, resolve.SubscriptionResponseWriter, error) {
 	if wfw, ok := w.(withFlushWriter); ok {
-		return ctx, wfw.SubscriptionResponseWriter(), true
+		return ctx, wfw.SubscriptionResponseWriter(), nil
 	}
 	wgParams := NegotiateSubscriptionParams(r, false)
 
 	if _, ok := w.(http.Flusher); !ok {
-		return ctx, nil, false
+		return ctx, nil, errCouldNotFlushResponse
 	}
 
 	setSubscriptionHeaders(wgParams, r, w)
@@ -207,10 +208,13 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 		ctx.ExecutionOptions.SendHeartbeat = true
 		// Flush the response head immediately so the client establishes the connection
 		// before the first message, instead of blocking until one is streamed.
-		_ = flushWriter.writeAndFlush(nil)
+		if err := flushWriter.writeAndFlush(nil); err != nil {
+			flushWriter.cancel()
+			return ctx, nil, fmt.Errorf("flush initial subscription response: %w", err)
+		}
 	}
 
-	return ctx, flushWriter, true
+	return ctx, flushWriter, nil
 }
 
 func wrapMultipartMessage(resp []byte, wrapPayload bool) ([]byte, error) {

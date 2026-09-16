@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -158,8 +159,8 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
 		req.Header.Set("Accept", sseMimeType)
 
-		_, _, ok := GetSubscriptionResponseWriter(resolve.NewContext(t.Context()), req, recorder, false, 0)
-		require.True(t, ok)
+		_, _, err := GetSubscriptionResponseWriter(resolve.NewContext(t.Context()), req, recorder, false, 0)
+		require.NoError(t, err)
 
 		assert.Equal(t, sseMimeType, recorder.Header().Get("Content-Type"))
 		assert.True(t, recorder.Flushed, "expected the SSE response head to be flushed before any message is written")
@@ -170,13 +171,13 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
 		req.Header.Set("Accept", sseMimeType)
 
-		_, writer, ok := GetSubscriptionResponseWriter(resolve.NewContext(t.Context()), req, recorder, false, time.Second)
-		require.True(t, ok)
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(t.Context()), req, recorder, false, time.Second)
+		require.NoError(t, err)
 		require.Len(t, recorder.deadlines, 2, "expected the initial header flush deadline to be set and cleared")
 		assert.False(t, recorder.deadlines[0].IsZero())
 		assert.True(t, recorder.deadlines[1].IsZero())
 
-		_, err := writer.Write([]byte(`{"data":{"id":1}}`))
+		_, err = writer.Write([]byte(`{"data":{"id":1}}`))
 		require.NoError(t, err)
 		require.NoError(t, writer.Flush())
 		require.Len(t, recorder.deadlines, 4, "expected the data frame deadline to be set and cleared")
@@ -197,8 +198,8 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
 		req.Header.Set("Accept", sseMimeType)
 
-		_, writer, ok := GetSubscriptionResponseWriter(resolve.NewContext(t.Context()), req, recorder, false, 0)
-		require.True(t, ok)
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(t.Context()), req, recorder, false, 0)
+		require.NoError(t, err)
 
 		flushErr := errors.New("flush failed")
 		recorder.flushErr = flushErr
@@ -210,10 +211,33 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
 		req.Header.Set("Accept", sseMimeType)
 
-		_, writer, ok := GetSubscriptionResponseWriter(resolve.NewContext(t.Context()), req, recorder, false, time.Second)
-		require.True(t, ok)
+		_, writer, err := GetSubscriptionResponseWriter(resolve.NewContext(t.Context()), req, recorder, false, time.Second)
+		require.NoError(t, err)
 		require.NoError(t, writer.Heartbeat())
 		assert.True(t, recorder.Flushed)
 		assert.Contains(t, recorder.Body.String(), ":heartbeat")
+	})
+
+	t.Run("returns an error and cancels the context when the initial SSE flush fails", func(t *testing.T) {
+		flushErr := errors.New("flush failed")
+		recorder := &deadlineRecorder{
+			ResponseRecorder: httptest.NewRecorder(),
+			flushErr:         flushErr,
+		}
+		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
+		req.Header.Set("Accept", sseMimeType)
+
+		resolveCtx, writer, err := GetSubscriptionResponseWriter(
+			resolve.NewContext(t.Context()),
+			req,
+			recorder,
+			false,
+			time.Second,
+		)
+
+		require.ErrorIs(t, err, flushErr)
+		assert.ErrorContains(t, err, "flush initial subscription response")
+		assert.Nil(t, writer)
+		assert.ErrorIs(t, resolveCtx.Context().Err(), context.Canceled)
 	})
 }
