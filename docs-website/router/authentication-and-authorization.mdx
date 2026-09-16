@@ -64,7 +64,7 @@ For more information on the attributes, visit the auth configuration parameter s
 Use `authentication.jwt.on_error` to control how the router handles request-time authentication errors:
 
 - `reject` (default): return a generic `401 Unauthorized` response.
-- `continue`: ignore invalid credentials for router authentication and proceed as unauthenticated. The original header is preserved for custom modules and configured forwarding to subgraphs. Required authentication and field authorization still apply.
+- `continue`: ignore invalid credentials and proceed as unauthenticated. Required authentication and field authorization still apply.
 
 ```yaml
 authentication:
@@ -75,15 +75,9 @@ authentication:
 
 authorization:
   require_authentication: false
-
-headers:
-  all:
-    request:
-      - op: propagate
-        named: Authorization
 ```
 
-With this configuration, an invalid JWT or opaque token does not cause a router authentication rejection. The header forwarding engine sends the original `Authorization` value, including its prefix, to subgraphs. Without a matching forwarding rule, the credential is not forwarded. Use `headers.subgraphs` to limit forwarding to specific subgraphs. See [subgraph request header operations](/router/proxy-capabilities/subgraph-request-header-operations).
+The original credential remains available to custom modules and [configured header forwarding](/router/proxy-capabilities/subgraph-request-header-operations).
 
 <Warning>
   This option permits unauthenticated traffic after authentication fails. A custom module or downstream service must validate the original credential before protected work or side effects. Header presence alone does not authenticate a request.
