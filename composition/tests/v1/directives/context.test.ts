@@ -17,20 +17,6 @@ import {
   SCHEMA_QUERY_DEFINITION,
 } from '../utils/utils';
 
-const subgraphWithContextOnObject = createSubgraph(
-  'subgraph-context-object',
-  `
-    type Query {
-      user: User!
-    }
-
-    type User @context(name: "userContext") {
-      id: ID!
-      name: String!
-    }
-  `,
-);
-
 const subgraphWithContextOnInterface = createSubgraph(
   'subgraph-context-interface',
   `
@@ -64,20 +50,6 @@ const subgraphWithContextOnUnion = createSubgraph(
 
     type Organisation {
       id: ID!
-    }
-  `,
-);
-
-const subgraphWithRepeatedContextOnObject = createSubgraph(
-  'subgraph-context-repeated',
-  `
-    type Query {
-      user: User!
-    }
-
-    type User @context(name: "userContext") @context(name: "accountContext") {
-      id: ID!
-      name: String!
     }
   `,
 );
@@ -121,97 +93,6 @@ const subgraphWithFromContextOnEntity = createSubgraph(
   `,
 );
 
-const subgraphWithManuallyDefinedContextFieldValue = createSubgraph(
-  'subgraph-manual-context-field-value',
-  `
-    scalar ContextFieldValue
-
-    type Query {
-      user: User!
-    }
-
-    type User @context(name: "userContext") {
-      id: ID!
-      locale: String!
-      profile: Profile!
-    }
-
-    type Profile {
-      greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
-    }
-  `,
-);
-
-const subgraphWithTypeConditionedFromContext = createSubgraph(
-  'subgraph-from-context-type-condition',
-  `
-    type Query {
-      account: Account!
-    }
-
-    union Account @context(name: "accountContext") = User | Organisation
-
-    type User {
-      id: ID!
-      locale: String!
-      profile: Profile!
-    }
-
-    type Organisation {
-      id: ID!
-      defaultLocale: String!
-      profile: Profile!
-    }
-
-    type Profile {
-      greeting(
-        locale: String
-          @fromContext(field: "$accountContext ... on User { locale } ... on Organisation { defaultLocale }")
-      ): String!
-    }
-  `,
-);
-
-const subgraphWithContextOnTypeExtension = createSubgraph(
-  'subgraph-context-type-extension',
-  `
-    type Query {
-      user: User!
-    }
-
-    type User @key(fields: "id") {
-      id: ID!
-    }
-
-    extend type User @context(name: "userContext") {
-      locale: String!
-    }
-  `,
-);
-
-const subgraphWithMultipleContextArguments = createSubgraph(
-  'subgraph-multiple-context-arguments',
-  `
-    type Query {
-      user: User!
-    }
-
-    type User @context(name: "userContext") {
-      id: ID!
-      locale: String!
-      tier: String!
-      profile: Profile!
-    }
-
-    type Profile {
-      greeting(
-        locale: String @fromContext(field: "$userContext { locale }")
-        tier: String @fromContext(field: "$userContext { tier }")
-      ): String!
-    }
-  `,
-);
-
 const subgraphWithContextArgument = createSubgraph(
   'subgraph-context-argument',
   `
@@ -245,256 +126,349 @@ const subgraphWithNullableArgument = createSubgraph(
   `,
 );
 
-const subgraphWithRequiredArgument = createSubgraph(
-  'subgraph-required-argument',
-  `
-    type Query {
-      noop: Int
-    }
+const SCHEMA_WITHOUT_CONTEXT_ARGUMENT = normalizeString(`
+  ${SCHEMA_QUERY_DEFINITION}
 
-    type Wallet @key(fields: "id") @shareable {
-      id: ID!
-      apply(plan: String!): Int!
-    }
-  `,
-);
+  type Profile {
+    greeting: String!
+  }
 
-const SCHEMA_WITHOUT_CONTEXT_ARGUMENT = normalizeString(
-  SCHEMA_QUERY_DEFINITION +
-    `
-    type Profile {
-      greeting: String!
-    }
+  type Query {
+    user: User!
+  }
 
-    type Query {
-      user: User!
-    }
+  type User {
+    id: ID!
+    locale: String!
+    profile: Profile!
+  }
+`);
 
-    type User {
-      id: ID!
-      locale: String!
-      profile: Profile!
-    }
-  `,
-);
+const FEDERATED_WALLET_SCHEMA = normalizeString(`
+  ${SCHEMA_QUERY_DEFINITION}
+
+  type Member {
+    id: ID!
+    plan: String!
+  }
+
+  type Query {
+    member(id: ID!): Member
+    noop: Int
+  }
+
+  type Wallet {
+    apply: Int!
+    id: ID!
+  }
+`);
 
 describe('@context and @fromContext directives', () => {
   describe('normalisation', () => {
     it('preserves @context on an interface type', () => {
       const { schema } = normalizeSubgraphSuccess(subgraphWithContextOnInterface, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            CONTEXT_DIRECTIVE +
-            `
-            interface Node @context(name: "nodeContext") {
-              id: ID!
-            }
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
 
-            type Query {
-              node: Node!
-            }
+          ${CONTEXT_DIRECTIVE}
 
-            type User implements Node {
-              id: ID!
-              name: String!
-            }
-          `,
-        ),
+          interface Node @context(name: "nodeContext") {
+            id: ID!
+          }
+
+          type Query {
+            node: Node!
+          }
+
+          type User implements Node {
+            id: ID!
+            name: String!
+          }
+        `),
       );
     });
 
     it('preserves @context on a union type', () => {
       const { schema } = normalizeSubgraphSuccess(subgraphWithContextOnUnion, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            CONTEXT_DIRECTIVE +
-            `
-            union Account @context(name: "accountContext") = Organisation | User
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
 
-            type Organisation {
-              id: ID!
-            }
+          ${CONTEXT_DIRECTIVE}
 
-            type Query {
-              account: Account!
-            }
+          union Account @context(name: "accountContext") = Organisation | User
 
-            type User {
-              id: ID!
-            }
-          `,
-        ),
+          type Organisation {
+            id: ID!
+          }
+
+          type Query {
+            account: Account!
+          }
+
+          type User {
+            id: ID!
+          }
+        `),
       );
     });
 
     it('preserves multiple @context declarations on the same type', () => {
-      const { schema } = normalizeSubgraphSuccess(
-        subgraphWithRepeatedContextOnObject,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(schemaToSortedNormalizedString(schema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            CONTEXT_DIRECTIVE +
-            `
-            type Query {
-              user: User!
-            }
+      const subgraph = createSubgraph(
+        'subgraph-context-repeated',
+        `
+          type Query {
+            user: User!
+          }
 
-            type User @context(name: "userContext") @context(name: "accountContext") {
-              id: ID!
-              name: String!
-            }
-          `,
-        ),
+          type User @context(name: "userContext") @context(name: "accountContext") {
+            id: ID!
+            name: String!
+          }
+        `,
+      );
+      const { schema } = normalizeSubgraphSuccess(subgraph, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          ${CONTEXT_DIRECTIVE}
+
+          type Query {
+            user: User!
+          }
+
+          type User @context(name: "userContext") @context(name: "accountContext") {
+            id: ID!
+            name: String!
+          }
+        `),
       );
     });
 
     it('preserves a @fromContext selection with type conditions', () => {
-      const { schema } = normalizeSubgraphSuccess(
-        subgraphWithTypeConditionedFromContext,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
+      const subgraph = createSubgraph(
+        'subgraph-from-context-type-condition',
+        `
+          type Query {
+            account: Account!
+          }
+
+          union Account @context(name: "accountContext") = User | Organisation
+
+          type User {
+            id: ID!
+            locale: String!
+            profile: Profile!
+          }
+
+          type Organisation {
+            id: ID!
+            defaultLocale: String!
+            profile: Profile!
+          }
+
+          type Profile {
+            greeting(
+              locale: String
+                @fromContext(field: "$accountContext ... on User { locale } ... on Organisation { defaultLocale }")
+            ): String!
+          }
+        `,
       );
+      const { schema } = normalizeSubgraphSuccess(subgraph, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            CONTEXT_DIRECTIVE +
-            FROM_CONTEXT_DIRECTIVE +
-            `
-            union Account @context(name: "accountContext") = Organisation | User
-          ` +
-            CONTEXT_FIELD_VALUE_SCALAR +
-            `
-            type Organisation {
-              defaultLocale: String!
-              id: ID!
-              profile: Profile!
-            }
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
 
-            type Profile {
-              greeting(locale: String @fromContext(field: "$accountContext ... on User { locale } ... on Organisation { defaultLocale }")): String!
-            }
+          ${CONTEXT_DIRECTIVE}
 
-            type Query {
-              account: Account!
-            }
+          ${FROM_CONTEXT_DIRECTIVE}
 
-            type User {
-              id: ID!
-              locale: String!
-              profile: Profile!
-            }
-          `,
-        ),
+          union Account @context(name: "accountContext") = Organisation | User
+
+          ${CONTEXT_FIELD_VALUE_SCALAR}
+
+          type Organisation {
+            defaultLocale: String!
+            id: ID!
+            profile: Profile!
+          }
+
+          type Profile {
+            greeting(locale: String @fromContext(field: "$accountContext ... on User { locale } ... on Organisation { defaultLocale }")): String!
+          }
+
+          type Query {
+            account: Account!
+          }
+
+          type User {
+            id: ID!
+            locale: String!
+            profile: Profile!
+          }
+        `),
       );
     });
 
     it('preserves @context declared on a type extension', () => {
-      const { schema } = normalizeSubgraphSuccess(subgraphWithContextOnTypeExtension, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(schemaToSortedNormalizedString(schema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            CONTEXT_DIRECTIVE +
-            KEY_DIRECTIVE +
-            `
-            type Query {
-              user: User!
-            }
+      const subgraph = createSubgraph(
+        'subgraph-context-type-extension',
+        `
+          type Query {
+            user: User!
+          }
 
-            type User @key(fields: "id") @context(name: "userContext") {
-              id: ID!
-              locale: String!
-            }
-          ` +
-            OPENFED_FIELD_SET,
-        ),
+          type User @key(fields: "id") {
+            id: ID!
+          }
+
+          extend type User @context(name: "userContext") {
+            locale: String!
+          }
+        `,
+      );
+      const { schema } = normalizeSubgraphSuccess(subgraph, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          ${CONTEXT_DIRECTIVE}
+
+          ${KEY_DIRECTIVE}
+
+          type Query {
+            user: User!
+          }
+
+          type User @key(fields: "id") @context(name: "userContext") {
+            id: ID!
+            locale: String!
+          }
+
+          ${OPENFED_FIELD_SET}
+        `),
       );
     });
 
     it('preserves multiple context arguments on the same field', () => {
-      const { schema } = normalizeSubgraphSuccess(
-        subgraphWithMultipleContextArguments,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
+      const subgraph = createSubgraph(
+        'subgraph-multiple-context-arguments',
+        `
+          type Query {
+            user: User!
+          }
+
+          type User @context(name: "userContext") {
+            id: ID!
+            locale: String!
+            tier: String!
+            profile: Profile!
+          }
+
+          type Profile {
+            greeting(
+              locale: String @fromContext(field: "$userContext { locale }")
+              tier: String @fromContext(field: "$userContext { tier }")
+            ): String!
+          }
+        `,
       );
+      const { schema } = normalizeSubgraphSuccess(subgraph, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            CONTEXT_DIRECTIVE +
-            FROM_CONTEXT_DIRECTIVE +
-            CONTEXT_FIELD_VALUE_SCALAR +
-            `
-            type Profile {
-              greeting(locale: String @fromContext(field: "$userContext { locale }"), tier: String @fromContext(field: "$userContext { tier }")): String!
-            }
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
 
-            type Query {
-              user: User!
-            }
+          ${CONTEXT_DIRECTIVE}
 
-            type User @context(name: "userContext") {
-              id: ID!
-              locale: String!
-              profile: Profile!
-              tier: String!
-            }
-          `,
-        ),
+          ${FROM_CONTEXT_DIRECTIVE}
+
+          ${CONTEXT_FIELD_VALUE_SCALAR}
+
+          type Profile {
+            greeting(locale: String @fromContext(field: "$userContext { locale }"), tier: String @fromContext(field: "$userContext { tier }")): String!
+          }
+
+          type Query {
+            user: User!
+          }
+
+          type User @context(name: "userContext") {
+            id: ID!
+            locale: String!
+            profile: Profile!
+            tier: String!
+          }
+        `),
       );
     });
 
     it('preserves @context and @fromContext alongside @key on entities', () => {
       const { schema } = normalizeSubgraphSuccess(subgraphWithFromContextOnEntity, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            CONTEXT_DIRECTIVE +
-            FROM_CONTEXT_DIRECTIVE +
-            KEY_DIRECTIVE +
-            CONTEXT_FIELD_VALUE_SCALAR +
-            `
-            type Profile @key(fields: "id") {
-              greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
-              id: ID!
-            }
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
 
-            type Query {
-              user: User!
-            }
+          ${CONTEXT_DIRECTIVE}
 
-            type User @key(fields: "id") @context(name: "userContext") {
-              id: ID!
-              locale: String!
-              profile: Profile!
-            }
-          ` +
-            OPENFED_FIELD_SET,
-        ),
+          ${FROM_CONTEXT_DIRECTIVE}
+
+          ${KEY_DIRECTIVE}
+
+          ${CONTEXT_FIELD_VALUE_SCALAR}
+
+          type Profile @key(fields: "id") {
+            greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
+            id: ID!
+          }
+
+          type Query {
+            user: User!
+          }
+
+          type User @key(fields: "id") @context(name: "userContext") {
+            id: ID!
+            locale: String!
+            profile: Profile!
+          }
+
+          ${OPENFED_FIELD_SET}
+        `),
       );
     });
   });
 
   describe('federation', () => {
     it('strips @context from federated graphs', () => {
-      const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphWithContextOnObject],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            `
-            type Query {
-              user: User!
-            }
+      const subgraph = createSubgraph(
+        'subgraph-context-object',
+        `
+          type Query {
+            user: User!
+          }
 
-            type User {
-              id: ID!
-              name: String!
-            }
-          `,
-        ),
+          type User @context(name: "userContext") {
+            id: ID!
+            name: String!
+          }
+        `,
+      );
+      const { federatedGraphSchema } = federateSubgraphsSuccess([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          type Query {
+            user: User!
+          }
+
+          type User {
+            id: ID!
+            name: String!
+          }
+        `),
       );
     });
 
@@ -504,23 +478,22 @@ describe('@context and @fromContext directives', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            `
-            interface Node {
-              id: ID!
-            }
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
 
-            type Query {
-              node: Node!
-            }
+          interface Node {
+            id: ID!
+          }
 
-            type User implements Node {
-              id: ID!
-              name: String!
-            }
-          `,
-        ),
+          type Query {
+            node: Node!
+          }
+
+          type User implements Node {
+            id: ID!
+            name: String!
+          }
+        `),
       );
     });
 
@@ -530,24 +503,23 @@ describe('@context and @fromContext directives', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            `
-            union Account = Organisation | User
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
 
-            type Organisation {
-              id: ID!
-            }
+          union Account = Organisation | User
 
-            type Query {
-              account: Account!
-            }
+          type Organisation {
+            id: ID!
+          }
 
-            type User {
-              id: ID!
-            }
-          `,
-        ),
+          type Query {
+            account: Account!
+          }
+
+          type User {
+            id: ID!
+          }
+        `),
       );
     });
 
@@ -565,25 +537,24 @@ describe('@context and @fromContext directives', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            `
-            type Profile {
-              greeting: String!
-              id: ID!
-            }
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
 
-            type Query {
-              user: User!
-            }
+          type Profile {
+            greeting: String!
+            id: ID!
+          }
 
-            type User {
-              id: ID!
-              locale: String!
-              profile: Profile!
-            }
-          `,
-        ),
+          type Query {
+            user: User!
+          }
+
+          type User {
+            id: ID!
+            locale: String!
+            profile: Profile!
+          }
+        `),
       );
     });
 
@@ -592,27 +563,8 @@ describe('@context and @fromContext directives', () => {
         [subgraphWithContextArgument, subgraphWithNullableArgument],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      const expected = normalizeString(
-        SCHEMA_QUERY_DEFINITION +
-          `
-          type Member {
-            id: ID!
-            plan: String!
-          }
-
-          type Query {
-            member(id: ID!): Member
-            noop: Int
-          }
-
-          type Wallet {
-            apply: Int!
-            id: ID!
-          }
-        `,
-      );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expected);
-      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expected);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(FEDERATED_WALLET_SCHEMA);
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(FEDERATED_WALLET_SCHEMA);
     });
 
     it('strips a context argument regardless of the subgraph order', () => {
@@ -620,32 +572,25 @@ describe('@context and @fromContext directives', () => {
         [subgraphWithNullableArgument, subgraphWithContextArgument],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            `
-            type Member {
-              id: ID!
-              plan: String!
-            }
-
-            type Query {
-              member(id: ID!): Member
-              noop: Int
-            }
-
-            type Wallet {
-              apply: Int!
-              id: ID!
-            }
-          `,
-        ),
-      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(FEDERATED_WALLET_SCHEMA);
     });
 
     it('returns an error if an argument takes a context in one subgraph and is required in another', () => {
+      const subgraph = createSubgraph(
+        'subgraph-required-argument',
+        `
+          type Query {
+            noop: Int
+          }
+
+          type Wallet @key(fields: "id") @shareable {
+            id: ID!
+            apply(plan: String!): Int!
+          }
+        `,
+      );
       const { errors } = federateSubgraphsFailure(
-        [subgraphWithContextArgument, subgraphWithRequiredArgument],
+        [subgraphWithContextArgument, subgraph],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
@@ -659,8 +604,28 @@ describe('@context and @fromContext directives', () => {
     });
 
     it('strips a manually defined ContextFieldValue scalar from federated graphs', () => {
+      const subgraph = createSubgraph(
+        'subgraph-manual-context-field-value',
+        `
+          scalar ContextFieldValue
+
+          type Query {
+            user: User!
+          }
+
+          type User @context(name: "userContext") {
+            id: ID!
+            locale: String!
+            profile: Profile!
+          }
+
+          type Profile {
+            greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
+          }
+        `,
+      );
       const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphWithManuallyDefinedContextFieldValue],
+        [subgraph],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(SCHEMA_WITHOUT_CONTEXT_ARGUMENT);
