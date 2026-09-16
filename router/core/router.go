@@ -62,6 +62,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	inmemorycache "github.com/wundergraph/cosmo/router/pkg/responsecaching/cache/in_memory"
 	rediscache "github.com/wundergraph/cosmo/router/pkg/responsecaching/cache/redis"
+	"github.com/wundergraph/cosmo/router/pkg/responsecaching/invalidation"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
@@ -1203,19 +1204,60 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 		return fmt.Errorf("response cache is enabled but its fallback_ttl is %s, which must be greater than zero", r.responseCacheConfig.FallbackTTL)
 	}
 
+	var err error
 	switch provider := r.responseCacheConfig.Storage.Provider; provider {
 	case "", config.ResponseCacheStorageProviderRedis:
-		return r.setupRedisResponseCache(ctx)
+		err = r.setupRedisResponseCache(ctx)
 	case config.ResponseCacheStorageProviderMemory:
-		return r.setupInMemoryResponseCache()
+		err = r.setupInMemoryResponseCache()
 	default:
-		return fmt.Errorf(
+		err = fmt.Errorf(
 			"response cache storage provider %q is not supported, use %q or %q",
 			provider,
 			config.ResponseCacheStorageProviderRedis,
 			config.ResponseCacheStorageProviderMemory,
 		)
 	}
+	if err != nil {
+		return err
+	}
+
+	if err = r.startResponseCacheInvalidationServer(ctx); err != nil {
+		if closeErr := r.responseCache.Close(); closeErr != nil {
+			r.logger.Error("failed to close response cache after invalidation server setup failed", zap.Error(closeErr))
+		}
+		r.responseCache = nil
+		return err
+	}
+
+	return nil
+}
+
+// startResponseCacheInvalidationServer listens for invalidation requests.
+func (r *Router) startResponseCacheInvalidationServer(ctx context.Context) error {
+	if r.responseCache == nil || !r.responseCacheConfig.Invalidation.Endpoint.Enabled {
+		return nil
+	}
+
+	svr, err := invalidation.NewServer(r.logger, r.responseCacheConfig.Invalidation, r.responseCache)
+	if err != nil {
+		return fmt.Errorf("failed to create response cache invalidation server: %w", err)
+	}
+
+	lc := &net.ListenConfig{}
+	listener, err := lc.Listen(ctx, "tcp", svr.Addr)
+	if err != nil {
+		return fmt.Errorf("failed to bind response cache invalidation server to %s: %w", svr.Addr, err)
+	}
+	r.responseCacheInvalidationServer = svr
+
+	go func() {
+		if err := svr.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			r.logger.Error("Failed to start response cache invalidation server", zap.Error(err))
+		}
+	}()
+
+	return nil
 }
 
 // setupInMemoryResponseCache builds a response cache held in this process. Nothing
@@ -2009,6 +2051,12 @@ func (r *Router) Shutdown(ctx context.Context) error {
 				)
 			}
 			err.Append(fmt.Errorf("failed to shutdown router: %w", subErr))
+		}
+	}
+
+	if r.responseCacheInvalidationServer != nil {
+		if subErr := r.responseCacheInvalidationServer.Shutdown(ctx); subErr != nil {
+			err.Append(fmt.Errorf("failed to shutdown response cache invalidation server: %w", subErr))
 		}
 	}
 

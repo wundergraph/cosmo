@@ -100,7 +100,7 @@ export const SetupTest = async function ({
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
   const server = Fastify({
-    logger: log,
+    loggerInstance: log,
   });
 
   await server.register(database, {
