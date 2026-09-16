@@ -37,7 +37,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
   const checkUserAccess = useCheckUserAccess();
   const plan = user?.currentOrganization?.billing?.plan;
 
-  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
+  const { pageSize: limit, offset } = usePaginationParams();
 
   const { toast } = useToast();
 

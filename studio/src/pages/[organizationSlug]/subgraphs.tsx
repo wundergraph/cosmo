@@ -26,7 +26,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
   } = useWorkspace();
   const [tab] = useQueryState('tab');
 
-  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
+  const { pageSize: limit, offset } = usePaginationParams();
 
   const [search, setSearch] = useQueryState('search', parseAsString.withDefault(''));
   const [query] = useDebounce(search, 500);

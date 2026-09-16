@@ -1,5 +1,5 @@
 import { AnalyticsDataTable } from '@/components/analytics/data-table';
-import { parseAsString, useQueryState, useQueryStates } from 'nuqs';
+import { parseAsString, useQueryStates } from 'nuqs';
 import { AnalyticsToolbar } from '@/components/analytics/toolbar';
 import TraceDetails from '@/components/analytics/trace-details';
 import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';

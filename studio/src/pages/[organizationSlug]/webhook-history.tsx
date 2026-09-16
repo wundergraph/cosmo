@@ -226,9 +226,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
               <TableRow
                 key={row.id}
                 onClick={() => {
-                  applyParams({
-                    details: row.original.id,
-                  });
+                  setDeliveryId(row.original.id);
                 }}
                 className="group cursor-pointer hover:bg-secondary/30"
                 data-state={row.getIsSelected() && 'selected'}

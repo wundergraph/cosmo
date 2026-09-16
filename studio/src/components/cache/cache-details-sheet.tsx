@@ -3,7 +3,6 @@ import { useQueryState } from 'nuqs';
 import { useHotkeys } from '@saas-ui/use-hotkeys';
 import { CacheWarmerOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { CodeViewer } from '../code-viewer';
 import { Button } from '../ui/button';
@@ -18,7 +17,6 @@ import { GraphContext } from '../layout/graph-layout';
 import { buildUrl } from '@/lib/build-url';
 
 export const CacheDetailsSheet: React.FC<any> = ({ operations }: { operations: CacheWarmerOperation[] }) => {
-  const router = useRouter();
   const [operationId, setOperationId] = useQueryState('operationId');
 
   const [index, setIndex] = useState(operations.findIndex((r: CacheWarmerOperation) => r.id === operationId));
@@ -33,21 +31,13 @@ export const CacheDetailsSheet: React.FC<any> = ({ operations }: { operations: C
 
   const nextTrace = () => {
     if (index + 1 < operations.length) {
-      const newQuery = { ...router.query };
-      newQuery['operationId'] = operations[index + 1].id;
-      router.replace({
-        query: newQuery,
-      });
+      setOperationId(operations[index + 1].id);
     }
   };
 
   const previousTrace = () => {
     if (index - 1 >= 0) {
-      const newQuery = { ...router.query };
-      newQuery['operationId'] = operations[index - 1].id;
-      router.replace({
-        query: newQuery,
-      });
+      setOperationId(operations[index - 1].id);
     }
   };
 

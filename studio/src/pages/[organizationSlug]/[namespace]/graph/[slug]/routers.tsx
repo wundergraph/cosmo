@@ -294,6 +294,7 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
 const RoutersPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
+  const [, setServiceInstanceId] = useQueryState('serviceInstanceId');
   const [open, setOpen] = useState(false);
   const { namespace, slug } = useParams<{ namespace: string; slug: string }>();
 
@@ -522,13 +523,7 @@ const RoutersPage: NextPageWithLayout = () => {
                         key={row.original.serviceInstanceId}
                         data-state={row.getIsSelected() && 'selected'}
                         onClick={() => {
-                          router.push({
-                            pathname: '/[organizationSlug]/[namespace]/graph/[slug]/routers',
-                            query: {
-                              ...router.query,
-                              serviceInstanceId: row.getValue('serviceInstanceId'),
-                            },
-                          });
+                          setServiceInstanceId(row.getValue('serviceInstanceId'));
                         }}
                         className={cn(
                           'group cursor-pointer hover:bg-secondary/30',

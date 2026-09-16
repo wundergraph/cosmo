@@ -23,7 +23,7 @@ const FeatureFlagsPage: NextPageWithLayout = () => {
     namespace: { name: namespace },
   } = useWorkspace();
 
-  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
+  const { pageSize: limit, offset } = usePaginationParams();
 
   const [search, setSearch] = useQueryState('search', parseAsString.withDefault(''));
   const [query] = useDebounce(search, 500);

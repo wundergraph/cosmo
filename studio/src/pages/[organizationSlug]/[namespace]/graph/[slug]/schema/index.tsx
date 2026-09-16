@@ -386,7 +386,7 @@ const Type = (props: {
   endLineNo?: number;
 }) => {
   const router = useRouter();
-  const [fieldName] = useQueryState('fieldName');
+  const [fieldName, setFieldName] = useQueryState('fieldName');
   const isAuthenticatedType = props.authenticated || !!props.requiresScopes?.length;
 
   return (
@@ -456,18 +456,7 @@ const Type = (props: {
               <p className="w-full overflow-hidden truncate">{fieldName}</p>
             </Badge>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => {
-              delete router.query.fieldName;
-              router.push({
-                pathname: `${router.pathname}`,
-                query: {
-                  ...router.query,
-                },
-              });
-            }}
-          >
+          <Button variant="outline" onClick={() => setFieldName(null)}>
             <XMarkIcon className="mr-2 h-4 w-4" />
             Clear
           </Button>

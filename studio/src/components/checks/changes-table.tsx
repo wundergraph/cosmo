@@ -11,7 +11,6 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext } from 'react';
 import { GraphContext } from '../layout/graph-layout';
@@ -104,8 +103,7 @@ const Row = ({
   offset: number;
   openUsage: (changeType: string, path?: string) => void;
 }) => {
-  const router = useRouter();
-  const { checkId } = useParams<{ checkId: string }>();
+  const { checkId, slug } = useParams<{ checkId: string; slug: string }>();
   const { toast } = useToast();
   const {
     namespace: { name: namespace },
@@ -244,7 +242,7 @@ const Row = ({
                           query: {
                             organizationSlug,
                             namespace,
-                            slug: router.query.slug,
+                            slug: slug,
                             typename: path?.split('.')?.[0],
                           },
                         }

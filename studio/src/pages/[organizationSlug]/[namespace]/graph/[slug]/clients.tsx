@@ -177,6 +177,8 @@ const deletePersistedOperationReducer = (
   }
 };
 
+const clientParams = { clientId: parseAsString, clientName: parseAsString };
+
 const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAdminOrDeveloper: boolean }) => {
   const router = useRouter();
   const { slug, organizationSlug } = useParams<{ slug: string; organizationSlug: string }>();
@@ -184,10 +186,7 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
     namespace: { name: namespace },
   } = useWorkspace();
   const { toast } = useToast();
-  const [{ clientId, clientName }, setClient] = useQueryStates({
-    clientId: parseAsString,
-    clientName: parseAsString,
-  });
+  const [{ clientId, clientName }, setClient] = useQueryStates(clientParams);
   const graphContext = useContext(GraphContext);
   const [persistedOperationDeleteState, dispatch] = useReducer(deletePersistedOperationReducer, {
     id: null,
@@ -432,9 +431,9 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
                                 href={{
                                   pathname: `/[organizationSlug]/[namespace]/graph/[slug]/analytics`,
                                   query: {
-                                    organizationSlug: router.query.organizationSlug,
+                                    organizationSlug,
                                     namespace,
-                                    slug: router.query.slug,
+                                    slug,
                                     filterState: createFilterState({
                                       operationPersistedId: op.id,
                                     }),
@@ -676,7 +675,7 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
 };
 
 const ClientsPage: NextPageWithLayout = () => {
-  const [, setClient] = useQueryStates({ clientId: parseAsString, clientName: parseAsString });
+  const [, setClient] = useQueryStates(clientParams);
   const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
