@@ -28,6 +28,10 @@ export const operationsFilterParams = {
   sortDirection: parseAsString.withDefault('desc'),
 };
 
+/**
+ * The operations page's URL state: the filters, the sort and the selected operation. Changing a
+ * filter clears the selection, because the operation it names may not survive the new filter.
+ */
 export const useOperationsFilters = () => {
   const [filters, setFilters] = useQueryStates(operationsFilterParams);
 
