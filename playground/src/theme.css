@@ -264,3 +264,15 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 .graphiql-container .CodeMirror-cursor {
   border-left: 2px solid gray !important;
 }
+
+#response-parent {
+  --events-panel-height: 240px;
+}
+
+#response-parent.with-events-panel .graphiql-response {
+  height: calc(100% - var(--events-panel-height));
+}
+
+#stream-events-panel {
+  height: var(--events-panel-height);
+}
