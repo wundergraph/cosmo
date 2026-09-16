@@ -78,7 +78,7 @@ authorization:
   require_authentication: false
 ```
 
-With `continue`, invalid credentials, including unsupported header prefixes and empty tokens, leave the request unauthenticated. The original credential remains available to custom modules and [configured header forwarding](/router/proxy-capabilities/subgraph-request-header-operations).
+With `continue`, the router ignores invalid tokens, unsupported header prefixes, and empty tokens. The original credential remains available to custom modules and [configured header forwarding](/router/proxy-capabilities/subgraph-request-header-operations).
 
 <Warning>
   Your module or downstream service must validate the credential before allowing protected operations.
