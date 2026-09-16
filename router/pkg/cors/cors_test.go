@@ -153,6 +153,24 @@ func TestMatchOrigins(t *testing.T) {
 	}
 }
 
+func TestMatchOriginsReuse(t *testing.T) {
+	t.Parallel()
+
+	cfg := Config{MatchOrigins: []string{`^https://one\.example$`}}
+	require.NoError(t, cfg.Validate())
+	first := newCors(nil, cfg)
+	assert.Same(t, cfg.compiledMatchOrigins[0], first.matchOrigins[0])
+
+	cfg.MatchOrigins[0] = `^https://two\.example$`
+	second := newCors(nil, cfg)
+	assert.True(t, first.validateOrigin("https://one.example"))
+	assert.False(t, second.validateOrigin("https://one.example"))
+	assert.True(t, second.validateOrigin("https://two.example"))
+
+	cfg.MatchOrigins[0] = `[`
+	assert.Error(t, cfg.Validate())
+}
+
 func TestInvalidMatchOrigins(t *testing.T) {
 	t.Parallel()
 

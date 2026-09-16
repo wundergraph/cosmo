@@ -23,8 +23,7 @@ type cors struct {
 var maxWildcardOriginLength = 4096 // Maximum length of an origin string for it to be eligible for wildcard matching
 
 func newCors(handler http.Handler, config Config) *cors {
-	matchOrigins, err := config.validateAndCompile()
-	if err != nil {
+	if err := config.Validate(); err != nil {
 		panic(err.Error())
 	}
 
@@ -43,7 +42,7 @@ func newCors(handler http.Handler, config Config) *cors {
 		normalHeaders:    generateNormalHeaders(config),
 		preflightHeaders: generatePreflightHeaders(config),
 		wildcardOrigins:  config.parseNewWildcardRules(),
-		matchOrigins:     matchOrigins,
+		matchOrigins:     config.compiledMatchOrigins,
 		handler:          handler,
 	}
 }

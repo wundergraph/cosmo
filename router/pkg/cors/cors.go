@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -51,6 +52,8 @@ type Config struct {
 	// MaxAge indicates how long (with second-precision) the results of a preflight request
 	// can be cached
 	MaxAge time.Duration
+
+	compiledMatchOrigins []*regexp.Regexp
 }
 
 // AddAllowMethods is allowed to add custom methods
@@ -68,28 +71,29 @@ func (c *Config) AddExposeHeaders(headers ...string) {
 	c.ExposeHeaders = append(c.ExposeHeaders, headers...)
 }
 
-// Validate is check configuration of user defined.
+// Validate checks the configuration and caches compiled origin patterns.
 func (c *Config) Validate() error {
-	_, err := c.validateAndCompile()
-	return err
-}
-
-func (c *Config) validateAndCompile() ([]*regexp.Regexp, error) {
 	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0 || len(c.MatchOrigins) > 0) {
-		return nil, errors.New("conflict settings: all origins are allowed. AllowOriginFunc, AllowOrigins or MatchOrigins is not needed")
+		return errors.New("conflict settings: all origins are allowed. AllowOriginFunc, AllowOrigins or MatchOrigins is not needed")
 	}
 	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 && len(c.MatchOrigins) == 0 {
-		return nil, errors.New("conflict settings: all origins disabled")
+		return errors.New("conflict settings: all origins disabled")
+	}
+	if slices.EqualFunc(c.MatchOrigins, c.compiledMatchOrigins, func(pattern string, re *regexp.Regexp) bool {
+		return pattern == re.String()
+	}) {
+		return nil
 	}
 	var patterns []*regexp.Regexp
 	for _, pattern := range c.MatchOrigins {
 		re, err := regexp.Compile(pattern)
 		if err != nil {
-			return nil, fmt.Errorf("bad origin regex in match_origins %q: %w", pattern, err)
+			return fmt.Errorf("bad origin regex in match_origins %q: %w", pattern, err)
 		}
 		patterns = append(patterns, re)
 	}
-	return patterns, nil
+	c.compiledMatchOrigins = patterns
+	return nil
 }
 
 func (c *Config) parseNewWildcardRules() []*WildcardPattern {
