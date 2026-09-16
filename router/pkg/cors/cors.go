@@ -14,6 +14,7 @@ type Config struct {
 	AllowAllOrigins bool
 
 	// AllowOrigins is a list of origins a cross-domain request can be executed from.
+	// Origins can use any URL scheme. Wildcard patterns are supported.
 	// If the special "*" value is present in the list, all origins will be allowed.
 	// Default value is []
 	AllowOrigins []string
@@ -42,15 +43,6 @@ type Config struct {
 	// MaxAge indicates how long (with second-precision) the results of a preflight request
 	// can be cached
 	MaxAge time.Duration
-
-	// Allows usage of popular browser extensions schemas
-	AllowBrowserExtensions bool
-
-	// Allows usage of WebSocket protocol
-	AllowWebSockets bool
-
-	// Allows usage of file:// schema (dangerous!) use it only when you 100% sure it's needed
-	AllowFiles bool
 }
 
 // AddAllowMethods is allowed to add custom methods
@@ -68,30 +60,6 @@ func (c *Config) AddExposeHeaders(headers ...string) {
 	c.ExposeHeaders = append(c.ExposeHeaders, headers...)
 }
 
-func (c *Config) getAllowedSchemas() []string {
-	allowedSchemas := DefaultSchemas
-	if c.AllowBrowserExtensions {
-		allowedSchemas = append(allowedSchemas, ExtensionSchemas...)
-	}
-	if c.AllowWebSockets {
-		allowedSchemas = append(allowedSchemas, WebSocketSchemas...)
-	}
-	if c.AllowFiles {
-		allowedSchemas = append(allowedSchemas, FileSchemas...)
-	}
-	return allowedSchemas
-}
-
-func (c *Config) validateAllowedSchemas(origin string) bool {
-	allowedSchemas := c.getAllowedSchemas()
-	for _, schema := range allowedSchemas {
-		if strings.HasPrefix(origin, schema) {
-			return true
-		}
-	}
-	return false
-}
-
 // Validate is check configuration of user defined.
 func (c *Config) Validate() error {
 	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0) {
@@ -99,11 +67,6 @@ func (c *Config) Validate() error {
 	}
 	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 {
 		return errors.New("conflict settings: all origins disabled")
-	}
-	for _, origin := range c.AllowOrigins {
-		if !strings.Contains(origin, "*") && !c.validateAllowedSchemas(origin) {
-			return errors.New("bad origin: origins must contain '*' or include " + strings.Join(c.getAllowedSchemas(), ","))
-		}
 	}
 	return nil
 }

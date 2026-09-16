@@ -10980,6 +10980,48 @@ func TestFlakyTelemetry(t *testing.T) {
 			})
 		})
 
+		t.Run("verify query complexity expression attribute", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			key := "custom.attribute"
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key: key,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "string(request.operation.queryDepth)",
+						},
+					},
+				},
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+						Mode: config.ComplexityLimitsModeEnforce,
+						Depth: &config.ComplexityLimit{
+							Enabled: true,
+							Limit:   2,
+						},
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `query { employee(id: 1) { details { forename } } }`,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+
+				customAttribute := attribute.String(key, "3")
+				normalizeSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Normalize")
+				require.NotContains(t, normalizeSpan.Attributes(), customAttribute)
+
+				validateSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, validateSpan.Attributes(), customAttribute)
+			})
+		})
+
 		t.Run("verify validationTime expression attribute", func(t *testing.T) {
 			t.Parallel()
 

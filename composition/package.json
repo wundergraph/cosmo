@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/composition",
-  "version": "0.65.0",
+  "version": "0.65.1",
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
@@ -48,6 +48,7 @@
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "del-cli": "catalog:",
+    "eslint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
