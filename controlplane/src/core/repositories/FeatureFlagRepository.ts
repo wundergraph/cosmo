@@ -329,6 +329,11 @@ export class FeatureFlagRepository {
       return true;
     }
 
+    if (scope !== 'feature-flag' && scope !== 'feature-subgraph') {
+      // Invalid scope provided
+      return false;
+    }
+
     const graphAdmin = rbac.ruleFor('subgraph-admin');
     const graphPublisher = rbac.ruleFor('subgraph-publisher');
     const graphViewer = rbac.ruleFor('subgraph-viewer');
@@ -374,20 +379,18 @@ export class FeatureFlagRepository {
 
     if (uniqueResources.length > 0) {
       clauses.push(
-        scope === 'feature-flag'
-          ? exists(
-              this.db
-                .select({ exists: sql`1` })
-                .from(featureFlagToFeatureSubgraphs)
-                .innerJoin(subgraphs, eq(subgraphs.id, featureFlagToFeatureSubgraphs.featureSubgraphId))
-                .where(
-                  and(
-                    eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlags.id),
-                    inArray(subgraphs.targetId, uniqueResources),
-                  ),
-                ),
-            )
-          : inArray(schema.targets.id, uniqueResources),
+        exists(
+          this.db
+            .select({ exists: sql`1` })
+            .from(featureFlagToFeatureSubgraphs)
+            .innerJoin(subgraphs, eq(subgraphs.id, featureFlagToFeatureSubgraphs.featureSubgraphId))
+            .where(
+              and(
+                eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlags.id),
+                inArray(subgraphs.targetId, uniqueResources),
+              ),
+            ),
+        ),
       );
     }
 
