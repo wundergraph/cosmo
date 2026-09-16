@@ -379,18 +379,20 @@ export class FeatureFlagRepository {
 
     if (uniqueResources.length > 0) {
       clauses.push(
-        exists(
-          this.db
-            .select({ exists: sql`1` })
-            .from(featureFlagToFeatureSubgraphs)
-            .innerJoin(subgraphs, eq(subgraphs.id, featureFlagToFeatureSubgraphs.featureSubgraphId))
-            .where(
-              and(
-                eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlags.id),
-                inArray(subgraphs.targetId, uniqueResources),
-              ),
-            ),
-        ),
+        scope === 'feature-flag'
+          ? exists(
+              this.db
+                .select({ exists: sql`1` })
+                .from(featureFlagToFeatureSubgraphs)
+                .innerJoin(subgraphs, eq(subgraphs.id, featureFlagToFeatureSubgraphs.featureSubgraphId))
+                .where(
+                  and(
+                    eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlags.id),
+                    inArray(subgraphs.targetId, uniqueResources),
+                  ),
+                ),
+            )
+          : inArray(schema.targets.id, uniqueResources),
       );
     }
 
