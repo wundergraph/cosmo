@@ -196,6 +196,50 @@ func TestMCPOAuthPerToolScopes(t *testing.T) {
 	})
 }
 
+// Some IdPs (Duende IdentityServer and others in the .NET ecosystem) emit the scope claim as a
+// JSON array once a token carries more than one scope, rather than as a space delimited string.
+func TestMCPOAuthArrayScopeClaim(t *testing.T) {
+	oauthServer, err := testutil.NewOAuthTestServer(t, nil)
+	require.NoError(t, err, "failed to start OAuth server")
+	defer oauthServer.Close() //nolint:errcheck
+
+	arrayScopeToken, err := oauthServer.CreateToken(map[string]any{
+		"sub":   "test-user",
+		"scope": []string{"mcp:connect", "mcp:tools:read"},
+	})
+	require.NoError(t, err, "failed to create token")
+
+	testenv.Run(t, &testenv.Config{
+		MCP: config.MCPConfiguration{
+			Enabled:      true,
+			ExposeSchema: true,
+			OAuth: config.MCPOAuthConfiguration{
+				Enabled: true,
+				JWKS: []config.JWKSConfiguration{
+					{URL: oauthServer.JWKSURL()},
+				},
+				AuthorizationServerURL: oauthServer.Issuer(),
+				Scopes: config.MCPOAuthScopesConfiguration{
+					Initialize: []string{"mcp:connect"},
+					GetSchema:  []string{"mcp:tools:read"},
+				},
+			},
+		},
+		MCPAuthToken:      arrayScopeToken,
+		MCPOperationsPath: "testdata/mcp_operations",
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		ctx := context.Background()
+
+		client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), arrayScopeToken)
+		require.NoError(t, client.Connect(ctx), "should connect with scopes encoded as a JSON array")
+		defer client.Close() //nolint:errcheck
+
+		result, err := client.CallTool(ctx, "get_schema", nil)
+		require.NoError(t, err, "should call tool with scopes encoded as a JSON array")
+		require.NotNil(t, result)
+	})
+}
+
 func TestMCPOAuthMultipleAuthorizationServers(t *testing.T) {
 	oauthServerA, err := testutil.NewOAuthTestServer(t, &testutil.OAuthTestServerOptions{KeyID: "server_a_rsa"})
 	require.NoError(t, err, "failed to start OAuth server A")

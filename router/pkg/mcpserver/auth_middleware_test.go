@@ -140,6 +140,34 @@ func TestExtractScopes(t *testing.T) {
 			},
 			want: []string{},
 		},
+		{
+			name: "reads scope claim encoded as a JSON array",
+			claims: authentication.Claims{
+				"scope": []any{"mcp:tools", "mcp:read", "mcp:write"},
+			},
+			want: []string{"mcp:tools", "mcp:read", "mcp:write"},
+		},
+		{
+			name: "reads scope claim encoded as a string slice",
+			claims: authentication.Claims{
+				"scope": []string{"mcp:tools", "mcp:read"},
+			},
+			want: []string{"mcp:tools", "mcp:read"},
+		},
+		{
+			name: "skips non-string members of a JSON array scope claim",
+			claims: authentication.Claims{
+				"scope": []any{"mcp:tools", 42, nil, "mcp:read"},
+			},
+			want: []string{"mcp:tools", "mcp:read"},
+		},
+		{
+			name: "returns nil for an unsupported scope claim type",
+			claims: authentication.Claims{
+				"scope": 42,
+			},
+			want: nil,
+		},
 	}
 
 	for _, tt := range tests {

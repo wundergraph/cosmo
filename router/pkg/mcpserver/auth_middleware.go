@@ -315,17 +315,9 @@ func findMissing(tokenSet map[string]struct{}, required []string) []string {
 	return missing
 }
 
-// extractScopes extracts space-separated scope values from the OAuth 2.0 "scope" claim.
+// extractScopes extracts the scope values from the OAuth 2.0 "scope" claim.
 func extractScopes(claims authentication.Claims) []string {
-	scopeClaim, ok := claims["scope"]
-	if !ok {
-		return nil
-	}
-	scopeStr, ok := scopeClaim.(string)
-	if !ok {
-		return nil
-	}
-	return strings.Fields(scopeStr)
+	return authentication.ScopesFromClaims(claims, authentication.DefaultScopeClaim)
 }
 
 // GetClaimsFromContext retrieves authenticated user claims from context.

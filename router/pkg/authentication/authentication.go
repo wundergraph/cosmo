@@ -73,11 +73,32 @@ func (a *authentication) Scopes() []string {
 	if a == nil {
 		return nil
 	}
-	scopes, ok := a.claims[a.scopeClaim].(string)
-	if !ok {
+	return ScopesFromClaims(a.claims, a.scopeClaim)
+}
+
+// ScopesFromClaims reads the scope claim. RFC 8693 defines it as a space delimited string, but
+// some IdPs (Duende IdentityServer and others in the .NET ecosystem) emit a JSON array instead,
+// so both encodings are accepted. Non-string members of an array are ignored.
+func ScopesFromClaims(claims Claims, scopeClaim string) []string {
+	if scopeClaim == "" {
+		scopeClaim = DefaultScopeClaim
+	}
+	switch v := claims[scopeClaim].(type) {
+	case string:
+		return strings.Fields(v)
+	case []string:
+		return v
+	case []any:
+		scopes := make([]string, 0, len(v))
+		for _, scope := range v {
+			if s, ok := scope.(string); ok {
+				scopes = append(scopes, s)
+			}
+		}
+		return scopes
+	default:
 		return nil
 	}
-	return strings.Split(scopes, " ")
 }
 
 var errUnacceptableAud = errors.New("audience match not found")
