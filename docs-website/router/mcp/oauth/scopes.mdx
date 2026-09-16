@@ -44,10 +44,10 @@ oauth:
 When both `initialize` and method-level scopes are configured, the token must contain **all** of them. For example, calling `tools/call` requires both the `initialize` scopes and the `tools_call` scopes.
 
 <Info>
-  Scopes in the JWT are read from the `scope` claim, either as a **space-separated string** (per OAuth 2.0
-  convention) or as a **JSON array** of strings, which some identity providers emit instead. A claim in any
-  other shape — including an array holding a non-string member — is rejected with `401 invalid_token`
-  rather than read partially.
+  Scopes in the JWT are read from the `scope` claim. The claim can be a **space-separated string**, per
+  OAuth 2.0 convention, or a **JSON array** of strings. Some identity providers emit the array format.
+  A claim that is absent or `null` grants no scopes. Any other shape is rejected with `401 invalid_token`.
+  This includes an array holding a non-string member. Invalid arrays are never read partially.
 </Info>
 
 ### Built-in Tool Scopes

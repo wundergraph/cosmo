@@ -48,6 +48,12 @@ func TestScopes(t *testing.T) {
 			want:   nil,
 		},
 		{
+			// A null claim carries no scopes to read, so it grants none rather than being invalid.
+			name:   "returns nil when the scope claim is null",
+			claims: Claims{"scope": nil},
+			want:   nil,
+		},
+		{
 			name:    "rejects an unsupported scope claim type",
 			claims:  Claims{"scope": 42},
 			wantErr: true,

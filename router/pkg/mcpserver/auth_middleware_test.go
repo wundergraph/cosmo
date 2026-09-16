@@ -139,6 +139,12 @@ func TestExtractScopes(t *testing.T) {
 			want:   nil,
 		},
 		{
+			// A null claim carries no scopes to read, so it grants none rather than being invalid.
+			name:   "returns nil when scope claim is null",
+			claims: authentication.Claims{"scope": nil},
+			want:   nil,
+		},
+		{
 			name: "returns empty slice when scope claim is empty string",
 			claims: authentication.Claims{
 				"scope": "",
