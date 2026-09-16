@@ -1,5 +1,5 @@
 import { GraphContext } from '@/components/layout/graph-layout';
-import { useParams } from 'next/navigation';
+import { useCheckParams } from '@/hooks/use-check-params';
 import { useUser } from '@/hooks/use-user';
 import { cn } from '@/lib/utils';
 import { CheckCircleIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
@@ -29,7 +29,7 @@ export const GraphPruningIssuesTable = ({
   hasGraphPruningErrors: boolean;
 }) => {
   const router = useRouter();
-  const { slug, checkId } = useParams<{ slug: string; checkId: string }>();
+  const { slug, checkId } = useCheckParams();
   const user = useUser();
   const graphContext = useContext(GraphContext);
   const {

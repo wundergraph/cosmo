@@ -1,5 +1,5 @@
 import { FieldUsageSheet } from '@/components/analytics/field-usage';
-import { useParams } from 'next/navigation';
+import { useCheckParams } from '@/hooks/use-check-params';
 import { useQueryState } from 'nuqs';
 import { getCheckBadge, getCheckIcon, isCheckSuccessful } from '@/components/check-badge-icon';
 import { ChangesTable } from '@/components/checks/changes-table';
@@ -220,7 +220,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const { slug, checkId: id } = useParams<{ slug: string; checkId: string }>();
+  const { slug, checkId: id } = useCheckParams();
 
   const { data, isLoading, error, refetch } = useQuery(
     getCheckSummary,
@@ -346,7 +346,7 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const { slug, checkId: id } = useParams<{ slug: string; checkId: string }>();
+  const { slug, checkId: id } = useCheckParams();
   const [tab] = useQueryState('tab');
 
   const { mutate: forceSuccess } = useMutation(forceCheckSuccess, {

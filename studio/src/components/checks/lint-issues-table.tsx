@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { useParams } from 'next/navigation';
+import { useCheckParams } from '@/hooks/use-check-params';
 import { CheckCircleIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
 import { Cross1Icon } from '@radix-ui/react-icons';
 import { LintIssue, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -27,7 +27,7 @@ export const LintIssuesTable = ({
   isLintingEnabled: boolean;
 }) => {
   const router = useRouter();
-  const { slug, checkId } = useParams<{ slug: string; checkId: string }>();
+  const { slug, checkId } = useCheckParams();
   const user = useUser();
   const graphContext = useContext(GraphContext);
   const {

@@ -1,5 +1,5 @@
 import { FieldUsageSheet } from '@/components/analytics/field-usage';
-import { useParams } from 'next/navigation';
+import { useCheckParams } from '@/hooks/use-check-params';
 import { parseAsString, useQueryStates } from 'nuqs';
 import { ChangesTable } from '@/components/checks/changes-table';
 import { EmptyState } from '@/components/empty-state';
@@ -117,7 +117,7 @@ export const CheckOperations = () => {
   const { toast } = useToast();
   const { pageNumber, pageSize: limit, offset } = usePaginationParams();
 
-  const { checkId: id } = useParams<{ checkId: string }>();
+  const { checkId: id } = useCheckParams();
 
   const [{ search }, setSearch] = useQueryStates({ search: parseAsString.withDefault(''), page: pageParam });
   const [debouncedSearch] = useDebounce(search, 500);
