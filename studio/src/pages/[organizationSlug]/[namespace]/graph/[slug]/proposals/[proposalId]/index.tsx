@@ -70,7 +70,7 @@ export const ProposalDetails = ({
   const { slug, proposalId: id } = useParams<{ slug: string; proposalId: string }>();
   const [tab] = useQueryState('tab');
   const [subgraph] = useQueryState('subgraph');
-  const { pageNumber, pageSize: limit } = usePaginationParams();
+  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
   const { toast } = useToast();
 
   const [reviewAction, setReviewAction] = useState<'APPROVED' | 'CLOSED' | null>(null);
@@ -83,8 +83,8 @@ export const ProposalDetails = ({
     getProposalChecks,
     {
       proposalId: id,
-      limit: limit > 50 ? 50 : limit,
-      offset: (pageNumber - 1) * limit,
+      limit,
+      offset,
     },
     {
       enabled: tab === 'checks',

@@ -42,6 +42,7 @@ export const ChangesTable = ({
   hasIgnoreAll?: boolean;
 }) => {
   const openUsage = useOpenUsage({ trafficCheckDays, createdAt });
+  const { pageSize: limit, offset } = usePaginationParams();
 
   return (
     <TableWrapper>
@@ -65,6 +66,8 @@ export const ChangesTable = ({
               operationName={operationName}
               openUsage={openUsage}
               subgraphName={c.subgraphName}
+              limit={limit}
+              offset={offset}
             />
           ))}
         </TableBody>
@@ -85,6 +88,8 @@ const Row = ({
   operationName,
   subgraphName,
   openUsage,
+  limit,
+  offset,
 }: {
   changeType: string;
   message: string;
@@ -95,6 +100,8 @@ const Row = ({
   operationHash?: string;
   operationName?: string;
   subgraphName?: string;
+  limit: number;
+  offset: number;
   openUsage: (changeType: string, path?: string) => void;
 }) => {
   const router = useRouter();
@@ -105,8 +112,6 @@ const Row = ({
   } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
   const graphContext = useContext(GraphContext);
-  const { pageNumber, pageSize: limit } = usePaginationParams();
-
   const client = useQueryClient();
 
   const invalidateCheckOperations = () => {
@@ -116,8 +121,8 @@ const Row = ({
         checkId,
         graphName: graphContext?.graph?.name,
         namespace: graphContext?.graph?.namespace,
-        limit: limit > 200 ? 200 : limit,
-        offset: (pageNumber - 1) * limit,
+        limit,
+        offset,
       },
       cardinality: 'finite',
     });

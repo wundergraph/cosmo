@@ -39,7 +39,7 @@ const ProposalsPage: NextPageWithLayout = () => {
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const { pageNumber, pageSize: limit } = usePaginationParams();
+  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
 
   const {
     dateRange: { start, end },
@@ -57,7 +57,7 @@ const ProposalsPage: NextPageWithLayout = () => {
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
       limit,
-      offset: (pageNumber - 1) * limit,
+      offset,
     },
     {
       placeholderData: (prev) => prev,

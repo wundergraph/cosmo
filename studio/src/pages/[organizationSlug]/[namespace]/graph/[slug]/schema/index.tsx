@@ -1,6 +1,6 @@
 import { FieldUsageSheet } from '@/components/analytics/field-usage';
 import { useParams } from 'next/navigation';
-import { useQueryState } from 'nuqs';
+import { parseAsString, useQueryState } from 'nuqs';
 import { useApplyParams } from '@/components/analytics/use-apply-params';
 import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';
 import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
@@ -874,7 +874,7 @@ export const GraphSelector = () => {
   const router = useRouter();
   const [activeFeatureFlag] = useQueryState('featureFlag');
   const { slug: graphName } = useParams<{ slug: string }>();
-  const [schemaType] = useQueryState('schemaType');
+  const [schemaType] = useQueryState('schemaType', parseAsString.withDefault('client'));
   const {
     namespace: { name: namespace },
   } = useWorkspace();
@@ -1016,10 +1016,10 @@ export const GraphSelector = () => {
             schemaType: v,
           });
         }}
-        value={schemaType || 'client'}
+        value={schemaType}
       >
         <SelectTrigger className="w-max">
-          <SelectValue>{sentenceCase(schemaType || 'client')} Schema</SelectValue>
+          <SelectValue>{sentenceCase(schemaType)} Schema</SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="client">
@@ -1268,7 +1268,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     (flag) => flag.name === featureFlagName && flag.hasFailedLatestComposition,
   );
 
-  const [schemaType] = useQueryState('schemaType');
+  const [schemaType] = useQueryState('schemaType', parseAsString.withDefault('client'));
   const schema = schemaType === 'router' ? data?.sdl : data?.clientSchema || data?.sdl;
 
   const { ast, doc, isParsing } = useParseSchema(schema);
@@ -1293,7 +1293,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
           organizationSlug,
           namespace,
           graphName,
-          schemaType: schemaType || 'client',
+          schemaType: schemaType,
         })}
       >
         Schema
@@ -1311,7 +1311,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
             namespace,
             graphName,
             category: selectedCategory,
-            schemaType: schemaType || 'client',
+            schemaType: schemaType,
           })}
         >
           {sentenceCase(selectedCategory)}

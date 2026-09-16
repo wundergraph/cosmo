@@ -40,7 +40,7 @@ import { WebhookDeliveryDetails } from '@/components/webhook-delivery-details';
 
 const WebhookHistoryPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const { pageNumber, pageSize: limit } = usePaginationParams();
+  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
   const {
     dateRange: { start, end },
     range,
@@ -53,8 +53,8 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
     getOrganizationWebhookHistory,
     {
       pagination: {
-        limit: limit > 50 ? 50 : limit,
-        offset: (pageNumber - 1) * limit,
+        limit,
+        offset,
       },
       dateRange: {
         start: formatISO(range ? createDateRange(range).start : start),

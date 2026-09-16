@@ -115,7 +115,7 @@ const CopyableOperationHash = ({ hash }: { hash: string }) => {
 export const CheckOperations = () => {
   const graphContext = useContext(GraphContext);
   const { toast } = useToast();
-  const { pageNumber, pageSize: limit } = usePaginationParams();
+  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
 
   const { checkId: id } = useParams<{ checkId: string }>();
 
@@ -129,8 +129,8 @@ export const CheckOperations = () => {
       checkId: id,
       graphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
-      limit: limit > 200 ? 200 : limit,
-      offset: (pageNumber - 1) * limit,
+      limit,
+      offset,
       search: debouncedSearch,
     },
     {

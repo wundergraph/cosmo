@@ -60,7 +60,7 @@ const getCheckSubgraphDisplayName = ({
 
 const ChecksPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const { pageNumber, pageSize: limit } = usePaginationParams();
+  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
 
   const selectedSubgraphs = parseSelectedSubgraphs(router.query.subgraphs);
   const {
@@ -86,8 +86,8 @@ const ChecksPage: NextPageWithLayout = () => {
     {
       name: graphName,
       namespace,
-      limit: limit > 50 ? 50 : limit,
-      offset: (pageNumber - 1) * limit,
+      limit,
+      offset,
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
       filters: {

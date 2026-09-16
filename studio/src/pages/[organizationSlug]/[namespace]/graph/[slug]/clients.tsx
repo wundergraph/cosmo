@@ -179,11 +179,10 @@ const deletePersistedOperationReducer = (
 
 const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAdminOrDeveloper: boolean }) => {
   const router = useRouter();
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, organizationSlug } = useParams<{ slug: string; organizationSlug: string }>();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const clientId = searchParams.get('clientId');
@@ -210,19 +209,6 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
   const { ast } = useParseSchema(sdlData?.sdl);
 
   const [search, setSearch] = useQueryState('search', parseAsString.withDefault(''));
-  const applyParams = (search: string) => {
-    const query = { ...router.query };
-    query.search = search;
-
-    if (!search) {
-      delete query.search;
-    }
-
-    router.replace({
-      query,
-    });
-  };
-
   const { data, isLoading, error, refetch } = useQuery(
     getPersistedOperations,
     {
@@ -354,19 +340,13 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
             placeholder="Search by Name or ID"
             className="pl-8 pr-10"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              applyParams(e.target.value);
-            }}
+            onChange={(e) => setSearch(e.target.value)}
           />
           {search && (
             <Button
               variant="ghost"
               className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-              onClick={() => {
-                setSearch('');
-                applyParams('');
-              }}
+              onClick={() => setSearch(null)}
             >
               <Cross1Icon />
             </Button>

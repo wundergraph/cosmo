@@ -20,7 +20,7 @@ import { formatISO } from 'date-fns';
 import { usePaginationParams } from '@/hooks/use-pagination-params';
 
 const AuditLogPage: NextPageWithLayout = () => {
-  const { pageNumber, pageSize: limit } = usePaginationParams();
+  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
 
   const {
     dateRange: { start, end },
@@ -31,8 +31,8 @@ const AuditLogPage: NextPageWithLayout = () => {
   const endDate = range ? createDateRange(range).end : end;
 
   const { data, isLoading, error, refetch } = useQuery(getAuditLogs, {
-    limit: limit > 50 ? 50 : limit,
-    offset: (pageNumber - 1) * limit,
+    limit,
+    offset,
     startDate: formatISO(startDate),
     endDate: formatISO(endDate),
   });
