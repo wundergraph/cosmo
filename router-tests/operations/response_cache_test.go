@@ -533,10 +533,10 @@ func TestRootFetchResponseCacheRedis(t *testing.T) {
 	})
 }
 
-// TestResponseCacheWithMultiFetch pins what engine.enable_multi_fetch costs the
-// response cache. The merged entity fetch it produces is not cached and nothing
-// reports that it was skipped, while the root query fetch of the same operation
-// is cached as it would be without the flag.
+// TestResponseCacheWithMultiFetch pins that engine.enable_multi_fetch costs the
+// response cache nothing. The merged entity fetch it produces is cached per
+// entry, and the root query fetch of the same operation is cached as it would
+// be without the flag.
 func TestResponseCacheWithMultiFetch(t *testing.T) {
 	t.Parallel()
 
@@ -557,7 +557,7 @@ func TestResponseCacheWithMultiFetch(t *testing.T) {
 	  }
 	}`
 
-	t.Run("the merged entity fetch is re-sent on every request", func(t *testing.T) {
+	t.Run("the merged entity fetch is served from the cache", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -587,8 +587,8 @@ func TestResponseCacheWithMultiFetch(t *testing.T) {
 
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Family.Load(),
 				"enable_multi_fetch has nothing to merge here and leaves root caching alone")
-			require.EqualValues(t, 3, xEnv.SubgraphRequestCount.Employees.Load(),
-				"the merged entity fetch is re-sent, so it was never cached")
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Employees.Load(),
+				"the merged entity fetch is not re-sent: every entry of it was cached")
 
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(),
 				"an entity fetch with nothing to merge with is cached as usual")
