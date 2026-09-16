@@ -109,8 +109,8 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
 
   return (
     <>
-      <NuqsAdapter>
-        <PostHogProvider client={posthog}>
+      <PostHogProvider client={posthog}>
+        <NuqsAdapter>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
             <QueryClientProvider client={queryClient}>
               <PostHogFeatureFlagProvider disabled={!process.env.NEXT_PUBLIC_POSTHOG_KEY}>
@@ -125,8 +125,8 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
               </PostHogFeatureFlagProvider>
             </QueryClientProvider>
           </ThemeProvider>
-        </PostHogProvider>
-      </NuqsAdapter>
+        </NuqsAdapter>
+      </PostHogProvider>
       <Footer />
     </>
   );
