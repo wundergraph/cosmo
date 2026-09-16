@@ -100,24 +100,3 @@ func TestValidateResponseCacheTagHeader(t *testing.T) {
 		})
 	}
 }
-
-func BenchmarkBuildCacheTagHeader(b *testing.B) {
-	fits := []string{"subgraph-accounts", "subgraph-products", "type-accounts-User", "type-products-Product", "users", "user-42", "products", "product-7"}
-	over := []string{"subgraph-a"}
-	for i := 0; i < 500; i++ {
-		over = append(over, "tag-"+strings.Repeat("x", 20)+string(rune('a'+i%26)))
-	}
-
-	b.Run("fits", func(b *testing.B) {
-		b.ReportAllocs()
-		for b.Loop() {
-			buildCacheTagHeader(fits, ",", 16384)
-		}
-	})
-	b.Run("over max_bytes", func(b *testing.B) {
-		b.ReportAllocs()
-		for b.Loop() {
-			buildCacheTagHeader(over, ",", 4096)
-		}
-	})
-}
