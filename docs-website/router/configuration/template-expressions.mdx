@@ -78,8 +78,14 @@ The `request` object is a read-only entity that provides details about the incom
 - `request.operation.variablesRemappingCacheHit` (bool)
 - `request.operation.persistedOperationCacheHit` (bool)
 - `request.operation.planCacheHit` (bool)
+- `request.operation.queryDepth` (int) - Maximum nesting depth calculated for the operation.
+- `request.operation.queryTotalFields` (int) - Calculated total-fields complexity value evaluated against `security.complexity_limits.total_fields`.
+- `request.operation.queryRootFields` (int) - Number of root fields without aliases.
+- `request.operation.queryRootFieldAliases` (int) - Number of root fields that use aliases.
+- `request.operation.queryComplexityCacheHit` (bool) - Whether all four query complexity values were reused from the complexity calculation cache.
 - `request.operation.variables` - The operation variables sent with the request, as a JSON string. The value can contain sensitive data and can be large, so log it with care. It is only serialized when an expression references it, so configurations that do not use it pay no cost.
 
+The query complexity fields are calculated during validation when `security.complexity_limits` is configured. They remain zero-valued when complexity limits are not configured or a request exits before validation. Use `mode: measure` to collect them without rejecting operations. Aliased root fields are counted in `queryRootFieldAliases`, not `queryRootFields`.
 
 The serialization of `request.operation.variables` is decided once per request across the whole configuration. If any access log, metric, telemetry, tracing, or rate-limiter expression references it, it is serialized; otherwise it is skipped.
 
@@ -94,6 +100,8 @@ hasPrefix(request.operation.name, 'Delete') == true
 request.operation.sha256Hash != ''
 request.operation.persistedId != ''
 request.operation.planCacheHit == true
+request.operation.queryDepth > 5
+request.operation.queryComplexityCacheHit == true
 # Log the variables only when the variable remapping cache missed.
 request.operation.variablesRemappingCacheHit ? '' : request.operation.variables
 ```
