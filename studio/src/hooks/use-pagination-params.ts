@@ -1,9 +1,11 @@
 import { clamp } from '@/lib/utils';
 import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
 
+export const DEFAULT_PAGE_SIZE = 10;
+
 export const pageParam = parseAsInteger.withDefault(1);
 
-export const usePaginationParams = ({ defaultPageSize = 10 }: { defaultPageSize?: number } = {}) => {
+export const usePaginationParams = ({ defaultPageSize = DEFAULT_PAGE_SIZE }: { defaultPageSize?: number } = {}) => {
   const [{ page, pageSize: rawPageSize, search }] = useQueryStates({
     page: pageParam,
     pageSize: parseAsInteger.withDefault(defaultPageSize),

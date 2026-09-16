@@ -1,6 +1,6 @@
 import { ChevronLeftIcon, ChevronRightIcon, DoubleArrowLeftIcon, DoubleArrowRightIcon } from '@radix-ui/react-icons';
 import { parseAsInteger, useQueryStates } from 'nuqs';
-import { pageParam } from '@/hooks/use-pagination-params';
+import { DEFAULT_PAGE_SIZE, pageParam } from '@/hooks/use-pagination-params';
 import { Button } from './button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 
@@ -9,7 +9,7 @@ export const Pagination = ({
   noOfPages,
   pageNumber,
   options,
-  defaultPageSize = 10,
+  defaultPageSize = DEFAULT_PAGE_SIZE,
 }: {
   limit: number;
   noOfPages: number;
