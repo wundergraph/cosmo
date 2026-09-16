@@ -1,5 +1,5 @@
 import { useReducer } from 'react';
-import { parseAsString, useQueryState } from 'nuqs';
+import { parseAsString, useQueryState, useQueryStates } from 'nuqs';
 import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
 import { CodeViewer } from '@/components/code-viewer';
 import { EmptyState } from '@/components/empty-state';
@@ -53,7 +53,7 @@ import copy from 'copy-to-clipboard';
 import { formatDistanceToNow } from 'date-fns';
 import Fuse from 'fuse.js';
 import Link from 'next/link';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useRouter } from 'next/router';
 import { useContext, useState } from 'react';
 import { BiAnalyse } from 'react-icons/bi';
@@ -184,9 +184,10 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
     namespace: { name: namespace },
   } = useWorkspace();
   const { toast } = useToast();
-  const searchParams = useSearchParams();
-  const clientId = searchParams.get('clientId');
-  const clientName = searchParams.get('clientName');
+  const [{ clientId, clientName }, setClient] = useQueryStates({
+    clientId: parseAsString,
+    clientName: parseAsString,
+  });
   const graphContext = useContext(GraphContext);
   const [persistedOperationDeleteState, dispatch] = useReducer(deletePersistedOperationReducer, {
     id: null,
@@ -535,12 +536,7 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
         open={!!clientId}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
-            const newQuery = { ...router.query };
-            delete newQuery['clientId'];
-            delete newQuery['clientName'];
-            router.replace({
-              query: newQuery,
-            });
+            setClient({ clientId: null, clientName: null });
           }
         }}
       >
@@ -680,6 +676,7 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
 };
 
 const ClientsPage: NextPageWithLayout = () => {
+  const [, setClient] = useQueryStates({ clientId: parseAsString, clientName: parseAsString });
   const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
@@ -811,14 +808,7 @@ const ClientsPage: NextPageWithLayout = () => {
                           variant="link"
                           className="px-0 hover:no-underline"
                           onClick={() => {
-                            router.replace({
-                              pathname: router.pathname,
-                              query: {
-                                ...router.query,
-                                clientId: id,
-                                clientName: name,
-                              },
-                            });
+                            setClient({ clientId: id, clientName: name });
                           }}
                         >
                           View Operations

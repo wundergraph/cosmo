@@ -50,7 +50,7 @@ const RouterSheet: React.FC<any> = (props) => {
   const router = useRouter();
   const [size, setSize] = useState<keyof typeof sizes>('default');
 
-  const [serviceInstanceId] = useQueryState('serviceInstanceId');
+  const [serviceInstanceId, setServiceInstanceId] = useQueryState('serviceInstanceId');
 
   const index = props.data.findIndex((r: any) => r.serviceInstanceId === serviceInstanceId);
 
@@ -100,12 +100,7 @@ const RouterSheet: React.FC<any> = (props) => {
       open={!!serviceInstanceId}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
-          const newQuery = { ...router.query };
-          delete newQuery['serviceInstanceId'];
-
-          router.replace({
-            query: newQuery,
-          });
+          setServiceInstanceId(null);
         }
       }}
     >

@@ -19,7 +19,7 @@ import { buildUrl } from '@/lib/build-url';
 
 export const CacheDetailsSheet: React.FC<any> = ({ operations }: { operations: CacheWarmerOperation[] }) => {
   const router = useRouter();
-  const [operationId] = useQueryState('operationId');
+  const [operationId, setOperationId] = useQueryState('operationId');
 
   const [index, setIndex] = useState(operations.findIndex((r: CacheWarmerOperation) => r.id === operationId));
 
@@ -79,11 +79,7 @@ export const CacheDetailsSheet: React.FC<any> = ({ operations }: { operations: C
       open={!!operationId}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
-          const newQuery = { ...router.query };
-          delete newQuery['operationId'];
-          router.replace({
-            query: newQuery,
-          });
+          setOperationId(null);
         }
       }}
     >

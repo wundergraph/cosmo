@@ -34,12 +34,10 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { getOrganizationWebhookHistory } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { GetOrganizationWebhookHistoryResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatISO } from 'date-fns';
-import { useRouter } from 'next/router';
 import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { WebhookDeliveryDetails } from '@/components/webhook-delivery-details';
 
 const WebhookHistoryPage: NextPageWithLayout = () => {
-  const router = useRouter();
   const { pageNumber, pageSize: limit, offset } = usePaginationParams();
   const {
     dateRange: { start, end },
@@ -48,7 +46,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
   const { refreshInterval } = useAnalyticsQueryState();
   const [type] = useQueryState('type', parseAsString.withDefault(''));
 
-  const [deliveryId] = useQueryState('details');
+  const [deliveryId, setDeliveryId] = useQueryState('details');
   const { data, isLoading, error, isFetching, refetch } = useQuery(
     getOrganizationWebhookHistory,
     {
@@ -260,11 +258,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
         deliveryId={deliveryId ?? undefined}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
-            const newQuery = { ...router.query };
-            delete newQuery['details'];
-            router.replace({
-              query: newQuery,
-            });
+            setDeliveryId(null);
           }
         }}
         refreshDeliveries={refetch}
