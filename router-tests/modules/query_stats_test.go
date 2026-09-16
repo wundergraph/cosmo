@@ -156,14 +156,16 @@ func TestCustomModuleQueryStats(t *testing.T) {
 			assert.Equal(t, 200, res.Response.StatusCode)
 
 			testenv.AwaitChannelWithT(t, 10*time.Second, resultsChan, func(t *testing.T, qps core.QueryPlanStats) {
-				assert.Equal(t, 10, qps.TotalSubgraphFetches)
+				// Same-wave entity fetches to one subgraph are merged into a single request
+				// (engine.enable_multi_fetch is on by default), so each subgraph is hit once per wave.
+				assert.Equal(t, 6, qps.TotalSubgraphFetches)
 
 				expectedSubgraphFetches := map[string]int{
-					"availability": 2,
-					"employees":    3,
+					"availability": 1,
+					"employees":    2,
 					"family":       1,
-					"mood":         2,
-					"products":     2,
+					"mood":         1,
+					"products":     1,
 				}
 
 				assert.Equal(t, expectedSubgraphFetches, qps.SubgraphFetches)
@@ -179,22 +181,10 @@ func TestCustomModuleQueryStats(t *testing.T) {
 						SubgraphName: "products",
 						TypeName:     "Query",
 						FieldName:    "_entities",
-						Count:        2,
+						Count:        1,
 					},
 					{
 						SubgraphName: "mood",
-						TypeName:     "Query",
-						FieldName:    "_entities",
-						Count:        2,
-					},
-					{
-						SubgraphName: "availability",
-						TypeName:     "Query",
-						FieldName:    "_entities",
-						Count:        2,
-					},
-					{
-						SubgraphName: "family",
 						TypeName:     "Query",
 						FieldName:    "_entities",
 						Count:        1,
@@ -203,7 +193,19 @@ func TestCustomModuleQueryStats(t *testing.T) {
 						SubgraphName: "employees",
 						TypeName:     "Query",
 						FieldName:    "_entities",
-						Count:        2,
+						Count:        1,
+					},
+					{
+						SubgraphName: "availability",
+						TypeName:     "Query",
+						FieldName:    "_entities",
+						Count:        1,
+					},
+					{
+						SubgraphName: "family",
+						TypeName:     "Query",
+						FieldName:    "_entities",
+						Count:        1,
 					},
 				}, qps.SubgraphRootFields)
 			})
