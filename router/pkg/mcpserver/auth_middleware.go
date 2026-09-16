@@ -14,6 +14,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"go.uber.org/zap"
 )
 
 type contextKey string
@@ -43,12 +44,17 @@ type MCPAuthMiddleware struct {
 	toolScopes                       map[string][][]string // toolName -> OR-of-AND scope groups
 	scopeExtractorMu                 sync.RWMutex
 	scopeExtractor                   *ScopeExtractor
+	logger                           *zap.Logger
 }
 
 // NewMCPAuthMiddleware creates a new authentication middleware.
-func NewMCPAuthMiddleware(tokenDecoder authentication.TokenDecoder, resourceMetadataURL string, scopes config.MCPOAuthScopesConfiguration, scopeChallengeIncludeTokenScopes bool) (*MCPAuthMiddleware, error) {
+func NewMCPAuthMiddleware(tokenDecoder authentication.TokenDecoder, resourceMetadataURL string, scopes config.MCPOAuthScopesConfiguration, scopeChallengeIncludeTokenScopes bool, logger *zap.Logger) (*MCPAuthMiddleware, error) {
 	if tokenDecoder == nil {
 		return nil, fmt.Errorf("token decoder must be provided")
+	}
+
+	if logger == nil {
+		logger = zap.NewNop()
 	}
 
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
@@ -64,6 +70,7 @@ func NewMCPAuthMiddleware(tokenDecoder authentication.TokenDecoder, resourceMeta
 		resourceMetadataURL:              resourceMetadataURL,
 		scopes:                           scopes,
 		scopeChallengeIncludeTokenScopes: scopeChallengeIncludeTokenScopes,
+		logger:                           logger,
 	}, nil
 }
 
@@ -123,12 +130,19 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Extract token scopes once for all checks in this request
-		tokenScopes := extractScopes(claims)
+		tokenScopes, err := extractScopes(claims)
+		if err != nil {
+			m.logger.Warn("MCP request rejected: unreadable scope claim",
+				zap.String("scope_claim_shape", scopeClaimShape(claims)),
+				zap.Error(err))
+			m.sendInvalidTokenResponse(w, "invalid scope claim")
+			return
+		}
 		tokenScopeSet := toSet(tokenScopes)
 
 		if len(m.scopes.Initialize) > 0 {
 			if missing := findMissing(tokenScopeSet, m.scopes.Initialize); len(missing) > 0 {
-				m.sendInsufficientScopeResponse(w, m.scopes.Initialize, tokenScopes, missing)
+				m.sendInsufficientScopeResponse(w, claims, m.scopes.Initialize, tokenScopes, missing)
 				return
 			}
 		}
@@ -167,7 +181,7 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 				}
 				if len(methodScopes) > 0 {
 					if missing := findMissing(tokenScopeSet, methodScopes); len(missing) > 0 {
-						m.sendInsufficientScopeResponse(w, methodScopes, tokenScopes, missing)
+						m.sendInsufficientScopeResponse(w, claims, methodScopes, tokenScopes, missing)
 						return
 					}
 				}
@@ -178,7 +192,7 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 					// Built-in tool scope check (additive to tools_call gate)
 					if builtinScopes := m.getBuiltinToolScopes(toolName); len(builtinScopes) > 0 {
 						if missing := findMissing(tokenScopeSet, builtinScopes); len(missing) > 0 {
-							m.sendInsufficientScopeResponse(w, builtinScopes, tokenScopes, missing)
+							m.sendInsufficientScopeResponse(w, claims, builtinScopes, tokenScopes, missing)
 							return
 						}
 					}
@@ -187,7 +201,7 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 					if toolOrScopes := m.getToolScopes(toolName); len(toolOrScopes) > 0 {
 						if !satisfiesAnyGroup(tokenScopeSet, toolOrScopes) {
 							challengeScopes := bestScopeChallengeWithExisting(tokenScopes, toolOrScopes, m.scopeChallengeIncludeTokenScopes)
-							m.sendPerToolInsufficientScopeResponse(w, challengeScopes, toolName)
+							m.sendPerToolInsufficientScopeResponse(w, claims, challengeScopes, toolName)
 							return
 						}
 					}
@@ -197,7 +211,7 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 					if toolName == "execute_graphql" && len(jsonRPCReq.Params.Arguments) > 0 {
 						if extractor := m.getScopeExtractor(); extractor != nil {
 							if challengeScopes := m.checkExecuteGraphQLScopes(tokenScopes, tokenScopeSet, jsonRPCReq.Params.Arguments, extractor); len(challengeScopes) > 0 {
-								m.sendPerToolInsufficientScopeResponse(w, challengeScopes, "execute_graphql")
+								m.sendPerToolInsufficientScopeResponse(w, claims, challengeScopes, "execute_graphql")
 								return
 							}
 						}
@@ -212,10 +226,24 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// sendUnauthorizedResponse sends a 401 with WWW-Authenticate per RFC 6750 and RFC 9728.
+// sendUnauthorizedResponse sends a 401 with WWW-Authenticate per RFC 6750 and RFC 9728. It carries
+// no error code, which RFC 6750 Section 3.1 reserves for requests that did present credentials.
 func (m *MCPAuthMiddleware) sendUnauthorizedResponse(w http.ResponseWriter, errorDescription string) {
+	m.writeUnauthorized(w, "", errorDescription)
+}
+
+// sendInvalidTokenResponse sends a 401 with the invalid_token code of RFC 6750 Section 3.1, for a
+// token that was presented but cannot be read.
+func (m *MCPAuthMiddleware) sendInvalidTokenResponse(w http.ResponseWriter, errorDescription string) {
+	m.writeUnauthorized(w, "invalid_token", errorDescription)
+}
+
+func (m *MCPAuthMiddleware) writeUnauthorized(w http.ResponseWriter, errorCode, errorDescription string) {
 	authHeader := `Bearer realm="mcp"`
 
+	if errorCode != "" {
+		authHeader += fmt.Sprintf(`, error="%s"`, errorCode)
+	}
 	if len(m.scopes.Initialize) > 0 {
 		authHeader += fmt.Sprintf(`, scope="%s"`, strings.Join(m.scopes.Initialize, " "))
 	}
@@ -234,24 +262,32 @@ func (m *MCPAuthMiddleware) sendUnauthorizedResponse(w http.ResponseWriter, erro
 // sendInsufficientScopeResponse sends a 403 per RFC 6750 Section 3.1.
 // When scopeChallengeIncludeTokenScopes is true, the challenge includes the token's
 // existing scopes to work around client SDKs that replace rather than accumulate scopes.
-func (m *MCPAuthMiddleware) sendInsufficientScopeResponse(w http.ResponseWriter, operationScopes []string, tokenScopes []string, missingScopes []string) {
+func (m *MCPAuthMiddleware) sendInsufficientScopeResponse(w http.ResponseWriter, claims authentication.Claims, operationScopes []string, tokenScopes []string, missingScopes []string) {
 	challengeScopes := operationScopes
 	if m.scopeChallengeIncludeTokenScopes {
 		challengeScopes = mergeAndDedup(tokenScopes, operationScopes)
 	}
 
 	desc := strings.ReplaceAll(fmt.Sprintf("missing required scopes: %s", strings.Join(missingScopes, ", ")), `"`, `'`)
-	m.writeScopeChallenge(w, challengeScopes, desc)
+	m.writeScopeChallenge(w, claims, challengeScopes, desc)
 }
 
 // sendPerToolInsufficientScopeResponse sends a 403 for per-tool scope failures.
-func (m *MCPAuthMiddleware) sendPerToolInsufficientScopeResponse(w http.ResponseWriter, challengeScopes []string, toolName string) {
+func (m *MCPAuthMiddleware) sendPerToolInsufficientScopeResponse(w http.ResponseWriter, claims authentication.Claims, challengeScopes []string, toolName string) {
 	sanitizedName := strings.ReplaceAll(toolName, `"`, `'`)
-	m.writeScopeChallenge(w, challengeScopes, fmt.Sprintf("insufficient scopes for tool %s", sanitizedName))
+	m.writeScopeChallenge(w, claims, challengeScopes, fmt.Sprintf("insufficient scopes for tool %s", sanitizedName))
 }
 
 // writeScopeChallenge writes a 403 with a WWW-Authenticate Bearer challenge.
-func (m *MCPAuthMiddleware) writeScopeChallenge(w http.ResponseWriter, scopes []string, errorDescription string) {
+func (m *MCPAuthMiddleware) writeScopeChallenge(w http.ResponseWriter, claims authentication.Claims, scopes []string, errorDescription string) {
+	// A 403 that comes down to the claim's encoding rather than the token's grants is otherwise
+	// invisible to an operator.
+	tokenScopes, _ := extractScopes(claims)
+	m.logger.Warn("MCP request rejected with insufficient scope",
+		zap.String("scope_claim_shape", scopeClaimShape(claims)),
+		zap.Int("token_scopes", len(tokenScopes)),
+		zap.String("error_description", errorDescription))
+
 	authHeader := fmt.Sprintf(`Bearer error="insufficient_scope", scope="%s"`, strings.Join(scopes, " "))
 	if m.resourceMetadataURL != "" {
 		authHeader += fmt.Sprintf(`, resource_metadata="%s"`, m.resourceMetadataURL)
@@ -315,17 +351,23 @@ func findMissing(tokenSet map[string]struct{}, required []string) []string {
 	return missing
 }
 
-// extractScopes extracts space-separated scope values from the OAuth 2.0 "scope" claim.
-func extractScopes(claims authentication.Claims) []string {
-	scopeClaim, ok := claims["scope"]
-	if !ok {
-		return nil
+// scopeClaimShape names the encoding of the "scope" claim for diagnostics.
+func scopeClaimShape(claims authentication.Claims) string {
+	switch v := claims[authentication.DefaultScopeClaim].(type) {
+	case nil:
+		return "missing"
+	case string:
+		return "string"
+	case []string, []any:
+		return "array"
+	default:
+		return fmt.Sprintf("%T", v)
 	}
-	scopeStr, ok := scopeClaim.(string)
-	if !ok {
-		return nil
-	}
-	return strings.Fields(scopeStr)
+}
+
+// extractScopes extracts the scope values from the OAuth 2.0 "scope" claim.
+func extractScopes(claims authentication.Claims) ([]string, error) {
+	return authentication.ScopesFromClaims(claims, authentication.DefaultScopeClaim)
 }
 
 // GetClaimsFromContext retrieves authenticated user claims from context.
