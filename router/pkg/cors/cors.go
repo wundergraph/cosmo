@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
-	"slices"
 	"strings"
 	"time"
 )
@@ -71,7 +70,7 @@ func (c *Config) AddExposeHeaders(headers ...string) {
 	c.ExposeHeaders = append(c.ExposeHeaders, headers...)
 }
 
-// Validate checks the configuration and caches compiled origin patterns.
+// Validate checks the configuration and compiles origin patterns.
 func (c *Config) Validate() error {
 	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0 || len(c.MatchOrigins) > 0) {
 		return errors.New("conflict settings: all origins are allowed. AllowOriginFunc, AllowOrigins or MatchOrigins is not needed")
@@ -79,18 +78,13 @@ func (c *Config) Validate() error {
 	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 && len(c.MatchOrigins) == 0 {
 		return errors.New("conflict settings: all origins disabled")
 	}
-	if slices.EqualFunc(c.MatchOrigins, c.compiledMatchOrigins, func(pattern string, re *regexp.Regexp) bool {
-		return pattern == re.String()
-	}) {
-		return nil
-	}
-	var patterns []*regexp.Regexp
-	for _, pattern := range c.MatchOrigins {
+	patterns := make([]*regexp.Regexp, len(c.MatchOrigins))
+	for i, pattern := range c.MatchOrigins {
 		re, err := regexp.Compile(pattern)
 		if err != nil {
 			return fmt.Errorf("bad origin regex in match_origins %q: %w", pattern, err)
 		}
-		patterns = append(patterns, re)
+		patterns[i] = re
 	}
 	c.compiledMatchOrigins = patterns
 	return nil
