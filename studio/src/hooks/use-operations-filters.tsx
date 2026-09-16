@@ -12,8 +12,11 @@ const fetchBasedOnEnum = {
   errors: OperationsFetchBasedOn.ERRORS,
 } as const satisfies Record<FetchBasedOn, OperationsFetchBasedOn>;
 
-const enumToString = (enumValue: OperationsFetchBasedOn): FetchBasedOn =>
-  (Object.keys(fetchBasedOnEnum) as FetchBasedOn[]).find((key) => fetchBasedOnEnum[key] === enumValue) ?? 'requests';
+const fetchBasedOnString = {
+  [OperationsFetchBasedOn.REQUESTS]: 'requests',
+  [OperationsFetchBasedOn.LATENCY]: 'latency',
+  [OperationsFetchBasedOn.ERRORS]: 'errors',
+} as const satisfies Record<OperationsFetchBasedOn, FetchBasedOn>;
 
 export const operationsFilterParams = {
   includeOperationsWithDeprecatedFieldsOnly: parseAsBoolean.withDefault(false),
@@ -41,7 +44,7 @@ export const useOperationsFilters = () => {
 
   const applySorting = useCallback(
     (fetchBasedOn: OperationsFetchBasedOn, sortDirection: string) => {
-      setFilters({ fetchBasedOn: enumToString(fetchBasedOn), sortDirection: sortDirection || null });
+      setFilters({ fetchBasedOn: fetchBasedOnString[fetchBasedOn], sortDirection: sortDirection || null });
     },
     [setFilters],
   );
