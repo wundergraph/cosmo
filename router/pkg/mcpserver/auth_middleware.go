@@ -130,7 +130,14 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Extract token scopes once for all checks in this request
-		tokenScopes := extractScopes(claims)
+		tokenScopes, err := extractScopes(claims)
+		if err != nil {
+			m.logger.Warn("MCP request rejected: unreadable scope claim",
+				zap.String("scope_claim_shape", scopeClaimShape(claims)),
+				zap.Error(err))
+			m.sendInvalidTokenResponse(w, "invalid scope claim")
+			return
+		}
 		tokenScopeSet := toSet(tokenScopes)
 
 		if len(m.scopes.Initialize) > 0 {
@@ -219,10 +226,25 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// sendUnauthorizedResponse sends a 401 with WWW-Authenticate per RFC 6750 and RFC 9728.
+// sendUnauthorizedResponse sends a 401 with WWW-Authenticate per RFC 6750 and RFC 9728. It carries
+// no error code: RFC 6750 Section 3.1 reserves that for requests that did present credentials.
 func (m *MCPAuthMiddleware) sendUnauthorizedResponse(w http.ResponseWriter, errorDescription string) {
+	m.writeUnauthorized(w, "", errorDescription)
+}
+
+// sendInvalidTokenResponse sends a 401 for a token that was presented but cannot be read, carrying
+// the invalid_token error code of RFC 6750 Section 3.1 so the client can tell it apart from a token
+// that is merely underscoped.
+func (m *MCPAuthMiddleware) sendInvalidTokenResponse(w http.ResponseWriter, errorDescription string) {
+	m.writeUnauthorized(w, "invalid_token", errorDescription)
+}
+
+func (m *MCPAuthMiddleware) writeUnauthorized(w http.ResponseWriter, errorCode, errorDescription string) {
 	authHeader := `Bearer realm="mcp"`
 
+	if errorCode != "" {
+		authHeader += fmt.Sprintf(`, error="%s"`, errorCode)
+	}
 	if len(m.scopes.Initialize) > 0 {
 		authHeader += fmt.Sprintf(`, scope="%s"`, strings.Join(m.scopes.Initialize, " "))
 	}
@@ -259,11 +281,12 @@ func (m *MCPAuthMiddleware) sendPerToolInsufficientScopeResponse(w http.Response
 
 // writeScopeChallenge writes a 403 with a WWW-Authenticate Bearer challenge.
 func (m *MCPAuthMiddleware) writeScopeChallenge(w http.ResponseWriter, claims authentication.Claims, scopes []string, errorDescription string) {
-	// A token whose scope claim could not be read is indistinguishable from one carrying no
-	// scopes, so record the encoding to make an otherwise silent 403 diagnosable.
+	// Record how the claim was encoded and how much was read from it, so a 403 that comes down to
+	// the claim's shape rather than the token's actual grants is diagnosable from the logs.
+	tokenScopes, _ := extractScopes(claims)
 	m.logger.Warn("MCP request rejected with insufficient scope",
 		zap.String("scope_claim_shape", scopeClaimShape(claims)),
-		zap.Int("token_scopes", len(extractScopes(claims))),
+		zap.Int("token_scopes", len(tokenScopes)),
 		zap.String("error_description", errorDescription))
 
 	authHeader := fmt.Sprintf(`Bearer error="insufficient_scope", scope="%s"`, strings.Join(scopes, " "))
@@ -343,8 +366,10 @@ func scopeClaimShape(claims authentication.Claims) string {
 	}
 }
 
-// extractScopes extracts the scope values from the OAuth 2.0 "scope" claim.
-func extractScopes(claims authentication.Claims) []string {
+// extractScopes extracts the scope values from the OAuth 2.0 "scope" claim. An unreadable claim
+// is an error rather than an empty scope set, so the request is rejected as an invalid token
+// instead of being reported as merely missing scopes.
+func extractScopes(claims authentication.Claims) ([]string, error) {
 	return authentication.ScopesFromClaims(claims, authentication.DefaultScopeClaim)
 }
 

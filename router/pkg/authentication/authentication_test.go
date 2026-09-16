@@ -14,6 +14,7 @@ func TestScopes(t *testing.T) {
 		scopeClaim string
 		claims     Claims
 		want       []string
+		wantErr    bool
 	}{
 		{
 			name:   "splits a space delimited scope claim",
@@ -31,9 +32,9 @@ func TestScopes(t *testing.T) {
 			want:   []string{"read", "write"},
 		},
 		{
-			name:   "skips non-string members of a JSON array scope claim",
-			claims: Claims{"scope": []any{"read", 42, nil, "write"}},
-			want:   []string{"read", "write"},
+			name:    "rejects a JSON array scope claim holding a non-string member",
+			claims:  Claims{"scope": []any{"read", 42, "write"}},
+			wantErr: true,
 		},
 		{
 			name:       "honours a custom scope claim",
@@ -47,9 +48,9 @@ func TestScopes(t *testing.T) {
 			want:   nil,
 		},
 		{
-			name:   "returns nil for an unsupported scope claim type",
-			claims: Claims{"scope": 42},
-			want:   nil,
+			name:    "rejects an unsupported scope claim type",
+			claims:  Claims{"scope": 42},
+			wantErr: true,
 		},
 	}
 
@@ -62,6 +63,17 @@ func TestScopes(t *testing.T) {
 				scopeClaim = DefaultScopeClaim
 			}
 			a := &authentication{claims: tt.claims, scopeClaim: scopeClaim}
+
+			scopes, err := ScopesFromClaims(tt.claims, scopeClaim)
+			if tt.wantErr {
+				require.ErrorIs(t, err, ErrInvalidScopeClaim)
+				require.Nil(t, scopes)
+				// Scopes cannot report the error through its interface, so it fails closed.
+				require.Nil(t, a.Scopes())
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, scopes)
 			require.Equal(t, tt.want, a.Scopes())
 		})
 	}

@@ -3,6 +3,7 @@ package authentication
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -69,35 +70,50 @@ func (a *authentication) SetScopes(scopes []string) {
 	a.claims[a.scopeClaim] = strings.Join(scopes, " ")
 }
 
+// Scopes returns the scopes of the request, or nil if the scope claim could not be read. Callers
+// that need to tell an unreadable claim from an absent one should use [ScopesFromClaims].
 func (a *authentication) Scopes() []string {
 	if a == nil {
 		return nil
 	}
-	return ScopesFromClaims(a.claims, a.scopeClaim)
+	scopes, err := ScopesFromClaims(a.claims, a.scopeClaim)
+	if err != nil {
+		return nil
+	}
+	return scopes
 }
+
+// ErrInvalidScopeClaim is returned when the scope claim is present but not in a readable encoding.
+var ErrInvalidScopeClaim = errors.New("invalid scope claim")
 
 // ScopesFromClaims reads the scope claim. RFC 8693 defines it as a space delimited string, but
 // some IdPs (Duende IdentityServer and others in the .NET ecosystem) emit a JSON array instead,
-// so both encodings are accepted. Non-string members of an array are ignored.
-func ScopesFromClaims(claims Claims, scopeClaim string) []string {
+// so both encodings are accepted. An absent claim yields no scopes and no error; a claim in any
+// other encoding, including an array holding a non-string member, is rejected rather than read
+// partially, since silently dropping a scope grants less access than the token was issued for.
+func ScopesFromClaims(claims Claims, scopeClaim string) ([]string, error) {
 	if scopeClaim == "" {
 		scopeClaim = DefaultScopeClaim
 	}
 	switch v := claims[scopeClaim].(type) {
+	case nil:
+		return nil, nil
 	case string:
-		return strings.Fields(v)
+		return strings.Fields(v), nil
 	case []string:
-		return v
+		return v, nil
 	case []any:
 		scopes := make([]string, 0, len(v))
-		for _, scope := range v {
-			if s, ok := scope.(string); ok {
-				scopes = append(scopes, s)
+		for i, scope := range v {
+			s, ok := scope.(string)
+			if !ok {
+				return nil, fmt.Errorf("%w: member %d has type %T, expected string", ErrInvalidScopeClaim, i, scope)
 			}
+			scopes = append(scopes, s)
 		}
-		return scopes
+		return scopes, nil
 	default:
-		return nil
+		return nil, fmt.Errorf("%w: claim has type %T, expected string or array", ErrInvalidScopeClaim, v)
 	}
 }
 

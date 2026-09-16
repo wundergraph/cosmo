@@ -45,8 +45,9 @@ When both `initialize` and method-level scopes are configured, the token must co
 
 <Info>
   Scopes in the JWT are read from the `scope` claim, either as a **space-separated string** (per OAuth 2.0
-  convention) or as a **JSON array** of strings, which some identity providers emit instead. Non-string
-  members of an array claim are ignored.
+  convention) or as a **JSON array** of strings, which some identity providers emit instead. A claim in any
+  other shape — including an array holding a non-string member — is rejected with `401 invalid_token`
+  rather than read partially.
 </Info>
 
 ### Built-in Tool Scopes

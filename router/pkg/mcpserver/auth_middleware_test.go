@@ -114,9 +114,10 @@ func TestGetClaimsFromContext(t *testing.T) {
 
 func TestExtractScopes(t *testing.T) {
 	tests := []struct {
-		name   string
-		claims authentication.Claims
-		want   []string
+		name    string
+		claims  authentication.Claims
+		want    []string
+		wantErr bool
 	}{
 		{
 			name: "splits scope claim into multiple values",
@@ -166,11 +167,18 @@ func TestExtractScopes(t *testing.T) {
 			want: []string{"mcp:tools", "mcp:read"},
 		},
 		{
-			name: "skips non-string members of a JSON array scope claim",
+			name: "rejects a JSON array scope claim holding a non-string member",
 			claims: authentication.Claims{
-				"scope": []any{"mcp:tools", 42, nil, "mcp:read"},
+				"scope": []any{"mcp:tools", 42, "mcp:read"},
 			},
-			want: []string{"mcp:tools", "mcp:read"},
+			wantErr: true,
+		},
+		{
+			name: "rejects a JSON array scope claim holding a null member",
+			claims: authentication.Claims{
+				"scope": []any{"mcp:tools", nil},
+			},
+			wantErr: true,
 		},
 		{
 			name: "returns empty slice for an empty JSON array scope claim",
@@ -180,17 +188,23 @@ func TestExtractScopes(t *testing.T) {
 			want: []string{},
 		},
 		{
-			name: "returns nil for an unsupported scope claim type",
+			name: "rejects an unsupported scope claim type",
 			claims: authentication.Claims{
 				"scope": 42,
 			},
-			want: nil,
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractScopes(tt.claims)
+			got, err := extractScopes(tt.claims)
+			if tt.wantErr {
+				require.ErrorIs(t, err, authentication.ErrInvalidScopeClaim)
+				assert.Nil(t, got, "no scopes may be read from a rejected claim")
+				return
+			}
+			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -207,7 +221,6 @@ func TestScopeRejectionLogsClaimShape(t *testing.T) {
 	}{
 		{name: "string claim", scope: "mcp:other", wantShape: "string", wantCount: 1},
 		{name: "array claim", scope: []any{"mcp:other", "mcp:another"}, wantShape: "array", wantCount: 2},
-		{name: "unreadable claim", scope: 42, wantShape: "int", wantCount: 0},
 		{name: "missing claim", scope: nil, wantShape: "missing", wantCount: 0},
 	}
 
@@ -244,6 +257,57 @@ func TestScopeRejectionLogsClaimShape(t *testing.T) {
 			require.Len(t, entries, 1, "a rejected request must log exactly one line")
 			assert.Equal(t, tt.wantShape, entries[0].ContextMap()["scope_claim_shape"])
 			assert.EqualValues(t, tt.wantCount, entries[0].ContextMap()["token_scopes"])
+		})
+	}
+}
+
+func TestUnreadableScopeClaimIsRejected(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		scope     any
+		wantShape string
+	}{
+		{name: "non-string array member", scope: []any{"mcp:connect", 42}, wantShape: "array"},
+		{name: "null array member", scope: []any{"mcp:connect", nil}, wantShape: "array"},
+		{name: "unsupported claim type", scope: 42, wantShape: "int"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			decoder := &mockTokenDecoder{
+				decodeFunc: func(token string) (authentication.Claims, error) {
+					return authentication.Claims{"sub": "user123", "scope": tt.scope}, nil
+				},
+			}
+
+			observed, logs := observer.New(zapcore.WarnLevel)
+			middleware, err := NewMCPAuthMiddleware(decoder, "https://test.example/metadata", config.MCPOAuthScopesConfiguration{
+				Initialize: []string{"mcp:connect"},
+			}, false, zap.New(observed))
+			require.NoError(t, err)
+
+			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
+
+			req, _ := http.NewRequest("POST", "/mcp", nil)
+			req.Header.Set("Authorization", "Bearer any-token")
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
+
+			// The claim is unreadable, so the token is invalid rather than merely underscoped.
+			require.Equal(t, http.StatusUnauthorized, rr.Code)
+			assert.Contains(t, rr.Header().Get("WWW-Authenticate"), `error="invalid_token"`)
+			assert.NotContains(t, rr.Header().Get("WWW-Authenticate"), "42", "claim contents must not leak into the response")
+
+			entries := logs.FilterMessage("MCP request rejected: unreadable scope claim").All()
+			require.Len(t, entries, 1)
+			assert.Equal(t, tt.wantShape, entries[0].ContextMap()["scope_claim_shape"])
+			assert.Contains(t, entries[0].ContextMap()["error"], "expected string")
 		})
 	}
 }
