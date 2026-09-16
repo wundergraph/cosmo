@@ -1,8 +1,68 @@
-# At-Least-Once delivery guarantees for Cosmo Streams v1
+# At-Least-Once delivery guarantees for Cosmo Streams using Cursors v1
 
 Status: Draft  
 Author: Dominik Korittki  
 Date: 2026.09.10
+
+## Terminology
+
+- client: A subscription client connecting to the router
+- router: Cosmo Router
+- broker: Services that can act like message brokers/queues like Kafka, NATS, Redis, RabbitMQ, etc.
+
+## The Problem
+
+Today Cosmo Streams only supports at-most-once. Events are received by a broker, resolved per
+subscribed client and then fanned out. This happens fire-and-forget. The router flushes a message
+onto a socket without any recovery on os/network/client problems. When the router boots it  connects
+to a broker at queue head, ignoring every message that has arrived before that. This results in
+some consequences:
+
+- When a client disconnects and later reconnects it has missed all messages the router pushed meantime
+- When a router stops and later restarts it misses all messages which arrived in the broker meantime
+- A client has no way to recover these messages
+
+## Scope
+
+### Goals
+
+- **Backwards-compatible**: Merging the feature doesn't break anything for any user. No schema changes, no config changes.
+- **Scalable**: Works with any number of router instances, routers behind load-balancers, etc.
+- **Works with WS / SSE**: Works on SSE and websocket connections
+- **Receive every message at least once**: despite transport problems or offline time
+
+### Non-Goals
+
+- **Compensate missing broker capabilities**: If a broker can't remember its messages the router won't make up for that
+- **Complicated, fragile designs**: If its complicated and needs a lot of time its not a good first iteration on the problem
+- **Spec changes**: We actually want to, to provide other at-least-once options eventually, but not in v1. [More details](#official-spec-changes)
+
+## High-Level general design
+
+The idea is to provide clients metadata, which is sent alongside each message, which allows the
+router to track that message on the broker. When a client reconnects it provides this metadata
+to the router and the router fetches messages from the broker beginning from there.
+We can encode this metadata in a token, which we call **Cursor**.
+
+### Stateless on the router
+
+From the router POV its stateless. It does not need to remember anything. Position tracking
+happens at the client while remembering messages is done by the broker. The router also
+does not improve it's fire and forget fan-out model in this v1 RFC. It simply awaits the clients
+wish to proceed from an earlier point in time.
+
+### Burden on the client
+
+This statelessnes makes it easy to implement in the router but puts a burden on the client.
+The client now needs to deal with cursors. It needs to store the last cursor, decide the commit point
+(when is a received message processed?) and send it back upon reconnect.
+
+Another challenge is how to detect missing messages. When a WS / SSE connection becomes half-open
+missing messages might never be noticed. Both WS and SSE are TCP, which helps, but it does not
+prevent the client from missing a message in all cases. The best advice is to instruct the client
+to send heartbeats. Start missing heartbeat responses? Better reconnect with the last cursor.
+A situation which should not occur is that heartbeats keep working but messages silently gone,
+thanks to WS and SSE using TCP.
 
 ## Implementation
 
@@ -264,14 +324,14 @@ Its a territory where we aim to enhance official specs like
 We would like to include things like capability negotations ("dear server I support at-least-once
 methods XYZ, what do you support?") and ACK responses ("dear server I got your message #132").  
 However we decided not to include this aspect in At-Least-Once v1. These spec changes need a
-public, community-driven discussion with potentially huge changes to the initial design idea.
+public, community-driven discussion with potentially huge changes as the spec progresses.
 Its also not clear how long it takes until the spec changes are accepted. We want to keep the
 project independent and be able to deliver it in a reasonably short period of time.  
 However, we want to commit to these spec changes as we think they are valuable to the GraphQL
 ecosystem. We will work on spec changes very soon and integrate them in
 At-Least-Once v2. The big endgoal is to have a public spec for at-least-once and we support it.
 
-For the time being we make use of the extensibility of current transport specs.
+For the time being we make use of the extensibility of current specifications.
 
 #### Client <-> Router handshake
 
@@ -392,23 +452,35 @@ commit point reduces duplicate messages.
 
 ### Adapters
 
-Not every broker can start reading at a position a client asks for. To keep that difference
-visible in the code, resuming is not added to the existing `Adapter` interface. Instead there is
-a second interface which extends it.
+Adapters are an abstraction inside the router to let a subscription datasource be able to deal
+with different types of brokers without knowing how to actually deal with that broker.
+
+That abstraction is today looks like this.
 
 ```go
-// SeekableAdapter is implemented by adapters that can resume a subscription
-// from a position that was already delivered to a client.
+type Adapter interface {
+	Startup(ctx context.Context) error
+	Shutdown(ctx context.Context) error
+	Subscribe(ctx context.Context, cfg SubscriptionEventConfiguration, updater SubscriptionEventUpdater) error
+	Publish(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) error
+}
+```
+
+These four methods are implemented by concrete provider adapters for Kafka, Nats and Redis today.
+`Startup` and `Shutdown` manage connection lifecycles to brokers.
+`Subscribe` handles GraphQL subscriptions. It listens to the broker queues for events and
+resolves + sends them for each connected subscription client once they appear.
+`Publish` is for GraphQL mutations, sends messages into a broker queue - not of interest for this RFC.
+
+For cursors to work the adapters needs to be seekable, i.e. start from any given position but
+not every broker can do this. Plain NATS and Redis PubSub don't provide seekable queues. NATS
+Jetstream and Redis Streams however do. To reflect this we invent a new interface for seekable
+adapters, which extends normal adapters:
+
+```go
 type SeekableAdapter interface {
-    Adapter
-
-    // SubscribeFrom works like Subscribe, but starts with the message that
-    // follows position. A nil position behaves like Subscribe.
-    SubscribeFrom(ctx context.Context, cfg SubscriptionEventConfiguration, position CursorPosition, updater SubscriptionEventUpdater) error
-
-    // DecodePosition reads the position bytes of a cursor back into the
-    // position type of this provider.
-    DecodePosition(payload []byte) (CursorPosition, error)
+  Adapter
+  SubscribeFrom(ctx context.Context, cfg SubscriptionEventConfiguration, position CursorPosition, updater SubscriptionEventUpdater) error
 }
 ```
 
@@ -421,15 +493,43 @@ handshake with `DELIVERY_GUARANTEE_UNSUPPORTED` if the assertion fails.
 For example Kafka will be a seekable adapter, so there is a concrete type called `kafka.SeekableProviderAdapter`,
 which implements `SeekableAdapter`.
 
-
-
-### Package Hierarchy
-
-TBD - How to structure packages and types
-
 ### Config
 
-TBD - What router config options should change or be invented
+Everything is configured under `events.delivery-guarantees.cursor-resume`
+
+```yaml
+events:
+  delivery-guarantees:
+    cursor-resume:
+      # makes the router advertise cursor capabilities on handshakes.
+      # ignores client handshakes if false.
+      enabled: true # default false
+
+      # how long the router accepts old cursors.
+      # note: should not exceed the brokers retention window.
+      max_resume_window: 24h # default 3h
+
+      # cursor hmac signing. Router uses the key with highest id.
+      keys:
+        - id: 1
+          secret: env:COSMO_CURSOR_KEY_1
+          expires_at: 2026-12-31T00:00:00Z # accepts cursors signed by this key until
+        - id: 2
+          secret: env:COSMO_CURSOR_KEY_2
+
+      replay:
+        flow-control:
+          # router-side limit of messages flushed per client per second 
+          max_messages_per_second: 100
+
+    
+  providers:
+    kafka:
+      - id: my-kafka
+        delivery-guarantees:
+          disable: # per provider overrides
+            - cursor-resume
+```
 
 ### Client Middleware
 
@@ -437,9 +537,9 @@ TBD - How can we provide extentions to commonly used GraphQL subscription client
 
 
 # Todos
+- [x] Goals / Non-Goals
 - [x] Cursors
 - [x] Transport
 - [x] Adapters
-- [ ] Package Hierarchy
-- [ ] Config
+- [x] Config
 - [ ] Client Middleware
