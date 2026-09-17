@@ -143,7 +143,11 @@ These apply to the current alpha.
 
 **Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
 
-**`enable_multi_fetch` disables caching for merged entity fetches.** When `engine.enable_multi_fetch` is on, the router merges entity fetches to the same subgraph within one parallel wave into a single request. A merged fetch is not cached, and nothing reports that it was skipped. An entity fetch that has nothing to merge with is still cached, and root query fetches are unaffected. Support for caching merged fetches is planned.
+**A merged entity fetch is served per alias.** With `engine.enable_multi_fetch` on, entity fetches to the same subgraph within one parallel wave are merged into a single request with aliased `_entities` fields. The response is taken apart again on the way into the cache, so each alias stores one entry per entity, the same as the unmerged fetch it replaces would have. Each alias is then served all-or-nothing like a batch: a warm alias is left out of the next merged request, a cold one is fetched whole. When some aliases are warm and others are not, the router still sends the request for the cold ones, and the `Cache-Control` it reports for that fetch is capped at the life left on the warm ones. Only a request that finds every alias warm is a cache hit.
+
+**A merged entity fetch keeps no declared cache tags.** `apolloEntityCacheTags` is one flat list with nothing to say which alias each entry belongs to, so the tags a subgraph declares for a merged response are dropped. The entries are still indexed by subgraph and type, and invalidation by either still reaches them. Invalidation by cache tag misses them until they expire.
+
+**A failed merged request skips what depends on its warm aliases.** When the request for the cold aliases fails to reach the subgraph, the warm aliases keep their cached data and only the cold ones report the failure. Fetches that depend on the merged fetch are skipped as a whole, though, including those that depend only on a warm alias. Their fields stay `null` without an error of their own.
 
 ## Cache tags
 
@@ -169,7 +173,7 @@ The shape depends on what was fetched, because an entity fetch caches one entry 
 }
 ```
 
-An outer array whose length does not match the entities answered costs the whole response its tags, rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and never forwarded to clients.
+An outer array whose length does not match the entities answered costs the whole response its tags, rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and never forwarded to clients. A merged entity fetch under `engine.enable_multi_fetch` declares no tags, see [Limitations](#limitations).
 
 ## Invalidation
 
