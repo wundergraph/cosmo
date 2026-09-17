@@ -338,6 +338,29 @@ func (m *CustomModule) RouterOnRequest(ctx core.RequestContext, next http.Handle
 }
 ```
 
+#### Streaming responses
+
+A custom response writer that wraps a subscription response must implement `http.Flusher`.
+
+To keep the SSE write timeout, the writer must also implement `SetWriteDeadline(time.Time) error` or `Unwrap() http.ResponseWriter`:
+
+```go
+// Required for streaming.
+func (w *headerCapturingWriter) Flush() {
+	w.ResponseWriter.(http.Flusher).Flush()
+}
+
+// Forward write deadlines to the wrapped writer.
+func (w *headerCapturingWriter) SetWriteDeadline(deadline time.Time) error {
+	return http.NewResponseController(w.ResponseWriter).SetWriteDeadline(deadline)
+}
+
+// Or expose the wrapped writer. The router then finds SetWriteDeadline on it.
+func (w *headerCapturingWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}
+```
+
 ### Request Handler lifecycle
 
 The current module handler allow to intercept and modify request / response subgraphs.
