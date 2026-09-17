@@ -3,6 +3,7 @@ package integration
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -18,6 +19,8 @@ import (
 	non_flusher_writer "github.com/wundergraph/cosmo/router-tests/modules/non-flusher-writer"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -163,6 +166,106 @@ func TestHTTPMultipartSubscriptions(t *testing.T) {
 	})
 }
 
+func TestSSESubgraphConnectionErrors(t *testing.T) {
+	const subgraphError = `{"errors":[{"message":"invalid token","extensions":{"code":"UNAUTHENTICATED"}}],"data":null}`
+
+	t.Run("reports the upstream status when an SSE GET subgraph returns 401", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.PropagateStatusCodes = true
+			},
+			ModifyRouterConfig: func(cfg *nodev1.RouterConfig) {
+				for _, datasource := range cfg.EngineConfig.DatasourceConfigurations {
+					if datasource.CustomGraphql != nil {
+						datasource.CustomGraphql.Subscription.Protocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE.Enum()
+					}
+				}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							assert.Equal(t, "text/event-stream", r.Header.Get("Accept"))
+							assert.Equal(t, http.MethodGet, r.Method)
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusUnauthorized)
+							_, err := io.WriteString(w, subgraphError)
+							assert.NoError(t, err)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+			defer cancel()
+			xEnv.RouterClient.Timeout = 10 * time.Second
+
+			var payload string
+			xEnv.GraphQLSubscriptionOverSSE(ctx, testenv.GraphQLRequest{
+				Query: `subscription { countEmp(max: 1, intervalMilliseconds: 10) }`,
+				Header: http.Header{
+					"Accept": {"text/event-stream"},
+				},
+			}, func(data string) {
+				payload = data
+				cancel()
+			})
+
+			require.JSONEq(t, `{"errors":[{"message":"Subscription connection request failed for Subgraph 'employees'.","extensions":{"statusCode":401}}],"data":null}`, payload)
+		})
+	})
+
+	t.Run("reports the upstream status when an SSE POST subgraph returns 401", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.PropagateStatusCodes = true
+			},
+			ModifyRouterConfig: func(cfg *nodev1.RouterConfig) {
+				for _, datasource := range cfg.EngineConfig.DatasourceConfigurations {
+					if datasource.CustomGraphql != nil {
+						datasource.CustomGraphql.Subscription.Protocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST.Enum()
+					}
+				}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							assert.Equal(t, "text/event-stream", r.Header.Get("Accept"))
+							assert.Equal(t, http.MethodPost, r.Method)
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusUnauthorized)
+							_, err := io.WriteString(w, subgraphError)
+							assert.NoError(t, err)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+			defer cancel()
+			xEnv.RouterClient.Timeout = 10 * time.Second
+
+			var payload string
+			xEnv.GraphQLSubscriptionOverSSE(ctx, testenv.GraphQLRequest{
+				Query: `subscription { countEmp(max: 1, intervalMilliseconds: 10) }`,
+				Header: http.Header{
+					"Accept": {"text/event-stream"},
+				},
+			}, func(data string) {
+				payload = data
+				cancel()
+			})
+
+			require.JSONEq(t, `{"errors":[{"message":"Subscription connection request failed for Subgraph 'employees'.","extensions":{"statusCode":401}}],"data":null}`, payload)
+		})
+	})
+}
+
 func TestSSESubscriptions(t *testing.T) {
 	subscriptionHeartbeatInterval := time.Millisecond * 300
 
@@ -301,7 +404,7 @@ func TestSSESubscriptions(t *testing.T) {
 			})
 
 			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
-				assert.Equal(t, `data: {"errors":[{"message":"Subscription Upgrade request failed for Subgraph 'employees'.","extensions":{"statusCode":403}}],"data":null}`, line)
+				assert.Equal(t, `data: {"errors":[{"message":"Subscription connection request failed for Subgraph 'employees'.","extensions":{"statusCode":403}}],"data":null}`, line)
 			})
 
 			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
