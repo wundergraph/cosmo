@@ -134,6 +134,7 @@ demo_mode: true
 # Cross-Origin Resource Sharing (CORS)
 cors:
   allow_origins: ['*']
+  match_origins: ['^https://([a-z0-9-]+\.)*example\.com$']
   allow_methods:
     - HEAD
     - GET
@@ -450,6 +451,7 @@ engine:
   websocket_client_write_timeout: 10s
   websocket_server_read_timeout: 5s
   websocket_server_write_timeout: 10s
+  sse_server_write_timeout: 10s
   websocket_server_poll_timeout: 1s
   websocket_server_conn_buffer_size: 128
   websocket_client_read_limit: 1MB
