@@ -49,8 +49,8 @@ try {
   queryConnection = postgres(databaseConnectionUrl, { ...connectionConfig });
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
-  // Assume the given organization id is a space separated list of ids and process each valid id one at a time
-  for (const orgId of organizationId.split(' ')) {
+  // Assume the given organization id is a comma-separated list of uuids and process each valid id one at a time
+  for (const orgId of organizationId.split(',')) {
     if (orgId.length === 0 || !validate(orgId)) {
       // Skip invalid organization ids
       continue;
