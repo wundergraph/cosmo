@@ -1828,8 +1828,16 @@
         },
         "allow_origins": {
           "type": "array",
-          "description": "The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.",
+          "description": "The allowed origins. Origins can use any URL scheme, and wildcard patterns are supported. The default '*' allows all origins.",
           "default": ["*"],
+          "items": {
+            "type": "string"
+          }
+        },
+        "match_origins": {
+          "type": "array",
+          "description": "Go regular expressions matched against the original Origin header, in addition to allow_origins. Patterns are unanchored; use ^ and $ to match the entire origin. Matching is case-insensitive by default; prefix a pattern with (?-i) for case-sensitive matching. Set allow_origins to [] to allow only regex matches; its default '*' still allows all origins. Invalid expressions fail startup when CORS is enabled.",
+          "default": [],
           "items": {
             "type": "string"
           }
