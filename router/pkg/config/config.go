@@ -1128,6 +1128,7 @@ type ResponseCacheConfiguration struct {
 	Storage      ResponseCacheStorageConfig      `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
 	Invalidation ResponseCacheInvalidationConfig `yaml:"invalidation,omitempty" envPrefix:"INVALIDATION_"`
 	TagHeader    ResponseCacheTagHeaderConfig    `yaml:"cache_tag_header,omitempty" envPrefix:"CACHE_TAG_HEADER_"`
+	PrivateID    string                          `yaml:"private_id,omitempty" env:"PRIVATE_ID"`
 }
 
 type ResponseCacheTagHeaderConfig struct {
