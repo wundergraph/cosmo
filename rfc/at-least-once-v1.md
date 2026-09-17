@@ -459,6 +459,14 @@ GraphQL [Execution Results](https://spec.graphql.org/September2025/#sec-Executio
 
 This works independently of any transport protocol as it relies on the GraphQL spec itself.
 
+##### Cursors are cumulative
+
+A cursor should not be seen as a pointer to one message but rather as the position of every message
+delivered on that subscription so far. Cursor B contains everything cursor A contained.
+
+That means resuming from a cursor acknowledges every message delivered up to and including it. A
+client that stores cursor B has given up its chance to receive the message that carried cursor A.
+
 #### Resuming clients
 
 When a client wants to receive messages where it left off it has to provide the cursor upon
@@ -491,6 +499,15 @@ where it left off. It means the commit is basically happening at the client. The
 point could be when a client has successfully processed the event, and thats not necessarily when it
 received it. Sometimes it needs to be transformed, enriched or processed in different ways until it
 was successfully rendered on displays. Using this as the commit point reduces duplicate messages.
+
+Because cursors are [cumulative](#cursors-are-cumulative), commits have to happen in delivery order.
+A client that processes messages concurrently may well finish message 3 before message 2. If it
+commits message 3 right away and message 2 then fails, message 2 is lost: the stored cursor already
+points past it. Nobody notices, because router and broker have no idea the client skipped anything.
+
+The rule is therefore: a client may only commit a cursor once every message delivered before it was
+processed. Committing the last message of an unbroken processed prefix is always safe. Committing
+anything beyond it breaks the guarantee.
 
 ### Adapters
 
@@ -608,9 +625,15 @@ The WebSocket binding provides:
 - **Cursor extraction**: incoming `next` messages are unwrapped and the `extensions.cursor` value is
   handed to the user alongside the payload, so nobody has to know the wire format.
 - **Explicit commit**: each delivered message carries an `ack()` (name TBD) the user calls once the
-  event has actually been processed. Only then is the cursor persisted. This matches the commit
-  point argued for in [A word on commit points](#a-word-on-commit-points) — the client decides what
-  "processed" means.
+  event has actually been processed. This matches the commit point argued for in
+  [A word on commit points](#a-word-on-commit-points) — the client decides what "processed" means.
+  `ack()` does not persist that message's cursor directly. It marks the message as processed and
+  persists the cursor of the longest unbroken processed prefix. Acking message 3 while 2 is still
+  open stores nothing; acking 2 then stores the cursor of 3. This keeps out-of-order acks safe: the
+  worst case is that a few already processed messages arrive again after a resume, which
+  at-least-once allows. Two consequences follow. An `ack()` that is never called stalls the stored
+  cursor, so the package caps the number of open messages and raises an error when the cap is hit.
+  And since resumes can repeat messages, handlers have to be idempotent.
 - **Pluggable cursor storage**: the package ships a `CursorStore` interface with implementations for
   in-memory (default), `localStorage`/`IndexedDB` when running in a browser, and a file on disk for
   Node. Users with other requirements (a database, a service worker, an encrypted store) implement
