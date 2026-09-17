@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.250.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.250.1...controlplane@0.250.2) (2026-09-17)
+
+### Bug Fixes
+
+* apply rbac correctly when groups are limited to specific subgraphs ([#3215](https://github.com/wundergraph/cosmo/issues/3215)) ([26545dc](https://github.com/wundergraph/cosmo/commit/26545dc13544a7483280efae680ea4776936ee40)) (@wilsonrivera)
+* remove Slack Connect from Scale plan ([#3255](https://github.com/wundergraph/cosmo/issues/3255)) ([2f2a294](https://github.com/wundergraph/cosmo/commit/2f2a2945ae0f384370466b1bc05747b3cc384257)) (@jvr545)
+
 ## [0.250.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.250.0...controlplane@0.250.1) (2026-09-16)
 
 ### Bug Fixes
