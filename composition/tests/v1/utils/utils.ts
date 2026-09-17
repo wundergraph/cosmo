@@ -21,7 +21,7 @@ export const CONTEXT_DIRECTIVE = `
   directive @context(name: String!) repeatable on INTERFACE | OBJECT | UNION
 `;
 
-export const CONTEXT_FIELD_VALUE_SCALAR = `scalar ContextFieldValue`;
+export const CONTEXT_FIELD_VALUE_SCALAR = `  scalar ContextFieldValue`;
 
 export const COST_DIRECTIVE = `
   directive @cost(weight: Int!) on ARGUMENT_DEFINITION | ENUM | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | OBJECT | SCALAR
@@ -90,9 +90,9 @@ export const LIST_SIZE_DIRECTIVE = `
   directive @listSize(assumedSize: Int, requireOneSlicingArgument: Boolean = true, sizedFields: [String!], slicingArguments: [String!]) on FIELD_DEFINITION
 `;
 
-export const OPENFED_FIELD_SET = `scalar openfed__FieldSet`;
+export const OPENFED_FIELD_SET = `  scalar openfed__FieldSet`;
 
-export const OPENFED_SCOPE = `scalar openfed__Scope`;
+export const OPENFED_SCOPE = `  scalar openfed__Scope`;
 
 export const OPENFED_SUBSCRIPTION_FIELD_CONDITION = `
   input openfed__SubscriptionFieldCondition {
