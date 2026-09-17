@@ -107,7 +107,7 @@ async function enableFeatureForOrganization(db: PostgresJsDatabase<typeof schema
   });
 
   if (feature?.enabled) {
-    console.log(`The feature has already been enable for "${org.name}"`);
+    console.log(`The feature has already been enabled for "${org.name}"`);
     return;
   }
 
@@ -189,7 +189,7 @@ async function enableFeatureForOrganization(db: PostgresJsDatabase<typeof schema
         );
       }
     }
-
-    console.log(`Feature enabled successfully for organization "${org.name}"`);
   });
+
+  console.log(`Feature enabled successfully for organization "${org.name}"`);
 }
