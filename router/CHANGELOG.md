@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.348.0](https://github.com/wundergraph/cosmo/compare/router@0.347.1...router@0.348.0) (2026-09-16)
+
+### Bug Fixes
+
+* **router:** accept JSON array scope claims ([#3251](https://github.com/wundergraph/cosmo/issues/3251)) ([35e20ef](https://github.com/wundergraph/cosmo/commit/35e20efb489cc7b3f88da4a071fe2607534922e6)) (@gausie)
+
+### Features
+
+* add ability to log operation complexity ([#3176](https://github.com/wundergraph/cosmo/issues/3176)) ([390158e](https://github.com/wundergraph/cosmo/commit/390158e9584864e85d99d0a44e4fcf373cf48068)) (@alepane21)
+* **router:** support custom URL schemes in CORS origins ([#3230](https://github.com/wundergraph/cosmo/issues/3230)) ([3dba5d1](https://github.com/wundergraph/cosmo/commit/3dba5d1173bb41f0850242ce9e2adc52e7f8cdeb)) (@fiam)
+
 ## [0.347.1](https://github.com/wundergraph/cosmo/compare/router@0.347.0...router@0.347.1) (2026-09-15)
 
 ### Bug Fixes

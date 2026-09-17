@@ -179,6 +179,9 @@
     "AllowOrigins": [
       "*"
     ],
+    "MatchOrigins": [
+      "^https://([a-z0-9-]+\\.)*example\\.com$"
+    ],
     "AllowMethods": [
       "HEAD",
       "GET",
