@@ -148,7 +148,7 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 	}
 	// Not on a response carrying subgraph errors: it was just marked no-store.
 	if h.cacheTagHeader != nil && !h.didSetSubgraphErrors {
-		if value := buildCacheTagHeader(h.resolveCtx.ResponseCacheHeaderTags(), h.cacheTagHeader.Delimiter, h.cacheTagHeader.MaxBytes); value != "" {
+		if value := buildCacheTagHeader(h.resolveCtx.ResponseCacheSurrogateKeys(), h.cacheTagHeader.Delimiter, h.cacheTagHeader.MaxBytes); value != "" {
 			h.writer.Header().Set(h.cacheTagHeader.Name, value)
 		}
 	}

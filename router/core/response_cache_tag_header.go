@@ -13,37 +13,37 @@ import (
 // buildCacheTagHeader: empty when nothing fits. Input is unique already and
 // left untouched; sorted coarsest first only when over maxBytes. One exact
 // size allocation for the value either way.
-func buildCacheTagHeader(headerTags []string, delimiter string, maxBytes int) string {
-	usable := make([]string, 0, len(headerTags))
-	for _, headerTag := range headerTags {
+func buildCacheTagHeader(surrogateKeys []string, delimiter string, maxBytes int) string {
+	usable := make([]string, 0, len(surrogateKeys))
+	for _, surrogateKey := range surrogateKeys {
 		// The delimiter would split it; a control byte would break the header.
-		if headerTag == "" || strings.Contains(headerTag, delimiter) || !httpguts.ValidHeaderFieldValue(headerTag) {
+		if surrogateKey == "" || strings.Contains(surrogateKey, delimiter) || !httpguts.ValidHeaderFieldValue(surrogateKey) {
 			continue
 		}
-		usable = append(usable, headerTag)
+		usable = append(usable, surrogateKey)
 	}
 
 	fit := fitCacheTagCount(usable, delimiter, maxBytes)
 	if fit < len(usable) {
 		// Counted again: the sort changes which tags come first.
-		caching.SortHeaderTags(usable)
+		caching.SortSurrogateKeys(usable)
 		fit = fitCacheTagCount(usable, delimiter, maxBytes)
 	}
 	return strings.Join(usable[:fit], delimiter)
 }
 
-func fitCacheTagCount(headerTags []string, delimiter string, maxBytes int) int {
+func fitCacheTagCount(surrogateKeys []string, delimiter string, maxBytes int) int {
 	size := 0
-	for i, headerTag := range headerTags {
+	for i, surrogateKey := range surrogateKeys {
 		if i > 0 {
 			size += len(delimiter)
 		}
-		size += len(headerTag)
+		size += len(surrogateKey)
 		if size > maxBytes {
 			return i
 		}
 	}
-	return len(headerTags)
+	return len(surrogateKeys)
 }
 
 // reservedCacheTagHeaderNames: set after Content-Length, so naming one of
