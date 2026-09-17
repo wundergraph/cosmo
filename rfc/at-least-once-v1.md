@@ -4,12 +4,6 @@ Status: Draft
 Author: Dominik Korittki  
 Date: 2026.09.10
 
-## Terminology
-
-- client: A subscription client connecting to the router
-- router: Cosmo Router
-- broker: Services that can act like message brokers/queues like Kafka, NATS, Redis, RabbitMQ, etc.
-
 ## The Problem
 
 Today Cosmo Streams only supports at-most-once. Events are received by a broker, resolved per
@@ -35,20 +29,48 @@ some consequences:
 
 - **Compensate missing broker capabilities**: If a broker can't remember its messages the router won't make up for that
 - **Complicated, fragile designs**: If its complicated and needs a lot of time its not a good first iteration on the problem
-- **Spec changes**: We actually want to, to provide other at-least-once options eventually, but not in v1. [More details](#official-spec-changes)
+- **Spec changes**: We actually want to provide other at-least-once options eventually, but not in v1. [More details](#official-spec-changes)
 
-## High-Level general design
+## On a high-level
 
-The idea is to provide clients metadata, which is sent alongside each message, which allows the
-router to track that message on the broker. When a client reconnects it provides this metadata
+The idea is to provide clients metadata, which is sent alongside each message, which allows to track
+that message on the broker it came from. When a client reconnects it provides this metadata
 to the router and the router fetches messages from the broker beginning from there.
 We can encode this metadata in a token, which we call **Cursor**.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Router
+    participant Broker
+
+    Note over Client,Router: Initial subscription
+    Client->>Router: subscribe (delivery-guarantee: cursor)
+    Router->>Broker: Subscribe()
+    Broker-->>Router: event
+    Router-->>Client: next { data, extensions.cursor: A }
+    Note over Client: stores cursor A
+    Broker-->>Router: event
+    Router-->>Client: next { data, extensions.cursor: B }
+    Note over Client: stores cursor B
+
+    Note over Client,Router: connection drops (network / router restart)
+    Client--xRouter: disconnected
+
+    Note over Client,Router: resume from last stored cursor
+    Client->>Router: subscribe (cursor: B)
+    Router->>Router: verify HMAC tag, decode position
+    Router->>Broker: SubscribeFrom(position B)
+    Broker-->>Router: event (position after B)
+    Router-->>Client: next { data, extensions.cursor: C }
+    Note over Client: stores cursor C
+```
 
 ### Stateless on the router
 
 From the router POV its stateless. It does not need to remember anything. Position tracking
 happens at the client while remembering messages is done by the broker. The router also
-does not improve it's fire and forget fan-out model in this v1 RFC. It simply awaits the clients
+does not need to improve it's fire and forget fan-out model in this v1 RFC. It simply awaits the clients
 wish to proceed from an earlier point in time.
 
 ### Burden on the client
@@ -328,8 +350,8 @@ public, community-driven discussion with potentially huge changes as the spec pr
 Its also not clear how long it takes until the spec changes are accepted. We want to keep the
 project independent and be able to deliver it in a reasonably short period of time.  
 However, we want to commit to these spec changes as we think they are valuable to the GraphQL
-ecosystem. We will work on spec changes very soon and integrate them in
-At-Least-Once v2. The big endgoal is to have a public spec for at-least-once and we support it.
+ecosystem. The big endgoal is to have a public spec for at-least-once and we support it but we
+have to start somewhere.
 
 For the time being we make use of the extensibility of current specifications.
 
