@@ -299,6 +299,17 @@ func writeRequestErrors(params writeRequestErrorsParams) {
 			}
 			params.logger.Error("Error writing response", zap.Error(err))
 		}
+		return
+	}
+
+	if wgRequestParams.UseSse {
+		if _, err := params.writer.Write([]byte("\n\n")); err != nil && params.logger != nil {
+			if rErrors.IsBrokenPipe(err) {
+				params.logger.Warn("Broken pipe, error writing response", zap.Error(err))
+				return
+			}
+			params.logger.Error("Error writing response", zap.Error(err))
+		}
 	}
 }
 
