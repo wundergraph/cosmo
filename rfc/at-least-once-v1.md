@@ -213,7 +213,8 @@ tag mismatch, which is also why the payload has to be serialized deterministical
 place.
 
 1. base64-decode and check the length (at least version + keyID + tag)
-2. read `version` and `keyID`, look up the key in the keyring, reject on an unknown `keyID`
+2. read `version` and `keyID`, look up the key in the keyring, reject on an unknown or no-longer-
+   verifiable `keyID` (see [Keys](#keys) for when a key stops being verifiable)
 3. split off the last 16 bytes as the carried tag, everything before it is signed
 4. recalculate `requestData` from the incoming request and recalculate the tag
 5. compare with `hmac.Equal`, never with `==` or `bytes.Equal`, so the comparison stays constant
@@ -224,15 +225,27 @@ place.
 Step 7 is what keeps a tag from staying valid forever. Without it a leaked cursor works until the
 key is rotated.
 
+Steps 2 and 7 are independent gates, not a fallback for one another. Being inside `max_resume_window`
+never overrides an invalid key: if the key a cursor was signed with is no longer verifiable, the
+cursor is rejected at step 2 regardless of how young `IssuedAt` is. `max_resume_window` only bounds
+how far back an *otherwise-valid* key is willing to look.
+
 A cursor that fails any of these steps fails the subscription with a distinct error code. A fallback
 to a fresh subscription is deliberately not made: that would silently hide both attacks and
 misconfigured keys behind a subscription that merely looks like it works.
 
 ##### Keys
 
-`KeyID` selects the key from a small keyring the router holds. The router signs with the newest key
-and accepts any key in the ring that has not expired yet, which is what makes rotation possible
-without breaking cursors that are already in flight.
+`KeyID` selects the key from a small keyring the router holds. The router signs with the newest key.
+
+`expires_at` on a key is a **signing** cutoff, not a **verification** cutoff. Past it the router
+stops issuing new cursors with that key, but it keeps accepting the key for verification until
+`expires_at + max_resume_window`. Without that extra window a cursor issued an instant before
+`expires_at` would have its resume window cut short: it could still be within `max_resume_window` of
+its `IssuedAt` and yet be rejected because the key that signed it looks expired. Retaining the key for
+the full resume window past its own expiry closes that gap. This is also why `expires_at` should not
+be set closer than `max_resume_window` to the previous key's rotation, or the ring runs out of still-
+verifiable keys for cursors issued right at the boundary.
 
 The key is configuration, not something a router generates at startup. Two router replicas behind a
 load balancer have to derive the same key, otherwise a resume that lands on another replica fails.
@@ -573,7 +586,9 @@ events:
       keys:
         - id: 1
           secret: env:COSMO_CURSOR_KEY_1
-          expires_at: 2026-12-31T00:00:00Z # accepts cursors signed by this key until
+          # stops signing new cursors with this key at this time;
+          # still verifies cursors signed by it until expires_at + max_resume_window
+          expires_at: 2026-12-31T00:00:00Z 
         - id: 2
           secret: env:COSMO_CURSOR_KEY_2
 
