@@ -2,7 +2,9 @@ package cors
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -18,6 +20,12 @@ type Config struct {
 	// If the special "*" value is present in the list, all origins will be allowed.
 	// Default value is []
 	AllowOrigins []string
+
+	// MatchOrigins is a list of Go regular expressions matched against the
+	// lowercased origin. Patterns are compiled as written and are unanchored;
+	// use ^ and $ to match the entire origin.
+	// An origin is allowed if it matches AllowOrigins or MatchOrigins.
+	MatchOrigins []string
 
 	// AllowOriginFunc is a custom function to validate the origin. It take the origin
 	// as argument and returns true if allowed or false otherwise. If this option is
@@ -43,6 +51,8 @@ type Config struct {
 	// MaxAge indicates how long (with second-precision) the results of a preflight request
 	// can be cached
 	MaxAge time.Duration
+
+	compiledMatchOrigins []*regexp.Regexp
 }
 
 // AddAllowMethods is allowed to add custom methods
@@ -60,14 +70,23 @@ func (c *Config) AddExposeHeaders(headers ...string) {
 	c.ExposeHeaders = append(c.ExposeHeaders, headers...)
 }
 
-// Validate is check configuration of user defined.
+// Validate checks the configuration and compiles origin patterns.
 func (c *Config) Validate() error {
-	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0) {
-		return errors.New("conflict settings: all origins are allowed. AllowOriginFunc or AllowOrigins is not needed")
+	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0 || len(c.MatchOrigins) > 0) {
+		return errors.New("conflict settings: all origins are allowed. AllowOriginFunc, AllowOrigins or MatchOrigins is not needed")
 	}
-	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 {
+	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 && len(c.MatchOrigins) == 0 {
 		return errors.New("conflict settings: all origins disabled")
 	}
+	patterns := make([]*regexp.Regexp, len(c.MatchOrigins))
+	for i, pattern := range c.MatchOrigins {
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return fmt.Errorf("bad origin regex in match_origins %q: %w", pattern, err)
+		}
+		patterns[i] = re
+	}
+	c.compiledMatchOrigins = patterns
 	return nil
 }
 

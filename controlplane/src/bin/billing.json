@@ -111,7 +111,7 @@
         },
         {
           "id": "support",
-          "description": "Slack Connect / Private Discord Channel"
+          "description": "Private Discord Channel"
         },
         { "id": "analytics-retention", "limit": 14 },
         { "id": "tracing-retention", "limit": 14 },
