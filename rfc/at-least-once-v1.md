@@ -533,7 +533,85 @@ events:
 
 ### Client Middleware
 
-TBD - How can we provide extentions to commonly used GraphQL subscription client SDKs
+The handshake described above is intentionally plain: any client that can put a key into
+`payload.extensions` and read one back out of `extensions` can use it. But doing it by hand means
+every user reimplements the same bookkeeping — negotiate the guarantee, pull the cursor out of each
+message, decide when a message counts as processed, store the cursor somewhere it survives a
+reload, and hand it back on reconnect. To avoid that we want to ship our own npm packages that wrap
+[graphql-ws](https://www.npmjs.com/package/graphql-ws) and
+[graphql-sse](https://www.npmjs.com/package/graphql-sse) rather than replacing them.
+
+Each exposes a `createClient` of its own that takes the usual options of the wrapped library plus a small amount of
+at-least-once configuration, and returns a client with the same familiar API, so existing code
+keeps working and users are not locked into our fork of the ecosystem.
+
+#### A transport-agnostic core
+
+Most of what the middleware does has nothing to do with the transport: the cursor store, the commit
+semantics, the bookkeeping of "which cursor belongs to which subscription" and the decision of what
+to send on the next connect are identical for WebSockets and SSE. We therefore split the work into a
+core package holding that logic and two thin transport bindings on top of it. Only three things
+differ per transport and live in the bindings: how the handshake keys get into the request, how the
+negotiation confirmation is read back, and how liveness is detected.
+
+#### graphql-ws
+
+The WebSocket binding provides:
+
+- **Cursor negotiation**: the requested `delivery-guarantee` list is injected into
+  `payload.extensions` on every subscribe, and the router's confirmation (or a
+  `DELIVERY_GUARANTEE_UNSUPPORTED` error) is surfaced as a typed result instead of a raw GraphQL
+  error, so users can decide whether to fall back to at-most-once or fail loudly.
+- **Cursor extraction**: incoming `next` messages are unwrapped and the `extensions.cursor` value is
+  handed to the user alongside the payload, so nobody has to know the wire format.
+- **Explicit commit**: each delivered message carries an `ack()` (name TBD) the user calls once the
+  event has actually been processed. Only then is the cursor persisted. This matches the commit
+  point argued for in [A word on commit points](#a-word-on-commit-points) — the client decides what
+  "processed" means.
+- **Pluggable cursor storage**: the package ships a `CursorStore` interface with implementations for
+  in-memory (default), `localStorage`/`IndexedDB` when running in a browser, and a file on disk for
+  Node. Users with other requirements (a database, a service worker, an encrypted store) implement
+  the interface themselves. Cursors are keyed per subscription, matching the per-subscription cursor
+  model of the transport.
+- **Heartbeats and liveness**: graphql-ws already has `Ping`/`Pong` messages and a client-side
+  `keepAlive` option, so we do not need to invent a heartbeat. What we add is a sane default
+  (heartbeats on, with an interval and a missed-heartbeat threshold) and the reaction: when the
+  configured number of pongs is missed, the connection is torn down and re-established, resuming
+  from the last persisted cursor instead of from "now".
+- **Manual connection control**: `disconnect()` and `resume()` (name TBD) let users park a
+  subscription — a backgrounded tab, a device going offline, a deliberate backpressure decision —
+  and later reconnect from the stored cursor, without waiting for a heartbeat to fail.
+
+#### graphql-sse
+
+We want the same feature set for graphql-sse in v1. An SSE `next` event carries a plain GraphQL
+execution result, so cursor negotiation, cursor extraction, explicit commit and pluggable storage
+work exactly as they do over WebSockets. The SSE binding differs in three places:
+
+- **Handshake**: graphql-sse has two modes — one HTTP request per operation, or one shared stream
+  with a reservation. Both send a GraphQL request body on subscribe, so `delivery-guarantee` and
+  `cursor` go into `extensions` the same way in both.
+- **Negotiation confirmation**: the graphql-sse client never hands the caller the HTTP `Response`,
+  so the `x-cosmo-at-least-once-capabilities` header is awkward to read, and on a shared stream it
+  arrives on a different request than the events. **Recommended RFC change**: confirm in-band on the
+  first `next` message's `extensions`, as graphql-transport-ws already does, and keep the header
+  only for clients not using our package. See [Negotation success](#negotation-success).
+- **Liveness**: the real gap, see below.
+- **Reconnect and manual control**: the binding disables the built-in retry and drives reconnects
+  itself, rebuilding the subscribe request from the cursor store, so `disconnect()`/`resume()` and
+  the reconnect policy are shared with the WebSocket binding.
+
+**On liveness**: SSE is one-directional, so the client cannot ping — it can only listen. The server
+proves it is alive by emitting SSE keepalive comments, but the graphql-sse parser discards comments
+and the client has no idle-timeout option, so an idle stream and a dead stream look identical to the
+application. The binding closes the gap by supplying its own `fetchFn` (a documented client option),
+watching the raw response bytes for silence and aborting the request when the threshold is exceeded.
+graphql-sse sees an ordinary network failure and takes the reconnect path we already resume from.
+This requires the router to emit keepalive comments at a known interval, which has to become a
+configurable router setting so both thresholds can be matched.
+
+We deliberately do not use SSE's native `id:` / `Last-Event-ID` resumption: graphql-sse does not
+define event ids, and it would give us a second cursor channel that works on only one transport.
 
 
 # Todos
@@ -542,4 +620,4 @@ TBD - How can we provide extentions to commonly used GraphQL subscription client
 - [x] Transport
 - [x] Adapters
 - [x] Config
-- [ ] Client Middleware
+- [x] Client Middleware
