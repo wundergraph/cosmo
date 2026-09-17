@@ -145,7 +145,7 @@ export function updateMonograph(
         opts.chClient!,
         opts.webhookProxyUrl,
         false,
-        opts.promptToQueryServiceAddress,
+        opts.promptToQueryClient,
         opts.billingDefaultPlanId,
       );
 

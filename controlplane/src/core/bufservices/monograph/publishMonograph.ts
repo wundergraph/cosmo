@@ -152,7 +152,7 @@ export function publishMonograph(
           opts.chClient,
           opts.webhookProxyUrl,
           false,
-          opts.promptToQueryServiceAddress,
+          opts.promptToQueryClient,
           opts.billingDefaultPlanId,
         );
 

@@ -198,7 +198,7 @@ export function deleteFederatedSubgraph(
           opts.chClient,
           opts.webhookProxyUrl,
           req.disableResolvabilityValidation,
-          opts.promptToQueryServiceAddress,
+          opts.promptToQueryClient,
           opts.billingDefaultPlanId,
         );
 

@@ -1,4 +1,4 @@
-import type { ConnectRouterOptions } from '@connectrpc/connect';
+import type { Client, ConnectRouterOptions } from '@connectrpc/connect';
 import { ConnectRouter } from '@connectrpc/connect';
 import { AIService } from '@wundergraph/cosmo-connect/dist/ai/v1/ai_pb';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
@@ -7,6 +7,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import { App } from 'octokit';
 import Redlock from 'redlock';
+import { PromptToQueryService } from '@wundergraph/cosmo-connect/dist/yoko/v1/prompt_to_query_pb';
 import * as schema from '../db/schema.js';
 import AIServiceImpl from './bufservices/AIService.js';
 import NodeServiceImpl from './bufservices/NodeService.js';
@@ -58,7 +59,7 @@ export interface RouterOptions {
   stripeSecretKey?: string;
   cdnBaseUrl: string;
   lockAdapter: Redlock;
-  promptToQueryServiceAddress?: string;
+  promptToQueryClient?: Client<typeof PromptToQueryService>;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 80_000,

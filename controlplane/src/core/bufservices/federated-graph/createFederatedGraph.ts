@@ -217,7 +217,7 @@ export function createFederatedGraph(
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
-        opts.promptToQueryServiceAddress,
+        opts.promptToQueryClient,
         opts.billingDefaultPlanId,
       );
 

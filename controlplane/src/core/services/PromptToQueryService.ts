@@ -8,8 +8,7 @@ import {
 import { create } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import * as z from 'zod';
-import { Client, Code, ConnectError, createClient } from '@connectrpc/connect';
-import { createConnectTransport } from '@connectrpc/connect-node';
+import { Client, Code, ConnectError } from '@connectrpc/connect';
 import {
   OperationType,
   PromptToQueryService as PtQService,
@@ -36,28 +35,13 @@ class StillIndexingError extends Error {
 
 @traced
 export class PromptToQueryService {
-  readonly #client: Client<typeof PtQService>;
-
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
     private logger: FastifyBaseLogger,
-    clientOrServiceAddress: string | Client<typeof PtQService>,
+    private client: Client<typeof PtQService>,
     private organizationId: string,
     private defaultBillingPlanId: string | undefined,
-  ) {
-    if (typeof clientOrServiceAddress === 'string') {
-      this.#client = createClient(
-        PtQService,
-        createConnectTransport({
-          baseUrl: clientOrServiceAddress,
-          httpVersion: '2',
-        }),
-      );
-    } else {
-      // For testing purposes, we want to receive the client itself so we can have a mock implementation
-      this.#client = clientOrServiceAddress;
-    }
-  }
+  ) {}
 
   async generateQuery(
     federatedGraphId: string,
@@ -134,7 +118,7 @@ export class PromptToQueryService {
       }
 
       return PromptToQueryService.createResponse(
-        await this.#client.resolve({ schemaId, prompt: parsed.data.prompt }, { signal }),
+        await this.client.resolve({ schemaId, prompt: parsed.data.prompt }, { signal }),
       );
     } catch (e) {
       this.logger.error(e, 'Failed to execute Prompt to Query due an unexpected error');
@@ -163,13 +147,13 @@ export class PromptToQueryService {
     }
 
     // Fire and forget the schema indexation
-    this.#client
+    this.client
       .ensureSchema({ sdl: schema })
       .catch((e) => this.logger.error(e, 'Failed to index schema due an unexpected error'));
   }
 
   private async getSchemaId(schemaSDL: string, signal?: AbortSignal): Promise<string | undefined> {
-    const resp = await this.#client.ensureSchema({ sdl: schemaSDL }, { signal });
+    const resp = await this.client.ensureSchema({ sdl: schemaSDL }, { signal });
 
     let schemaId = resp.schema?.schemaId;
     const schemaStatus = resp.schema?.status;
@@ -183,7 +167,7 @@ export class PromptToQueryService {
        */
       schemaId = await retryWithBackoff(
         async (abortSignal) => {
-          const schemaResp = await this.#client.getSchema({ schemaId: resp.schema?.schemaId }, { signal: abortSignal });
+          const schemaResp = await this.client.getSchema({ schemaId: resp.schema?.schemaId }, { signal: abortSignal });
           if (schemaResp.schema?.status === SchemaStatus.INDEXING) {
             throw new StillIndexingError(schemaResp.schema!);
           }

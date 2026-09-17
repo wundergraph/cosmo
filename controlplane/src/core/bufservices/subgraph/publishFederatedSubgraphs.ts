@@ -433,7 +433,7 @@ async function runBatchPublish({
     opts.chClient,
     opts.webhookProxyUrl,
     disableResolvabilityValidation,
-    opts.promptToQueryServiceAddress,
+    opts.promptToQueryClient,
     opts.billingDefaultPlanId,
   );
 

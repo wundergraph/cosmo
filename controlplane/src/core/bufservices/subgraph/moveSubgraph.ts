@@ -112,7 +112,7 @@ export function moveSubgraph(
           opts.chClient,
           opts.webhookProxyUrl,
           req.disableResolvabilityValidation,
-          opts.promptToQueryServiceAddress,
+          opts.promptToQueryClient,
           opts.billingDefaultPlanId,
         );
 

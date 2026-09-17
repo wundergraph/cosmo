@@ -234,6 +234,8 @@ export const envVariables = z
      * Prompt-to-Query
      */
     PROMPT_TO_QUERY_SERVICE_ENDPOINT: z.string().url().optional(),
+    PROMPT_TO_QUERY_HTTP_VERSION: z.union([z.literal('1.1'), z.literal('2')]).optional(),
+    PROMPT_TO_QUERY_TOKEN: z.string().jwt().optional(),
   })
   .merge(sentryEnvVariables)
   .refine((input) => {

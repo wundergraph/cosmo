@@ -1,6 +1,8 @@
 /* eslint-disable no-labels */
 import { createHash, randomUUID } from 'node:crypto';
 import { JsonObject, fromJson, toJson, toJsonString } from '@bufbuild/protobuf';
+import { Client } from '@connectrpc/connect';
+import { PromptToQueryService as PtQService } from '@wundergraph/cosmo-connect/dist/yoko/v1/prompt_to_query_pb';
 import {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigSchema,
@@ -75,14 +77,14 @@ export class CompositionService {
     private chClient: ClickHouseClient | undefined,
     private webhookProxyUrl: string | undefined,
     private disableResolvabilityValidation: boolean | undefined,
-    promptToQueryServiceAddress: string | undefined,
+    promptToQueryClient: Client<typeof PtQService> | undefined,
     private defaultBillingPlanId: string | undefined,
   ) {
-    this.#ptqService = promptToQueryServiceAddress
+    this.#ptqService = promptToQueryClient
       ? new PromptToQueryService(
           this.db,
           this.logger,
-          promptToQueryServiceAddress,
+          promptToQueryClient,
           this.organizationId,
           this.defaultBillingPlanId,
         )

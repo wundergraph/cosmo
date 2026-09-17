@@ -13,7 +13,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof AIServ
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        if (!opts.promptToQueryServiceAddress) {
+        if (!opts.promptToQueryClient) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -25,7 +25,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof AIServ
         const promptToQueryService = new PromptToQueryService(
           opts.db,
           logger,
-          opts.promptToQueryServiceAddress,
+          opts.promptToQueryClient,
           authContext.organizationId,
           opts.billingDefaultPlanId,
         );

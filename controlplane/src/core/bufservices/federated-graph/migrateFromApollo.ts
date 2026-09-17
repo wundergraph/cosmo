@@ -157,7 +157,7 @@ export function migrateFromApollo(
         opts.chClient,
         opts.webhookProxyUrl,
         true,
-        opts.promptToQueryServiceAddress,
+        opts.promptToQueryClient,
         opts.billingDefaultPlanId,
       );
 
