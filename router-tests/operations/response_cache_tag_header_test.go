@@ -40,7 +40,7 @@ func tagHeaderSubgraphs() testenv.SubgraphsConfig {
 	}
 }
 
-func headerTagsOf(t *testing.T, header, delimiter string) []string {
+func surrogateKeysOf(t *testing.T, header, delimiter string) []string {
 	t.Helper()
 	require.NotEmpty(t, header)
 	return strings.Split(header, delimiter)
@@ -60,14 +60,14 @@ func TestResponseCacheTagHeader(t *testing.T) {
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load())
 
-			headerTags := headerTagsOf(t, first.Response.Header.Get("Cache-Tag"), ",")
+			surrogateKeys := surrogateKeysOf(t, first.Response.Header.Get("Cache-Tag"), ",")
 
-			// Coarsest first: every subgraph headerTag, then every type headerTag, then the rest.
-			require.Equal(t, []string{"subgraph-employees", "subgraph-mood", "type-mood-Employee"}, headerTags[:3])
-			require.Contains(t, headerTags, "moods")
-			require.Contains(t, headerTags, "employee-1")
-			require.Contains(t, headerTags, "employee-10")
-			require.NotContains(t, headerTags, "type-employees-Employee", "a root fetch has no single typename")
+			// Coarsest first: every subgraph surrogateKey, then every type surrogateKey, then the rest.
+			require.Equal(t, []string{"subgraph-employees", "subgraph-mood", "type-mood-Employee"}, surrogateKeys[:3])
+			require.Contains(t, surrogateKeys, "moods")
+			require.Contains(t, surrogateKeys, "employee-1")
+			require.Contains(t, surrogateKeys, "employee-10")
+			require.NotContains(t, surrogateKeys, "type-employees-Employee", "a root fetch has no single typename")
 
 			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(),
@@ -120,10 +120,10 @@ func TestResponseCacheTagHeader(t *testing.T) {
 			Subgraphs: tagHeaderSubgraphs(),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
-			headerTags := headerTagsOf(t, first.Response.Header.Get("Cache-Tag"), ",")
-			require.Contains(t, headerTags, "subgraph-mood")
-			require.Contains(t, headerTags, "type-mood-Employee")
-			require.Contains(t, headerTags, "employee-1")
+			surrogateKeys := surrogateKeysOf(t, first.Response.Header.Get("Cache-Tag"), ",")
+			require.Contains(t, surrogateKeys, "subgraph-mood")
+			require.Contains(t, surrogateKeys, "type-mood-Employee")
+			require.Contains(t, surrogateKeys, "employee-1")
 
 			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
@@ -148,13 +148,13 @@ func TestResponseCacheTagHeader(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.Empty(t, res.Response.Header.Values("Cache-Tag"))
 
-			headerTags := headerTagsOf(t, res.Response.Header.Get("Surrogate-Key"), " ")
-			require.Contains(t, headerTags, "subgraph-mood")
-			require.Contains(t, headerTags, "employee-1")
+			surrogateKeys := surrogateKeysOf(t, res.Response.Header.Get("Surrogate-Key"), " ")
+			require.Contains(t, surrogateKeys, "subgraph-mood")
+			require.Contains(t, surrogateKeys, "employee-1")
 		})
 	})
 
-	t.Run("max_bytes keeps the coarsest headerTags that fit", func(t *testing.T) {
+	t.Run("max_bytes keeps the coarsest surrogate keys that fit", func(t *testing.T) {
 		t.Parallel()
 
 		const maxBytes = 40
@@ -169,7 +169,7 @@ func TestResponseCacheTagHeader(t *testing.T) {
 			header := res.Response.Header.Get("Cache-Tag")
 			require.LessOrEqual(t, len(header), maxBytes)
 			require.Equal(t, "subgraph-employees,subgraph-mood", header,
-				"every subgraph headerTag fits, no type headerTag does")
+				"every subgraph surrogate key fits, no type surrogate key does")
 		})
 	})
 
@@ -209,7 +209,7 @@ func TestResponseCacheTagHeader(t *testing.T) {
 
 			require.Less(t, xEnv.SubgraphRequestCount.Mood.Load(), int64(n), "some requests must have been followers")
 			for i, header := range headers {
-				require.Contains(t, headerTagsOf(t, header, ","), "employee-1", "request %d", i)
+				require.Contains(t, surrogateKeysOf(t, header, ","), "employee-1", "request %d", i)
 				require.Equal(t, headers[0], header, "request %d", i)
 			}
 		})
@@ -275,7 +275,7 @@ func TestResponseCacheTagHeader(t *testing.T) {
 		})
 	})
 
-	t.Run("the in memory provider keeps headerTags too", func(t *testing.T) {
+	t.Run("the in memory provider keeps surrogate keys too", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -291,7 +291,7 @@ func TestResponseCacheTagHeader(t *testing.T) {
 			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
 
-			require.Contains(t, headerTagsOf(t, first.Response.Header.Get("Cache-Tag"), ","), "employee-1")
+			require.Contains(t, surrogateKeysOf(t, first.Response.Header.Get("Cache-Tag"), ","), "employee-1")
 			require.Equal(t, first.Response.Header.Get("Cache-Tag"), second.Response.Header.Get("Cache-Tag"))
 		})
 	})
