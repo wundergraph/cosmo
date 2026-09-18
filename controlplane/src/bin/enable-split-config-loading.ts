@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import process from 'node:process';
 import { pino } from 'pino';
 import postgres, { Sql } from 'postgres';
@@ -111,19 +112,9 @@ async function enableFeatureForOrganization(db: PostgresJsDatabase<typeof schema
     return;
   }
 
-  console.log(`Enabling 'split-config-loading' for organization "${org.name}"`);
+  console.log(`Recomposing federated graphs using 'split-config-loading' for organization "${org.name}"`);
 
   await db.transaction(async (tx) => {
-    // Enable the feature for the organization before recomposing all the graphs/feature flags
-    await tx
-      .insert(schema.organizationFeatures)
-      .values({
-        organizationId: org.id,
-        feature: 'split-config-loading',
-        enabled: true,
-      })
-      .execute();
-
     // Initialize the composition service
     const compositionService = new CompositionService(
       tx,
@@ -140,6 +131,8 @@ async function enableFeatureForOrganization(db: PostgresJsDatabase<typeof schema
     );
 
     // Recompose all federated graphs
+    console.log(`Recomposing feature flags using 'split-config-loading' for organization "${org.name}"`);
+
     const fedGraphRepo = new FederatedGraphRepository(logger, tx, org.id);
     const fedGraphs = await fedGraphRepo.list({ limit: 0, offset: 0 });
 
@@ -147,6 +140,7 @@ async function enableFeatureForOrganization(db: PostgresJsDatabase<typeof schema
       const { compositionErrors } = await compositionService.composeAndDeployFederatedGraph({
         actorId: org.creatorUserId!,
         federatedGraph,
+        splitConfigLoading: true,
       });
 
       if (compositionErrors.length > 0) {
@@ -181,6 +175,7 @@ async function enableFeatureForOrganization(db: PostgresJsDatabase<typeof schema
       const { compositionErrors } = await compositionService.composeAndDeployFeatureFlag({
         actorId: org.creatorUserId!,
         featureFlag,
+        splitConfigLoading: true,
       });
 
       if (compositionErrors.length > 0) {
@@ -191,5 +186,7 @@ async function enableFeatureForOrganization(db: PostgresJsDatabase<typeof schema
     }
   });
 
-  console.log(`Feature enabled successfully for organization "${org.name}"`);
+  console.log(
+    `All federated graphs and feature flags recomposed using 'split-config-loading' for organization "${org.name}"`,
+  );
 }
