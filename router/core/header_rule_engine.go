@@ -32,6 +32,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/cache"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -567,52 +568,51 @@ func hashHeaderStable(hdr http.Header) uint64 {
 	return d.Sum64()
 }
 
-// usesMostRestrictiveCacheControl reports whether a response rule with the most
-// restrictive cache control algorithm applies to a fetch of subgraphName.
-func (h *HeaderPropagation) usesMostRestrictiveCacheControl(subgraphName string) bool {
-	lists := [][]*config.ResponseHeaderRule{h.rules.All.Response}
-	if subgraphRules, ok := h.rules.Subgraphs[subgraphName]; ok {
-		lists = append(lists, subgraphRules.Response)
+// cacheLifetimePolicy renders the life left on the cached entries a fetch was
+// served from as a policy for the most restrictive algorithm. Nil when the fetch
+// touched no cached entry. No life left means no-cache: max-age=0 would be
+// dropped by the merge and let a longer policy win.
+func cacheLifetimePolicy(info *resolve.ResponseInfo) *cachedirective.Object {
+	if !info.ResponseCacheHit && info.ResponseCacheTTL <= 0 {
+		return nil
 	}
-	if h.postResponseRules != nil {
-		lists = append(lists, h.postResponseRules.All, h.postResponseRules.Subgraphs[subgraphName])
+	directives := &cachedirective.ResponseCacheDirectives{MaxAge: -1}
+	if maxAge := cachedirective.DeltaSeconds(cache.ToDeltaSeconds(info.ResponseCacheTTL)); maxAge > 0 {
+		directives.MaxAge = maxAge
+		directives.Public = true
+	} else {
+		directives.NoCachePresent = true
 	}
-	for _, rules := range lists {
-		for _, rule := range rules {
-			if rule.Algorithm == config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl {
-				return true
-			}
-		}
-	}
-	return false
+	return &cachedirective.Object{RespDirectives: directives}
 }
 
 // ApplyResponseHeaderRules applies response header rules for a subgraph fetch.
 // Called from OnFinished for every fetch (both singleflight leaders and followers).
-func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, headers http.Header, subgraphName string, statusCode int, request *http.Request) {
+func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, subgraphName string, info *resolve.ResponseInfo) {
 	propagation := getResponseHeaderPropagation(ctx)
 	if propagation == nil {
 		return
 	}
 
 	resp := &http.Response{
-		StatusCode: statusCode,
-		Header:     headers,
+		StatusCode: info.StatusCode,
+		Header:     info.ResponseHeaders,
 	}
-	if request != nil {
-		resp.Request = request
+	if info.Request != nil {
+		resp.Request = info.Request
 	} else {
 		resp.Request = (&http.Request{}).WithContext(ctx)
 	}
+	cached := cacheLifetimePolicy(info)
 
 	for _, rule := range h.rules.All.Response {
-		h.applyResponseRule(propagation, resp, rule)
+		h.applyResponseRule(propagation, resp, rule, cached)
 	}
 
 	if subgraphName != "" {
 		if subgraphRules, ok := h.rules.Subgraphs[subgraphName]; ok {
 			for _, rule := range subgraphRules.Response {
-				h.applyResponseRule(propagation, resp, rule)
+				h.applyResponseRule(propagation, resp, rule, cached)
 			}
 		}
 	}
@@ -622,11 +622,11 @@ func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, header
 	// these rules (e.g. cache control algorithm) read them.
 	if h.postResponseRules != nil {
 		for _, rule := range h.postResponseRules.All {
-			h.applyResponseRule(propagation, resp, rule)
+			h.applyResponseRule(propagation, resp, rule, cached)
 		}
 		if subgraphName != "" {
 			for _, rule := range h.postResponseRules.Subgraphs[subgraphName] {
-				h.applyResponseRule(propagation, resp, rule)
+				h.applyResponseRule(propagation, resp, rule, cached)
 			}
 		}
 	}
@@ -640,7 +640,7 @@ func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestCon
 }
 
 // applyResponseRule applies one response header rule to a subgraph response res.
-func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropagation, res *http.Response, rule *config.ResponseHeaderRule) {
+func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropagation, res *http.Response, rule *config.ResponseHeaderRule, cached *cachedirective.Object) {
 	if rule.Operation == config.HeaderRuleOperationSet {
 		// Inject the value into the subgraph response headers so it looks like it
 		// came from the subgraph. Downstream rules (propagate, cache control
@@ -660,9 +660,9 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 
 		values := res.Header.Values(rule.Named)
 		if len(values) > 0 {
-			h.applyResponseRuleKeyValue(res, propagation, rule, rule.Named, values)
+			h.applyResponseRuleKeyValue(res, propagation, rule, rule.Named, values, cached)
 		} else if rule.Default != "" {
-			h.applyResponseRuleKeyValue(res, propagation, rule, rule.Named, []string{rule.Default})
+			h.applyResponseRuleKeyValue(res, propagation, rule, rule.Named, []string{rule.Default}, cached)
 		}
 
 		return
@@ -678,17 +678,17 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 						continue
 					}
 					values := res.Header.Values(name)
-					h.applyResponseRuleKeyValue(res, propagation, rule, name, values)
+					h.applyResponseRuleKeyValue(res, propagation, rule, name, values, cached)
 				}
 			}
 		}
 	} else if rule.Algorithm == config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl {
 		// Explicitly apply the CacheControl algorithm on the headers
-		h.applyResponseRuleKeyValue(res, propagation, rule, "", []string{""})
+		h.applyResponseRuleKeyValue(res, propagation, rule, "", []string{""}, cached)
 	}
 }
 
-func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule, key string, values []string) {
+func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule, key string, values []string, cached *cachedirective.Object) {
 	// Since we'll be setting the header map directly, we need to canonicalize the key
 	key = http.CanonicalHeaderKey(key)
 	switch rule.Algorithm {
@@ -715,7 +715,7 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 		}
 		propagation.m.Unlock()
 	case config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl:
-		h.applyResponseRuleMostRestrictiveCacheControl(res, propagation, rule)
+		h.applyResponseRuleMostRestrictiveCacheControl(res, propagation, rule, cached)
 	}
 }
 
@@ -849,7 +849,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 	}
 }
 
-func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule) {
+func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule, cached *cachedirective.Object) {
 	propagation.m.Lock()
 	previousCacheControl := propagation.previousCacheControl
 	propagation.m.Unlock()
@@ -880,7 +880,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	dateHeader, _ := http.ParseTime(res.Header.Get("Date"))
 	lastModifiedHeader, _ := http.ParseTime(res.Header.Get("Last-Modified"))
 
-	if previousCacheControl == nil && reqCacheHeader == "" && resCacheHeader == "" && expiresHeader.IsZero() && rule.Default == "" {
+	if previousCacheControl == nil && cached == nil && reqCacheHeader == "" && resCacheHeader == "" && expiresHeader.IsZero() && rule.Default == "" {
 		// There is no default/previous value to set, and since no cache control headers have been set, exit early
 		return
 	}
@@ -919,6 +919,9 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	// Merge with the current shared state under lock to avoid lost updates when
 	// multiple subgraph responses compute policies concurrently.
 	policies := []*cachedirective.Object{obj}
+	if cached != nil {
+		policies = append(policies, cached)
+	}
 	if defaultPolicy != nil {
 		policies = append(policies, defaultPolicy)
 	}

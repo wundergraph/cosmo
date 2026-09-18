@@ -338,7 +338,7 @@ func TestApplyResponseRuleKeyValue(t *testing.T) {
 		t.Parallel()
 		prop := newPropagation()
 		rule := &config.ResponseHeaderRule{Algorithm: config.ResponseHeaderRuleAlgorithmFirstWrite}
-		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"first"})
+		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"first"}, nil)
 		assert.Equal(t, []string{"first"}, prop.header.Values("X-Test"))
 	})
 
@@ -346,8 +346,8 @@ func TestApplyResponseRuleKeyValue(t *testing.T) {
 		t.Parallel()
 		prop := newPropagation()
 		rule := &config.ResponseHeaderRule{Algorithm: config.ResponseHeaderRuleAlgorithmFirstWrite}
-		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"first"})
-		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"second"})
+		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"first"}, nil)
+		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"second"}, nil)
 		assert.Equal(t, []string{"first"}, prop.header.Values("X-Test"))
 	})
 
@@ -355,8 +355,8 @@ func TestApplyResponseRuleKeyValue(t *testing.T) {
 		t.Parallel()
 		prop := newPropagation()
 		rule := &config.ResponseHeaderRule{Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite}
-		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"first"})
-		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"second"})
+		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"first"}, nil)
+		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"second"}, nil)
 		assert.Equal(t, []string{"second"}, prop.header.Values("X-Test"))
 	})
 
@@ -364,8 +364,8 @@ func TestApplyResponseRuleKeyValue(t *testing.T) {
 		t.Parallel()
 		prop := newPropagation()
 		rule := &config.ResponseHeaderRule{Algorithm: config.ResponseHeaderRuleAlgorithmAppend}
-		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"a"})
-		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"b", "c"})
+		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"a"}, nil)
+		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"b", "c"}, nil)
 		assert.Equal(t, []string{"a,b,c"}, prop.header.Values("X-Test"))
 	})
 
@@ -373,7 +373,7 @@ func TestApplyResponseRuleKeyValue(t *testing.T) {
 		t.Parallel()
 		prop := newPropagation()
 		rule := &config.ResponseHeaderRule{Algorithm: config.ResponseHeaderRuleAlgorithmAppend}
-		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"only"})
+		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"only"}, nil)
 		assert.Equal(t, []string{"only"}, prop.header.Values("X-Test"))
 	})
 
@@ -381,8 +381,8 @@ func TestApplyResponseRuleKeyValue(t *testing.T) {
 		t.Parallel()
 		prop := newPropagation()
 		rule := &config.ResponseHeaderRule{Algorithm: config.ResponseHeaderRuleAlgorithmAppend}
-		hp.applyResponseRuleKeyValue(nil, prop, rule, "Set-Cookie", []string{"a=1; Path=/"})
-		hp.applyResponseRuleKeyValue(nil, prop, rule, "Set-Cookie", []string{"b=2; Path=/"})
+		hp.applyResponseRuleKeyValue(nil, prop, rule, "Set-Cookie", []string{"a=1; Path=/"}, nil)
+		hp.applyResponseRuleKeyValue(nil, prop, rule, "Set-Cookie", []string{"b=2; Path=/"}, nil)
 		// Set-Cookie must NOT be comma-joined (RFC 6265)
 		assert.Equal(t, []string{"a=1; Path=/", "b=2; Path=/"}, prop.header.Values("Set-Cookie"))
 	})
@@ -409,7 +409,7 @@ func TestApplyResponseRuleSetWritesToSubgraphResponse(t *testing.T) {
 			Name:      "X-Custom",
 			Value:     "test-value",
 		}
-		hp.applyResponseRule(prop, res, rule)
+		hp.applyResponseRule(prop, res, rule, nil)
 		require.Equal(t, "", prop.header.Get("X-Custom"), "set should not write to propagation header")
 		require.Equal(t, "test-value", res.Header.Get("X-Custom"), "set should write to subgraph response header")
 	})
@@ -423,7 +423,7 @@ func TestApplyResponseRuleSetWritesToSubgraphResponse(t *testing.T) {
 			Name:      "Cache-Control",
 			Value:     "max-age=300",
 		}
-		hp.applyResponseRule(prop, res, rule)
+		hp.applyResponseRule(prop, res, rule, nil)
 		require.Equal(t, "", prop.header.Get("Cache-Control"), "set should not write to propagation header")
 		require.Equal(t, "max-age=300", res.Header.Get("Cache-Control"), "set should write to subgraph response header")
 	})
@@ -439,7 +439,7 @@ func TestApplyResponseRuleSetWritesToSubgraphResponse(t *testing.T) {
 		res := &http.Response{
 			Header: http.Header{"X-Custom": []string{"from-subgraph"}},
 		}
-		hp.applyResponseRule(prop, res, rule)
+		hp.applyResponseRule(prop, res, rule, nil)
 		require.Equal(t, "from-subgraph", prop.header.Get("X-Custom"))
 	})
 }

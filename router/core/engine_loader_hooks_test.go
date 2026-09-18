@@ -432,12 +432,12 @@ func TestRecordFetchError(t *testing.T) {
 
 // TestApplyResponseCacheLifetime pins how the life left on response cache entries reaches the
 // Cache-Control merge.
-func TestApplyResponseCacheLifetime(t *testing.T) {
+// TestMostRestrictiveCacheControl_CacheLifetime pins how the life left on
+// cached entries merges with the Cache-Control the subgraph sent.
+func TestMostRestrictiveCacheControl_CacheLifetime(t *testing.T) {
 	t.Parallel()
 
 	type want struct {
-		// raw is compared verbatim when set, for a header that does not parse.
-		raw     string
 		maxAge  cachedirective.DeltaSeconds
 		public  bool
 		private bool
@@ -453,7 +453,7 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 		want   *want         // nil: no header must be set
 	}{
 		{
-			name:   "a miss with an origin header leaves it alone",
+			name:   "a miss with an origin header keeps it",
 			origin: "public, max-age=120",
 			want:   &want{maxAge: 120, public: true},
 		},
@@ -506,38 +506,41 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 			origin: "public, max-age=120",
 			want:   &want{maxAge: -1, public: true, noCache: true},
 		},
-		{
-			name:   "a partial hit leaves an unparsable origin header alone",
-			ttl:    30 * time.Second,
-			origin: "max-age=soon",
-			want:   &want{raw: "max-age=soon"},
-		},
 	}
+
+	rules := &config.HeaderRules{All: &config.GlobalHeaderRule{Response: []*config.ResponseHeaderRule{{
+		Operation: config.HeaderRuleOperationPropagate,
+		Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+	}}}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			propagation, err := NewHeaderPropagation(t.Context(), zap.NewNop(), rules, nil)
+			require.NoError(t, err)
+
+			ctx, _ := setupTestContext(t, sdktrace.NewTracerProvider())
+			client := &responseHeaderPropagation{header: make(http.Header), m: &sync.Mutex{}}
+			ctx = context.WithValue(ctx, responseHeaderPropagationKey{}, client)
+
 			headers := make(http.Header)
 			if tt.origin != "" {
 				headers.Set(cacheControlKey, tt.origin)
 			}
-
-			applyResponseCacheLifetime(headers, &resolve.ResponseInfo{
+			propagation.ApplyResponseHeaderRules(ctx, "employees", &resolve.ResponseInfo{
+				StatusCode:       http.StatusOK,
+				ResponseHeaders:  headers,
 				ResponseCacheHit: tt.hit,
 				ResponseCacheTTL: tt.ttl,
 			})
 
 			if tt.want == nil {
-				require.Empty(t, headers.Values(cacheControlKey))
+				require.Empty(t, client.header.Values(cacheControlKey))
 				return
 			}
-			require.Len(t, headers.Values(cacheControlKey), 1)
-			if tt.want.raw != "" {
-				require.Equal(t, tt.want.raw, headers.Get(cacheControlKey))
-				return
-			}
-			got, err := cachedirective.ParseResponseCacheControl(headers.Get(cacheControlKey))
+			require.Len(t, client.header.Values(cacheControlKey), 1)
+			got, err := cachedirective.ParseResponseCacheControl(client.header.Get(cacheControlKey))
 			require.NoError(t, err)
 			require.Equal(t, tt.want.maxAge, got.MaxAge, "max-age")
 			require.Equal(t, tt.want.public, got.Public, "public")
