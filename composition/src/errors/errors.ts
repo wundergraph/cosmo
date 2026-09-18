@@ -30,6 +30,7 @@ import {
   ARGUMENT,
   FIELD,
   FIELD_PATH,
+  FROM_CONTEXT,
   IN_UPPER,
   INPUT_FIELD,
   INTERFACE,
@@ -585,6 +586,16 @@ export function invalidInterfaceImplementationError(
           invalidFieldImplementation.originalResponseType +
           `" for "${interfaceName}.${fieldName}".\n`;
       }
+      if (invalidFieldImplementation.invalidContextArguments.size > 0) {
+        message +=
+          `   An ${ARGUMENT} must define "@${FROM_CONTEXT}" on both the Interface field and its implementation,` +
+          ` or on neither.\n` +
+          `    The following argument` +
+          (invalidFieldImplementation.invalidContextArguments.size > 1 ? `s are` : ` is`) +
+          ` declared "@${FROM_CONTEXT}" on only one of the two definitions: "` +
+          [...invalidFieldImplementation.invalidContextArguments].join(`", "`) +
+          `"\n`;
+      }
       if (invalidFieldImplementation.isInaccessible) {
         message +=
           `   The field has been declared "@inaccessible"; however, the same field has not been declared "@inaccessible"` +
@@ -623,6 +634,27 @@ export function invalidRequiredInputValueError(
       ` as optional on all other definitions of that ${typeString} in all other subgraphs.\n`;
   }
   return new Error(message);
+}
+
+export function contextArgumentRequiredError(
+  coords: string,
+  contextSubgraphNames: Array<string>,
+  requiredSubgraphNames: Array<string>,
+): Error {
+  return new Error(
+    `The ${ARGUMENT} "${coords}" is invalid because:\n` +
+      ` It defines "@${FROM_CONTEXT}" in the following subgraph` +
+      (contextSubgraphNames.length > 1 ? 's' : '') +
+      ': "' +
+      contextSubgraphNames.join(QUOTATION_JOIN) +
+      `"\n` +
+      ` However, it is required in the following subgraph` +
+      (requiredSubgraphNames.length > 1 ? 's' : '') +
+      ': "' +
+      requiredSubgraphNames.join(QUOTATION_JOIN) +
+      `"\n` +
+      ` An ${ARGUMENT} that defines "@${FROM_CONTEXT}" must not be required in any subgraph that defines it.\n`,
+  );
 }
 
 export function duplicateArgumentsError(fieldPath: string, duplicatedArguments: string[]): Error {
