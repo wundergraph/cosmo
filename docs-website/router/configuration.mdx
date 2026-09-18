@@ -942,10 +942,48 @@ pyroscope:
 | ---------------------- | ----------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | CORS_ENABLED           | enabled           | <Icon icon="square" /> | Set this to enable/disable the CORS middleware. It is enabled by default. When disabled, the rest of the properties for CORS have no effect. | true                                 |
 | CORS_ALLOW_ORIGINS     | allow_origins     | <Icon icon="square" /> | This is a list of origins which are allowed. You can provide origins with wildcards                                                          | \*                                   |
+| CORS_MATCH_ORIGINS     | match_origins     | <Icon icon="square" /> | Go regular expressions matched against the lowercased origin in addition to `allow_origins`. Patterns are compiled as written and matching is unanchored. Separate patterns with semicolons in the environment variable. | []                            |
 | CORS_ALLOW_METHODS     | allow_methods     | <Icon icon="square" /> |                                                                                                                                              | HEAD,GET,POST                        |
 | CORS_ALLOW_HEADERS     | allow_headers     | <Icon icon="square" /> |                                                                                                                                              | Origin, Content-Length, Content-Type |
 | CORS_ALLOW_CREDENTIALS | allow_credentials | <Icon icon="square" /> |                                                                                                                                              | true                                 |
 | CORS_MAX_AGE           | max_age           | <Icon icon="square" /> |                                                                                                                                              | 5m                                   |
+
+Origins in `allow_origins` can use any URL scheme. Wildcard patterns are supported. The default `["*"]` allows all origins, regardless of scheme.
+
+### Regular expression origins
+
+Use `match_origins` to allow origins using [Go regular expressions](https://pkg.go.dev/regexp/syntax). When CORS is enabled, invalid patterns prevent router startup and the error identifies the pattern. Lookarounds and backreferences are not supported.
+
+The `allow_origins` and `match_origins` lists are additive. Set `allow_origins: []` for regex-only matching. Its default `["*"]` allows every origin, even when `match_origins` is set.
+
+Patterns match any substring of the origin unless you add anchors. Use `^` and `$` to match the entire origin. For example, `^https://([a-z0-9-]+\.)*example\.com$` allows `https://example.com` and `https://app.example.com`, but rejects `https://app.example.com.evil.com`. Without the anchors, that pattern also matches `https://app.example.com.evil.com`. Include any allowed port explicitly in the pattern.
+
+The router lowercases the `Origin` header value before literal, wildcard, and regex matching. This normalizes scheme and host casing, as in serialized browser origins. Ports are preserved. Regex patterns are compiled exactly as configured, with Go's default case-sensitive matching. Write scheme and host literals in lowercase, or add `(?i)` explicitly. For example, `^https://app\.example\.com$` matches `HTTPS://APP.EXAMPLE.COM`, but `^HTTPS://APP\.EXAMPLE\.COM$` does not. Regex escapes such as `\D` retain their original meaning.
+
+```yaml
+cors:
+  allow_origins: []
+  match_origins:
+    - '^https://([a-z0-9-]+\.)*example\.com$'
+    - '^https://(.+\.)?aol\.(de|ca|co\.uk|com)$'
+```
+
+Use single-quoted YAML strings to preserve regex backslashes. Separate patterns in `CORS_MATCH_ORIGINS` with semicolons (`;`) so commas in repetition counts such as `{1,3}` are preserved. For regex-only matching with this environment variable, set `allow_origins: []` in YAML. Leaving `CORS_ALLOW_ORIGINS` empty does not clear its default.
+
+Requests and preflights allowed by a regex echo the original `Origin` header in `Access-Control-Allow-Origin`, preserving its casing. Cross-origin requests that match neither list receive `403 Forbidden`.
+
+### Custom URL schemes
+
+List the full origin in `allow_origins`, such as `custom://localhost`, to allow that origin.
+
+```yaml
+cors:
+  allow_origins:
+    - "https://app.example.com"
+    - "custom://localhost"
+```
+
+Patterns in `match_origins` can also match custom URL schemes, for example `^custom://localhost$`.
 
 ### Example YAML config:
 
@@ -2153,6 +2191,7 @@ Configure the GraphQL Execution Engine of the Router.
 | ENGINE_ENABLE_NET_POLL                                        | enable_net_poll                                        | <Icon icon="square" /> | Enables the more efficient poll implementation for the server-side WebSocket handler of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used. Has no effect on the router's upstream connections to subgraphs.                              | true          |
 | ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT                          | websocket_server_read_timeout                          | <Icon icon="square" /> | Read timeout on the server-side WebSocket handler (router accepting clients). Specified as a Go duration string, e.g. `10ms`, `1s`, `1m`.                                                                                                                                                                                                   | 5s            |
 | ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT                         | websocket_server_write_timeout                         | <Icon icon="square" /> | Write timeout on the server-side WebSocket handler (router accepting clients).                                                                                                                                                                                                                                                               | 10s           |
+| ENGINE_SSE_SERVER_WRITE_TIMEOUT                               | sse_server_write_timeout                               | <Icon icon="square" /> | Write timeout for SSE responses from the router to clients. If a write takes longer, the router closes the subscription. Set `0s` to disable.                                                                                                                                                                                  | 10s           |
 | ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT                          | websocket_server_poll_timeout                          | <Icon icon="square" /> | The timeout for the poll loop of the server-side WebSocket handler. The period is specified as a string with a number and a unit.                                                                                                                                                                                                            | 1s            |
 | ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE                      | websocket_server_conn_buffer_size                      | <Icon icon="square" /> | The buffer size for the poll buffer of the server-side WebSocket handler. The buffer size determines how many connections can be handled in one loop.                                                                                                                                                                                        | 128           |
 | ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT                         | websocket_client_write_timeout                         | <Icon icon="square" /> | The timeout for the websocket write of the WebSocket client implementation.                                                                                                                                                                                                                                                                 | 10s           |
@@ -2177,8 +2216,8 @@ Configure the GraphQL Execution Engine of the Router.
 | ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS                      | validate_required_external_fields                      | <Icon icon="square" /> | Validate nullable external "@requires" dependencies. When a subgraph entity fetch returns a null value with an error for a field set specified in the "@requires" directive, any following fetch that depends on it should not receive such an entity.                                                                                      | false         |
 | ENGINE_SUBSCRIPTION_FETCH_TIMEOUT                             | subscription_fetch_timeout                             | <Icon icon="square" /> | The maximum time a subscription fetch can take before it is considered timed out.                                                                                                                                                                                                                                                           | 30s           |
 | ENGINE_ENABLE_DEFER                                           | enable_defer                                           | <Icon icon="square" /> | Enables support for the [`@defer`](/router/defer) directive, allowing clients to defer parts of a query so that the initial response is returned faster and deferred fields are streamed incrementally.                                                                                                                                      | false         |
-| ENGINE_ENABLE_MULTI_FETCH                                     | enable_multi_fetch                                     | <Icon icon="square" /> | Merges entity fetches that target the same subgraph and execute at the same point in the query plan into a single request with aliased `_entities` fields. This reduces the number of requests sent to subgraphs.                                                                                                                           | false         |
-| ENGINE_ENABLE_SCHEDULE_FETCHES                                | enable_schedule_fetches                                | <Icon icon="square" /> | Replaces the wave-based fetch execution with a dependency-aware fetch scheduler. Independent fetch chains progress as soon as their own dependencies complete, instead of waiting for the slowest fetch in each wave.                                                                                                                       | false         |
+| ENGINE_ENABLE_MULTI_FETCH                                     | enable_multi_fetch                                     | <Icon icon="square" /> | Merges entity fetches that target the same subgraph and execute at the same point in the query plan into a single request with aliased `_entities` fields. This reduces the number of requests sent to subgraphs.                                                                                                                           | true          |
+| ENGINE_ENABLE_SCHEDULE_FETCHES                                | enable_schedule_fetches                                | <Icon icon="square" /> | Replaces the wave-based fetch execution with a dependency-aware fetch scheduler. Independent fetch chains progress as soon as their own dependencies complete, instead of waiting for the slowest fetch in each wave.                                                                                                                       | true          |
 | ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY | relax_subgraph_operation_field_selection_merging_nullability | <Icon icon="square" /> | Relaxes nullability validation for [field selection merging](/router/relaxed-field-selection-merging-nullability) across union member types.                                                                                                                                                                                    | false         |
 | ENGINE_ALLOW_STRING_LITERALS_FOR_ENUMS                        | allow_string_literals_for_enums                        | <Icon icon="square" /> | Accepts a [string literal where an enum value is expected](/router/string-literals-for-enums) if the string content matches one of the enum's values. This is a deviation from the GraphQL specification.                                                                                                                                   | false         |
 
@@ -2227,8 +2266,8 @@ engine:
   disable_exposing_variables_content_on_validation_error: false
   enable_subgraph_fetch_operation_name: true
   subscription_fetch_timeout: 30s
-  enable_multi_fetch: false
-  enable_schedule_fetches: false
+  enable_multi_fetch: true
+  enable_schedule_fetches: true
   relax_subgraph_operation_field_selection_merging_nullability: false
   allow_string_literals_for_enums: false
 ```
@@ -2547,6 +2586,8 @@ security:
     total_fields_limit: 700
   operation_name_length_limit: 1024
 ```
+
+Both complexity modes calculate and expose operation complexity. `measure` reports the values without rejecting requests. `enforce` reports the same values and rejects requests that exceed enabled limits. The calculated values and cache status can be seen on the traces or added to router access logs with [operation complexity expressions](/router/access-logs#logging-operation-complexity).
 
 <Warning>
   Query Depth is now deprecated. We recommend using the

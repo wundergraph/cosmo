@@ -4,6 +4,39 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.349.0](https://github.com/wundergraph/cosmo/compare/router@0.348.0...router@0.349.0) (2026-09-17)
+
+### Bug Fixes
+
+* **router:** add SSE server write timeout ([#3238](https://github.com/wundergraph/cosmo/issues/3238)) ([a774b65](https://github.com/wundergraph/cosmo/commit/a774b6582b078ae224b56a1b7dbe9ebf58cee13c)) (@endigma)
+
+### Features
+
+* **router:** support regex-based CORS origin matching ([#3232](https://github.com/wundergraph/cosmo/issues/3232)) ([8dd66d3](https://github.com/wundergraph/cosmo/commit/8dd66d3ca612b5c18d03fd5a63f70fe03685aeb8)) (@fiam)
+
+# [0.348.0](https://github.com/wundergraph/cosmo/compare/router@0.347.1...router@0.348.0) (2026-09-16)
+
+### Bug Fixes
+
+* **router:** accept JSON array scope claims ([#3251](https://github.com/wundergraph/cosmo/issues/3251)) ([35e20ef](https://github.com/wundergraph/cosmo/commit/35e20efb489cc7b3f88da4a071fe2607534922e6)) (@gausie)
+
+### Features
+
+* add ability to log operation complexity ([#3176](https://github.com/wundergraph/cosmo/issues/3176)) ([390158e](https://github.com/wundergraph/cosmo/commit/390158e9584864e85d99d0a44e4fcf373cf48068)) (@alepane21)
+* **router:** support custom URL schemes in CORS origins ([#3230](https://github.com/wundergraph/cosmo/issues/3230)) ([3dba5d1](https://github.com/wundergraph/cosmo/commit/3dba5d1173bb41f0850242ce9e2adc52e7f8cdeb)) (@fiam)
+
+## [0.347.1](https://github.com/wundergraph/cosmo/compare/router@0.347.0...router@0.347.1) (2026-09-15)
+
+### Bug Fixes
+
+* enable multi-fetch and scheduling ([#3243](https://github.com/wundergraph/cosmo/issues/3243)) ([ce3eec1](https://github.com/wundergraph/cosmo/commit/ce3eec17ab6ac993cb281989dfe8b6f9a35be391)) (@ysmolski)
+
+# [0.347.0](https://github.com/wundergraph/cosmo/compare/router@0.346.1...router@0.347.0) (2026-09-14)
+
+### Features
+
+* entity caching invalidation ([#3213](https://github.com/wundergraph/cosmo/issues/3213)) ([c6363a3](https://github.com/wundergraph/cosmo/commit/c6363a3d6fde9ee49e30d25d1a55de80496681bd)) (@SkArchon)
+
 ## [0.346.1](https://github.com/wundergraph/cosmo/compare/router@0.346.0...router@0.346.1) (2026-09-09)
 
 ### Bug Fixes
