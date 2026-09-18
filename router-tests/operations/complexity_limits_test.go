@@ -1,14 +1,15 @@
 package integration
 
 import (
-	"github.com/wundergraph/cosmo/router-tests/testutils"
-
+	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
@@ -292,6 +293,7 @@ func TestComplexityLimits(t *testing.T) {
 
 				testSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepth.Int(3))
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryTotalFields.Int(5))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
 				// wait to let cache get consistent
@@ -305,6 +307,7 @@ func TestComplexityLimits(t *testing.T) {
 
 				testSpan2 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepth.Int(3))
+				require.Contains(t, testSpan2.Attributes(), otel.WgQueryTotalFields.Int(5))
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 				exporter.Reset()
 				// wait to let cache get consistent
@@ -416,7 +419,7 @@ func TestComplexityLimits(t *testing.T) {
 					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
 						TotalFields: &config.ComplexityLimit{
 							Enabled: true,
-							Limit:   1,
+							Limit:   4,
 						},
 					}
 				},
@@ -425,18 +428,18 @@ func TestComplexityLimits(t *testing.T) {
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
 				})
 				require.Equal(t, 400, res.Response.StatusCode)
-				require.Equal(t, `{"errors":[{"message":"The total number of fields 2 exceeds the limit allowed (1)"}]}`, res.Body)
+				require.Equal(t, `{"errors":[{"message":"The total number of fields 5 exceeds the limit allowed (4)"}]}`, res.Body)
 			})
 		})
 
-		t.Run("total fields allows queries under the limit", func(t *testing.T) {
+		t.Run("total fields allows queries at the limit", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
 						TotalFields: &config.ComplexityLimit{
 							Enabled: true,
-							Limit:   3,
+							Limit:   5,
 						},
 					}
 				},
@@ -447,6 +450,64 @@ func TestComplexityLimits(t *testing.T) {
 				require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
 			})
 		})
+	})
+
+	t.Run("total fields counts leaf fields without increasing depth", func(t *testing.T) {
+		t.Parallel()
+
+		for _, leaves := range []int{1, 4, 8, 20, 50, 200} {
+			t.Run(fmt.Sprintf("%d leaves", leaves), func(t *testing.T) {
+				t.Parallel()
+				testenv.Run(t, &testenv.Config{
+					ModifySecurityConfiguration: func(c *config.SecurityConfiguration) {
+						c.ComplexityLimits = &config.ComplexityLimits{
+							TotalFields: &config.ComplexityLimit{Enabled: true, Limit: 3},
+						}
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					var query strings.Builder
+					query.WriteString(`{ employee(id: 1) { details {`)
+					for i := range leaves {
+						fmt.Fprintf(&query, "field%d: forename ", i)
+					}
+					query.WriteString(`} } }`)
+
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: query.String()})
+					require.NoError(t, err)
+					if leaves == 1 {
+						require.Equal(t, http.StatusOK, res.Response.StatusCode)
+						require.JSONEq(t, `{"data":{"employee":{"details":{"field0":"Jens"}}}}`, res.Body)
+						return
+					}
+					require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+					require.JSONEq(t, fmt.Sprintf(`{"errors":[{"message":"The total number of fields %d exceeds the limit allowed (3)"}]}`, leaves+2), res.Body)
+				})
+			})
+		}
+	})
+
+	t.Run("total fields counts scalar root fields", func(t *testing.T) {
+		t.Parallel()
+
+		for _, field := range []string{"initialPayload", "__typename"} {
+			t.Run(field, func(t *testing.T) {
+				t.Parallel()
+				testenv.Run(t, &testenv.Config{
+					ModifySecurityConfiguration: func(c *config.SecurityConfiguration) {
+						c.ComplexityLimits = &config.ComplexityLimits{
+							TotalFields: &config.ComplexityLimit{Enabled: true, Limit: 2},
+						}
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						Query: fmt.Sprintf(`{ first: %[1]s second: %[1]s third: %[1]s }`, field),
+					})
+					require.NoError(t, err)
+					require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+					require.JSONEq(t, `{"errors":[{"message":"The total number of fields 3 exceeds the limit allowed (2)"}]}`, res.Body)
+				})
+			})
+		}
 	})
 
 	t.Run("root fields limit", func(t *testing.T) {
@@ -642,6 +703,7 @@ func TestComplexityLimits(t *testing.T) {
 
 				testSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepth.Int(3))
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryTotalFields.Int(5))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 			})
 		})
@@ -674,6 +736,7 @@ func TestComplexityLimits(t *testing.T) {
 
 				testSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepth.Int(3))
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryTotalFields.Int(5))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
 
@@ -688,6 +751,7 @@ func TestComplexityLimits(t *testing.T) {
 
 				testSpan2 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepth.Int(3))
+				require.Contains(t, testSpan2.Attributes(), otel.WgQueryTotalFields.Int(5))
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 			})
 		})
