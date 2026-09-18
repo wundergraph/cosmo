@@ -203,6 +203,9 @@
     "Storage": {
       "ProviderID": ""
     },
+    "Resources": {
+      "Enabled": false
+    },
     "Session": {
       "Stateless": true
     },

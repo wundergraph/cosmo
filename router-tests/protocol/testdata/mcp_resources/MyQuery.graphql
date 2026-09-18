@@ -1,0 +1,12 @@
+query MyEmployees($criteria: SearchInput) {
+    findEmployees(criteria: $criteria) {
+        id
+        isAvailable
+        currentMood
+        products
+        details {
+            forename
+            nationality
+        }
+    }
+}

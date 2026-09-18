@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/iancoleman/strcase"
@@ -30,12 +32,19 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 )
 
+// contextInstructions is appended to the configured server instructions when
+// context resources are enabled, so agents know to discover skills before
+// multi-tool workflows. Instructions reach clients via both server/discover
+// and the legacy initialize response.
+const contextInstructions = "This server may provide skills describing how its tools should be used together. For complex workflows, call get_context to discover relevant skills and load the applicable skill before invoking operation tools."
+
 // reservedToolNames contains tool names that are internally registered by the MCP server
 // and must not be used by operations when omitToolNamePrefix is enabled.
 var reservedToolNames = []string{
 	"get_schema",
 	"execute_graphql",
 	"get_operation_info",
+	"get_context",
 }
 
 // requestHeadersKey is a custom context key for storing request headers.
@@ -88,6 +97,9 @@ type Options struct {
 	// adds structured content to successful tool results (MCP structured tool
 	// output). Increases tools/list and result payload sizes.
 	OutputSchemaEnabled bool
+	// ResourcesEnabled serves markdown context documents and Agent Skills from
+	// the operations directory as MCP resources, plus a get_context tool.
+	ResourcesEnabled bool
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
 	// CorsConfig is the CORS configuration for the MCP server
@@ -136,6 +148,9 @@ type GraphQLSchemaServer struct {
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
+	resourcesEnabled          bool
+	contextScan               *contextScan
+	registeredResources       []string
 	corsConfig                cors.Config
 	cancel                    context.CancelFunc
 	oauthConfig               *config.MCPOAuthConfiguration
@@ -175,6 +190,32 @@ type OperationsResponse struct {
 	Usage       string          `json:"usage"`
 	LLMGuidance LLMGuidance     `json:"llmGuidance"`
 	Endpoint    string          `json:"endpoint"`
+}
+
+// ContextSkillEntry describes one Agent Skill in the get_context index.
+type ContextSkillEntry struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	URI         string `json:"uri"`
+}
+
+// ContextDocumentEntry describes one loose context document in the
+// get_context index.
+type ContextDocumentEntry struct {
+	URI         string `json:"uri"`
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+}
+
+// ContextIndex is the get_context response when no URI is requested.
+type ContextIndex struct {
+	Skills    []ContextSkillEntry    `json:"skills"`
+	Documents []ContextDocumentEntry `json:"documents"`
+}
+
+// GetContextInput is the input of the get_context tool.
+type GetContextInput struct {
+	URI string `json:"uri,omitempty"`
 }
 
 // GraphQLOperationInfoResponse is the response structure for the graphql_operation_info tool.
@@ -358,6 +399,14 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 			zap.Strings("authorization_servers", options.OAuthConfig.AuthorizationServers()))
 	}
 
+	instructions := options.Instructions
+	if options.ResourcesEnabled {
+		if instructions != "" {
+			instructions += "\n\n"
+		}
+		instructions += contextInstructions
+	}
+
 	// Create the MCP server with all options
 	mcpServer := mcp.NewServer(
 		&mcp.Implementation{
@@ -367,7 +416,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 			Version:     options.ServerVersion,
 		},
 		&mcp.ServerOptions{
-			Instructions: options.Instructions,
+			Instructions: instructions,
 			PageSize:     100,
 			// ttlMs and cacheScope use the SDK defaults (0 / "public"). They
 			// become configurable under mcp.server.discover once the SDK adds a
@@ -400,6 +449,8 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		exposeSchema:              options.ExposeSchema,
 		omitToolNamePrefix:        options.OmitToolNamePrefix,
 		outputSchemaEnabled:       options.OutputSchemaEnabled,
+		resourcesEnabled:          options.ResourcesEnabled,
+		contextScan:               newEmptyContextScan(),
 		stateless:                 options.Stateless,
 		corsConfig:                options.CorsConfig,
 		cancel:                    cancel,
@@ -513,6 +564,14 @@ func WithOmitToolNamePrefix(omitToolNamePrefix bool) func(*Options) {
 func WithOutputSchemaEnabled(outputSchemaEnabled bool) func(*Options) {
 	return func(o *Options) {
 		o.OutputSchemaEnabled = outputSchemaEnabled
+	}
+}
+
+// WithResourcesEnabled serves markdown context documents and Agent Skills
+// from the operations directory as MCP resources.
+func WithResourcesEnabled(enabled bool) func(*Options) {
+	return func(o *Options) {
+		o.ResourcesEnabled = enabled
 	}
 }
 
@@ -671,6 +730,10 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 		return fmt.Errorf("failed to register tools: %w", err)
 	}
 
+	if err := s.registerContextResources(); err != nil {
+		return fmt.Errorf("failed to register context resources: %w", err)
+	}
+
 	return nil
 }
 
@@ -696,6 +759,99 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// registerContextResources rescans the operations directory and replaces the
+// registered MCP resources, mirroring the tools flow in Reload. The go-sdk
+// advertises the resources capability and emits list_changed notifications
+// automatically when resources are added or removed.
+//
+// The directory is scanned before anything is removed: a scan error leaves
+// the previously registered resources live instead of leaving the server
+// resource-less, and there is no window where resources are briefly
+// unregistered while the scan runs. This mirrors how Reload leaves old tools
+// registered when operation loading fails.
+func (s *GraphQLSchemaServer) registerContextResources() error {
+	if !s.resourcesEnabled || s.operationsDir == "" {
+		s.server.RemoveResources(s.registeredResources...)
+		s.registeredResources = nil
+		s.contextScan = newEmptyContextScan()
+		return nil
+	}
+
+	scan, err := scanContextResources(s.operationsDir, s.logger)
+	if err != nil {
+		return err
+	}
+
+	s.server.RemoveResources(s.registeredResources...)
+	s.registeredResources = nil
+	s.contextScan = scan
+
+	handler := s.handleReadContextResource()
+	for _, res := range scan.resources {
+		s.server.AddResource(&mcp.Resource{
+			URI:         res.uri,
+			Name:        res.name,
+			Title:       res.title,
+			Description: res.description,
+			MIMEType:    res.mimeType,
+		}, handler)
+		s.registeredResources = append(s.registeredResources, res.uri)
+	}
+
+	s.logger.Debug("Registered MCP context resources",
+		zap.Int("resources", len(scan.resources)),
+		zap.Int("skills", len(scan.skills)))
+
+	return nil
+}
+
+// checkServableFile validates a context resource file at read time. The scan
+// records file metadata once, but a file can grow or be replaced (for
+// example by a FIFO) between the scan and a request, so both read paths
+// re-check the 16 MiB cap and the regular-file requirement before reading.
+func checkServableFile(filePath string) error {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to stat resource file: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("resource file is not a regular file")
+	}
+	if info.Size() > maxServedFileBytes {
+		return fmt.Errorf("resource file exceeds the %d byte limit", maxServedFileBytes)
+	}
+	return nil
+}
+
+// handleReadContextResource serves resources/read for context documents and
+// skill files. Content is read from disk per request so edits between config
+// reloads are served fresh.
+func (s *GraphQLSchemaServer) handleReadContextResource() mcp.ResourceHandler {
+	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+		res, ok := s.contextScan.byURI[req.Params.URI]
+		if !ok {
+			return nil, fmt.Errorf("unknown resource: %s", req.Params.URI)
+		}
+		if err := checkServableFile(res.filePath); err != nil {
+			return nil, fmt.Errorf("cannot serve resource %s: %w", req.Params.URI, err)
+		}
+		content, err := os.ReadFile(res.filePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read resource %s: %w", req.Params.URI, err)
+		}
+		contents := &mcp.ResourceContents{
+			URI:      res.uri,
+			MIMEType: res.mimeType,
+		}
+		if utf8.Valid(content) {
+			contents.Text = string(content)
+		} else {
+			contents.Blob = content
+		}
+		return &mcp.ReadResourceResult{Contents: []*mcp.ResourceContents{contents}}, nil
+	}
 }
 
 // registerTools registers all tools for the MCP server
@@ -759,6 +915,35 @@ func (s *GraphQLSchemaServer) registerTools() error {
 
 		s.server.AddTool(tool, s.handleExecuteGraphQL())
 		s.registeredTools = append(s.registeredTools, "execute_graphql")
+	}
+
+	// Register the get_context tool when context resources are enabled. It
+	// mirrors resources/list + resources/read for MCP clients that never
+	// fetch resources on their own.
+	if s.resourcesEnabled {
+		getContextSchema := map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"uri": map[string]any{
+					"type":        "string",
+					"description": "URI of a context document or skill file to read (from the index). Omit to list all available skills and context documents.",
+				},
+			},
+			"additionalProperties": false,
+		}
+
+		tool := &mcp.Tool{
+			Name:        "get_context",
+			Description: "Discover and load domain guidance and skills for using this server's tools. Call without a URI before complex or multi-tool workflows to find relevant instructions. When a relevant skill exists, load its SKILL.md before executing the workflow. When a loaded skill references another file by relative path, resolve it against the skill root and request the resulting skill:// URI.",
+			InputSchema: getContextSchema,
+			Annotations: &mcp.ToolAnnotations{
+				Title:        "Get Context Documents and Skills",
+				ReadOnlyHint: true,
+			},
+		}
+
+		s.server.AddTool(tool, s.handleGetContext())
+		s.registeredTools = append(s.registeredTools, "get_context")
 	}
 
 	// Get operations filtered by the excludeMutations setting
@@ -1165,6 +1350,85 @@ func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context,
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: schemaStr}},
+		}, nil
+	}
+}
+
+// handleGetContext serves the get_context tool: without a URI it returns the
+// index of skills and context documents, with a URI it returns that
+// resource's raw text content.
+func (s *GraphQLSchemaServer) handleGetContext() func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		var input GetContextInput
+		if len(request.Params.Arguments) > 0 {
+			if err := json.Unmarshal(request.Params.Arguments, &input); err != nil {
+				return nil, fmt.Errorf("invalid input: %w", err)
+			}
+		}
+
+		scan := s.contextScan
+
+		if input.URI == "" {
+			index := ContextIndex{
+				Skills:    []ContextSkillEntry{},
+				Documents: []ContextDocumentEntry{},
+			}
+			for _, sk := range scan.skills {
+				index.Skills = append(index.Skills, ContextSkillEntry{
+					Name:        sk.name,
+					Description: sk.description,
+					URI:         sk.uri,
+				})
+			}
+			for _, res := range scan.resources {
+				if res.skillName != "" {
+					continue
+				}
+				index.Documents = append(index.Documents, ContextDocumentEntry{
+					URI:         res.uri,
+					Title:       res.title,
+					Description: res.description,
+				})
+			}
+			payload, err := json.Marshal(index)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal context index: %w", err)
+			}
+			// Structured content plus a serialized-JSON text fallback, per
+			// current MCP guidance for structured tool results. No output
+			// schema is declared on the tool: the uri form returns raw
+			// document text, so one schema cannot describe both responses.
+			return &mcp.CallToolResult{
+				Content:           []mcp.Content{&mcp.TextContent{Text: string(payload)}},
+				StructuredContent: index,
+			}, nil
+		}
+
+		res, ok := scan.byURI[input.URI]
+		if !ok {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("unknown context uri: %s (call get_context without arguments to list valid uris)", input.URI)}},
+			}, nil
+		}
+		if err := checkServableFile(res.filePath); err != nil {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("cannot serve %s: %s", input.URI, err)}},
+			}, nil
+		}
+		content, err := os.ReadFile(res.filePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read %s: %w", input.URI, err)
+		}
+		if !utf8.Valid(content) {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("%s is a binary resource; read it via resources/read", input.URI)}},
+			}, nil
+		}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: string(content)}},
 		}, nil
 	}
 }
