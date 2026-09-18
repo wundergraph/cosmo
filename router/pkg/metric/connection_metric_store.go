@@ -23,7 +23,9 @@ type ConnectionMetricProvider interface {
 	MeasureTCPConnectDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
+	MeasureTimeToLastRequestByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTimeToFirstByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
+	MeasureTimeToLastByte(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	Shutdown() error
 }
 
@@ -34,7 +36,9 @@ type ConnectionMetricStore interface {
 	MeasureTCPConnectDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTimeToFirstRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
+	MeasureTimeToLastRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
+	MeasureTimeToLastByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	Shutdown(ctx context.Context) error
 }
 
@@ -123,10 +127,22 @@ func (c *ConnectionMetrics) MeasureTimeToFirstRequestByte(ctx context.Context, d
 	c.promConnectionMetrics.MeasureTimeToFirstRequestByte(ctx, duration, opts)
 }
 
+func (c *ConnectionMetrics) MeasureTimeToLastRequestByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+	opts := c.recordOpts(attrs)
+	c.otlpConnectionMetrics.MeasureTimeToLastRequestByte(ctx, duration, opts)
+	c.promConnectionMetrics.MeasureTimeToLastRequestByte(ctx, duration, opts)
+}
+
 func (c *ConnectionMetrics) MeasureTimeToFirstByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
 	opts := c.recordOpts(attrs)
 	c.otlpConnectionMetrics.MeasureTimeToFirstByte(ctx, duration, opts)
 	c.promConnectionMetrics.MeasureTimeToFirstByte(ctx, duration, opts)
+}
+
+func (c *ConnectionMetrics) MeasureTimeToLastByte(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+	opts := c.recordOpts(attrs)
+	c.otlpConnectionMetrics.MeasureTimeToLastByte(ctx, duration, opts)
+	c.promConnectionMetrics.MeasureTimeToLastByte(ctx, duration, opts)
 }
 
 func (c *ConnectionMetrics) recordOpts(attrs []attribute.KeyValue) otelmetric.RecordOption {
