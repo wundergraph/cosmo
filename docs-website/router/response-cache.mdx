@@ -173,7 +173,9 @@ The shape depends on what was fetched, because an entity fetch caches one entry 
 }
 ```
 
-An outer array whose length does not match the entities answered costs the whole response its tags, rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and never forwarded to clients. A merged entity fetch under `engine.enable_multi_fetch` declares no tags, see [Limitations](#limitations).
+An outer array whose length does not match the entities answered costs the whole response its tags,
+rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and
+never forwarded to clients. The router does not record tags from a merged entity fetch., see [Limitations](#limitations).
 
 ## Invalidation
 
