@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import {
   createSubgraph,
   federateSubgraphsFailure,
@@ -25,8 +25,8 @@ import {
 } from '../utils/utils';
 
 describe('@context and @fromContext directives', () => {
-  describe('normalisation', () => {
-    it('preserves @context on an interface type', () => {
+  describe('normalization', () => {
+    test('preserves @context on an interface type', () => {
       const subgraph = createSubgraph(
         'subgraph-context-interface',
         `
@@ -67,7 +67,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('preserves @context on a union type', () => {
+    test('preserves @context on a union type', () => {
       const subgraph = createSubgraph(
         'subgraph-context-union',
         `
@@ -110,7 +110,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('preserves multiple @context declarations on the same type', () => {
+    test('preserves multiple @context declarations on the same type', () => {
       const subgraph = createSubgraph(
         'subgraph-context-repeated',
         `
@@ -143,7 +143,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('preserves a @fromContext selection with type conditions', () => {
+    test('preserves a @fromContext selection with type conditions', () => {
       const subgraph = createSubgraph(
         'subgraph-from-context-type-condition',
         `
@@ -209,7 +209,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('preserves @context declared on a type extension', () => {
+    test('preserves @context declared on a type extension', () => {
       const subgraph = createSubgraph(
         'subgraph-context-type-extension',
         `
@@ -249,7 +249,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('preserves multiple context arguments on the same field', () => {
+    test('preserves multiple context arguments on the same field', () => {
       const subgraph = createSubgraph(
         'subgraph-multiple-context-arguments',
         `
@@ -301,7 +301,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('preserves @context and @fromContext alongside @key on entities', () => {
+    test('preserves @context and @fromContext alongside @key on entities', () => {
       const subgraph = createSubgraph(
         'subgraph-from-context-entity',
         `
@@ -356,7 +356,7 @@ describe('@context and @fromContext directives', () => {
   });
 
   describe('federation', () => {
-    it('strips @context from federated graphs', () => {
+    test('strips @context from federated graphs', () => {
       const subgraph = createSubgraph(
         'subgraph-context-object',
         `
@@ -387,7 +387,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('strips @context from interface types in federated graphs', () => {
+    test('strips @context from interface types in federated graphs', () => {
       const subgraph = createSubgraph(
         'subgraph-context-interface',
         `
@@ -426,7 +426,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('strips @context from union types in federated graphs', () => {
+    test('strips @context from union types in federated graphs', () => {
       const subgraph = createSubgraph(
         'subgraph-context-union',
         `
@@ -467,7 +467,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('strips context arguments from federated graphs', () => {
+    test('strips context arguments from federated graphs', () => {
       const subgraph = createSubgraph(
         'subgraph-from-context-argument',
         `
@@ -508,7 +508,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('strips @context and @fromContext from entities in federated graphs', () => {
+    test('strips @context and @fromContext from entities in federated graphs', () => {
       const subgraph = createSubgraph(
         'subgraph-from-context-entity',
         `
@@ -551,7 +551,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('strips an argument that only one subgraph declares as a context argument', () => {
+    test('strips an argument that only one subgraph declares as a context argument', () => {
       const subgraphA = createSubgraph(
         'subgraph-context-argument',
         `
@@ -609,7 +609,7 @@ describe('@context and @fromContext directives', () => {
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expectedSchema);
     });
 
-    it('strips a context argument regardless of the subgraph order', () => {
+    test('strips a context argument regardless of the subgraph order', () => {
       const subgraphA = createSubgraph(
         'subgraph-nullable-argument',
         `
@@ -667,7 +667,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('returns an error if an argument takes a context in one subgraph and is required in another', () => {
+    test('returns an error if an argument takes a context in one subgraph and is required in another', () => {
       const subgraphA = createSubgraph(
         'subgraph-context-argument',
         `
@@ -710,7 +710,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('strips a context argument that is declared on both an interface field and its implementation', () => {
+    test('strips a context argument that is declared on both an interface field and its implementation', () => {
       const subgraph = createSubgraph(
         'subgraph-context-interface-implementation',
         `
@@ -762,7 +762,7 @@ describe('@context and @fromContext directives', () => {
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expectedSchema);
     });
 
-    it('returns an error if an argument is a context argument on an implementation but not on the interface', () => {
+    test('returns an error if an argument is a context argument on an implementation but not on the interface', () => {
       const subgraph = createSubgraph(
         'subgraph-context-implementation-only',
         `
@@ -816,7 +816,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('returns an error if an argument is a context argument on an interface but not on the implementation', () => {
+    test('returns an error if an argument is a context argument on an interface but not on the implementation', () => {
       const subgraph = createSubgraph(
         'subgraph-context-interface-only',
         `
@@ -870,7 +870,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('returns an error if an argument is required in the subgraph that declares it a context argument', () => {
+    test('returns an error if an argument is required in the subgraph that declares it a context argument', () => {
       const subgraph = createSubgraph(
         'subgraph-required-context-argument',
         `
@@ -900,7 +900,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    it('strips a manually defined ContextFieldValue scalar from federated graphs', () => {
+    test('strips a manually defined ContextFieldValue scalar from federated graphs', () => {
       const subgraph = createSubgraph(
         'subgraph-manual-context-field-value',
         `
@@ -946,7 +946,7 @@ describe('@context and @fromContext directives', () => {
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expectedSchema);
     });
 
-    it('excludes context arguments from client schemas', () => {
+    test('excludes context arguments from client schemas', () => {
       const subgraph = createSubgraph(
         'subgraph-from-context-argument',
         `
