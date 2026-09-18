@@ -6,32 +6,36 @@ sidebarTitle: How It Works
 ---
 
 This page describes how the router plans and executes an operation that contains `@defer`.
-The fetch trees are written in a simplified notation.
+This page writes the fetch trees in a simplified notation.
 They show which queries each subgraph receives.
 
 ## Two phases
 
-The router splits the operation into a primary part and one group of fetches per deferred fragment.
+The router splits the operation into a primary group of fetches, and one group per deferred fragment.
 
 1. **Primary phase.**
-   The router runs the fetches for every field outside deferred fragments, renders the first response part with `data` and `pending`, and sends it.
+   The router runs the fetches for every field outside the deferred fragments.
+   The router renders the initial response with `data` and `pending`, and sends it.
 2. **Deferred phase.**
-   Each deferred fragment is resolved through its own fetches.
-   The result is merged into the same response tree, rendered as an `incremental` entry, and sent as one part.
+   The router resolves each deferred fragment through its own fetches.
+   The router merges the result into the same response tree.
+   The router renders the result as an `incremental` entry and sends one part.
 
-The deferred phase starts after the first part has been written.
-The client therefore never waits for a deferred subgraph before seeing the primary data.
+The deferred phase starts after the router writes the initial response.
+The client therefore never waits for a deferred subgraph before it sees the primary data.
 
 ## Where a deferred fetch starts
 
-A deferred fragment sits somewhere inside the response tree, but a subgraph request has to start at a place the router can query directly.
+A deferred fragment can be at any place inside the response tree.
+A subgraph request must start at a place that the router can query directly.
 There are two such places, called anchors:
 
 - a **root field**, which the router can query again with the same arguments, and
 - an **entity with a key**, which the router can query through `_entities` with a representation built from the key.
 
-The router walks up from the deferred fields to the nearest anchor and builds the deferred fetch from there.
-The following sections show the resulting fetch sequences for the main cases.
+The router finds the nearest anchor above the deferred fields.
+It builds the deferred fetch from that anchor.
+The following sections show the fetch sequences for the main cases.
 All examples use the [Cosmo demo schema](/router/defer/usage#schema-used-on-this-page).
 
 ## Deferred root fields in the same subgraph
@@ -47,18 +51,19 @@ query {
 }
 ```
 
-`employee` and `tag` are both served by the employees subgraph.
+`employee` and `tag` both come from the employees subgraph.
 The nearest anchor for `tag` is the root field.
 
 ```text
 primary
   fetch employees: { employee(id: 1) { id } }
 
-deferred fragment 1, under the path ["employee"]
+deferred fragment 1, at the path ["employee"]
   fetch employees: { employee(id: 1) { tag } }
 ```
 
-The router sends a second query for the same root field that selects only the deferred fields.
+The router sends a second query for the same root field.
+That query selects only the deferred fields.
 The two fetches are independent, and the subgraph resolves `employee(id: 1)` twice.
 
 ## Deferred fields on a non-entity type
@@ -77,13 +82,15 @@ query {
 ```
 
 `Details` is a plain object type without `@key`.
-It cannot be fetched on its own, so the router walks up to `employee`, a root field on the same subgraph, and runs an additional query.
+The router cannot fetch it on its own.
+The nearest anchor is `employee`, a root field on the same subgraph.
+The router runs an additional query for that root field.
 
 ```text
 primary
   fetch employees: { employee(id: 1) { id } }
 
-deferred fragment 1, under the path ["employee"]
+deferred fragment 1, at the path ["employee"]
   fetch employees: { employee(id: 1) { details { forename } } }
 ```
 
@@ -107,14 +114,14 @@ query {
 }
 ```
 
-`hobbies` is served by the hobbies subgraph.
+`hobbies` comes from the hobbies subgraph.
 `Employee` is an entity with `@key(fields: "id")`, so the router can fetch it through `_entities`.
 
 ```text
 primary
   fetch employees: { employee(id: 1) { id details { forename } __typename } }
 
-deferred fragment 1, mounted at ["employee"]
+deferred fragment 1, at the path ["employee"]
   fetch hobbies, depends on the primary fetch:
     _entities(representations: [{ __typename: "Employee", id: 1 }]) {
       ... on Employee { hobbies { __typename } }
@@ -123,9 +130,10 @@ deferred fragment 1, mounted at ["employee"]
 
 Two details matter here:
 
-- The primary fetch selects `__typename` in addition to the fields the client asked for.
-  Key fields that the client did not select are added to the primary fetch as well.
-  They are needed to build the representation and are not returned to the client.
+- The primary fetch selects `__typename` in addition to the fields that the client asked for.
+  The router adds the key fields that the client did not select to the primary fetch as well.
+  The router needs them to build the representation.
+  The router does not return them to the client.
 - The deferred fetch depends on the primary fetch.
   It reads the key values from the response tree that the primary phase already filled.
 
@@ -147,15 +155,17 @@ query RequiresMood {
 }
 ```
 
-`Employee.derivedMood` is served by the employees subgraph and declares `@requires(fields: "currentMood")`.
-`currentMood` is served by the mood subgraph.
-`products` is a root field on the employees subgraph, and `lead` is served by the employees subgraph as well.
+`Employee.derivedMood` comes from the employees subgraph.
+It declares `@requires(fields: "currentMood")`.
+`currentMood` comes from the mood subgraph.
+`products` is a root field on the employees subgraph.
+`lead` comes from the same subgraph.
 
 ```text
 primary
   fetch employees: { products { __typename ... on Consultancy { __typename } } }
 
-deferred fragment 1, mounted at ["products"]
+deferred fragment 1, at the path ["products"]
   sequence
     fetch employees: { products { __typename ... on Consultancy { lead { __typename id } } } }
     for each lead, fetch mood:
@@ -169,7 +179,10 @@ deferred fragment 1, mounted at ["products"]
 ```
 
 The primary fetch only establishes the list and the concrete type of each item.
-The deferred group starts at the root field again, collects the keys of every `lead`, fetches the required `currentMood`, and then fetches `derivedMood` with the required value in the representation.
+The deferred group starts at the root field again.
+It collects the keys of every `lead`.
+It fetches the required `currentMood`.
+It then fetches `derivedMood` with the required value in the representation.
 The whole `@requires` chain runs inside the deferred phase.
 
 ## Sibling and nested fragments
@@ -207,58 +220,68 @@ parallel
 
 - **Siblings run concurrently.**
   Fragments `1` and `3` start at the same time.
-  Their subgraph requests overlap, and each one produces its own response part when it completes.
-  Delivery order is not guaranteed.
+  Their subgraph requests overlap.
+  Each one produces its own response part when it completes.
+  The router does not guarantee the delivery order.
 - **A nested fragment runs after its parent.**
-  Fragment `2` starts when fragment `1` has been delivered.
-  It is announced in the `pending` list of the part that delivers fragment `1`.
+  Fragment `2` starts when the router delivers fragment `1`.
+  The router announces fragment `2` in the `pending` list of the incremental response that delivers fragment `1`.
 - **Dependencies point at data, not at parents.**
   The entity fetch for `hobbies` depends on the primary fetch, which supplies the key.
   Its parent fragment only decides when it may start.
 
-Rendering and sending of parts is serialized, so parts never interleave on the wire.
+The router serializes the rendering and the sending of parts.
+Two parts never interleave in the response stream.
 
 ## Lists
 
-A deferred fragment inside a list field is planned once for the whole list.
-The router records the fragment's mount point at the list field, and the position of each list item becomes the `subPath` of its `incremental` entry.
+The router plans a deferred fragment inside a list field once for the whole list.
+The router records the path of the fragment at the list field.
+The position of each list item becomes the `subPath` of its `incremental` entry.
 
-For a list with three items and a fragment that applies to one of them, the router sends one `pending` entry for the list and one `incremental` entry with `subPath: [0]`.
-For a list where the fragment applies to every item, the part contains one `incremental` entry per item.
+A list can have three items, with a fragment that applies to one of them.
+The router then sends one `pending` entry for the list, and one `incremental` entry with `subPath: [0]`.
+If the fragment applies to every item, the incremental response contains one `incremental` entry per item.
 See [@defer inside a list](/router/defer/usage#defer-inside-a-list) for the response.
 
 ## Field deduplication
 
-When the same field is selected both inside and outside a deferred fragment on the same object, the router keeps the non-deferred selection.
-The field is fetched in the primary phase and appears in the first part.
+The client can select the same field inside and outside a deferred fragment on the same object.
+The router then keeps the non-deferred selection.
+The router fetches the field in the primary phase, and the field appears in the initial response.
 
-When this removes every field of a fragment, the deferred fragment is discarded.
-It is not announced in `pending`, and the response may be a single JSON document if no other fragment remains.
+This can remove every field of a fragment.
+The router then discards the deferred fragment.
+The router does not announce it in `pending`.
+If no other fragment remains, the response is a single JSON document.
 
 ## Errors
 
-Errors follow the same rules as in a regular response, applied per part.
+Errors follow the same rules as in a regular response.
+The router applies those rules per part.
 
-- Errors of non-deferred fields appear in `errors` of the first part.
+- Errors of non-deferred fields appear in `errors` of the initial response.
 - Errors from a deferred fetch that still returns data appear in `errors` of the `incremental` entry:
 
   ```json
   {"incremental":[{"data":{"f1":"hello"},"id":"1","errors":[{"message":"Failed to fetch from Subgraph.","extensions":{"errors":[{"message":"partial failure"}]}}]}],"completed":[{"id":"1"}],"hasNext":false}
   ```
 
-- When a deferred fragment has no data to deliver, for example because a non-nullable field inside it became `null`, the part has no `incremental` entry and the error is attached to the `completed` entry:
+- A deferred fragment can have no data to deliver, for example because a non-nullable field inside it became `null`.
+  The incremental response then has no `incremental` entry, and the router attaches the error to the `completed` entry:
 
   ```json
   {"completed":[{"id":"1","errors":[{"message":"Cannot return null for non-nullable field 'Query.f1'.","path":["f1"]}]}],"hasNext":false}
   ```
 
-- A fragment mounted on an object that became `null` in the first part is never announced.
-  Its `pending` entry is omitted and no part is sent for it.
+- The router never announces a fragment when the object at its path became `null` in the initial response.
+  The router omits its `pending` entry and sends no part for it.
 - A failure in one fragment does not stop its siblings.
-  Every announced fragment is completed, and the stream ends with `hasNext: false`.
+  The router completes every announced fragment, and the stream ends with `hasNext: false`.
 
 ## Caching
 
-The query plan of an operation with `@defer` is cached like any other plan.
-The values of variables used in `@defer(if:)` are part of the cache key, so the deferred and the inlined variant of an operation are two separate plan cache entries.
+The router caches the query plan of an operation with `@defer` like any other plan.
+The values of the variables in `@defer(if:)` belong to the cache key.
+The deferred variant and the inlined variant of an operation are two separate cache entries.
 Cache warming supports operations with `@defer`.
