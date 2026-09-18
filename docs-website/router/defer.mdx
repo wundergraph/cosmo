@@ -11,13 +11,15 @@ When resolving a regular GraphQL response, a GraphQL server waits for every fiel
 The response latency equals the resolve time of the slowest field.
 This can be a problem for large queries with many fields.
 
-One possible solution is to split the query into smaller parts,
-but that means maintaining two queries and making two HTTP calls.
+One solution splits the query into smaller queries.
+The client then maintains two queries and makes two HTTP calls.
 
-With the `@defer` directive, a client marks fragments that may arrive later.
-The router sends all available fields immediately in the initial response, and the rest of the fields are streamed in subsequent chunks within the same multipart HTTP response.
+With the `@defer` directive, a client marks the fragments that may arrive later.
+The router sends every available field in the initial response.
+The router sends the remaining fields in later parts of the same multipart HTTP response.
 
-The client renders the initial data immediately, and fills in the deferred fragments as they arrive.
+The client renders the initial data immediately.
+The client adds each deferred fragment when it arrives.
 The merged result is identical to the result of the same query without `@defer`.
 
 ```graphql
@@ -46,20 +48,23 @@ This query spans three subgraphs:
 - The `hobbies` subgraph returns `hobbies`.
 
 Without `@defer`, the client waits for all three subgraphs.
-With `@defer`, the client receives everything except `hobbies` first, and `hobbies` in a second part.
+With `@defer`, the client receives everything except `hobbies` in the initial response.
+The client receives `hobbies` in an incremental response.
 
 ## Specification status
 
 `@defer` is not yet part of a released GraphQL specification.
-The router implements the [Incremental Delivery spec draft](https://github.com/graphql/graphql-spec/pull/1110), which is at RFC stage 2 of the GraphQL specification process.
-The response format is the `pending`, `incremental`, and `completed` format described in the draft.
+The router implements the [Incremental Delivery spec draft](https://github.com/graphql/graphql-spec/pull/1110).
+The draft is at RFC stage 2 of the GraphQL specification process.
+The draft describes the response format as the `pending`, `incremental`, and `completed` format.
 
-The same format is implemented by graphql-js `17.0.0-alpha.9` and by Apollo Client 4.1 through its `GraphQL17Alpha9Handler`.
+graphql-js `17.0.0-alpha.9` and Apollo Client 4.1 implement the same format.
+Apollo Client implements it through its `GraphQL17Alpha9Handler`.
 See [Using @defer](/router/defer/usage) for client setup.
 
 ## How to enable it
 
-`@defer` support is disabled by default.
+The router disables `@defer` support by default.
 To enable it, add the following to the router configuration:
 
 ```yaml config.yaml
@@ -85,9 +90,11 @@ The router accepts these forms:
 - `multipart/mixed` without a format version.
 - `multipart/mixed;incrementalSpec=v0.2`, the format version the router implements.
 - The wildcards `multipart/*` and `*/*`.
-- No `Accept` header at all, which is treated as accepting everything.
+- No `Accept` header.
+  The router then treats the request as one that accepts every form.
 
-When the operation contains an active `@defer` and the `Accept` header allows none of these, the router answers with status 200 and a GraphQL error:
+The `Accept` header can allow none of these forms.
+If the operation contains an active `@defer`, the router answers with status 200 and a GraphQL error:
 
 ```json
 {
@@ -102,8 +109,10 @@ When the operation contains an active `@defer` and the `Accept` header allows no
 }
 ```
 
-A client that asks for a different incremental delivery format, such as `multipart/mixed;deferSpec=20220824`, the older format used by Apollo Router, would parse the response incorrectly and lose the deferred data.
-The router rejects such a request with status 200 and the error code `DEFER_UNSUPPORTED_SPEC`:
+A client can ask for a different incremental delivery format, such as `multipart/mixed;deferSpec=20220824`.
+Apollo Router uses that older format.
+Such a client parses the response incorrectly and loses the deferred data.
+The router rejects the request with status 200 and the error code `DEFER_UNSUPPORTED_SPEC`:
 
 ```json
 {
@@ -118,11 +127,12 @@ The router rejects such a request with status 200 and the error code `DEFER_UNSU
 }
 ```
 
-A named format wins over a wildcard.
-`Accept: multipart/mixed;deferSpec=20220824, */*` is rejected, because the client stated which format it can parse.
+A named format takes priority over a wildcard.
+The router rejects `Accept: multipart/mixed;deferSpec=20220824, */*`, because the client stated which format it can parse.
 
-An operation with all `@defer` directives disabled through `@defer(if: false)` will be executed as a regular operation.
-The router answers it with a single JSON response regardless of the `Accept` header.
+An operation can disable all its `@defer` directives through `@defer(if: false)`.
+The router executes such an operation as a regular operation.
+The router answers it with a single JSON response, whatever the `Accept` header contains.
 
 ## Response format
 
@@ -135,15 +145,17 @@ Cache-Control: no-cache
 X-Accel-Buffering: no
 ```
 
-`Transfer-Encoding: chunked` is sent on HTTP/1.1 only.
+The router sends `Transfer-Encoding: chunked` on HTTP/1.1 only.
 HTTP/2 forbids the header and frames the stream itself.
 
-Each part starts with the boundary `--graphql`, a `Content-Type: application/json` header, and an empty line, followed by one JSON payload.
+Each part starts with the boundary `--graphql`, a `Content-Type: application/json` header, and an empty line.
+One JSON payload follows.
 The stream ends with the closing boundary `--graphql--`.
 Line breaks inside the framing are `\r\n`.
 
 Every part carries a plain GraphQL payload.
-This differs from [multipart subscriptions](/router/subscriptions/multipart-http-requests), where each part wraps the result in a `payload` object.
+This differs from [multipart subscriptions](/router/subscriptions/multipart-http-requests).
+There, each part wraps the result in a `payload` object.
 
 The query above produces this response:
 
@@ -168,21 +180,24 @@ Content-Type: application/json
 | `data` | initial response | All fields outside deferred fragments. |
 | `errors` | initial response | Errors of the non-deferred fields, as in a regular response. |
 | `extensions` | initial response | Extensions, as in a regular response. |
-| `pending` | initial response, and incremental parts for deferred fragments | Announces a deferred fragment. Each entry has an `id`, the `path` of the object where the fragment was used, and an optional `label`. |
+| `pending` | initial and incremental responses | Announces a deferred fragment. Each entry has an `id`, the `path` where the fragment applies, and an optional `label`. |
 | `incremental` | incremental response | Delivered fragment data. Each entry has `data`, the `id` of its `pending` entry, an optional `subPath`, and optional `errors`. |
-| `completed` | incremental response | Fragments that were fully delivered in the current incremental response. Each entry has an `id` and optional `errors`. |
+| `completed` | incremental response | Fragments that the router delivered in full in the current incremental response. Each entry has an `id` and optional `errors`. |
 | `hasNext` | every part | `true` while more parts follow, `false` on the last part. |
 
-A client merges an `incremental` entry into its result at the location `pending[id].path` followed by `incremental.subPath`.
-The `subPath` is present when the fragment sits inside a list, where it carries the list index, or when the delivered object is nested deeper than the fragment's path, as in the [duplicated fields example](/router/defer/usage#fields-selected-both-inside-and-outside-defer).
+A client merges an `incremental` entry into its result at the location `pending[id].path`, followed by `incremental.subPath`.
+The router adds a `subPath` in two cases.
+The fragment is inside a list, and the `subPath` carries the list index.
+The delivered object is deeper than the path of the fragment, as in the [duplicated fields example](/router/defer/usage#fields-selected-both-inside-and-outside-defer).
 
-A nested `@defer` is announced in the `pending` list of the part that delivers its parent fragment.
+The router announces a nested `@defer` in the `pending` list of the incremental response that delivers its parent fragment.
 
 ## Proxies and load balancers
 
-Incremental delivery relies on the client receiving each part as soon as the router writes it.
-Every intermediary between the router and the client must pass response chunks through without buffering.
-The router sets `X-Accel-Buffering: no`, which disables buffering in NGINX and compatible proxies.
+Incremental delivery needs the client to receive each part as soon as the router writes it.
+Every intermediary between the router and the client must pass each part through without buffering.
+The router sets `X-Accel-Buffering: no`.
+This header disables buffering in NGINX and in compatible proxies.
 Check ingress controllers, CDNs, and compression settings separately.
 
 ## Next steps

@@ -1,7 +1,7 @@
 ---
 title: "@defer"
 icon: "forward-step"
-description: "The @defer directive marks a fragment whose fields are delivered after the initial response, in additional parts of the same HTTP response."
+description: "The @defer directive marks a fragment that the router delivers after the initial response, in a later part of the same HTTP response."
 ---
 
 ## Definition
@@ -17,21 +17,23 @@ directive @defer(
 
 | Argument | Type       | Default | Description                                                                                                        |
 | -------- | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
-| `if`     | `Boolean!` | `true`  | Controls whether the fragment is deferred. Accepts a literal or a variable. With `false`, the fragment is delivered in the initial response. |
-| `label`  | `String`   |         | A static string that identifies the fragment in the response. It is returned on the `pending` entry of the fragment. |
+| `if`     | `Boolean!` | `true`  | Controls whether the router defers the fragment. Accepts a literal or a variable. With `false`, the router delivers the fragment in the initial response. |
+| `label`  | `String`   |         | A static string that identifies the fragment in the response. The router returns it on the `pending` entry of the fragment. |
 
 ## Overview
 
 `@defer` is an executable directive.
 Clients use it in operations, not in subgraph schemas.
 It marks a fragment whose fields the client does not need in the initial response.
-The router returns all other fields first and delivers the deferred fragment in a later part of a `multipart/mixed` response.
+The router returns all other fields in the initial response.
+The router delivers the deferred fragment in a later part of a `multipart/mixed` response.
 
-The directive is provided by the router once `engine.enable_defer` is set to `true`.
-No subgraph changes and no composition changes are needed.
+The router provides the directive when you set `engine.enable_defer` to `true`.
+You change no subgraph and no composition.
 See [Defer](/router/defer) for the router configuration and the response format.
 
-`@defer` is defined by the [Incremental Delivery spec draft](https://github.com/graphql/graphql-spec/pull/1110), which is at RFC stage 2 of the GraphQL specification process.
+The [Incremental Delivery spec draft](https://github.com/graphql/graphql-spec/pull/1110) defines `@defer`.
+The draft is at RFC stage 2 of the GraphQL specification process.
 The router follows the response format of that draft.
 
 ### Supported locations
@@ -84,7 +86,8 @@ query ProductPage {
 ```
 
 The response has two parts.
-The first part carries `id` and `name` and announces the deferred fragment:
+The initial response carries `id` and `name`.
+It announces the deferred fragment:
 
 ```json
 {
@@ -94,7 +97,7 @@ The first part carries `id` and `name` and announces the deferred fragment:
 }
 ```
 
-The second part delivers the fragment and completes it:
+The incremental response delivers the fragment and completes it:
 
 ```json
 {
@@ -143,7 +146,7 @@ query ProductPage {
 }
 ```
 
-The label is returned on the `pending` entry:
+The router returns the label on the `pending` entry:
 
 ```json
 {
@@ -168,23 +171,31 @@ query ProductPage($deferReviews: Boolean!) {
 }
 ```
 
-With `deferReviews: true`, `reviews` arrives in a second part.
-With `deferReviews: false`, `reviews` is part of the initial response and the router sends a single JSON response.
+With `deferReviews: true`, `reviews` arrives in an incremental response.
+With `deferReviews: false`, `reviews` belongs to the initial response.
+The router then sends a single JSON response.
 
 ## Rules
 
-- A `label` is a static string. Variables are not accepted as labels.
+- A `label` is a static string.
+  The router does not accept a variable as a label.
 - Labels must be unique across all `@defer` and `@stream` directives in the document.
-- A field selected both inside and outside a deferred fragment on the same object is delivered in the initial response. The deferred copy is dropped.
+- The client can select the same field inside and outside a deferred fragment on the same object.
+  The router then delivers the field in the initial response and drops the deferred copy.
 - A deferred fragment without field selections has no effect.
-- `if` accepts a literal or a variable. The variable value is resolved per request and takes part in the router's query plan cache key.
+- `if` accepts a literal or a variable.
+  The router resolves the variable value per request.
+  The value belongs to the cache key of the query plan.
 
 ## Federation behavior
 
-The router fully handles `@defer` itself.
-It plans the deferred fragment as a separate set of subgraph fetches that run after the initial response has been sent.
+The router handles `@defer` itself.
+It plans the deferred fragment as a separate set of subgraph fetches.
+Those fetches run after the router sends the initial response.
 
-When a deferred fragment selects fields of an entity that another subgraph owns, the router fetches the entity key in the initial phase and uses it as the representation for the deferred entity fetch.
+A deferred fragment can select fields of an entity that another subgraph owns.
+The router then fetches the entity key in the primary phase.
+It uses that key as the representation for the deferred entity fetch.
 Subgraphs never receive the `@defer` directive.
 
 See [How the Router Executes @defer](/router/defer/how-it-works) for the execution model.
