@@ -1,0 +1,469 @@
+---
+title: "Using @defer"
+description: "Query patterns and client setup for incremental delivery with the Cosmo Router."
+icon: "code"
+sidebarTitle: Usage and Examples
+---
+
+This page shows the common `@defer` patterns and the response parts that each one produces.
+The responses come from the router's test suite, so they show exactly what the router sends.
+[Defer](/router/defer#response-format) describes the multipart framing.
+This page shows only the JSON payload of each part.
+
+## Schema used on this page
+
+The examples run against the Cosmo demo, a federated graph with an `Employee` entity spread over several subgraphs.
+
+| Field | Subgraph |
+|-------|----------|
+| `Query.employee`, `Query.teammates`, `Query.products` | employees |
+| `Employee.id`, `Employee.details`, `Employee.role`, `Employee.derivedMood` | employees |
+| `Employee.hobbies` | hobbies |
+| `Employee.currentMood` | mood |
+| `Employee.products` | products |
+| `Consultancy.lead` | employees |
+
+`Employee.derivedMood` declares `@requires(fields: "currentMood")`, so it depends on the mood subgraph.
+
+## Defer a fragment from another subgraph
+
+This is the most common pattern.
+The router returns the fields from a fast subgraph first.
+The fields from a slow subgraph follow.
+
+```graphql
+query {
+  employee(id: 1) {
+    id
+    details {
+      forename
+      location { language }
+    }
+    ... @defer {
+      hobbies { __typename }
+    }
+  }
+  teammates(team: OPERATIONS) {
+    id
+    details { forename }
+    products
+  }
+}
+```
+
+Initial response:
+
+```json
+{"data":{"employee":{"id":1,"details":{"forename":"Jens","location":{"language":"German"}}},"teammates":[{"id":4,"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"details":{"forename":"Alexandra"},"products":["FINANCE"]}]},"pending":[{"id":"1","path":["employee"]}],"hasNext":true}
+```
+
+Incremental response:
+
+```json
+{"incremental":[{"data":{"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":false}
+```
+
+The `pending` entry tells the client that the path of fragment `1` is `["employee"]`.
+The `incremental` entry delivers `hobbies` for that path.
+The position of the `@defer` fragment inside the selection set does not matter.
+A fragment before `details` produces the same two parts.
+
+## Defer the whole query
+
+A `@defer` fragment at the root selection set defers every field.
+The initial response is then empty.
+This is rarely useful on its own.
+The router allows it, because `if` variables can turn individual fragments on and off.
+Different variable values then produce different response shapes.
+
+```graphql
+query {
+  ... @defer {
+    employee(id: 1) {
+      id
+      details {
+        forename
+        location { language }
+      }
+      hobbies { __typename }
+    }
+    teammates(team: OPERATIONS) {
+      id
+      details { forename }
+      products
+    }
+  }
+}
+```
+
+Initial response:
+
+```json
+{"data":{},"pending":[{"id":"1","path":[]}],"hasNext":true}
+```
+
+Incremental response:
+
+```json
+{"incremental":[{"data":{"employee":{"id":1,"details":{"forename":"Jens","location":{"language":"German"}},"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"teammates":[{"id":4,"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"details":{"forename":"Alexandra"},"products":["FINANCE"]}]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":false}
+```
+
+The initial response arrives as soon as the router validates and plans the operation.
+`data` is an empty object, and `path` is empty, because the deferred fragment is on the root.
+
+## Nested @defer
+
+A client can nest a fragment inside another deferred fragment.
+The router delivers the inner fragment after the outer one.
+
+```graphql
+query {
+  employee(id: 1) {
+    id
+    ... @defer {
+      details {
+        forename
+        location { language }
+      }
+      ... @defer {
+        hobbies { __typename }
+      }
+    }
+  }
+  teammates(team: OPERATIONS) {
+    id
+    details { forename }
+    products
+  }
+}
+```
+
+Initial response:
+
+```json
+{"data":{"employee":{"id":1},"teammates":[{"id":4,"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"details":{"forename":"Alexandra"},"products":["FINANCE"]}]},"pending":[{"id":"1","path":["employee"]}],"hasNext":true}
+```
+
+First incremental response:
+
+```json
+{"incremental":[{"data":{"details":{"forename":"Jens","location":{"language":"German"}}},"id":"1"}],"completed":[{"id":"1"}],"pending":[{"id":"2","path":["employee"]}],"hasNext":true}
+```
+
+Second incremental response:
+
+```json
+{"incremental":[{"data":{"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"id":"2"}],"completed":[{"id":"2"}],"hasNext":false}
+```
+
+The initial response announces only fragment `1`.
+The router announces fragment `2` in the first incremental response, together with the delivery of its parent.
+A client therefore updates its `pending` map from every part, not only from the first.
+
+## Sibling @defer fragments
+
+Two fragments at the same level are independent.
+The router delivers each one in its own part as soon as it is ready.
+
+```graphql
+query {
+  employee(id: 1) {
+    id
+    ... @defer { details { forename location { language } } }
+    ... @defer { hobbies { __typename } }
+  }
+}
+```
+
+The initial response announces both fragments:
+
+```json
+{"data":{"employee":{"id":1}},"pending":[{"id":"1","path":["employee"]},{"id":"2","path":["employee"]}],"hasNext":true}
+```
+
+Two more parts follow, one per fragment.
+The part that completes the last outstanding fragment carries `hasNext: false`.
+The fragments run concurrently.
+The arrival order of the two parts depends on which subgraph answers first.
+A client matches a part to a fragment by `id`, never by arrival order.
+
+## @defer inside a list
+
+The router announces a fragment inside a list field once, and delivers it once for all list items.
+Each item gets its own `incremental` entry, with its own `subPath`.
+
+```graphql
+query RequiresMood {
+  products {
+    ... on Consultancy {
+      ... @defer {
+        lead {
+          __typename
+          id
+          derivedMood
+        }
+      }
+    }
+  }
+}
+```
+
+Initial response:
+
+```json
+{"data":{"products":[{},{},{}]},"pending":[{"id":"1","path":["products"]}],"hasNext":true}
+```
+
+Incremental response:
+
+```json
+{"incremental":[{"data":{"lead":{"__typename":"Employee","id":1,"derivedMood":"HAPPY"}},"id":"1","subPath":[0]}],"completed":[{"id":"1"}],"hasNext":false}
+```
+
+`products` has three items, and one of them is a `Consultancy`.
+The `pending` entry points at the list, `["products"]`.
+The `incremental` entry adds `[0]` as `subPath`, so the client merges it into `products[0]`.
+The list items appear as `{}` in the initial response, because the fragment covers all of their selected fields.
+
+A list with several matching items produces several `incremental` entries in the same part.
+Each entry carries its own index.
+
+## Fields selected both inside and outside @defer
+
+The router delivers a field selected outside a deferred fragment in the initial response.
+This also applies when the same field is inside the fragment.
+
+```graphql
+query {
+  employee(id: 1) {
+    id
+    details { forename }
+    ... @defer {
+      details { location { language } }
+      hobbies { __typename }
+    }
+  }
+  teammates(team: OPERATIONS) {
+    id
+    details { forename }
+    products
+  }
+}
+```
+
+Initial response:
+
+```json
+{"data":{"employee":{"id":1,"details":{"forename":"Jens"}},"teammates":[{"id":4,"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"details":{"forename":"Alexandra"},"products":["FINANCE"]}]},"pending":[{"id":"1","path":["employee"]}],"hasNext":true}
+```
+
+Incremental response:
+
+```json
+{"incremental":[{"data":{"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"id":"1"},{"data":{"location":{"language":"German"}},"id":"1","subPath":["details"]}],"completed":[{"id":"1"}],"hasNext":false}
+```
+
+`details.forename` is in the initial response.
+The router defers `details.location`.
+It arrives with `subPath: ["details"]`, because it belongs to an object below the path of the fragment.
+One fragment can therefore produce several `incremental` entries in one part.
+
+## Named fragments
+
+`@defer` works on fragment spreads and inside fragment bodies.
+
+```graphql
+query {
+  employees {
+    id
+    ...EmployeeProfile @defer
+  }
+}
+
+fragment EmployeeProfile on Employee {
+  details {
+    forename
+    surname
+  }
+  hobbies {
+    ... on Gaming { name }
+    ... on Programming { languages }
+  }
+}
+```
+
+This is equivalent to an inline fragment with the same selections.
+The initial response carries the list with `id` only.
+It announces one fragment for the whole list:
+
+```json
+{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]},"pending":[{"id":"1","path":["employees"]}],"hasNext":true}
+```
+
+The incremental response contains one `incremental` entry per employee.
+Each entry carries its list index as `subPath`.
+
+A `@defer` inside the fragment body, for example around `hobbies`, has the same effect as an inline fragment at that position in every spread.
+
+## Labels
+
+A label names a fragment in the response.
+
+```graphql
+query {
+  employee(id: 1) {
+    id
+    ... @defer(label: "hobbies") {
+      hobbies { __typename }
+    }
+  }
+}
+```
+
+Initial response:
+
+```json
+{"data":{"employee":{"id":1}},"pending":[{"id":"1","path":["employee"],"label":"hobbies"}],"hasNext":true}
+```
+
+Incremental response:
+
+```json
+{"incremental":[{"data":{"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":false}
+```
+
+The router returns the label on the `pending` entry only.
+`incremental` and `completed` entries reference the fragment by `id`.
+A label is a static string.
+A label must be unique across all `@defer` and `@stream` directives in the document.
+
+## Conditional @defer
+
+The `if` argument turns deferral on and off per request.
+
+```graphql
+query EmployeePage($deferHobbies: Boolean!) {
+  employee(id: 1) {
+    id
+    ... @defer(if: $deferHobbies) {
+      hobbies { __typename }
+    }
+  }
+}
+```
+
+With `{"deferHobbies": true}`, the response is a multipart response with two parts.
+With `{"deferHobbies": false}`, the router returns one JSON response with `Content-Type: application/json`.
+`data` then contains `hobbies`:
+
+```json
+{"data":{"employee":{"id":1,"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]}}}
+```
+
+The variable value belongs to the cache key of the query plan.
+The router plans each variant once and caches them separately.
+The [cache warmer](/concepts/cache-warmer) accepts operations with `@defer`.
+
+## Header propagation
+
+[Header forwarding rules](/router/proxy-capabilities/subgraph-request-header-operations) apply to every subgraph request of an operation.
+They also apply to the requests for deferred fragments.
+A header from the client request reaches the deferred subgraphs and the primary subgraphs in the same way.
+
+## Clients
+
+### curl
+
+```bash
+curl -N http://localhost:3002/graphql \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: multipart/mixed' \
+  -d '{"query":"{ employee(id: 1) { id ... @defer { hobbies { __typename } } } }"}'
+```
+
+`-N` disables output buffering, so curl prints each part when it arrives.
+
+The output shows the raw multipart stream:
+
+```text
+--graphql
+Content-Type: application/json
+
+{"data":{"employee":{"id":1}},"pending":[{"id":"1","path":["employee"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":false}
+
+--graphql--
+```
+
+Add `-i` to print the response headers as well, including `Content-Type: multipart/mixed; boundary="graphql"; incrementalSpec=v0.2`.
+
+### fetch
+
+The browser `fetch` API exposes the response as a stream.
+The following example reads the stream and splits it at the part boundary.
+It prints the JSON payload of each part when the part arrives.
+
+```js
+const response = await fetch("http://localhost:3002/graphql", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", Accept: "multipart/mixed" },
+  body: JSON.stringify({
+    query: "{ employee(id: 1) { id ... @defer { hobbies { __typename } } } }",
+  }),
+});
+
+const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+let buffer = "";
+for (;;) {
+  const { value, done } = await reader.read();
+  if (done) break;
+  buffer += value;
+  const parts = buffer.split("\r\n--graphql");
+  buffer = parts.pop();
+  for (const part of parts) {
+    const payload = part.slice(part.indexOf("\r\n\r\n") + 4).trim();
+    if (payload) console.log(JSON.parse(payload));
+  }
+}
+```
+
+The console shows the two payloads from the curl example above.
+The stream ends when the reader reports `done`.
+To build the complete result, merge each `incremental` entry at `pending[id].path`, followed by `subPath`.
+[Payload fields](/router/defer#payload-fields) describes this merge.
+
+### Apollo Client
+
+Apollo Client 4.1 and newer supports the response format the router sends.
+Configure the `GraphQL17Alpha9Handler` as the incremental handler:
+
+```ts
+import { ApolloClient, HttpLink, InMemoryCache } from "@apollo/client";
+import { GraphQL17Alpha9Handler } from "@apollo/client/incremental";
+
+const client = new ApolloClient({
+  cache: new InMemoryCache(),
+  link: new HttpLink({ uri: "http://localhost:3002/graphql" }),
+  incrementalHandler: new GraphQL17Alpha9Handler(),
+});
+```
+
+The handler sends `Accept: multipart/mixed;incrementalSpec=v0.2` for operations that contain `@defer`.
+The router accepts that header.
+A query with `@defer` then delivers partial data to `useQuery` and `watchQuery` as parts arrive.
+`dataState` moves from `streaming` to `complete`.
+
+Apollo Client rewrites the operation before it sends the operation.
+It adds a generated `label` such as `ac_0` to every `@defer` fragment.
+The router returns those labels on the corresponding `pending` entries.
+
+The `Defer20220824Handler` implements the older format of Apollo Router.
+It sends `Accept: multipart/mixed;deferSpec=20220824`.
+That handler merges the deferred data at the wrong place.
+The router therefore rejects such a request with the error code `DEFER_UNSUPPORTED_SPEC`.
+See [Send a request](/router/defer#send-a-request) for the error body.
+Use `GraphQL17Alpha9Handler`.
