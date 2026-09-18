@@ -24,156 +24,27 @@ import {
   SCHEMA_QUERY_DEFINITION,
 } from '../utils/utils';
 
-const subgraphWithContextOnInterface = createSubgraph(
-  'subgraph-context-interface',
-  `
-    type Query {
-      node: Node!
-    }
-
-    interface Node @context(name: "nodeContext") {
-      id: ID!
-    }
-
-    type User implements Node {
-      id: ID!
-      name: String!
-    }
-  `,
-);
-
-const subgraphWithContextOnUnion = createSubgraph(
-  'subgraph-context-union',
-  `
-    type Query {
-      account: Account!
-    }
-
-    union Account @context(name: "accountContext") = User | Organisation
-
-    type User {
-      id: ID!
-    }
-
-    type Organisation {
-      id: ID!
-    }
-  `,
-);
-
-const subgraphWithFromContextOnArgument = createSubgraph(
-  'subgraph-from-context-argument',
-  `
-    type Query {
-      user: User!
-    }
-
-    type User @context(name: "userContext") {
-      id: ID!
-      locale: String!
-      profile: Profile!
-    }
-
-    type Profile {
-      greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
-    }
-  `,
-);
-
-const subgraphWithFromContextOnEntity = createSubgraph(
-  'subgraph-from-context-entity',
-  `
-    type Query {
-      user: User!
-    }
-
-    type User @key(fields: "id") @context(name: "userContext") {
-      id: ID!
-      locale: String!
-      profile: Profile!
-    }
-
-    type Profile @key(fields: "id") {
-      id: ID!
-      greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
-    }
-  `,
-);
-
-const subgraphWithContextArgument = createSubgraph(
-  'subgraph-context-argument',
-  `
-    type Query {
-      member(id: ID!): Member
-    }
-
-    type Member @key(fields: "id") @context(name: "memberContext") {
-      id: ID!
-      plan: String!
-    }
-
-    type Wallet @key(fields: "id") @shareable {
-      id: ID!
-      apply(plan: String @fromContext(field: "$memberContext { plan }")): Int!
-    }
-  `,
-);
-
-const subgraphWithNullableArgument = createSubgraph(
-  'subgraph-nullable-argument',
-  `
-    type Query {
-      noop: Int
-    }
-
-    type Wallet @key(fields: "id") @shareable {
-      id: ID!
-      apply(plan: String): Int!
-    }
-  `,
-);
-
-const SCHEMA_WITHOUT_CONTEXT_ARGUMENT = normalizeString(`
-  ${SCHEMA_QUERY_DEFINITION}
-
-  type Profile {
-    greeting: String!
-  }
-
-  type Query {
-    user: User!
-  }
-
-  type User {
-    id: ID!
-    locale: String!
-    profile: Profile!
-  }
-`);
-
-const FEDERATED_WALLET_SCHEMA = normalizeString(`
-  ${SCHEMA_QUERY_DEFINITION}
-
-  type Member {
-    id: ID!
-    plan: String!
-  }
-
-  type Query {
-    member(id: ID!): Member
-    noop: Int
-  }
-
-  type Wallet {
-    apply: Int!
-    id: ID!
-  }
-`);
-
 describe('@context and @fromContext directives', () => {
   describe('normalisation', () => {
     it('preserves @context on an interface type', () => {
-      const { schema } = normalizeSubgraphSuccess(subgraphWithContextOnInterface, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const subgraph = createSubgraph(
+        'subgraph-context-interface',
+        `
+          type Query {
+            node: Node!
+          }
+
+          interface Node @context(name: "nodeContext") {
+            id: ID!
+          }
+
+          type User implements Node {
+            id: ID!
+            name: String!
+          }
+        `,
+      );
+      const { schema } = normalizeSubgraphSuccess(subgraph, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(`
           ${SCHEMA_QUERY_DEFINITION}
@@ -197,7 +68,25 @@ describe('@context and @fromContext directives', () => {
     });
 
     it('preserves @context on a union type', () => {
-      const { schema } = normalizeSubgraphSuccess(subgraphWithContextOnUnion, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const subgraph = createSubgraph(
+        'subgraph-context-union',
+        `
+          type Query {
+            account: Account!
+          }
+
+          union Account @context(name: "accountContext") = User | Organisation
+
+          type User {
+            id: ID!
+          }
+
+          type Organisation {
+            id: ID!
+          }
+        `,
+      );
+      const { schema } = normalizeSubgraphSuccess(subgraph, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(`
           ${SCHEMA_QUERY_DEFINITION}
@@ -413,7 +302,26 @@ describe('@context and @fromContext directives', () => {
     });
 
     it('preserves @context and @fromContext alongside @key on entities', () => {
-      const { schema } = normalizeSubgraphSuccess(subgraphWithFromContextOnEntity, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const subgraph = createSubgraph(
+        'subgraph-from-context-entity',
+        `
+          type Query {
+            user: User!
+          }
+
+          type User @key(fields: "id") @context(name: "userContext") {
+            id: ID!
+            locale: String!
+            profile: Profile!
+          }
+
+          type Profile @key(fields: "id") {
+            id: ID!
+            greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
+          }
+        `,
+      );
+      const { schema } = normalizeSubgraphSuccess(subgraph, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(`
           ${SCHEMA_QUERY_DEFINITION}
@@ -480,10 +388,24 @@ describe('@context and @fromContext directives', () => {
     });
 
     it('strips @context from interface types in federated graphs', () => {
-      const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphWithContextOnInterface],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
+      const subgraph = createSubgraph(
+        'subgraph-context-interface',
+        `
+          type Query {
+            node: Node!
+          }
+
+          interface Node @context(name: "nodeContext") {
+            id: ID!
+          }
+
+          type User implements Node {
+            id: ID!
+            name: String!
+          }
+        `,
       );
+      const { federatedGraphSchema } = federateSubgraphsSuccess([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(`
           ${SCHEMA_QUERY_DEFINITION}
@@ -505,10 +427,25 @@ describe('@context and @fromContext directives', () => {
     });
 
     it('strips @context from union types in federated graphs', () => {
-      const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphWithContextOnUnion],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
+      const subgraph = createSubgraph(
+        'subgraph-context-union',
+        `
+          type Query {
+            account: Account!
+          }
+
+          union Account @context(name: "accountContext") = User | Organisation
+
+          type User {
+            id: ID!
+          }
+
+          type Organisation {
+            id: ID!
+          }
+        `,
       );
+      const { federatedGraphSchema } = federateSubgraphsSuccess([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(`
           ${SCHEMA_QUERY_DEFINITION}
@@ -531,18 +468,67 @@ describe('@context and @fromContext directives', () => {
     });
 
     it('strips context arguments from federated graphs', () => {
-      const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphWithFromContextOnArgument],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
+      const subgraph = createSubgraph(
+        'subgraph-from-context-argument',
+        `
+          type Query {
+            user: User!
+          }
+
+          type User @context(name: "userContext") {
+            id: ID!
+            locale: String!
+            profile: Profile!
+          }
+
+          type Profile {
+            greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
+          }
+        `,
       );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(SCHEMA_WITHOUT_CONTEXT_ARGUMENT);
+      const { federatedGraphSchema } = federateSubgraphsSuccess([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          type Profile {
+            greeting: String!
+          }
+
+          type Query {
+            user: User!
+          }
+
+          type User {
+            id: ID!
+            locale: String!
+            profile: Profile!
+          }
+        `),
+      );
     });
 
     it('strips @context and @fromContext from entities in federated graphs', () => {
-      const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphWithFromContextOnEntity],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
+      const subgraph = createSubgraph(
+        'subgraph-from-context-entity',
+        `
+          type Query {
+            user: User!
+          }
+
+          type User @key(fields: "id") @context(name: "userContext") {
+            id: ID!
+            locale: String!
+            profile: Profile!
+          }
+
+          type Profile @key(fields: "id") {
+            id: ID!
+            greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
+          }
+        `,
       );
+      const { federatedGraphSchema } = federateSubgraphsSuccess([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(`
           ${SCHEMA_QUERY_DEFINITION}
@@ -566,24 +552,141 @@ describe('@context and @fromContext directives', () => {
     });
 
     it('strips an argument that only one subgraph declares as a context argument', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-context-argument',
+        `
+          type Query {
+            member(id: ID!): Member
+          }
+
+          type Member @key(fields: "id") @context(name: "memberContext") {
+            id: ID!
+            plan: String!
+          }
+
+          type Wallet @key(fields: "id") @shareable {
+            id: ID!
+            apply(plan: String @fromContext(field: "$memberContext { plan }")): Int!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-nullable-argument',
+        `
+          type Query {
+            noop: Int
+          }
+
+          type Wallet @key(fields: "id") @shareable {
+            id: ID!
+            apply(plan: String): Int!
+          }
+        `,
+      );
       const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphWithContextArgument, subgraphWithNullableArgument],
+        [subgraphA, subgraphB],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(FEDERATED_WALLET_SCHEMA);
-      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(FEDERATED_WALLET_SCHEMA);
+      const expectedSchema = normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+
+        type Member {
+          id: ID!
+          plan: String!
+        }
+
+        type Query {
+          member(id: ID!): Member
+          noop: Int
+        }
+
+        type Wallet {
+          apply: Int!
+          id: ID!
+        }
+      `);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expectedSchema);
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expectedSchema);
     });
 
     it('strips a context argument regardless of the subgraph order', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-nullable-argument',
+        `
+          type Query {
+            noop: Int
+          }
+
+          type Wallet @key(fields: "id") @shareable {
+            id: ID!
+            apply(plan: String): Int!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-context-argument',
+        `
+          type Query {
+            member(id: ID!): Member
+          }
+
+          type Member @key(fields: "id") @context(name: "memberContext") {
+            id: ID!
+            plan: String!
+          }
+
+          type Wallet @key(fields: "id") @shareable {
+            id: ID!
+            apply(plan: String @fromContext(field: "$memberContext { plan }")): Int!
+          }
+        `,
+      );
       const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphWithNullableArgument, subgraphWithContextArgument],
+        [subgraphA, subgraphB],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(FEDERATED_WALLET_SCHEMA);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          type Member {
+            id: ID!
+            plan: String!
+          }
+
+          type Query {
+            member(id: ID!): Member
+            noop: Int
+          }
+
+          type Wallet {
+            apply: Int!
+            id: ID!
+          }
+        `),
+      );
     });
 
     it('returns an error if an argument takes a context in one subgraph and is required in another', () => {
-      const subgraph = createSubgraph(
+      const subgraphA = createSubgraph(
+        'subgraph-context-argument',
+        `
+          type Query {
+            member(id: ID!): Member
+          }
+
+          type Member @key(fields: "id") @context(name: "memberContext") {
+            id: ID!
+            plan: String!
+          }
+
+          type Wallet @key(fields: "id") @shareable {
+            id: ID!
+            apply(plan: String @fromContext(field: "$memberContext { plan }")): Int!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
         'subgraph-required-argument',
         `
           type Query {
@@ -596,10 +699,7 @@ describe('@context and @fromContext directives', () => {
           }
         `,
       );
-      const { errors } = federateSubgraphsFailure(
-        [subgraphWithContextArgument, subgraph],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const { errors } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         contextArgumentRequiredError(
@@ -825,16 +925,66 @@ describe('@context and @fromContext directives', () => {
         [subgraph],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(SCHEMA_WITHOUT_CONTEXT_ARGUMENT);
-      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(SCHEMA_WITHOUT_CONTEXT_ARGUMENT);
+      const expectedSchema = normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+
+        type Profile {
+          greeting: String!
+        }
+
+        type Query {
+          user: User!
+        }
+
+        type User {
+          id: ID!
+          locale: String!
+          profile: Profile!
+        }
+      `);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expectedSchema);
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expectedSchema);
     });
 
     it('excludes context arguments from client schemas', () => {
-      const { federatedGraphClientSchema } = federateSubgraphsSuccess(
-        [subgraphWithFromContextOnArgument],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
+      const subgraph = createSubgraph(
+        'subgraph-from-context-argument',
+        `
+          type Query {
+            user: User!
+          }
+
+          type User @context(name: "userContext") {
+            id: ID!
+            locale: String!
+            profile: Profile!
+          }
+
+          type Profile {
+            greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
+          }
+        `,
       );
-      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(SCHEMA_WITHOUT_CONTEXT_ARGUMENT);
+      const { federatedGraphClientSchema } = federateSubgraphsSuccess([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          type Profile {
+            greeting: String!
+          }
+
+          type Query {
+            user: User!
+          }
+
+          type User {
+            id: ID!
+            locale: String!
+            profile: Profile!
+          }
+        `),
+      );
     });
   });
 });
