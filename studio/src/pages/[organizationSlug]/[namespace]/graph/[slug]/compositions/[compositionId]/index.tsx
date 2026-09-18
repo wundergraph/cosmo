@@ -1,6 +1,7 @@
 import { getCheckIcon } from '@/components/check-badge-icon';
 import { EmptyState } from '@/components/empty-state';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
+import { SchemaTypeSelect } from '@/components/schema/schema-type-select';
 import { SDLViewerActions } from '@/components/schema/sdl-viewer';
 import { SDLViewerMonaco } from '@/components/schema/sdl-viewer-monaco';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -16,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -39,7 +39,6 @@ import {
   GraphCompositionSubgraph,
   SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { sentenceCase } from 'change-case';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -471,29 +470,7 @@ export const CompositionDetails = ({
                   sdlData.sdl !== 'full' && (
                     <div className="relative flex h-full min-h-[60vh] flex-col">
                       <div className="-top-[60px] right-8 flex w-max items-center gap-x-4 px-5 md:absolute md:w-auto md:px-0">
-                        <Select onValueChange={(v: typeof schemaType) => setSchemaType(v)} value={schemaType}>
-                          <SelectTrigger>
-                            <SelectValue>
-                              {sentenceCase(schemaType)}
-                              Schema
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="client">
-                              Client Schema
-                              <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                                The schema available to the clients and through introspection
-                              </p>
-                            </SelectItem>
-                            <Separator />
-                            <SelectItem value="router">
-                              Router Schema
-                              <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                                The full schema used by the router to plan your operations
-                              </p>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <SchemaTypeSelect value={schemaType} onValueChange={setSchemaType} />
                         <SDLViewerActions
                           sdl={schemaType === 'router' ? sdlData.sdl : sdlData.clientSchema || sdlData.sdl}
                           size="icon"
