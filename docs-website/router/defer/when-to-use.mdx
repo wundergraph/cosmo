@@ -32,6 +32,7 @@ Splitting a screen into a fast query and a slow query also gets the fast data fi
 - **Shared fetches.**
   The entity keys and parent objects fetched for the first part are reused for the deferred fragments.
   Two queries fetch them twice.
+  [Deferred root fields and fields on non-entity types](/router/defer/how-it-works#deferred-root-fields-in-the-same-subgraph) can still need a second root query.
 - **No client-side join.**
   The router tells the client where each fragment belongs through `pending.path` and `subPath`.
   With two queries, the client has to stitch the results itself.

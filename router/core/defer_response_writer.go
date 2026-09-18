@@ -87,7 +87,7 @@ func (f *HttpDeferWriter) Flush() (err error) {
 	return nil
 }
 
-func GetDeferResponseWriter(ctx *resolve.Context, _ *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.DeferResponseWriter, bool) {
+func GetDeferResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.DeferResponseWriter, bool) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		return ctx, nil, false
@@ -95,7 +95,11 @@ func GetDeferResponseWriter(ctx *resolve.Context, _ *http.Request, w http.Respon
 
 	// Standard headers for Apollo Client @defer support
 	w.Header().Set("Content-Type", multipartMime+"; boundary=\""+multipartBoundary+"\"; incrementalSpec="+deferIncrementalSpec)
-	w.Header().Set("Transfer-Encoding", "chunked")
+	// HTTP/2 forbids Transfer-Encoding and frames the stream itself, so only
+	// HTTP/1.1 responses announce chunked transfer.
+	if r.ProtoMajor == 1 {
+		w.Header().Set("Transfer-Encoding", "chunked")
+	}
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	// allow unbuffered responses, it's used when it's necessary just to pass response through

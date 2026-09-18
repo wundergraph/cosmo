@@ -441,8 +441,7 @@ The handler sends `Accept: multipart/mixed;incrementalSpec=v0.2` for operations 
 Queries with `@defer` then deliver partial data to `useQuery` and `watchQuery` as parts arrive, with `dataState` moving from `streaming` to `complete`.
 
 Apollo Client rewrites the operation before sending it.
-It adds `__typename` to every selection set and a generated `label` such as `ac_0` to every `@defer` fragment.
-Both are handled by the router, and the labels show up on the `pending` entries.
+It adds a generated `label` such as `ac_0` to every `@defer` fragment, and the router returns those labels on the corresponding `pending` entries.
 
 The `Defer20220824Handler` implements the older format used by Apollo Router and sends `Accept: multipart/mixed;deferSpec=20220824`.
 The router rejects such requests with the error code `DEFER_UNSUPPORTED_SPEC`, because that handler would merge the deferred data at the wrong place.
