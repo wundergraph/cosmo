@@ -588,8 +588,8 @@ export function invalidInterfaceImplementationError(
       }
       if (invalidFieldImplementation.invalidContextArguments.size > 0) {
         message +=
-          `   An ${ARGUMENT} that the router populates rather than the client must be declared "@${FROM_CONTEXT}" on` +
-          ` both the Interface field and its implementation.\n` +
+          `   An ${ARGUMENT} must define "@${FROM_CONTEXT}" on both the Interface field and its implementation,` +
+          ` or on neither.\n` +
           `    The following argument` +
           (invalidFieldImplementation.invalidContextArguments.size > 1 ? `s are` : ` is`) +
           ` declared "@${FROM_CONTEXT}" on only one of the two definitions: "` +
@@ -643,7 +643,7 @@ export function contextArgumentRequiredError(
 ): Error {
   return new Error(
     `The ${ARGUMENT} "${coords}" is invalid because:\n` +
-      ` It is declared "@${FROM_CONTEXT}" in the following subgraph` +
+      ` It defines "@${FROM_CONTEXT}" in the following subgraph` +
       (contextSubgraphNames.length > 1 ? 's' : '') +
       ': "' +
       contextSubgraphNames.join(QUOTATION_JOIN) +
@@ -653,7 +653,7 @@ export function contextArgumentRequiredError(
       ': "' +
       requiredSubgraphNames.join(QUOTATION_JOIN) +
       `"\n` +
-      ` An ${ARGUMENT} that the router populates rather than the client must not be required in any subgraph.\n`,
+      ` An ${ARGUMENT} that defines "@${FROM_CONTEXT}" must not be required in any subgraph that defines it.\n`,
   );
 }
 
