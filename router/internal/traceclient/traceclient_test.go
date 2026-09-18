@@ -15,6 +15,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -132,6 +134,48 @@ func roundTripThroughHooks(t *testing.T, withContainer bool, fire func(ct *httpt
 }
 
 func TestTraceInjectingRoundTripper(t *testing.T) {
+	t.Run("adds connection phase timings to the active span", func(t *testing.T) {
+		exporter := tracetest.NewInMemoryExporter()
+		provider := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+		ctx, span := provider.Tracer("test").Start(WithClientTraceResults(context.Background()), "fetch")
+		now := time.Now()
+		clientTrace := &ClientTrace{
+			ConnectionGet:      &GetConnection{Time: now, HostPort: "subgraph.local:443"},
+			ConnectionAcquired: &AcquiredConnection{Time: now.Add(time.Millisecond)},
+			durations: phaseDurations{
+				DNSLookup:              2 * time.Millisecond,
+				TCPConnect:             3 * time.Millisecond,
+				TLSHandshake:           4 * time.Millisecond,
+				TimeToFirstRequestByte: 5 * time.Millisecond,
+				TimeToFirstByte:        6 * time.Millisecond,
+			},
+		}
+		request, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://subgraph.local/graphql", http.NoBody)
+		require.NoError(t, err)
+		rt := NewTraceInjectingRoundTripper(http.DefaultTransport, &metric.NoopConnectionMetricStore{}, func(context.Context, *http.Request) (*expr.Context, string) {
+			return &expr.Context{}, "service"
+		})
+
+		rt.processConnectionMetrics(ctx, request, clientTrace)
+		span.End()
+
+		spans := exporter.GetSpans()
+		require.Len(t, spans, 1)
+		attributes := attribute.NewSet(spans[0].Attributes...)
+		for key, expected := range map[attribute.Key]float64{
+			"wg.http.client.connection.acquire_duration_ms": 1,
+			"wg.http.client.dns_lookup_duration_ms":         2,
+			"wg.http.client.tcp_connect_duration_ms":        3,
+			"wg.http.client.tls_handshake_duration_ms":      4,
+			"wg.http.client.time_to_first_request_byte_ms":  5,
+			"wg.http.client.time_to_first_byte_ms":          6,
+		} {
+			value, ok := attributes.Value(key)
+			require.True(t, ok, key)
+			require.Equal(t, expected, value.AsFloat64(), key)
+		}
+	})
+
 	t.Run("records a metric for every observed connection phase", func(t *testing.T) {
 		server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("ok"))
