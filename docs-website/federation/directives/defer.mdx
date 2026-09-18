@@ -1,0 +1,190 @@
+---
+title: "@defer"
+icon: "forward-step"
+description: "The @defer directive marks a fragment whose fields are delivered after the initial response, in additional parts of the same HTTP response."
+---
+
+## Definition
+
+```graphql
+directive @defer(
+  if: Boolean! = true
+  label: String
+) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+```
+
+## Arguments
+
+| Argument | Type       | Default | Description                                                                                                        |
+| -------- | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
+| `if`     | `Boolean!` | `true`  | Controls whether the fragment is deferred. Accepts a literal or a variable. With `false`, the fragment is delivered in the initial response. |
+| `label`  | `String`   |         | A static string that identifies the fragment in the response. It is returned on the `pending` entry of the fragment. |
+
+## Overview
+
+`@defer` is an executable directive.
+Clients use it in operations, not in subgraph schemas.
+It marks a fragment whose fields the client does not need in the initial response.
+The router returns all other fields first and delivers the deferred fragment in a later part of a `multipart/mixed` response.
+
+The directive is provided by the router once `engine.enable_defer` is set to `true`.
+No subgraph changes and no composition changes are needed.
+See [Defer](/router/defer) for the router configuration and the response format.
+
+`@defer` is defined by the [Incremental Delivery spec draft](https://github.com/graphql/graphql-spec/pull/1110), which is at RFC stage 2 of the GraphQL specification process.
+The router follows the response format of that draft.
+
+### Supported locations
+
+- **Inline fragments** without a type condition: `... @defer { ... }`.
+- **Inline fragments** with a type condition: `... on Product @defer { ... }`.
+- **Fragment spreads**: `...ProductReviews @defer`.
+
+### Supported operations
+
+- **Queries**, on root fields and on nested fields.
+- **Mutations**, on nested fields below the root selection set.
+
+## Examples
+
+### Example schema
+
+```graphql
+type Query {
+  product(id: ID!): Product
+}
+
+type Product @key(fields: "id") {
+  id: ID!
+  name: String!
+  reviews: [Review!]!
+}
+
+type Review {
+  rating: Int!
+  body: String!
+}
+```
+
+### Deferring an inline fragment
+
+```graphql
+query ProductPage {
+  product(id: "1") {
+    id
+    name
+    ... @defer {
+      reviews {
+        rating
+        body
+      }
+    }
+  }
+}
+```
+
+The response has two parts.
+The first part carries `id` and `name` and announces the deferred fragment:
+
+```json
+{
+  "data": { "product": { "id": "1", "name": "Router" } },
+  "pending": [{ "id": "1", "path": ["product"] }],
+  "hasNext": true
+}
+```
+
+The second part delivers the fragment and completes it:
+
+```json
+{
+  "incremental": [
+    {
+      "data": { "reviews": [{ "rating": 5, "body": "Fast." }] },
+      "id": "1"
+    }
+  ],
+  "completed": [{ "id": "1" }],
+  "hasNext": false
+}
+```
+
+### Deferring a fragment spread
+
+```graphql
+query ProductPage {
+  product(id: "1") {
+    id
+    name
+    ...ProductReviews @defer
+  }
+}
+
+fragment ProductReviews on Product {
+  reviews {
+    rating
+    body
+  }
+}
+```
+
+### Using Labels
+
+```graphql
+query ProductPage {
+  product(id: "1") {
+    id
+    ... @defer(label: "reviews") {
+      reviews {
+        rating
+      }
+    }
+  }
+}
+```
+
+The label is returned on the `pending` entry:
+
+```json
+{
+  "data": { "product": { "id": "1" } },
+  "pending": [{ "id": "1", "path": ["product"], "label": "reviews" }],
+  "hasNext": true
+}
+```
+
+### Conditional defer
+
+```graphql
+query ProductPage($deferReviews: Boolean!) {
+  product(id: "1") {
+    id
+    ... @defer(if: $deferReviews) {
+      reviews {
+        rating
+      }
+    }
+  }
+}
+```
+
+With `deferReviews: true`, `reviews` arrives in a second part.
+With `deferReviews: false`, `reviews` is part of the initial response and the router sends a single JSON response.
+
+## Rules
+
+- A `label` is a static string. Variables are not accepted as labels.
+- Labels must be unique across all `@defer` and `@stream` directives in the document.
+- A field selected both inside and outside a deferred fragment on the same object is delivered in the initial response. The deferred copy is dropped.
+- A deferred fragment without field selections has no effect.
+- `if` accepts a literal or a variable. The variable value is resolved per request and takes part in the router's query plan cache key.
+
+## Federation behavior
+
+The router fully handles `@defer` itself.
+It plans the deferred fragment as a separate set of subgraph fetches that run after the initial response has been sent.
+
+When a deferred fragment selects fields of an entity that another subgraph owns, the router fetches the entity key in the initial phase and uses it as the representation for the deferred entity fetch.
+Subgraphs never receive the `@defer` directive.
+
+See [How the Router Executes @defer](/router/defer/how-it-works) for the execution model.

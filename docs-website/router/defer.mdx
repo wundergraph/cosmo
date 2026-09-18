@@ -1,0 +1,200 @@
+---
+title: "Defer"
+description: "Deliver the slow parts of a query response incrementally with the @defer directive."
+icon: "forward-step"
+sidebarTitle: Overview
+---
+
+## What @defer does
+
+When resolving a regular GraphQL response, a GraphQL server waits for every field to resolve.
+The response latency equals the resolve time of the slowest field.
+This can be a problem for large queries with many fields.
+
+One possible solution is to split the query into smaller parts,
+but that means maintaining two queries and making two HTTP calls.
+
+With the `@defer` directive, a client marks fragments that may arrive later.
+The router sends all available fields immediately in the initial response, and the rest of the fields are streamed in subsequent chunks within the same multipart HTTP response.
+
+The client renders the initial data immediately, and fills in the deferred fragments as they arrive.
+The merged result is identical to the result of the same query without `@defer`.
+
+```graphql
+query {
+  employee(id: 1) {
+    id
+    details {
+      forename
+      location { language }
+    }
+    ... @defer {
+      hobbies { __typename }
+    }
+  }
+  teammates(team: OPERATIONS) {
+    id
+    details { forename }
+    products
+  }
+}
+```
+
+This query spans three subgraphs:
+- The `employees` subgraph returns `employee` and `teammates`.
+- The `products` subgraph returns `products`.
+- The `hobbies` subgraph returns `hobbies`.
+
+Without `@defer`, the client waits for all three subgraphs.
+With `@defer`, the client receives everything except `hobbies` first, and `hobbies` in a second part.
+
+## Specification status
+
+`@defer` is not yet part of a released GraphQL specification.
+The router implements the [Incremental Delivery spec draft](https://github.com/graphql/graphql-spec/pull/1110), which is at RFC stage 2 of the GraphQL specification process.
+The response format is the `pending`, `incremental`, and `completed` format described in the draft.
+
+The same format is implemented by graphql-js `17.0.0-alpha.9` and by Apollo Client 4.1 through its `GraphQL17Alpha9Handler`.
+See [Using @defer](/router/defer/usage) for client setup.
+
+## How to enable it
+
+`@defer` support is disabled by default.
+To enable it, add the following to the router configuration:
+
+```yaml config.yaml
+engine:
+  enable_defer: true
+```
+
+The corresponding environment variable is `ENGINE_ENABLE_DEFER`.
+The setting is available since router `0.328.0`.
+
+## Send a request
+
+A client opts into incremental delivery with the `Accept` header:
+
+```http
+POST /graphql
+Content-Type: application/json
+Accept: multipart/mixed
+```
+
+The router accepts these forms:
+
+- `multipart/mixed` without a format version.
+- `multipart/mixed;incrementalSpec=v0.2`, the format version the router implements.
+- The wildcards `multipart/*` and `*/*`.
+- No `Accept` header at all, which is treated as accepting everything.
+
+When the operation contains an active `@defer` and the `Accept` header allows none of these, the router answers with status 200 and a GraphQL error:
+
+```json
+{
+  "errors": [
+    {
+      "message": "the router received a query with the @defer directive but the client does not accept multipart/mixed HTTP responses. To enable @defer support, add the HTTP header 'Accept: multipart/mixed'",
+      "extensions": {
+        "code": "DEFER_BAD_HEADER"
+      }
+    }
+  ]
+}
+```
+
+A client that asks for a different incremental delivery format, such as `multipart/mixed;deferSpec=20220824` sent by Apollo Router clients, would parse the response incorrectly and lose the deferred data.
+The router rejects such a request with status 200 and the error code `DEFER_UNSUPPORTED_SPEC`:
+
+```json
+{
+  "errors": [
+    {
+      "message": "the router received a query with the @defer directive but the client requested the incremental delivery format 'deferSpec=20220824', while the router implements 'incrementalSpec=v0.2'. Use a client that supports this format, for example Apollo Client with GraphQL17Alpha9Handler",
+      "extensions": {
+        "code": "DEFER_UNSUPPORTED_SPEC"
+      }
+    }
+  ]
+}
+```
+
+A named format wins over a wildcard.
+`Accept: multipart/mixed;deferSpec=20220824, */*` is rejected, because the client stated which format it can parse.
+
+An operation with all `@defer` directives disabled through `@defer(if: false)` will be executed as a regular operation.
+The router answers it with a single JSON response regardless of the `Accept` header.
+
+## Response format
+
+The router responds with these headers:
+
+```http
+Content-Type: multipart/mixed; boundary="graphql"; incrementalSpec=v0.2
+Transfer-Encoding: chunked
+Cache-Control: no-cache
+X-Accel-Buffering: no
+```
+
+Each part starts with the boundary `--graphql`, a `Content-Type: application/json` header, and an empty line, followed by one JSON payload.
+The stream ends with the closing boundary `--graphql--`.
+Line breaks inside the framing are `\r\n`.
+
+Every part carries a plain GraphQL payload.
+This differs from [multipart subscriptions](/router/subscriptions/multipart-http-requests), where each part wraps the result in a `payload` object.
+
+The query above produces this response:
+
+```text
+--graphql
+Content-Type: application/json
+
+{"data":{"employee":{"id":1,"details":{"forename":"Jens","location":{"language":"German"}}},"teammates":[{"id":4,"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"details":{"forename":"Alexandra"},"products":["FINANCE"]}]},"pending":[{"id":"1","path":["employee"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":false}
+
+--graphql--
+```
+
+## Payload fields
+
+| Field | Appears in | Meaning |
+|-------|------------|---------|
+| `data` | initial response | All fields outside deferred fragments. |
+| `errors` | initial response | Errors of the non-deferred fields, as in a regular response. |
+| `extensions` | initial response | Extensions, as in a regular response. |
+| `pending` | initial response, and incremental parts for deferred fragments | Announces a deferred fragment. Each entry has an `id`, the `path` of the object where the fragment was used, and an optional `label`. |
+| `incremental` | incremental response | Delivered fragment data. Each entry has `data`, the `id` of its `pending` entry, an optional `subPath`, and optional `errors`. |
+| `completed` | incremental response | Fragments that were fully delivered in the current incremental response. Each entry has an `id` and optional `errors`. |
+| `hasNext` | every part | `true` while more parts follow, `false` on the last part. |
+
+A client merges an `incremental` entry into its result at the location `pending[id].path` followed by `incremental.subPath`.
+The `subPath` is present when the fragment sits inside a list, where it carries the list index, or when the delivered object is nested deeper than the fragment's path, as in the [duplicated fields example](/router/defer/usage#fields-selected-both-inside-and-outside-defer).
+
+A nested `@defer` is announced in the `pending` list of the part that delivers its parent fragment.
+
+## Proxies and load balancers
+
+Incremental delivery relies on the client receiving each part as soon as the router writes it.
+Every intermediary between the router and the client must pass response chunks through without buffering.
+The router sets `X-Accel-Buffering: no`, which disables buffering in NGINX and compatible proxies.
+Check ingress controllers, CDNs, and compression settings separately.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Using @defer" icon="code" href="/router/defer/usage">
+    Query patterns, response walkthroughs, and client setup for curl, fetch, and Apollo Client.
+  </Card>
+  <Card title="How the Router Executes @defer" icon="diagram-project" href="/router/defer/how-it-works">
+    What happens between receiving the query and sending the last part.
+  </Card>
+  <Card title="When to Use @defer" icon="scale-balanced" href="/router/defer/when-to-use">
+    Choosing between @defer, separate queries, pagination, and subscriptions.
+  </Card>
+  <Card title="@defer directive reference" icon="forward-step" href="/federation/directives/defer">
+    Definition, arguments, locations, and rules.
+  </Card>
+</CardGroup>
