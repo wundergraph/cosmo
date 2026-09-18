@@ -598,24 +598,24 @@ func TestResponseCacheWithMultiFetch(t *testing.T) {
 	})
 }
 
+// One tag list per entity, in the order the batch answered them, which is
+// the order the router asked for them in.
+// __typename on every entity, as the router's own entity fetch selection
+// asks for it whether or not the client query did.
+const taggedMoodEntity = `{"__typename":"Employee","currentMood":"HAPPY"},`
+const taggedMoodBatch = `{"data":{"_entities":[` +
+	taggedMoodEntity + taggedMoodEntity + taggedMoodEntity + taggedMoodEntity + taggedMoodEntity +
+	taggedMoodEntity + taggedMoodEntity + taggedMoodEntity + taggedMoodEntity +
+	`{"__typename":"Employee","currentMood":"HAPPY"}` +
+	`]},"extensions":{"apolloEntityCacheTags":[` +
+	`["moods","employee-1"],["moods","employee-2"],["moods","employee-3"],` +
+	`["moods","employee-4"],["moods","employee-5"],["moods","employee-6"],` +
+	`["moods","employee-7"],["moods","employee-8"],["moods","employee-9"],` +
+	`["moods","employee-10"]` +
+	`]}}`
+
 func TestResponseCacheTags(t *testing.T) {
 	t.Parallel()
-
-	// One tag list per entity, in the order the batch answered them, which is
-	// the order the router asked for them in.
-	// __typename on every entity, as the router's own entity fetch selection
-	// asks for it whether or not the client query did.
-	const entity = `{"__typename":"Employee","currentMood":"HAPPY"},`
-	const taggedMoodBatch = `{"data":{"_entities":[` +
-		entity + entity + entity + entity + entity +
-		entity + entity + entity + entity +
-		`{"__typename":"Employee","currentMood":"HAPPY"}` +
-		`]},"extensions":{"apolloEntityCacheTags":[` +
-		`["moods","employee-1"],["moods","employee-2"],["moods","employee-3"],` +
-		`["moods","employee-4"],["moods","employee-5"],["moods","employee-6"],` +
-		`["moods","employee-7"],["moods","employee-8"],["moods","employee-9"],` +
-		`["moods","employee-10"]` +
-		`]}}`
 
 	t.Run("a tagged response is cached exactly as an untagged one", func(t *testing.T) {
 		t.Parallel()
@@ -863,18 +863,6 @@ func TestResponseCacheTags(t *testing.T) {
 
 func TestResponseCacheInvalidation(t *testing.T) {
 	t.Parallel()
-
-	const entity = `{"__typename":"Employee","currentMood":"HAPPY"},`
-	const taggedMoodBatch = `{"data":{"_entities":[` +
-		entity + entity + entity + entity + entity +
-		entity + entity + entity + entity +
-		`{"__typename":"Employee","currentMood":"HAPPY"}` +
-		`]},"extensions":{"apolloEntityCacheTags":[` +
-		`["moods","employee-1"],["moods","employee-2"],["moods","employee-3"],` +
-		`["moods","employee-4"],["moods","employee-5"],["moods","employee-6"],` +
-		`["moods","employee-7"],["moods","employee-8"],["moods","employee-9"],` +
-		`["moods","employee-10"]` +
-		`]}}`
 
 	const moodQuery = `query { employees { id currentMood } }`
 
