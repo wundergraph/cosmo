@@ -357,6 +357,23 @@ spec:
                   key: smtpRequireTls
             {{- end }}
             {{- end }}
+            {{- if .Values.configuration.promptToQuery.enabled }}
+            - name: PROMPT_TO_QUERY_SERVICE_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: promptToQueryAddress
+            - name: PROMPT_TO_QUERY_HTTP_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: promptToQueryHttpVersion
+            - name: PROMPT_TO_QUERY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: promptToQueryToken
+            {{- end }}
             {{- if .Values.configuration.stripeSecretKey }}
             - name: STRIPE_SECRET_KEY
               valueFrom:

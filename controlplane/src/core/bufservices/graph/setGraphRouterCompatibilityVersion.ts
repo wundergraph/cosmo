@@ -141,6 +141,8 @@ export function setGraphRouterCompatibilityVersion(
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
+        opts.promptToQueryClient,
+        opts.billingDefaultPlanId,
       );
 
       return await compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph });

@@ -49,3 +49,6 @@ data:
   {{- if .Values.configuration.s3ForcePathStyle }}
   s3ForcePathStyle: "{{ .Values.configuration.s3ForcePathStyle }}"
   {{ end }}
+  {{- if .Values.configuration.promptToQuery.enabled }}
+  promptToQueryHttpVersion: "{{ .Values.configuration.promptToQuery.httpVersion }}"
+  {{ end }}

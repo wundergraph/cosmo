@@ -8,6 +8,8 @@ import {
   createTestRBACEvaluator,
   genID,
 } from '../../src/core/test-util.js';
+import { decodeJWT } from '../../src/core/crypto/jwt.js';
+import type { GraphApiKeyJwtPayload } from '../../src/types/index.js';
 import { DEFAULT_NAMESPACE, createFederatedGraph, SetupTest } from '../test-util.js';
 
 let dbname = '';
@@ -38,6 +40,45 @@ describe('Router Tokens', () => {
       expect(response.response?.code).toBe(EnumStatusCode.OK);
       expect(typeof response.token).toBe('string');
       expect(response.token).not.toBe('');
+    });
+
+    test('Should include enabled graph token features under their own names', async (testContext) => {
+      const { client, server } = await SetupTest({
+        dbname,
+        enabledFeatures: ['split-config-loading', 'prompt-to-query'],
+      });
+      testContext.onTestFinished(() => server.close());
+
+      const graphName = genID('fedgraph');
+      await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, [], 'http://localhost:8080');
+
+      const response = await client.createFederatedGraphToken({
+        graphName,
+        namespace: DEFAULT_NAMESPACE,
+        tokenName: 'feature-token',
+      });
+
+      expect(response.response?.code).toBe(EnumStatusCode.OK);
+      const payload = decodeJWT<GraphApiKeyJwtPayload>(response.token);
+      expect(payload.features).toEqual(expect.arrayContaining(['split-config-loading', 'prompt-to-query']));
+    });
+
+    test('Should omit prompt to query from tokens when the feature is disabled', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
+
+      const graphName = genID('fedgraph');
+      await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, [], 'http://localhost:8080');
+
+      const response = await client.createFederatedGraphToken({
+        graphName,
+        namespace: DEFAULT_NAMESPACE,
+        tokenName: 'no-feature-token',
+      });
+
+      expect(response.response?.code).toBe(EnumStatusCode.OK);
+      const payload = decodeJWT<GraphApiKeyJwtPayload>(response.token);
+      expect(payload.features ?? []).not.toContain('prompt-to-query');
     });
 
     test('Should fail when the federated graph does not exist', async (testContext) => {

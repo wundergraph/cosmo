@@ -503,6 +503,8 @@ export function publishFederatedSubgraph(
           opts.chClient,
           opts.webhookProxyUrl,
           req.disableResolvabilityValidation,
+          opts.promptToQueryClient,
+          opts.billingDefaultPlanId,
         );
 
         return subgraphRepo.update(
