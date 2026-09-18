@@ -102,7 +102,7 @@ When the operation contains an active `@defer` and the `Accept` header allows no
 }
 ```
 
-A client that asks for a different incremental delivery format, such as `multipart/mixed;deferSpec=20220824` sent by Apollo Router clients, would parse the response incorrectly and lose the deferred data.
+A client that asks for a different incremental delivery format, such as `multipart/mixed;deferSpec=20220824`, the older format used by Apollo Router, would parse the response incorrectly and lose the deferred data.
 The router rejects such a request with status 200 and the error code `DEFER_UNSUPPORTED_SPEC`:
 
 ```json
@@ -134,6 +134,9 @@ Transfer-Encoding: chunked
 Cache-Control: no-cache
 X-Accel-Buffering: no
 ```
+
+`Transfer-Encoding: chunked` is sent on HTTP/1.1 only.
+HTTP/2 forbids the header and frames the stream itself.
 
 Each part starts with the boundary `--graphql`, a `Content-Type: application/json` header, and an empty line, followed by one JSON payload.
 The stream ends with the closing boundary `--graphql--`.
