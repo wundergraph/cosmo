@@ -1,4 +1,6 @@
 import { Input } from '@/components/ui/input';
+import { useQueryStates } from 'nuqs';
+import { pageParam } from '@/hooks/use-pagination-params';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -11,9 +13,7 @@ import type { AnalyticsFilter } from '@/components/analytics/filters';
 import { GraphContext } from '@/components/layout/graph-layout';
 import { useQuery } from '@connectrpc/connect-query';
 import { getClientsFromAnalytics } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { useOperationsFilters } from '@/hooks/use-operations-filters';
-import { useApplyParams } from '@/components/analytics/use-apply-params';
-import { useRouter } from 'next/router';
+import { operationsFilterParams, useOperationsFilters } from '@/hooks/use-operations-filters';
 
 interface OperationsSearchProps {
   searchQuery: string;
@@ -45,9 +45,10 @@ export const OperationsSearch = ({
   className,
 }: OperationsSearchProps) => {
   const graphContext = useContext(GraphContext);
-  const router = useRouter();
-  const applyParams = useApplyParams();
-  const { clientNames } = useOperationsFilters();
+  const [{ clientNames, operationHash, page: pageNumber }, setFilters] = useQueryStates({
+    ...operationsFilterParams,
+    page: pageParam,
+  });
 
   // Fetch clients for the filter
   const { data: clientsData } = useQuery(
@@ -60,12 +61,6 @@ export const OperationsSearch = ({
       enabled: !!graphContext?.graph?.name,
     },
   );
-
-  // Get current page number
-  const pageNumber = useMemo(() => {
-    const page = parseInt(router.query.page as string, 10);
-    return isNaN(page) || page < 1 ? 1 : page;
-  }, [router.query.page]);
 
   const clients = useMemo(() => clientsData?.clients || [], [clientsData?.clients]);
 
@@ -87,14 +82,12 @@ export const OperationsSearch = ({
 
   const handleClientNameFilterSelect = useCallback(
     (value?: string[]) => {
-      const clientNamesValue = value && value.length > 0 ? value.join(',') : null;
-
-      applyParams({
-        clientNames: clientNamesValue,
-        page: pageNumber !== 1 ? '1' : null,
+      setFilters({
+        clientNames: value && value.length > 0 ? value : null,
+        page: null,
       });
     },
-    [pageNumber, applyParams],
+    [setFilters],
   );
 
   const filtersList: AnalyticsFilter[] = useMemo(
@@ -127,10 +120,7 @@ export const OperationsSearch = ({
     ],
   );
 
-  // Check if an operation is selected
-  const hasSelectedOperation = useMemo(() => {
-    return !!router.query.operationHash;
-  }, [router.query.operationHash]);
+  const hasSelectedOperation = !!operationHash;
 
   // Check if any filters are active
   const hasActiveFilters = useMemo(() => {
@@ -140,14 +130,14 @@ export const OperationsSearch = ({
   // Reset all filters and operation selection
   const handleResetFilters = useCallback(() => {
     // Clear all filters and operation selection in a single update
-    applyParams({
+    setFilters({
       clientNames: null,
       includeOperationsWithDeprecatedFieldsOnly: null,
       operationHash: null,
       operationName: null,
-      page: pageNumber !== 1 ? '1' : null,
+      page: null,
     });
-  }, [applyParams, pageNumber]);
+  }, [setFilters]);
 
   return (
     <div className={`w-full space-y-4 ${className}`}>
