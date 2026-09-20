@@ -205,7 +205,7 @@ export default async function build(opts: BuildConfig) {
   const logger = pino(opts.production ? opts.logger : { ...developmentLoggerOpts, ...opts.logger });
 
   const fastify = Fastify({
-    logger,
+    loggerInstance: logger,
     // The maximum amount of time in *milliseconds* in which a plugin can load
     pluginTimeout: 10_000, // 10s
   });

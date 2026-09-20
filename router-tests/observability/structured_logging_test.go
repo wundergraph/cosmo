@@ -4358,6 +4358,104 @@ func TestAccessLogs(t *testing.T) {
 	t.Run("expression field logging", func(t *testing.T) {
 		t.Parallel()
 
+		t.Run("validate query complexity expressions for successful, rejected, and cached operations", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "query_depth",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.queryDepth",
+							},
+						},
+						{
+							Key: "query_total_fields",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.queryTotalFields",
+							},
+						},
+						{
+							Key: "query_root_fields",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.queryRootFields",
+							},
+						},
+						{
+							Key: "query_root_field_aliases",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.queryRootFieldAliases",
+							},
+						},
+						{
+							Key: "query_complexity_cache_hit",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.queryComplexityCacheHit",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+					ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+						securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+							Mode: config.ComplexityLimitsModeEnforce,
+							Depth: &config.ComplexityLimit{
+								Enabled: true,
+								Limit:   3,
+							},
+						}
+						securityConfiguration.ComplexityCalculationCache = &config.ComplexityCalculationCache{
+							Enabled:   true,
+							CacheSize: 1024,
+						}
+					},
+					ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+						engineExecutionConfiguration.Debug.SynchronousCacheWrites = true
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					successfulQuery := `query {
+						first: employee(id: 1) { id details { forename surname } }
+						employee(id: 2) { id details { forename } }
+						employees { id }
+					}`
+					rejectedQuery := `query {
+						employee(id: 1) { details { pets { name } } }
+					}`
+
+					makeRequest := func(query string, expectedStatus int) {
+						t.Helper()
+						res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: query})
+						require.NoError(t, err)
+						require.Equal(t, expectedStatus, res.Response.StatusCode)
+					}
+
+					makeRequest(successfulQuery, http.StatusOK)
+					makeRequest(successfulQuery, http.StatusOK)
+					makeRequest(rejectedQuery, http.StatusBadRequest)
+
+					requestLogs := xEnv.Observer().FilterMessage("/graphql").All()
+					require.Len(t, requestLogs, 3)
+
+					assertComplexityFields := func(logContext map[string]interface{}, depth, totalFields, rootFields, rootFieldAliases int64, cacheHit bool) {
+						t.Helper()
+						require.Equal(t, depth, logContext["query_depth"])
+						require.Equal(t, totalFields, logContext["query_total_fields"])
+						require.Equal(t, rootFields, logContext["query_root_fields"])
+						require.Equal(t, rootFieldAliases, logContext["query_root_field_aliases"])
+						require.Equal(t, cacheHit, logContext["query_complexity_cache_hit"])
+					}
+
+					assertComplexityFields(requestLogs[0].ContextMap(), 3, 5, 2, 1, false)
+					assertComplexityFields(requestLogs[1].ContextMap(), 3, 5, 2, 1, true)
+					assertComplexityFields(requestLogs[2].ContextMap(), 4, 3, 1, 0, false)
+				},
+			)
+		})
+
 		t.Run("validate request.operation.normalizationCacheHit expression", func(t *testing.T) {
 			t.Parallel()
 

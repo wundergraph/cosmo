@@ -91,7 +91,7 @@ func getErrorType(err error) errorType {
 	if errors.Is(err, context.Canceled) {
 		return errorTypeContextCanceled
 	}
-	var upgradeErr transport.ErrFailedUpgrade
+	var upgradeErr transport.ErrFailedSubscriptionConnection
 	if errors.As(err, &upgradeErr) {
 		return errorTypeUpgradeFailed
 	}
@@ -293,6 +293,17 @@ func writeRequestErrors(params writeRequestErrorsParams) {
 
 	if _, err := params.requestErrors.WriteResponse(params.writer); err != nil {
 		if params.logger != nil {
+			if rErrors.IsBrokenPipe(err) {
+				params.logger.Warn("Broken pipe, error writing response", zap.Error(err))
+				return
+			}
+			params.logger.Error("Error writing response", zap.Error(err))
+		}
+		return
+	}
+
+	if wgRequestParams.UseSse {
+		if _, err := params.writer.Write([]byte("\n\n")); err != nil && params.logger != nil {
 			if rErrors.IsBrokenPipe(err) {
 				params.logger.Warn("Broken pipe, error writing response", zap.Error(err))
 				return

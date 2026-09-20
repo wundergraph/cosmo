@@ -2,7 +2,9 @@ package cors
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -14,9 +16,16 @@ type Config struct {
 	AllowAllOrigins bool
 
 	// AllowOrigins is a list of origins a cross-domain request can be executed from.
+	// Origins can use any URL scheme. Wildcard patterns are supported.
 	// If the special "*" value is present in the list, all origins will be allowed.
 	// Default value is []
 	AllowOrigins []string
+
+	// MatchOrigins is a list of Go regular expressions matched against the
+	// lowercased origin. Patterns are compiled as written and are unanchored;
+	// use ^ and $ to match the entire origin.
+	// An origin is allowed if it matches AllowOrigins or MatchOrigins.
+	MatchOrigins []string
 
 	// AllowOriginFunc is a custom function to validate the origin. It take the origin
 	// as argument and returns true if allowed or false otherwise. If this option is
@@ -43,14 +52,7 @@ type Config struct {
 	// can be cached
 	MaxAge time.Duration
 
-	// Allows usage of popular browser extensions schemas
-	AllowBrowserExtensions bool
-
-	// Allows usage of WebSocket protocol
-	AllowWebSockets bool
-
-	// Allows usage of file:// schema (dangerous!) use it only when you 100% sure it's needed
-	AllowFiles bool
+	compiledMatchOrigins []*regexp.Regexp
 }
 
 // AddAllowMethods is allowed to add custom methods
@@ -68,43 +70,23 @@ func (c *Config) AddExposeHeaders(headers ...string) {
 	c.ExposeHeaders = append(c.ExposeHeaders, headers...)
 }
 
-func (c *Config) getAllowedSchemas() []string {
-	allowedSchemas := DefaultSchemas
-	if c.AllowBrowserExtensions {
-		allowedSchemas = append(allowedSchemas, ExtensionSchemas...)
-	}
-	if c.AllowWebSockets {
-		allowedSchemas = append(allowedSchemas, WebSocketSchemas...)
-	}
-	if c.AllowFiles {
-		allowedSchemas = append(allowedSchemas, FileSchemas...)
-	}
-	return allowedSchemas
-}
-
-func (c *Config) validateAllowedSchemas(origin string) bool {
-	allowedSchemas := c.getAllowedSchemas()
-	for _, schema := range allowedSchemas {
-		if strings.HasPrefix(origin, schema) {
-			return true
-		}
-	}
-	return false
-}
-
-// Validate is check configuration of user defined.
+// Validate checks the configuration and compiles origin patterns.
 func (c *Config) Validate() error {
-	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0) {
-		return errors.New("conflict settings: all origins are allowed. AllowOriginFunc or AllowOrigins is not needed")
+	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0 || len(c.MatchOrigins) > 0) {
+		return errors.New("conflict settings: all origins are allowed. AllowOriginFunc, AllowOrigins or MatchOrigins is not needed")
 	}
-	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 {
+	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 && len(c.MatchOrigins) == 0 {
 		return errors.New("conflict settings: all origins disabled")
 	}
-	for _, origin := range c.AllowOrigins {
-		if !strings.Contains(origin, "*") && !c.validateAllowedSchemas(origin) {
-			return errors.New("bad origin: origins must contain '*' or include " + strings.Join(c.getAllowedSchemas(), ","))
+	patterns := make([]*regexp.Regexp, len(c.MatchOrigins))
+	for i, pattern := range c.MatchOrigins {
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return fmt.Errorf("bad origin regex in match_origins %q: %w", pattern, err)
 		}
+		patterns[i] = re
 	}
+	c.compiledMatchOrigins = patterns
 	return nil
 }
 

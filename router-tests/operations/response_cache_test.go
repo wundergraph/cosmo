@@ -1,17 +1,23 @@
 package integration
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"slices"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/freeport"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -533,10 +539,9 @@ func TestRootFetchResponseCacheRedis(t *testing.T) {
 	})
 }
 
-// TestResponseCacheWithMultiFetch pins what engine.enable_multi_fetch costs the
-// response cache. The merged entity fetch it produces is not cached and nothing
-// reports that it was skipped, while the root query fetch of the same operation
-// is cached as it would be without the flag.
+// TestResponseCacheWithMultiFetch covers the response cache under engine.enable_multi_fetch.
+// The two entity fetches, Employee.derivedMood and Consultancy.isLeadAvailable, are merged
+// into one aliased _entities request.
 func TestResponseCacheWithMultiFetch(t *testing.T) {
 	t.Parallel()
 
@@ -557,14 +562,26 @@ func TestResponseCacheWithMultiFetch(t *testing.T) {
 	  }
 	}`
 
-	t.Run("the merged entity fetch is re-sent on every request", func(t *testing.T) {
+	multiFetch := func(cfg *config.EngineExecutionConfiguration) {
+		cfg.EnableMultiFetch = true
+	}
+
+	// invalidateConsultancy drops the Consultancy entity cached from employees,
+	// which is the isLeadAvailable alias, leaving the derivedMood alias warm.
+	invalidateConsultancy := func(t *testing.T, addr string) {
+		t.Helper()
+		status, count := invalidateCacheKey(t, addr, responseCacheSharedKey,
+			`[{"kind":"type","subgraph":"employees","type":"Consultancy"}]`)
+		require.Equal(t, http.StatusAccepted, status)
+		require.Equal(t, 1, count, "the one Consultancy is indexed under its type although it was cached from a merged fetch")
+	}
+
+	t.Run("a merged entity fetch is cached per alias", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions: responseCacheOptions(t, time.Minute),
-			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.EnableMultiFetch = true
-			},
+			RouterOptions:                      responseCacheOptions(t, time.Minute),
+			ModifyEngineExecutionConfiguration: multiFetch,
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees:    testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
 				Family:       testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
@@ -585,17 +602,134 @@ func TestResponseCacheWithMultiFetch(t *testing.T) {
 			require.Contains(t, first.Body, `"isLeadAvailable"`)
 			require.Contains(t, first.Body, `"findEmployees"`)
 
-			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Family.Load(),
-				"enable_multi_fetch has nothing to merge here and leaves root caching alone")
-			require.EqualValues(t, 3, xEnv.SubgraphRequestCount.Employees.Load(),
-				"the merged entity fetch is re-sent, so it was never cached")
-
-			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(),
-				"an entity fetch with nothing to merge with is cached as usual")
-			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Availability.Load(),
-				"an entity fetch with nothing to merge with is cached as usual")
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Employees.Load(),
+				"every entity of both aliases is warm, so the merged fetch is not sent again")
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Family.Load())
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Availability.Load())
 		})
 	})
+
+	t.Run("a partially warm merged fetch asks only for the cold alias", func(t *testing.T) {
+		t.Parallel()
+
+		cfg, addr := makeCacheAsConfig(t)
+		employees := &entityRequestRecorder{}
+		employees.cacheControl.Store("public, max-age=60")
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions:                      []core.Option{responseCacheStorageProviders(), core.WithResponseCache(cfg)},
+			ModifyEngineExecutionConfiguration: multiFetch,
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{Middleware: employees.middleware},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+
+			bodies := employees.entityRequests()
+			require.Len(t, bodies, 1, "the two entity fetches were merged into one request")
+			require.Contains(t, bodies[0], `"__typename":"Employee"`)
+			require.Contains(t, bodies[0], `"__typename":"Consultancy"`)
+
+			invalidateConsultancy(t, addr)
+
+			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			require.Equal(t, first.Body, second.Body)
+
+			bodies = employees.entityRequests()
+			require.Len(t, bodies, 2, "the cold alias sends the merged request out again")
+			require.Contains(t, bodies[1], `"__typename":"Consultancy"`,
+				"the invalidated Consultancy is asked for")
+			require.NotContains(t, bodies[1], `"__typename":"Employee"`,
+				"the warm Employee alias is left out of the request")
+		})
+	})
+
+	t.Run("a partial hit caps Cache-Control at the life left on the warm alias", func(t *testing.T) {
+		t.Parallel()
+
+		cfg, addr := makeCacheAsConfig(t)
+		employees := &entityRequestRecorder{}
+		employees.cacheControl.Store("public, max-age=60")
+
+		// Only the merged fetch is cacheable here. The root fetches and the
+		// other subgraphs send no Cache-Control, so nothing else weighs in on
+		// the header the client receives.
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				responseCacheStorageProviders(),
+				core.WithResponseCache(cfg),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{{
+							Operation: config.HeaderRuleOperationPropagate,
+							Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+						}},
+					},
+				}),
+			},
+			ModifyEngineExecutionConfiguration: multiFetch,
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{Middleware: employees.middleware},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			require.Equal(t, "max-age=60, public", first.Response.Header.Get("Cache-Control"),
+				"a miss propagates the origin's Cache-Control")
+
+			// The Employee alias stays warm with under a minute left. The origin
+			// now promises ten minutes for the Consultancy it is asked for again.
+			invalidateConsultancy(t, addr)
+			employees.cacheControl.Store("public, max-age=600")
+
+			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			require.Equal(t, first.Body, second.Body)
+			require.Len(t, employees.entityRequests(), 2, "the cold alias was fetched")
+
+			maxAge := maxAgeOf(t, second.Response.Header.Get("Cache-Control"))
+			require.Greater(t, maxAge, 0)
+			require.LessOrEqual(t, maxAge, 60,
+				"half of the merged fetch expires with the warm alias, so the origin's longer max-age must not reach the client")
+		})
+	})
+}
+
+// entityRequestRecorder is a subgraph middleware that records the body of every
+// entity request and marks entity responses with the current cacheControl.
+// Root fetches carry no Cache-Control and stay out of the cache, so the entity
+// fetch is the only cacheable request the subgraph answers.
+type entityRequestRecorder struct {
+	cacheControl atomic.Value
+	mu           sync.Mutex
+	bodies       []string
+}
+
+func (r *entityRequestRecorder) middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		req.Body = io.NopCloser(bytes.NewReader(body))
+
+		if bytes.Contains(body, []byte("_entities")) {
+			r.mu.Lock()
+			r.bodies = append(r.bodies, string(body))
+			r.mu.Unlock()
+			if cacheControl, _ := r.cacheControl.Load().(string); cacheControl != "" {
+				w.Header().Set("Cache-Control", cacheControl)
+			}
+		}
+
+		next.ServeHTTP(w, req)
+	})
+}
+
+func (r *entityRequestRecorder) entityRequests() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return slices.Clone(r.bodies)
 }
 
 // One tag list per entity, in the order the batch answered them, which is
@@ -866,47 +1000,6 @@ func TestResponseCacheInvalidation(t *testing.T) {
 
 	const moodQuery = `query { employees { id currentMood } }`
 
-	// invalidate posts an array of requests and returns the status and count.
-	invalidate := func(t *testing.T, addr, key, body string) (int, int) {
-		t.Helper()
-
-		req, err := http.NewRequest(http.MethodPost, "http://"+addr+"/invalidation", strings.NewReader(body))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
-		if key != "" {
-			req.Header.Set("Authorization", key)
-		}
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer func() { _ = res.Body.Close() }()
-
-		var decoded struct {
-			Count int `json:"count"`
-		}
-		require.NoError(t, json.NewDecoder(res.Body).Decode(&decoded))
-
-		return res.StatusCode, decoded.Count
-	}
-
-	// invalidatableConfig is a response cache whose entries may be invalidated
-	// with responseCacheSharedKey, on a port of this test's own.
-	invalidatableConfig := func(t *testing.T) (*config.ResponseCacheConfiguration, string) {
-		t.Helper()
-
-		cfg := responseCacheConfig(t, time.Minute)
-		addr := fmt.Sprintf("127.0.0.1:%d", freeport.GetOne(t))
-
-		cfg.Invalidation.Endpoint = config.ResponseCacheInvalidationEndpointConfig{
-			Enabled:    true,
-			ListenAddr: addr,
-			Path:       "/invalidation",
-			SharedKey:  responseCacheSharedKey,
-		}
-
-		return cfg, addr
-	}
-
 	moodEnv := func(cfg *config.ResponseCacheConfiguration) *testenv.Config {
 		return &testenv.Config{
 			RouterOptions: []core.Option{responseCacheStorageProviders(), core.WithResponseCache(cfg)},
@@ -920,7 +1013,7 @@ func TestResponseCacheInvalidation(t *testing.T) {
 
 	t.Run("a cache tag drops the entry it names and no other", func(t *testing.T) {
 		t.Parallel()
-		cfg, addr := invalidatableConfig(t)
+		cfg, addr := makeCacheAsConfig(t)
 
 		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
@@ -928,7 +1021,7 @@ func TestResponseCacheInvalidation(t *testing.T) {
 			entries, _ := responseCacheStored(t, cfg.KeyPrefix)
 			require.Len(t, entries, 10)
 
-			status, count := invalidate(t, addr, responseCacheSharedKey,
+			status, count := invalidateCacheKey(t, addr, responseCacheSharedKey,
 				`[{"kind":"cache_tag","subgraphs":["mood"],"cache_tag":"employee-1"}]`)
 			require.Equal(t, http.StatusAccepted, status)
 			require.Equal(t, 1, count, "one entity carried that tag")
@@ -941,14 +1034,14 @@ func TestResponseCacheInvalidation(t *testing.T) {
 
 	t.Run("a subgraph request empties everything that subgraph answered", func(t *testing.T) {
 		t.Parallel()
-		cfg, addr := invalidatableConfig(t)
+		cfg, addr := makeCacheAsConfig(t)
 
 		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(), "the second was a hit")
 
-			status, count := invalidate(t, addr, responseCacheSharedKey,
+			status, count := invalidateCacheKey(t, addr, responseCacheSharedKey,
 				`[{"kind":"subgraph","subgraph":"mood"}]`)
 			require.Equal(t, http.StatusAccepted, status)
 			require.Equal(t, 10, count)
@@ -965,12 +1058,12 @@ func TestResponseCacheInvalidation(t *testing.T) {
 
 	t.Run("a type request is scoped to the subgraph that answered", func(t *testing.T) {
 		t.Parallel()
-		cfg, addr := invalidatableConfig(t)
+		cfg, addr := makeCacheAsConfig(t)
 
 		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 
-			status, count := invalidate(t, addr, responseCacheSharedKey,
+			status, count := invalidateCacheKey(t, addr, responseCacheSharedKey,
 				`[{"kind":"type","subgraph":"mood","type":"Employee"}]`)
 			require.Equal(t, http.StatusAccepted, status)
 			require.Equal(t, 10, count)
@@ -982,7 +1075,7 @@ func TestResponseCacheInvalidation(t *testing.T) {
 
 	t.Run("naming another subgraph's type leaves this one alone", func(t *testing.T) {
 		t.Parallel()
-		cfg, addr := invalidatableConfig(t)
+		cfg, addr := makeCacheAsConfig(t)
 
 		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
@@ -990,7 +1083,7 @@ func TestResponseCacheInvalidation(t *testing.T) {
 			// Employee is cached from mood. Asking employees to drop its
 			// Employees must not touch mood's, which is the whole reason the
 			// type index is scoped by subgraph.
-			status, count := invalidate(t, addr, responseCacheSharedKey,
+			status, count := invalidateCacheKey(t, addr, responseCacheSharedKey,
 				`[{"kind":"type","subgraph":"employees","type":"Employee"}]`)
 			require.Equal(t, http.StatusAccepted, status)
 			require.Zero(t, count)
@@ -1002,12 +1095,12 @@ func TestResponseCacheInvalidation(t *testing.T) {
 
 	t.Run("a wrong shared key invalidates nothing", func(t *testing.T) {
 		t.Parallel()
-		cfg, addr := invalidatableConfig(t)
+		cfg, addr := makeCacheAsConfig(t)
 
 		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 
-			status, _ := invalidate(t, addr, "not-the-shared-key-but-long-enough-yes",
+			status, _ := invalidateCacheKey(t, addr, "not-the-shared-key-but-long-enough-yes",
 				`[{"kind":"subgraph","subgraph":"mood"}]`)
 			require.Equal(t, http.StatusUnauthorized, status)
 
@@ -1018,13 +1111,13 @@ func TestResponseCacheInvalidation(t *testing.T) {
 
 	t.Run("a disabled index is refused rather than answered with nothing", func(t *testing.T) {
 		t.Parallel()
-		cfg, addr := invalidatableConfig(t)
+		cfg, addr := makeCacheAsConfig(t)
 		cfg.Invalidation.Type = false
 
 		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 
-			status, _ := invalidate(t, addr, responseCacheSharedKey,
+			status, _ := invalidateCacheKey(t, addr, responseCacheSharedKey,
 				`[{"kind":"type","subgraph":"mood","type":"Employee"}]`)
 			require.Equal(t, http.StatusBadRequest, status)
 
@@ -1036,12 +1129,12 @@ func TestResponseCacheInvalidation(t *testing.T) {
 
 	t.Run("one bad element leaves the rest of the array unapplied", func(t *testing.T) {
 		t.Parallel()
-		cfg, addr := invalidatableConfig(t)
+		cfg, addr := makeCacheAsConfig(t)
 
 		testenv.Run(t, moodEnv(cfg), func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 
-			status, _ := invalidate(t, addr, responseCacheSharedKey,
+			status, _ := invalidateCacheKey(t, addr, responseCacheSharedKey,
 				`[{"kind":"subgraph","subgraph":"mood"},{"kind":"nonsense"}]`)
 			require.Equal(t, http.StatusBadRequest, status)
 
@@ -1121,6 +1214,48 @@ func cacheControlMiddleware(value string) func(http.Handler) http.Handler {
 }
 
 const responseCacheSharedKey = "a-shared-key-that-is-long-enough-to-pass"
+
+// invalidateCacheKey posts an array of invalidation requests and returns the status
+// and the number of entries dropped.
+func invalidateCacheKey(t *testing.T, addr, key, body string) (int, int) {
+	t.Helper()
+
+	req, err := http.NewRequest(http.MethodPost, "http://"+addr+"/invalidation", strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	if key != "" {
+		req.Header.Set("Authorization", key)
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = res.Body.Close() }()
+
+	var decoded struct {
+		Count int `json:"count"`
+	}
+	require.NoError(t, json.NewDecoder(res.Body).Decode(&decoded))
+
+	return res.StatusCode, decoded.Count
+}
+
+// makeCacheAsConfig is a response cache whose entries may be invalidated
+// with responseCacheSharedKey, on a port of this test's own.
+func makeCacheAsConfig(t *testing.T) (*config.ResponseCacheConfiguration, string) {
+	t.Helper()
+
+	cfg := responseCacheConfig(t, time.Minute)
+	addr := fmt.Sprintf("127.0.0.1:%d", freeport.GetOne(t))
+
+	cfg.Invalidation.Endpoint = config.ResponseCacheInvalidationEndpointConfig{
+		Enabled:    true,
+		ListenAddr: addr,
+		Path:       "/invalidation",
+		SharedKey:  responseCacheSharedKey,
+	}
+
+	return cfg, addr
+}
 
 const (
 	responseCacheRedisAddr       = "localhost:6379"

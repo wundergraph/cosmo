@@ -18,8 +18,14 @@ import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
 import DOMPurify from 'isomorphic-dompurify';
 import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
-import { ProposalOrigin, Subgraph, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  PlaygroundHeader,
+  ProposalOrigin,
+  Subgraph,
+  SubgraphType,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole, ProposalOrigin as ProposalOriginEnum, WebsocketSubprotocol } from '../db/models.js';
+import { PlaygroundHeaderEntry } from '../db/schema.js';
 import {
   AuthContext,
   DateRange,
@@ -54,6 +60,32 @@ const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
 const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
 const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
 const pluginVersionRegex = /^v\d+$/;
+// Matches studio/src/lib/playground-headers.ts:isValidHeaderName. Keep the two in sync.
+// The character class is kept verbatim (rather than reordered) so the two copies stay diffable.
+// eslint-disable-next-line unicorn/better-regex
+const headerNameRegex = /^[\^`\-\w!#$%&'*+.|~]+$/;
+/**
+ * RFC 7230 allows visible ASCII, space and HTAB in a header field value. Anything else
+ * in the C0 range - CR and LF above all - would let a stored value inject extra headers
+ * into the request the Playground builds, so it is rejected before being persisted.
+ * Written as a codepoint scan rather than a regex so no `no-control-regex` suppression
+ * is needed, and so the HTAB allowance is stated in code.
+ */
+const hasControlCharacter = (value: string): boolean => {
+  for (const character of value) {
+    const code = character.codePointAt(0);
+
+    if (code === undefined || code === 0x09) {
+      continue; // HTAB is legal in a field value.
+    }
+
+    if (code < 0x20 || code === 0x7f) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -349,6 +381,55 @@ export const isValidGraphName = (name: string): boolean => {
 
 export const isValidPluginVersion = (version: string): boolean => {
   return pluginVersionRegex.test(version);
+};
+
+export const isValidHeaderName = (name: string): boolean => {
+  return headerNameRegex.test(name);
+};
+
+/**
+ * Strips a header list down to the plain rows the `headers` json column stores.
+ * This is NOT a no-op: protobuf-es messages carry a `$typeName` field, and TypeScript
+ * will happily assign `PlaygroundHeader[]` to `PlaygroundHeaderEntry[]` (excess
+ * properties are only rejected on object literals), so without this the type name
+ * would be serialised into the database and handed back on every read.
+ */
+export const toPlaygroundHeaderEntries = (headers: PlaygroundHeader[]): PlaygroundHeaderEntry[] =>
+  headers.map(({ key, value }) => ({ key, value }));
+
+export type PlaygroundHeaderValidation = { success: true } | { success: false; errors: string[] };
+
+/**
+ * Checks one playground header list. Reports every problem it finds rather than only the
+ * first, so a caller fixing a form is told about all of them at once. `scopeLabel` names
+ * the list in each message, e.g. 'graph' or 'personal'.
+ */
+export const validatePlaygroundHeaders = (
+  headers: PlaygroundHeader[],
+  scopeLabel: string,
+): PlaygroundHeaderValidation => {
+  const errors: string[] = [];
+  const seen = new Set<string>();
+
+  for (const header of headers) {
+    if (!isValidHeaderName(header.key)) {
+      errors.push(`Header name must be a valid HTTP token '${header.key}' in ${scopeLabel} headers`);
+      continue;
+    }
+
+    // The offending value is deliberately not echoed back - it holds control characters.
+    if (hasControlCharacter(header.value)) {
+      errors.push(`Header value must not contain control characters '${header.key}' in ${scopeLabel} headers`);
+    }
+
+    const lowered = header.key.toLowerCase();
+    if (seen.has(lowered)) {
+      errors.push(`Duplicate header name '${header.key}' in ${scopeLabel} headers`);
+    }
+    seen.add(lowered);
+  }
+
+  return errors.length === 0 ? { success: true } : { success: false, errors };
 };
 
 export const validateDateRanges = ({

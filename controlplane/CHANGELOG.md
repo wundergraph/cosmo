@@ -4,6 +4,32 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.251.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.250.2...controlplane@0.251.0) (2026-09-18)
+
+### Features
+
+* **sentry:** always sample the checks and publishes ([#3253](https://github.com/wundergraph/cosmo/issues/3253)) ([e016228](https://github.com/wundergraph/cosmo/commit/e016228614e3f889961adf89a3aa8ceddaddb9d1)) (@JivusAyrus)
+
+## [0.250.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.250.1...controlplane@0.250.2) (2026-09-17)
+
+### Bug Fixes
+
+* apply rbac correctly when groups are limited to specific subgraphs ([#3215](https://github.com/wundergraph/cosmo/issues/3215)) ([26545dc](https://github.com/wundergraph/cosmo/commit/26545dc13544a7483280efae680ea4776936ee40)) (@wilsonrivera)
+* remove Slack Connect from Scale plan ([#3255](https://github.com/wundergraph/cosmo/issues/3255)) ([2f2a294](https://github.com/wundergraph/cosmo/commit/2f2a2945ae0f384370466b1bc05747b3cc384257)) (@jvr545)
+
+## [0.250.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.250.0...controlplane@0.250.1) (2026-09-16)
+
+### Bug Fixes
+
+* **controlplane:** upgrade fastify to v5 ([#3193](https://github.com/wundergraph/cosmo/issues/3193)) ([86a355b](https://github.com/wundergraph/cosmo/commit/86a355bcb4ed0fce51747c4d2cedfa31c105dde3)) (@gausie)
+* restore lint autofix ([#3242](https://github.com/wundergraph/cosmo/issues/3242)) ([cd65459](https://github.com/wundergraph/cosmo/commit/cd654597c46d77fcbc0c44b2352fef177f6ccec6)) (@comatory)
+
+# [0.250.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.249.3...controlplane@0.250.0) (2026-09-14)
+
+### Features
+
+* add an option to set default headers ([#3208](https://github.com/wundergraph/cosmo/issues/3208)) ([fd12221](https://github.com/wundergraph/cosmo/commit/fd12221ef769fea0920941b47acf151655d82223)) (@JivusAyrus)
+
 ## [0.249.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.249.2...controlplane@0.249.3) (2026-09-09)
 
 **Note:** Version bump only for package controlplane

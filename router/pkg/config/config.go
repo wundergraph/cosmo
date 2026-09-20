@@ -203,6 +203,7 @@ type Telemetry struct {
 type CORS struct {
 	Enabled          bool          `yaml:"enabled" envDefault:"true" env:"CORS_ENABLED"`
 	AllowOrigins     []string      `yaml:"allow_origins" envDefault:"*" env:"CORS_ALLOW_ORIGINS"`
+	MatchOrigins     []string      `yaml:"match_origins" env:"CORS_MATCH_ORIGINS" envSeparator:";"`
 	AllowMethods     []string      `yaml:"allow_methods" envDefault:"HEAD,GET,POST" env:"CORS_ALLOW_METHODS"`
 	AllowHeaders     []string      `yaml:"allow_headers" envDefault:"Origin,Content-Length,Content-Type" env:"CORS_ALLOW_HEADERS"`
 	AllowCredentials bool          `yaml:"allow_credentials" envDefault:"true" env:"CORS_ALLOW_CREDENTIALS"`
@@ -500,14 +501,17 @@ type EngineExecutionConfiguration struct {
 	DisableVariablesRemapping                        bool          `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
 	EnableRequireFetchReasons                        bool          `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
 	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
+	SSEServerWriteTimeout                            time.Duration `envDefault:"10s" env:"ENGINE_SSE_SERVER_WRITE_TIMEOUT" yaml:"sse_server_write_timeout,omitempty"`
 	EnableDefer                                      bool          `envDefault:"false" env:"ENGINE_ENABLE_DEFER" yaml:"enable_defer"`
 
 	// EnableMultiFetch merges entity fetches to the same subgraph that execute
 	// in the same wave into a single batched request with aliased _entities fields.
-	EnableMultiFetch bool `envDefault:"false" env:"ENGINE_ENABLE_MULTI_FETCH" yaml:"enable_multi_fetch"`
+	// Enabled by default, set to false to send one request per entity fetch.
+	EnableMultiFetch bool `envDefault:"true" env:"ENGINE_ENABLE_MULTI_FETCH" yaml:"enable_multi_fetch"`
 	// EnableScheduleFetches replaces the legacy wave-based fetch organizers with the
 	// dependency-aware fetch scheduler (component-split, chain-inlined execution trees).
-	EnableScheduleFetches bool `envDefault:"false" env:"ENGINE_ENABLE_SCHEDULE_FETCHES" yaml:"enable_schedule_fetches"`
+	// Enabled by default, set to false to fall back to the wave-based organizers.
+	EnableScheduleFetches bool `envDefault:"true" env:"ENGINE_ENABLE_SCHEDULE_FETCHES" yaml:"enable_schedule_fetches"`
 
 	// Server-side WebSocket handler options (router accepting client connections)
 	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`
