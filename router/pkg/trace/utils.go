@@ -55,6 +55,16 @@ func CommonRequestFilter(r *http.Request) bool {
 	return true
 }
 
+func clientRequestFilter(r *http.Request) bool {
+	if r.Method != "GET" && r.Method != "POST" {
+		return false
+	}
+	if r.Header.Get("X-WG-DISABLE-TRACING") == "true" {
+		return false
+	}
+	return true
+}
+
 func GetClientHeader(h http.Header, headerNames []string, defaultValue string) string {
 	for _, headerName := range headerNames {
 		value := h.Get(headerName)
