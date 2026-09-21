@@ -34,13 +34,6 @@ import {
 } from '@/components/playground/custom-scripts';
 import { Badge } from '@/components/ui/badge';
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
-import {
-  StreamApi,
-  StreamEventsContext,
-  StreamEventsPanel,
-  StreamEventsProvider,
-  ToggleCursors,
-} from '@/components/playground/stream-events';
 import 'graphiql/graphiql.css';
 import '@graphiql/plugin-explorer/dist/style.css';
 import '@/theme.css';
@@ -232,36 +225,6 @@ const graphiQLFetch = async (
   }
 };
 
-const isSubscription = (graphQLParams: any, opts: any): boolean => {
-  try {
-    const documentAST = opts?.documentAST ?? parse(graphQLParams.query);
-    const operationName = graphQLParams.operationName;
-
-    return documentAST.definitions.some(
-      (def: any) =>
-        def.kind === Kind.OPERATION_DEFINITION &&
-        def.operation === OperationTypeNode.SUBSCRIPTION &&
-        (!operationName || def.name?.value === operationName),
-    );
-  } catch {
-    return false;
-  }
-};
-
-async function* tapAsyncIterable(iterable: AsyncIterable<any>, api: StreamApi) {
-  try {
-    for await (const value of iterable) {
-      api.pushEvent(value);
-      yield value;
-    }
-  } catch (e: any) {
-    api.pushError(e?.message ?? String(e));
-    throw e;
-  } finally {
-    api.endStream();
-  }
-}
-
 const ResponseToolbar = () => {
   const { view, setView } = useContext(PlaygroundContext);
 
@@ -392,8 +355,6 @@ const PlaygroundPortal = () => {
   const artDiv = document.getElementById('art-visualization');
   const plannerDiv = document.getElementById('planner-visualization');
   const toggleClientValidation = document.getElementById('toggle-client-validation');
-  const toggleCursors = document.getElementById('toggle-cursors');
-  const streamEventsPanel = document.getElementById('stream-events-panel');
   const logo = document.getElementById('graphiql-wg-logo');
   const scriptsSection = document.getElementById('scripts-section');
   const preFlightScriptSection = document.getElementById('pre-flight-script-section');
@@ -403,8 +364,6 @@ const PlaygroundPortal = () => {
     !artDiv ||
     !plannerDiv ||
     !toggleClientValidation ||
-    !toggleCursors ||
-    !streamEventsPanel ||
     !logo ||
     !scriptsSection ||
     !preFlightScriptSection
@@ -418,8 +377,6 @@ const PlaygroundPortal = () => {
       {createPortal(<PlanView />, plannerDiv)}
       {createPortal(<TraceView />, artDiv)}
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
-      {createPortal(<ToggleCursors />, toggleCursors)}
-      {createPortal(<StreamEventsPanel />, streamEventsPanel)}
       {createPortal(<CustomScripts />, scriptsSection)}
       {createPortal(<PreFlightScript />, preFlightScriptSection)}
       {createPortal(
@@ -464,17 +421,13 @@ function constructGraphQLURL(location: string, graphqlURL: string, playgroundPat
   return baseURL + graphqlURL;
 }
 
-type PlaygroundProps = {
+export const Playground = (input: {
   routingUrl?: string;
   hideLogo?: boolean;
   theme?: 'light' | 'dark' | undefined;
   scripts?: GraphiQLScripts;
   fetch?: typeof fetch;
-};
-
-const PlaygroundInner = (input: PlaygroundProps) => {
-  const { streamApiRef } = useContext(StreamEventsContext);
-
+}) => {
   const url =
     input.routingUrl ||
     import.meta.env.VITE_ROUTING_URL ||
@@ -618,11 +571,6 @@ const PlaygroundInner = (input: PlaygroundProps) => {
 
         responseSectionParent.append(artWrapper);
         responseSectionParent.append(plannerWrapper);
-
-        const eventsPanel = document.createElement('div');
-        eventsPanel.id = 'stream-events-panel';
-        eventsPanel.className = 'absolute bottom-0 left-0 right-0 z-10 hidden';
-        responseSectionParent.append(eventsPanel);
       }
     }
 
@@ -632,10 +580,6 @@ const PlaygroundInner = (input: PlaygroundProps) => {
       const toggleClientValidation = document.createElement('div');
       toggleClientValidation.id = 'toggle-client-validation';
       toolbar.append(toggleClientValidation);
-
-      const toggleCursors = document.createElement('div');
-      toggleCursors.id = 'toggle-cursors';
-      toolbar.append(toggleCursors);
     }
 
     setIsMounted(true);
@@ -670,42 +614,13 @@ const PlaygroundInner = (input: PlaygroundProps) => {
       setStatusText(statusText);
     };
 
-    const baseFetcher = createGraphiQLFetcher({
+    return createGraphiQLFetcher({
       url: url,
       subscriptionUrl: url.replace('http', 'ws'),
       fetch: (...args) =>
         graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, args[0] as URL, args[1] as RequestInit),
     });
-
-    return async (graphQLParams: any, opts: any) => {
-      const api = streamApiRef.current;
-
-      if (!isSubscription(graphQLParams, opts) || !api.cursorsEnabled) {
-        return baseFetcher(graphQLParams, opts);
-      }
-
-      const resumeFrom = api.resumeEnabled ? api.lastCursor ?? undefined : undefined;
-      api.startStream(resumeFrom);
-
-      const result = await baseFetcher(
-        {
-          ...graphQLParams,
-          extensions: {
-            ...(graphQLParams.extensions as object),
-            'delivery-guarantee': 'cursor',
-            ...(resumeFrom ? { cursor: resumeFrom } : {}),
-          },
-        },
-        opts,
-      );
-
-      if (result && typeof (result as any)[Symbol.asyncIterator] === 'function') {
-        return tapAsyncIterable(result as AsyncIterable<any>, api);
-      }
-
-      return result;
-    };
-  }, [schema, clientValidationEnabled, url, input.scripts, streamApiRef]);
+  }, [schema, clientValidationEnabled]);
 
   const [debouncedQuery] = useDebounce(query, 300);
   const [debouncedHeaders] = useDebounce(headers, 300);
@@ -815,9 +730,3 @@ const PlaygroundInner = (input: PlaygroundProps) => {
     </TooltipProvider>
   );
 };
-
-export const Playground = (input: PlaygroundProps) => (
-  <StreamEventsProvider>
-    <PlaygroundInner {...input} />
-  </StreamEventsProvider>
-);
