@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router/internal/expr"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestResponseCachePrivateIDResolve(t *testing.T) {
@@ -22,7 +21,7 @@ func TestResponseCachePrivateIDResolve(t *testing.T) {
 	}
 	compile := func(t *testing.T, expression string) *responseCachePrivateID {
 		t.Helper()
-		p, err := newResponseCachePrivateID(&config.ResponseCacheConfiguration{PrivateID: expression}, expr.CreateNewExprManager())
+		p, err := newResponseCachePrivateID(expression, expr.CreateNewExprManager())
 		require.NoError(t, err)
 		return p
 	}
@@ -65,26 +64,26 @@ func TestNewResponseCachePrivateID(t *testing.T) {
 
 	t.Run("a bad expression is refused", func(t *testing.T) {
 		t.Parallel()
-		_, err := newResponseCachePrivateID(&config.ResponseCacheConfiguration{PrivateID: "request.nope"}, expr.CreateNewExprManager())
+		_, err := newResponseCachePrivateID("request.nope", expr.CreateNewExprManager())
 		require.ErrorContains(t, err, "private_id")
 	})
 
 	t.Run("a non string expression is refused", func(t *testing.T) {
 		t.Parallel()
-		_, err := newResponseCachePrivateID(&config.ResponseCacheConfiguration{PrivateID: "1 + 1"}, expr.CreateNewExprManager())
+		_, err := newResponseCachePrivateID("1 + 1", expr.CreateNewExprManager())
 		require.ErrorContains(t, err, "expected string")
 	})
 
 	t.Run("an empty expression yields no resolver", func(t *testing.T) {
 		t.Parallel()
-		p, err := newResponseCachePrivateID(&config.ResponseCacheConfiguration{}, expr.CreateNewExprManager())
+		p, err := newResponseCachePrivateID("", expr.CreateNewExprManager())
 		require.NoError(t, err)
 		require.Nil(t, p)
 	})
 
 	t.Run("a valid expression passes", func(t *testing.T) {
 		t.Parallel()
-		p, err := newResponseCachePrivateID(&config.ResponseCacheConfiguration{PrivateID: "request.auth.claims.sub"}, expr.CreateNewExprManager())
+		p, err := newResponseCachePrivateID("request.auth.claims.sub", expr.CreateNewExprManager())
 		require.NoError(t, err)
 		require.NotNil(t, p)
 	})

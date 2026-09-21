@@ -8,7 +8,6 @@ import (
 	"github.com/expr-lang/expr/vm"
 
 	"github.com/wundergraph/cosmo/router/internal/expr"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 // responseCachePrivateID resolves, per request, the id of the user private
@@ -17,11 +16,13 @@ type responseCachePrivateID struct {
 	program *vm.Program
 }
 
-func newResponseCachePrivateID(cfg *config.ResponseCacheConfiguration, mgr *expr.Manager) (*responseCachePrivateID, error) {
-	if cfg.PrivateID == "" {
+// newResponseCachePrivateID compiles a private_id expression. An empty one
+// yields nil, which resolves to no id.
+func newResponseCachePrivateID(expression string, mgr *expr.Manager) (*responseCachePrivateID, error) {
+	if expression == "" {
 		return nil, nil
 	}
-	program, err := mgr.CompileExpression(cfg.PrivateID, reflect.String)
+	program, err := mgr.CompileExpression(expression, reflect.String)
 	if err != nil {
 		return nil, fmt.Errorf("response cache private_id: %w", err)
 	}

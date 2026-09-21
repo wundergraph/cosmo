@@ -94,10 +94,9 @@ type HandlerOptions struct {
 	HeaderPropagation                        *HeaderPropagation
 
 	ResponseCache             caching.Cache
-	ResponseCacheFallbackTTL  time.Duration
 	ResponseCacheInvalidation config.ResponseCacheInvalidationConfig
 	ResponseCacheTagHeader    config.ResponseCacheTagHeaderConfig
-	ResponseCachePrivateID    *responseCachePrivateID
+	ResponseCacheSettings     *responseCacheSettings
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -122,10 +121,9 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		sseServerWriteTimeout:                    opts.SSEServerWriteTimeout,
 		headerPropagation:                        opts.HeaderPropagation,
 		responseCacheStore:                       opts.ResponseCache,
-		responseCacheFallbackTTL:                 opts.ResponseCacheFallbackTTL,
 		responseCacheInvalidation:                opts.ResponseCacheInvalidation,
 		responseCacheTagHeader:                   opts.ResponseCacheTagHeader,
-		responseCachePrivateID:                   opts.ResponseCachePrivateID,
+		responseCacheSettings:                    opts.ResponseCacheSettings,
 		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log),
 	}
 	return graphQLHandler
@@ -174,11 +172,10 @@ type GraphQLHandler struct {
 	engineLoaderHooks         resolve.LoaderHooks
 	headerPropagation         *HeaderPropagation
 	responseCacheStore        caching.Cache
-	responseCacheFallbackTTL  time.Duration
 	responseCacheErrorHandler func(error)
 	responseCacheInvalidation config.ResponseCacheInvalidationConfig
 	responseCacheTagHeader    config.ResponseCacheTagHeaderConfig
-	responseCachePrivateID    *responseCachePrivateID
+	responseCacheSettings     *responseCacheSettings
 
 	enableCacheResponseHeaders      bool
 	enableResponseHeaderPropagation bool
@@ -231,18 +228,16 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		resolveCtx.SetEngineLoaderHooks(h.engineLoaderHooks)
 	}
 	resolveCtx = h.configureRateLimiting(resolveCtx, reqCtx.operation.opType)
-	if h.responseCacheStore != nil {
-		resolveCtx.SetResponseCache(resolve.ResponseCacheOptions{
-			Store:      h.responseCacheStore,
-			DefaultTTL: h.responseCacheFallbackTTL,
-			OnError:    h.responseCacheErrorHandler,
-			Invalidation: resolve.ResponseCacheTagIndexOptions{
-				CacheTag: h.responseCacheInvalidation.CacheTag,
-				Subgraph: h.responseCacheInvalidation.Subgraph,
-				Type:     h.responseCacheInvalidation.Type,
-			},
-			PrivateID: h.responseCachePrivateID.resolve(reqCtx.expressionContext, h.responseCacheErrorHandler),
-		})
+	if h.responseCacheStore != nil && h.responseCacheSettings != nil {
+		cacheOpts := h.responseCacheSettings.options(reqCtx.expressionContext, h.responseCacheErrorHandler)
+		cacheOpts.Store = h.responseCacheStore
+		cacheOpts.OnError = h.responseCacheErrorHandler
+		cacheOpts.Invalidation = resolve.ResponseCacheTagIndexOptions{
+			CacheTag: h.responseCacheInvalidation.CacheTag,
+			Subgraph: h.responseCacheInvalidation.Subgraph,
+			Type:     h.responseCacheInvalidation.Type,
+		}
+		resolveCtx.SetResponseCache(cacheOpts)
 	}
 	if reqCtx.customFieldValueRenderer != nil {
 		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)

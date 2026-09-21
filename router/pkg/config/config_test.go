@@ -2727,3 +2727,106 @@ version: "1"
 	require.Equal(t, ResponseCacheStorageProviderMemory, cfg.Config.ResponseCache.Storage.Provider)
 	require.Equal(t, int64(4096), cfg.Config.ResponseCache.Storage.MaxEntries)
 }
+
+// TestResponseCacheSubgraphConfig covers the all/subgraphs split: a subgraphs
+// entry never passes through env parsing, so it is explicit, and nothing under
+// all leaks into it.
+func TestResponseCacheSubgraphConfig(t *testing.T) {
+	t.Run("a map entry is explicit, nothing is defaulted or taken from all", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+response_cache:
+  all:
+    fallback_ttl: 2m
+    private_id: "request.auth.claims.sub"
+  subgraphs:
+    products:
+      fallback_ttl: 5m
+    inventory:
+      enabled: false
+    reviews:
+      enabled: true
+      fallback_ttl: 10s
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		rc := cfg.Config.ResponseCache
+		require.True(t, rc.All.Enabled)
+		require.Equal(t, 2*time.Minute, rc.All.FallbackTTL)
+
+		products := rc.Subgraphs["products"]
+		require.False(t, products.Enabled, "a fallback_ttl alone does not enable an entry")
+		require.Equal(t, 5*time.Minute, products.FallbackTTL)
+		require.Empty(t, products.PrivateID, "nothing is inherited from all")
+
+		inventory := rc.Subgraphs["inventory"]
+		require.False(t, inventory.Enabled)
+		require.Zero(t, inventory.FallbackTTL, "no default, and not all's 2m")
+
+		reviews := rc.Subgraphs["reviews"]
+		require.True(t, reviews.Enabled)
+		require.Equal(t, 10*time.Second, reviews.FallbackTTL)
+
+	})
+
+	t.Run("an all block that omits a key keeps the env value", func(t *testing.T) {
+		t.Setenv("RESPONSE_CACHE_ALL_FALLBACK_TTL", "5m")
+		f := createTempFileFromFixture(t, `
+version: "1"
+response_cache:
+  all:
+    private_id: "request.auth.claims.sub"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, 5*time.Minute, cfg.Config.ResponseCache.All.FallbackTTL)
+		require.Equal(t, "request.auth.claims.sub", cfg.Config.ResponseCache.All.PrivateID)
+	})
+
+	t.Run("all is reachable from env", func(t *testing.T) {
+		t.Setenv("RESPONSE_CACHE_ALL_ENABLED", "false")
+		t.Setenv("RESPONSE_CACHE_ALL_PRIVATE_ID", "request.header.Get('X-User-Id')")
+		f := createTempFileFromFixture(t, `
+version: "1"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.False(t, cfg.Config.ResponseCache.All.Enabled)
+		require.Equal(t, "request.header.Get('X-User-Id')", cfg.Config.ResponseCache.All.PrivateID)
+	})
+
+	t.Run("a top level fallback_ttl is refused", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+response_cache:
+  fallback_ttl: 30s
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/response_cache'")
+	})
+
+	t.Run("a too short subgraph fallback_ttl is refused", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+response_cache:
+  subgraphs:
+    products:
+      fallback_ttl: 500ms
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/response_cache/subgraphs/products/fallback_ttl'")
+	})
+
+	t.Run("an unknown key in a subgraph entry is refused", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+response_cache:
+  subgraphs:
+    products:
+      ttl: 5m
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/response_cache/subgraphs/products'")
+	})
+}

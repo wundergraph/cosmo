@@ -60,11 +60,12 @@ storage_providers:
 
 response_cache:
   enabled: true
-  fallback_ttl: 30s
   key_prefix: 'cosmo_response_cache:'
   storage:
     provider: 'redis'
     provider_id: 'my_redis'
+  all:
+    fallback_ttl: 30s
 ```
 </CodeGroup>
 
@@ -78,10 +79,11 @@ Each replica holds its own cache, nothing survives a restart, and no Redis is ne
 ```yaml config.yaml
 response_cache:
   enabled: true
-  fallback_ttl: 30s
   storage:
     provider: 'memory'
     max_entries: 2048
+  all:
+    fallback_ttl: 30s
 ```
 </CodeGroup>
 
@@ -93,18 +95,32 @@ response_cache:
 response_cache:
   # Enable response caching. Default: false.
   enabled: true
-  # Lifetime for a response with a recognized caching directive but no lifetime.
-  # A response naming its own max-age or s-maxage gets that instead.
-  # Minimum 1s. Default: 30s.
-  fallback_ttl: 30s
   # Prepended to every cache key so entries cannot collide with anything else
   # sharing the Redis instance. Redis only, ignored by the memory provider.
   # Default: cosmo_response_cache:
   key_prefix: 'cosmo_response_cache:'
-  # Expression yielding the id of the user a request acts for, so private
-  # subgraph responses can be cached per user. See Private responses.
-  # Default: none, private responses are not cached.
-  private_id: ''
+  # What the cache does for every subgraph without an entry under subgraphs.
+  all:
+    # Cache this subgraph's responses. Set to false to cache only the
+    # subgraphs listed under subgraphs. Default: true.
+    enabled: true
+    # Lifetime for a response with a recognized caching directive but no lifetime.
+    # A response naming its own max-age or s-maxage gets that instead.
+    # Minimum 1s. Default: 30s.
+    fallback_ttl: 30s
+    # Expression yielding the id of the user a request acts for, so private
+    # subgraph responses can be cached per user. See Private responses.
+    # Default: none, private responses are not cached.
+    private_id: ''
+  # Per-subgraph settings, keyed by subgraph name. An entry replaces all
+  # entirely and is explicit: nothing is inherited and nothing is defaulted.
+  # See Per-subgraph configuration.
+  subgraphs:
+    inventory:
+      enabled: false
+    products:
+      enabled: true
+      fallback_ttl: 5m
   storage:
     # redis or memory. Default: redis.
     provider: 'redis'
@@ -148,7 +164,42 @@ response_cache:
 
 `storage` is required when `enabled` is `true`.
 
-Environment variables bypass the config schema validation. A `fallback_ttl` of zero or less fails startup either way, as does a `private_id` that does not compile.
+Environment variables bypass the config schema validation. A `fallback_ttl` of zero or less under `all`, or under an enabled subgraph entry, fails startup either way, as does a `private_id` that does not compile.
+
+## Per-subgraph configuration
+
+`all` applies to every subgraph. An entry under `subgraphs`, keyed by subgraph name, replaces `all` for that subgraph:
+
+```yaml config.yaml
+response_cache:
+  enabled: true
+  storage:
+    provider: 'redis'
+    provider_id: 'my_redis'
+  all:
+    fallback_ttl: 30s
+    private_id: "request.auth.claims.sub"
+  subgraphs:
+    inventory:
+      enabled: false
+    products:
+      enabled: true
+      fallback_ttl: 5m
+```
+
+Here `inventory` is never cached, `products` keeps responses without a lifetime for five minutes, and every other subgraph keeps them for thirty seconds.
+
+An entry is a full override and is explicit. Nothing under `all` reaches a subgraph that has an entry, and no key is defaulted:
+
+* `enabled` must be set. An entry without it does not cache that subgraph. A `fallback_ttl` on its own does not enable anything.
+* An enabled entry must set `fallback_ttl`, or startup fails naming the entry.
+* An entry without `private_id` has none. So `products` above does not cache its `private` responses, although `all` names an id. Repeat the `private_id` in the entry to keep it.
+
+Setting `all.enabled` to `false` turns the cache off for every subgraph without an entry, so only the entries that set `enabled: true` are cached. With no such entry the router starts and logs a warning, and nothing is cached.
+
+An entry naming a subgraph the graph does not have is kept and logged at startup, since a feature flag graph may have it.
+
+The invalidation indexes, the invalidation endpoint, and the cache tag header are not per subgraph.
 
 ## Private responses
 
@@ -162,8 +213,11 @@ response_cache:
   storage:
     provider: 'redis'
     provider_id: 'my_redis'
-  private_id: "request.auth.claims.sub"
+  all:
+    private_id: "request.auth.claims.sub"
 ```
+
+Under `all` it applies to every subgraph. Under a `subgraphs` entry it applies to that subgraph alone, and an entry without one has none. See [Per-subgraph configuration](#per-subgraph-configuration).
 
 With a `private_id` in place:
 
@@ -369,14 +423,16 @@ Startup fails when `name` is not a valid header name or is `Content-Length`, `Co
 The router logs once at startup when the cache is enabled. With the Redis provider:
 
 ```
-INFO  Response cache enabled  {"fallback_ttl": "30s", "storage_provider": "redis", "key_prefix": "cosmo_response_cache:", "storage_provider_id": "my_redis"}
+INFO  Response cache enabled  {"fallback_ttl": "30s", "subgraph_overrides": 0, "storage_provider": "redis", "key_prefix": "cosmo_response_cache:", "storage_provider_id": "my_redis"}
 ```
 
 With the memory provider:
 
 ```
-INFO  Response cache enabled  {"fallback_ttl": "30s", "storage_provider": "memory", "max_entries": 2048}
+INFO  Response cache enabled  {"fallback_ttl": "30s", "subgraph_overrides": 0, "storage_provider": "memory", "max_entries": 2048}
 ```
+
+`fallback_ttl` is the value under `all` and `subgraph_overrides` counts the entries under `subgraphs`.
 
 Nothing is logged when the cache is disabled.
 

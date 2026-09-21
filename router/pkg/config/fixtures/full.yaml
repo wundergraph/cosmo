@@ -541,7 +541,6 @@ storage_providers:
 
 response_cache:
   enabled: true
-  fallback_ttl: 30s
   key_prefix: 'response_cache_test:'
   storage:
     provider: 'redis'
@@ -561,7 +560,17 @@ response_cache:
     name: 'Surrogate-Key'
     delimiter: ' '
     max_bytes: 1024
-  private_id: "request.auth.claims.sub"
+  all:
+    enabled: true
+    fallback_ttl: 30s
+    private_id: "request.auth.claims.sub"
+  subgraphs:
+    inventory:
+      enabled: false
+    products:
+      enabled: true
+      fallback_ttl: 5m
+      private_id: "request.header.Get('X-User-Id')"
 
 security:
   complexity_calculation_cache:
