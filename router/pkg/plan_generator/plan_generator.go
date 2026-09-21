@@ -34,6 +34,10 @@ type QueryPlanConfig struct {
 	LogLevel                           string
 	Logger                             *zap.Logger
 	MaxDataSourceCollectorsConcurrency uint
+	// EnableMultiFetch mirrors the engine.enable_multi_fetch router setting.
+	EnableMultiFetch bool
+	// EnableScheduleFetches mirrors the engine.enable_schedule_fetches router setting.
+	EnableScheduleFetches bool
 }
 
 type QueryPlanResults struct {
@@ -112,7 +116,11 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 	ctxError, cancelError := context.WithCancelCause(ctx)
 	defer cancelError(nil)
 
-	pg, err := core.NewPlanGenerator(executionConfigPath, cfg.Logger, cfg.MaxDataSourceCollectorsConcurrency)
+	pg, err := core.NewPlanGenerator(executionConfigPath, cfg.Logger, core.PlanGeneratorOptions{
+		MaxDataSourceCollectorsConcurrency: cfg.MaxDataSourceCollectorsConcurrency,
+		EnableMultiFetch:                   cfg.EnableMultiFetch,
+		EnableScheduleFetches:              cfg.EnableScheduleFetches,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create plan generator: %w", err)
 	}

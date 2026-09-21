@@ -88,12 +88,15 @@ func TestPersistedOperationOverGET(t *testing.T) {
 func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Operation not found", func(t *testing.T) {
+	t.Run("returns not found when the hash is unknown", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			ApqConfig: config.AutomaticPersistedQueriesConfig{
 				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)

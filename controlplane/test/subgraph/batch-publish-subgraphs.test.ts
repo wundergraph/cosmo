@@ -712,9 +712,12 @@ describe('Batch publish subgraphs tests', () => {
       jobId: resp.jobId!,
       organizationId: users.adminAliceCompanyA.organizationId,
     });
+    const queueEvents = new QueueEvents(job.queueName);
+    testContext.onTestFinished(() => queueEvents.close());
 
+    await queueEvents.waitUntilReady();
     await job.changeDelay(0);
-    await job.waitUntilFinished(new QueueEvents(job.queueName));
+    await job.waitUntilFinished(queueEvents);
 
     statusResp = await client.getBatchPublishJobStatus({ jobId: resp.jobId });
     expect(statusResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);

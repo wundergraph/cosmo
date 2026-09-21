@@ -29,6 +29,18 @@ export const updatePlaygroundScript = PlatformService.method.updatePlaygroundScr
 export const getPlaygroundScripts = PlatformService.method.getPlaygroundScripts;
 
 /**
+ * Playground default headers
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetPlaygroundDefaultHeaders
+ */
+export const getPlaygroundDefaultHeaders = PlatformService.method.getPlaygroundDefaultHeaders;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundDefaultHeaders
+ */
+export const updatePlaygroundDefaultHeaders = PlatformService.method.updatePlaygroundDefaultHeaders;
+
+/**
  * Namespaces
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateNamespace
@@ -130,6 +142,14 @@ export const migrateMonograph = PlatformService.method.migrateMonograph;
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraph
  */
 export const createFederatedSubgraph = PlatformService.method.createFederatedSubgraph;
+
+/**
+ * CreateFederatedSubgraphs creates multiple federated subgraphs on the control plane in a single request. Either
+ * every subgraph is created or none is.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraphs
+ */
+export const createFederatedSubgraphs = PlatformService.method.createFederatedSubgraphs;
 
 /**
  * PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.

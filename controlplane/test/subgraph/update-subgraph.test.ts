@@ -165,7 +165,7 @@ describe('Update subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(createFederatedSubgraphResp.response?.details).toBe('Event-Driven Graphs must not define a routing URL');
+    expect(createFederatedSubgraphResp.response?.details).toBe('An Event-Driven Graph must not define a routing URL');
   });
 
   test('that an error is returned if an Event-Driven subgraph is updated with a subscription URL', async (testContext) => {
@@ -183,7 +183,7 @@ describe('Update subgraph tests', () => {
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(createFederatedSubgraphResp.response?.details).toBe(
-      'Event-Driven Graphs must not define a subscription URL',
+      'An Event-Driven Graph must not define a subscription URL',
     );
   });
 
@@ -202,7 +202,7 @@ describe('Update subgraph tests', () => {
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(createFederatedSubgraphResp.response?.details).toBe(
-      'Event-Driven Graphs must not define a subscription protocol',
+      'An Event-Driven Graph must not define a subscription protocol',
     );
   });
 
@@ -221,7 +221,7 @@ describe('Update subgraph tests', () => {
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(createFederatedSubgraphResp.response?.details).toBe(
-      'Event-Driven Graphs must not define a websocket subprotocol',
+      'An Event-Driven Graph must not define a websocket subprotocol',
     );
   });
 

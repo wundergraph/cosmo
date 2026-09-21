@@ -140,7 +140,7 @@ func TestMCPAuthMiddlewareExecuteGraphQLScopes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(validDecoder, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes)
+			middleware, err := NewMCPAuthMiddleware(validDecoder, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes, nil)
 			assert.NoError(t, err)
 
 			// Set scope extractor for execute_graphql runtime checking
@@ -185,7 +185,7 @@ func TestMCPAuthMiddlewareExecuteGraphQLNoExtractor(t *testing.T) {
 		ToolsCall:  []string{"mcp:tools:write"},
 	}
 
-	middleware, err := NewMCPAuthMiddleware(decoder, testMetadataURL, scopes, false)
+	middleware, err := NewMCPAuthMiddleware(decoder, testMetadataURL, scopes, false, nil)
 	assert.NoError(t, err)
 	// Deliberately NOT setting a scope extractor
 

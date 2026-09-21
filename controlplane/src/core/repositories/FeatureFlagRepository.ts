@@ -1,6 +1,21 @@
 import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, desc, eq, inArray, like, or, sql, arrayOverlaps, isNull } from 'drizzle-orm';
+import {
+  SQL,
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  inArray,
+  like,
+  or,
+  sql,
+  arrayOverlaps,
+  isNull,
+  isNotNull,
+} from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { validate as isValidUuid } from 'uuid';
@@ -217,7 +232,7 @@ export class FeatureFlagRepository {
       return [];
     }
 
-    if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
+    if (!this.applyRbacConditionsToQuery(rbac, conditions, 'feature-flag')) {
       return [];
     }
 
@@ -267,7 +282,7 @@ export class FeatureFlagRepository {
       return 0;
     }
 
-    if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
+    if (!this.applyRbacConditionsToQuery(rbac, conditions, 'feature-flag')) {
       return 0;
     }
 
@@ -290,13 +305,33 @@ export class FeatureFlagRepository {
    * Applies conditions based on the provided RBAC. If the actor can't access any subgraph, the
    * returned value is false; otherwise, true.
    *
+   * The conditions are expressed against the table the caller selects from, which differs per
+   * scope:
+   *
+   * - `feature-subgraph` → the query selects from `targets`, so the namespace is matched on
+   *   `targets.namespaceId` and resources directly on `targets.id`.
+   * - `feature-flag` → the query selects from `feature_flags`, which has no `targets` in its
+   *   FROM clause. The namespace is matched on `featureFlags.namespaceId` and resources through
+   *   an `EXISTS` sub-query, so a flag is visible when it contains at least one feature subgraph
+   *   the actor was granted.
+   *
    * @param rbac
    * @param conditions
+   * @param scope The table the caller selects from
    * @private
    */
-  private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
+  private applyRbacConditionsToQuery(
+    rbac: RBACEvaluator | undefined,
+    conditions: (SQL<unknown> | undefined)[],
+    scope: 'feature-flag' | 'feature-subgraph' = 'feature-subgraph',
+  ) {
     if (!rbac || rbac.isOrganizationAdminOrDeveloper || rbac.isOrganizationViewer) {
       return true;
+    }
+
+    if (scope !== 'feature-flag' && scope !== 'feature-subgraph') {
+      // Invalid scope provided
+      return false;
     }
 
     const graphAdmin = rbac.ruleFor('subgraph-admin');
@@ -324,19 +359,44 @@ export class FeatureFlagRepository {
       resources.push(...graphViewer.resources);
     }
 
-    if (namespaces.length > 0 && resources.length > 0) {
-      conditions.push(
-        or(
-          inArray(schema.targets.namespaceId, [...new Set(namespaces)]),
-          inArray(schema.targets.id, [...new Set(resources)]),
-        ),
-      );
-    } else if (namespaces.length > 0) {
-      conditions.push(inArray(schema.targets.namespaceId, [...new Set(namespaces)]));
-    } else if (resources.length > 0) {
-      conditions.push(inArray(schema.targets.id, [...new Set(resources)]));
+    const uniqueNamespaces = [...new Set(namespaces)];
+    const uniqueResources = [...new Set(resources)];
+
+    if (uniqueNamespaces.length === 0 && uniqueResources.length === 0) {
+      // A rule without namespaces and resources grants the role for every namespace
+      return true;
     }
 
+    const clauses: SQL<unknown>[] = [];
+    if (uniqueNamespaces.length > 0) {
+      clauses.push(
+        inArray(
+          scope === 'feature-flag' ? schema.featureFlags.namespaceId : schema.targets.namespaceId,
+          uniqueNamespaces,
+        ),
+      );
+    }
+
+    if (uniqueResources.length > 0) {
+      clauses.push(
+        scope === 'feature-flag'
+          ? exists(
+              this.db
+                .select({ exists: sql`1` })
+                .from(featureFlagToFeatureSubgraphs)
+                .innerJoin(subgraphs, eq(subgraphs.id, featureFlagToFeatureSubgraphs.featureSubgraphId))
+                .where(
+                  and(
+                    eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlags.id),
+                    inArray(subgraphs.targetId, uniqueResources),
+                  ),
+                ),
+            )
+          : inArray(schema.targets.id, uniqueResources),
+      );
+    }
+
+    conditions.push(clauses.length === 1 ? clauses[0] : or(...clauses));
     return true;
   }
 
@@ -461,6 +521,7 @@ export class FeatureFlagRepository {
     limit,
     offset,
     query,
+    rbac,
   }: {
     federatedGraphId: string;
     namespaceId: string;
@@ -468,6 +529,7 @@ export class FeatureFlagRepository {
     limit: number;
     offset: number;
     query?: string;
+    rbac?: RBACEvaluator;
   }): Promise<{ featureSubgraphs: FeatureSubgraphDTO[]; totalCount: number }> {
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
 
@@ -493,6 +555,14 @@ export class FeatureFlagRepository {
 
     if (query) {
       conditions.push(isValidUuid(query) ? eq(subgraphs.id, query) : like(targets.name, `%${query}%`));
+    }
+
+    if (
+      rbac &&
+      (!applyIdpNamespaceGate(rbac, targets.namespaceId, conditions) ||
+        !this.applyRbacConditionsToQuery(rbac, conditions))
+    ) {
+      return { featureSubgraphs: [], totalCount: 0 };
     }
 
     const baseSubgraphs = alias(subgraphs, 'base_subgraphs');
@@ -552,7 +622,7 @@ export class FeatureFlagRepository {
     const pendingFeatureSubgraphs = featureSubgraphTargets.map((target) => target.targetId);
     while (pendingFeatureSubgraphs.length > 0) {
       const chunkOfIdsToFetch = pendingFeatureSubgraphs.splice(0, 100);
-      const chunkOfSubgraphs = await subgraphRepo.getSubgraphsByTargetIds(chunkOfIdsToFetch);
+      const chunkOfSubgraphs = await subgraphRepo.getSubgraphsByTargetIds(chunkOfIdsToFetch, rbac);
       a.push(...chunkOfSubgraphs);
     }
 
@@ -1483,17 +1553,44 @@ export class FeatureFlagRepository {
     return featureFlagCompositions;
   }
 
-  // return all the feature flag schema versions associated with the base schema version
-  // input: base schema version id
-  public async getFeatureFlagSchemaVersionsByBaseSchemaVersion({
-    baseSchemaVersionId,
+  public async getFeatureFlagSchemaVersionsInLatestComposition({
+    federatedGraphId,
+    federatedGraphTargetId,
   }: {
-    baseSchemaVersionId: string;
+    federatedGraphId: string;
+    federatedGraphTargetId: string;
   }) {
-    // A feature flag can have multiple composed schema versions against the same base schema version
-    // (e.g. recomposing the feature flag recomposes it against the unchanged base, so rows accumulate).
-    // Deduplicate by feature flag, keeping the latest composed version, so callers get one entry per flag.
-    const ffSchemaVersions = await this.db
+    const orgRepo = new OrganizationRepository(this.logger, this.db);
+    const splitConfigFeature = await orgRepo.getFeature({
+      organizationId: this.organizationId,
+      featureId: 'split-config-loading',
+    });
+
+    let baseLinkageCondition;
+    if (splitConfigFeature?.enabled) {
+      // Flag compositions are decoupled from the base composition, so the base schema version is irrelevant here.
+      baseLinkageCondition = and(
+        isNull(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId),
+        eq(federatedGraphsToFeatureFlagSchemaVersions.federatedGraphId, federatedGraphId),
+      );
+    } else {
+      const federatedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+      const latestValidBaseSchemaVersion = await federatedGraphRepo.getLatestValidSchemaVersion({
+        targetId: federatedGraphTargetId,
+      });
+
+      if (!latestValidBaseSchemaVersion) {
+        return;
+      }
+
+      baseLinkageCondition = eq(
+        federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId,
+        latestValidBaseSchemaVersion.schemaVersionId,
+      );
+    }
+
+    // The latest composition per flag that actually succeeded and deployed; this is what we return.
+    const validSchemaVersions = await this.db
       .selectDistinctOn([federatedGraphsToFeatureFlagSchemaVersions.featureFlagId], {
         id: federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
         featureFlagId: federatedGraphsToFeatureFlagSchemaVersions.featureFlagId,
@@ -1503,15 +1600,53 @@ export class FeatureFlagRepository {
         schemaVersion,
         eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
       )
-      .where(eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId))
+      .innerJoin(graphCompositions, eq(graphCompositions.schemaVersionId, schemaVersion.id))
+      .innerJoin(featureFlags, eq(featureFlags.id, federatedGraphsToFeatureFlagSchemaVersions.featureFlagId))
+      .where(
+        and(
+          baseLinkageCondition,
+          isNotNull(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId),
+          eq(graphCompositions.isComposable, true),
+          or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
+          or(isNull(graphCompositions.admissionError), eq(graphCompositions.admissionError, '')),
+          eq(featureFlags.isEnabled, true),
+        ),
+      )
       .orderBy(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, desc(schemaVersion.createdAt))
       .execute();
 
-    if (ffSchemaVersions.length === 0) {
+    if (validSchemaVersions.length === 0) {
       return;
     }
 
-    return ffSchemaVersions;
+    if (!splitConfigFeature?.enabled) {
+      return validSchemaVersions.map((version) => ({
+        ...version,
+        hasFailedLatestComposition: false,
+      }));
+    }
+
+    // The latest composition per flag regardless of status, used only to detect a newer failed composition.
+    const latestSchemaVersions = await this.db
+      .selectDistinctOn([federatedGraphsToFeatureFlagSchemaVersions.featureFlagId], {
+        id: federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
+        featureFlagId: federatedGraphsToFeatureFlagSchemaVersions.featureFlagId,
+      })
+      .from(federatedGraphsToFeatureFlagSchemaVersions)
+      .innerJoin(
+        schemaVersion,
+        eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
+      )
+      .where(and(baseLinkageCondition, isNotNull(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId)))
+      .orderBy(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, desc(schemaVersion.createdAt))
+      .execute();
+
+    const latestIdByFeatureFlagId = new Map(latestSchemaVersions.map((version) => [version.featureFlagId, version.id]));
+
+    return validSchemaVersions.map((version) => ({
+      ...version,
+      hasFailedLatestComposition: latestIdByFeatureFlagId.get(version.featureFlagId) !== version.id,
+    }));
   }
 
   /*
@@ -1588,16 +1723,22 @@ export class FeatureFlagRepository {
         schemaVersion,
         eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
       )
+      .innerJoin(graphCompositions, eq(graphCompositions.schemaVersionId, schemaVersion.id))
       .where(
         /**
          * When split config is enabled, the feature flag composition will not be tied to the base schema version, so
-         * we need to check that the baseCompositionSchemaVersionId is null
+         * we need to check that the baseCompositionSchemaVersionId is null. We also require the composition to have
+         * succeeded, otherwise a failed latest composition resolves to a null SDL and the caller 404s instead of
+         * serving the last valid schema.
          */
         splitConfigFeature?.enabled
           ? and(
               isNull(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId),
               eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
               eq(federatedGraphsToFeatureFlagSchemaVersions.federatedGraphId, federatedGraphId),
+              eq(graphCompositions.isComposable, true),
+              or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
+              or(isNull(graphCompositions.admissionError), eq(graphCompositions.admissionError, '')),
             )
           : and(
               eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
