@@ -53,7 +53,7 @@ type ProviderAdapter struct {
 type PollerOpts struct {
 	providerId  string
 	emitCursors bool
-	tracker     *positionTracker
+	tracker     cursorPosition
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
@@ -163,7 +163,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		zap.Strings("topics", subConf.Topics),
 	)
 
-	tracker := newPositionTracker()
+	tracker := make(cursorPosition)
 
 	// Create a new client for the topic
 	// Copy opts to avoid data race when multiple goroutines call Subscribe concurrently
@@ -253,7 +253,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 // warning and consumed via ConsumeTopics instead of being assigned explicit partitions, with
 // ConsumeResetOffset set to the cursor's issue time so they start where a known partition
 // without a recorded position would.
-func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, resumeCursor string, subConf *SubscriptionEventConfiguration, tracker *positionTracker) ([]kgo.Opt, error) {
+func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, resumeCursor string, subConf *SubscriptionEventConfiguration, tracker cursorPosition) ([]kgo.Opt, error) {
 	cur, err := datasource.DecodeCursor(resumeCursor)
 	if err != nil {
 		return nil, datasource.NewError("invalid resume cursor", err)
