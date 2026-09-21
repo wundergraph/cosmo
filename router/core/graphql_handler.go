@@ -96,6 +96,7 @@ type HandlerOptions struct {
 	ResponseCache             caching.Cache
 	ResponseCacheFallbackTTL  time.Duration
 	ResponseCacheInvalidation config.ResponseCacheInvalidationConfig
+	ResponseCacheTagHeader    config.ResponseCacheTagHeaderConfig
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -122,6 +123,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		responseCacheStore:                       opts.ResponseCache,
 		responseCacheFallbackTTL:                 opts.ResponseCacheFallbackTTL,
 		responseCacheInvalidation:                opts.ResponseCacheInvalidation,
+		responseCacheTagHeader:                   opts.ResponseCacheTagHeader,
 		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log),
 	}
 	return graphQLHandler
@@ -173,6 +175,7 @@ type GraphQLHandler struct {
 	responseCacheFallbackTTL  time.Duration
 	responseCacheErrorHandler func(error)
 	responseCacheInvalidation config.ResponseCacheInvalidationConfig
+	responseCacheTagHeader    config.ResponseCacheTagHeaderConfig
 
 	enableCacheResponseHeaders      bool
 	enableResponseHeaderPropagation bool
@@ -298,6 +301,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				}
+			}
+			if h.responseCacheStore != nil && h.responseCacheTagHeader.Enabled {
+				pw.cacheTagHeader = &h.responseCacheTagHeader
 			}
 		}
 
@@ -600,19 +606,19 @@ func (h *GraphQLHandler) writeError(ctx *resolve.Context, err error, res *resolv
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}
-	case errorTypeUpgradeFailed:
-		var upgradeErr transport.ErrFailedUpgrade
-		if h.subgraphErrorPropagation.PropagateStatusCodes && errors.As(err, &upgradeErr) && upgradeErr.StatusCode != 0 {
+	case errorTypeSubscriptionConnectionFailed:
+		var connectionErr transport.ErrFailedSubscriptionConnection
+		if h.subgraphErrorPropagation.PropagateStatusCodes && errors.As(err, &connectionErr) && connectionErr.StatusCode != 0 {
 			response.Errors[0].Extensions = &Extensions{
-				StatusCode: upgradeErr.StatusCode,
+				StatusCode: connectionErr.StatusCode,
 			}
-			if subgraph := reqContext.subgraphResolver.BySubgraphURL(upgradeErr.URL); subgraph != nil {
-				response.Errors[0].Message = fmt.Sprintf("Subscription Upgrade request failed for Subgraph '%s'.", subgraph.Name)
+			if subgraph := reqContext.subgraphResolver.BySubgraphURL(connectionErr.URL); subgraph != nil {
+				response.Errors[0].Message = fmt.Sprintf("Subscription connection request failed for Subgraph '%s'.", subgraph.Name)
 			} else {
-				response.Errors[0].Message = "Subscription Upgrade request failed"
+				response.Errors[0].Message = "Subscription connection request failed"
 			}
 		} else {
-			response.Errors[0].Message = "Subscription Upgrade request failed"
+			response.Errors[0].Message = "Subscription connection request failed"
 		}
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusOK)
