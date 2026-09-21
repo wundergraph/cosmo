@@ -21,7 +21,7 @@ func tagIndexKey(tag string) string { return testPrefix + tagNamespace + tag }
 
 // rawEntry is value as SetMany stores it, for cases that seed redis by hand.
 func rawEntry(value string) string {
-	return string(enginecache.EncodeEntry([]byte(value), nil))
+	return string(enginecache.EncodeItem(enginecache.Item{Value: []byte(value)}))
 }
 
 // newTestRedisCache returns a cache backed by an in-process Redis, plus the
