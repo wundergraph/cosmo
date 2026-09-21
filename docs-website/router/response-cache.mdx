@@ -257,7 +257,7 @@ The whole array is validated before anything is removed. One bad element refuses
 
 ## CDN purging
 
-A CDN in front of the router can cache whole responses and purge them by tag. Enable `cache_tag_header` and the router returns the tags of each response in a header the CDN reads. Ensure that you set the correct tag name, for example Cloudflare purges by `Cache-Tag`, Fastly by `Surrogate-Key`.
+A CDN in front of the router can cache whole responses and purge them by tag. Enable `cache_tag_header` and the router returns the tags of each response in a header the CDN reads. Set the header name and delimiter the CDN expects. Cloudflare purges by `Cache-Tag` with tags separated by a comma, the default. Fastly purges by `Surrogate-Key` with tags separated by a space.
 
 ```yaml config.yaml
 response_cache:
@@ -265,6 +265,7 @@ response_cache:
   cache_tag_header:
     enabled: true
     name: 'Surrogate-Key'
+    delimiter: ' '
 ```
 
 <Note>
