@@ -189,11 +189,13 @@ These apply to the current alpha.
 
 **Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
 
-**A merged entity fetch is served per alias.** With `engine.enable_multi_fetch` on, entity fetches to the same subgraph within one parallel wave are merged into a single request with aliased `_entities` fields. The response is taken apart again on the way into the cache, so each alias stores one entry per entity, the same as the unmerged fetch it replaces would have. Each alias is then served all-or-nothing like a batch: a warm alias is left out of the next merged request, a cold one is fetched whole. When some aliases are warm and others are not, the router still sends the request for the cold ones, and the `Cache-Control` it reports for that fetch is capped at the life left on the warm ones. Only a request that finds every alias warm is a cache hit.
+**Merged entity fetches have their own rules.** With `engine.enable_multi_fetch` on, entity fetches to the same subgraph within one parallel wave are merged into a single request with aliased `_entities` fields. The response is taken apart again on the way into the cache, so each alias stores one entry per entity, the same as the unmerged fetch it replaces would have. From there:
 
-**A merged entity fetch keeps no declared cache tags.** `apolloEntityCacheTags` is one flat list with nothing to say which alias each entry belongs to, so the tags a subgraph declares for a merged response are dropped. The entries are still indexed by subgraph and type, and invalidation by either still reaches them. Invalidation by cache tag misses them until they expire.
-
-**A failed merged request skips what depends on its warm aliases.** When the request for the cold aliases fails to reach the subgraph, the warm aliases keep their cached data and only the cold ones report the failure. Fetches that depend on the merged fetch are skipped as a whole, though, including those that depend only on a warm alias. Their fields stay `null` without an error of their own.
+- **Each alias is served all-or-nothing, like a batch.** A warm alias is left out of the next merged request. A cold one is fetched whole.
+- **Only a request that finds every alias warm is a cache hit.** When some aliases are warm and others are not, the router still sends the request for the cold ones.
+- **The reported `Cache-Control` is capped at the warm aliases.** The lifetime reported for a partly warm fetch is the life left on its warm aliases.
+- **Declared cache tags are dropped.** `apolloEntityCacheTags` is one flat list with nothing to say which alias each entry belongs to. The entries are still indexed by subgraph and type, and invalidation by either still reaches them. Invalidation by cache tag misses them until they expire.
+- **A failed request skips everything that depends on the merged fetch.** When the request for the cold aliases fails to reach the subgraph, the warm aliases keep their cached data and only the cold ones report the failure. Fetches that depend on the merged fetch are skipped as a whole, including those that depend only on a warm alias. Their fields stay `null` without an error of their own.
 
 ## Cache tags
 
@@ -221,7 +223,7 @@ The shape depends on what was fetched, because an entity fetch caches one entry 
 
 An outer array whose length does not match the entities answered costs the whole response its tags,
 rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and
-never forwarded to clients. The router does not record tags from a merged entity fetch., see [Limitations](#limitations).
+never forwarded to clients. The router does not record tags from a merged entity fetch. See [Limitations](#limitations).
 
 ## Invalidation
 
@@ -318,6 +320,8 @@ Every cacheable fetch of the request contributes three tiers of tag, coarsest fi
 
 A root query fetch has no single type and contributes no type tag. Declared tags are passed through unchanged. Tags are unique within the header.
 
+The `subgraph-` and `type-` prefixes are not reserved. A declared tag such as `subgraph-products` is indistinguishable in the header from the generated one, and a purge by it removes both. Avoid those prefixes in declared tags so a header tag maps back to one invalidation element.
+
 ```
 Cache-Tag: subgraph-employees,subgraph-mood,type-mood-Employee,moods,employee-1,employee-10
 ```
@@ -335,6 +339,8 @@ The header does not depend on the `invalidation` indexes. It is built even when 
 `max_bytes` caps the header value. When the tags do not fit, they are grouped coarsest first, subgraph then type then declared, and the finest that do not fit are left out. A purge by a coarse tag still reaches the response. The default of 16384 bytes is Cloudflare's limit on `Cache-Tag`.
 
 A declared tag that contains the delimiter, or a byte not valid in a header, is left out.
+
+`max_bytes` caps the whole value, not one tag. Fastly reads at most 1,024 bytes per key and ignores a longer key and every key after it, even when the value fits. Keep each declared tag at or below 1,024 bytes when purging through Fastly.
 
 ### Purge both caches
 
