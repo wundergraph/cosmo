@@ -26,19 +26,19 @@ func TestJWTOnError(t *testing.T) {
 		name, header, payload                              string
 		reject, required, custom, authenticated, wantError bool
 	}{
-		{name: "default rejects", header: "Bearer opaque", reject: true, wantError: true},
-		{name: "continue ignores opaque token", header: "Bearer opaque"},
-		{name: "unsupported prefix", header: "Basic opaque"},
-		{name: "empty token", header: "Bearer"},
-		{name: "missing token"},
-		{name: "required authentication", header: "Bearer opaque", required: true, wantError: true},
-		{name: "custom failure", header: "Bearer opaque", custom: true, wantError: true},
-		{name: "successful fallback", header: "Bearer " + valid, custom: true, authenticated: true},
-		{name: "WebSocket rejects by default", payload: `{"Authorization":"Bearer opaque"}`, reject: true, wantError: true},
-		{name: "WebSocket token", payload: `{"Authorization":"Bearer opaque"}`},
-		{name: "WebSocket fallback", header: "Bearer opaque", payload: `{"Authorization":"Bearer ` + valid + `"}`, authenticated: true},
-		{name: "malformed payload", header: "Bearer opaque", payload: `{`, wantError: true},
-		{name: "non-string credential", payload: `{"Authorization":42}`, wantError: true},
+		{name: "HTTP rejects an invalid token by default", header: "Bearer opaque", reject: true, wantError: true},
+		{name: "HTTP continue allows an opaque token without authenticating", header: "Bearer opaque"},
+		{name: "HTTP continue allows an unsupported prefix without authenticating", header: "Basic opaque"},
+		{name: "HTTP continue allows an empty token without authenticating", header: "Bearer"},
+		{name: "HTTP continue allows missing credentials without authenticating"},
+		{name: "continue still rejects when authentication is required", header: "Bearer opaque", required: true, wantError: true},
+		{name: "continue still rejects a custom authenticator failure", header: "Bearer opaque", custom: true, wantError: true},
+		{name: "valid HTTP JWT authenticates after a custom authenticator failure", header: "Bearer " + valid, custom: true, authenticated: true},
+		{name: "WebSocket rejects an invalid token by default", payload: `{"Authorization":"Bearer opaque"}`, reject: true, wantError: true},
+		{name: "WebSocket continue allows an opaque token without authenticating", payload: `{"Authorization":"Bearer opaque"}`},
+		{name: "valid WebSocket JWT authenticates after an ignored HTTP token", header: "Bearer opaque", payload: `{"Authorization":"Bearer ` + valid + `"}`, authenticated: true},
+		{name: "continue still rejects a malformed WebSocket payload", header: "Bearer opaque", payload: `{`, wantError: true},
+		{name: "continue still rejects a non-string WebSocket credential", payload: `{"Authorization":42}`, wantError: true},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {

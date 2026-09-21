@@ -46,20 +46,35 @@ func TestJWTOnErrorForwarding(t *testing.T) {
 	}, func(t *testing.T, env *testenv.Environment) {
 		const query = `{ credential: headerValue(name: "Authorization") authenticated: headerValue(name: "X-Test-Authenticated") }`
 		const expected = `{"data":{"credential":"Bearer opaque","authenticated":"false"}}`
-		res, err := env.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{Query: query}, map[string]string{"Authorization": "Bearer opaque"})
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		require.JSONEq(t, expected, res.Body)
-		require.Empty(t, res.Response.Header.Get(xAuthenticatedByHeader))
 
-		conn := env.InitGraphQLWebSocketConnection(nil, nil, json.RawMessage(`{"Authorization":"Bearer opaque"}`))
-		operation, err := json.Marshal(map[string]string{"query": query})
-		require.NoError(t, err)
-		require.NoError(t, testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{ID: "1", Type: "subscribe", Payload: operation}))
-		var message testenv.WebSocketMessage
-		require.NoError(t, testenv.WSReadJSON(t, conn, &message))
-		require.Equal(t, "next", message.Type)
-		require.JSONEq(t, expected, string(message.Payload))
-		require.NoError(t, conn.Close())
+		t.Run("HTTP forwards invalid credentials without authenticating", func(t *testing.T) {
+			res, err := env.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{Query: query}, map[string]string{"Authorization": "Bearer opaque"})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.JSONEq(t, expected, res.Body)
+			require.Empty(t, res.Response.Header.Get(xAuthenticatedByHeader))
+		})
+
+		t.Run("WebSocket forwards invalid credentials without authenticating", func(t *testing.T) {
+			conn, _, err := env.GraphQLWebsocketDialWithRetry(nil, nil)
+			require.NoError(t, err)
+			require.NotNil(t, conn)
+			t.Cleanup(func() { _ = conn.Close() })
+			require.NoError(t, testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				Type: "connection_init", Payload: json.RawMessage(`{"Authorization":"Bearer opaque"}`),
+			}))
+			var ack testenv.WebSocketMessage
+			require.NoError(t, testenv.WSReadJSON(t, conn, &ack))
+			require.Equal(t, "connection_ack", ack.Type)
+
+			operation, err := json.Marshal(map[string]string{"query": query})
+			require.NoError(t, err)
+			require.NoError(t, testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{ID: "1", Type: "subscribe", Payload: operation}))
+			var message testenv.WebSocketMessage
+			require.NoError(t, testenv.WSReadJSON(t, conn, &message))
+			require.Equal(t, "next", message.Type)
+			require.JSONEq(t, expected, string(message.Payload))
+			require.NoError(t, conn.Close())
+		})
 	})
 }
