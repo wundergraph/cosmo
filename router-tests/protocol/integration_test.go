@@ -662,7 +662,9 @@ func TestPropagateOperationName(t *testing.T) {
 		employeePrefix := "query Requires__employees__"
 		var mut sync.Mutex
 		// Middleware for Employee Subgraph should remove queries it sees.
-		expectEmployeeOps := []string{employeePrefix + "0", employeePrefix + "3", employeePrefix + "4"}
+		// The two same-wave entity fetches (ids 3 and 4) are merged into one request
+		// by default, whose operation name carries both ids.
+		expectEmployeeOps := []string{employeePrefix + "0", employeePrefix + "multi_3_4"}
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
@@ -677,7 +679,7 @@ func TestPropagateOperationName(t *testing.T) {
 							var req core.GraphQLRequest
 							require.NoError(t, json.Unmarshal(body, &req))
 
-							got := req.Query[:len(employeePrefix)+1]
+							got := strings.TrimSpace(req.Query[:strings.IndexAny(req.Query, "({")])
 							mut.Lock()
 							idx := slices.Index(expectEmployeeOps, got)
 							require.True(t, idx != -1, "expected one of %v, got %v", expectEmployeeOps, got)

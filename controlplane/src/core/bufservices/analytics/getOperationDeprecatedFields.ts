@@ -106,7 +106,7 @@ export function getOperationDeprecatedFields(
         });
       }
     } catch (error) {
-      logger.error('Error getting latest valid schema version', { error });
+      logger.error(error, 'Error getting latest valid schema version');
     }
 
     return {

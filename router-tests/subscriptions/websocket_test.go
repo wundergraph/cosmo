@@ -1351,7 +1351,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "error", msg.Type)
-			require.Equal(t, `[{"message":"Subscription Upgrade request failed for Subgraph 'employees'.","extensions":{"statusCode":418}}]`, string(msg.Payload))
+			require.Equal(t, `[{"message":"Subscription connection request failed for Subgraph 'employees'.","extensions":{"statusCode":418}}]`, string(msg.Payload))
 		})
 	})
 	t.Run("subscription with unexposed upgrade error", func(t *testing.T) {
@@ -1389,7 +1389,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "error", msg.Type)
-			require.Equal(t, `[{"message":"Subscription Upgrade request failed"}]`, string(msg.Payload))
+			require.Equal(t, `[{"message":"Subscription connection request failed"}]`, string(msg.Payload))
 		})
 	})
 	t.Run("subscription error in resolver", func(t *testing.T) {
@@ -3117,7 +3117,7 @@ func TestWebsocketClose(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.JSONEq(t, `[{"message":"Subscription Upgrade request failed for Subgraph 'employees'.","extensions":{"statusCode":401}}]`, string(res.Payload))
+			require.JSONEq(t, `[{"message":"Subscription connection request failed for Subgraph 'employees'.","extensions":{"statusCode":401}}]`, string(res.Payload))
 
 			require.NoError(t, conn.SetReadDeadline(time.Now().Add(500*time.Millisecond)))
 			_, _, nextErr := conn.ReadMessage()

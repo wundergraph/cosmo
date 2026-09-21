@@ -296,6 +296,41 @@ The response type of the expression is validated upon startup. You should ensure
  Note that while `subgraph` attributes can be accessed in the request logger, it will always have "zero" values.
 </Warning>
 
+#### Logging operation complexity
+
+Router access-log expressions can record the operation complexity values that are also attached to validation traces. Configure `security.complexity_limits` first. Use `measure` mode to calculate the values without rejecting operations.
+
+```yaml
+security:
+  complexity_calculation_cache:
+    enabled: true
+    size: 1024
+  complexity_limits:
+    mode: measure
+
+access_logs:
+  enabled: true
+  router:
+    fields:
+      - key: "query_depth"
+        value_from:
+          expression: "request.operation.queryDepth"
+      - key: "query_total_fields"
+        value_from:
+          expression: "request.operation.queryTotalFields"
+      - key: "query_root_fields"
+        value_from:
+          expression: "request.operation.queryRootFields"
+      - key: "query_root_field_aliases"
+        value_from:
+          expression: "request.operation.queryRootFieldAliases"
+      - key: "query_complexity_cache_hit"
+        value_from:
+          expression: "request.operation.queryComplexityCacheHit"
+```
+
+The numeric values are logged as integers and the cache status as a boolean. See [Template Expressions](/router/configuration/template-expressions#operation-object) for field definitions and lifecycle limitations.
+
 #### Subgraph Access Log Expressions
 
 <Info>
