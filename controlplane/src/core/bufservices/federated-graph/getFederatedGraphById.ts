@@ -73,16 +73,15 @@ export function getFederatedGraphById(
 
     const featureFlagsInLatestValidComposition: FeatureFlagDTO[] = [];
 
-    if (federatedGraph.schemaVersionId) {
-      const ffsInLatestValidComposition = await featureFlagRepo.getFeatureFlagSchemaVersionsByBaseSchemaVersion({
-        baseSchemaVersionId: federatedGraph.schemaVersionId,
-      });
-      if (ffsInLatestValidComposition) {
-        for (const ff of ffsInLatestValidComposition) {
-          const flag = featureFlags.find((f) => f.id === ff.featureFlagId);
-          if (flag) {
-            featureFlagsInLatestValidComposition.push(flag);
-          }
+    const ffsInLatestValidComposition = await featureFlagRepo.getFeatureFlagSchemaVersionsInLatestComposition({
+      federatedGraphId: federatedGraph.id,
+      federatedGraphTargetId: federatedGraph.targetId,
+    });
+    if (ffsInLatestValidComposition) {
+      for (const ff of ffsInLatestValidComposition) {
+        const flag = featureFlags.find((f) => f.id === ff.featureFlagId);
+        if (flag) {
+          featureFlagsInLatestValidComposition.push(flag);
         }
       }
     }

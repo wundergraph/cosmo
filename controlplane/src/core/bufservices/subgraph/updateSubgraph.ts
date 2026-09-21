@@ -6,7 +6,6 @@ import {
   UpdateSubgraphRequest,
   UpdateSubgraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { PlainMessage } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
@@ -21,8 +20,8 @@ import {
   formatWebsocketSubprotocol,
   getLogger,
   handleError,
-  isValidGrpcNamingScheme,
   isValidLabels,
+  validateSubgraphRouting,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -91,95 +90,27 @@ export function updateSubgraph(
       };
     }
 
-    // If the graph is an EDG, it should never define a routing URL nor a subscription URL
-    if (subgraph.isEventDrivenGraph) {
-      if (req.routingUrl !== undefined) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Event-Driven Graphs must not define a routing URL`,
-          },
-          compositionErrors: [],
-          deploymentErrors: [],
-          compositionWarnings: [],
-        };
-      }
-      if (req.subscriptionUrl !== undefined) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Event-Driven Graphs must not define a subscription URL`,
-          },
-          compositionErrors: [],
-          deploymentErrors: [],
-          compositionWarnings: [],
-        };
-      }
-      if (req.subscriptionProtocol !== undefined) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Event-Driven Graphs must not define a subscription protocol`,
-          },
-          compositionErrors: [],
-          deploymentErrors: [],
-          compositionWarnings: [],
-        };
-      }
-      if (req.websocketSubprotocol !== undefined) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Event-Driven Graphs must not define a websocket subprotocol`,
-          },
-          compositionErrors: [],
-          deploymentErrors: [],
-          compositionWarnings: [],
-        };
-      }
-    } else {
-      // Routing URL should never be an empty string, so check explicitly for undefined
-      if (req.routingUrl !== undefined && !isValidUrl(req.routingUrl)) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Routing URL "${req.routingUrl}" is not a valid URL.`,
-          },
-          compositionErrors: [],
-          deploymentErrors: [],
-          compositionWarnings: [],
-        };
-      }
-      // For GRPC_SERVICE subgraphs, validate that routing URL follows gRPC naming scheme
-      if (
-        req.routingUrl !== undefined &&
-        subgraph.type === formatSubgraphType(SubgraphType.GRPC_SERVICE) &&
-        !isValidGrpcNamingScheme(req.routingUrl)
-      ) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details:
-              `Routing URL must follow gRPC naming scheme. ` +
-              `See https://grpc.io/docs/guides/custom-name-resolution/ for examples.`,
-          },
-          compositionErrors: [],
-          deploymentErrors: [],
-          compositionWarnings: [],
-        };
-      }
-      // When un-setting the url, the url can be an empty string
-      if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Subscription URL "${req.subscriptionUrl}" is not a valid URL.`,
-          },
-          compositionErrors: [],
-          deploymentErrors: [],
-          compositionWarnings: [],
-        };
-      }
+    // An existing subgraph keeps its routing URL when the request omits one, so the URL is optional here.
+    const routingViolation = validateSubgraphRouting({
+      isEventDrivenGraph: subgraph.isEventDrivenGraph,
+      routingUrl: req.routingUrl,
+      subscriptionUrl: req.subscriptionUrl,
+      subscriptionProtocol: req.subscriptionProtocol,
+      websocketSubprotocol: req.websocketSubprotocol,
+      routingUrlRequirement: 'optional',
+      isGrpcService: subgraph.type === formatSubgraphType(SubgraphType.GRPC_SERVICE),
+    });
+
+    if (routingViolation) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: routingViolation,
+        },
+        compositionErrors: [],
+        deploymentErrors: [],
+        compositionWarnings: [],
+      };
     }
 
     // Check if the user is authorized to perform the action

@@ -464,6 +464,90 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
+	t.Run("subscription receive subscription when using inaccessible field as filter", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.NatsSubscriptionFilterJSONTemplate,
+			EnableNats:               true,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscriptionPayload struct {
+				employeeUpdated struct {
+					ID float64 `graphql:"id"`
+				} `graphql:"employeeUpdated(tag: \"test\")"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl).WithSyncMode(true)
+
+			subscriptionArgsCh := make(chan natsSubscriptionArgs)
+			subscriptionID, err := client.Subscribe(&subscriptionPayload, nil, func(dataValue []byte, errValue error) error {
+				subscriptionArgsCh <- natsSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionID)
+
+			clientRunErrCh := make(chan error)
+			go func() {
+				clientErr := client.Run()
+				clientRunErrCh <- clientErr
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
+
+			// Receive the first message, which matches the filter
+			subject := xEnv.GetPubSubName("employee-updated.test")
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee","tag": "test"}`), 1, EventWaitTimeout)
+
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdated":{"id":3}}`, string(args.dataValue))
+			})
+
+			// Published on the subject the subscription listens on, but the tag does not match the filter condition,
+			//so the message must be filtered out
+			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":7,"__typename": "Employee","tag": "other"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+
+			// Should receive the last message because it matches the filter again
+			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":12,"__typename": "Employee","tag": "test"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdated":{"id":12}}`, string(args.dataValue))
+			})
+
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientRunErrCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "unable to close client before timeout")
+
+			xEnv.WaitForSubscriptionCount(0, EventWaitTimeout)
+			xEnv.WaitForConnectionCount(0, EventWaitTimeout)
+
+			natsLogs := xEnv.Observer().FilterMessageSnippet("Nats").All()
+			require.Len(t, natsLogs, 2)
+			providerIDFields := xEnv.Observer().FilterField(zap.String("provider_id", "my-nats")).All()
+			require.Len(t, providerIDFields, 2)
+		})
+	})
+
 	t.Run("multipart with apollo compatibility", func(t *testing.T) {
 		t.Parallel()
 

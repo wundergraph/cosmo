@@ -29,7 +29,6 @@ import {
   configureDescriptionPropagationError,
   inaccessibleQueryRootTypeError,
   inaccessibleRequiredInputValueError,
-  inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
   incompatibleFederatedFieldNamedTypeError,
   incompatibleMergedTypesError,
   incompatibleParentKindFatalError,
@@ -2536,17 +2535,6 @@ export class FederationFactory {
       return [];
     }
     let lastData: ParentDefinitionData = objectData;
-    if (this.inaccessibleCoords.has(lastData.renamedTypeName)) {
-      fieldErrorMessages.push(
-        inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage(
-          inputFieldPath,
-          conditionFieldPath,
-          paths[0],
-          lastData.renamedTypeName,
-        ),
-      );
-      return [];
-    }
     let partialConditionFieldPath = '';
     for (let i = 0; i < paths.length; i++) {
       const fieldName = paths[i];
@@ -2583,17 +2571,6 @@ export class FederationFactory {
             partialConditionFieldPath,
             fieldPath,
             directiveSubgraphName,
-          ),
-        );
-        return [];
-      }
-      if (this.inaccessibleCoords.has(fieldPath)) {
-        fieldErrorMessages.push(
-          inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage(
-            inputFieldPath,
-            conditionFieldPath,
-            partialConditionFieldPath,
-            fieldPath,
           ),
         );
         return [];
@@ -3251,9 +3228,8 @@ export class FederationFactory {
   }
 
   buildFederationContractResult(contractTagOptions: ContractTagOptions): FederationResult {
-    if (!this.isVersionTwo) {
-      /* If all the subgraphs are version one, the @inaccessible directive won't be present.
-       ** However, contracts require @inaccessible to exclude applicable tagged types. */
+    if (!this.referencedFederatedDirectiveNames.has(INACCESSIBLE)) {
+      // Even if all the subgraphs are version one, the @inaccessible directive needs to be defined.
       this.routerDefinitions.push(INACCESSIBLE_DEFINITION);
     }
     const tagIntersection = contractTagOptions.tagNamesToExclude.intersection(contractTagOptions.tagNamesToInclude);
@@ -3269,6 +3245,7 @@ export class FederationFactory {
         if (isNodeDataInaccessible(parentDefinitionData)) {
           continue;
         }
+
         const parentTagData = this.parentTagDataByTypeName.get(parentTypeName);
         if (!parentTagData) {
           parentDefinitionData.federatedDirectivesData.directivesByName.set(INACCESSIBLE, [

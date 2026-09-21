@@ -1,0 +1,349 @@
+---
+title: "Response Cache (Experimental)"
+description: "Cache fetches to avoid subsequent requests reaching upstream subgraphs."
+icon: "boxes-stacked"
+---
+
+<Danger>
+  **Experimental feature.** Response caching is in alpha and is subject to change, and should not be used in production environments.
+</Danger>
+
+The router caches two kinds of subgraph response.
+
+**Entity fetches.** An entity fetch is the request the router sends to a subgraph through the `_entities` root field to resolve fields of an entity that another subgraph owns. Entries are keyed per entity and per selection set, so asking for different fields of the same entity does not share an entry.
+
+**Root query fetches.** A root query fetch is the request the router sends a subgraph for the root fields the client selected. The whole answer is stored as one entry. The key covers the operation text and every variable value. Any difference in either is a miss, and the request goes to the subgraph as it would have. Only queries are cached. Mutations and subscriptions are never cached.
+
+Response caching is disabled by default.
+
+## What gets cached
+
+A subgraph response is cached only when its `Cache-Control` header asks to be. The rules apply in this order:
+
+1. `no-store` refuses caching.
+2. `no-cache` or `private` refuses caching, in any form. This includes the qualified `no-cache="Set-Cookie"` form.
+3. `s-maxage` sets the lifetime and takes precedence over `max-age`.
+4. `max-age` sets the lifetime when `s-maxage` is absent.
+5. When neither lifetime is present, `fallback_ttl` applies if the header contains `public`, `must-revalidate`, `proxy-revalidate`, `stale-if-error`, or `stale-while-revalidate`. The stale directives require a valid duration, such as `stale-if-error=60`.
+
+`public` is optional. For example, `Cache-Control: max-age=60` and `Cache-Control: s-maxage=60` both allow caching for 60 seconds.
+
+A value of `0` for the selected lifetime refuses caching. It does not fall through to the next rule. For example, `max-age=60, s-maxage=0` is not cached, while `max-age=0, s-maxage=60` is cached for 60 seconds. An invalid duration in a recognized directive also prevents caching.
+
+A missing or empty `Cache-Control` header is never cached. Headers containing only unrecognized directives, such as `cdn-cache-control=60` or `immutable`, are also never cached. `fallback_ttl` does not apply to these responses.
+
+Revalidation and stale-response directives opt into the fallback lifetime. The response cache does not revalidate entries or serve expired entries.
+
+A response carrying GraphQL errors is never cached, whatever its `Cache-Control` header says.
+
+<Info>
+  Configuring the response cache does not make anything cacheable on its own. Subgraphs opt in with a recognized caching directive, such as `Cache-Control: max-age=60` or `Cache-Control: public`. If nothing appears to be cached, check the subgraph response headers first.
+</Info>
+
+## Enable it
+
+### Redis
+
+Every router replica shares one cache and entries outlive the process. Define a [storage provider](/router/storage-providers), then reference it by `provider_id`.
+
+Redis 7.0 or newer is required to use this feature.
+
+<CodeGroup>
+```yaml config.yaml
+storage_providers:
+  redis:
+    - id: 'my_redis'
+      cluster_enabled: false
+      urls:
+        - 'redis://localhost:6379'
+
+response_cache:
+  enabled: true
+  fallback_ttl: 30s
+  key_prefix: 'cosmo_response_cache:'
+  storage:
+    provider: 'redis'
+    provider_id: 'my_redis'
+```
+</CodeGroup>
+
+An unknown `provider_id` fails startup.
+
+### Router memory
+
+Each replica holds its own cache, nothing survives a restart, and no Redis is needed.
+
+<CodeGroup>
+```yaml config.yaml
+response_cache:
+  enabled: true
+  fallback_ttl: 30s
+  storage:
+    provider: 'memory'
+    max_entries: 2048
+```
+</CodeGroup>
+
+`provider` defaults to `redis`, so caching in memory has to be asked for by name. This prevents a missing `provider_id` from quietly turning one shared cache into one cache per replica.
+
+## Configuration reference
+
+```yaml config.yaml
+response_cache:
+  # Enable response caching. Default: false.
+  enabled: true
+  # Lifetime for a response with a recognized caching directive but no lifetime.
+  # A response naming its own max-age or s-maxage gets that instead.
+  # Minimum 1s. Default: 30s.
+  fallback_ttl: 30s
+  # Prepended to every cache key so entries cannot collide with anything else
+  # sharing the Redis instance. Redis only, ignored by the memory provider.
+  # Default: cosmo_response_cache:
+  key_prefix: 'cosmo_response_cache:'
+  storage:
+    # redis or memory. Default: redis.
+    provider: 'redis'
+    # ID of a provider declared under storage_providers.redis.
+    # Required unless provider is memory.
+    provider_id: 'my_redis'
+    # Memory provider only. Default: 10000.
+    max_entries: 10000
+  invalidation:
+    # Which secondary indexes are built over cached entries, so an entry can
+    # later be found by what it is about. Each defaults to true.
+    # Index under the cache tags a subgraph declared.
+    cache_tag: true
+    # Index under the subgraph that answered.
+    subgraph: true
+    # Index entities under their __typename.
+    type: true
+    endpoint:
+      # Serve the invalidation endpoint. Default: false.
+      enabled: false
+      # Its own address, not a route on the router's port. Default: localhost:5027.
+      listen_addr: 'localhost:5027'
+      # Default: /invalidation.
+      path: '/invalidation'
+      # Sent as the Authorization header, no Bearer prefix. At least 32
+      # characters. Required when the endpoint is enabled.
+      shared_key: ''
+  cache_tag_header:
+    # Return the cache tags of a response in a header a CDN can purge by.
+    # See "CDN purging" below. Default: false.
+    enabled: false
+    # Header name. Cloudflare reads Cache-Tag, Fastly reads Surrogate-Key.
+    # Default: Cache-Tag.
+    name: 'Cache-Tag'
+    # Separates tags in the value. Fastly expects a space. Default: ,
+    delimiter: ','
+    # Largest value emitted, in bytes. Tags that do not fit are dropped
+    # finest first. The default is Cloudflare's limit. Default: 16384.
+    max_bytes: 16384
+```
+
+`storage` is required when `enabled` is `true`.
+
+Environment variables bypass the config schema validation. A `fallback_ttl` of zero or less fails startup either way.
+
+## Limitations
+
+These apply to the current alpha.
+
+**A batch is served from the cache only when every entity in it is present.** One miss sends the whole batch to the subgraph, including the entities that were already cached. Entities are stored individually, so a later batch made up only of cached entities is a full hit.
+
+**Forwarded request headers are not part of the cache key.** The key covers the request the router renders for the subgraph, which is the operation text and its variables. Headers added by header propagation are applied after that and never reach the key. Two requests that differ only by a propagated header share one entry, so the first response is served to the second caller. A subgraph whose answer varies by request header must use `private` or `no-store`. Omitting `public` does not prevent caching.
+
+**Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
+
+**A merged entity fetch is served per alias.** With `engine.enable_multi_fetch` on, entity fetches to the same subgraph within one parallel wave are merged into a single request with aliased `_entities` fields. The response is taken apart again on the way into the cache, so each alias stores one entry per entity, the same as the unmerged fetch it replaces would have. Each alias is then served all-or-nothing like a batch: a warm alias is left out of the next merged request, a cold one is fetched whole. When some aliases are warm and others are not, the router still sends the request for the cold ones, and the `Cache-Control` it reports for that fetch is capped at the life left on the warm ones. Only a request that finds every alias warm is a cache hit.
+
+**A merged entity fetch keeps no declared cache tags.** `apolloEntityCacheTags` is one flat list with nothing to say which alias each entry belongs to, so the tags a subgraph declares for a merged response are dropped. The entries are still indexed by subgraph and type, and invalidation by either still reaches them. Invalidation by cache tag misses them until they expire.
+
+**A failed merged request skips what depends on its warm aliases.** When the request for the cold aliases fails to reach the subgraph, the warm aliases keep their cached data and only the cold ones report the failure. Fetches that depend on the merged fetch are skipped as a whole, though, including those that depend only on a warm alias. Their fields stay `null` without an error of their own.
+
+## Cache tags
+
+A subgraph names what its response is about by returning a cache tag extension. Tags are recorded as a secondary index over the cached entries, so an entry can be found by what it is about rather than only by the key it happens to sit under.
+
+The shape depends on what was fetched, because an entity fetch caches one entry per entity while a root query fetch caches its whole answer as one.
+
+**Entity fetches** return `apolloEntityCacheTags`, an array of arrays holding one list per entity, in the same order as the `_entities` answered:
+
+```json
+{
+  "data": { "_entities": [{ "__typename": "User", "id": "1" }, { "__typename": "User", "id": "2" }] },
+  "extensions": { "apolloEntityCacheTags": [["users", "user-1"], ["users", "user-2"]] }
+}
+```
+
+**Root query fetches** return `apolloCacheTags`, one flat array:
+
+```json
+{
+  "data": { "homepage": { "title": "Hello" } },
+  "extensions": { "apolloCacheTags": ["homepage", "featured"] }
+}
+```
+
+An outer array whose length does not match the entities answered costs the whole response its tags,
+rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and
+never forwarded to clients. The router does not record tags from a merged entity fetch., see [Limitations](#limitations).
+
+## Invalidation
+
+Cached entries expire when their TTL ends. Send a request to the invalidation endpoint on its separate port to remove entries earlier.
+
+<Danger>
+**An entry written while an invalidation runs can survive it.** The index lists the entry before its value lands, so the request finds nothing to remove and leaves it in place. The entry then serves data fetched before the invalidation until its TTL ends. Send the request again once in-flight writes have settled. This is a known bug and a fix is in progress.
+</Danger>
+
+### Enable the endpoint
+
+The endpoint only starts when the response cache itself is enabled.
+
+```yaml config.yaml
+response_cache:
+  enabled: true
+  invalidation:
+    endpoint:
+      enabled: true
+      shared_key: 'a-random-string-of-at-least-32-characters'
+```
+
+The endpoint speaks plain HTTP. Keep `listen_addr` on the loopback interface, or terminate TLS in front of it, so the shared key is not sent in the clear.
+
+### Send a request
+
+`POST` a JSON array to the endpoint, with the shared key as the `Authorization` header. There is no `Bearer` prefix.
+
+```bash
+curl -X POST "http://localhost:5027/invalidation" \
+  -H "Authorization: ${INVALIDATION_SHARED_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '[
+    { "kind": "subgraph", "subgraph": "products" },
+    { "kind": "type", "subgraph": "products", "type": "Product" },
+    { "kind": "cache_tag", "subgraphs": ["products", "reviews"], "cache_tag": "product-42" }
+  ]'
+```
+
+Each element names one of three kinds.
+
+| `kind` | Removes | Fields |
+| --- | --- | --- |
+| `subgraph` | Every entry the subgraph answered | `subgraph` |
+| `type` | Every entity of that `__typename` the subgraph answered | `subgraph`, `type` |
+| `cache_tag` | Every entry the listed subgraphs tagged with it | `subgraphs`, `cache_tag` |
+
+A successful request answers `202` with the number of cache keys removed:
+
+```json
+{ "count": 12 }
+```
+
+The whole array is validated before anything is removed. One bad element refuses the request with `400` and removes nothing, so it can be corrected and resent as a whole. Each error names the element it is about:
+
+```json
+{ "errors": [{ "index": 1, "kind": "type", "message": "a \"type\" request requires a type" }] }
+```
+
+### Restrictions
+
+**Tags can be outdated.** With the Redis provider, an entry cached again under different tags stays listed under its earlier tags until it expires. Invalidating a tag the entry no longer carries still removes it. With the memory provider, an entry is listed under the tags of its latest write only.
+
+**Everything is scoped to a subgraph.** A type or a cache tag is indexed per subgraph that answered, so every request names one. There is no way to invalidate a type or a tag across all subgraphs in one element. List the subgraphs instead.
+
+**The memory provider is per replica.** Each router holds its own cache, so an invalidation reaches only the replica it was sent to. Do not use the in-memory cache with multiple router instances in production.
+
+## CDN purging
+
+A CDN in front of the router can cache whole responses and purge them by tag. Enable `cache_tag_header` and the router returns the tags of each response in a header the CDN reads. Set the header name and delimiter the CDN expects. Cloudflare purges by `Cache-Tag` with tags separated by a comma, the default. Fastly purges by `Surrogate-Key` with tags separated by a space.
+
+```yaml config.yaml
+response_cache:
+  enabled: true
+  cache_tag_header:
+    enabled: true
+    name: 'Surrogate-Key'
+    delimiter: ' '
+```
+
+<Note>
+  The header names what a response is about. It does not tell the CDN to cache it. The CDN caches on the `Cache-Control` the router returns, which the [cache control policy](/router/proxy-capabilities/adjusting-cache-control) sets. On a hit, the lifetime reported for the served fetch is the time left on the entry, so the CDN never holds a response longer than the router does.
+</Note>
+
+### What the header carries
+
+Every cacheable fetch of the request contributes three tiers of tag, coarsest first:
+
+| Tag | One per | Purge removes |
+| --- | --- | --- |
+| `subgraph-{name}` | Subgraph a cached fetch went to | Everything that subgraph answered |
+| `type-{subgraph}-{__typename}` | Entity type an entity fetch returned | Every response holding an entity of that type |
+| The tag as declared | Tag in `apolloCacheTags` or `apolloEntityCacheTags` | Every response the subgraph tagged with it |
+
+A root query fetch has no single type and contributes no type tag. Declared tags are passed through unchanged. Tags are unique within the header.
+
+```
+Cache-Tag: subgraph-employees,subgraph-mood,type-mood-Employee,moods,employee-1,employee-10
+```
+
+### When it is sent
+
+The header is sent on cache hits and misses alike. A hit rebuilds it from what was stored with the entry, so both carry the same value. A fetch that was not cacheable contributes nothing, and a response with no cacheable fetch has no header.
+
+The header is not sent on subscriptions, deferred or batched responses, or responses carrying subgraph errors. A response with subgraph errors is marked `no-store` instead.
+
+The header does not depend on the `invalidation` indexes. It is built even when every index is off.
+
+### Size
+
+`max_bytes` caps the header value. When the tags do not fit, they are grouped coarsest first, subgraph then type then declared, and the finest that do not fit are left out. A purge by a coarse tag still reaches the response. The default of 16384 bytes is Cloudflare's limit on `Cache-Tag`.
+
+A declared tag that contains the delimiter, or a byte not valid in a header, is left out.
+
+### Purge both caches
+
+A purge at the CDN removes the response from the CDN only. The next request reaches the router, which may still serve the entry from its own cache. Send the same change to the [invalidation endpoint](#invalidation) as well. Each header tag maps to one `kind`:
+
+| Header tag | Invalidation element |
+| --- | --- |
+| `subgraph-products` | `{ "kind": "subgraph", "subgraph": "products" }` |
+| `type-products-Product` | `{ "kind": "type", "subgraph": "products", "type": "Product" }` |
+| `product-42` | `{ "kind": "cache_tag", "subgraphs": ["products"], "cache_tag": "product-42" }` |
+
+Invalidate the router first, then purge the CDN, so the CDN's refetch does not pick up the stale entry.
+
+### Validation
+
+Startup fails when `name` is not a valid header name or is `Content-Length`, `Content-Type` or `Transfer-Encoding`, when `delimiter` is empty or not valid in a header, or when `max_bytes` is not greater than zero.
+
+## Observability
+
+The router logs once at startup when the cache is enabled. With the Redis provider:
+
+```
+INFO  Response cache enabled  {"fallback_ttl": "30s", "storage_provider": "redis", "key_prefix": "cosmo_response_cache:", "storage_provider_id": "my_redis"}
+```
+
+With the memory provider:
+
+```
+INFO  Response cache enabled  {"fallback_ttl": "30s", "storage_provider": "memory", "max_entries": 2048}
+```
+
+Nothing is logged when the cache is disabled.
+
+Cache failures never fail a request. When a read or a write fails, the router serves from the subgraph and logs a warning:
+
+```
+WARN  Response cache degraded, serving from the subgraph instead
+```
+
+That warning is sampled to one line per second. An unreachable cache produces one failure per cacheable fetch of every request in flight, and logging it unsampled would compound the outage.
+
+## Related
+
+* [Storage Providers](/router/storage-providers) defines the Redis instance the `redis` provider references.
+* [Adjusting Cache Control](/router/proxy-capabilities/adjusting-cache-control) sets the `Cache-Control` the client and any CDN in front of the router receive.
+* [Cache Warmer](/concepts/cache-warmer) is a different cache. It pre-populates the operation plan cache and does not cache subgraph responses.

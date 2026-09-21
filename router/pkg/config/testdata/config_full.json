@@ -179,6 +179,9 @@
     "AllowOrigins": [
       "*"
     ],
+    "MatchOrigins": [
+      "^https://([a-z0-9-]+\\.)*example\\.com$"
+    ],
     "AllowMethods": [
       "HEAD",
       "GET",
@@ -284,6 +287,7 @@
       "Enabled": false,
       "JWKS": null,
       "AuthorizationServerURL": "",
+      "AuthorizationServerURLs": null,
       "Scopes": {
         "Initialize": null,
         "ToolsList": null,
@@ -295,7 +299,10 @@
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
     },
-    "ResourceDocumentation": ""
+    "ResourceDocumentation": "",
+    "OutputSchema": {
+      "Enabled": true
+    }
   },
   "ConnectRPC": {
     "Enabled": false,
@@ -769,7 +776,8 @@
     "ErrorExtensionCode": {
       "Enabled": true,
       "Code": "RATE_LIMIT_EXCEEDED"
-    }
+    },
+    "ExcludeSubscriptions": true
   },
   "LocalhostFallbackInsideDocker": true,
   "CDN": {
@@ -858,6 +866,33 @@
     "ItemDelay": 0,
     "Timeout": 30000000000,
     "InMemoryFallback": true
+  },
+  "ResponseCache": {
+    "Enabled": true,
+    "FallbackTTL": 30000000000,
+    "KeyPrefix": "response_cache_test:",
+    "Storage": {
+      "Provider": "redis",
+      "ProviderID": "my_redis",
+      "MaxEntries": 2048
+    },
+    "Invalidation": {
+      "CacheTag": true,
+      "Subgraph": false,
+      "Type": true,
+      "Endpoint": {
+        "Enabled": true,
+        "ListenAddr": "localhost:5027",
+        "Path": "/invalidation",
+        "SharedKey": "a-shared-key-that-is-long-enough-to-pass"
+      }
+    },
+    "TagHeader": {
+      "Enabled": true,
+      "Name": "Surrogate-Key",
+      "Delimiter": " ",
+      "MaxBytes": 1024
+    }
   },
   "RouterConfigPath": "latest.json",
   "RouterRegistration": true,
@@ -983,7 +1018,10 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "SSEServerWriteTimeout": 10000000000,
     "EnableDefer": false,
+    "EnableMultiFetch": true,
+    "EnableScheduleFetches": true,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,

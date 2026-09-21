@@ -31,3 +31,13 @@ export type ProvidesWithInterfaceFieldSelectionWarningParams = {
   selection: string;
   subgraphName: SubgraphName;
 };
+
+export type UnsupportedDirectiveWarningParams = {
+  directiveName: DirectiveName;
+  subgraphName: SubgraphName;
+};
+
+export type OverrideDirectiveLabelArgumentWarningParams = {
+  coords: string;
+  subgraphName: SubgraphName;
+};

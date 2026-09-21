@@ -47,6 +47,12 @@ const (
 	// PlatformServiceGetPlaygroundScriptsProcedure is the fully-qualified name of the PlatformService's
 	// GetPlaygroundScripts RPC.
 	PlatformServiceGetPlaygroundScriptsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetPlaygroundScripts"
+	// PlatformServiceGetPlaygroundDefaultHeadersProcedure is the fully-qualified name of the
+	// PlatformService's GetPlaygroundDefaultHeaders RPC.
+	PlatformServiceGetPlaygroundDefaultHeadersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetPlaygroundDefaultHeaders"
+	// PlatformServiceUpdatePlaygroundDefaultHeadersProcedure is the fully-qualified name of the
+	// PlatformService's UpdatePlaygroundDefaultHeaders RPC.
+	PlatformServiceUpdatePlaygroundDefaultHeadersProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdatePlaygroundDefaultHeaders"
 	// PlatformServiceCreateNamespaceProcedure is the fully-qualified name of the PlatformService's
 	// CreateNamespace RPC.
 	PlatformServiceCreateNamespaceProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateNamespace"
@@ -98,6 +104,9 @@ const (
 	// PlatformServiceCreateFederatedSubgraphProcedure is the fully-qualified name of the
 	// PlatformService's CreateFederatedSubgraph RPC.
 	PlatformServiceCreateFederatedSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateFederatedSubgraph"
+	// PlatformServiceCreateFederatedSubgraphsProcedure is the fully-qualified name of the
+	// PlatformService's CreateFederatedSubgraphs RPC.
+	PlatformServiceCreateFederatedSubgraphsProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateFederatedSubgraphs"
 	// PlatformServicePublishFederatedSubgraphProcedure is the fully-qualified name of the
 	// PlatformService's PublishFederatedSubgraph RPC.
 	PlatformServicePublishFederatedSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraph"
@@ -625,6 +634,9 @@ type PlatformServiceClient interface {
 	DeletePlaygroundScript(context.Context, *connect.Request[v1.DeletePlaygroundScriptRequest]) (*connect.Response[v1.DeletePlaygroundScriptResponse], error)
 	UpdatePlaygroundScript(context.Context, *connect.Request[v1.UpdatePlaygroundScriptRequest]) (*connect.Response[v1.UpdatePlaygroundScriptResponse], error)
 	GetPlaygroundScripts(context.Context, *connect.Request[v1.GetPlaygroundScriptsRequest]) (*connect.Response[v1.GetPlaygroundScriptsResponse], error)
+	// Playground default headers
+	GetPlaygroundDefaultHeaders(context.Context, *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error)
+	UpdatePlaygroundDefaultHeaders(context.Context, *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error)
 	// Namespaces
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
@@ -651,6 +663,9 @@ type PlatformServiceClient interface {
 	MigrateMonograph(context.Context, *connect.Request[v1.MigrateMonographRequest]) (*connect.Response[v1.MigrateMonographResponse], error)
 	// CreateFederatedSubgraph creates a federated subgraph on the control plane.
 	CreateFederatedSubgraph(context.Context, *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error)
+	// CreateFederatedSubgraphs creates multiple federated subgraphs on the control plane in a single request. Either
+	// every subgraph is created or none is.
+	CreateFederatedSubgraphs(context.Context, *connect.Request[v1.CreateFederatedSubgraphsRequest]) (*connect.Response[v1.CreateFederatedSubgraphsResponse], error)
 	// PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
 	PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error)
 	// PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
@@ -1024,6 +1039,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundScripts")),
 			connect.WithClientOptions(opts...),
 		),
+		getPlaygroundDefaultHeaders: connect.NewClient[v1.GetPlaygroundDefaultHeadersRequest, v1.GetPlaygroundDefaultHeadersResponse](
+			httpClient,
+			baseURL+PlatformServiceGetPlaygroundDefaultHeadersProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundDefaultHeaders")),
+			connect.WithClientOptions(opts...),
+		),
+		updatePlaygroundDefaultHeaders: connect.NewClient[v1.UpdatePlaygroundDefaultHeadersRequest, v1.UpdatePlaygroundDefaultHeadersResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdatePlaygroundDefaultHeadersProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("UpdatePlaygroundDefaultHeaders")),
+			connect.WithClientOptions(opts...),
+		),
 		createNamespace: connect.NewClient[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateNamespaceProcedure,
@@ -1124,6 +1151,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceCreateFederatedSubgraphProcedure,
 			connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraph")),
+			connect.WithClientOptions(opts...),
+		),
+		createFederatedSubgraphs: connect.NewClient[v1.CreateFederatedSubgraphsRequest, v1.CreateFederatedSubgraphsResponse](
+			httpClient,
+			baseURL+PlatformServiceCreateFederatedSubgraphsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraphs")),
 			connect.WithClientOptions(opts...),
 		),
 		publishFederatedSubgraph: connect.NewClient[v1.PublishFederatedSubgraphRequest, v1.PublishFederatedSubgraphResponse](
@@ -2180,6 +2213,8 @@ type platformServiceClient struct {
 	deletePlaygroundScript                             *connect.Client[v1.DeletePlaygroundScriptRequest, v1.DeletePlaygroundScriptResponse]
 	updatePlaygroundScript                             *connect.Client[v1.UpdatePlaygroundScriptRequest, v1.UpdatePlaygroundScriptResponse]
 	getPlaygroundScripts                               *connect.Client[v1.GetPlaygroundScriptsRequest, v1.GetPlaygroundScriptsResponse]
+	getPlaygroundDefaultHeaders                        *connect.Client[v1.GetPlaygroundDefaultHeadersRequest, v1.GetPlaygroundDefaultHeadersResponse]
+	updatePlaygroundDefaultHeaders                     *connect.Client[v1.UpdatePlaygroundDefaultHeadersRequest, v1.UpdatePlaygroundDefaultHeadersResponse]
 	createNamespace                                    *connect.Client[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse]
 	deleteNamespace                                    *connect.Client[v1.DeleteNamespaceRequest, v1.DeleteNamespaceResponse]
 	renameNamespace                                    *connect.Client[v1.RenameNamespaceRequest, v1.RenameNamespaceResponse]
@@ -2197,6 +2232,7 @@ type platformServiceClient struct {
 	updateMonograph                                    *connect.Client[v1.UpdateMonographRequest, v1.UpdateMonographResponse]
 	migrateMonograph                                   *connect.Client[v1.MigrateMonographRequest, v1.MigrateMonographResponse]
 	createFederatedSubgraph                            *connect.Client[v1.CreateFederatedSubgraphRequest, v1.CreateFederatedSubgraphResponse]
+	createFederatedSubgraphs                           *connect.Client[v1.CreateFederatedSubgraphsRequest, v1.CreateFederatedSubgraphsResponse]
 	publishFederatedSubgraph                           *connect.Client[v1.PublishFederatedSubgraphRequest, v1.PublishFederatedSubgraphResponse]
 	publishFederatedSubgraphs                          *connect.Client[v1.PublishFederatedSubgraphsRequest, v1.PublishFederatedSubgraphsResponse]
 	getBatchPublishJobStatus                           *connect.Client[v1.GetBatchPublishJobStatusRequest, v1.GetBatchPublishJobStatusResponse]
@@ -2392,6 +2428,18 @@ func (c *platformServiceClient) GetPlaygroundScripts(ctx context.Context, req *c
 	return c.getPlaygroundScripts.CallUnary(ctx, req)
 }
 
+// GetPlaygroundDefaultHeaders calls
+// wg.cosmo.platform.v1.PlatformService.GetPlaygroundDefaultHeaders.
+func (c *platformServiceClient) GetPlaygroundDefaultHeaders(ctx context.Context, req *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error) {
+	return c.getPlaygroundDefaultHeaders.CallUnary(ctx, req)
+}
+
+// UpdatePlaygroundDefaultHeaders calls
+// wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundDefaultHeaders.
+func (c *platformServiceClient) UpdatePlaygroundDefaultHeaders(ctx context.Context, req *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error) {
+	return c.updatePlaygroundDefaultHeaders.CallUnary(ctx, req)
+}
+
 // CreateNamespace calls wg.cosmo.platform.v1.PlatformService.CreateNamespace.
 func (c *platformServiceClient) CreateNamespace(ctx context.Context, req *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error) {
 	return c.createNamespace.CallUnary(ctx, req)
@@ -2475,6 +2523,11 @@ func (c *platformServiceClient) MigrateMonograph(ctx context.Context, req *conne
 // CreateFederatedSubgraph calls wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraph.
 func (c *platformServiceClient) CreateFederatedSubgraph(ctx context.Context, req *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error) {
 	return c.createFederatedSubgraph.CallUnary(ctx, req)
+}
+
+// CreateFederatedSubgraphs calls wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraphs.
+func (c *platformServiceClient) CreateFederatedSubgraphs(ctx context.Context, req *connect.Request[v1.CreateFederatedSubgraphsRequest]) (*connect.Response[v1.CreateFederatedSubgraphsResponse], error) {
+	return c.createFederatedSubgraphs.CallUnary(ctx, req)
 }
 
 // PublishFederatedSubgraph calls wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph.
@@ -3391,6 +3444,9 @@ type PlatformServiceHandler interface {
 	DeletePlaygroundScript(context.Context, *connect.Request[v1.DeletePlaygroundScriptRequest]) (*connect.Response[v1.DeletePlaygroundScriptResponse], error)
 	UpdatePlaygroundScript(context.Context, *connect.Request[v1.UpdatePlaygroundScriptRequest]) (*connect.Response[v1.UpdatePlaygroundScriptResponse], error)
 	GetPlaygroundScripts(context.Context, *connect.Request[v1.GetPlaygroundScriptsRequest]) (*connect.Response[v1.GetPlaygroundScriptsResponse], error)
+	// Playground default headers
+	GetPlaygroundDefaultHeaders(context.Context, *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error)
+	UpdatePlaygroundDefaultHeaders(context.Context, *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error)
 	// Namespaces
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
@@ -3417,6 +3473,9 @@ type PlatformServiceHandler interface {
 	MigrateMonograph(context.Context, *connect.Request[v1.MigrateMonographRequest]) (*connect.Response[v1.MigrateMonographResponse], error)
 	// CreateFederatedSubgraph creates a federated subgraph on the control plane.
 	CreateFederatedSubgraph(context.Context, *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error)
+	// CreateFederatedSubgraphs creates multiple federated subgraphs on the control plane in a single request. Either
+	// every subgraph is created or none is.
+	CreateFederatedSubgraphs(context.Context, *connect.Request[v1.CreateFederatedSubgraphsRequest]) (*connect.Response[v1.CreateFederatedSubgraphsResponse], error)
 	// PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
 	PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error)
 	// PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
@@ -3786,6 +3845,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundScripts")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetPlaygroundDefaultHeadersHandler := connect.NewUnaryHandler(
+		PlatformServiceGetPlaygroundDefaultHeadersProcedure,
+		svc.GetPlaygroundDefaultHeaders,
+		connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundDefaultHeaders")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdatePlaygroundDefaultHeadersHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdatePlaygroundDefaultHeadersProcedure,
+		svc.UpdatePlaygroundDefaultHeaders,
+		connect.WithSchema(platformServiceMethods.ByName("UpdatePlaygroundDefaultHeaders")),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceCreateNamespaceHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateNamespaceProcedure,
 		svc.CreateNamespace,
@@ -3886,6 +3957,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceCreateFederatedSubgraphProcedure,
 		svc.CreateFederatedSubgraph,
 		connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraph")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceCreateFederatedSubgraphsHandler := connect.NewUnaryHandler(
+		PlatformServiceCreateFederatedSubgraphsProcedure,
+		svc.CreateFederatedSubgraphs,
+		connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraphs")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServicePublishFederatedSubgraphHandler := connect.NewUnaryHandler(
@@ -4943,6 +5020,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceUpdatePlaygroundScriptHandler.ServeHTTP(w, r)
 		case PlatformServiceGetPlaygroundScriptsProcedure:
 			platformServiceGetPlaygroundScriptsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetPlaygroundDefaultHeadersProcedure:
+			platformServiceGetPlaygroundDefaultHeadersHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdatePlaygroundDefaultHeadersProcedure:
+			platformServiceUpdatePlaygroundDefaultHeadersHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateNamespaceProcedure:
 			platformServiceCreateNamespaceHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteNamespaceProcedure:
@@ -4977,6 +5058,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceMigrateMonographHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateFederatedSubgraphProcedure:
 			platformServiceCreateFederatedSubgraphHandler.ServeHTTP(w, r)
+		case PlatformServiceCreateFederatedSubgraphsProcedure:
+			platformServiceCreateFederatedSubgraphsHandler.ServeHTTP(w, r)
 		case PlatformServicePublishFederatedSubgraphProcedure:
 			platformServicePublishFederatedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServicePublishFederatedSubgraphsProcedure:
@@ -5348,6 +5431,14 @@ func (UnimplementedPlatformServiceHandler) GetPlaygroundScripts(context.Context,
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetPlaygroundScripts is not implemented"))
 }
 
+func (UnimplementedPlatformServiceHandler) GetPlaygroundDefaultHeaders(context.Context, *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetPlaygroundDefaultHeaders is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdatePlaygroundDefaultHeaders(context.Context, *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundDefaultHeaders is not implemented"))
+}
+
 func (UnimplementedPlatformServiceHandler) CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateNamespace is not implemented"))
 }
@@ -5414,6 +5505,10 @@ func (UnimplementedPlatformServiceHandler) MigrateMonograph(context.Context, *co
 
 func (UnimplementedPlatformServiceHandler) CreateFederatedSubgraph(context.Context, *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CreateFederatedSubgraphs(context.Context, *connect.Request[v1.CreateFederatedSubgraphsRequest]) (*connect.Response[v1.CreateFederatedSubgraphsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraphs is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error) {

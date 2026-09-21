@@ -111,6 +111,7 @@ type headerPropagationWriter struct {
 	didApplyRouterRespHeaders bool
 	costHeaderSetter          func(typeStats map[string]resolve.TypeNameStats)
 	didSetCostHeaders         bool
+	cacheTagHeader            *config.ResponseCacheTagHeaderConfig
 }
 
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
@@ -144,6 +145,12 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 	if h.costHeaderSetter != nil && !h.didSetCostHeaders {
 		h.didSetCostHeaders = true
 		h.costHeaderSetter(h.resolveCtx.TypeNameStats)
+	}
+	// Not on a response carrying subgraph errors: it was just marked no-store.
+	if h.cacheTagHeader != nil && !h.didSetSubgraphErrors {
+		if value := buildCacheTagHeader(h.resolveCtx.ResponseCacheSurrogateKeys(), h.cacheTagHeader.Delimiter, h.cacheTagHeader.MaxBytes); value != "" {
+			h.writer.Header().Set(h.cacheTagHeader.Name, value)
+		}
 	}
 	return h.writer.Write(p)
 }
@@ -567,6 +574,26 @@ func hashHeaderStable(hdr http.Header) uint64 {
 	return d.Sum64()
 }
 
+// usesMostRestrictiveCacheControl reports whether a response rule with the most
+// restrictive cache control algorithm applies to a fetch of subgraphName.
+func (h *HeaderPropagation) usesMostRestrictiveCacheControl(subgraphName string) bool {
+	lists := [][]*config.ResponseHeaderRule{h.rules.All.Response}
+	if subgraphRules, ok := h.rules.Subgraphs[subgraphName]; ok {
+		lists = append(lists, subgraphRules.Response)
+	}
+	if h.postResponseRules != nil {
+		lists = append(lists, h.postResponseRules.All, h.postResponseRules.Subgraphs[subgraphName])
+	}
+	for _, rules := range lists {
+		for _, rule := range rules {
+			if rule.Algorithm == config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // ApplyResponseHeaderRules applies response header rules for a subgraph fetch.
 // Called from OnFinished for every fetch (both singleflight leaders and followers).
 func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, headers http.Header, subgraphName string, statusCode int, request *http.Request) {
@@ -619,6 +646,7 @@ func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestCon
 	return resp
 }
 
+// applyResponseRule applies one response header rule to a subgraph response res.
 func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropagation, res *http.Response, rule *config.ResponseHeaderRule) {
 	if rule.Operation == config.HeaderRuleOperationSet {
 		// Inject the value into the subgraph response headers so it looks like it
@@ -1006,6 +1034,7 @@ func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirec
 		result.RespDirectives.MaxAge = minMaxAge
 	}
 	result.RespDirectives.PrivatePresent = isPrivate
+	result.RespDirectives.Public = isPublic && !isPrivate
 
 	// Format the final Cache-Control header
 	headerParts := []string{}

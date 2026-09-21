@@ -9,6 +9,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -52,7 +56,7 @@ func TestNewMCPAuthMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(tt.decoder, "https://test.example/.well-known/oauth-protected-resource/mcp", config.MCPOAuthScopesConfiguration{}, false)
+			middleware, err := NewMCPAuthMiddleware(tt.decoder, "https://test.example/.well-known/oauth-protected-resource/mcp", config.MCPOAuthScopesConfiguration{}, false, nil)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, middleware)
@@ -110,9 +114,10 @@ func TestGetClaimsFromContext(t *testing.T) {
 
 func TestExtractScopes(t *testing.T) {
 	tests := []struct {
-		name   string
-		claims authentication.Claims
-		want   []string
+		name    string
+		claims  authentication.Claims
+		want    []string
+		wantErr bool
 	}{
 		{
 			name: "splits scope claim into multiple values",
@@ -134,18 +139,181 @@ func TestExtractScopes(t *testing.T) {
 			want:   nil,
 		},
 		{
+			// A null claim carries no scopes to read, so it grants none rather than being invalid.
+			name:   "returns nil when scope claim is null",
+			claims: authentication.Claims{"scope": nil},
+			want:   nil,
+		},
+		{
 			name: "returns empty slice when scope claim is empty string",
 			claims: authentication.Claims{
 				"scope": "",
 			},
 			want: []string{},
 		},
+		{
+			name: "splits string scope claims on whitespace, not commas",
+			claims: authentication.Claims{
+				"scope": "mcp:tools,mcp:read mcp:write",
+			},
+			want: []string{"mcp:tools,mcp:read", "mcp:write"},
+		},
+		{
+			name: "reads scope claim encoded as a JSON array",
+			claims: authentication.Claims{
+				"scope": []any{"mcp:tools", "mcp:read", "mcp:write"},
+			},
+			want: []string{"mcp:tools", "mcp:read", "mcp:write"},
+		},
+		{
+			name: "reads scope claim encoded as a string slice",
+			claims: authentication.Claims{
+				"scope": []string{"mcp:tools", "mcp:read"},
+			},
+			want: []string{"mcp:tools", "mcp:read"},
+		},
+		{
+			name: "rejects a JSON array scope claim holding a non-string member",
+			claims: authentication.Claims{
+				"scope": []any{"mcp:tools", 42, "mcp:read"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "rejects a JSON array scope claim holding a null member",
+			claims: authentication.Claims{
+				"scope": []any{"mcp:tools", nil},
+			},
+			wantErr: true,
+		},
+		{
+			name: "returns empty slice for an empty JSON array scope claim",
+			claims: authentication.Claims{
+				"scope": []any{},
+			},
+			want: []string{},
+		},
+		{
+			name: "rejects an unsupported scope claim type",
+			claims: authentication.Claims{
+				"scope": 42,
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractScopes(tt.claims)
+			got, err := extractScopes(tt.claims)
+			if tt.wantErr {
+				require.ErrorIs(t, err, authentication.ErrInvalidScopeClaim)
+				assert.Nil(t, got, "no scopes may be read from a rejected claim")
+				return
+			}
+			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestScopeRejectionLogsClaimShape(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		scope     any
+		wantShape string
+		wantCount int
+	}{
+		{name: "string claim", scope: "mcp:other", wantShape: "string", wantCount: 1},
+		{name: "array claim", scope: []any{"mcp:other", "mcp:another"}, wantShape: "array", wantCount: 2},
+		{name: "missing claim", scope: nil, wantShape: "missing", wantCount: 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			claims := authentication.Claims{"sub": "user123"}
+			if tt.scope != nil {
+				claims["scope"] = tt.scope
+			}
+			decoder := &mockTokenDecoder{
+				decodeFunc: func(token string) (authentication.Claims, error) { return claims, nil },
+			}
+
+			observed, logs := observer.New(zapcore.WarnLevel)
+			middleware, err := NewMCPAuthMiddleware(decoder, "https://test.example/metadata", config.MCPOAuthScopesConfiguration{
+				Initialize: []string{"mcp:connect"},
+			}, false, zap.New(observed))
+			require.NoError(t, err)
+
+			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
+
+			req, _ := http.NewRequest("POST", "/mcp", nil)
+			req.Header.Set("Authorization", "Bearer any-token")
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
+
+			require.Equal(t, http.StatusForbidden, rr.Code)
+
+			entries := logs.FilterMessage("MCP request rejected with insufficient scope").All()
+			require.Len(t, entries, 1, "a rejected request must log exactly one line")
+			assert.Equal(t, tt.wantShape, entries[0].ContextMap()["scope_claim_shape"])
+			assert.EqualValues(t, tt.wantCount, entries[0].ContextMap()["token_scopes"])
+		})
+	}
+}
+
+func TestUnreadableScopeClaimIsRejected(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		scope     any
+		wantShape string
+	}{
+		{name: "non-string array member", scope: []any{"mcp:connect", 42}, wantShape: "array"},
+		{name: "null array member", scope: []any{"mcp:connect", nil}, wantShape: "array"},
+		{name: "unsupported claim type", scope: 42, wantShape: "int"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			decoder := &mockTokenDecoder{
+				decodeFunc: func(token string) (authentication.Claims, error) {
+					return authentication.Claims{"sub": "user123", "scope": tt.scope}, nil
+				},
+			}
+
+			observed, logs := observer.New(zapcore.WarnLevel)
+			middleware, err := NewMCPAuthMiddleware(decoder, "https://test.example/metadata", config.MCPOAuthScopesConfiguration{
+				Initialize: []string{"mcp:connect"},
+			}, false, zap.New(observed))
+			require.NoError(t, err)
+
+			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
+
+			req, _ := http.NewRequest("POST", "/mcp", nil)
+			req.Header.Set("Authorization", "Bearer any-token")
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
+
+			// The claim is unreadable, so the token is invalid rather than merely underscoped.
+			require.Equal(t, http.StatusUnauthorized, rr.Code)
+			assert.Contains(t, rr.Header().Get("WWW-Authenticate"), `error="invalid_token"`)
+			assert.NotContains(t, rr.Header().Get("WWW-Authenticate"), "42", "claim contents must not leak into the response")
+
+			entries := logs.FilterMessage("MCP request rejected: unreadable scope claim").All()
+			require.Len(t, entries, 1)
+			assert.Equal(t, tt.wantShape, entries[0].ContextMap()["scope_claim_shape"])
+			assert.Contains(t, entries[0].ContextMap()["error"], "expected string")
 		})
 	}
 }
@@ -289,7 +457,7 @@ func TestMCPAuthMiddlewareHTTP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			decoder := tt.setupDecoder()
-			middleware, err := NewMCPAuthMiddleware(decoder, testMetadataURL, tt.scopes, true)
+			middleware, err := NewMCPAuthMiddleware(decoder, testMetadataURL, tt.scopes, true, nil)
 			assert.NoError(t, err)
 
 			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -440,7 +608,7 @@ func TestMCPAuthMiddlewarePerToolScopes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(validDecoder, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes)
+			middleware, err := NewMCPAuthMiddleware(validDecoder, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes, nil)
 			assert.NoError(t, err)
 
 			// Set per-tool scopes
@@ -569,7 +737,7 @@ func TestMCPAuthMiddlewareMethodLevelScopes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(validDecoder, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes)
+			middleware, err := NewMCPAuthMiddleware(validDecoder, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes, nil)
 			assert.NoError(t, err)
 
 			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -677,7 +845,7 @@ func TestMCPAuthMiddlewareBuiltinToolScopes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(validDecoder, testMetadataURL, scopes, false)
+			middleware, err := NewMCPAuthMiddleware(validDecoder, testMetadataURL, scopes, false, nil)
 			assert.NoError(t, err)
 
 			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

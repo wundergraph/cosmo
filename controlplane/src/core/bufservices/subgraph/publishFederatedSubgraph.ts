@@ -6,7 +6,6 @@ import {
   PublishFederatedSubgraphResponse,
   SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { PlainMessage } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
 import { maxRowLimitForChecks } from '../../constants.js';
@@ -32,9 +31,9 @@ import {
   getLogger,
   handleError,
   isValidGraphName,
-  isValidGrpcNamingScheme,
   isValidLabels,
   isValidPluginVersion,
+  validateSubgraphRouting,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -332,100 +331,28 @@ export function publishFederatedSubgraph(
         };
       }
 
-      if (isEventDrivenGraph) {
-        if (req.routingUrl !== undefined) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `An Event-Driven Graph must not define a routing URL`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-            compositionWarnings: [],
-            proposalMatchMessage,
-          };
-        }
-        if (req.subscriptionUrl !== undefined) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `An Event-Driven Graph must not define a subscription URL`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-            compositionWarnings: [],
-            proposalMatchMessage,
-          };
-        }
-        if (req.subscriptionProtocol !== undefined) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `An Event-Driven Graph must not define a subscription protocol`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-            compositionWarnings: [],
-            proposalMatchMessage,
-          };
-        }
-        if (req.websocketSubprotocol !== undefined) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `An Event-Driven Graph must not define a websocket subprotocol.`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-            compositionWarnings: [],
-            proposalMatchMessage,
-          };
-        }
-      } else if (req.type !== SubgraphType.GRPC_PLUGIN) {
-        if (!isValidUrl(routingUrl)) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: routingUrl
-                ? `Routing URL "${routingUrl}" is not a valid URL.`
-                : req.isFeatureSubgraph
-                  ? `A valid, non-empty routing URL is required to create and publish a feature subgraph.`
-                  : `A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph.`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-            compositionWarnings: [],
-            proposalMatchMessage,
-          };
-        }
-        // For GRPC_SERVICE subgraphs, validate that routing URL follows gRPC naming scheme
-        if (req.type === SubgraphType.GRPC_SERVICE && !isValidGrpcNamingScheme(routingUrl)) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details:
-                `Routing URL must follow gRPC naming scheme. ` +
-                `See https://grpc.io/docs/guides/custom-name-resolution/ for examples.`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-            compositionWarnings: [],
-            proposalMatchMessage,
-          };
-        }
+      const routingViolation = validateSubgraphRouting({
+        isEventDrivenGraph,
+        routingUrl: req.routingUrl,
+        subscriptionUrl: req.subscriptionUrl,
+        subscriptionProtocol: req.subscriptionProtocol,
+        websocketSubprotocol: req.websocketSubprotocol,
+        routingUrlRequirement: req.type === SubgraphType.GRPC_PLUGIN ? 'skipped' : 'required',
+        isGrpcService: req.type === SubgraphType.GRPC_SERVICE,
+        isFeatureSubgraph: req.isFeatureSubgraph,
+      });
 
-        if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `Subscription URL "${req.subscriptionUrl}" is not a valid URL`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-            compositionWarnings: [],
-            proposalMatchMessage,
-          };
-        }
+      if (routingViolation) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: routingViolation,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+          proposalMatchMessage,
+        };
       }
 
       if (!isValidGraphName(req.name)) {
@@ -463,28 +390,30 @@ export function publishFederatedSubgraph(
       }
 
       // Create the subgraph if it doesn't exist
-      subgraph = await subgraphRepo.create({
-        name: req.name,
-        namespace: req.namespace,
-        namespaceId: namespace.id,
-        createdBy: authContext.userId,
-        labels: req.labels,
-        isEventDrivenGraph,
-        routingUrl,
-        subscriptionUrl: req.subscriptionUrl,
-        subscriptionProtocol:
-          req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
-        websocketSubprotocol:
-          req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
-        featureSubgraphOptions:
-          req.isFeatureSubgraph && baseSubgraphID !== ''
-            ? {
-                isFeatureSubgraph: req.isFeatureSubgraph || false,
-                baseSubgraphID,
-              }
-            : undefined,
-        type: formatSubgraphType(req.type),
-      });
+      [subgraph] = await subgraphRepo.create([
+        {
+          name: req.name,
+          namespace: req.namespace,
+          namespaceId: namespace.id,
+          createdBy: authContext.userId,
+          labels: req.labels,
+          isEventDrivenGraph,
+          routingUrl,
+          subscriptionUrl: req.subscriptionUrl,
+          subscriptionProtocol:
+            req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
+          websocketSubprotocol:
+            req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
+          featureSubgraphOptions:
+            req.isFeatureSubgraph && baseSubgraphID !== ''
+              ? {
+                  isFeatureSubgraph: req.isFeatureSubgraph || false,
+                  baseSubgraphID,
+                }
+              : undefined,
+          type: formatSubgraphType(req.type),
+        },
+      ]);
 
       if (!subgraph) {
         throw new Error(`Subgraph '${req.name}' could not be created`);

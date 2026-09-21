@@ -23,7 +23,8 @@ mcp:
     base_url: 'https://mcp.example.com' # Required when OAuth is enabled
   oauth:
     enabled: true
-    authorization_server_url: 'https://auth.example.com'
+    authorization_server_urls:
+      - 'https://auth.example.com'
     jwks:
       - url: 'https://auth.example.com/.well-known/jwks.json'
         refresh_interval: '1m'
@@ -48,7 +49,8 @@ Define which scopes are required at each level:
 ```yaml
 oauth:
   enabled: true
-  authorization_server_url: 'https://auth.example.com'
+  authorization_server_urls:
+    - 'https://auth.example.com'
   scopes:
     initialize:
       - 'mcp:connect' # Required for all MCP requests
@@ -116,7 +118,8 @@ For local development, you can use a symmetric secret instead of a remote JWKS e
 ```yaml
 oauth:
   enabled: true
-  authorization_server_url: 'https://auth.example.com'
+  authorization_server_urls:
+    - 'https://auth.example.com'
   jwks:
     - secret: 'your-shared-secret'
       symmetric_algorithm: 'HS256'

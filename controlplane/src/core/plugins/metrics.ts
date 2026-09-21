@@ -1,11 +1,10 @@
 import client, { Registry } from 'prom-client';
 import fp from 'fastify-plugin';
-import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
-import { FastifyListenOptions } from 'fastify/types/instance.js';
+import Fastify, { FastifyRequest, FastifyReply, FastifyInstance, FastifyListenOptions } from 'fastify';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    metricsServer: Fastify.FastifyInstance;
+    metricsServer: FastifyInstance;
     startMetricsServer(opts: FastifyListenOptions): Promise<string>;
   }
 }
@@ -21,7 +20,7 @@ export default fp<MetricsPluginOptions>(function (fastify, { path = '/metrics', 
     plugin: 'metrics',
   });
   const listener = Fastify({
-    logger: metricsLogger,
+    loggerInstance: metricsLogger,
   });
 
   client.collectDefaultMetrics({ register: registry });
