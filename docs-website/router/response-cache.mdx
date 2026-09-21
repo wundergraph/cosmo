@@ -188,7 +188,8 @@ A subgraph whose answer depends on a request header, such as `Accept-Language`, 
 * Values are taken from the request as the subgraph receives it, after header propagation. A header named in `Vary` that the router does not forward counts as empty, so it never splits the cache.
 * `Vary: *` is never cached, and neither is a response naming more than 100 headers.
 * A header whose value differs per caller, such as `Cookie` or `Authorization`, yields one variant per caller. Nobody is served another caller's body, but the entries are rarely reused. A subgraph whose answer is per user should say `private` instead.
-* A subgraph that changes what it varies on replaces the record on its next miss. Variants stored under the old names are never served again and expire on their own TTL.
+* A subgraph that changes what it varies on adds the new set of names to the record on its next miss, newest first, rather than replacing it. A lookup tries one variant per set in that order and serves the first it finds, so variants stored under the old names stay reachable until they expire. A record keeps at most 8 sets; past that the oldest are dropped.
+* With `engine.enable_multi_fetch` on, a merged entity fetch carries one `Vary` for the whole response, and the router applies it to every alias in it. An alias whose own answer would have varied on less is stored under the wider set, which splits its entries by headers they do not depend on. That costs extra misses, never a wrong body. A merged fetch follows records the same way a single fetch does, with one second round trip for all of its aliases together. The lever for the cost is on the subgraph side: emit the minimum `Vary` for what was actually resolved rather than a fixed union for the service.
 
 ## Limitations
 
@@ -232,7 +233,7 @@ The shape depends on what was fetched, because an entity fetch caches one entry 
 
 An outer array whose length does not match the entities answered costs the whole response its tags,
 rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and
-never forwarded to clients. The router does not record tags from a merged entity fetch., see [Limitations](#limitations).
+never forwarded to clients. The router does not record tags from a merged entity fetch, see [Limitations](#limitations).
 
 ## Invalidation
 
