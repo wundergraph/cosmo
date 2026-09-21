@@ -3,6 +3,8 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -198,6 +200,111 @@ func TestResponseCacheVary(t *testing.T) {
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load())
 			requireMood(t, moodIn(t, xEnv, "de"), "SAD")
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load())
+		})
+	})
+}
+
+// varyMergedMoodQuery asks for moods under two root fields, so with multi fetch
+// on the two Mood entity fetches go out as one merged request.
+const varyMergedMoodQuery = `query { employees { id currentMood } employee(id: 1) { id currentMood } }`
+
+var moodValue = regexp.MustCompile(`"currentMood":"[A-Z_]+"`)
+
+// varyMergedMoodMiddleware lets the Mood subgraph answer the merged, aliased
+// request and localises every mood in its answer, saying so with Vary.
+func varyMergedMoodMiddleware(vary string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rec := httptest.NewRecorder()
+			next.ServeHTTP(rec, r)
+
+			mood := "HAPPY"
+			if r.Header.Get(varyLanguageHeader) == "de" {
+				mood = "SAD"
+			}
+			body := moodValue.ReplaceAll(rec.Body.Bytes(), []byte(`"currentMood":"`+mood+`"`))
+
+			for name, values := range rec.Header() {
+				w.Header()[name] = values
+			}
+			w.Header().Del("Content-Length")
+			w.Header().Set("Cache-Control", "public, max-age=60")
+			if vary != "" {
+				w.Header().Set("Vary", vary)
+			}
+			w.WriteHeader(rec.Code)
+			_, _ = w.Write(body)
+		})
+	}
+}
+
+// TestResponseCacheVaryMultiFetch is TestResponseCacheVary under
+// engine.enable_multi_fetch: one merged request, one Vary for both aliases.
+func TestResponseCacheVaryMultiFetch(t *testing.T) {
+	t.Parallel()
+
+	multiFetch := func(cfg *config.EngineExecutionConfiguration) {
+		cfg.EnableMultiFetch = true
+	}
+
+	mergedMoodIn := func(t *testing.T, xEnv *testenv.Environment, language, mood string) {
+		t.Helper()
+		req := testenv.GraphQLRequest{Query: varyMergedMoodQuery}
+		if language != "" {
+			req.Header = http.Header{varyLanguageHeader: []string{language}}
+		}
+		res := xEnv.MakeGraphQLRequestOK(req)
+		requireMood(t, res, mood)
+		require.Equal(t, 11, strings.Count(res.Body, `"currentMood":"`+mood+`"`), "both aliases in the one language")
+	}
+
+	t.Run("each header value is served its own variant", func(t *testing.T) {
+		t.Parallel()
+
+		cfg, opts := varyMoodConfig(t, nil)
+		testenv.Run(t, &testenv.Config{
+			RouterOptions:                      opts,
+			ModifyEngineExecutionConfiguration: multiFetch,
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: varyMergedMoodMiddleware("Accept-Language")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			mergedMoodIn(t, xEnv, "de", "SAD")
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(), "the two entity fetches went out merged")
+			mergedMoodIn(t, xEnv, "de", "SAD")
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(), "the second request is a hit")
+
+			mergedMoodIn(t, xEnv, "en", "HAPPY")
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(), "another language is not served the first one's entries")
+			mergedMoodIn(t, xEnv, "en", "HAPPY")
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load())
+
+			mergedMoodIn(t, xEnv, "de", "SAD")
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(), "the first variant is still there")
+
+			// Ten employees under one alias and employee 1 again under the other:
+			// the alias is part of a merged entry's key, so eleven records.
+			requireVariants(t, cfg.KeyPrefix, 11, 2)
+		})
+	})
+
+	t.Run("Vary: * is never cached", func(t *testing.T) {
+		t.Parallel()
+
+		cfg, opts := varyMoodConfig(t, nil)
+		testenv.Run(t, &testenv.Config{
+			RouterOptions:                      opts,
+			ModifyEngineExecutionConfiguration: multiFetch,
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: varyMergedMoodMiddleware("*")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			mergedMoodIn(t, xEnv, "de", "SAD")
+			mergedMoodIn(t, xEnv, "de", "SAD")
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load())
+
+			entries, _ := responseCacheStored(t, cfg.KeyPrefix)
+			require.Empty(t, entries)
 		})
 	})
 }

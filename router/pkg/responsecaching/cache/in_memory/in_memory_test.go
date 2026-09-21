@@ -151,15 +151,15 @@ func TestInMemoryCache(t *testing.T) {
 
 			c := newTestCache(t)
 
-			vary := []string{"accept-language"}
+			vary := [][]string{{"accept-language"}, {"accept-language", "x-region"}}
 			err := c.SetMany(ctx, []enginecache.Item{{Key: "a", Vary: vary, TTL: time.Hour}})
 			require.NoError(t, err)
-			vary[0] = "changed-after-write"
+			vary[0][0] = "changed-after-write"
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
 			require.Empty(t, results["a"].Value)
-			require.Equal(t, []string{"accept-language"}, results["a"].Vary)
+			require.Equal(t, [][]string{{"accept-language"}, {"accept-language", "x-region"}}, results["a"].Vary)
 		})
 	})
 

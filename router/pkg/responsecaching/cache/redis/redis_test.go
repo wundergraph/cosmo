@@ -196,7 +196,7 @@ func TestRedisCache(t *testing.T) {
 
 			c, _ := newTestRedisCache(t)
 
-			vary := []string{"accept-language", "x-region"}
+			vary := [][]string{{"accept-language"}, {"accept-language", "x-region"}}
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Vary: vary, TTL: time.Hour, Tags: []string{"subgraph:accounts"}},
 				{Key: "a+v", Value: []byte("value"), TTL: time.Hour},
