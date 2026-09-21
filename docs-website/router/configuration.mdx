@@ -1651,7 +1651,7 @@ traffic_shaping:
       max_attempts: 5
       interval: 3s
       max_duration: 10s
-      condition: "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
+      expression: "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
     # Circuit Breaker
     circuit_breaker:
       enabled: true
