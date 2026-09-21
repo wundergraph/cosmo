@@ -40,6 +40,19 @@ A response carrying GraphQL errors is never cached, whatever its `Cache-Control`
   Configuring the response cache does not make anything cacheable on its own. Subgraphs opt in with a recognized caching directive, such as `Cache-Control: max-age=60` or `Cache-Control: public`. If nothing appears to be cached, check the subgraph response headers first.
 </Info>
 
+## Request directives
+
+A client controls the cache for its own request through the `Cache-Control` request header. Two directives are honored:
+
+- `no-cache` skips the lookup. Every fetch of the operation goes to its subgraph, and the responses are stored as they are for any other request, so a `no-cache` request refreshes the entries it bypassed.
+- `no-store` keeps the responses to this request out of the cache. Nothing is stored, but a warm entry still answers the request, as [RFC 9111](https://www.rfc-editor.org/rfc/rfc9111#section-5.2.1.5) allows.
+
+Sent together, `no-cache, no-store` neither reads nor writes the cache. Every other request directive is ignored, including `max-age`, `min-fresh`, `max-stale` and `only-if-cached`, as is the `Pragma` header. A `Cache-Control` request header that does not parse is ignored as a whole.
+
+<Warning>
+  Any client can send these directives, and they cannot be turned off. A client that sends `no-cache` on every request bypasses the cache on every request, and its subgraphs see all of its traffic.
+</Warning>
+
 ## Enable it
 
 ### Redis

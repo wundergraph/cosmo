@@ -225,9 +225,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		resolveCtx.SetEngineLoaderHooks(h.engineLoaderHooks)
 	}
 	resolveCtx = h.configureRateLimiting(resolveCtx, reqCtx.operation.opType)
-	if h.responseCacheStore != nil {
+	if store := selectCacheStore(h.responseCacheStore, reqCtx.cacheControl); store != nil {
 		resolveCtx.SetResponseCache(resolve.ResponseCacheOptions{
-			Store:      h.responseCacheStore,
+			Store:      store,
 			DefaultTTL: h.responseCacheFallbackTTL,
 			OnError:    h.responseCacheErrorHandler,
 			Invalidation: resolve.ResponseCacheTagIndexOptions{
