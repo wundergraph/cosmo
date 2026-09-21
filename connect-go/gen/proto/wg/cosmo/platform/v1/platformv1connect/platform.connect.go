@@ -47,6 +47,12 @@ const (
 	// PlatformServiceGetPlaygroundScriptsProcedure is the fully-qualified name of the PlatformService's
 	// GetPlaygroundScripts RPC.
 	PlatformServiceGetPlaygroundScriptsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetPlaygroundScripts"
+	// PlatformServiceGetPlaygroundDefaultHeadersProcedure is the fully-qualified name of the
+	// PlatformService's GetPlaygroundDefaultHeaders RPC.
+	PlatformServiceGetPlaygroundDefaultHeadersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetPlaygroundDefaultHeaders"
+	// PlatformServiceUpdatePlaygroundDefaultHeadersProcedure is the fully-qualified name of the
+	// PlatformService's UpdatePlaygroundDefaultHeaders RPC.
+	PlatformServiceUpdatePlaygroundDefaultHeadersProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdatePlaygroundDefaultHeaders"
 	// PlatformServiceCreateNamespaceProcedure is the fully-qualified name of the PlatformService's
 	// CreateNamespace RPC.
 	PlatformServiceCreateNamespaceProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateNamespace"
@@ -628,6 +634,9 @@ type PlatformServiceClient interface {
 	DeletePlaygroundScript(context.Context, *connect.Request[v1.DeletePlaygroundScriptRequest]) (*connect.Response[v1.DeletePlaygroundScriptResponse], error)
 	UpdatePlaygroundScript(context.Context, *connect.Request[v1.UpdatePlaygroundScriptRequest]) (*connect.Response[v1.UpdatePlaygroundScriptResponse], error)
 	GetPlaygroundScripts(context.Context, *connect.Request[v1.GetPlaygroundScriptsRequest]) (*connect.Response[v1.GetPlaygroundScriptsResponse], error)
+	// Playground default headers
+	GetPlaygroundDefaultHeaders(context.Context, *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error)
+	UpdatePlaygroundDefaultHeaders(context.Context, *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error)
 	// Namespaces
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
@@ -1028,6 +1037,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceGetPlaygroundScriptsProcedure,
 			connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundScripts")),
+			connect.WithClientOptions(opts...),
+		),
+		getPlaygroundDefaultHeaders: connect.NewClient[v1.GetPlaygroundDefaultHeadersRequest, v1.GetPlaygroundDefaultHeadersResponse](
+			httpClient,
+			baseURL+PlatformServiceGetPlaygroundDefaultHeadersProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundDefaultHeaders")),
+			connect.WithClientOptions(opts...),
+		),
+		updatePlaygroundDefaultHeaders: connect.NewClient[v1.UpdatePlaygroundDefaultHeadersRequest, v1.UpdatePlaygroundDefaultHeadersResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdatePlaygroundDefaultHeadersProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("UpdatePlaygroundDefaultHeaders")),
 			connect.WithClientOptions(opts...),
 		),
 		createNamespace: connect.NewClient[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse](
@@ -2192,6 +2213,8 @@ type platformServiceClient struct {
 	deletePlaygroundScript                             *connect.Client[v1.DeletePlaygroundScriptRequest, v1.DeletePlaygroundScriptResponse]
 	updatePlaygroundScript                             *connect.Client[v1.UpdatePlaygroundScriptRequest, v1.UpdatePlaygroundScriptResponse]
 	getPlaygroundScripts                               *connect.Client[v1.GetPlaygroundScriptsRequest, v1.GetPlaygroundScriptsResponse]
+	getPlaygroundDefaultHeaders                        *connect.Client[v1.GetPlaygroundDefaultHeadersRequest, v1.GetPlaygroundDefaultHeadersResponse]
+	updatePlaygroundDefaultHeaders                     *connect.Client[v1.UpdatePlaygroundDefaultHeadersRequest, v1.UpdatePlaygroundDefaultHeadersResponse]
 	createNamespace                                    *connect.Client[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse]
 	deleteNamespace                                    *connect.Client[v1.DeleteNamespaceRequest, v1.DeleteNamespaceResponse]
 	renameNamespace                                    *connect.Client[v1.RenameNamespaceRequest, v1.RenameNamespaceResponse]
@@ -2403,6 +2426,18 @@ func (c *platformServiceClient) UpdatePlaygroundScript(ctx context.Context, req 
 // GetPlaygroundScripts calls wg.cosmo.platform.v1.PlatformService.GetPlaygroundScripts.
 func (c *platformServiceClient) GetPlaygroundScripts(ctx context.Context, req *connect.Request[v1.GetPlaygroundScriptsRequest]) (*connect.Response[v1.GetPlaygroundScriptsResponse], error) {
 	return c.getPlaygroundScripts.CallUnary(ctx, req)
+}
+
+// GetPlaygroundDefaultHeaders calls
+// wg.cosmo.platform.v1.PlatformService.GetPlaygroundDefaultHeaders.
+func (c *platformServiceClient) GetPlaygroundDefaultHeaders(ctx context.Context, req *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error) {
+	return c.getPlaygroundDefaultHeaders.CallUnary(ctx, req)
+}
+
+// UpdatePlaygroundDefaultHeaders calls
+// wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundDefaultHeaders.
+func (c *platformServiceClient) UpdatePlaygroundDefaultHeaders(ctx context.Context, req *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error) {
+	return c.updatePlaygroundDefaultHeaders.CallUnary(ctx, req)
 }
 
 // CreateNamespace calls wg.cosmo.platform.v1.PlatformService.CreateNamespace.
@@ -3409,6 +3444,9 @@ type PlatformServiceHandler interface {
 	DeletePlaygroundScript(context.Context, *connect.Request[v1.DeletePlaygroundScriptRequest]) (*connect.Response[v1.DeletePlaygroundScriptResponse], error)
 	UpdatePlaygroundScript(context.Context, *connect.Request[v1.UpdatePlaygroundScriptRequest]) (*connect.Response[v1.UpdatePlaygroundScriptResponse], error)
 	GetPlaygroundScripts(context.Context, *connect.Request[v1.GetPlaygroundScriptsRequest]) (*connect.Response[v1.GetPlaygroundScriptsResponse], error)
+	// Playground default headers
+	GetPlaygroundDefaultHeaders(context.Context, *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error)
+	UpdatePlaygroundDefaultHeaders(context.Context, *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error)
 	// Namespaces
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
@@ -3805,6 +3843,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceGetPlaygroundScriptsProcedure,
 		svc.GetPlaygroundScripts,
 		connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundScripts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetPlaygroundDefaultHeadersHandler := connect.NewUnaryHandler(
+		PlatformServiceGetPlaygroundDefaultHeadersProcedure,
+		svc.GetPlaygroundDefaultHeaders,
+		connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundDefaultHeaders")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdatePlaygroundDefaultHeadersHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdatePlaygroundDefaultHeadersProcedure,
+		svc.UpdatePlaygroundDefaultHeaders,
+		connect.WithSchema(platformServiceMethods.ByName("UpdatePlaygroundDefaultHeaders")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateNamespaceHandler := connect.NewUnaryHandler(
@@ -4970,6 +5020,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceUpdatePlaygroundScriptHandler.ServeHTTP(w, r)
 		case PlatformServiceGetPlaygroundScriptsProcedure:
 			platformServiceGetPlaygroundScriptsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetPlaygroundDefaultHeadersProcedure:
+			platformServiceGetPlaygroundDefaultHeadersHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdatePlaygroundDefaultHeadersProcedure:
+			platformServiceUpdatePlaygroundDefaultHeadersHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateNamespaceProcedure:
 			platformServiceCreateNamespaceHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteNamespaceProcedure:
@@ -5375,6 +5429,14 @@ func (UnimplementedPlatformServiceHandler) UpdatePlaygroundScript(context.Contex
 
 func (UnimplementedPlatformServiceHandler) GetPlaygroundScripts(context.Context, *connect.Request[v1.GetPlaygroundScriptsRequest]) (*connect.Response[v1.GetPlaygroundScriptsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetPlaygroundScripts is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetPlaygroundDefaultHeaders(context.Context, *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetPlaygroundDefaultHeaders is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdatePlaygroundDefaultHeaders(context.Context, *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundDefaultHeaders is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error) {

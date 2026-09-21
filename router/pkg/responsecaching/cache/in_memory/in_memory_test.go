@@ -124,26 +124,26 @@ func TestInMemoryCache(t *testing.T) {
 			requireTTLNear(t, time.Hour, results["a"].TTL)
 		})
 
-		t.Run("headerTags come back with the entry and are not shared", func(t *testing.T) {
+		t.Run("surrogateKeys come back with the entry and are not shared", func(t *testing.T) {
 			t.Parallel()
 
 			c := newTestCache(t)
 
-			headerTags := []string{"subgraph-accounts", "user-42"}
+			surrogateKeys := []string{"subgraph-accounts", "user-42"}
 			err := c.SetMany(ctx, []enginecache.Item{
-				{Key: "a", Value: []byte("value"), TTL: time.Hour, HeaderTags: headerTags},
+				{Key: "a", Value: []byte("value"), TTL: time.Hour, SurrogateKeys: surrogateKeys},
 			})
 			require.NoError(t, err)
-			headerTags[0] = "changed-after-write"
+			surrogateKeys[0] = "changed-after-write"
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
-			require.Equal(t, []string{"subgraph-accounts", "user-42"}, results["a"].HeaderTags)
+			require.Equal(t, []string{"subgraph-accounts", "user-42"}, results["a"].SurrogateKeys)
 
-			results["a"].HeaderTags[0] = "changed-after-read"
+			results["a"].SurrogateKeys[0] = "changed-after-read"
 			again, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
-			require.Equal(t, []string{"subgraph-accounts", "user-42"}, again["a"].HeaderTags)
+			require.Equal(t, []string{"subgraph-accounts", "user-42"}, again["a"].SurrogateKeys)
 		})
 
 		t.Run("a vary record comes back as a record and is not shared", func(t *testing.T) {

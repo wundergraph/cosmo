@@ -11,18 +11,18 @@ import (
 func TestBuildCacheTagHeader(t *testing.T) {
 	t.Parallel()
 
-	headerTags := []string{"user-42", "type-accounts-User", "subgraph-accounts", "users", "subgraph-products", "type-products-Product"}
+	surrogateKeys := []string{"user-42", "type-accounts-User", "subgraph-accounts", "users", "subgraph-products", "type-products-Product"}
 
 	t.Run("what fits is sent as it came", func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, strings.Join(headerTags, ","), buildCacheTagHeader(headerTags, ",", 16384))
+		require.Equal(t, strings.Join(surrogateKeys, ","), buildCacheTagHeader(surrogateKeys, ",", 16384))
 		require.Equal(t, "a subgraph-x", buildCacheTagHeader([]string{"a", "subgraph-x"}, " ", 100))
 	})
 
 	t.Run("what does not fit is cut coarsest tier first", func(t *testing.T) {
 		t.Parallel()
 		require.Equal(t, "subgraph-accounts,subgraph-products,type-accounts-User",
-			buildCacheTagHeader(headerTags, ",", len("subgraph-accounts,subgraph-products,type-accounts-User")))
+			buildCacheTagHeader(surrogateKeys, ",", len("subgraph-accounts,subgraph-products,type-accounts-User")))
 	})
 
 	t.Run("the input is left in its order", func(t *testing.T) {
@@ -38,7 +38,7 @@ func TestBuildCacheTagHeader(t *testing.T) {
 			buildCacheTagHeader([]string{"subgraph-a", "subgraph-b"}, ",", len("subgraph-a,subgraph-b")))
 	})
 
-	t.Run("truncation stops at the first headerTag that does not fit, delimiter included", func(t *testing.T) {
+	t.Run("truncation stops at the first surrogate key that does not fit, delimiter included", func(t *testing.T) {
 		t.Parallel()
 		// subgraph-a (10), then ",type-a-Very-Long-Type" would pass 24, and the
 		// shorter ",zz" after it must not be taken in its place.
@@ -48,7 +48,7 @@ func TestBuildCacheTagHeader(t *testing.T) {
 		require.Empty(t, buildCacheTagHeader([]string{"subgraph-a"}, ",", 3))
 	})
 
-	t.Run("a headerTag carrying the delimiter or a line break is left out", func(t *testing.T) {
+	t.Run("a surrogate key carrying the delimiter or a line break is left out", func(t *testing.T) {
 		t.Parallel()
 		require.Equal(t, "ok", buildCacheTagHeader([]string{"subgraph-a,b", "ok", "line\nbreak", "nul\x00", ""}, ",", 100))
 		require.Equal(t, "c", buildCacheTagHeader([]string{"a b", "c"}, " ", 100))

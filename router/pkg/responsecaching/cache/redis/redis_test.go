@@ -173,21 +173,21 @@ func TestRedisCache(t *testing.T) {
 			}, results)
 		})
 
-		t.Run("headerTags come back with the entry", func(t *testing.T) {
+		t.Run("surrogateKeys come back with the entry", func(t *testing.T) {
 			t.Parallel()
 
 			c, _ := newTestRedisCache(t)
 
-			headerTags := []string{"subgraph-accounts", "type-accounts-User", "user-42"}
+			surrogateKeys := []string{"subgraph-accounts", "type-accounts-User", "user-42"}
 			err := c.SetMany(ctx, []enginecache.Item{
-				{Key: "a", Value: []byte("value"), TTL: time.Hour, HeaderTags: headerTags},
+				{Key: "a", Value: []byte("value"), TTL: time.Hour, SurrogateKeys: surrogateKeys},
 			})
 			require.NoError(t, err)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
 			require.Equal(t, map[string]enginecache.Item{
-				"a": {Key: "a", Value: []byte("value"), TTL: time.Hour, HeaderTags: headerTags},
+				"a": {Key: "a", Value: []byte("value"), TTL: time.Hour, SurrogateKeys: surrogateKeys},
 			}, results)
 		})
 

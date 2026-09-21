@@ -18,7 +18,11 @@ const {
 } = sentryEnvVariables.parse(process.env);
 
 // RPC paths we always trace at 100%, regardless of SENTRY_TRACES_SAMPLE_RATE.
-const ALWAYS_SAMPLE_PATHS = ['/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraphs'];
+const ALWAYS_SAMPLE_PATHS = [
+  '/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraphs',
+  '/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraph',
+  '/wg.cosmo.platform.v1.PlatformService/CheckSubgraphSchema',
+];
 
 const matchesAlwaysSample = (value: unknown): boolean => {
   if (typeof value !== 'string') {

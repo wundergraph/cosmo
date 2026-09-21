@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.65.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.65.0...@wundergraph/composition@0.65.1) (2026-09-16)
+
+### Bug Fixes
+
+* restore lint autofix ([#3242](https://github.com/wundergraph/cosmo/issues/3242)) ([cd65459](https://github.com/wundergraph/cosmo/commit/cd654597c46d77fcbc0c44b2352fef177f6ccec6)) (@comatory)
+
+# [0.65.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.64.1...@wundergraph/composition@0.65.0) (2026-09-14)
+
+### Features
+
+* wgc router compose supports contracts ([#3240](https://github.com/wundergraph/cosmo/issues/3240)) ([4311d09](https://github.com/wundergraph/cosmo/commit/4311d097529e24038391f9897070482c100dec12)) (@Aenimus)
+
 ## [0.64.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.64.0...@wundergraph/composition@0.64.1) (2026-09-09)
 
 ### Bug Fixes
