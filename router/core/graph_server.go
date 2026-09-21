@@ -896,6 +896,9 @@ func (s *graphMux) waitForCaches() {
 	if s.operationHashCache != nil {
 		s.operationHashCache.Wait()
 	}
+	if s.complexityCalculationCache != nil {
+		s.complexityCalculationCache.Wait()
+	}
 }
 
 // configureCacheMetrics sets up the cache metrics for this mux if enabled in the config.
@@ -1806,11 +1809,14 @@ func (s *graphServer) buildGraphMux(
 		SubgraphErrorPropagation:        s.subgraphErrorPropagation,
 		EngineLoaderHooks:               loaderHooks,
 		HeaderPropagation:               s.headerPropagation,
+		SSEServerWriteTimeout:           s.engineExecutionConfiguration.SSEServerWriteTimeout,
 	}
 
 	if s.responseCache != nil {
 		handlerOpts.ResponseCache = s.responseCache
 		handlerOpts.ResponseCacheFallbackTTL = s.responseCacheConfig.FallbackTTL
+		handlerOpts.ResponseCacheInvalidation = s.responseCacheConfig.Invalidation
+		handlerOpts.ResponseCacheTagHeader = s.responseCacheConfig.TagHeader
 	}
 
 	if s.redisClient != nil {

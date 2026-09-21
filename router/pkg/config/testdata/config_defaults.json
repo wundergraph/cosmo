@@ -130,6 +130,7 @@
     "AllowOrigins": [
       "*"
     ],
+    "MatchOrigins": null,
     "AllowMethods": [
       "HEAD",
       "GET",
@@ -446,6 +447,23 @@
       "Provider": "redis",
       "ProviderID": "",
       "MaxEntries": 10000
+    },
+    "Invalidation": {
+      "CacheTag": true,
+      "Subgraph": true,
+      "Type": true,
+      "Endpoint": {
+        "Enabled": false,
+        "ListenAddr": "localhost:5027",
+        "Path": "/invalidation",
+        "SharedKey": ""
+      }
+    },
+    "TagHeader": {
+      "Enabled": false,
+      "Name": "Cache-Tag",
+      "Delimiter": ",",
+      "MaxBytes": 16384
     }
   },
   "RouterConfigPath": "",
@@ -530,9 +548,10 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "SSEServerWriteTimeout": 10000000000,
     "EnableDefer": false,
-    "EnableMultiFetch": false,
-    "EnableScheduleFetches": false,
+    "EnableMultiFetch": true,
+    "EnableScheduleFetches": true,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,

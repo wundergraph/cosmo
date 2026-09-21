@@ -18,7 +18,9 @@ import {
 import { Kind, print } from 'graphql';
 import {
   BOOLEAN_SCALAR,
+  CONTEXT_FIELD_VALUE,
   EXECUTION,
+  FEDERATION_POLICY,
   FIELD_SET_SCALAR,
   FLOAT_SCALAR,
   ID_SCALAR,
@@ -76,6 +78,10 @@ export function isArgumentValueValid({
         case INT_SCALAR: {
           return argumentValue.kind === Kind.INT;
         }
+        case CONTEXT_FIELD_VALUE:
+        // intentional fallthrough
+        case FEDERATION_POLICY:
+        // intentional fallthrough
         case FIELD_SET_SCALAR:
         // intentional fallthrough
         case SCOPE_SCALAR:

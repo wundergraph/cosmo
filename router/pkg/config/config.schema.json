@@ -1496,7 +1496,7 @@
                     "enabled": {
                       "type": "boolean",
                       "default": false,
-                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms. The default value is false."
+                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, time-to-last-request-byte, time-to-first-byte, and time-to-last-byte histograms. The default value is false."
                     }
                   }
                 },
@@ -1682,7 +1682,7 @@
                     "enabled": {
                       "type": "boolean",
                       "default": false,
-                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms. The default value is false."
+                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, time-to-last-request-byte, time-to-first-byte, and time-to-last-byte histograms. The default value is false."
                     }
                   }
                 },
@@ -1828,8 +1828,16 @@
         },
         "allow_origins": {
           "type": "array",
-          "description": "The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.",
+          "description": "The allowed origins. Origins can use any URL scheme, and wildcard patterns are supported. The default '*' allows all origins.",
           "default": ["*"],
+          "items": {
+            "type": "string"
+          }
+        },
+        "match_origins": {
+          "type": "array",
+          "description": "Go regular expressions matched against the original Origin header, in addition to allow_origins. Patterns are unanchored; use ^ and $ to match the entire origin. Matching is case-insensitive by default; prefix a pattern with (?-i) for case-sensitive matching. Set allow_origins to [] to allow only regex matches; its default '*' still allows all origins. Invalid expressions fail startup when CORS is enabled.",
+          "default": [],
           "items": {
             "type": "string"
           }
@@ -3363,7 +3371,7 @@
     },
     "response_cache": {
       "type": "object",
-      "description": "Caches subgraph responses, either in Redis or in this router's own memory. Two things are cached: each entity of a federation entity fetch, per selection set, so asking for different fields of the same entity does not share a cache entry, and a batch is served from the cache only when every entity in it is present; and the whole answer of a root query fetch, keyed by the request that produced it, so any difference in the operation or its variables sends the request to the subgraph unchanged. Neither key covers the headers the router forwards, so a subgraph whose answer varies by request header must not mark it public. Only subgraph responses whose Cache-Control header asks to be cached are stored. NOTE: This option is experimental and may change in future versions.",
+      "description": "Caches subgraph responses, either in Redis or in this router's own memory. Two things are cached: each entity of a federation entity fetch, per selection set, so asking for different fields of the same entity does not share a cache entry, and a batch is served from the cache only when every entity in it is present; and the whole answer of a root query fetch, keyed by the request that produced it, so any difference in the operation or its variables sends the request to the subgraph unchanged. Neither key covers the headers the router forwards, so a subgraph whose answer varies by request header must use private or no-store. Only subgraph responses whose Cache-Control header asks to be cached are stored; public is not required. NOTE: This option is experimental and may change in future versions.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
@@ -3374,7 +3382,7 @@
         "fallback_ttl": {
           "type": "string",
           "format": "go-duration",
-          "description": "How long an entity is kept when the subgraph response sends Cache-Control: public but does not say for how long. A subgraph that sends max-age or s-maxage gets the last word either way, including refusing with no-store, no-cache or private. A subgraph response with no Cache-Control header is never cached, whatever this is set to. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
+          "description": "How long a response is kept when its Cache-Control header contains public, must-revalidate, proxy-revalidate, stale-if-error or stale-while-revalidate without max-age or s-maxage. The stale directives require valid durations. An explicit s-maxage takes precedence over max-age, and both override this fallback. No-store, no-cache, private, invalid durations or a zero selected lifetime prevent caching. Missing, empty or unrecognized-only Cache-Control headers never use this fallback. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
           "default": "30s",
           "duration": {
             "minimum": "1s"
@@ -3399,7 +3407,7 @@
             },
             "provider_id": {
               "type": "string",
-              "description": "The ID of a Redis storage provider declared under 'storage_providers.redis'. Required when 'provider' is 'redis', which is the default; an unknown ID fails startup. Ignored by the 'memory' provider."
+              "description": "The ID of a Redis storage provider declared under 'storage_providers.redis'. Required when 'provider' is 'redis', which is the default; an unknown ID fails startup. The instance must run Redis 7.0 or newer: tagged writes use EXPIRE options that older versions reject. Ignored by the 'memory' provider."
             },
             "max_entries": {
               "type": "integer",
@@ -3421,6 +3429,88 @@
           "then": {},
           "else": {
             "required": ["provider_id"]
+          }
+        },
+        "invalidation": {
+          "type": "object",
+          "description": "Secondary indexes built over cached entries so they can later be invalidated by what they are about rather than waiting out their TTL. Each index is independent; with all of them off entries are cached untagged.",
+          "additionalProperties": false,
+          "properties": {
+            "cache_tag": {
+              "type": "boolean",
+              "description": "Index entries under the cache tags a subgraph declares. A subgraph opts in by returning an 'apolloEntityCacheTags' extension: an array of arrays holding one list of tags per cached value, in the same order as the '_entities' it answered with, or a single element outer array for a root query fetch. The extension is consumed by the router and never forwarded to clients. Set to false to stop recording declared cache tags.",
+              "default": true
+            },
+            "subgraph": {
+              "type": "boolean",
+              "description": "Index every cached entry under the subgraph that answered it, so everything one subgraph contributed can be found without that subgraph having declared anything. Set to false to stop maintaining the by-subgraph index.",
+              "default": true
+            },
+            "type": {
+              "type": "boolean",
+              "description": "Index every cached entity under its __typename, scoped to the subgraph that answered so invalidating one subgraph's type leaves the others alone. Requires the typename to be present in what is cached, which a root query fetch has no single one of. Set to false to stop maintaining the by-type index.",
+              "default": true
+            },
+            "endpoint": {
+              "type": "object",
+              "description": "An HTTP endpoint that drops cached entries before their TTL. It listens on an address of its own rather than as a route on the router's port, so that reaching the graph does not by itself reach the thing that empties its cache. It accepts a POST carrying a JSON array of invalidation requests, each naming a 'kind' of 'subgraph', 'type' or 'cache_tag' together with the subgraph it applies to, and answers 202 with the number of cache keys removed.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Start the invalidation listener. When disabled, entries are still indexed and still expire on their own TTL; they simply cannot be dropped early.",
+                  "default": false
+                },
+                "listen_addr": {
+                  "type": "string",
+                  "format": "hostname-port",
+                  "description": "The address the invalidation endpoint listens on. Defaults to loopback, because an endpoint that empties the cache should be exposed on purpose rather than by inheriting whatever the router itself is exposed on. Expose it to internal networks only.",
+                  "default": "localhost:5027"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "The path the invalidation endpoint is served at.",
+                  "default": "/invalidation"
+                },
+                "shared_key": {
+                  "type": "string",
+                  "minLength": 32,
+                  "description": "Compared in full against the 'Authorization' header of an invalidation request, with no 'Bearer' prefix expected. Required when the endpoint is enabled: an enabled endpoint without a key fails startup rather than accepting unauthenticated requests."
+                }
+              }
+            }
+          }
+        },
+        "cache_tag_header": {
+          "type": "object",
+          "description": "Returns the cache tags of a response in a header a CDN or reverse proxy can purge by: 'subgraph-{name}' per subgraph touched, 'type-{subgraph}-{type}' per entity type touched, and every tag a subgraph declared in its 'apolloCacheTags' or 'apolloEntityCacheTags' extension, unchanged. Sent on cache hits and misses alike; fetches that were not cacheable contribute nothing. Independent of the 'invalidation' indexes. Not sent on subscriptions, deferred or batched responses, or responses carrying subgraph errors. Off by default.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Emit the header.",
+              "default": false
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the header. Use 'Surrogate-Key' for Fastly.",
+              "default": "Cache-Tag",
+              "examples": ["Cache-Tag", "Surrogate-Key"]
+            },
+            "delimiter": {
+              "type": "string",
+              "minLength": 1,
+              "description": "What separates tags in the header value. Use a space for Fastly. A tag containing the delimiter cannot be sent and is left out.",
+              "default": ",",
+              "examples": [",", " "]
+            },
+            "max_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The largest header value emitted, in bytes. When the tags do not fit they are grouped coarsest first, subgraph then type then declared, and the finest that do not fit are left out. The default matches Cloudflare's Cache-Tag limit.",
+              "default": 16384
+            }
           }
         }
       },
@@ -4067,13 +4157,13 @@
         },
         "enable_multi_fetch": {
           "type": "boolean",
-          "description": "Enables merging entity fetches to the same subgraph that execute in the same wave into a single batched request with aliased _entities fields. Merging reduces the number of subgraph requests.",
-          "default": false
+          "description": "Merges entity fetches to the same subgraph that execute in the same wave into a single batched request with aliased _entities fields. Merging reduces the number of subgraph requests. Set to false to send one request per entity fetch.",
+          "default": true
         },
         "enable_schedule_fetches": {
           "type": "boolean",
-          "description": "Enables the dependency-aware fetch scheduler, which organizes fetches into component-split, chain-inlined execution trees instead of the legacy wave-based structure.",
-          "default": false
+          "description": "Uses the dependency-aware fetch scheduler, which organizes fetches into component-split, chain-inlined execution trees instead of the legacy wave-based structure. Set to false to fall back to the wave-based structure.",
+          "default": true
         },
         "websocket_client_write_timeout": {
           "type": "string",
@@ -4230,6 +4320,12 @@
           "format": "go-duration",
           "default": "30s",
           "description": "The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "sse_server_write_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "default": "10s",
+          "description": "The maximum time for one SSE write and flush to a client. If a write takes longer, the router closes that subscription so it does not block other subscriptions on the same trigger. Set 0s to disable the timeout."
         },
         "enable_defer": {
           "type": "boolean",

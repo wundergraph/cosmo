@@ -78,8 +78,14 @@ The `request` object is a read-only entity that provides details about the incom
 - `request.operation.variablesRemappingCacheHit` (bool)
 - `request.operation.persistedOperationCacheHit` (bool)
 - `request.operation.planCacheHit` (bool)
+- `request.operation.queryDepth` (int) - Maximum nesting depth calculated for the operation.
+- `request.operation.queryTotalFields` (int) - Calculated total-fields complexity value evaluated against `security.complexity_limits.total_fields`.
+- `request.operation.queryRootFields` (int) - Number of root fields without aliases.
+- `request.operation.queryRootFieldAliases` (int) - Number of root fields that use aliases.
+- `request.operation.queryComplexityCacheHit` (bool) - Whether all four query complexity values were reused from the complexity calculation cache.
 - `request.operation.variables` - The operation variables sent with the request, as a JSON string. The value can contain sensitive data and can be large, so log it with care. It is only serialized when an expression references it, so configurations that do not use it pay no cost.
 
+The query complexity fields are calculated during validation when `security.complexity_limits` is configured. They remain zero-valued when complexity limits are not configured or a request exits before validation. Use `mode: measure` to collect them without rejecting operations. Aliased root fields are counted in `queryRootFieldAliases`, not `queryRootFields`.
 
 The serialization of `request.operation.variables` is decided once per request across the whole configuration. If any access log, metric, telemetry, tracing, or rate-limiter expression references it, it is serialized; otherwise it is skipped.
 
@@ -94,6 +100,8 @@ hasPrefix(request.operation.name, 'Delete') == true
 request.operation.sha256Hash != ''
 request.operation.persistedId != ''
 request.operation.planCacheHit == true
+request.operation.queryDepth > 5
+request.operation.queryComplexityCacheHit == true
 # Log the variables only when the variable remapping cache missed.
 request.operation.variablesRemappingCacheHit ? '' : request.operation.variables
 ```
@@ -217,7 +225,9 @@ Client trace values describe the individual subgraph fetch that is being logged 
 - `subgraph.request.clientTrace.tcpConnectDuration` (time.Duration): The duration of the TCP connect (dial) for the subgraph request. It is 0 when an existing connection is reused. In case of retries, the value of the last attempt that dialed is recorded.
 - `subgraph.request.clientTrace.tlsHandshakeDuration` (time.Duration): The duration of the TLS handshake for the subgraph request. It is 0 when an existing connection is reused or the subgraph is reached over plaintext. In case of retries, the value of the last attempt that performed a handshake is recorded.
 - `subgraph.request.clientTrace.timeToFirstRequestByte` (time.Duration): The duration from the start of the HTTP attempt to writing the first request byte to the subgraph. It includes acquiring the connection. In case of retries, the value of the last attempt that wrote a request byte is recorded.
+- `subgraph.request.clientTrace.timeToLastRequestByte` (time.Duration): The duration between the first request-header write callback and a successful request-complete callback from Go's HTTP transport. This approximates the time from the first to the last request byte. The value is 0 unless both callbacks are observed and the request-complete callback reports no error. In case of retries, the value of the last attempt with both callbacks is recorded. The value is also 0 for single-flight followers because they do not write a separate subgraph request.
 - `subgraph.request.clientTrace.timeToFirstByte` (time.Duration): The duration from completing the request write to receiving the first response byte from the subgraph. In case of retries, only the last attempt is recorded.
+- `subgraph.request.clientTrace.timeToLastByte` (time.Duration): The duration from receiving the first response byte to consuming the last response byte. The value is 0 unless the first response byte is observed and the full response body is consumed, either to EOF or through the declared `Content-Length`. A response that cannot carry a body completes when its headers have been read. The value remains 0 for bodies that are closed early or end in a read error, upgraded or streaming subscription responses, and single-flight followers that do not independently consume the origin response body. In case of retries, the value of the last attempt whose response is fully consumed is recorded.
 
 This object is available in template expressions and can be accessed using the `subgraph` identifier. For example, you can access the subgraph name using `subgraph.name` or check for errors using `subgraph.request.error`.
 

@@ -179,6 +179,9 @@
     "AllowOrigins": [
       "*"
     ],
+    "MatchOrigins": [
+      "^https://([a-z0-9-]+\\.)*example\\.com$"
+    ],
     "AllowMethods": [
       "HEAD",
       "GET",
@@ -872,6 +875,23 @@
       "Provider": "redis",
       "ProviderID": "my_redis",
       "MaxEntries": 2048
+    },
+    "Invalidation": {
+      "CacheTag": true,
+      "Subgraph": false,
+      "Type": true,
+      "Endpoint": {
+        "Enabled": true,
+        "ListenAddr": "localhost:5027",
+        "Path": "/invalidation",
+        "SharedKey": "a-shared-key-that-is-long-enough-to-pass"
+      }
+    },
+    "TagHeader": {
+      "Enabled": true,
+      "Name": "Surrogate-Key",
+      "Delimiter": " ",
+      "MaxBytes": 1024
     }
   },
   "RouterConfigPath": "latest.json",
@@ -998,9 +1018,10 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "SSEServerWriteTimeout": 10000000000,
     "EnableDefer": false,
-    "EnableMultiFetch": false,
-    "EnableScheduleFetches": false,
+    "EnableMultiFetch": true,
+    "EnableScheduleFetches": true,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,

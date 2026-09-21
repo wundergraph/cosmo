@@ -26,7 +26,7 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions: responseCacheOptions(time.Minute),
+			RouterOptions: responseCacheOptions(t, time.Minute),
 			// The default is what mood has to beat: employees sends no Cache-Control,
 			// so on a cache hit it is otherwise the only policy left in play.
 			CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=300"},
@@ -62,7 +62,7 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions:      responseCacheOptions(time.Minute),
+			RouterOptions:      responseCacheOptions(t, time.Minute),
 			CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=300"},
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=10")},
@@ -89,7 +89,7 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions:      responseCacheOptions(time.Minute),
+			RouterOptions:      responseCacheOptions(t, time.Minute),
 			CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=300"},
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood:      testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
@@ -112,7 +112,7 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions: responseCacheOptions(time.Minute),
+			RouterOptions: responseCacheOptions(t, time.Minute),
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
 			},

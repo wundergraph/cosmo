@@ -4,6 +4,10 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.13.8](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.13.7...@wundergraph/playground@0.13.8) (2026-09-08)
+
+**Note:** Version bump only for package @wundergraph/playground
+
 ## [0.13.7](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.13.6...@wundergraph/playground@0.13.7) (2026-08-26)
 
 **Note:** Version bump only for package @wundergraph/playground
