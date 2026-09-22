@@ -1767,6 +1767,7 @@ Configure WebSocket handlers, protocols, and more.
 | -------------------- | -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | WEBSOCKETS_ENABLED   | enabled                          | <Icon icon="square-check" iconType="solid" /> |                                                                                                                                              | true          |
 |                      | absinthe_protocol                | <Icon icon="square" />                        | [Absinthe Protocol Configuration](/router/configuration#absinthe-protocol-configuration)                                                     |               |
+| WEBSOCKETS_DEFAULT_SUBPROTOCOL | default_subprotocol    | <Icon icon="square" />                        | The subprotocol to use when a client sends no `Sec-WebSocket-Protocol` header. One of `graphql-transport-ws` or `graphql-ws`. When empty, the router closes such connections. |               |
 |                      | forward_upgrade_headers          | <Icon icon="square" />                        | Forward all useful Headers from the Upgrade Request, like User-Agent or Authorization in the extensions field when subscribing on a Subgraph |               |
 |                      | forward_upgrade_query_params     | <Icon icon="square" />                        | Forward all query parameters from the Upgrade Request in the extensions field when subscribing on a Subgraph                                 |               |
 |                      | forward_initial_payload          | <Icon icon="square" />                        | Forward the initial payload from a client subscription in the extensions field when subscribing on a Subgraph                                | true          |
@@ -1810,6 +1811,8 @@ websocket:
   absinthe_protocol:
     enabled: true
     handler_path: /absinthe/socket
+  # used when a client sends no Sec-WebSocket-Protocol header
+  default_subprotocol: graphql-transport-ws
   forward_initial_payload: true
   forward_upgrade_headers:
     enabled: true
