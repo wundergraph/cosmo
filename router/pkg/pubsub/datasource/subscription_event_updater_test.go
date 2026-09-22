@@ -51,8 +51,8 @@ func TestSubscriptionEventUpdater_Update_NoHooks(t *testing.T) {
 	}
 
 	// Expect calls to Update for each event
-	mockUpdater.On("Update", []byte("test data 1")).Return()
-	mockUpdater.On("Update", []byte("test data 2")).Return()
+	mockUpdater.On("Update", []byte("test data 1"), "").Return()
+	mockUpdater.On("Update", []byte("test data 2"), "").Return()
 
 	updater := NewSubscriptionEventUpdater(
 		config,
@@ -186,9 +186,9 @@ func TestSubscriptionEventUpdater_Update_PassthroughWithNoHooks(t *testing.T) {
 	}
 
 	// With no hooks, Update should call the underlying eventUpdater.Update for each event
-	mockUpdater.On("Update", []byte("event data 1")).Return()
-	mockUpdater.On("Update", []byte("event data 2")).Return()
-	mockUpdater.On("Update", []byte("event data 3")).Return()
+	mockUpdater.On("Update", []byte("event data 1"), "").Return()
+	mockUpdater.On("Update", []byte("event data 2"), "").Return()
+	mockUpdater.On("Update", []byte("event data 3"), "").Return()
 
 	updater := NewSubscriptionEventUpdater(
 		config,
@@ -201,9 +201,9 @@ func TestSubscriptionEventUpdater_Update_PassthroughWithNoHooks(t *testing.T) {
 	updater.Update(events)
 
 	// Verify all events were passed through without modification
-	mockUpdater.AssertCalled(t, "Update", []byte("event data 1"))
-	mockUpdater.AssertCalled(t, "Update", []byte("event data 2"))
-	mockUpdater.AssertCalled(t, "Update", []byte("event data 3"))
+	mockUpdater.AssertCalled(t, "Update", []byte("event data 1"), "")
+	mockUpdater.AssertCalled(t, "Update", []byte("event data 2"), "")
+	mockUpdater.AssertCalled(t, "Update", []byte("event data 3"), "")
 	mockUpdater.AssertNumberOfCalls(t, "Update", 3)
 }
 
@@ -220,8 +220,8 @@ func TestSubscriptionEventUpdater_Update_SkipsNilEvents(t *testing.T) {
 		&testEvent{mutableTestEvent("event data 2")},
 	}
 
-	mockUpdater.On("Update", []byte("event data 1")).Return()
-	mockUpdater.On("Update", []byte("event data 2")).Return()
+	mockUpdater.On("Update", []byte("event data 1"), "").Return()
+	mockUpdater.On("Update", []byte("event data 2"), "").Return()
 
 	updater := NewSubscriptionEventUpdater(
 		config,
@@ -235,8 +235,8 @@ func TestSubscriptionEventUpdater_Update_SkipsNilEvents(t *testing.T) {
 		updater.Update(events)
 	})
 
-	mockUpdater.AssertCalled(t, "Update", []byte("event data 1"))
-	mockUpdater.AssertCalled(t, "Update", []byte("event data 2"))
+	mockUpdater.AssertCalled(t, "Update", []byte("event data 1"), "")
+	mockUpdater.AssertCalled(t, "Update", []byte("event data 2"), "")
 	mockUpdater.AssertNumberOfCalls(t, "Update", 2)
 }
 

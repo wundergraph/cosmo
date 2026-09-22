@@ -231,8 +231,8 @@ func (_c *MockSubscriptionUpdater_Subscriptions_Call) RunAndReturn(run func() ma
 }
 
 // Update provides a mock function for the type MockSubscriptionUpdater
-func (_mock *MockSubscriptionUpdater) Update(data []byte) {
-	_mock.Called(data)
+func (_mock *MockSubscriptionUpdater) Update(data []byte, cursor string) {
+	_mock.Called(data, cursor)
 	return
 }
 
@@ -243,18 +243,24 @@ type MockSubscriptionUpdater_Update_Call struct {
 
 // Update is a helper method to define mock.On call
 //   - data []byte
-func (_e *MockSubscriptionUpdater_Expecter) Update(data interface{}) *MockSubscriptionUpdater_Update_Call {
-	return &MockSubscriptionUpdater_Update_Call{Call: _e.mock.On("Update", data)}
+//   - cursor string
+func (_e *MockSubscriptionUpdater_Expecter) Update(data interface{}, cursor interface{}) *MockSubscriptionUpdater_Update_Call {
+	return &MockSubscriptionUpdater_Update_Call{Call: _e.mock.On("Update", data, cursor)}
 }
 
-func (_c *MockSubscriptionUpdater_Update_Call) Run(run func(data []byte)) *MockSubscriptionUpdater_Update_Call {
+func (_c *MockSubscriptionUpdater_Update_Call) Run(run func(data []byte, cursor string)) *MockSubscriptionUpdater_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 []byte
 		if args[0] != nil {
 			arg0 = args[0].([]byte)
 		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -265,14 +271,14 @@ func (_c *MockSubscriptionUpdater_Update_Call) Return() *MockSubscriptionUpdater
 	return _c
 }
 
-func (_c *MockSubscriptionUpdater_Update_Call) RunAndReturn(run func(data []byte)) *MockSubscriptionUpdater_Update_Call {
+func (_c *MockSubscriptionUpdater_Update_Call) RunAndReturn(run func(data []byte, cursor string)) *MockSubscriptionUpdater_Update_Call {
 	_c.Run(run)
 	return _c
 }
 
 // UpdateSubscription provides a mock function for the type MockSubscriptionUpdater
-func (_mock *MockSubscriptionUpdater) UpdateSubscription(id resolve.SubscriptionIdentifier, data []byte) {
-	_mock.Called(id, data)
+func (_mock *MockSubscriptionUpdater) UpdateSubscription(id resolve.SubscriptionIdentifier, data []byte, cursor string) {
+	_mock.Called(id, data, cursor)
 	return
 }
 
@@ -284,11 +290,12 @@ type MockSubscriptionUpdater_UpdateSubscription_Call struct {
 // UpdateSubscription is a helper method to define mock.On call
 //   - id resolve.SubscriptionIdentifier
 //   - data []byte
-func (_e *MockSubscriptionUpdater_Expecter) UpdateSubscription(id interface{}, data interface{}) *MockSubscriptionUpdater_UpdateSubscription_Call {
-	return &MockSubscriptionUpdater_UpdateSubscription_Call{Call: _e.mock.On("UpdateSubscription", id, data)}
+//   - cursor string
+func (_e *MockSubscriptionUpdater_Expecter) UpdateSubscription(id interface{}, data interface{}, cursor interface{}) *MockSubscriptionUpdater_UpdateSubscription_Call {
+	return &MockSubscriptionUpdater_UpdateSubscription_Call{Call: _e.mock.On("UpdateSubscription", id, data, cursor)}
 }
 
-func (_c *MockSubscriptionUpdater_UpdateSubscription_Call) Run(run func(id resolve.SubscriptionIdentifier, data []byte)) *MockSubscriptionUpdater_UpdateSubscription_Call {
+func (_c *MockSubscriptionUpdater_UpdateSubscription_Call) Run(run func(id resolve.SubscriptionIdentifier, data []byte, cursor string)) *MockSubscriptionUpdater_UpdateSubscription_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 resolve.SubscriptionIdentifier
 		if args[0] != nil {
@@ -298,9 +305,14 @@ func (_c *MockSubscriptionUpdater_UpdateSubscription_Call) Run(run func(id resol
 		if args[1] != nil {
 			arg1 = args[1].([]byte)
 		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -311,7 +323,7 @@ func (_c *MockSubscriptionUpdater_UpdateSubscription_Call) Return() *MockSubscri
 	return _c
 }
 
-func (_c *MockSubscriptionUpdater_UpdateSubscription_Call) RunAndReturn(run func(id resolve.SubscriptionIdentifier, data []byte)) *MockSubscriptionUpdater_UpdateSubscription_Call {
+func (_c *MockSubscriptionUpdater_UpdateSubscription_Call) RunAndReturn(run func(id resolve.SubscriptionIdentifier, data []byte, cursor string)) *MockSubscriptionUpdater_UpdateSubscription_Call {
 	_c.Run(run)
 	return _c
 }

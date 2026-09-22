@@ -38,7 +38,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithOnReceiveEventsHooks_Su
 
 	// Expect call to UpdateSubscription with modified data
 	subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
-	mockUpdater.On("UpdateSubscription", subId, []byte("modified data")).Return()
+	mockUpdater.On("UpdateSubscription", subId, []byte("modified data"), "").Return()
 	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
 		context.Background(): subId,
 	})
@@ -137,7 +137,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleOnReceiveEventsHooks_Succes
 
 	// Expect call to UpdateSubscription with modified data
 	subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
-	mockUpdater.On("UpdateSubscription", subId, []byte("modified by hook2")).Return()
+	mockUpdater.On("UpdateSubscription", subId, []byte("modified by hook2"), "").Return()
 	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
 		context.Background(): subId,
 	})
@@ -211,7 +211,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleOnReceiveEventsHooks_Error(
 		context.Background(): subId,
 	})
 	// Events from hook1 should still be sent despite the error
-	mockUpdater.On("UpdateSubscription", subId, []byte("original data")).Return()
+	mockUpdater.On("UpdateSubscription", subId, []byte("original data"), "").Return()
 	// Subscription should be closed due to the error from hook1
 	mockUpdater.On("CloseSubscription", subId).Return()
 
@@ -245,7 +245,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleOnReceiveEventsHooks_Error(
 	}, 100*time.Millisecond, 10*time.Millisecond, "hook3 should not have been called after hook1 returned an error")
 
 	// Verify events from hook1 were still sent
-	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("original data"))
+	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("original data"), "")
 	// Verify subscription was closed due to hook1's error
 	mockUpdater.AssertCalled(t, "CloseSubscription", subId)
 	// Verify Update was not called (since hooks are present)
@@ -280,8 +280,8 @@ func TestSubscriptionEventUpdater_Update_WithSingleOnReceiveEventsHookModificati
 	})
 
 	// With hooks, UpdateSubscription should be called with modified data
-	mockUpdater.On("UpdateSubscription", subId, []byte("modified: original data 1")).Return()
-	mockUpdater.On("UpdateSubscription", subId, []byte("modified: original data 2")).Return()
+	mockUpdater.On("UpdateSubscription", subId, []byte("modified: original data 1"), "").Return()
+	mockUpdater.On("UpdateSubscription", subId, []byte("modified: original data 2"), "").Return()
 
 	updater := NewSubscriptionEventUpdater(
 		config,
@@ -298,8 +298,8 @@ func TestSubscriptionEventUpdater_Update_WithSingleOnReceiveEventsHookModificati
 	updater.Update(originalEvents)
 
 	// Verify modified events were sent to UpdateSubscription, not the original events
-	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("modified: original data 1"))
-	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("modified: original data 2"))
+	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("modified: original data 1"), "")
+	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("modified: original data 2"), "")
 	mockUpdater.AssertNumberOfCalls(t, "UpdateSubscription", 2)
 	// Update should NOT be called when hooks are present
 	mockUpdater.AssertNotCalled(t, "Update")
@@ -328,7 +328,7 @@ func TestSubscriptionEventUpdater_Update_WithSingleOnReceiveEventsHookError_Clos
 		context.Background(): subId,
 	})
 	// Events are still sent even when hook returns error
-	mockUpdater.On("UpdateSubscription", subId, []byte("test data")).Return()
+	mockUpdater.On("UpdateSubscription", subId, []byte("test data"), "").Return()
 	// Subscription should be closed due to the error
 	mockUpdater.On("CloseSubscription", subId).Return()
 
@@ -341,7 +341,7 @@ func TestSubscriptionEventUpdater_Update_WithSingleOnReceiveEventsHookError_Clos
 	updater.Update(events)
 
 	// Verify events were still sent despite the error
-	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("test data"))
+	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("test data"), "")
 	// Verify subscription was closed due to the error
 	mockUpdater.AssertCalled(t, "CloseSubscription", subId)
 	// Update should NOT be called when hooks are present
@@ -413,7 +413,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleOnReceiveEventsHooksChainin
 		context.Background(): subId,
 	})
 	// Final modified data should have all three transformations applied
-	mockUpdater.On("UpdateSubscription", subId, []byte("step3: step2: step1: original")).Return()
+	mockUpdater.On("UpdateSubscription", subId, []byte("step3: step2: step1: original"), "").Return()
 
 	updater := NewSubscriptionEventUpdater(
 		config,
@@ -466,7 +466,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleOnReceiveEventsHooksChainin
 	mu.Unlock()
 
 	// Verify final modified events were sent to UpdateSubscription
-	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("step3: step2: step1: original"))
+	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("step3: step2: step1: original"), "")
 	mockUpdater.AssertNumberOfCalls(t, "UpdateSubscription", 1)
 	mockUpdater.AssertNotCalled(t, "Update")
 }
@@ -515,7 +515,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithOnReceiveEventsHookErro
 			)
 
 			subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
-			mockUpdater.On("UpdateSubscription", subId, []byte("test data")).Return()
+			mockUpdater.On("UpdateSubscription", subId, []byte("test data"), "").Return()
 			mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
 				context.Background(): subId,
 			})

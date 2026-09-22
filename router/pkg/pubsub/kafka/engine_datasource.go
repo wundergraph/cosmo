@@ -40,6 +40,14 @@ func (e *Event) GetHeaders() map[string][]byte {
 	return cloneHeaders(e.evt.Headers)
 }
 
+// Cursor implements datasource.StreamEvent.
+func (e *Event) Cursor() string {
+	if e.evt == nil {
+		return ""
+	}
+	return e.evt.ResumeCursor
+}
+
 func (e Event) Clone() datasource.MutableStreamEvent {
 	return e.evt.Clone()
 }
@@ -57,13 +65,10 @@ func cloneHeaders(src map[string][]byte) map[string][]byte {
 
 // MutableEvent implements datasource.MutableEvent
 type MutableEvent struct {
-	Key     []byte            `json:"key"`
-	Data    json.RawMessage   `json:"data"`
-	Headers map[string][]byte `json:"headers"`
-	// Cursor is the resume cursor for this event, set by the poller when the
-	// subscription opted in. Not part of the wire payload sent to the client
-	// directly -- it is rendered into response extensions by the engine.
-	Cursor string `json:"-"`
+	Key          []byte            `json:"key"`
+	Data         json.RawMessage   `json:"data"`
+	Headers      map[string][]byte `json:"headers"`
+	ResumeCursor string            `json:"-"`
 }
 
 func (e *MutableEvent) GetData() []byte {
@@ -87,12 +92,12 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 	return &e2
 }
 
-// Cursor implements datasource.CursorStreamEvent.
-func (e *Event) Cursor() string {
-	if e.evt == nil {
+// Cursor implements datasource.StreamEvent.
+func (e *MutableEvent) Cursor() string {
+	if e == nil {
 		return ""
 	}
-	return e.evt.Cursor
+	return e.ResumeCursor
 }
 
 // SubscriptionEventConfiguration is a public type that is used to allow access to custom fields
@@ -132,7 +137,7 @@ func (s *SubscriptionEventConfiguration) WantsCursors() bool {
 	return s.Body.Extensions.DeliveryGuarantee == "cursor"
 }
 
-// ResumeCursor returns the cursor the client presented to resume from, or ""
+// ResumeCursor returns the cursor the client presented to resume from, or an empty string
 // if none was given.
 func (s *SubscriptionEventConfiguration) ResumeCursor() string {
 	if s.Body == nil {

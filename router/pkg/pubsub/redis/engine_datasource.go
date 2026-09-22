@@ -29,6 +29,11 @@ func (e *Event) Clone() datasource.MutableStreamEvent {
 	return e.evt.Clone()
 }
 
+// Cursor implements datasource.StreamEvent. Redis events do not support cursors.
+func (e *Event) Cursor() string {
+	return ""
+}
+
 type MutableEvent struct {
 	Data json.RawMessage `json:"data"`
 }
@@ -55,6 +60,11 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 	return &MutableEvent{
 		Data: slices.Clone(e.Data),
 	}
+}
+
+// Cursor implements datasource.StreamEvent. Redis events do not support cursors.
+func (e *MutableEvent) Cursor() string {
+	return ""
 }
 
 // SubscriptionEventConfiguration contains configuration for subscription events

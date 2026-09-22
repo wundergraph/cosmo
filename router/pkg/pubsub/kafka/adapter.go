@@ -53,7 +53,7 @@ type ProviderAdapter struct {
 type PollerOpts struct {
 	providerId  string
 	emitCursors bool
-	tracker     cursorPosition
+	position    cursorPosition
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
@@ -116,19 +116,19 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 
 				var cursor string
 				if pollerOpts.emitCursors {
-					pollerOpts.tracker.advance(r.Topic, r.Partition, r.Offset, r.LeaderEpoch)
-					pos, err := pollerOpts.tracker.snapshot()
+					pollerOpts.position.addOffset(r.Topic, r.Partition, r.Offset, r.LeaderEpoch)
+					pos, err := pollerOpts.position.marshal()
 					if err != nil {
-						p.logger.Error("failed to snapshot cursor position, delivering event without a cursor", zap.Error(err))
+						p.logger.Error("failed to marshal cursor position, delivering event without a cursor", zap.Error(err))
 					} else {
-						cursor, err = datasource.EncodeCursor(datasource.Cursor{
+						cursor, err = datasource.MarshalCursor(datasource.Cursor{
 							ProviderType: datasource.ProviderTypeKafka,
 							ProviderID:   pollerOpts.providerId,
 							IssuedAt:     time.Now().UnixMilli(),
 							Position:     pos,
 						})
 						if err != nil {
-							p.logger.Error("failed to encode cursor, delivering event without a cursor", zap.Error(err))
+							p.logger.Error("failed to marshal cursor, delivering event without a cursor", zap.Error(err))
 							cursor = ""
 						}
 					}
@@ -137,10 +137,10 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 				updater.Update([]datasource.StreamEvent{
 					&Event{
 						evt: &MutableEvent{
-							Data:    r.Value,
-							Headers: headers,
-							Key:     r.Key,
-							Cursor:  cursor,
+							Data:         r.Value,
+							Headers:      headers,
+							Key:          r.Key,
+							ResumeCursor: cursor,
 						},
 					},
 				})
@@ -163,7 +163,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		zap.Strings("topics", subConf.Topics),
 	)
 
-	tracker := make(cursorPosition)
+	cursorPosition := make(cursorPosition)
 
 	// Create a new client for the topic
 	// Copy opts to avoid data race when multiple goroutines call Subscribe concurrently
@@ -178,7 +178,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	)
 
 	if resumeCursor := subConf.ResumeCursor(); resumeCursor != "" {
-		assignOpts, err := p.buildResumeAssignment(ctx, resumeCursor, subConf, tracker)
+		assignOpts, err := p.buildResumeAssignment(ctx, resumeCursor, subConf, cursorPosition)
 		if err != nil {
 			log.Error("failed to resume subscription from cursor", zap.Error(err))
 			return err
@@ -218,7 +218,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		err := p.topicPoller(pollerCtx, client, updater, PollerOpts{
 			providerId:  conf.ProviderID(),
 			emitCursors: subConf.WantsCursors(),
-			tracker:     tracker,
+			position:    cursorPosition,
 		})
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
@@ -253,8 +253,12 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 // warning and consumed via ConsumeTopics instead of being assigned explicit partitions, with
 // ConsumeResetOffset set to the cursor's issue time so they start where a known partition
 // without a recorded position would.
-func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, resumeCursor string, subConf *SubscriptionEventConfiguration, tracker cursorPosition) ([]kgo.Opt, error) {
-	cur, err := datasource.DecodeCursor(resumeCursor)
+func (p *ProviderAdapter) buildResumeAssignment(
+	ctx context.Context,
+	resumeCursor string,
+	subConf *SubscriptionEventConfiguration,
+	tracker cursorPosition) ([]kgo.Opt, error) {
+	cur, err := datasource.UnmarshalCursor(resumeCursor)
 	if err != nil {
 		return nil, datasource.NewError("invalid resume cursor", err)
 	}
@@ -302,7 +306,7 @@ func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, resumeCurso
 		assign[topic] = partAssign
 	}
 
-	tracker.seed(pos)
+	tracker.merge(pos)
 
 	opts := []kgo.Opt{kgo.ConsumePartitions(assign)}
 	if len(missingTopics) > 0 {
