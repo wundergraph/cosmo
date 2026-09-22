@@ -189,6 +189,8 @@ You have two ways to query for errors. Both metrics can be quite useful dependin
 
 * `wg.subgraph.id`: The ID of the subgraph
 
+* `wg.response_cache.status`: Whether the fetch was answered by the [response cache](/router/response-cache): `hit`, `partial_hit` or `miss`. Only present while the response cache is enabled.
+
 ### Resource attributes
 
 In OTEL, resource attributes are special attributes, identifying metrics based on resource characteristics. Although stored differently, they affect metric cardinality. In Prometheus, this data is labeled on the `target_info` metric.

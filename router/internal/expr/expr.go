@@ -160,8 +160,15 @@ type SubgraphRequest struct {
 }
 
 type SubgraphResponse struct {
-	Body   Body    `expr:"body"`
-	Header Headers `expr:"header"`
+	Body   Body                  `expr:"body"`
+	Header Headers               `expr:"header"`
+	Cache  SubgraphResponseCache `expr:"cache"`
+}
+
+// SubgraphResponseCache is what the response cache did for the fetch.
+type SubgraphResponseCache struct {
+	// Status is "hit", "partial_hit" or "miss". It is empty when the response cache is not enabled.
+	Status string `expr:"status"`
 }
 
 type ClientTrace struct {

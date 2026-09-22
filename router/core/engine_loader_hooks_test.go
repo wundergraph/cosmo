@@ -59,7 +59,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false)
 
 		ctx, _ := setupTestContext(t, tp)
 
@@ -89,7 +89,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false)
 
 		ctx, _ := setupTestContext(t, tp)
 
@@ -116,7 +116,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false)
 
 		ctx, _ := setupTestContext(t, tp)
 
@@ -612,7 +612,7 @@ func TestOnFinished_ResponseCacheLifetime(t *testing.T) {
 			require.NoError(t, err)
 
 			tp := sdktrace.NewTracerProvider()
-			hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation)
+			hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation, false)
 
 			ctx, _ := setupTestContext(t, tp)
 			client := &responseHeaderPropagation{header: make(http.Header), m: &sync.Mutex{}}
@@ -627,4 +627,88 @@ func TestOnFinished_ResponseCacheLifetime(t *testing.T) {
 			require.Equal(t, tt.want, client.header.Get(cacheControlKey))
 		})
 	}
+}
+
+func TestOnFinished_ResponseCacheStatus(t *testing.T) {
+	t.Parallel()
+
+	ds := resolve.DataSourceInfo{
+		ID:   "subgraph-1",
+		Name: "products",
+	}
+
+	// fetchSpanAttributes runs OnFinished once and hands back what the span carries.
+	fetchSpanAttributes := func(t *testing.T, cacheEnabled bool, info *resolve.ResponseInfo) attribute.Set {
+		t.Helper()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, nil, cacheEnabled)
+
+		ctx, _ := setupTestContext(t, tp)
+		hooks.OnFinished(ctx, ds, info)
+
+		spans := exporter.GetSpans().Snapshots()
+		require.Len(t, spans, 1)
+		return attribute.NewSet(spans[0].Attributes()...)
+	}
+
+	t.Run("a fetch answered from the cache is a hit", func(t *testing.T) {
+		t.Parallel()
+
+		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
+			StatusCode:       http.StatusOK,
+			ResponseCacheHit: true,
+			ResponseCacheTTL: time.Minute,
+		})
+		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
+		require.True(t, ok)
+		require.Equal(t, ResponseCacheStatusHit, status.AsString())
+	})
+
+	t.Run("a hit with no life left is still a hit", func(t *testing.T) {
+		t.Parallel()
+
+		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
+			StatusCode:       http.StatusOK,
+			ResponseCacheHit: true,
+		})
+		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
+		require.True(t, ok)
+		require.Equal(t, ResponseCacheStatusHit, status.AsString())
+	})
+
+	t.Run("a fetch that went out with cached entries in it is a partial hit", func(t *testing.T) {
+		t.Parallel()
+
+		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
+			StatusCode:       http.StatusOK,
+			ResponseCacheTTL: time.Minute,
+		})
+		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
+		require.True(t, ok)
+		require.Equal(t, ResponseCacheStatusPartialHit, status.AsString())
+	})
+
+	t.Run("a fetch the cache had nothing for is a miss", func(t *testing.T) {
+		t.Parallel()
+
+		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
+			StatusCode: http.StatusOK,
+		})
+		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
+		require.True(t, ok)
+		require.Equal(t, ResponseCacheStatusMiss, status.AsString())
+	})
+
+	t.Run("nothing is attached when the cache is not enabled", func(t *testing.T) {
+		t.Parallel()
+
+		attrs := fetchSpanAttributes(t, false, &resolve.ResponseInfo{
+			StatusCode: http.StatusOK,
+		})
+		_, ok := attrs.Value(rotel.WgResponseCacheStatus)
+		require.False(t, ok, "without a cache every fetch would read as a miss")
+	})
 }
