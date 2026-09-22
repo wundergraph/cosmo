@@ -458,6 +458,12 @@
         "Path": "/invalidation",
         "SharedKey": ""
       }
+    },
+    "TagHeader": {
+      "Enabled": false,
+      "Name": "Cache-Tag",
+      "Delimiter": ",",
+      "MaxBytes": 16384
     }
   },
   "RouterConfigPath": "",
@@ -573,6 +579,7 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
+    "DefaultSubprotocol": "",
     "ForwardUpgradeHeaders": {
       "Enabled": true,
       "AllowList": [
