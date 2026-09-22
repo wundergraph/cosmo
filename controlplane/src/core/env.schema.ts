@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+const emptyToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((val) => (val === '' ? undefined : val), schema.optional());
+
 export const sentryEnvVariables = z.object({
   SENTRY_ENABLED: z
     .string()
@@ -233,9 +236,14 @@ export const envVariables = z
     /**
      * Prompt-to-Query
      */
-    PROMPT_TO_QUERY_SERVICE_ENDPOINT: z.string().url().optional(),
+    PROMPT_TO_QUERY_SERVICE_ENDPOINT: emptyToUndefined(
+      z
+        .string()
+        .url()
+        .regex(/^https?:\/\//i, 'Must start with http:// or https://'),
+    ),
     PROMPT_TO_QUERY_HTTP_VERSION: z.union([z.literal('1.1'), z.literal('2')]).optional(),
-    PROMPT_TO_QUERY_TOKEN: z.string().jwt().optional(),
+    PROMPT_TO_QUERY_TOKEN: emptyToUndefined(z.string().jwt()),
   })
   .merge(sentryEnvVariables)
   .refine((input) => {
