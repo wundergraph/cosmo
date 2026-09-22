@@ -1,36 +1,63 @@
 module github.com/wundergraph/cosmo/router
 
-go 1.25.0
+go 1.27.0
 
 require (
 	connectrpc.com/connect v1.19.2
-	github.com/andybalholm/brotli v1.1.0 // indirect
+	connectrpc.com/vanguard v0.3.0
+	github.com/KimMachineGun/automemlimit v0.6.1
+	github.com/MicahParks/jwkset v0.11.0
+	github.com/MicahParks/keyfunc/v3 v3.6.2
+	github.com/alicebob/miniredis/v2 v2.34.0
+	github.com/bufbuild/protocompile v0.14.1
 	github.com/buger/jsonparser v1.1.2
+	github.com/caarlos0/env/v11 v11.3.1
+	github.com/cep21/circuit/v4 v4.0.0
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
+	github.com/dgraph-io/ristretto/v2 v2.4.0
 	github.com/dustin/go-humanize v1.0.1
-	github.com/go-chi/chi/v5 v5.2.2
+	github.com/expr-lang/expr v1.17.7
+	github.com/go-chi/chi/v5 v5.3.0
 	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/gobwas/ws v1.4.0
+	github.com/goccy/go-json v0.10.3
 	github.com/goccy/go-yaml v1.17.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
-	github.com/gorilla/websocket v1.5.1
+	github.com/google/go-containerregistry v0.20.3
+	github.com/google/jsonschema-go v0.4.3
+	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
+	github.com/grafana/pyroscope-go v1.4.0
+	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-multierror v1.1.1
+	github.com/hashicorp/go-plugin v1.6.3
 	github.com/hashicorp/go-retryablehttp v0.7.7
+	github.com/iancoleman/strcase v0.3.0
 	github.com/jensneuse/abstractlogger v0.0.4
 	github.com/joho/godotenv v1.5.1
+	github.com/klauspost/compress v1.18.7
+	github.com/minio/minio-go/v7 v7.0.74
 	github.com/mitchellh/mapstructure v1.5.0
+	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/nats-io/nats.go v1.50.0
 	github.com/nats-io/nuid v1.0.1
 	github.com/pkg/errors v0.9.1
+	github.com/posthog/posthog-go v1.5.5
+	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/client_golang v1.23.2
+	github.com/prometheus/otlptranslator v1.0.0
 	github.com/redis/go-redis/v9 v9.7.3
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/sebdah/goldie/v2 v2.7.1
 	github.com/shirou/gopsutil/v3 v3.24.3
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
+	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
 	github.com/twmb/franz-go v1.16.1
+	github.com/wundergraph/astjson v1.1.0
+	github.com/wundergraph/go-arena v1.3.0
 	github.com/wundergraph/graphql-go-tools/v2 v2.22.0
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
@@ -48,52 +75,21 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/automaxprocs v1.5.3
+	go.uber.org/goleak v1.3.0
+	go.uber.org/ratelimit v0.3.1
 	go.uber.org/zap v1.27.0
 	go.withmatt.com/connect-brotli v0.4.0
+	golang.org/x/net v0.58.0
 	golang.org/x/sync v0.22.0
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.41.0
+	golang.org/x/time v0.15.0
 	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.11
 )
 
 require (
-	connectrpc.com/vanguard v0.3.0
-	github.com/KimMachineGun/automemlimit v0.6.1
-	github.com/MicahParks/jwkset v0.11.0
-	github.com/MicahParks/keyfunc/v3 v3.6.2
-	github.com/alicebob/miniredis/v2 v2.34.0
-	github.com/bufbuild/protocompile v0.14.1
-	github.com/caarlos0/env/v11 v11.3.1
-	github.com/cep21/circuit/v4 v4.0.0
-	github.com/dgraph-io/ristretto/v2 v2.4.0
-	github.com/expr-lang/expr v1.17.7
-	github.com/goccy/go-json v0.10.3
-	github.com/google/go-containerregistry v0.20.3
-	github.com/google/jsonschema-go v0.4.3
-	github.com/google/uuid v1.6.0
-	github.com/grafana/pyroscope-go v1.4.0
-	github.com/hashicorp/go-hclog v1.6.3
-	github.com/hashicorp/go-plugin v1.6.3
-	github.com/iancoleman/strcase v0.3.0
-	github.com/klauspost/compress v1.18.6
-	github.com/minio/minio-go/v7 v7.0.74
-	github.com/modelcontextprotocol/go-sdk v1.7.0
-	github.com/posthog/posthog-go v1.5.5
-	github.com/pquerna/cachecontrol v0.2.0
-	github.com/prometheus/otlptranslator v1.0.0
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
-	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
-	github.com/wundergraph/astjson v1.1.0
-	github.com/wundergraph/go-arena v1.3.0
-	go.uber.org/goleak v1.3.0
-	go.uber.org/ratelimit v0.3.1
-	golang.org/x/net v0.58.0
-	golang.org/x/text v0.41.0
-	golang.org/x/time v0.15.0
-)
-
-require (
 	github.com/alicebob/gopher-json v0.0.0-20230218143504-906a9b012302 // indirect
+	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
@@ -171,6 +167,7 @@ require (
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect

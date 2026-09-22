@@ -11,7 +11,7 @@ It is in connection with the control plane to register itself and to send metric
 
 ### Prerequisites
 
-- [Go 1.25](https://golang.org/doc/install)
+- [Go 1.27](https://golang.org/doc/install)
 
 Use the `.env.example` file to create a `.env` file with the specified environment variables.
 

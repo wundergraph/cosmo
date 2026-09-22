@@ -150,7 +150,7 @@ spec:
 In some scenarios, you have to provide a custom Dockerfile, e.g., when you need to build your custom Router binary. Here is an example of how the Dockerfile can look.
 
 ```bash
-FROM --platform=${BUILDPLATFORM} golang:1.21 as builder
+FROM --platform=${BUILDPLATFORM} golang:1.27 as builder
 
 ARG TARGETOS
 ARG TARGETARCH

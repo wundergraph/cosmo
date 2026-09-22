@@ -1,9 +1,13 @@
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 interface TemplateMap {
   [key: string]: string;
 }
+
+// Compile all template subdirectories, generating <templates>/<folder>.ts in the templates root
+export const templatesDir = 'src/commands/router/commands/plugin/templates';
 
 // Convert file names to camelCase property names
 function fileNameToPropertyName(fileName: string): string {
@@ -36,12 +40,25 @@ function fileNameToPropertyName(fileName: string): string {
     .join('');
 }
 
-function compileTemplates(dir: string, outputFile: string, comment?: string) {
+// The template subdirectories that are compiled into a <folder>.ts module
+export function templateDirNames(baseDir: string = templatesDir): string[] {
+  return readdirSync(baseDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name);
+}
+
+export function templateModuleComment(dirName: string): string {
+  return `Templates for ${dirName} (templating is done by pupa)`;
+}
+
+// Renders the generated module for a template directory. The result is committed to the repo,
+// so tests can re-render it to detect drift between the .template files and the compiled output.
+// Returns undefined when the directory holds no templates.
+export function renderTemplateModule(dir: string, comment?: string): string | undefined {
   const files = readdirSync(dir).filter((f) => f.endsWith('.template'));
 
   if (files.length === 0) {
-    console.log(`No templates found in ${dir}`);
-    return;
+    return undefined;
   }
 
   const templates: TemplateMap = {};
@@ -79,25 +96,38 @@ function compileTemplates(dir: string, outputFile: string, comment?: string) {
   lines.push('};');
   lines.push('');
 
-  writeFileSync(outputFile, lines.join('\n'), 'utf8');
-  console.log(`Generated ${outputFile} with ${files.length} templates`);
+  return lines.join('\n');
 }
 
-// Compile all template subdirectories, generating <templates>/<folder>.ts in the templates root
-const templatesDir = 'src/commands/router/commands/plugin/templates';
+function compileTemplates(dir: string, outputFile: string, comment?: string) {
+  const content = renderTemplateModule(dir, comment);
 
-const entries = readdirSync(templatesDir, { withFileTypes: true });
-const subdirs = entries.filter((e: any) => e.isDirectory());
+  if (content === undefined) {
+    console.log(`No templates found in ${dir}`);
+    return;
+  }
 
-if (subdirs.length === 0) {
-  console.log(`No template subdirectories found in ${templatesDir}`);
-} else {
-  for (const dirent of subdirs) {
-    const dirName = dirent.name;
+  writeFileSync(outputFile, content, 'utf8');
+  console.log(`Generated ${outputFile}`);
+}
+
+function main() {
+  const dirNames = templateDirNames();
+
+  if (dirNames.length === 0) {
+    console.log(`No template subdirectories found in ${templatesDir}`);
+    return;
+  }
+
+  for (const dirName of dirNames) {
     const dirPath = join(templatesDir, dirName);
     const outFile = join(templatesDir, `${dirName}.ts`);
-    const comment = `Templates for ${dirName} (templating is done by pupa)`;
-    compileTemplates(dirPath, outFile, comment);
+    compileTemplates(dirPath, outFile, templateModuleComment(dirName));
   }
   console.log('All templates compiled successfully');
+}
+
+// Only run when executed directly (pnpm compile-templates), never when imported by tests
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
 }

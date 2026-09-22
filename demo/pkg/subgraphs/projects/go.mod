@@ -1,6 +1,6 @@
 module github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
 
-go 1.25.0
+go 1.27.0
 
 require (
 	github.com/hashicorp/go-hclog v1.6.3
