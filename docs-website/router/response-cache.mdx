@@ -343,8 +343,6 @@ The header does not depend on the `invalidation` indexes. It is built even when 
 
 A declared tag that contains the delimiter, or a byte not valid in a header, is left out.
 
-`max_bytes` caps the whole value, not one tag. Fastly reads at most 1,024 bytes per key and ignores a longer key and every key after it, even when the value fits. Keep each declared tag at or below 1,024 bytes when purging through Fastly.
-
 ### Purge both caches
 
 A purge at the CDN removes the response from the CDN only. The next request reaches the router, which may still serve the entry from its own cache. Send the same change to the [invalidation endpoint](#invalidation) as well. Each header tag maps to one `kind`:
