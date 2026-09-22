@@ -8,7 +8,7 @@ import {
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 import {
-  contextArgumentRequiredError,
+  requiredContextArgumentError,
   type ImplementationErrors,
   type InvalidFieldImplementation,
   invalidInterfaceImplementationError,
@@ -702,7 +702,7 @@ describe('@context and @fromContext directives', () => {
       const { errors } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
-        contextArgumentRequiredError(
+        requiredContextArgumentError(
           'Wallet.apply(plan: ...)',
           ['subgraph-context-argument'],
           ['subgraph-required-argument'],
@@ -892,7 +892,7 @@ describe('@context and @fromContext directives', () => {
       const { errors } = federateSubgraphsFailure([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
-        contextArgumentRequiredError(
+        requiredContextArgumentError(
           'Wallet.apply(plan: ...)',
           ['subgraph-required-context-argument'],
           ['subgraph-required-context-argument'],

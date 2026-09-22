@@ -27,7 +27,7 @@ import {
   allChildDefinitionsAreInaccessibleError,
   allExternalFieldInstancesError,
   configureDescriptionPropagationError,
-  contextArgumentRequiredError,
+  requiredContextArgumentError,
   inaccessibleQueryRootTypeError,
   inaccessibleRequiredInputValueError,
   incompatibleFederatedFieldNamedTypeError,
@@ -1951,7 +1951,7 @@ export class FederationFactory {
       if (isInputValueDataFromContext(inputValueData)) {
         if (inputValueData.requiredSubgraphNames.size > 0) {
           this.errors.push(
-            contextArgumentRequiredError(
+            requiredContextArgumentError(
               inputValueData.federatedCoords,
               [...inputValueData.contextSubgraphNames],
               [...inputValueData.requiredSubgraphNames],

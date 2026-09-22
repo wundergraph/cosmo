@@ -636,7 +636,7 @@ export function invalidRequiredInputValueError(
   return new Error(message);
 }
 
-export function contextArgumentRequiredError(
+export function requiredContextArgumentError(
   coords: string,
   contextSubgraphNames: Array<string>,
   requiredSubgraphNames: Array<string>,
@@ -648,12 +648,12 @@ export function contextArgumentRequiredError(
       ': "' +
       contextSubgraphNames.join(QUOTATION_JOIN) +
       `"\n` +
-      ` However, it is required in the following subgraph` +
+      ` However, this argument is required in the following subgraph` +
       (requiredSubgraphNames.length > 1 ? 's' : '') +
       ': "' +
       requiredSubgraphNames.join(QUOTATION_JOIN) +
       `"\n` +
-      ` An ${ARGUMENT} that defines "@${FROM_CONTEXT}" must not be required in any subgraph that defines it.\n`,
+      ` An ${ARGUMENT} that defines "@${FROM_CONTEXT}" must be optional in any subgraph that references it.\n`,
   );
 }
 
