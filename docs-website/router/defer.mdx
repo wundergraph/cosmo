@@ -5,6 +5,10 @@ icon: "forward-step"
 sidebarTitle: Overview
 ---
 
+<Info>
+  Available since Router [0.328.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.328.0).
+</Info>
+
 ## What @defer does
 
 When resolving a regular GraphQL response, a GraphQL server waits for every field to resolve.
@@ -14,9 +18,9 @@ This can be a problem for large queries with many fields.
 One solution splits the query into smaller queries.
 The client then maintains two queries and makes two HTTP calls.
 
-With the `@defer` directive, a client marks the fragments that may arrive later.
-The router sends every available field in the initial response.
-The router sends the remaining fields in later parts of the same multipart HTTP response.
+With the `@defer` directive, a client marks fragments for later delivery.
+The router sends fields outside active `@defer` fragments in the initial response.
+The router sends deferred fields in later parts of the same multipart HTTP response.
 
 The client renders the initial data immediately.
 The client adds each deferred fragment when it arrives.
@@ -47,7 +51,7 @@ This query spans three subgraphs:
 - The `products` subgraph returns `products`.
 - The `hobbies` subgraph returns `hobbies`.
 
-Without `@defer`, the client waits for all three subgraphs.
+Without `@defer`, the router waits for all three subgraphs before it sends the response.
 With `@defer`, the client receives everything except `hobbies` in the initial response.
 The client receives `hobbies` in an incremental response.
 
@@ -55,7 +59,6 @@ The client receives `hobbies` in an incremental response.
 
 `@defer` is not yet part of a released GraphQL specification.
 The router implements the [Incremental Delivery spec draft](https://github.com/graphql/graphql-spec/pull/1110).
-The draft is at RFC stage 2 of the GraphQL specification process.
 The draft describes the response format as the `pending`, `incremental`, and `completed` format.
 
 graphql-js `17.0.0-alpha.9` and Apollo Client 4.1 implement the same format.
@@ -64,7 +67,8 @@ See [Using @defer](/router/defer/usage) for client setup.
 
 ## How to enable it
 
-The router disables `@defer` support by default.
+The router ignores `@defer` by default.
+It treats deferred fragments as regular fragments and returns one JSON response.
 To enable it, add the following to the router configuration:
 
 ```yaml config.yaml
@@ -73,7 +77,6 @@ engine:
 ```
 
 The corresponding environment variable is `ENGINE_ENABLE_DEFER`.
-The setting is available since router `0.328.0`.
 
 ## Send a request
 
@@ -130,9 +133,9 @@ The router rejects the request with status 200 and the error code `DEFER_UNSUPPO
 A named format takes priority over a wildcard.
 The router rejects `Accept: multipart/mixed;deferSpec=20220824, */*`, because the client stated which format it can parse.
 
-An operation can disable all its `@defer` directives through `@defer(if: false)`.
-The router executes such an operation as a regular operation.
-The router answers it with a single JSON response, whatever the `Accept` header contains.
+`@defer(if: false)` disables that directive.
+If every `@defer` directive is inactive, the router executes the operation without incremental delivery.
+The router returns one JSON response regardless of the `Accept` header.
 
 ## Response format
 
