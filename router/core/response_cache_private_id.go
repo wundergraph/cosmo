@@ -10,8 +10,9 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/expr"
 )
 
-// responseCachePrivateID resolves, per request, the id of the user private
-// responses are cached for.
+// responseCachePrivateID resolves, per request, the id of the private context
+// private responses are cached under: a user, a tenant, whatever the
+// expression names.
 type responseCachePrivateID struct {
 	program *vm.Program
 }
