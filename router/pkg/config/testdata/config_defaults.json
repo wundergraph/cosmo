@@ -580,6 +580,7 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
+    "DefaultSubprotocol": "",
     "ForwardUpgradeHeaders": {
       "Enabled": true,
       "AllowList": [

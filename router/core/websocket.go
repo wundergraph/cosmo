@@ -322,6 +322,11 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		subProtocol = wsproto.AbsintheWSSubProtocol
 	}
 
+	// if no subprotocol was set, use the default subprotocol from the config
+	if subProtocol == "" {
+		subProtocol = h.config.DefaultSubprotocol
+	}
+
 	// After successful upgrade, we can't write to the response writer anymore
 	// because it's hijacked by the websocket connection
 

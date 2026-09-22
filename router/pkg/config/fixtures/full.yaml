@@ -503,6 +503,7 @@ websocket:
   absinthe_protocol:
     enabled: true
     handler_path: /absinthe/socket
+  default_subprotocol: graphql-transport-ws
   forward_initial_payload: true
   forward_upgrade_headers:
     enabled: true

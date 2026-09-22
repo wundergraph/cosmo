@@ -824,6 +824,11 @@
             }
           }
         },
+        "default_subprotocol": {
+          "type": "string",
+          "enum": ["graphql-transport-ws", "graphql-ws"],
+          "description": "The subprotocol to use when the client does not send a Sec-WebSocket-Protocol header. By default such connections are rejected."
+        },
         "forward_upgrade_headers": {
           "type": "object",
           "additionalProperties": false,
