@@ -21,7 +21,7 @@
     "build": "pnpm -r run build",
     "test": "pnpm run -r --parallel test",
     "generate": "pnpm buf generate --path proto/wg/cosmo/platform --path proto/wg/cosmo/notifications --path proto/wg/cosmo/common --path proto/wg/cosmo/node --path proto/wg/cosmo/ai --template buf.ts.gen.yaml && pnpm -r run --filter './connect' build",
-    "generate:ptq": "pnpm buf generate --path yoko --include-imports --template ./buf.ptq.gen.yaml ssh://git@github.com/wundergraph/yoko.git#branch=main,subdir=proto && pnpm -r run --filter './connect' build",
+    "generate:ptq": "pnpm buf generate --path yoko --include-imports --template ./buf.ptq.gen.yaml ssh://git@github.com/wundergraph/yoko.git#ref=bbc10383ae99fefb579ee38a55930193c8314398,subdir=proto && pnpm -r run --filter './connect' build",
     "husky": "husky install",
     "lint:fix": "pnpm run -r --parallel lint:fix",
     "format": "pnpm run -r --parallel format",
