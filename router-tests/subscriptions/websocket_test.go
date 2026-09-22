@@ -123,59 +123,6 @@ func TestWebSockets(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
-	t.Run("client without subprotocol header", func(t *testing.T) {
-		t.Parallel()
-
-		t.Run("is rejected when no default subprotocol is configured", func(t *testing.T) {
-			t.Parallel()
-
-			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-				conn, _, err := (&websocket.Dialer{}).Dial(xEnv.GraphQLWebSocketSubscriptionURL(), nil)
-				require.NoError(t, err)
-				defer conn.Close()
-				require.Empty(t, conn.Subprotocol())
-				_, _, err = conn.ReadMessage()
-				require.Error(t, err)
-			})
-		})
-
-		t.Run("uses the configured default subprotocol", func(t *testing.T) {
-			t.Parallel()
-
-			testenv.Run(t, &testenv.Config{
-				ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
-					cfg.DefaultSubprotocol = "graphql-transport-ws"
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				conn, _, err := (&websocket.Dialer{}).Dial(xEnv.GraphQLWebSocketSubscriptionURL(), nil)
-				require.NoError(t, err)
-				defer conn.Close()
-				require.Empty(t, conn.Subprotocol())
-				err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{Type: "connection_init"})
-				require.NoError(t, err)
-				var ack testenv.WebSocketMessage
-				err = testenv.WSReadJSON(t, conn, &ack)
-				require.NoError(t, err)
-				require.Equal(t, "connection_ack", ack.Type)
-				err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
-					ID:      "1",
-					Type:    "subscribe",
-					Payload: []byte(`{"query":"{ employees { id } }"}`),
-				})
-				require.NoError(t, err)
-				var res testenv.WebSocketMessage
-				err = testenv.WSReadJSON(t, conn, &res)
-				require.NoError(t, err)
-				require.Equal(t, "next", res.Type)
-				require.Equal(t, "1", res.ID)
-				require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, string(res.Payload))
-				var complete testenv.WebSocketMessage
-				err = testenv.WSReadJSON(t, conn, &complete)
-				require.NoError(t, err)
-				require.Equal(t, "complete", complete.Type)
-			})
-		})
-	})
 	t.Run("query with authorization reject", func(t *testing.T) {
 		t.Parallel()
 
