@@ -63,7 +63,7 @@ function getComposeGraphsPool() {
     minThreads: 1,
     maxThreads: getMaxThreads(),
     runtime: 'child_process',
-    concurrentTasksPerWorker: 2,
+    concurrentTasksPerWorker: 1,
     serialization: 'advanced',
   };
 
