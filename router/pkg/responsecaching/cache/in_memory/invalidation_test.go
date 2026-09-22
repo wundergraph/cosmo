@@ -96,8 +96,22 @@ func TestInMemoryCacheInvalidateByTags(t *testing.T) {
 		require.Equal(t, []string{"v1:a"}, indexKeys(c.tags, "subgraph:accounts"))
 		removed, err = c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
 		require.NoError(t, err)
-		require.Equal(t, 1, removed, "counted from the index, which still named it")
+		require.Zero(t, removed, "the index still named it, but nothing was stored to remove")
 		require.Empty(t, stored(t, c, "v1:a"))
+	})
+
+	t.Run("an entry under several requested tags is counted once", func(t *testing.T) {
+		c := newTaggedCache(t)
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
+			item("v1:a", "subgraph:accounts", "type:accounts:User"),
+			item("v1:b", "subgraph:accounts"),
+		}))
+		c.cache.Wait()
+
+		removed, err := c.InvalidateByTags(t.Context(), []string{"subgraph:accounts", "type:accounts:User"})
+		require.NoError(t, err)
+		require.Equal(t, 2, removed)
+		require.Empty(t, stored(t, c, "v1:a", "v1:b"))
 	})
 
 	t.Run("an expired member is not counted as removed", func(t *testing.T) {

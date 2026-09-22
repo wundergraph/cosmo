@@ -458,6 +458,12 @@
         "Path": "/invalidation",
         "SharedKey": ""
       }
+    },
+    "TagHeader": {
+      "Enabled": false,
+      "Name": "Cache-Tag",
+      "Delimiter": ",",
+      "MaxBytes": 16384
     }
   },
   "RouterConfigPath": "",
