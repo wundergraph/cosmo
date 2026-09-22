@@ -1,6 +1,6 @@
 module github.com/wundergraph/cosmo/speedtrap
 
-go 1.25
+go 1.27
 
 require (
 	github.com/gobwas/ws v1.4.0
