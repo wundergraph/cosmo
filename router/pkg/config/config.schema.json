@@ -3395,7 +3395,7 @@
         },
         "private_id": {
           "type": "string",
-          "description": "An expression, evaluated per request, that yields the id of the user the request acts for, e.g. request.auth.claims.sub or request.header.Get('X-User-Id'). A subgraph response whose Cache-Control header contains private is then cached under a key scoped to that id, so each user is served their own entry. When the expression yields nothing, for example an anonymous request, private responses are not cached. Public responses are unaffected. The expression must evaluate to a string; see https://expr-lang.org/docs/language-definition for the syntax."
+          "description": "An expression, evaluated per request, that yields the id of the private context the request belongs to, such as a user or a tenant, e.g. request.auth.claims.sub or request.header.Get('X-User-Id'). A subgraph response whose Cache-Control header contains private is then cached under a key partitioned by that id, so each context is served its own entry and requests sharing an id share it. When the expression yields nothing, for example an anonymous request, private responses are not cached. Public responses are unaffected. The expression must evaluate to a string; see https://expr-lang.org/docs/language-definition for the syntax."
         },
         "storage": {
           "type": "object",
