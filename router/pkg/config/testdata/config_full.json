@@ -1049,6 +1049,7 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
+    "DefaultSubprotocol": "graphql-transport-ws",
     "ForwardUpgradeHeaders": {
       "Enabled": true,
       "AllowList": [
