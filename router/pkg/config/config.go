@@ -712,12 +712,23 @@ type HeaderSource struct {
 	ValuePrefixes []string `yaml:"value_prefixes"`
 }
 
+// JWTOnError controls how JWT credential failures are handled.
+type JWTOnError string
+
+const (
+	JWTOnErrorReject   JWTOnError = "reject"
+	JWTOnErrorContinue JWTOnError = "continue"
+)
+
 type JWTAuthenticationConfiguration struct {
 	JWKS              []JWKSConfiguration `yaml:"jwks"`
 	ScopeClaim        string              `yaml:"scope_claim" envDefault:"scope"`
 	HeaderName        string              `yaml:"header_name" envDefault:"Authorization"`
 	HeaderValuePrefix string              `yaml:"header_value_prefix" envDefault:"Bearer"`
 	HeaderSources     []HeaderSource      `yaml:"header_sources"`
+	// OnError controls whether invalid JWT credentials reject the request or are ignored.
+	// Required authentication and field authorization still apply.
+	OnError JWTOnError `yaml:"on_error" envDefault:"reject"`
 }
 
 type AuthenticationConfiguration struct {
@@ -951,6 +962,8 @@ type WebSocketConfiguration struct {
 	Enabled bool `yaml:"enabled" envDefault:"true" env:"WEBSOCKETS_ENABLED"`
 	// AbsintheProtocol configuration for the Absinthe Protocol
 	AbsintheProtocol AbsintheProtocolConfiguration `yaml:"absinthe_protocol,omitempty"`
+	// DefaultSubprotocol is used when the client does not send a Sec-WebSocket-Protocol header. Empty rejects the connection.
+	DefaultSubprotocol string `yaml:"default_subprotocol,omitempty"`
 	// ForwardUpgradeHeaders true if the Router should forward Upgrade Request Headers in the Extensions payload when starting a Subscription on a Subgraph
 	ForwardUpgradeHeaders ForwardUpgradeHeadersConfiguration `yaml:"forward_upgrade_headers"`
 	// ForwardUpgradeQueryParamsInExtensions true if the Router should forward Upgrade Request Query Parameters in the Extensions payload when starting a Subscription on a Subgraph

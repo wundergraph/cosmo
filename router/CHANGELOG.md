@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.351.0](https://github.com/wundergraph/cosmo/compare/router@0.350.0...router@0.351.0) (2026-09-23)
+
+### Features
+
+* **router:** add default websocket subprotocol for clients without a protocol header ([#3271](https://github.com/wundergraph/cosmo/issues/3271)) ([4966f8e](https://github.com/wundergraph/cosmo/commit/4966f8e61554d49f068881569f08d39c82253e8d)) (@endigma)
+
+# [0.350.0](https://github.com/wundergraph/cosmo/compare/router@0.349.0...router@0.350.0) (2026-09-21)
+
+### Bug Fixes
+
+* **router:** preserve SSE subscription connection errors ([#3260](https://github.com/wundergraph/cosmo/issues/3260)) ([b7751fb](https://github.com/wundergraph/cosmo/commit/b7751fb74fcd215ad7f79ec7edb624308bbd6f3c)) (@endigma)
+
+### Features
+
+* router cache tag based invalidation for cdns ([#3218](https://github.com/wundergraph/cosmo/issues/3218)) ([9727872](https://github.com/wundergraph/cosmo/commit/97278728ab186482ef712fb9aafcb45d7eef5a91)) (@SkArchon)
+* **router:** add metric request timetolastbyte ([#3119](https://github.com/wundergraph/cosmo/issues/3119)) ([0f04cd8](https://github.com/wundergraph/cosmo/commit/0f04cd8c327449498b061f5cc911ad6463f0961d)) (@alepane21)
+* **router:** cache multi-fetches and cap Cache-Control at cached TTL ([#3258](https://github.com/wundergraph/cosmo/issues/3258)) ([8d77b1b](https://github.com/wundergraph/cosmo/commit/8d77b1be96c8d5dbe7e6c38f9b414aadd6daeac0)) (@ysmolski)
+
 # [0.349.0](https://github.com/wundergraph/cosmo/compare/router@0.348.0...router@0.349.0) (2026-09-17)
 
 ### Bug Fixes
