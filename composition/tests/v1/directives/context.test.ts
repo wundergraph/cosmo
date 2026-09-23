@@ -870,6 +870,118 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
+    test('returns an error for each sibling Interface if only the implementation declares a context argument', () => {
+      const subgraph = createSubgraph(
+        'subgraph-context-argument-sibling-interfaces',
+        `
+          type Query {
+            object: Object!
+          }
+
+          interface InterfaceA {
+            a(a: ID): ID
+          }
+
+          interface InterfaceB {
+            a(a: ID): ID
+          }
+
+          type Entity @key(fields: "id") @context(name: "entity") {
+            id: ID!
+          }
+
+          type Object implements InterfaceA & InterfaceB @key(fields: "id") {
+            id: ID!
+            a(a: ID @fromContext(field: "$entity { id }")): ID
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
+      const implementationErrors: ImplementationErrors = {
+        invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+          [
+            'a',
+            {
+              invalidAdditionalArguments: new Set<string>(),
+              invalidContextArguments: new Set<string>(['a']),
+              invalidImplementedArguments: [],
+              isInaccessible: false,
+              originalResponseType: 'ID',
+              unimplementedArguments: new Set<string>(),
+            },
+          ],
+        ]),
+        unimplementedFields: [],
+      };
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidInterfaceImplementationError(
+          'Object',
+          OBJECT,
+          new Map<string, ImplementationErrors>([
+            ['InterfaceA', implementationErrors],
+            ['InterfaceB', implementationErrors],
+          ]),
+        ),
+      );
+    });
+
+    test('returns an error for each Interface in a hierarchy if only the implementation declares a context argument', () => {
+      const subgraph = createSubgraph(
+        'subgraph-context-argument-interface-hierarchy',
+        `
+          type Query {
+            object: Object!
+          }
+
+          interface InterfaceA {
+            a(a: ID): ID
+          }
+
+          interface InterfaceB implements InterfaceA {
+            a(a: ID): ID
+          }
+
+          type Entity @key(fields: "id") @context(name: "entity") {
+            id: ID!
+          }
+
+          type Object implements InterfaceA & InterfaceB @key(fields: "id") {
+            id: ID!
+            a(a: ID @fromContext(field: "$entity { id }")): ID
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
+      const implementationErrors: ImplementationErrors = {
+        invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+          [
+            'a',
+            {
+              invalidAdditionalArguments: new Set<string>(),
+              invalidContextArguments: new Set<string>(['a']),
+              invalidImplementedArguments: [],
+              isInaccessible: false,
+              originalResponseType: 'ID',
+              unimplementedArguments: new Set<string>(),
+            },
+          ],
+        ]),
+        unimplementedFields: [],
+      };
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidInterfaceImplementationError(
+          'Object',
+          OBJECT,
+          new Map<string, ImplementationErrors>([
+            ['InterfaceA', implementationErrors],
+            ['InterfaceB', implementationErrors],
+          ]),
+        ),
+      );
+    });
+
     test('returns an error if an argument is required in the subgraph that declares it a context argument', () => {
       const subgraph = createSubgraph(
         'subgraph-required-context-argument',
