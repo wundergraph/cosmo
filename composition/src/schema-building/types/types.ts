@@ -121,7 +121,7 @@ export type InputObjectDefinitionData = {
 
 export type InputValueData = {
   configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
-  contextSubgraphNames: Set<SubgraphName>;
+  fromContextSubgraphNames: Set<SubgraphName>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   federatedCoords: string;
   includeDefaultValue: boolean;

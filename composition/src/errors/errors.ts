@@ -638,15 +638,15 @@ export function invalidRequiredInputValueError(
 
 export function requiredContextArgumentError(
   coords: string,
-  contextSubgraphNames: Array<string>,
+  fromContextSubgraphNames: Array<string>,
   requiredSubgraphNames: Array<string>,
 ): Error {
   return new Error(
     `The ${ARGUMENT} "${coords}" is invalid because:\n` +
       ` It defines "@${FROM_CONTEXT}" in the following subgraph` +
-      (contextSubgraphNames.length > 1 ? 's' : '') +
+      (fromContextSubgraphNames.length > 1 ? 's' : '') +
       ': "' +
-      contextSubgraphNames.join(QUOTATION_JOIN) +
+      fromContextSubgraphNames.join(QUOTATION_JOIN) +
       `"\n` +
       ` However, this argument is required in the following subgraph` +
       (requiredSubgraphNames.length > 1 ? 's' : '') +

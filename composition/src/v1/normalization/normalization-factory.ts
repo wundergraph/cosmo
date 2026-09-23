@@ -1369,7 +1369,7 @@ export class NormalizationFactory {
     const directivesByName = this.extractDirectives(node, new Map<DirectiveName, ConstDirectiveNode[]>());
     const inputValueData: InputValueData = {
       configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
-      contextSubgraphNames: new Set<SubgraphName>(directivesByName.has(FROM_CONTEXT) ? [this.subgraphName] : []),
+      fromContextSubgraphNames: new Set<SubgraphName>(directivesByName.has(FROM_CONTEXT) ? [this.subgraphName] : []),
       directivesByName,
       federatedCoords,
       fieldName,

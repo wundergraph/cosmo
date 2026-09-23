@@ -146,7 +146,7 @@ import {
   getDefinitionDataCoords,
   getInitialFederatedDescription,
   getSubscriptionFilterValue,
-  isInputValueDataFromContext,
+  doesArgumentDefineFromContext,
   isLeafKind,
   isNodeDataInaccessible,
   isParentDataCompositeOutputType,
@@ -436,7 +436,9 @@ export class FederationFactory {
             continue;
           }
           // A context argument is removed from the federated schema, so it must be removed from both definitions
-          if (isInputValueDataFromContext(inputValueData) !== isInputValueDataFromContext(implementationArgumentData)) {
+          if (
+            doesArgumentDefineFromContext(inputValueData) !== doesArgumentDefineFromContext(implementationArgumentData)
+          ) {
             hasErrors = true;
             hasNestedErrors = true;
             invalidFieldImplementation.invalidContextArguments.add(argumentName);
@@ -778,8 +780,8 @@ export class FederationFactory {
     );
     setLongestDescription(targetData, incomingData);
     addIterableToSet({
-      source: incomingData.contextSubgraphNames,
-      target: targetData.contextSubgraphNames,
+      source: incomingData.fromContextSubgraphNames,
+      target: targetData.fromContextSubgraphNames,
     });
     addIterableToSet({
       source: incomingData.requiredSubgraphNames,
@@ -1132,7 +1134,7 @@ export class FederationFactory {
   copyInputValueData(sourceData: InputValueData): InputValueData {
     return {
       configureDescriptionDataBySubgraphName: copyObjectValueMap(sourceData.configureDescriptionDataBySubgraphName),
-      contextSubgraphNames: new Set(sourceData.contextSubgraphNames),
+      fromContextSubgraphNames: new Set(sourceData.fromContextSubgraphNames),
       directivesByName: copyArrayValueMap(sourceData.directivesByName),
       federatedCoords: sourceData.federatedCoords,
       fieldName: sourceData.fieldName,
@@ -1948,12 +1950,12 @@ export class FederationFactory {
     const invalidRequiredArguments: InvalidRequiredInputValueData[] = [];
     const fieldCoords = `${fieldData.renamedParentTypeName}.${fieldData.name}`;
     for (const [argumentName, inputValueData] of fieldData.argumentDataByName) {
-      if (isInputValueDataFromContext(inputValueData)) {
+      if (doesArgumentDefineFromContext(inputValueData)) {
         if (inputValueData.requiredSubgraphNames.size > 0) {
           this.errors.push(
             requiredContextArgumentError(
               inputValueData.federatedCoords,
-              [...inputValueData.contextSubgraphNames],
+              [...inputValueData.fromContextSubgraphNames],
               [...inputValueData.requiredSubgraphNames],
             ),
           );
