@@ -428,6 +428,8 @@ If client and router both agree to use cursors the router will confirm this to t
 
 ##### Negotiation failure
 
+###### DELIVERY_GUARANTEE_UNSUPPORTED
+
 In case the router won't support any guarantees the client listed it will terminate the subscription
 with an error. For both subprotocols two fields can be defined which indicate the nature of the
 error:
@@ -477,6 +479,15 @@ data: {"errors":[{"message":"Subscription requires delivery guarantee 'cursor', 
 event: complete
 data:
 ```
+
+###### DELIVERY_GUARANTEE_UNSATISFIABLE
+
+In case the router would like to resume but can't for any technical reason it returns
+`DELIVERY_GUARANTEE_UNSATISFIABLE` in the same way as `DELIVERY_GUARANTEE_UNSUPPORTED`.
+
+Potential reasons to return this error are
+- Broker does not have the messages anymore (retention window surpassed)
+- Broker misconfiguration prevents to resume
 
 #### Sending cursors to clients
 
