@@ -159,50 +159,66 @@ matches.
 #### Signing
 
 Cursors travel through the client, so the client can read them and change them. To stop that, every
-cursor carries an HMAC-SHA256 tag, truncated to 16 bytes and keyed with a router-side secret. The
-key never leaves the router.
+cursor carries an HMAC-SHA256 tag on its wire foramt, truncated to 16 bytes and keyed with a
+router-side secret. The key never leaves the router.
 
 ```
 tag = HMAC-SHA256(key[keyID],
-        "cosmo/cursor/v1" || version || keyID || payload || requestData
+        "cosmo/cursor/v1" || version || keyID || payload || requestData || clientData
       )[:16]
 ```
 
-The tag covers two things at once:
-
-1. the serialized cursor itself, so a client cannot rewrite its own position, provider or timestamp
-2. data that identifies the request the cursor was issued for, so a client cannot resume with a
-   cursor that belongs to somebody else
-
-The second part is never sent to the client. The router recalculates it from the incoming request on
-resume. That also means the client can neither read the identity out of the tag nor calculate the
-tag of another client.
+1. `"cosmo/cursor/v1"`: prefix for domain seperation; makes sure the tag can't be replayed as a valid tag somewhere else that happens to use the same secret
+2. `version`: cursor version, so a cursor with a different version is considered invalid
+3. `keyID`: id of the signing key, so a cursor with a different key is considered invalid
+4. `payload`: serialized cursor, so a client cannot rewrite its own position, provider or timestamp
+5. `requestData`: information about the request to prevent clients from resuming with a different query
+6. `clientData`: information about the client to prevent a different client from using the same cursor
 
 The tag needs no protection of its own. If the client changes the payload, the recalculated tag no
 longer matches the carried one. If the client changes the tag, it no longer matches the payload. To
 produce a matching pair the client would need the key, which it does not have.
 
-The `"cosmo/cursor/v1"` prefix is domain separation: it makes sure a tag issued here can never be
-replayed as a valid tag somewhere else that happens to use the same secret.
+##### About `requestData`
 
-##### Request data
+`requestData` contains information about the request to prevent clients from resuming with a different query.
+It's never sent to the client. The router recalculates it from the incoming request on resume.
 
-The following goes into the `requestData` part of the HMAC input:
+Anything from the operation that influences what events clients receive needs to go in here:
 
 - `SubscriptionEventConfiguration.ProviderType()`
 - `SubscriptionEventConfiguration.ProviderID()`
-- Root field name
-- alphanumerically sorted list of topics of the subscription (or channels / subjects)
-- if JWT present on request: name of authenticator + `sub` claim of token
+- alphanumerically sorted list of topics of the subscription (or channels / subjects).
+  Each field is seeded with a length-boundary: `"orders" + "event" --> "6orders5event"`
+  to prevent collisions.
+- normalized operation document bytes, to prevent a user to replay with a different query
+- canonicalized operation document variables.
+  Variables enter the tag in a canonical form:
+  - Object keys are sorted byte-wise by their decoded name, so that the ordering does not depend on how the client escaped them.
+  - Array order preserved
+  - Insignificant whitespace dropped
+  - Keys and strings re-escaped through a single policy
+  - Numbers emitted verbatim as the client sent them (i.e. `1` != `1.0`)
 
-If no JWT is present, then the cursor could be used by a different user.
+##### About `clientData`
 
-Each field is seeded with a length-boundary: `"orders" + "event" --> "6orders5event"` to prevent
-collisions.
+`clientData` binds a cursor to the identity that was authenticated when it was
+issued, so a cursor that leaks cannot be resumed by somebody else. Like
+`requestData` it is never sent to the client; the router recalculates it from the
+incoming request on resume.
 
-The GraphQL query itself is deliberately not part of the input: a client may add or remove fields
-between reconnects, and that is okay. The subscription itself must still list the same topics on the
-EDFS directive, however.
+`clientData` contains:
+
+1. `Authentication.Authenticator()` — the name of the authenticator that handled
+   the request
+2. the `iss` claim
+3. the `aud` claim, sorted byte-wise when it is an array
+4. the configured identity claim, `sub` by default
+
+Each field is length-prefixed for the same reason the topic list is: without it,
+authenticator `auth` with subject `0123` and authenticator `auth0` with subject
+`123` serialize to the same bytes. The boundary between `requestData` and
+`clientData` in the tag input is framed the same way.
 
 ##### Verification on resume
 
