@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { useCheckParams } from '@/hooks/use-check-params';
 import { CheckCircleIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
 import { Cross1Icon } from '@radix-ui/react-icons';
 import { LintIssue, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -26,6 +27,7 @@ export const LintIssuesTable = ({
   isLintingEnabled: boolean;
 }) => {
   const router = useRouter();
+  const { slug, checkId } = useCheckParams();
   const user = useUser();
   const graphContext = useContext(GraphContext);
   const {
@@ -100,8 +102,8 @@ export const LintIssuesTable = ({
                           href={`${buildUrl('/:organizationSlug/:namespace/graph/:slug/checks/:checkId', {
                             organizationSlug,
                             namespace,
-                            slug: router.query.slug as string,
-                            checkId: router.query.checkId as string,
+                            slug,
+                            checkId,
                             tab: 'schema',
                             subgraph: l.subgraphName,
                           })}${l.issueLocation?.line ? `#L${l.issueLocation?.line}` : ''}`}
