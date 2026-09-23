@@ -1,4 +1,6 @@
 import { EmptyState } from '@/components/empty-state';
+import { useParams } from 'next/navigation';
+import { useQueryState } from 'nuqs';
 import { getDashboardLayout } from '@/components/layout/dashboard-layout';
 import { EventsMeta, Meta, NotificationToolbar, notificationEvents } from '@/components/notifications/components';
 import { Badge } from '@/components/ui/badge';
@@ -430,13 +432,12 @@ const Integration = ({
 };
 
 const IntegrationsPage: NextPageWithLayout = () => {
-  const router = useRouter();
   const checkUserAccess = useCheckUserAccess();
 
   const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
 
-  const organizationSlug = router.query.organizationSlug as string;
-  const code = router.query.code as string;
+  const { organizationSlug } = useParams<{ organizationSlug: string }>();
+  const [code] = useQueryState('code');
   const slackRedirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}/${encodeURIComponent(organizationSlug)}/integrations`;
   const [shouldCreate, setShouldCreate] = useState(false);
 
@@ -491,7 +492,9 @@ const IntegrationsPage: NextPageWithLayout = () => {
                 Integrate
               </Link>
             </Button>
-            {shouldCreate && <Integration mode="create" refresh={() => refetch()} open={true} code={code} />}
+            {shouldCreate && (
+              <Integration mode="create" refresh={() => refetch()} open={true} code={code ?? undefined} />
+            )}
           </>
         }
       />
@@ -521,7 +524,9 @@ const IntegrationsPage: NextPageWithLayout = () => {
                 Integrate
               </Link>
             </Button>
-            {shouldCreate && <Integration mode="create" refresh={() => refetch()} open={true} code={code} />}
+            {shouldCreate && (
+              <Integration mode="create" refresh={() => refetch()} open={true} code={code ?? undefined} />
+            )}
           </>
         )}
       </div>

@@ -951,6 +951,8 @@ type WebSocketConfiguration struct {
 	Enabled bool `yaml:"enabled" envDefault:"true" env:"WEBSOCKETS_ENABLED"`
 	// AbsintheProtocol configuration for the Absinthe Protocol
 	AbsintheProtocol AbsintheProtocolConfiguration `yaml:"absinthe_protocol,omitempty"`
+	// DefaultSubprotocol is used when the client does not send a Sec-WebSocket-Protocol header. Empty rejects the connection.
+	DefaultSubprotocol string `yaml:"default_subprotocol,omitempty"`
 	// ForwardUpgradeHeaders true if the Router should forward Upgrade Request Headers in the Extensions payload when starting a Subscription on a Subgraph
 	ForwardUpgradeHeaders ForwardUpgradeHeadersConfiguration `yaml:"forward_upgrade_headers"`
 	// ForwardUpgradeQueryParamsInExtensions true if the Router should forward Upgrade Request Query Parameters in the Extensions payload when starting a Subscription on a Subgraph
@@ -1131,6 +1133,16 @@ type ResponseCacheConfiguration struct {
 	KeyPrefix    string                          `yaml:"key_prefix" envDefault:"cosmo_response_cache:" env:"KEY_PREFIX"`
 	Storage      ResponseCacheStorageConfig      `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
 	Invalidation ResponseCacheInvalidationConfig `yaml:"invalidation,omitempty" envPrefix:"INVALIDATION_"`
+	TagHeader    ResponseCacheTagHeaderConfig    `yaml:"cache_tag_header,omitempty" envPrefix:"CACHE_TAG_HEADER_"`
+}
+
+type ResponseCacheTagHeaderConfig struct {
+	Enabled   bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Name      string `yaml:"name,omitempty" envDefault:"Cache-Tag" env:"NAME"`
+	Delimiter string `yaml:"delimiter,omitempty" envDefault:"," env:"DELIMITER"`
+	// MaxBytes caps the header value; tags are packed coarsest first and the
+	// finest that do not fit are left out.
+	MaxBytes int `yaml:"max_bytes,omitempty" envDefault:"16384" env:"MAX_BYTES"`
 }
 
 // ResponseCacheInvalidationConfig selects which secondary indexes are built

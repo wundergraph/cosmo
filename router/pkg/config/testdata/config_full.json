@@ -886,6 +886,12 @@
         "Path": "/invalidation",
         "SharedKey": "a-shared-key-that-is-long-enough-to-pass"
       }
+    },
+    "TagHeader": {
+      "Enabled": true,
+      "Name": "Surrogate-Key",
+      "Delimiter": " ",
+      "MaxBytes": 1024
     }
   },
   "RouterConfigPath": "latest.json",
@@ -1043,6 +1049,7 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
+    "DefaultSubprotocol": "graphql-transport-ws",
     "ForwardUpgradeHeaders": {
       "Enabled": true,
       "AllowList": [

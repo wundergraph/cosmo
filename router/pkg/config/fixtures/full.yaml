@@ -503,6 +503,7 @@ websocket:
   absinthe_protocol:
     enabled: true
     handler_path: /absinthe/socket
+  default_subprotocol: graphql-transport-ws
   forward_initial_payload: true
   forward_upgrade_headers:
     enabled: true
@@ -556,6 +557,11 @@ response_cache:
       listen_addr: 'localhost:5027'
       path: '/invalidation'
       shared_key: 'a-shared-key-that-is-long-enough-to-pass'
+  cache_tag_header:
+    enabled: true
+    name: 'Surrogate-Key'
+    delimiter: ' '
+    max_bytes: 1024
 
 security:
   complexity_calculation_cache:

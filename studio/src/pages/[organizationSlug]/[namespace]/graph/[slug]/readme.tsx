@@ -1,4 +1,5 @@
 import { EmptyState } from '@/components/empty-state';
+import { useParams } from 'next/navigation';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { OverviewToolbar } from '@/components/overview/OverviewToolbar';
 import { CLI } from '@/components/ui/cli';
@@ -41,8 +42,7 @@ const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
 };
 
 const FederatedGraphReadmePage = () => {
-  const router = useRouter();
-  const slug = router.query.slug as string;
+  const { slug } = useParams<{ slug: string }>();
   const graph = useContext(GraphContext);
   if (!graph || !graph.graph) {
     return null;
