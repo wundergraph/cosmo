@@ -26,10 +26,12 @@ import {
 
 let composeGraphsPool: WorkerPool | undefined;
 const composeGraphsPoolConfig = {
+  minThreads: 0,
   maxThreads: 0,
 };
 
 export interface ConfigureComposeGraphsPoolOptions {
+  minThreads: number;
   maxThreads: number;
 }
 
@@ -46,6 +48,14 @@ function getWorkerFilename() {
   };
 }
 
+function getMinThreads() {
+  if (composeGraphsPoolConfig.minThreads > 0) {
+    return composeGraphsPoolConfig.minThreads;
+  }
+
+  return 1;
+}
+
 function getMaxThreads() {
   if (composeGraphsPoolConfig.maxThreads > 0) {
     return composeGraphsPoolConfig.maxThreads;
@@ -60,10 +70,10 @@ function getComposeGraphsPool() {
   }
 
   const options = {
-    minThreads: 1,
+    minThreads: getMinThreads(),
     maxThreads: getMaxThreads(),
     runtime: 'child_process',
-    concurrentTasksPerWorker: 2,
+    concurrentTasksPerWorker: 1,
     serialization: 'advanced',
   };
 

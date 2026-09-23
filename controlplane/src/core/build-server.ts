@@ -73,6 +73,7 @@ import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composit
 export interface BuildConfig {
   logger: LoggerOptions;
   composition?: {
+    minThreads: number;
     maxThreads: number;
   };
   database: {
@@ -187,6 +188,7 @@ const developmentLoggerOpts: LoggerOptions = {
 
 export default async function build(opts: BuildConfig) {
   configureComposeGraphsPool({
+    minThreads: opts.composition?.minThreads ?? 0,
     maxThreads: opts.composition?.maxThreads ?? 0,
   });
 
