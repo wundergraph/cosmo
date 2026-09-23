@@ -1,4 +1,5 @@
 import { NamespaceGateEmptyState } from '@/components/dashboard/namespace-gate-empty-state';
+import { useParams } from 'next/navigation';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { formatDateTime } from '@/lib/format-date';
 import { cn } from '@/lib/utils';
@@ -107,7 +108,7 @@ export const OrganizationBanner = () => {
 export const DashboardLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const user = useUser();
-  const organizationSlug = router.query.organizationSlug as string;
+  const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const checkUserAccess = useCheckUserAccess();
   const [isStarBannerDisabled, setDisableStarBanner] = useStarBannerDisabled();
   const { namespace, namespaceByName, isLoading: isWorkspaceLoading } = useWorkspace();

@@ -1,4 +1,6 @@
 import { EmptyState } from '@/components/empty-state';
+import { useParams } from 'next/navigation';
+import { useQueryState } from 'nuqs';
 import { GraphPageLayout, getGraphLayout, GraphContext } from '@/components/layout/graph-layout';
 import Link from 'next/link';
 import { ArrowRightIcon, SizeIcon } from '@radix-ui/react-icons';
@@ -48,7 +50,7 @@ const RouterSheet: React.FC<any> = (props) => {
   const router = useRouter();
   const [size, setSize] = useState<keyof typeof sizes>('default');
 
-  const serviceInstanceId = router.query.serviceInstanceId as string;
+  const [serviceInstanceId, setServiceInstanceId] = useQueryState('serviceInstanceId');
 
   const index = props.data.findIndex((r: any) => r.serviceInstanceId === serviceInstanceId);
 
@@ -56,21 +58,13 @@ const RouterSheet: React.FC<any> = (props) => {
 
   const nextServer = () => {
     if (index + 1 < props.data.length) {
-      const newQuery = { ...router.query };
-      newQuery['serviceInstanceId'] = props.data[index + 1].serviceInstanceId;
-      router.replace({
-        query: newQuery,
-      });
+      setServiceInstanceId(props.data[index + 1].serviceInstanceId);
     }
   };
 
   const previousServer = () => {
     if (index - 1 >= 0) {
-      const newQuery = { ...router.query };
-      newQuery['serviceInstanceId'] = props.data[index - 1].serviceInstanceId;
-      router.replace({
-        query: newQuery,
-      });
+      setServiceInstanceId(props.data[index - 1].serviceInstanceId);
     }
   };
 
@@ -98,12 +92,7 @@ const RouterSheet: React.FC<any> = (props) => {
       open={!!serviceInstanceId}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
-          const newQuery = { ...router.query };
-          delete newQuery['serviceInstanceId'];
-
-          router.replace({
-            query: newQuery,
-          });
+          setServiceInstanceId(null);
         }
       }}
     >
@@ -145,7 +134,7 @@ const RouterSheet: React.FC<any> = (props) => {
 
           <SheetTitle className="m-0 flex flex-wrap items-center gap-x-1.5 text-sm">
             <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">{serviceInstanceId}</code>
-            <CopyButton tooltip="Copy instance id" value={serviceInstanceId} />
+            <CopyButton tooltip="Copy instance id" value={serviceInstanceId ?? ''} />
           </SheetTitle>
 
           <Spacer />
@@ -297,9 +286,9 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
 const RoutersPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
+  const [serviceInstanceId, setServiceInstanceId] = useQueryState('serviceInstanceId');
   const [open, setOpen] = useState(false);
-  const namespace = router.query.namespace as string;
-  const slug = router.query.slug as string;
+  const { namespace, slug } = useParams<{ namespace: string; slug: string }>();
 
   const { data, isLoading, error, refetch } = useQuery(
     getRouters,
@@ -526,19 +515,13 @@ const RoutersPage: NextPageWithLayout = () => {
                         key={row.original.serviceInstanceId}
                         data-state={row.getIsSelected() && 'selected'}
                         onClick={() => {
-                          router.push({
-                            pathname: '/[organizationSlug]/[namespace]/graph/[slug]/routers',
-                            query: {
-                              ...router.query,
-                              serviceInstanceId: row.getValue('serviceInstanceId'),
-                            },
-                          });
+                          setServiceInstanceId(row.getValue('serviceInstanceId'));
                         }}
                         className={cn(
                           'group cursor-pointer hover:bg-secondary/30',
                           'border-b transition-colors data-[state=selected]:bg-muted',
                           {
-                            'bg-secondary/50': row.original.serviceInstanceId === router.query.serviceInstanceId,
+                            'bg-secondary/50': row.original.serviceInstanceId === serviceInstanceId,
                           },
                         )}
                       >

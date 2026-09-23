@@ -59,6 +59,35 @@ Use `scope_claim` when your provider stores authorization scopes in a claim othe
 
 For more information on the attributes, visit the auth configuration parameter section page [here](/router/configuration#authentication).
 
+### Configuring JWT validation error handling
+
+`authentication.jwt.on_error` accepts only `reject` (default) and `continue`. Other values prevent the router from starting.
+
+With `reject`, invalid credentials return HTTP `401 Unauthorized`. For WebSocket initial-payload authentication, the router sends an error message and closes the connection.
+
+Use `continue` for HTTP and WebSocket authentication when a custom module or subgraph validates opaque OAuth tokens.
+
+```yaml
+authentication:
+  jwt:
+    jwks:
+      - url: https://example.com/.well-known/jwks.json
+    on_error: continue
+
+authorization:
+  require_authentication: false
+```
+
+With `continue`, the router ignores invalid tokens, unsupported header prefixes, and empty tokens. The original credential remains available to custom modules and [configured header forwarding](/router/proxy-capabilities/subgraph-request-header-operations).
+
+<Warning>
+  Your module or downstream service must validate the credential before allowing protected operations.
+</Warning>
+
+With `authorization.require_authentication: true`, the router still rejects unauthenticated requests. Fields protected by `@authenticated` or `@requiresScopes` also keep their authorization checks.
+
+This option does not ignore custom authenticator errors, malformed WebSocket payloads, or startup errors. MCP OAuth is unaffected.
+
 ### Disabling Authentication for Introspection Operations
 
 Cosmo Router supports bypassing authentication for introspection queries.

@@ -824,6 +824,11 @@
             }
           }
         },
+        "default_subprotocol": {
+          "type": "string",
+          "enum": ["graphql-transport-ws", "graphql-ws"],
+          "description": "The subprotocol to use when the client does not send a Sec-WebSocket-Protocol header. By default such connections are rejected."
+        },
         "forward_upgrade_headers": {
           "type": "object",
           "additionalProperties": false,
@@ -2423,6 +2428,12 @@
                   }
                 ]
               }
+            },
+            "on_error": {
+              "type": "string",
+              "enum": ["reject", "continue"],
+              "default": "reject",
+              "description": "Controls JWT credential failures. The default 'reject' returns HTTP 401 Unauthorized, or sends an error message and closes the connection for WebSocket initial-payload authentication. With 'continue', invalid tokens, unsupported header prefixes, and empty tokens are ignored. Custom authenticator errors and malformed WebSocket payloads still return errors. Required authentication and field authorization still apply."
             },
             "scope_claim": {
               "type": "string",

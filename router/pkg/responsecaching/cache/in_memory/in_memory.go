@@ -25,7 +25,7 @@ type entry struct {
 
 // cloneSets copies a record's name sets, inner slices included.
 func cloneSets(sets [][]string) [][]string {
-	if sets == nil {
+	if len(sets) == 0 {
 		return nil
 	}
 	out := make([][]string, len(sets))

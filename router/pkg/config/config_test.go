@@ -518,6 +518,18 @@ graph:
 	g.AssertJson(t, "config_defaults", cfg.Config)
 }
 
+func TestJWTOnErrorRejectsInvalidYAML(t *testing.T) {
+	t.Parallel()
+	cases := []string{"unknown", "42"}
+	for _, value := range cases {
+		t.Run(value, func(t *testing.T) {
+			var cfg JWTAuthenticationConfiguration
+			err := yaml.Unmarshal([]byte("on_error: "+value), &cfg)
+			require.ErrorContains(t, err, "authentication.jwt.on_error")
+		})
+	}
+}
+
 func TestOverrides(t *testing.T) {
 	t.Parallel()
 
