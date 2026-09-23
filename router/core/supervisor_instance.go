@@ -355,9 +355,10 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 	}
 
 	opts := authentication.HttpHeaderAuthenticatorOptions{
-		Name:                 "jwks",
-		HeaderSourcePrefixes: headerSourceMap,
-		TokenDecoder:         tokenDecoder,
+		Name:                     "jwks",
+		HeaderSourcePrefixes:     headerSourceMap,
+		TokenDecoder:             tokenDecoder,
+		IgnoreInvalidCredentials: jwtConf.OnError == config.JWTOnErrorContinue,
 	}
 
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(opts)
@@ -375,9 +376,10 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 		}
 
 		opts := authentication.WebsocketInitialPayloadAuthenticatorOptions{
-			TokenDecoder:        tokenDecoder,
-			Key:                 cfg.WebSocket.Authentication.FromInitialPayload.Key,
-			HeaderValuePrefixes: headerPrefixes,
+			TokenDecoder:             tokenDecoder,
+			Key:                      cfg.WebSocket.Authentication.FromInitialPayload.Key,
+			HeaderValuePrefixes:      headerPrefixes,
+			IgnoreInvalidCredentials: jwtConf.OnError == config.JWTOnErrorContinue,
 		}
 		authenticator, err = authentication.NewWebsocketInitialPayloadAuthenticator(opts)
 		if err != nil {

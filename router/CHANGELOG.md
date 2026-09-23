@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.351.0](https://github.com/wundergraph/cosmo/compare/router@0.350.0...router@0.351.0) (2026-09-23)
+
+### Features
+
+* **router:** add default websocket subprotocol for clients without a protocol header ([#3271](https://github.com/wundergraph/cosmo/issues/3271)) ([4966f8e](https://github.com/wundergraph/cosmo/commit/4966f8e61554d49f068881569f08d39c82253e8d)) (@endigma)
+
 # [0.350.0](https://github.com/wundergraph/cosmo/compare/router@0.349.0...router@0.350.0) (2026-09-21)
 
 ### Bug Fixes
