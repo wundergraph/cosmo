@@ -586,14 +586,22 @@ export function invalidInterfaceImplementationError(
           invalidFieldImplementation.originalResponseType +
           `" for "${interfaceName}.${fieldName}".\n`;
       }
-      if (invalidFieldImplementation.invalidContextArguments.size > 0) {
+      if (invalidFieldImplementation.interfaceContextFields.size > 0) {
         message +=
-          `   An ${ARGUMENT} must define "@${FROM_CONTEXT}" on both the Interface field and its implementation,` +
-          ` or on neither.\n` +
+          `   "@${FROM_CONTEXT}" cannot be defined on an Interface field.\n` +
           `    The following argument` +
-          (invalidFieldImplementation.invalidContextArguments.size > 1 ? `s are` : ` is`) +
-          ` declared "@${FROM_CONTEXT}" on only one of the two definitions: "` +
-          [...invalidFieldImplementation.invalidContextArguments].join(`", "`) +
+          (invalidFieldImplementation.interfaceContextFields.size > 1 ? `s define` : ` defines`) +
+          ` "@${FROM_CONTEXT}": "` +
+          [...invalidFieldImplementation.interfaceContextFields].join(`", "`) +
+          `"\n`;
+      }
+      if (invalidFieldImplementation.interfaceImplementationContextFields.size > 0) {
+        message +=
+          `   "@${FROM_CONTEXT}" cannot be defined on the implementation of an Interface field.\n` +
+          `    The following argument` +
+          (invalidFieldImplementation.interfaceImplementationContextFields.size > 1 ? `s define` : ` defines`) +
+          ` "@${FROM_CONTEXT}": "` +
+          [...invalidFieldImplementation.interfaceImplementationContextFields].join(`", "`) +
           `"\n`;
       }
       if (invalidFieldImplementation.isInaccessible) {

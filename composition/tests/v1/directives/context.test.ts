@@ -710,7 +710,7 @@ describe('@context and @fromContext directives', () => {
       );
     });
 
-    test('strips a context argument that is declared on both an interface field and its implementation', () => {
+    test('returns an error if a context argument is declared on both an interface field and its implementation', () => {
       const subgraph = createSubgraph(
         'subgraph-context-interface-implementation',
         `
@@ -733,33 +733,36 @@ describe('@context and @fromContext directives', () => {
           }
         `,
       );
-      const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraph],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
+      const { errors } = federateSubgraphsFailure([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidInterfaceImplementationError(
+          'Profile',
+          OBJECT,
+          new Map<string, ImplementationErrors>([
+            [
+              'Node',
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'greeting',
+                    {
+                      interfaceContextFields: new Set<string>(['locale']),
+                      interfaceImplementationContextFields: new Set<string>(['locale']),
+                      invalidAdditionalArguments: new Set<string>(),
+                      invalidImplementedArguments: [],
+                      isInaccessible: false,
+                      originalResponseType: 'String!',
+                      unimplementedArguments: new Set<string>(),
+                    },
+                  ],
+                ]),
+                unimplementedFields: [],
+              },
+            ],
+          ]),
+        ),
       );
-      const expectedSchema = normalizeString(`
-        ${SCHEMA_QUERY_DEFINITION}
-
-        interface Node {
-          greeting: String!
-        }
-
-        type Profile implements Node {
-          greeting: String!
-        }
-
-        type Query {
-          profile: Profile!
-          user: User!
-        }
-
-        type User {
-          id: ID!
-          locale: String!
-        }
-      `);
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expectedSchema);
-      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expectedSchema);
     });
 
     test('returns an error if an argument is a context argument on an implementation but not on the interface', () => {
@@ -799,8 +802,9 @@ describe('@context and @fromContext directives', () => {
                   [
                     'greeting',
                     {
+                      interfaceContextFields: new Set<string>(),
+                      interfaceImplementationContextFields: new Set<string>(['locale']),
                       invalidAdditionalArguments: new Set<string>(),
-                      invalidContextArguments: new Set<string>(['locale']),
                       invalidImplementedArguments: [],
                       isInaccessible: false,
                       originalResponseType: 'String!',
@@ -853,8 +857,9 @@ describe('@context and @fromContext directives', () => {
                   [
                     'greeting',
                     {
+                      interfaceContextFields: new Set<string>(['locale']),
+                      interfaceImplementationContextFields: new Set<string>(),
                       invalidAdditionalArguments: new Set<string>(),
-                      invalidContextArguments: new Set<string>(['locale']),
                       invalidImplementedArguments: [],
                       isInaccessible: false,
                       originalResponseType: 'String!',
@@ -902,8 +907,9 @@ describe('@context and @fromContext directives', () => {
           [
             'a',
             {
+              interfaceContextFields: new Set<string>(),
+              interfaceImplementationContextFields: new Set<string>(['a']),
               invalidAdditionalArguments: new Set<string>(),
-              invalidContextArguments: new Set<string>(['a']),
               invalidImplementedArguments: [],
               isInaccessible: false,
               originalResponseType: 'ID',
@@ -958,8 +964,9 @@ describe('@context and @fromContext directives', () => {
           [
             'a',
             {
+              interfaceContextFields: new Set<string>(),
+              interfaceImplementationContextFields: new Set<string>(['a']),
               invalidAdditionalArguments: new Set<string>(),
-              invalidContextArguments: new Set<string>(['a']),
               invalidImplementedArguments: [],
               isInaccessible: false,
               originalResponseType: 'ID',

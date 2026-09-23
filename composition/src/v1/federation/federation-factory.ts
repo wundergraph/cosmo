@@ -402,8 +402,9 @@ export class FederationFactory {
           continue;
         }
         const invalidFieldImplementation: InvalidFieldImplementation = {
+          interfaceContextFields: new Set<ArgumentName>(),
+          interfaceImplementationContextFields: new Set<ArgumentName>(),
           invalidAdditionalArguments: new Set<string>(),
-          invalidContextArguments: new Set<ArgumentName>(),
           invalidImplementedArguments: [],
           isInaccessible: false,
           originalResponseType: printTypeNode(interfaceField.node.type),
@@ -435,13 +436,17 @@ export class FederationFactory {
             invalidFieldImplementation.unimplementedArguments.add(argumentName);
             continue;
           }
-          // A context argument is removed from the federated schema, so it must be removed from both definitions
-          if (
-            doesArgumentDefineFromContext(inputValueData) !== doesArgumentDefineFromContext(implementationArgumentData)
-          ) {
+          // @fromContext cannot be defined on an interface field
+          if (doesArgumentDefineFromContext(inputValueData)) {
             hasErrors = true;
             hasNestedErrors = true;
-            invalidFieldImplementation.invalidContextArguments.add(argumentName);
+            invalidFieldImplementation.interfaceContextFields.add(argumentName);
+          }
+          // @fromContext cannot be defined on the implementation of an interface field
+          if (doesArgumentDefineFromContext(implementationArgumentData)) {
+            hasErrors = true;
+            hasNestedErrors = true;
+            invalidFieldImplementation.interfaceImplementationContextFields.add(argumentName);
           }
           // Implemented arguments should be the exact same type
           const actualType = printTypeNode(implementationArgumentData.node.type);

@@ -2517,8 +2517,9 @@ export class NormalizationFactory {
           continue;
         }
         const invalidFieldImplementation: InvalidFieldImplementation = {
+          interfaceContextFields: new Set<ArgumentName>(),
+          interfaceImplementationContextFields: new Set<ArgumentName>(),
           invalidAdditionalArguments: new Set<string>(),
-          invalidContextArguments: new Set<ArgumentName>(),
           invalidImplementedArguments: [],
           isInaccessible: false,
           originalResponseType: printTypeNode(interfaceField.node.type),

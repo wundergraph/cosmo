@@ -11,8 +11,9 @@ export type InvalidArgumentImplementation = {
 
 export type InvalidFieldImplementation = {
   implementedResponseType?: string;
+  interfaceContextFields: Set<ArgumentName>;
+  interfaceImplementationContextFields: Set<ArgumentName>;
   invalidAdditionalArguments: Set<string>;
-  invalidContextArguments: Set<ArgumentName>;
   invalidImplementedArguments: InvalidArgumentImplementation[];
   isInaccessible: boolean;
   originalResponseType: string;
