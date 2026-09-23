@@ -25839,11 +25839,9 @@ type UpdatePlaygroundDefaultHeadersRequest struct {
 	// `repeated` fields because proto3 repeated has no presence, so an omitted
 	// list and an empty one would be identical on the wire - and both meanings
 	// are needed here:
-	//
-	//	omitted            -> leave that scope's stored headers unchanged
-	//	present, empty     -> clear that scope, deleting its row
-	//	present, non-empty -> replace that scope's headers with these
-	//
+	//   omitted            -> leave that scope's stored headers unchanged
+	//   present, empty     -> clear that scope, deleting its row
+	//   present, non-empty -> replace that scope's headers with these
 	// A caller without permission for a scope omits it; sending it is rejected
 	// rather than silently ignored.
 	GraphHeaders    *PlaygroundHeaderList `protobuf:"bytes,3,opt,name=graphHeaders,proto3" json:"graphHeaders,omitempty"`

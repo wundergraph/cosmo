@@ -939,8 +939,9 @@ type PlatformServiceClient interface {
 	DeleteCacheWarmerOperation(context.Context, *connect.Request[v1.DeleteCacheWarmerOperationRequest]) (*connect.Response[v1.DeleteCacheWarmerOperationResponse], error)
 	GetSubgraphCheckExtensionsConfig(context.Context, *connect.Request[v1.GetSubgraphCheckExtensionsConfigRequest]) (*connect.Response[v1.GetSubgraphCheckExtensionsConfigResponse], error)
 	ConfigureSubgraphCheckExtensions(context.Context, *connect.Request[v1.ConfigureSubgraphCheckExtensionsRequest]) (*connect.Response[v1.ConfigureSubgraphCheckExtensionsResponse], error)
+	//
 	// Billing
-	// -----------------------------------------------------------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
 	GetBillingPlans(context.Context, *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error)
 	// Create a Stripe checkout session
@@ -3749,8 +3750,9 @@ type PlatformServiceHandler interface {
 	DeleteCacheWarmerOperation(context.Context, *connect.Request[v1.DeleteCacheWarmerOperationRequest]) (*connect.Response[v1.DeleteCacheWarmerOperationResponse], error)
 	GetSubgraphCheckExtensionsConfig(context.Context, *connect.Request[v1.GetSubgraphCheckExtensionsConfigRequest]) (*connect.Response[v1.GetSubgraphCheckExtensionsConfigResponse], error)
 	ConfigureSubgraphCheckExtensions(context.Context, *connect.Request[v1.ConfigureSubgraphCheckExtensionsRequest]) (*connect.Response[v1.ConfigureSubgraphCheckExtensionsResponse], error)
+	//
 	// Billing
-	// -----------------------------------------------------------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
 	GetBillingPlans(context.Context, *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error)
 	// Create a Stripe checkout session
