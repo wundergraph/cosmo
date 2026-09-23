@@ -177,10 +177,22 @@ With a `private_id` in place:
 The id is digested with SHA-256 before it becomes part of the key, so raw ids never reach the store. The expression must evaluate to a string. A value of any other type is reported through the response cache warning described under [Observability](#observability) and treated as no id.
 
 <Warning>
-  `private_id` partitions the cache. It does not by itself guarantee that a response is served only to those it was meant for: two requests with the same id share an entry, whatever else differs between them. Propagated headers are not part of the key, so a `private` answer that also depends on a header the id does not account for is served to every request with that id. Fold the header into the expression, or have the subgraph answer `no-store`.
+  `private_id` partitions the cache. It does not by itself guarantee that a response is served only to those it was meant for: two requests with the same id share an entry, whatever else differs between them. Propagated headers are not part of the key unless the subgraph names them in `Vary`, so a `private` answer that also depends on a header the id does not account for is served to every request with that id. Name the header in `Vary`, fold it into the expression, or have the subgraph answer `no-store`.
 
   An expression that yields the same value for different contexts, or one that can be set by the client itself, lets one context be served another's entry. Prefer a verified claim over a plain header.
 </Warning>
+
+## Varying responses
+
+A subgraph whose answer depends on a request header, such as `Accept-Language`, names it in a `Vary` response header. The router then keeps one entry per set of values it sent, learned from the first response, the way an HTTP proxy cache does:
+
+* The first request for an operation misses. The names in the response's `Vary` header are stored at the entry's key as a record, and the body is stored under a variant key derived from the values the router sent.
+* A later lookup finds the record, digests the values this request sends the subgraph for those headers, and looks the variant up under the resulting key. A varying response costs two cache round trips per lookup. A response without `Vary` costs one, as before.
+* Values are taken from the request as the subgraph receives it, after header propagation. A header named in `Vary` that the router does not forward counts as empty, so it never splits the cache.
+* `Vary: *` is never cached, and neither is a response naming more than 100 headers.
+* A header whose value differs per caller, such as `Cookie` or `Authorization`, yields one variant per caller. Nobody is served another caller's body, but the entries are rarely reused. A subgraph whose answer is per user should say `private` instead.
+* A subgraph that changes what it varies on adds the new set of names to the record on its next miss, newest first, rather than replacing it. A lookup tries one variant per set in that order and serves the first it finds, so variants stored under the old names stay reachable until they expire. A record keeps at most 8 sets; past that the oldest are dropped.
+* With `engine.enable_multi_fetch` on, a merged entity fetch carries one `Vary` for the whole response, and the router applies it to every alias in it. An alias whose own answer would have varied on less is stored under the wider set, which splits its entries by headers they do not depend on. That costs extra misses, never a wrong body. A merged fetch follows records the same way a single fetch does, with one second round trip for all of its aliases together. The lever for the cost is on the subgraph side: emit the minimum `Vary` for what was actually resolved rather than a fixed union for the service.
 
 ## Limitations
 
@@ -188,7 +200,7 @@ These apply to the current alpha.
 
 **A batch is served from the cache only when every entity in it is present.** One miss sends the whole batch to the subgraph, including the entities that were already cached. Entities are stored individually, so a later batch made up only of cached entities is a full hit.
 
-**Forwarded request headers are not part of the cache key.** The key covers the request the router renders for the subgraph, which is the operation text and its variables. Headers added by header propagation are applied after that and never reach the key. Two requests that differ only by a propagated header share one entry, so the first response is served to the second caller. A subgraph whose answer varies by request header must use `no-store`, or `private` together with a `private_id` whose value accounts for that header. Omitting `public` does not prevent caching.
+**Forwarded request headers reach the cache key only through `Vary`.** The key covers the request the router renders for the subgraph, which is the operation text and its variables. Headers added by header propagation are applied after that and never reach the key on their own. Two requests that differ only by a propagated header share one entry unless the subgraph names that header in `Vary`, as described under [Varying responses](#varying-responses). A subgraph that varies by request header without saying so must use `no-store`, or `private` together with a `private_id` whose value accounts for that header. Omitting `public` does not prevent caching.
 
 **Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
 
@@ -342,6 +354,8 @@ The header does not depend on the `invalidation` indexes. It is built even when 
 `max_bytes` caps the header value. When the tags do not fit, they are grouped coarsest first, subgraph then type then declared, and the finest that do not fit are left out. A purge by a coarse tag still reaches the response. The default of 16384 bytes is Cloudflare's limit on `Cache-Tag`.
 
 A declared tag that contains the delimiter, or a byte not valid in a header, is left out.
+
+`max_bytes` caps the whole value, not one tag. Fastly reads at most 1,024 bytes per key and ignores a longer key and every key after it, even when the value fits. Keep each declared tag at or below 1,024 bytes when purging through Fastly.
 
 ### Purge both caches
 
