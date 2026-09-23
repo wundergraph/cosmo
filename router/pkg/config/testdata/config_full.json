@@ -735,7 +735,8 @@
           "Name": "authz",
           "ValuePrefixes": null
         }
-      ]
+      ],
+      "OnError": "continue"
     },
     "IgnoreIntrospection": false
   },
