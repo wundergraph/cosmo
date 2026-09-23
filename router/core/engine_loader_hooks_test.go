@@ -6,19 +6,24 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
+	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/astjson"
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
-	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.uber.org/zap"
+
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 func setupTestContext(t *testing.T, tp *sdktrace.TracerProvider) (context.Context, *requestContext) {
@@ -423,4 +428,203 @@ func TestRecordFetchError(t *testing.T) {
 		require.Len(t, spans[0].Events(), 1)
 		require.True(t, store.requestErrorCalled)
 	})
+}
+
+// TestApplyResponseCacheLifetime pins how the life left on response cache entries reaches the
+// Cache-Control merge.
+func TestApplyResponseCacheLifetime(t *testing.T) {
+	t.Parallel()
+
+	type want struct {
+		// raw is compared verbatim when set, for a header that does not parse.
+		raw     string
+		maxAge  cachedirective.DeltaSeconds
+		public  bool
+		private bool
+		noStore bool
+		noCache bool
+	}
+
+	tests := []struct {
+		name   string
+		hit    bool          // served entirely from the cache
+		ttl    time.Duration // life left on the cached entries
+		origin string        // Cache-Control the subgraph sent
+		want   *want         // nil: no header must be set
+	}{
+		{
+			name:   "a miss with an origin header leaves it alone",
+			origin: "public, max-age=120",
+			want:   &want{maxAge: 120, public: true},
+		},
+		{
+			name: "a miss without an origin header sets nothing",
+		},
+		{
+			name: "a full hit reports its life as Cache-Control",
+			hit:  true,
+			ttl:  30 * time.Second,
+			want: &want{maxAge: 30, public: true},
+		},
+		{
+			name: "a full hit with no life left is no-cache",
+			hit:  true,
+			want: &want{maxAge: -1, noCache: true},
+		},
+		{
+			name:   "a partial hit caps a longer origin max-age",
+			ttl:    30 * time.Second,
+			origin: "public, max-age=120",
+			want:   &want{maxAge: 30, public: true},
+		},
+		{
+			name:   "a partial hit keeps a shorter origin max-age",
+			ttl:    30 * time.Second,
+			origin: "public, max-age=10",
+			want:   &want{maxAge: 10, public: true},
+		},
+		{
+			name:   "a partial hit keeps the origin's no-store",
+			ttl:    30 * time.Second,
+			origin: "no-store",
+			want:   &want{maxAge: -1, noStore: true},
+		},
+		{
+			name:   "a partial hit keeps the origin's private",
+			ttl:    30 * time.Second,
+			origin: "private, max-age=120",
+			want:   &want{maxAge: 30, private: true},
+		},
+		{
+			name: "a partial hit without an origin header reports its life",
+			ttl:  30 * time.Second,
+			want: &want{maxAge: 30, public: true},
+		},
+		{
+			name:   "a partial hit with under a second left is no-cache",
+			ttl:    200 * time.Millisecond,
+			origin: "public, max-age=120",
+			want:   &want{maxAge: -1, public: true, noCache: true},
+		},
+		{
+			name:   "a partial hit leaves an unparsable origin header alone",
+			ttl:    30 * time.Second,
+			origin: "max-age=soon",
+			want:   &want{raw: "max-age=soon"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			headers := make(http.Header)
+			if tt.origin != "" {
+				headers.Set(cacheControlKey, tt.origin)
+			}
+
+			applyResponseCacheLifetime(headers, &resolve.ResponseInfo{
+				ResponseCacheHit: tt.hit,
+				ResponseCacheTTL: tt.ttl,
+			})
+
+			if tt.want == nil {
+				require.Empty(t, headers.Values(cacheControlKey))
+				return
+			}
+			require.Len(t, headers.Values(cacheControlKey), 1)
+			if tt.want.raw != "" {
+				require.Equal(t, tt.want.raw, headers.Get(cacheControlKey))
+				return
+			}
+			got, err := cachedirective.ParseResponseCacheControl(headers.Get(cacheControlKey))
+			require.NoError(t, err)
+			require.Equal(t, tt.want.maxAge, got.MaxAge, "max-age")
+			require.Equal(t, tt.want.public, got.Public, "public")
+			require.Equal(t, tt.want.private, got.PrivatePresent, "private")
+			require.Equal(t, tt.want.noStore, got.NoStore, "no-store")
+			require.Equal(t, tt.want.noCache, got.NoCachePresent, "no-cache")
+		})
+	}
+}
+
+// TestOnFinished_ResponseCacheLifetime pins which response header rules get to
+// see the TTL left on cached entries.
+func TestOnFinished_ResponseCacheLifetime(t *testing.T) {
+	t.Parallel()
+
+	mostRestrictive := &config.ResponseHeaderRule{
+		Operation: config.HeaderRuleOperationPropagate,
+		Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+	}
+	named := &config.ResponseHeaderRule{
+		Operation: config.HeaderRuleOperationPropagate,
+		Named:     cacheControlKey,
+		Algorithm: config.ResponseHeaderRuleAlgorithmFirstWrite,
+	}
+
+	tests := []struct {
+		name  string
+		rules *config.HeaderRules
+		post  *PostResponseRules
+		want  string // Cache-Control the client gets on a hit with 30s left
+	}{
+		{
+			name:  "a most restrictive rule for all subgraphs reads the TTL",
+			rules: &config.HeaderRules{All: &config.GlobalHeaderRule{Response: []*config.ResponseHeaderRule{mostRestrictive}}},
+			want:  "max-age=30, public",
+		},
+		{
+			name: "a most restrictive rule for this subgraph reads the TTL",
+			rules: &config.HeaderRules{Subgraphs: map[string]*config.GlobalHeaderRule{
+				"employees": {Response: []*config.ResponseHeaderRule{mostRestrictive}},
+			}},
+			want: "max-age=30, public",
+		},
+		{
+			name: "a most restrictive rule for another subgraph does not let a named rule see it",
+			rules: &config.HeaderRules{
+				All: &config.GlobalHeaderRule{Response: []*config.ResponseHeaderRule{named}},
+				Subgraphs: map[string]*config.GlobalHeaderRule{
+					"products": {Response: []*config.ResponseHeaderRule{mostRestrictive}},
+				},
+			},
+			want: "",
+		},
+		{
+			name:  "a cache control policy reads the TTL",
+			rules: &config.HeaderRules{},
+			post:  CreateCacheControlPolicyHeaderRules(config.CacheControlPolicy{Enabled: true}),
+			want:  "max-age=30, public",
+		},
+		{
+			name:  "a named propagate rule alone does not see the TTL",
+			rules: &config.HeaderRules{All: &config.GlobalHeaderRule{Response: []*config.ResponseHeaderRule{named}}},
+			want:  "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			propagation, err := NewHeaderPropagation(t.Context(), zap.NewNop(), tt.rules, tt.post)
+			require.NoError(t, err)
+
+			tp := sdktrace.NewTracerProvider()
+			hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation)
+
+			ctx, _ := setupTestContext(t, tp)
+			client := &responseHeaderPropagation{header: make(http.Header), m: &sync.Mutex{}}
+			ctx = context.WithValue(ctx, responseHeaderPropagationKey{}, client)
+
+			hooks.OnFinished(ctx, resolve.DataSourceInfo{ID: "employees", Name: "employees"}, &resolve.ResponseInfo{
+				StatusCode:       http.StatusOK,
+				ResponseCacheHit: true,
+				ResponseCacheTTL: 30 * time.Second,
+			})
+
+			require.Equal(t, tt.want, client.header.Get(cacheControlKey))
+		})
+	}
 }

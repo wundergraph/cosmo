@@ -130,6 +130,7 @@
     "AllowOrigins": [
       "*"
     ],
+    "MatchOrigins": null,
     "AllowMethods": [
       "HEAD",
       "GET",
@@ -457,6 +458,12 @@
         "Path": "/invalidation",
         "SharedKey": ""
       }
+    },
+    "TagHeader": {
+      "Enabled": false,
+      "Name": "Cache-Tag",
+      "Delimiter": ",",
+      "MaxBytes": 16384
     }
   },
   "RouterConfigPath": "",
@@ -541,6 +548,7 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "SSEServerWriteTimeout": 10000000000,
     "EnableDefer": false,
     "EnableMultiFetch": true,
     "EnableScheduleFetches": true,
@@ -571,6 +579,7 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
+    "DefaultSubprotocol": "",
     "ForwardUpgradeHeaders": {
       "Enabled": true,
       "AllowList": [

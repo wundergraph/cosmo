@@ -3,7 +3,9 @@ package cors
 import (
 	"maps"
 	"net/http"
+	"regexp"
 	"slices"
+	"strings"
 )
 
 type cors struct {
@@ -14,6 +16,7 @@ type cors struct {
 	normalHeaders    http.Header
 	preflightHeaders http.Header
 	wildcardOrigins  []*WildcardPattern
+	matchOrigins     []*regexp.Regexp
 	handler          http.Handler
 }
 
@@ -38,6 +41,7 @@ func newCors(handler http.Handler, config Config) *cors {
 		normalHeaders:    generateNormalHeaders(config),
 		preflightHeaders: generatePreflightHeaders(config),
 		wildcardOrigins:  config.parseNewWildcardRules(),
+		matchOrigins:     config.compiledMatchOrigins,
 		handler:          handler,
 	}
 }
@@ -84,11 +88,17 @@ func (cors *cors) validateOrigin(origin string) bool {
 	if cors.allowAllOrigins {
 		return true
 	}
-	if slices.Contains(cors.allowOrigins, origin) {
+	normalizedOrigin := strings.ToLower(origin)
+	if slices.Contains(cors.allowOrigins, normalizedOrigin) {
 		return true
 	}
-	if len(cors.wildcardOrigins) > 0 && cors.validateWildcardOrigin(origin) {
+	if cors.validateWildcardOrigin(normalizedOrigin) {
 		return true
+	}
+	for _, pattern := range cors.matchOrigins {
+		if pattern.MatchString(normalizedOrigin) {
+			return true
+		}
 	}
 	if cors.allowOriginFunc != nil {
 		return cors.allowOriginFunc(origin)
