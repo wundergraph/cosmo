@@ -127,6 +127,18 @@ response_cache:
       # Sent as the Authorization header, no Bearer prefix. At least 32
       # characters. Required when the endpoint is enabled.
       shared_key: ''
+  cache_tag_header:
+    # Return the cache tags of a response in a header a CDN can purge by.
+    # See "CDN purging" below. Default: false.
+    enabled: false
+    # Header name. Cloudflare reads Cache-Tag, Fastly reads Surrogate-Key.
+    # Default: Cache-Tag.
+    name: 'Cache-Tag'
+    # Separates tags in the value. Fastly expects a space. Default: ,
+    delimiter: ','
+    # Largest value emitted, in bytes. Tags that do not fit are dropped
+    # finest first. The default is Cloudflare's limit. Default: 16384.
+    max_bytes: 16384
 ```
 
 `storage` is required when `enabled` is `true`.
@@ -143,7 +155,11 @@ These apply to the current alpha.
 
 **Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
 
-**`enable_multi_fetch` disables caching for merged entity fetches.** When `engine.enable_multi_fetch` is on, the router merges entity fetches to the same subgraph within one parallel wave into a single request. A merged fetch is not cached, and nothing reports that it was skipped. An entity fetch that has nothing to merge with is still cached, and root query fetches are unaffected. Support for caching merged fetches is planned.
+**A merged entity fetch is served per alias.** With `engine.enable_multi_fetch` on, entity fetches to the same subgraph within one parallel wave are merged into a single request with aliased `_entities` fields. The response is taken apart again on the way into the cache, so each alias stores one entry per entity, the same as the unmerged fetch it replaces would have. Each alias is then served all-or-nothing like a batch: a warm alias is left out of the next merged request, a cold one is fetched whole. When some aliases are warm and others are not, the router still sends the request for the cold ones, and the `Cache-Control` it reports for that fetch is capped at the life left on the warm ones. Only a request that finds every alias warm is a cache hit.
+
+**A merged entity fetch keeps no declared cache tags.** `apolloEntityCacheTags` is one flat list with nothing to say which alias each entry belongs to, so the tags a subgraph declares for a merged response are dropped. The entries are still indexed by subgraph and type, and invalidation by either still reaches them. Invalidation by cache tag misses them until they expire.
+
+**A failed merged request skips what depends on its warm aliases.** When the request for the cold aliases fails to reach the subgraph, the warm aliases keep their cached data and only the cold ones report the failure. Fetches that depend on the merged fetch are skipped as a whole, though, including those that depend only on a warm alias. Their fields stay `null` without an error of their own.
 
 ## Cache tags
 
@@ -169,25 +185,33 @@ The shape depends on what was fetched, because an entity fetch caches one entry 
 }
 ```
 
-An outer array whose length does not match the entities answered costs the whole response its tags, rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and never forwarded to clients.
+An outer array whose length does not match the entities answered costs the whole response its tags,
+rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and
+never forwarded to clients. The router does not record tags from a merged entity fetch., see [Limitations](#limitations).
 
 ## Invalidation
 
-Entries leave the cache on their own, when the TTL expires. However users might want to invalidate the cached data before this happens. In order to do this the router provides an invalidation endpoint on a different port, which can get called to invalidate entries.
+Cached entries expire when their TTL ends. Send a request to the invalidation endpoint on its separate port to remove entries earlier.
 
 <Danger>
-**Tags may not be invalidated**. This is a known bug we are working on a fix for, essentially under certain circumstances certain entries belonging to a tag may not be invalidated, which leads to an issue of correctness.
+**An entry written while an invalidation runs can survive it.** The index lists the entry before its value lands, so the request finds nothing to remove and leaves it in place. The entry then serves data fetched before the invalidation until its TTL ends. Send the request again once in-flight writes have settled. This is a known bug and a fix is in progress.
 </Danger>
 
 ### Enable the endpoint
 
+The endpoint only starts when the response cache itself is enabled.
+
 ```yaml config.yaml
 response_cache:
+  enabled: true
   invalidation:
     endpoint:
       enabled: true
       shared_key: 'a-random-string-of-at-least-32-characters'
 ```
+
+The endpoint speaks plain HTTP. Keep `listen_addr` on the loopback interface, or terminate TLS in front of it, so the shared key is not sent in the clear.
+
 ### Send a request
 
 `POST` a JSON array to the endpoint, with the shared key as the `Authorization` header. There is no `Bearer` prefix.
@@ -229,7 +253,70 @@ The whole array is validated before anything is removed. One bad element refuses
 
 **Everything is scoped to a subgraph.** A type or a cache tag is indexed per subgraph that answered, so every request names one. There is no way to invalidate a type or a tag across all subgraphs in one element. List the subgraphs instead.
 
-**The memory provider is per replica.** Each router holds its own cache, so an invalidation reaches only the replica it was sent to. We do not recommend using the in memory cache with multiple instances, and also in production.
+**The memory provider is per replica.** Each router holds its own cache, so an invalidation reaches only the replica it was sent to. Do not use the in-memory cache with multiple router instances in production.
+
+## CDN purging
+
+A CDN in front of the router can cache whole responses and purge them by tag. Enable `cache_tag_header` and the router returns the tags of each response in a header the CDN reads. Set the header name and delimiter the CDN expects. Cloudflare purges by `Cache-Tag` with tags separated by a comma, the default. Fastly purges by `Surrogate-Key` with tags separated by a space.
+
+```yaml config.yaml
+response_cache:
+  enabled: true
+  cache_tag_header:
+    enabled: true
+    name: 'Surrogate-Key'
+    delimiter: ' '
+```
+
+<Note>
+  The header names what a response is about. It does not tell the CDN to cache it. The CDN caches on the `Cache-Control` the router returns, which the [cache control policy](/router/proxy-capabilities/adjusting-cache-control) sets. On a hit, the lifetime reported for the served fetch is the time left on the entry, so the CDN never holds a response longer than the router does.
+</Note>
+
+### What the header carries
+
+Every cacheable fetch of the request contributes three tiers of tag, coarsest first:
+
+| Tag | One per | Purge removes |
+| --- | --- | --- |
+| `subgraph-{name}` | Subgraph a cached fetch went to | Everything that subgraph answered |
+| `type-{subgraph}-{__typename}` | Entity type an entity fetch returned | Every response holding an entity of that type |
+| The tag as declared | Tag in `apolloCacheTags` or `apolloEntityCacheTags` | Every response the subgraph tagged with it |
+
+A root query fetch has no single type and contributes no type tag. Declared tags are passed through unchanged. Tags are unique within the header.
+
+```
+Cache-Tag: subgraph-employees,subgraph-mood,type-mood-Employee,moods,employee-1,employee-10
+```
+
+### When it is sent
+
+The header is sent on cache hits and misses alike. A hit rebuilds it from what was stored with the entry, so both carry the same value. A fetch that was not cacheable contributes nothing, and a response with no cacheable fetch has no header.
+
+The header is not sent on subscriptions, deferred or batched responses, or responses carrying subgraph errors. A response with subgraph errors is marked `no-store` instead.
+
+The header does not depend on the `invalidation` indexes. It is built even when every index is off.
+
+### Size
+
+`max_bytes` caps the header value. When the tags do not fit, they are grouped coarsest first, subgraph then type then declared, and the finest that do not fit are left out. A purge by a coarse tag still reaches the response. The default of 16384 bytes is Cloudflare's limit on `Cache-Tag`.
+
+A declared tag that contains the delimiter, or a byte not valid in a header, is left out.
+
+### Purge both caches
+
+A purge at the CDN removes the response from the CDN only. The next request reaches the router, which may still serve the entry from its own cache. Send the same change to the [invalidation endpoint](#invalidation) as well. Each header tag maps to one `kind`:
+
+| Header tag | Invalidation element |
+| --- | --- |
+| `subgraph-products` | `{ "kind": "subgraph", "subgraph": "products" }` |
+| `type-products-Product` | `{ "kind": "type", "subgraph": "products", "type": "Product" }` |
+| `product-42` | `{ "kind": "cache_tag", "subgraphs": ["products"], "cache_tag": "product-42" }` |
+
+Invalidate the router first, then purge the CDN, so the CDN's refetch does not pick up the stale entry.
+
+### Validation
+
+Startup fails when `name` is not a valid header name or is `Content-Length`, `Content-Type` or `Transfer-Encoding`, when `delimiter` is empty or not valid in a header, or when `max_bytes` is not greater than zero.
 
 ## Observability
 
@@ -258,4 +345,5 @@ That warning is sampled to one line per second. An unreachable cache produces on
 ## Related
 
 * [Storage Providers](/router/storage-providers) defines the Redis instance the `redis` provider references.
+* [Adjusting Cache Control](/router/proxy-capabilities/adjusting-cache-control) sets the `Cache-Control` the client and any CDN in front of the router receive.
 * [Cache Warmer](/concepts/cache-warmer) is a different cache. It pre-populates the operation plan cache and does not cache subgraph responses.

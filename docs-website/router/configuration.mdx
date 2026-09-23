@@ -711,7 +711,7 @@ This option may change or be removed in future versions as the OpenTelemetry SDK
 | METRICS_OTLP_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        | The metrics to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                        | []            |
 | METRICS_OTLP_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        | The metric labels to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                  | []            |
 | METRICS_OTLP_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false         |
-| METRICS_OTLP_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms.                                                  | false         |
+| METRICS_OTLP_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, time-to-last-request-byte (request transfer duration), time-to-first-byte, and time-to-last-byte (response transfer duration) histograms.                                                  | false         |
 | METRICS_OTLP_RESOLVER_ENABLED      | resolver.enabled      | <Icon icon="square" />                        | Enable resolver metrics: resolver concurrency gauges and the resolver acquire duration histogram.                                                                           | false         |
 | METRICS_OTLP_CIRCUIT_BREAKER       | circuit_breaker       | <Icon icon="square" />                        | Ensure that circuit breaker metrics are enabled for OTEL.                                                                                                                  | false         |
 | METRICS_OTLP_STREAM                | streams               | <Icon icon="square" />                        | Enable Cosmo Streams metrics.                                                                                                                                              | false         |
@@ -750,7 +750,7 @@ telemetry:
       router_runtime: true
       graphql_cache: true
       connection_stats: false
-      # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first request byte, time to first byte)
+      # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first request byte, request transfer duration, time to first response byte, response transfer duration)
       network:
         enabled: false
       # Resolver concurrency gauges and resolver acquire duration histogram
@@ -787,7 +787,7 @@ telemetry:
 | PROMETHEUS_LISTEN_ADDR           | listen_addr           | <Icon icon="square" />                        | The address to listen on for the prometheus metrics endpoint.                                                                                                              | "127.0.0.1:8088" |
 | PROMETHEUS_GRAPHQL_CACHE         | graphql_cache         | <Icon icon="square" />                        | Enable the collection of metrics for the GraphQL operation router caches.                                                                                                  | false            |
 | PROMETHEUS_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false            |
-| PROMETHEUS_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms.                                                  | false            |
+| PROMETHEUS_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, time-to-last-request-byte (request transfer duration), time-to-first-byte, and time-to-last-byte (response transfer duration) histograms.                                                  | false            |
 | PROMETHEUS_RESOLVER_ENABLED      | resolver.enabled      | <Icon icon="square" />                        | Enable resolver metrics: resolver concurrency gauges and the resolver acquire duration histogram.                                                                           | false            |
 | PROMETHEUS_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        |                                                                                                                                                                            |                  |
 | PROMETHEUS_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        |                                                                                                                                                                            |                  |
@@ -811,7 +811,7 @@ telemetry:
       listen_addr: "127.0.0.1:8088"
       graphql_cache: true
       connection_stats: false
-      # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first request byte, time to first byte)
+      # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first request byte, request transfer duration, time to first response byte, response transfer duration)
       network:
         enabled: false
       # Resolver concurrency gauges and resolver acquire duration histogram
@@ -942,10 +942,48 @@ pyroscope:
 | ---------------------- | ----------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | CORS_ENABLED           | enabled           | <Icon icon="square" /> | Set this to enable/disable the CORS middleware. It is enabled by default. When disabled, the rest of the properties for CORS have no effect. | true                                 |
 | CORS_ALLOW_ORIGINS     | allow_origins     | <Icon icon="square" /> | This is a list of origins which are allowed. You can provide origins with wildcards                                                          | \*                                   |
+| CORS_MATCH_ORIGINS     | match_origins     | <Icon icon="square" /> | Go regular expressions matched against the lowercased origin in addition to `allow_origins`. Patterns are compiled as written and matching is unanchored. Separate patterns with semicolons in the environment variable. | []                            |
 | CORS_ALLOW_METHODS     | allow_methods     | <Icon icon="square" /> |                                                                                                                                              | HEAD,GET,POST                        |
 | CORS_ALLOW_HEADERS     | allow_headers     | <Icon icon="square" /> |                                                                                                                                              | Origin, Content-Length, Content-Type |
 | CORS_ALLOW_CREDENTIALS | allow_credentials | <Icon icon="square" /> |                                                                                                                                              | true                                 |
 | CORS_MAX_AGE           | max_age           | <Icon icon="square" /> |                                                                                                                                              | 5m                                   |
+
+Origins in `allow_origins` can use any URL scheme. Wildcard patterns are supported. The default `["*"]` allows all origins, regardless of scheme.
+
+### Regular expression origins
+
+Use `match_origins` to allow origins using [Go regular expressions](https://pkg.go.dev/regexp/syntax). When CORS is enabled, invalid patterns prevent router startup and the error identifies the pattern. Lookarounds and backreferences are not supported.
+
+The `allow_origins` and `match_origins` lists are additive. Set `allow_origins: []` for regex-only matching. Its default `["*"]` allows every origin, even when `match_origins` is set.
+
+Patterns match any substring of the origin unless you add anchors. Use `^` and `$` to match the entire origin. For example, `^https://([a-z0-9-]+\.)*example\.com$` allows `https://example.com` and `https://app.example.com`, but rejects `https://app.example.com.evil.com`. Without the anchors, that pattern also matches `https://app.example.com.evil.com`. Include any allowed port explicitly in the pattern.
+
+The router lowercases the `Origin` header value before literal, wildcard, and regex matching. This normalizes scheme and host casing, as in serialized browser origins. Ports are preserved. Regex patterns are compiled exactly as configured, with Go's default case-sensitive matching. Write scheme and host literals in lowercase, or add `(?i)` explicitly. For example, `^https://app\.example\.com$` matches `HTTPS://APP.EXAMPLE.COM`, but `^HTTPS://APP\.EXAMPLE\.COM$` does not. Regex escapes such as `\D` retain their original meaning.
+
+```yaml
+cors:
+  allow_origins: []
+  match_origins:
+    - '^https://([a-z0-9-]+\.)*example\.com$'
+    - '^https://(.+\.)?aol\.(de|ca|co\.uk|com)$'
+```
+
+Use single-quoted YAML strings to preserve regex backslashes. Separate patterns in `CORS_MATCH_ORIGINS` with semicolons (`;`) so commas in repetition counts such as `{1,3}` are preserved. For regex-only matching with this environment variable, set `allow_origins: []` in YAML. Leaving `CORS_ALLOW_ORIGINS` empty does not clear its default.
+
+Requests and preflights allowed by a regex echo the original `Origin` header in `Access-Control-Allow-Origin`, preserving its casing. Cross-origin requests that match neither list receive `403 Forbidden`.
+
+### Custom URL schemes
+
+List the full origin in `allow_origins`, such as `custom://localhost`, to allow that origin.
+
+```yaml
+cors:
+  allow_origins:
+    - "https://app.example.com"
+    - "custom://localhost"
+```
+
+Patterns in `match_origins` can also match custom URL schemes, for example `^custom://localhost$`.
 
 ### Example YAML config:
 
@@ -1613,7 +1651,7 @@ traffic_shaping:
       max_attempts: 5
       interval: 3s
       max_duration: 10s
-      condition: "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
+      expression: "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
     # Circuit Breaker
     circuit_breaker:
       enabled: true
@@ -1729,6 +1767,7 @@ Configure WebSocket handlers, protocols, and more.
 | -------------------- | -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | WEBSOCKETS_ENABLED   | enabled                          | <Icon icon="square-check" iconType="solid" /> |                                                                                                                                              | true          |
 |                      | absinthe_protocol                | <Icon icon="square" />                        | [Absinthe Protocol Configuration](/router/configuration#absinthe-protocol-configuration)                                                     |               |
+|                      | default_subprotocol              | <Icon icon="square" />                        | The subprotocol to use when a client sends no `Sec-WebSocket-Protocol` header. One of `graphql-transport-ws` or `graphql-ws`. When empty, the router closes such connections. |               |
 |                      | forward_upgrade_headers          | <Icon icon="square" />                        | Forward all useful Headers from the Upgrade Request, like User-Agent or Authorization in the extensions field when subscribing on a Subgraph |               |
 |                      | forward_upgrade_query_params     | <Icon icon="square" />                        | Forward all query parameters from the Upgrade Request in the extensions field when subscribing on a Subgraph                                 |               |
 |                      | forward_initial_payload          | <Icon icon="square" />                        | Forward the initial payload from a client subscription in the extensions field when subscribing on a Subgraph                                | true          |
@@ -1772,6 +1811,8 @@ websocket:
   absinthe_protocol:
     enabled: true
     handler_path: /absinthe/socket
+  # used when a client sends no Sec-WebSocket-Protocol header
+  default_subprotocol: graphql-transport-ws
   forward_initial_payload: true
   forward_upgrade_headers:
     enabled: true
@@ -2153,6 +2194,7 @@ Configure the GraphQL Execution Engine of the Router.
 | ENGINE_ENABLE_NET_POLL                                        | enable_net_poll                                        | <Icon icon="square" /> | Enables the more efficient poll implementation for the server-side WebSocket handler of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used. Has no effect on the router's upstream connections to subgraphs.                              | true          |
 | ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT                          | websocket_server_read_timeout                          | <Icon icon="square" /> | Read timeout on the server-side WebSocket handler (router accepting clients). Specified as a Go duration string, e.g. `10ms`, `1s`, `1m`.                                                                                                                                                                                                   | 5s            |
 | ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT                         | websocket_server_write_timeout                         | <Icon icon="square" /> | Write timeout on the server-side WebSocket handler (router accepting clients).                                                                                                                                                                                                                                                               | 10s           |
+| ENGINE_SSE_SERVER_WRITE_TIMEOUT                               | sse_server_write_timeout                               | <Icon icon="square" /> | Write timeout for SSE responses from the router to clients. If a write takes longer, the router closes the subscription. Set `0s` to disable.                                                                                                                                                                                  | 10s           |
 | ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT                          | websocket_server_poll_timeout                          | <Icon icon="square" /> | The timeout for the poll loop of the server-side WebSocket handler. The period is specified as a string with a number and a unit.                                                                                                                                                                                                            | 1s            |
 | ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE                      | websocket_server_conn_buffer_size                      | <Icon icon="square" /> | The buffer size for the poll buffer of the server-side WebSocket handler. The buffer size determines how many connections can be handled in one loop.                                                                                                                                                                                        | 128           |
 | ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT                         | websocket_client_write_timeout                         | <Icon icon="square" /> | The timeout for the websocket write of the WebSocket client implementation.                                                                                                                                                                                                                                                                 | 10s           |

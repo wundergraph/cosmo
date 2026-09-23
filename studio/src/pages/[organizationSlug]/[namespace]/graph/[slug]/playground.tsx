@@ -1,4 +1,6 @@
 import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { useParams } from 'next/navigation';
+import { parseAsString, useQueryState } from 'nuqs';
 import { CodeViewer } from '@/components/code-viewer';
 import { getGraphLayout, GraphContext, GraphPageLayout } from '@/components/layout/graph-layout';
 import { PageHeader } from '@/components/layout/head';
@@ -69,7 +71,6 @@ import crypto from 'crypto';
 import { GraphiQL } from 'graphiql';
 import { GraphQLSchema, parse, validate } from 'graphql';
 import { useTheme } from 'next-themes';
-import { useRouter } from 'next/router';
 import posthog from 'posthog-js';
 import { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -282,9 +283,7 @@ const FormSchema = z.object({
 type Input = z.infer<typeof FormSchema>;
 
 const PersistOperation = () => {
-  const router = useRouter();
-  const slug = router.query.slug as string;
-  const namespace = router.query.namespace as string;
+  const { slug, namespace } = useParams<{ slug: string; namespace: string }>();
 
   const { query } = useContext(TraceContext);
 
@@ -603,15 +602,13 @@ const ToggleClientValidation = () => {
 };
 
 const ConfigSelect = () => {
-  const router = useRouter();
-
   const graphContext = useContext(GraphContext);
   const subgraphs = graphContext?.subgraphs;
   const compositionFlagsData = useCompositionFlags();
   const featureFlags = compositionFlagsData?.featureFlags ?? [];
 
-  const selected = (router.query.load as string) || graphContext?.graph?.id || '';
-  const type = (router.query.type as string) || 'graph';
+  const [selected] = useQueryState('load', parseAsString.withDefault(graphContext?.graph?.id || ''));
+  const [type] = useQueryState('type', parseAsString.withDefault('graph'));
 
   const applyParams = useApplyParams();
 
@@ -716,14 +713,13 @@ const PlaygroundPortal = () => {
 };
 
 const PlaygroundPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const operation = router.query.operation as string;
-  const variables = router.query.variables as string;
+  const [operation] = useQueryState('operation');
+  const [variables] = useQueryState('variables');
 
   const graphContext = useContext(GraphContext);
 
-  const loadSchemaGraphId = (router.query.load as string) || graphContext?.graph?.id || '';
-  const type = (router.query.type as string) || 'graph';
+  const [loadSchemaGraphId] = useQueryState('load', parseAsString.withDefault(graphContext?.graph?.id || ''));
+  const [type] = useQueryState('type', parseAsString.withDefault('graph'));
 
   const compositionFlagsData = useCompositionFlags();
 
