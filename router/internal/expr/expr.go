@@ -96,6 +96,11 @@ type Operation struct {
 	VariablesRemappingCacheHit     bool `expr:"variablesRemappingCacheHit"`
 	PersistedOperationCacheHit     bool `expr:"persistedOperationCacheHit"`
 	PlanCacheHit                   bool `expr:"planCacheHit"`
+	QueryDepth                     int  `expr:"queryDepth"`
+	QueryTotalFields               int  `expr:"queryTotalFields"`
+	QueryRootFields                int  `expr:"queryRootFields"`
+	QueryRootFieldAliases          int  `expr:"queryRootFieldAliases"`
+	QueryComplexityCacheHit        bool `expr:"queryComplexityCacheHit"`
 
 	// Variables is the JSON string of the operation variables sent with the request. It is only
 	// populated when an expression references it, to avoid the serialization cost on every request.
@@ -166,7 +171,9 @@ type ClientTrace struct {
 	TCPConnectDuration        time.Duration `expr:"tcpConnectDuration"`
 	TLSHandshakeDuration      time.Duration `expr:"tlsHandshakeDuration"`
 	TimeToFirstRequestByte    time.Duration `expr:"timeToFirstRequestByte"`
+	TimeToLastRequestByte     time.Duration `expr:"timeToLastRequestByte"`
 	TimeToFirstByte           time.Duration `expr:"timeToFirstByte"`
+	TimeToLastByte            time.Duration `expr:"timeToLastByte"`
 }
 
 // Subgraph Related

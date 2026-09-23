@@ -824,6 +824,11 @@
             }
           }
         },
+        "default_subprotocol": {
+          "type": "string",
+          "enum": ["graphql-transport-ws", "graphql-ws"],
+          "description": "The subprotocol to use when the client does not send a Sec-WebSocket-Protocol header. By default such connections are rejected."
+        },
         "forward_upgrade_headers": {
           "type": "object",
           "additionalProperties": false,
@@ -1496,7 +1501,7 @@
                     "enabled": {
                       "type": "boolean",
                       "default": false,
-                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms. The default value is false."
+                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, time-to-last-request-byte, time-to-first-byte, and time-to-last-byte histograms. The default value is false."
                     }
                   }
                 },
@@ -1682,7 +1687,7 @@
                     "enabled": {
                       "type": "boolean",
                       "default": false,
-                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms. The default value is false."
+                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, time-to-last-request-byte, time-to-first-byte, and time-to-last-byte histograms. The default value is false."
                     }
                   }
                 },
@@ -1828,8 +1833,16 @@
         },
         "allow_origins": {
           "type": "array",
-          "description": "The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.",
+          "description": "The allowed origins. Origins can use any URL scheme, and wildcard patterns are supported. The default '*' allows all origins.",
           "default": ["*"],
+          "items": {
+            "type": "string"
+          }
+        },
+        "match_origins": {
+          "type": "array",
+          "description": "Go regular expressions matched against the original Origin header, in addition to allow_origins. Patterns are unanchored; use ^ and $ to match the entire origin. Matching is case-insensitive by default; prefix a pattern with (?-i) for case-sensitive matching. Set allow_origins to [] to allow only regex matches; its default '*' still allows all origins. Invalid expressions fail startup when CORS is enabled.",
+          "default": [],
           "items": {
             "type": "string"
           }
@@ -3478,6 +3491,38 @@
               }
             }
           }
+        },
+        "cache_tag_header": {
+          "type": "object",
+          "description": "Returns the cache tags of a response in a header a CDN or reverse proxy can purge by: 'subgraph-{name}' per subgraph touched, 'type-{subgraph}-{type}' per entity type touched, and every tag a subgraph declared in its 'apolloCacheTags' or 'apolloEntityCacheTags' extension, unchanged. Sent on cache hits and misses alike; fetches that were not cacheable contribute nothing. Independent of the 'invalidation' indexes. Not sent on subscriptions, deferred or batched responses, or responses carrying subgraph errors. Off by default.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Emit the header.",
+              "default": false
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the header. Use 'Surrogate-Key' for Fastly.",
+              "default": "Cache-Tag",
+              "examples": ["Cache-Tag", "Surrogate-Key"]
+            },
+            "delimiter": {
+              "type": "string",
+              "minLength": 1,
+              "description": "What separates tags in the header value. Use a space for Fastly. A tag containing the delimiter cannot be sent and is left out.",
+              "default": ",",
+              "examples": [",", " "]
+            },
+            "max_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The largest header value emitted, in bytes. When the tags do not fit they are grouped coarsest first, subgraph then type then declared, and the finest that do not fit are left out. The default matches Cloudflare's Cache-Tag limit.",
+              "default": 16384
+            }
+          }
         }
       },
       "if": {
@@ -4123,13 +4168,13 @@
         },
         "enable_multi_fetch": {
           "type": "boolean",
-          "description": "Enables merging entity fetches to the same subgraph that execute in the same wave into a single batched request with aliased _entities fields. Merging reduces the number of subgraph requests.",
-          "default": false
+          "description": "Merges entity fetches to the same subgraph that execute in the same wave into a single batched request with aliased _entities fields. Merging reduces the number of subgraph requests. Set to false to send one request per entity fetch.",
+          "default": true
         },
         "enable_schedule_fetches": {
           "type": "boolean",
-          "description": "Enables the dependency-aware fetch scheduler, which organizes fetches into component-split, chain-inlined execution trees instead of the legacy wave-based structure.",
-          "default": false
+          "description": "Uses the dependency-aware fetch scheduler, which organizes fetches into component-split, chain-inlined execution trees instead of the legacy wave-based structure. Set to false to fall back to the wave-based structure.",
+          "default": true
         },
         "websocket_client_write_timeout": {
           "type": "string",
@@ -4286,6 +4331,12 @@
           "format": "go-duration",
           "default": "30s",
           "description": "The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "sse_server_write_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "default": "10s",
+          "description": "The maximum time for one SSE write and flush to a client. If a write takes longer, the router closes that subscription so it does not block other subscriptions on the same trigger. Set 0s to disable the timeout."
         },
         "enable_defer": {
           "type": "boolean",

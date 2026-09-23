@@ -219,6 +219,8 @@ You can find more examples here under [`Connection`](/router/metrics-and-monitor
 
 These metrics break down each outgoing subgraph request into its individual HTTP phases, collected per request via Go's `httptrace`. Use them to attribute subgraph latency to DNS resolution, connection setup, the TLS handshake, or the subgraph itself.
 
+The histograms record actual outgoing subgraph HTTP requests. When single-flight request deduplication coalesces fetches, only the fetch that sends the subgraph request produces samples. Followers do not independently write the request or consume the origin response body.
+
 #### Enable Network Metrics
 
 ```yaml config.yaml
@@ -239,7 +241,11 @@ telemetry:
 
 * `router_http_client_time_to_first_request_byte`: The time in ms from the start of the HTTP attempt to writing the first request byte to the subgraph. It includes acquiring the connection: pool wait, or DNS, TCP connect, and TLS handshake for new connections.
 
+* `router_http_client_time_to_last_request_byte`: The duration in ms between the first request-header write callback and a successful request-complete callback from Go's HTTP transport. This approximates the time from the first to the last request byte. Recorded only when both callbacks are observed and the request-complete callback reports no error.
+
 * `router_http_client_time_to_first_byte`: The time in ms from completing the request write to receiving the first response byte from the subgraph.
+
+* `router_http_client_time_to_last_byte`: The duration in ms from receiving the first response byte to consuming the last response byte. Recorded only when a first response byte is observed and the full body is consumed, either to EOF or through the declared `Content-Length`. A response that cannot carry a body completes when its headers have been read.
 
 ### Go Runtime Metrics
 

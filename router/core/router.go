@@ -294,6 +294,11 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 	if r.corsOptions == nil {
 		r.corsOptions = CorsDefaultOptions()
 	}
+	if r.corsOptions.Enabled {
+		if err := r.corsOptions.Validate(); err != nil {
+			return nil, fmt.Errorf("invalid CORS configuration: %w", err)
+		}
+	}
 
 	if r.subgraphTransportOptions == nil {
 		r.subgraphTransportOptions = DefaultSubgraphTransportOptions()
@@ -1202,6 +1207,9 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 	// Validate the TTL during startup to avoid additional checks during execution.
 	if r.responseCacheConfig.FallbackTTL <= 0 {
 		return fmt.Errorf("response cache is enabled but its fallback_ttl is %s, which must be greater than zero", r.responseCacheConfig.FallbackTTL)
+	}
+	if err := validateResponseCacheTagHeader(r.responseCacheConfig.TagHeader); err != nil {
+		return err
 	}
 
 	var err error

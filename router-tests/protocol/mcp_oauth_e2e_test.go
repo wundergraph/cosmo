@@ -196,6 +196,95 @@ func TestMCPOAuthPerToolScopes(t *testing.T) {
 	})
 }
 
+func TestMCPOAuthArrayScopeClaim(t *testing.T) {
+	oauthServer, err := testutil.NewOAuthTestServer(t, nil)
+	require.NoError(t, err, "failed to start OAuth server")
+	defer oauthServer.Close() //nolint:errcheck
+
+	arrayScopeToken, err := oauthServer.CreateToken(map[string]any{
+		"sub":   "test-user",
+		"scope": []string{"mcp:connect", "mcp:tools:read"},
+	})
+	require.NoError(t, err, "failed to create token")
+
+	testenv.Run(t, &testenv.Config{
+		MCP: config.MCPConfiguration{
+			Enabled:      true,
+			ExposeSchema: true,
+			OAuth: config.MCPOAuthConfiguration{
+				Enabled: true,
+				JWKS: []config.JWKSConfiguration{
+					{URL: oauthServer.JWKSURL()},
+				},
+				AuthorizationServerURL: oauthServer.Issuer(),
+				Scopes: config.MCPOAuthScopesConfiguration{
+					Initialize: []string{"mcp:connect"},
+					GetSchema:  []string{"mcp:tools:read"},
+				},
+			},
+		},
+		MCPAuthToken:      arrayScopeToken,
+		MCPOperationsPath: "testdata/mcp_operations",
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		ctx := context.Background()
+
+		client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), arrayScopeToken)
+		require.NoError(t, client.Connect(ctx), "should connect with scopes encoded as a JSON array")
+		defer client.Close() //nolint:errcheck
+
+		result, err := client.CallTool(ctx, "get_schema", nil)
+		require.NoError(t, err, "should call tool with scopes encoded as a JSON array")
+		require.NotNil(t, result)
+	})
+}
+
+// Dropping the unreadable members would authorize the request for less than the token was issued for.
+func TestMCPOAuthUnreadableScopeClaim(t *testing.T) {
+	oauthServer, err := testutil.NewOAuthTestServer(t, nil)
+	require.NoError(t, err, "failed to start OAuth server")
+	defer oauthServer.Close() //nolint:errcheck
+
+	validToken, err := oauthServer.CreateToken(map[string]any{
+		"sub":   "test-user",
+		"scope": []string{"mcp:connect"},
+	})
+	require.NoError(t, err, "failed to create token")
+
+	mixedScopeToken, err := oauthServer.CreateToken(map[string]any{
+		"sub":   "test-user",
+		"scope": []any{"mcp:connect", 42},
+	})
+	require.NoError(t, err, "failed to create token")
+
+	testenv.Run(t, &testenv.Config{
+		MCP: config.MCPConfiguration{
+			Enabled:      true,
+			ExposeSchema: true,
+			OAuth: config.MCPOAuthConfiguration{
+				Enabled: true,
+				JWKS: []config.JWKSConfiguration{
+					{URL: oauthServer.JWKSURL()},
+				},
+				AuthorizationServerURL: oauthServer.Issuer(),
+				Scopes: config.MCPOAuthScopesConfiguration{
+					Initialize: []string{"mcp:connect"},
+				},
+			},
+		},
+		MCPAuthToken:      validToken,
+		MCPOperationsPath: "testdata/mcp_operations",
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), mixedScopeToken)
+
+		err := client.Connect(context.Background())
+		require.Error(t, err, "should not connect with an unreadable scope claim")
+
+		authErr, ok := err.(*AuthError)
+		require.True(t, ok, "expected *AuthError but got %T: %v", err, err)
+		assert.Equal(t, http.StatusUnauthorized, authErr.StatusCode)
+	})
+}
+
 func TestMCPOAuthMultipleAuthorizationServers(t *testing.T) {
 	oauthServerA, err := testutil.NewOAuthTestServer(t, &testutil.OAuthTestServerOptions{KeyID: "server_a_rsa"})
 	require.NoError(t, err, "failed to start OAuth server A")

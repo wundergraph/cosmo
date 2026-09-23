@@ -78,8 +78,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // authorized compares the whole Authorization header against the shared key,
-// with no Bearer prefix expected
+// with no Bearer prefix expected. An unset key authorizes nobody, so a handler
+// mounted without NewServer's checks is closed rather than open.
 func (h *Handler) authorized(r *http.Request) bool {
+	if h.cfg.Endpoint.SharedKey == "" {
+		return false
+	}
 	given := r.Header.Get("Authorization")
 	return subtle.ConstantTimeCompare([]byte(given), []byte(h.cfg.Endpoint.SharedKey)) == 1
 }
