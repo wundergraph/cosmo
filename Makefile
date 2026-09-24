@@ -70,6 +70,13 @@ $(FORMAT_ARGS):
 	@:
 endif
 
+.PHONY: tidy-all
+tidy-all:
+	find . -name 'go.mod' | while read -r mod; do \
+		pushd "$$(dirname "$$mod")" && go mod tidy; \
+		popd; \
+	done
+
 seed:
 	pnpm -r run --filter './controlplane' seed
 
