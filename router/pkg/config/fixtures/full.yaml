@@ -134,6 +134,7 @@ demo_mode: true
 # Cross-Origin Resource Sharing (CORS)
 cors:
   allow_origins: ['*']
+  match_origins: ['^https://([a-z0-9-]+\.)*example\.com$']
   allow_methods:
     - HEAD
     - GET
@@ -372,6 +373,7 @@ headers:
 authentication:
   ignore_introspection: false
   jwt:
+    on_error: continue
     jwks:
       - url: 'https://example.com/.well-known/jwks.json'
         refresh_interval: 1m
@@ -450,6 +452,7 @@ engine:
   websocket_client_write_timeout: 10s
   websocket_server_read_timeout: 5s
   websocket_server_write_timeout: 10s
+  sse_server_write_timeout: 10s
   websocket_server_poll_timeout: 1s
   websocket_server_conn_buffer_size: 128
   websocket_client_read_limit: 1MB
@@ -501,6 +504,7 @@ websocket:
   absinthe_protocol:
     enabled: true
     handler_path: /absinthe/socket
+  default_subprotocol: graphql-transport-ws
   forward_initial_payload: true
   forward_upgrade_headers:
     enabled: true
@@ -554,6 +558,12 @@ response_cache:
       listen_addr: 'localhost:5027'
       path: '/invalidation'
       shared_key: 'a-shared-key-that-is-long-enough-to-pass'
+  cache_tag_header:
+    enabled: true
+    name: 'Surrogate-Key'
+    delimiter: ' '
+    max_bytes: 1024
+  private_id: "request.auth.claims.sub"
 
 security:
   complexity_calculation_cache:

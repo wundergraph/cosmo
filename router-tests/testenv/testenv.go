@@ -1390,6 +1390,8 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 		EnableRequestTracing:              true,
 		EnableNormalizationCache:          true,
 		EnableDefer:                       true,
+		EnableMultiFetch:                  true,
+		EnableScheduleFetches:             true,
 		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,

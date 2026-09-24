@@ -123,6 +123,44 @@ func TestInMemoryCache(t *testing.T) {
 			require.Equal(t, []byte("value"), results["a"].Value)
 			requireTTLNear(t, time.Hour, results["a"].TTL)
 		})
+
+		t.Run("surrogateKeys come back with the entry and are not shared", func(t *testing.T) {
+			t.Parallel()
+
+			c := newTestCache(t)
+
+			surrogateKeys := []string{"subgraph-accounts", "user-42"}
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "a", Value: []byte("value"), TTL: time.Hour, SurrogateKeys: surrogateKeys},
+			})
+			require.NoError(t, err)
+			surrogateKeys[0] = "changed-after-write"
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.Equal(t, []string{"subgraph-accounts", "user-42"}, results["a"].SurrogateKeys)
+
+			results["a"].SurrogateKeys[0] = "changed-after-read"
+			again, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.Equal(t, []string{"subgraph-accounts", "user-42"}, again["a"].SurrogateKeys)
+		})
+
+		t.Run("a vary record comes back as a record and is not shared", func(t *testing.T) {
+			t.Parallel()
+
+			c := newTestCache(t)
+
+			vary := [][]string{{"accept-language"}, {"accept-language", "x-region"}}
+			err := c.SetMany(ctx, []enginecache.Item{{Key: "a", Vary: vary, TTL: time.Hour}})
+			require.NoError(t, err)
+			vary[0][0] = "changed-after-write"
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.Empty(t, results["a"].Value)
+			require.Equal(t, [][]string{{"accept-language"}, {"accept-language", "x-region"}}, results["a"].Vary)
+		})
 	})
 
 	t.Run("SetMany", func(t *testing.T) {
