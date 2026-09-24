@@ -5,7 +5,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { DBSchemaChangeType } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
-import { federatedGraphClients, federatedGraphPersistedOperations, users } from '../../db/schema.js';
+import { federatedGraphs, federatedGraphClients, federatedGraphPersistedOperations, users } from '../../db/schema.js';
 import type { BlobStorage } from '../blobstorage/index.js';
 import { createManifestBlobStoragePath } from '../bufservices/persisted-operation/utils.js';
 import {
@@ -24,7 +24,7 @@ export interface PQLManifest {
   version: 1;
   revision: string;
   generatedAt: string;
-  operations: Record<string, string>; // sha256 hash -> operation body
+  operations: Record<string, string>; // operation ID -> body
 }
 
 type ChangeOverride = IgnoreAllOverride & {
@@ -47,6 +47,29 @@ export class OperationsRepository {
     private db: PostgresJsDatabase<typeof schema>,
     private federatedGraphId: string,
   ) {}
+
+  // Call inside a transaction and hold through blob writes and manifest upload.
+  // Publishes and deletions for the same graph must observe a single ordering.
+  // NO KEY UPDATE permits concurrent foreign-key checks while excluding other writers.
+  public async lockPersistedOperations() {
+    const [graph] = await this.db
+      .select({ id: federatedGraphs.id })
+      .from(federatedGraphs)
+      .where(eq(federatedGraphs.id, this.federatedGraphId))
+      .for('no key update');
+    return graph !== undefined;
+  }
+
+  public getPersistedOperationIdentitiesForGraph() {
+    return this.db
+      .select({
+        operationId: federatedGraphPersistedOperations.operationId,
+        hash: federatedGraphPersistedOperations.hash,
+        operationNames: federatedGraphPersistedOperations.operationNames,
+      })
+      .from(federatedGraphPersistedOperations)
+      .where(eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId));
+  }
 
   public async updatePersistedOperations(clientId: string, userId: string, operations: UpdatedPersistedOperation[]) {
     const now = new Date();
@@ -724,14 +747,17 @@ export class OperationsRepository {
       );
     }
 
-    const operations: Record<string, string> = {};
+    const operations: Record<string, string> = Object.create(null);
     for (const op of allOperations) {
+      if (Object.hasOwn(operations, op.operationId) && operations[op.operationId] !== op.operationContent) {
+        throw new Error(`Persisted operation ${op.operationId} has conflicting bodies across clients`);
+      }
       operations[op.operationId] = op.operationContent;
     }
 
     // Compute revision as SHA256 of the deterministic JSON serialization (sorted keys)
     const sortedKeys = Object.keys(operations).sort();
-    const sortedOperations: Record<string, string> = {};
+    const sortedOperations: Record<string, string> = Object.create(null);
     for (const key of sortedKeys) {
       sortedOperations[key] = operations[key];
     }

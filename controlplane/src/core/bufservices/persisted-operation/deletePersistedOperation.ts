@@ -5,7 +5,7 @@ import type {
   DeletePersistedOperationResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
-import { UnauthorizedError } from '../../errors/errors.js';
+import { PublicError, UnauthorizedError } from '../../errors/errors.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
@@ -46,73 +46,74 @@ export function deletePersistedOperation(
       };
     }
 
-    const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
-    const operation = await operationsRepo.getPersistedOperation({
-      operationId: req.operationId,
-      clientName: req.clientName,
-    });
+    return opts.db.transaction(async (tx) => {
+      const operationsRepo = new OperationsRepository(tx as typeof opts.db, federatedGraph.id);
+      if (!(await operationsRepo.lockPersistedOperations())) {
+        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Federated graph '${req.fedGraphName}' does not exist`);
+      }
+      const operation = await operationsRepo.getPersistedOperation({
+        operationId: req.operationId,
+        clientName: req.clientName,
+      });
 
-    if (!operation) {
+      if (!operation) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_NOT_FOUND,
+            details: `Persisted operation ${req.operationId} does not exist`,
+          },
+        };
+      }
+
+      const deletedOperation = await operationsRepo.deletePersistedOperation({
+        operationId: req.operationId,
+        clientName: req.clientName,
+      });
+
+      const path = createBlobStoragePath({
+        organizationId: authContext.organizationId,
+        fedGraphId: federatedGraph.id,
+        clientName: operation.clientName,
+        operationId: operation.operationId,
+      });
+
+      try {
+        await opts.blobStorage.deleteObject({ key: path });
+      } catch (e) {
+        const error = e instanceof Error ? e : new Error('Unknown error');
+        logger.error(error, `Could not delete operation for ${operation.operationId} at ${path}`);
+
+        throw new PublicError(EnumStatusCode.ERR, `Failed to delete operation ${operation.operationId}`, error);
+      }
+
+      try {
+        await operationsRepo.generateAndUploadManifest({
+          organizationId: authContext.organizationId,
+          blobStorage: opts.blobStorage,
+          logger,
+        });
+      } catch (e) {
+        const error = e instanceof Error ? e : new Error('Unknown error');
+        logger.error(error, `Failed to regenerate PQL manifest after deleting operation ${operation.operationId}`, {
+          federatedGraphId: federatedGraph.id,
+          organizationId: authContext.organizationId,
+        });
+        throw new PublicError(EnumStatusCode.ERR, 'Failed to publish persisted operations manifest', error);
+      }
+
       return {
         response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Persisted operation ${req.operationId} does not exist`,
+          code: EnumStatusCode.OK,
         },
+        operation: deletedOperation
+          ? {
+              id: deletedOperation.id,
+              operationId: deletedOperation.operationId,
+              clientName: deletedOperation.clientName,
+              operationNames: deletedOperation.operationNames,
+            }
+          : undefined,
       };
-    }
-
-    const deletedOperation = await operationsRepo.deletePersistedOperation({
-      operationId: req.operationId,
-      clientName: req.clientName,
     });
-
-    const path = createBlobStoragePath({
-      organizationId: authContext.organizationId,
-      fedGraphId: federatedGraph.id,
-      clientName: operation.clientName,
-      operationId: operation.operationId,
-    });
-
-    try {
-      await opts.blobStorage.deleteObject({ key: path });
-    } catch (e) {
-      const error = e instanceof Error ? e : new Error('Unknown error');
-      logger.error(error, `Could not delete operation for ${operation.operationId} at ${path}`);
-
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `Failed to delete operation ${operation.operationId}`,
-        },
-      };
-    }
-
-    try {
-      await operationsRepo.generateAndUploadManifest({
-        organizationId: authContext.organizationId,
-        blobStorage: opts.blobStorage,
-        logger,
-      });
-    } catch (e) {
-      const error = e instanceof Error ? e : new Error('Unknown error');
-      logger.error(error, `Failed to regenerate PQL manifest after deleting operation ${operation.operationId}`, {
-        federatedGraphId: federatedGraph.id,
-        organizationId: authContext.organizationId,
-      });
-    }
-
-    return {
-      response: {
-        code: EnumStatusCode.OK,
-      },
-      operation: deletedOperation
-        ? {
-            id: deletedOperation.id,
-            operationId: deletedOperation.operationId,
-            clientName: deletedOperation.clientName,
-            operationNames: deletedOperation.operationNames,
-          }
-        : undefined,
-    };
   });
 }

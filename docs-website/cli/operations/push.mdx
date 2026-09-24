@@ -22,6 +22,12 @@ The operations file might be one of the following formats:
 
 The operations are validated against the graph schema before registering them. If any of the operations is invalid, no operations will be registered.
 
+### Operation IDs
+
+Apollo manifests and Relay query maps preserve supplied operation IDs. Plain GraphQL files receive a SHA256 ID computed from their contents. IDs must contain 1–250 ASCII letters, digits, underscores, or hyphens. IDs are case-sensitive.
+
+An ID must refer to the same body across all clients in a graph. A different body returns a conflict for that operation; other valid operations can still be registered. See [Operation IDs and publishing conflicts](/router/persisted-queries/persisted-operations#operation-ids-and-publishing-conflicts) for batch validation and deletion behavior.
+
 ### Options
 
 - `-n, --namespace` : The namespace of the federated graph (Default: "default").

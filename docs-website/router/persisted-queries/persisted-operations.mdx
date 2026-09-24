@@ -99,6 +99,24 @@ To see all available options for `wgc operations push`, see [Push](/cli/operatio
 
 Additionally, check the [Using Persisted Operation with Federated GraphQL](/tutorial/using-persisted-operations) tutorial for a step-by-step guide.
 
+## Operation IDs and publishing conflicts
+
+Operation IDs are case-sensitive and must contain 1–250 ASCII letters, digits, underscores, or hyphens (`[A-Za-z0-9_-]{1,250}`). The control plane rejects a publish request containing an invalid ID before registering any operations in that request. The CLI sends operations in batches of up to 100; earlier successful batches are not rolled back if a later batch fails.
+
+Apollo JSON manifests preserve each operation's `id`. Relay JSON query maps preserve their supplied IDs. Plain `.graphql` and `.gql` files use the SHA256 hash of their contents as the ID. Publishing an ID does not enable support for that ID format in the router.
+
+Within a graph, an ID must identify the same operation body across all clients. Publishing the same ID and body for another client is allowed. Publishing the same ID with a different body returns `CONFLICT` for that operation and leaves the existing registration unchanged. Other valid operations in the request can still be published. These checks also apply to duplicate IDs in a batch and concurrent publishing requests. Different graphs can use the same ID for different bodies.
+
+The generated version 1 manifest contains one global ID-to-body map. Existing registrations that associate one ID with different bodies must be removed before the control plane can regenerate that graph's manifest.
+
+Deleting an operation removes one client's registration. Deleting a client removes all of that client's registrations. An ID stays registered while any client still registers it. After the last registration is deleted, the control plane permits the ID to be registered with a different body. Routers may still have cached the previous body, so use a new ID when changing an operation.
+
+### Publication failures
+
+If a storage operation or manifest publication fails, the request returns an error and its database changes are rolled back. Completed storage writes or deletions cannot be rolled back with the database. A failed request can therefore leave stored files out of sync with registrations.
+
+Existing conflicting registrations also prevent manifest generation. Deleting one registration succeeds only if the remaining registrations allow a valid manifest to be generated. Graphs with multiple conflicting IDs may require administrative cleanup before publishing or deleting operations.
+
 ## Deleting persisted operations in Studio
 
 You can delete persisted operations directly in Cosmo Studio after they have been uploaded via `wgc operations push`.

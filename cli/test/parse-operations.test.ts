@@ -6,6 +6,21 @@ import { describe, test, expect } from 'vitest';
 import { parseOperations } from '../src/commands/operations/commands/push.js';
 
 describe('parse operations from different formats', () => {
+  test.each(['get_typename_v1', 'Get-Typename_V1', 'a'.repeat(250)])(
+    'preserves custom ID %s in every JSON format',
+    (id) => {
+      const contents = 'query { __typename }';
+      const inputs = [
+        { format: 'apollo-persisted-query-manifest', version: 1, operations: [{ id, body: contents }] },
+        [[id, contents]],
+        { [id]: contents },
+      ];
+      for (const input of inputs) {
+        expect(parseOperations(JSON.stringify(input))).toMatchObject([{ id, contents }]);
+      }
+    },
+  );
+
   test('parse operations from graphql', () => {
     const operation = `query {
             hello
