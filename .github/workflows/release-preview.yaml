@@ -5,6 +5,9 @@ on:
     types: [opened, synchronize, reopened, edited]
     branches:
       - main
+    paths:
+      - '.github/workflows/release-preview.yaml'
+      - '.github/workflows/release.yaml'
   push:
     tags-ignore:
       - '**'
