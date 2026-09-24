@@ -1,29 +1,48 @@
-# Protect the CODEOWNERS file
+/.github/           @wundergraph/Platform
 /.github/CODEOWNERS @wundergraph/Owners
 
-/.github/actions/   @wundergraph/Platform
-/.github/scripts/   @wundergraph/Platform
-/.github/workflows/ @wundergraph/Platform
 /admission-server/  @wundergraph/Cosmo
+/aws-lambda-router/ @wundergraph/Router
 /cdn-server/        @wundergraph/Cosmo @wundergraph/Platform
 /cli/               @wundergraph/Cosmo
 /composition/       @wundergraph/Cosmo
 /connect/           @wundergraph/Router
 /connect-go/        @wundergraph/Router
 /controlplane/      @wundergraph/Cosmo
+/docker/            @wundergraph/Platform
 /graphqlmetrics/    @wundergraph/Platform @wundergraph/Router
 /helm/              @wundergraph/Platform
 /infrastructure/    @wundergraph/Platform
 /keycloak/          @wundergraph/Cosmo
 /otelcollector/     @wundergraph/Platform
+/patches/           @wundergraph/Cosmo
 /playground/        @wundergraph/Cosmo
 /protographic/      @wundergraph/Router
 /router/            @wundergraph/Router
 /router-tests/      @wundergraph/Router
 /router-plugin/     @wundergraph/Router
+/shared/            @wundergraph/Cosmo
 /studio/            @wundergraph/Cosmo
 
-/.release-please-manifest.json @wundergraph/Platform
+/buf.connect-go.go.gen.yaml     @wundergraph/Router
+/buf.graphqlmetrics.go.gen.yaml @wundergraph/Router
+/buf.router.go.gen.yaml         @wundergraph/Router
+/buf.ts.gen.yaml                @wundergraph/Cosmo
+
+/.npmrc               @wundergraph/Cosmo
+/package.json         @wundergraph/Cosmo
+/pnpm-lock.yaml       @wundergraph/Cosmo
+/pnpm-workspace.yaml  @wundergraph/Cosmo
+/tsconfig.base.json   @wundergraph/Cosmo
+/vitest.workspace.ts  @wundergraph/Cosmo
+
+/codecov.yaml @wundergraph/Platform
+
+/.release-please-manifest.json  @wundergraph/Platform
+/release-please-config.json     @wundergraph/Platform
+
+/.trivyignore.yaml  @wundergraph/Platform
+/trivy.yaml         @wundergraph/Platform
 
 # generated protobuf files, sourced from /proto/
 /router/gen/
