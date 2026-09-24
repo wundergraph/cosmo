@@ -1,6 +1,6 @@
 module github.com/wundergraph/cosmo/aws-lambda-router
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/akrylysov/algnhsa v1.1.0

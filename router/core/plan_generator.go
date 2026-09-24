@@ -209,7 +209,7 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 	)
 	normalizer.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
 	if report.HasErrors() {
-		return report
+		return &report
 	}
 
 	return nil
@@ -232,13 +232,13 @@ func (pl *Planner) extractAndRemapVariables(operation *ast.Document, operationNa
 	)
 	normalizer.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
 	if report.HasErrors() {
-		return report
+		return &report
 	}
 
 	remapper := astnormalization.NewVariablesMapper()
 	remapper.NormalizeOperation(operation, pl.definition, &report)
 	if report.HasErrors() {
-		return report
+		return &report
 	}
 
 	return nil
@@ -320,7 +320,7 @@ func (pl *Planner) validateOperation(operation *ast.Document) (err error) {
 	report := operationreport.Report{}
 	pl.operationValidator.Validate(operation, pl.clientDefinition, &report)
 	if report.HasErrors() {
-		return report
+		return &report
 	}
 
 	return nil
