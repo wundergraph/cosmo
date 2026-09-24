@@ -42,18 +42,30 @@ func selectCacheStore(store caching.Cache, directives *cachedirective.RequestCac
 
 // writeOnlyCache is a store every lookup misses on. Writes pass through.
 type writeOnlyCache struct {
-	caching.Cache
+	store caching.Cache
 }
 
 func (writeOnlyCache) GetMany(context.Context, []string) (map[string]caching.Item, error) {
 	return nil, nil
 }
 
+func (w writeOnlyCache) SetMany(ctx context.Context, items []caching.Item) error {
+	return w.store.SetMany(ctx, items)
+}
+
+var _ caching.Cache = writeOnlyCache{}
+
 // readOnlyCache is a store that drops every write. Lookups pass through.
 type readOnlyCache struct {
-	caching.Cache
+	store caching.Cache
+}
+
+func (r readOnlyCache) GetMany(ctx context.Context, keys []string) (map[string]caching.Item, error) {
+	return r.store.GetMany(ctx, keys)
 }
 
 func (readOnlyCache) SetMany(context.Context, []caching.Item) error {
 	return nil
 }
+
+var _ caching.Cache = readOnlyCache{}

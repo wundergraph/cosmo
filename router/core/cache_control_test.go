@@ -69,7 +69,7 @@ func TestSelectCacheStore(t *testing.T) {
 		t.Parallel()
 		got := selectCacheStore(store, &cachedirective.RequestCacheDirectives{NoStore: true})
 		require.IsType(t, readOnlyCache{}, got)
-		require.Same(t, store, got.(readOnlyCache).Cache)
+		require.Same(t, store, got.(readOnlyCache).store)
 	})
 
 	t.Run("no-cache with no-store keeps the request out of the cache", func(t *testing.T) {
@@ -81,7 +81,7 @@ func TestSelectCacheStore(t *testing.T) {
 		t.Parallel()
 		got := selectCacheStore(store, &cachedirective.RequestCacheDirectives{NoCache: true})
 		require.IsType(t, writeOnlyCache{}, got)
-		require.Same(t, store, got.(writeOnlyCache).Cache)
+		require.Same(t, store, got.(writeOnlyCache).store)
 	})
 
 	t.Run("a nil store is not wrapped", func(t *testing.T) {
