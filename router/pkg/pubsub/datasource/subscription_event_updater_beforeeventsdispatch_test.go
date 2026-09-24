@@ -41,7 +41,7 @@ func TestSubscriptionEventUpdater_Update_WithBeforeEventsDispatchHooks_Success(t
 	}
 
 	// Expect call to Update with modified data since there are no OnReceiveEvents hooks
-	mockUpdater.On("Update", []byte("modified data")).Return()
+	mockUpdater.On("Update", []byte("modified data"), "").Return()
 
 	updater := NewSubscriptionEventUpdater(
 		config,
@@ -65,7 +65,7 @@ func TestSubscriptionEventUpdater_Update_WithBeforeEventsDispatchHooks_Success(t
 		t.Fatal("timeout waiting for events")
 	}
 
-	mockUpdater.AssertCalled(t, "Update", []byte("modified data"))
+	mockUpdater.AssertCalled(t, "Update", []byte("modified data"), "")
 	mockUpdater.AssertNumberOfCalls(t, "Update", 1)
 }
 
@@ -132,7 +132,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleBeforeEventsDispatchHooks_S
 		return []StreamEvent{&testEvent{mutableTestEvent("modified by hook2")}}, nil
 	}
 
-	mockUpdater.On("Update", []byte("modified by hook2")).Return()
+	mockUpdater.On("Update", []byte("modified by hook2"), "").Return()
 
 	updater := NewSubscriptionEventUpdater(
 		config,
@@ -254,8 +254,8 @@ func TestSubscriptionEventUpdater_Update_WithSingleBeforeEventsDispatchHookModif
 		return modifiedEvents, nil
 	}
 
-	mockUpdater.On("Update", []byte("modified: original data 1")).Return()
-	mockUpdater.On("Update", []byte("modified: original data 2")).Return()
+	mockUpdater.On("Update", []byte("modified: original data 1"), "").Return()
+	mockUpdater.On("Update", []byte("modified: original data 2"), "").Return()
 
 	updater := NewSubscriptionEventUpdater(
 		config,
@@ -272,8 +272,8 @@ func TestSubscriptionEventUpdater_Update_WithSingleBeforeEventsDispatchHookModif
 	updater.Update(originalEvents)
 
 	// Verify modified events were sent to Update, not the original events
-	mockUpdater.AssertCalled(t, "Update", []byte("modified: original data 1"))
-	mockUpdater.AssertCalled(t, "Update", []byte("modified: original data 2"))
+	mockUpdater.AssertCalled(t, "Update", []byte("modified: original data 1"), "")
+	mockUpdater.AssertCalled(t, "Update", []byte("modified: original data 2"), "")
 	mockUpdater.AssertNumberOfCalls(t, "Update", 2)
 }
 
@@ -368,7 +368,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleBeforeEventsDispatchHooksCh
 	}
 
 	// Final modified data should have all three transformations applied
-	mockUpdater.On("Update", []byte("step3: step2: step1: original")).Return()
+	mockUpdater.On("Update", []byte("step3: step2: step1: original"), "").Return()
 
 	updater := NewSubscriptionEventUpdater(
 		config,
@@ -421,7 +421,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleBeforeEventsDispatchHooksCh
 	mu.Unlock()
 
 	// Verify final modified events were sent to Update
-	mockUpdater.AssertCalled(t, "Update", []byte("step3: step2: step1: original"))
+	mockUpdater.AssertCalled(t, "Update", []byte("step3: step2: step1: original"), "")
 	mockUpdater.AssertNumberOfCalls(t, "Update", 1)
 }
 
@@ -659,7 +659,7 @@ func TestSubscriptionEventUpdater_Update_WithBeforeEventsDispatchHooks_SuccessHa
 	}
 
 	subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
-	mockUpdater.On("UpdateSubscription", subId, []byte("modified by broadcast hook")).Return()
+	mockUpdater.On("UpdateSubscription", subId, []byte("modified by broadcast hook"), "").Return()
 	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
 		context.Background(): subId,
 	})
@@ -688,7 +688,7 @@ func TestSubscriptionEventUpdater_Update_WithBeforeEventsDispatchHooks_SuccessHa
 		t.Fatal("timeout waiting for OnReceiveEvents hook to be called")
 	}
 
-	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("modified by broadcast hook"))
+	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("modified by broadcast hook"), "")
 	mockUpdater.AssertNotCalled(t, "Update")
 }
 

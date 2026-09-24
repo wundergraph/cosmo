@@ -142,6 +142,11 @@ func (e *MutableEngineEvent) Clone() datasource.MutableStreamEvent {
 	return &MutableEngineEvent{data: slices.Clone(e.data)}
 }
 
+// Cursor implements datasource.StreamEvent. Engine events do not support cursors.
+func (e *MutableEngineEvent) GetCursor() string {
+	return ""
+}
+
 // EngineEvent is the event used to write to the engine subscription
 type EngineEvent struct {
 	evt *MutableEngineEvent
@@ -159,6 +164,11 @@ func (e *EngineEvent) Clone() datasource.MutableStreamEvent {
 		return &MutableEngineEvent{}
 	}
 	return e.evt.Clone()
+}
+
+// Cursor implements datasource.StreamEvent. Engine events do not support cursors.
+func (e *EngineEvent) Cursor() string {
+	return ""
 }
 
 type engineSubscriptionOnStartHookContext struct {

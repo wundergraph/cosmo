@@ -19,6 +19,7 @@ type Event struct {
 	evt *MutableEvent
 }
 
+// GetData implements datasource.StreamEvent.
 func (e *Event) GetData() []byte {
 	if e.evt == nil {
 		return nil
@@ -40,6 +41,15 @@ func (e *Event) GetHeaders() map[string][]byte {
 	return cloneHeaders(e.evt.Headers)
 }
 
+// Cursor implements datasource.StreamEvent.
+func (e *Event) GetCursor() string {
+	if e.evt == nil {
+		return ""
+	}
+	return e.evt.Cursor
+}
+
+// Clone implements datasource.StreamEvent.
 func (e Event) Clone() datasource.MutableStreamEvent {
 	return e.evt.Clone()
 }
@@ -60,6 +70,7 @@ type MutableEvent struct {
 	Key     []byte            `json:"key"`
 	Data    json.RawMessage   `json:"data"`
 	Headers map[string][]byte `json:"headers"`
+	Cursor  string            `json:"-"`
 }
 
 func (e *MutableEvent) GetData() []byte {
@@ -83,17 +94,58 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 	return &e2
 }
 
+// Cursor implements datasource.StreamEvent.
+func (e *MutableEvent) GetCursor() string {
+	if e == nil {
+		return ""
+	}
+	return e.Cursor
+}
+
 // SubscriptionEventConfiguration is a public type that is used to allow access to custom fields
 // of the provider
 type SubscriptionEventConfiguration struct {
 	Provider  string   `json:"providerId"`
 	Topics    []string `json:"topics"`
 	FieldName string   `json:"rootFieldName"`
+
+	// Body mirrors the request extensions the resolver merges into the subscription
+	// input at body.extensions. Nil on the planner rendered input template.
+	Body *requestBody `json:"body,omitempty"`
+}
+
+// requestBody is the opt-in / resume-cursor request extensions, deliberately
+// unversioned and unauthenticated for this prototype (see plan's Known
+// limitations).
+type requestBody struct {
+	Extensions struct {
+		DeliveryGuarantee string `json:"delivery-guarantee"`
+		Cursor            string `json:"cursor"`
+	} `json:"extensions"`
 }
 
 // ProviderID returns the provider ID
 func (s *SubscriptionEventConfiguration) ProviderID() string {
 	return s.Provider
+}
+
+// WantsCursors reports whether the client opted in to cursor-resume delivery,
+// i.e. requested delivery-guarantee "cursor". No negotiation or fallback list
+// in this prototype.
+func (s *SubscriptionEventConfiguration) WantsCursors() bool {
+	if s.Body == nil {
+		return false
+	}
+	return s.Body.Extensions.DeliveryGuarantee == "cursor"
+}
+
+// ResumeCursor returns the cursor the client presented to resume from, or an empty string
+// if none was given.
+func (s *SubscriptionEventConfiguration) ResumeCursor() string {
+	if s.Body == nil {
+		return ""
+	}
+	return s.Body.Extensions.Cursor
 }
 
 // ProviderType returns the provider type

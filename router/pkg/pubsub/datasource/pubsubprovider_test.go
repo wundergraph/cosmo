@@ -28,6 +28,10 @@ func (e mutableTestEvent) SetData(data []byte) {
 	copy(e, data)
 }
 
+func (e mutableTestEvent) GetCursor() string {
+	return ""
+}
+
 type testEvent struct {
 	evt mutableTestEvent
 }
@@ -38,6 +42,10 @@ func (e *testEvent) GetData() []byte {
 
 func (e *testEvent) Clone() MutableStreamEvent {
 	return e.evt.Clone()
+}
+
+func (e *testEvent) GetCursor() string {
+	return ""
 }
 
 type testSubscriptionConfig struct {

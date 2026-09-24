@@ -36,6 +36,11 @@ func (e Event) Clone() datasource.MutableStreamEvent {
 	return e.evt.Clone()
 }
 
+// Cursor implements datasource.StreamEvent. NATS events do not support cursors for now.
+func (e *Event) GetCursor() string {
+	return ""
+}
+
 type MutableEvent struct {
 	Data    json.RawMessage     `json:"data"`
 	Headers map[string][]string `json:"headers"`
@@ -67,6 +72,11 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 
 func (e *MutableEvent) ToStreamEvent() datasource.StreamEvent {
 	return &Event{evt: e}
+}
+
+// Cursor implements datasource.StreamEvent. NATS events do not support cursors.
+func (e *MutableEvent) GetCursor() string {
+	return ""
 }
 
 func cloneHeaders(src map[string][]string) map[string][]string {

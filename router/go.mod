@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.21.0
+	github.com/wundergraph/graphql-go-tools/v2 v2.21.1-0.20260921145308-f0b1b518096e
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.44.0
@@ -83,6 +83,7 @@ require (
 	github.com/prometheus/otlptranslator v1.0.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
+	github.com/twmb/franz-go/pkg/kmsg v1.7.0
 	github.com/wundergraph/astjson v1.1.0
 	github.com/wundergraph/go-arena v1.3.0
 	go.uber.org/goleak v1.3.0
@@ -159,7 +160,6 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
-	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect

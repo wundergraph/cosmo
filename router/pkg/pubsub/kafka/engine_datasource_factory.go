@@ -69,7 +69,6 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 		if err != nil {
 			return err
 		}
-
 		_, err = xxh.Write(val)
 		if err != nil {
 			return err
@@ -79,9 +78,29 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 		if err != nil {
 			return err
 		}
-
 		_, err = xxh.Write(val)
-		return err
+		if err != nil {
+			return err
+		}
+
+		// if cursor and deliver-guarantee exist use them, too.
+		val, _, _, err = jsonparser.Get(input, "body", "extensions", "cursor")
+		if err == nil {
+			_, err = xxh.Write(val)
+			if err != nil {
+				return err
+			}
+		}
+
+		val, _, _, err = jsonparser.Get(input, "body", "extensions", "delivery-guarantee")
+		if err == nil {
+			_, err = xxh.Write(val)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}
 
 	eventCreateFn := func(data []byte) datasource.MutableStreamEvent {
