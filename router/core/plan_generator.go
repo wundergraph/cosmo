@@ -464,7 +464,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	// this is the GraphQL Schema that we will expose from our API
 	definition, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
 	if report.HasErrors() {
-		return fmt.Errorf("failed to parse graphql schema from engine config: %w", report)
+		return fmt.Errorf("failed to parse graphql schema from engine config: %w", &report)
 	}
 
 	// we need to merge the base schema, it contains the __schema and __type queries
@@ -478,7 +478,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	if clientSchemaStr := routerConfig.GetEngineConfig().GetGraphqlClientSchema(); clientSchemaStr != "" {
 		clientSchema, report := astparser.ParseGraphqlDocumentString(clientSchemaStr)
 		if report.HasErrors() {
-			return fmt.Errorf("failed to parse graphql client schema from engine config: %w", report)
+			return fmt.Errorf("failed to parse graphql client schema from engine config: %w", &report)
 		}
 		err = asttransform.MergeDefinitionWithBaseSchema(&clientSchema)
 		if err != nil {
