@@ -50,5 +50,6 @@ data:
   s3ForcePathStyle: "{{ .Values.configuration.s3ForcePathStyle }}"
   {{ end }}
   {{- if .Values.configuration.promptToQuery.enabled }}
+  promptToQueryAddress: "{{ .Values.configuration.promptToQuery.address }}"
   promptToQueryHttpVersion: "{{ .Values.configuration.promptToQuery.httpVersion }}"
   {{ end }}

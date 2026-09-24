@@ -360,8 +360,8 @@ spec:
             {{- if .Values.configuration.promptToQuery.enabled }}
             - name: PROMPT_TO_QUERY_SERVICE_ENDPOINT
               valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
                   key: promptToQueryAddress
             - name: PROMPT_TO_QUERY_HTTP_VERSION
               valueFrom:
