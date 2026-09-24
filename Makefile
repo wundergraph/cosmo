@@ -73,8 +73,7 @@ endif
 .PHONY: tidy-all
 tidy-all:
 	find . -name 'go.mod' | while read -r mod; do \
-		pushd "$$(dirname "$$mod")" && go mod tidy; \
-		popd; \
+		(cd "$$(dirname "$$mod")" && go mod tidy) || exit 1; \
 	done
 
 seed:
