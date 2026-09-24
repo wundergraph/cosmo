@@ -1,6 +1,3 @@
-# Give everyone ownership for everything exceptions listed below
-*                   @wundergraph/Cosmo @wundergraph/Router
-
 # Protect the CODEOWNERS file
 /.github/CODEOWNERS @wundergraph/Owners
 
