@@ -368,7 +368,8 @@
       "ScopeClaim": "scope",
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
-      "HeaderSources": null
+      "HeaderSources": null,
+      "OnError": "reject"
     },
     "IgnoreIntrospection": false
   },
@@ -464,7 +465,8 @@
       "Name": "Cache-Tag",
       "Delimiter": ",",
       "MaxBytes": 16384
-    }
+    },
+    "PrivateID": ""
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,
