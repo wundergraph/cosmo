@@ -37,7 +37,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/exporter"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -1205,19 +1204,12 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 		return nil
 	}
 
-	// Validate the TTL during startup to avoid additional checks during execution.
-	if r.responseCacheConfig.FallbackTTL <= 0 {
-		return fmt.Errorf("response cache is enabled but its fallback_ttl is %s, which must be greater than zero", r.responseCacheConfig.FallbackTTL)
+	if err := validateResponseCacheSubgraphs(r.responseCacheConfig, r.logger); err != nil {
+		return err
 	}
 	if err := validateResponseCacheTagHeader(r.responseCacheConfig.TagHeader); err != nil {
 		return err
 	}
-	// The graph server compiles private_id again with its own manager; this
-	// compile only refuses a bad expression before any store is built.
-	if _, err := newResponseCachePrivateID(r.responseCacheConfig, expr.CreateNewExprManager()); err != nil {
-		return err
-	}
-
 	var err error
 	switch provider := r.responseCacheConfig.Storage.Provider; provider {
 	case "", config.ResponseCacheStorageProviderRedis:
@@ -1291,7 +1283,8 @@ func (r *Router) setupInMemoryResponseCache() error {
 
 	r.logger.Info(
 		"Response cache enabled",
-		zap.Duration("fallback_ttl", r.responseCacheConfig.FallbackTTL),
+		zap.Duration("fallback_ttl", r.responseCacheConfig.All.FallbackTTL),
+		zap.Int("subgraph_overrides", len(r.responseCacheConfig.Subgraphs)),
 		zap.String("storage_provider", string(config.ResponseCacheStorageProviderMemory)),
 		zap.Int64("max_entries", r.responseCacheConfig.Storage.MaxEntries),
 	)
@@ -1342,7 +1335,8 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 
 	r.logger.Info(
 		"Response cache enabled",
-		zap.Duration("fallback_ttl", r.responseCacheConfig.FallbackTTL),
+		zap.Duration("fallback_ttl", r.responseCacheConfig.All.FallbackTTL),
+		zap.Int("subgraph_overrides", len(r.responseCacheConfig.Subgraphs)),
 		zap.String("storage_provider", string(config.ResponseCacheStorageProviderRedis)),
 		zap.String("key_prefix", r.responseCacheConfig.KeyPrefix),
 		zap.String("storage_provider_id", providerID),

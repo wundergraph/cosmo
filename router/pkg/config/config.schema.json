@@ -3390,23 +3390,21 @@
           "description": "Enable response caching.",
           "default": false
         },
-        "fallback_ttl": {
-          "type": "string",
-          "format": "go-duration",
-          "description": "How long a response is kept when its Cache-Control header contains public, must-revalidate, proxy-revalidate, stale-if-error or stale-while-revalidate without max-age or s-maxage. The stale directives require valid durations. An explicit s-maxage takes precedence over max-age, and both override this fallback. No-store, no-cache, invalid durations or a zero selected lifetime prevent caching; private follows the same lifetime rules but is only stored when a private_id resolves. Missing, empty or unrecognized-only Cache-Control headers never use this fallback. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
-          "default": "30s",
-          "duration": {
-            "minimum": "1s"
-          }
-        },
         "key_prefix": {
           "type": "string",
           "description": "Prepended to every cache key so response cache entries cannot collide with anything else sharing the Redis instance. Applies to the 'redis' storage provider only: the 'memory' storage provider shares its keyspace with nothing and ignores this.",
           "default": "cosmo_response_cache:"
         },
-        "private_id": {
-          "type": "string",
-          "description": "An expression, evaluated per request, that yields the id of the private context the request belongs to, such as a user or a tenant, e.g. request.auth.claims.sub or request.header.Get('X-User-Id'). A subgraph response whose Cache-Control header contains private is then cached under a key partitioned by that id, so each context is served its own entry and requests sharing an id share it. When the expression yields nothing, for example an anonymous request, private responses are not cached. Public responses are unaffected. The expression must evaluate to a string; see https://expr-lang.org/docs/language-definition for the syntax."
+        "all": {
+          "description": "What the cache does for every subgraph that has no entry of its own under 'subgraphs'.",
+          "$ref": "#/$defs/response_cache_subgraph_all"
+        },
+        "subgraphs": {
+          "type": "object",
+          "description": "Per-subgraph settings. Each key is a subgraph name. An entry fully overrides 'all' for that subgraph and is explicit: nothing is inherited from 'all' and nothing is defaulted. An entry without 'enabled: true' does not cache that subgraph, an enabled entry must name a 'fallback_ttl' or startup fails, and an entry without 'private_id' does not cache that subgraph's private responses even when 'all' names one.",
+          "additionalProperties": {
+            "$ref": "#/$defs/response_cache_subgraph_entry"
+          }
         },
         "storage": {
           "type": "object",
@@ -4824,6 +4822,54 @@
           }
         }
       ]
+    },
+    "response_cache_subgraph_all": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What the response cache does for every subgraph without an entry of its own.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Cache subgraph responses. Set to false to cache only the subgraphs whose entry under 'subgraphs' enables it.",
+          "default": true
+        },
+        "fallback_ttl": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "How long a response is kept when its Cache-Control header contains public, must-revalidate, proxy-revalidate, stale-if-error or stale-while-revalidate without max-age or s-maxage. The stale directives require valid durations. An explicit s-maxage takes precedence over max-age, and both override this fallback. No-store, no-cache, invalid durations or a zero selected lifetime prevent caching; private follows the same lifetime rules but is only stored when a private_id resolves. Missing, empty or unrecognized-only Cache-Control headers never use this fallback. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
+          "default": "30s",
+          "duration": {
+            "minimum": "1s"
+          }
+        },
+        "private_id": {
+          "type": "string",
+          "description": "An expression, evaluated per request, that yields the id of the private context the request belongs to, such as a user or a tenant, e.g. request.auth.claims.sub or request.header.Get('X-User-Id'). A subgraph response whose Cache-Control header contains private is then cached under a key partitioned by that id, so each context is served its own entry and requests sharing an id share it. When the expression yields nothing, for example an anonymous request, private responses are not cached. Public responses are unaffected. The expression must evaluate to a string; see https://expr-lang.org/docs/language-definition for the syntax."
+        }
+      }
+    },
+    "response_cache_subgraph_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What the response cache does for one subgraph. Explicit: no key is defaulted or inherited from 'all'.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Cache this subgraph's responses. Omitted means false."
+        },
+        "fallback_ttl": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "How long a response of this subgraph is kept when its Cache-Control header asks for caching without a max-age or s-maxage, under the same rules as 'all.fallback_ttl'. Required when 'enabled' is true. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
+          "duration": {
+            "minimum": "1s"
+          }
+        },
+        "private_id": {
+          "type": "string",
+          "description": "An expression yielding the id of the private context a request belongs to, under the same rules as 'all.private_id', for this subgraph alone. Omitted means this subgraph's private responses are not cached, whatever 'all' names."
+        }
+      }
     },
     "traffic_shaping_subgraph_request_rule": {
       "type": "object",
