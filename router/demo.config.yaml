@@ -5,22 +5,6 @@
 
 version: "1"
 
-
-telemetry:
-  service_name: cosmo-router
-  metrics:
-    experiment_cardinality_limit: 2000
-    prometheus:
-      enabled: true
-      path: /metrics
-      listen_addr: localhost:8088
-      graphql_cache: false
-      connection_stats: false
-      streams: false
-      circuit_breaker: false
-      exclude_scope_info: false
-      exemplar_filter: always_off
-
 events:
   providers:
     nats:
