@@ -1432,7 +1432,7 @@ func (o *OperationKit) ValidateQueryComplexity() (ok bool, cacheEntry Complexity
 	globalComplexity, rootFieldStats := estimator.Do(o.kit.doc, o.operationProcessor.executor.ClientSchema, &report)
 	cacheResult := ComplexityCacheEntry{
 		Depth:       globalComplexity.Depth,
-		TotalFields: globalComplexity.NodeCount,
+		TotalFields: globalComplexity.FieldCount,
 	}
 	for _, entry := range rootFieldStats {
 		if entry.Alias == "" {
