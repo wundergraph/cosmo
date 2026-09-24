@@ -21,14 +21,14 @@ func TestComplexityLimits(t *testing.T) {
 	t.Parallel()
 	t.Run("old max query depth configuration still works", func(t *testing.T) {
 		t.Parallel()
-		t.Run("max query depth of 0 doesn't block", func(t *testing.T) {
+		t.Run("disabled max query depth does not block", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					if securityConfiguration.DepthLimit == nil {
 						securityConfiguration.DepthLimit = &config.QueryDepthConfiguration{}
 					}
-					securityConfiguration.DepthLimit.Enabled = true
+					securityConfiguration.DepthLimit.Enabled = false
 					securityConfiguration.DepthLimit.Limit = 0
 					securityConfiguration.DepthLimit.CacheSize = 1024
 				},
@@ -199,22 +199,27 @@ func TestComplexityLimits(t *testing.T) {
 
 		t.Run("max query depth blocks queries over the limit", func(t *testing.T) {
 			t.Parallel()
-			testenv.Run(t, &testenv.Config{
-				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					if securityConfiguration.DepthLimit == nil {
-						securityConfiguration.DepthLimit = &config.QueryDepthConfiguration{}
-					}
-					securityConfiguration.DepthLimit.Enabled = true
-					securityConfiguration.DepthLimit.Limit = 2
-					securityConfiguration.DepthLimit.CacheSize = 1024
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-					Query: `{ employee(id:1) { id details { forename surname } } }`,
+			for _, limit := range []int{0, 2} {
+				t.Run(fmt.Sprintf("limit %d", limit), func(t *testing.T) {
+					t.Parallel()
+					testenv.Run(t, &testenv.Config{
+						ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+							if securityConfiguration.DepthLimit == nil {
+								securityConfiguration.DepthLimit = &config.QueryDepthConfiguration{}
+							}
+							securityConfiguration.DepthLimit.Enabled = true
+							securityConfiguration.DepthLimit.Limit = limit
+							securityConfiguration.DepthLimit.CacheSize = 1024
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+						res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+							Query: `{ employee(id:1) { id details { forename surname } } }`,
+						})
+						require.Equal(t, 400, res.Response.StatusCode)
+						require.Equal(t, fmt.Sprintf(`{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (%d)"}]}`, limit), res.Body)
+					})
 				})
-				require.Equal(t, 400, res.Response.StatusCode)
-				require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}]}`, res.Body)
-			})
+			}
 		})
 
 		t.Run("max query depth blocks persisted queries over the limit", func(t *testing.T) {
@@ -339,22 +344,27 @@ func TestComplexityLimits(t *testing.T) {
 		t.Parallel()
 		t.Run("depth limit blocks queries over the limit", func(t *testing.T) {
 			t.Parallel()
-			testenv.Run(t, &testenv.Config{
-				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
-						Depth: &config.ComplexityLimit{
-							Enabled: true,
-							Limit:   2,
+			for _, limit := range []int{0, 2} {
+				t.Run(fmt.Sprintf("limit %d", limit), func(t *testing.T) {
+					t.Parallel()
+					testenv.Run(t, &testenv.Config{
+						ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+							securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+								Depth: &config.ComplexityLimit{
+									Enabled: true,
+									Limit:   limit,
+								},
+							}
 						},
-					}
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-					Query: `{ employee(id:1) { id details { forename surname } } }`,
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+						res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+							Query: `{ employee(id:1) { id details { forename surname } } }`,
+						})
+						require.Equal(t, 400, res.Response.StatusCode)
+						require.Equal(t, fmt.Sprintf(`{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (%d)"}]}`, limit), res.Body)
+					})
 				})
-				require.Equal(t, 400, res.Response.StatusCode)
-				require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}]}`, res.Body)
-			})
+			}
 		})
 
 		t.Run("depth limit blocks persisted queries over the limit", func(t *testing.T) {
@@ -389,7 +399,7 @@ func TestComplexityLimits(t *testing.T) {
 					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
 						Depth: &config.ComplexityLimit{
 							Enabled:                   true,
-							Limit:                     2,
+							Limit:                     0,
 							IgnorePersistedOperations: true,
 						},
 					}
@@ -414,22 +424,27 @@ func TestComplexityLimits(t *testing.T) {
 
 		t.Run("total fields limit blocks queries over the limit", func(t *testing.T) {
 			t.Parallel()
-			testenv.Run(t, &testenv.Config{
-				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
-						TotalFields: &config.ComplexityLimit{
-							Enabled: true,
-							Limit:   4,
+			for _, limit := range []int{0, 1, 4} {
+				t.Run(fmt.Sprintf("limit %d", limit), func(t *testing.T) {
+					t.Parallel()
+					testenv.Run(t, &testenv.Config{
+						ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+							securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+								TotalFields: &config.ComplexityLimit{
+									Enabled: true,
+									Limit:   limit,
+								},
+							}
 						},
-					}
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-					Query: `{ employee(id:1) { id details { forename surname } } }`,
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+						res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+							Query: `{ employee(id:1) { id details { forename surname } } }`,
+						})
+						require.Equal(t, 400, res.Response.StatusCode)
+						require.Equal(t, fmt.Sprintf(`{"errors":[{"message":"The total number of fields 5 exceeds the limit allowed (%d)"}]}`, limit), res.Body)
+					})
 				})
-				require.Equal(t, 400, res.Response.StatusCode)
-				require.Equal(t, `{"errors":[{"message":"The total number of fields 5 exceeds the limit allowed (4)"}]}`, res.Body)
-			})
+			}
 		})
 
 		t.Run("total fields allows queries at the limit", func(t *testing.T) {
@@ -515,22 +530,27 @@ func TestComplexityLimits(t *testing.T) {
 
 		t.Run("root fields limit blocks queries over the limit", func(t *testing.T) {
 			t.Parallel()
-			testenv.Run(t, &testenv.Config{
-				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
-						RootFields: &config.ComplexityLimit{
-							Enabled: true,
-							Limit:   2,
+			for _, limit := range []int{0, 2} {
+				t.Run(fmt.Sprintf("limit %d", limit), func(t *testing.T) {
+					t.Parallel()
+					testenv.Run(t, &testenv.Config{
+						ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+							securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+								RootFields: &config.ComplexityLimit{
+									Enabled: true,
+									Limit:   limit,
+								},
+							}
 						},
-					}
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-					Query: `query { initialPayload employee(id:1) { id } employees { id } }`,
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+						res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+							Query: `query { initialPayload employee(id:1) { id } employees { id } }`,
+						})
+						require.Equal(t, 400, res.Response.StatusCode)
+						require.Equal(t, fmt.Sprintf(`{"errors":[{"message":"The number of root fields 3 exceeds the root field limit allowed (%d)"}]}`, limit), res.Body)
+					})
 				})
-				require.Equal(t, 400, res.Response.StatusCode)
-				require.Equal(t, `{"errors":[{"message":"The number of root fields 3 exceeds the root field limit allowed (2)"}]}`, res.Body)
-			})
+			}
 		})
 
 		t.Run("root fields allows queries under the limit", func(t *testing.T) {
@@ -558,41 +578,66 @@ func TestComplexityLimits(t *testing.T) {
 
 		t.Run("root field aliases limit blocks queries over the limit", func(t *testing.T) {
 			t.Parallel()
-			testenv.Run(t, &testenv.Config{
-				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
-						RootFieldAliases: &config.ComplexityLimit{
-							Enabled: true,
-							Limit:   1,
+			for _, limit := range []int{0, 1} {
+				t.Run(fmt.Sprintf("limit %d", limit), func(t *testing.T) {
+					t.Parallel()
+					testenv.Run(t, &testenv.Config{
+						ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+							securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+								RootFieldAliases: &config.ComplexityLimit{
+									Enabled: true,
+									Limit:   limit,
+								},
+							}
 						},
-					}
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-					Query: `query { firstemployee: employee(id:1) { id } employee2: employee(id:2) { id } }`,
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+						res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+							Query: `query { firstemployee: employee(id:1) { id } employee2: employee(id:2) { id } }`,
+						})
+						require.Equal(t, 400, res.Response.StatusCode)
+						require.Equal(t, fmt.Sprintf(`{"errors":[{"message":"The number of root field aliases 2 exceeds the root field aliases limit allowed (%d)"}]}`, limit), res.Body)
+					})
 				})
-				require.Equal(t, 400, res.Response.StatusCode)
-				require.Equal(t, `{"errors":[{"message":"The number of root field aliases 2 exceeds the root field aliases limit allowed (1)"}]}`, res.Body)
-			})
+			}
 		})
 
 		t.Run("root field aliases allows queries under the limit", func(t *testing.T) {
 			t.Parallel()
-			testenv.Run(t, &testenv.Config{
-				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
-						RootFieldAliases: &config.ComplexityLimit{
-							Enabled: true,
-							Limit:   2,
-						},
-					}
+			testCases := []struct {
+				limit int
+				query string
+				body  string
+			}{
+				{
+					limit: 2,
+					query: `query { firstemployee: employee(id:1) { id } employee2: employee(id:2) { id } }`,
+					body:  `{"data":{"firstemployee":{"id":1},"employee2":{"id":2}}}`,
 				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `query { firstemployee: employee(id:1) { id } employee2: employee(id:2) { id } }`,
+				{
+					limit: 0,
+					query: `query { employee(id:1) { employeeId: id } }`,
+					body:  `{"data":{"employee":{"employeeId":1}}}`,
+				},
+			}
+
+			for _, tc := range testCases {
+				t.Run(fmt.Sprintf("limit %d", tc.limit), func(t *testing.T) {
+					t.Parallel()
+					testenv.Run(t, &testenv.Config{
+						ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+							securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+								RootFieldAliases: &config.ComplexityLimit{
+									Enabled: true,
+									Limit:   tc.limit,
+								},
+							}
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+						res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: tc.query})
+						require.JSONEq(t, tc.body, res.Body)
+					})
 				})
-				require.Equal(t, `{"data":{"firstemployee":{"id":1},"employee2":{"id":2}}}`, res.Body)
-			})
+			}
 		})
 	})
 
@@ -607,7 +652,7 @@ func TestComplexityLimits(t *testing.T) {
 						Mode: config.ComplexityLimitsModeMeasure,
 						Depth: &config.ComplexityLimit{
 							Enabled: true,
-							Limit:   2,
+							Limit:   0,
 						},
 					}
 				},
@@ -627,7 +672,7 @@ func TestComplexityLimits(t *testing.T) {
 						Mode: config.ComplexityLimitsModeMeasure,
 						TotalFields: &config.ComplexityLimit{
 							Enabled: true,
-							Limit:   1,
+							Limit:   0,
 						},
 					}
 				},
@@ -647,7 +692,7 @@ func TestComplexityLimits(t *testing.T) {
 						Mode: config.ComplexityLimitsModeMeasure,
 						RootFields: &config.ComplexityLimit{
 							Enabled: true,
-							Limit:   2,
+							Limit:   0,
 						},
 					}
 				},
@@ -667,7 +712,7 @@ func TestComplexityLimits(t *testing.T) {
 						Mode: config.ComplexityLimitsModeMeasure,
 						RootFieldAliases: &config.ComplexityLimit{
 							Enabled: true,
-							Limit:   1,
+							Limit:   0,
 						},
 					}
 				},

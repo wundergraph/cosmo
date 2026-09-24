@@ -373,6 +373,7 @@ headers:
 authentication:
   ignore_introspection: false
   jwt:
+    on_error: continue
     jwks:
       - url: 'https://example.com/.well-known/jwks.json'
         refresh_interval: 1m
@@ -562,6 +563,7 @@ response_cache:
     name: 'Surrogate-Key'
     delimiter: ' '
     max_bytes: 1024
+  private_id: "request.auth.claims.sub"
 
 security:
   complexity_calculation_cache:

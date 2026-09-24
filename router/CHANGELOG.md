@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.352.0](https://github.com/wundergraph/cosmo/compare/router@0.351.0...router@0.352.0) (2026-09-23)
+
+### Features
+
+* private caching ([#3244](https://github.com/wundergraph/cosmo/issues/3244)) ([27cde1e](https://github.com/wundergraph/cosmo/commit/27cde1ed351364efb3b4d7c8115907dde18e84fd)) (@SkArchon)
+* response cache Vary support ([#3256](https://github.com/wundergraph/cosmo/issues/3256)) ([3376562](https://github.com/wundergraph/cosmo/commit/33765624c69c68830866c2f043ebfc2d39fb5c06)) (@SkArchon)
+* **router:** configure authentication error handling ([#3234](https://github.com/wundergraph/cosmo/issues/3234)) ([123c10c](https://github.com/wundergraph/cosmo/commit/123c10c591058e4bfb7cb4e4aebfc0b4aa410b84)) (@fiam)
+
 # [0.351.0](https://github.com/wundergraph/cosmo/compare/router@0.350.0...router@0.351.0) (2026-09-23)
 
 ### Features
