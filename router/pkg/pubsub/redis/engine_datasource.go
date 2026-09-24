@@ -29,8 +29,8 @@ func (e *Event) Clone() datasource.MutableStreamEvent {
 	return e.evt.Clone()
 }
 
-// Cursor implements datasource.StreamEvent. Redis events do not support cursors.
-func (e *Event) Cursor() string {
+// Cursor implements datasource.StreamEvent. Redis events do not support cursors for now.
+func (e *Event) GetCursor() string {
 	return ""
 }
 
@@ -62,8 +62,8 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 	}
 }
 
-// Cursor implements datasource.StreamEvent. Redis events do not support cursors.
-func (e *MutableEvent) Cursor() string {
+// Cursor implements datasource.StreamEvent. Redis events do not support cursors for now.
+func (e *MutableEvent) GetCursor() string {
 	return ""
 }
 

@@ -36,8 +36,8 @@ func (e Event) Clone() datasource.MutableStreamEvent {
 	return e.evt.Clone()
 }
 
-// Cursor implements datasource.StreamEvent. NATS events do not support cursors.
-func (e *Event) Cursor() string {
+// Cursor implements datasource.StreamEvent. NATS events do not support cursors for now.
+func (e *Event) GetCursor() string {
 	return ""
 }
 
@@ -75,7 +75,7 @@ func (e *MutableEvent) ToStreamEvent() datasource.StreamEvent {
 }
 
 // Cursor implements datasource.StreamEvent. NATS events do not support cursors.
-func (e *MutableEvent) Cursor() string {
+func (e *MutableEvent) GetCursor() string {
 	return ""
 }
 

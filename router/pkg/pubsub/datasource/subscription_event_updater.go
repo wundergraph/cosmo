@@ -45,7 +45,7 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 			if event == nil {
 				continue
 			}
-			s.eventUpdater.Update(event.GetData(), event.Cursor())
+			s.eventUpdater.Update(event.GetData(), event.GetCursor())
 		}
 		return
 	}
@@ -187,7 +187,7 @@ func (s *subscriptionEventUpdater) updateSubscription(subscriptionCtx context.Co
 		if event == nil {
 			continue
 		}
-		s.eventUpdater.UpdateSubscription(subID, event.GetData(), event.Cursor())
+		s.eventUpdater.UpdateSubscription(subID, event.GetData(), event.GetCursor())
 	}
 
 	// In case there was an error we close the affected subscription.

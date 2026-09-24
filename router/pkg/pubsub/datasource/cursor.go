@@ -6,17 +6,24 @@ import (
 	"fmt"
 )
 
-// Cursor is the provider-agnostic envelope for an opaque resume cursor. It is
-// serialized as base64url(json) and handed to the client in the response
-// extensions of every event, and accepted back from the client on reconnect.
+// Cursor is provider-agnostic position information for subscription messages. It is
+// handed to the client in the response extensions of every event,
+// and accepted back from the client on reconnect.
 type Cursor struct {
-	ProviderType ProviderType    `json:"providerType"`
-	ProviderID   string          `json:"providerId"`
-	IssuedAt     int64           `json:"issuedAt"`
-	Position     json.RawMessage `json:"position"`
+	// The message broker type like "kafka" or "nats-jetstream".
+	ProviderType ProviderType `json:"providerType"`
+
+	// The provider id as specified in the router config.
+	ProviderID string `json:"providerId"`
+
+	// Unix timestamp of the creation date of this cursor.
+	IssuedAt int64 `json:"issuedAt"`
+
+	// The actual message position in the broker encoded as json. The format is provider-agnostic.
+	Position json.RawMessage `json:"position"`
 }
 
-// MarshalCursor serializes a Cursor to its wire representation.
+// MarshalCursor serializes a Cursor to its wire representation (base64 encoded json).
 func MarshalCursor(c Cursor) (string, error) {
 	data, err := json.Marshal(c)
 	if err != nil {

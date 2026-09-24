@@ -28,7 +28,7 @@ func (e mutableTestEvent) SetData(data []byte) {
 	copy(e, data)
 }
 
-func (e mutableTestEvent) Cursor() string {
+func (e mutableTestEvent) GetCursor() string {
 	return ""
 }
 
@@ -44,7 +44,7 @@ func (e *testEvent) Clone() MutableStreamEvent {
 	return e.evt.Clone()
 }
 
-func (e *testEvent) Cursor() string {
+func (e *testEvent) GetCursor() string {
 	return ""
 }
 

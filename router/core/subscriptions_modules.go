@@ -143,7 +143,7 @@ func (e *MutableEngineEvent) Clone() datasource.MutableStreamEvent {
 }
 
 // Cursor implements datasource.StreamEvent. Engine events do not support cursors.
-func (e *MutableEngineEvent) Cursor() string {
+func (e *MutableEngineEvent) GetCursor() string {
 	return ""
 }
 

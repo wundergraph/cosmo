@@ -114,39 +114,48 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 					DestinationName:     r.Topic,
 				})
 
-				var cursor string
-				if pollerOpts.emitCursors {
-					pollerOpts.position.addOffset(r.Topic, r.Partition, r.Offset, r.LeaderEpoch)
-					pos, err := pollerOpts.position.marshal()
-					if err != nil {
-						p.logger.Error("failed to marshal cursor position, delivering event without a cursor", zap.Error(err))
-					} else {
-						cursor, err = datasource.MarshalCursor(datasource.Cursor{
-							ProviderType: datasource.ProviderTypeKafka,
-							ProviderID:   pollerOpts.providerId,
-							IssuedAt:     time.Now().UnixMilli(),
-							Position:     pos,
-						})
-						if err != nil {
-							p.logger.Error("failed to marshal cursor, delivering event without a cursor", zap.Error(err))
-							cursor = ""
-						}
-					}
-				}
-
 				updater.Update([]datasource.StreamEvent{
 					&Event{
 						evt: &MutableEvent{
-							Data:         r.Value,
-							Headers:      headers,
-							Key:          r.Key,
-							ResumeCursor: cursor,
+							Data:    r.Value,
+							Headers: headers,
+							Key:     r.Key,
+							Cursor:  p.buildCursor(r, pollerOpts),
 						},
 					},
 				})
 			}
 		}
 	}
+}
+
+// buildCursor advances the poller's cursor position with the given record's offset and
+// marshals it into a resume cursor. It returns an empty string if cursors are disabled.
+// It logs an error marshaling fails.
+func (p *ProviderAdapter) buildCursor(r *kgo.Record, pollerOpts PollerOpts) string {
+	if !pollerOpts.emitCursors {
+		return ""
+	}
+
+	pollerOpts.position.addOffset(r.Topic, r.Partition, r.Offset, r.LeaderEpoch)
+	pos, err := pollerOpts.position.marshal()
+	if err != nil {
+		p.logger.Error("failed to marshal cursor position, delivering event without a cursor", zap.Error(err))
+		return ""
+	}
+
+	cursor, err := datasource.MarshalCursor(datasource.Cursor{
+		ProviderType: datasource.ProviderTypeKafka,
+		ProviderID:   pollerOpts.providerId,
+		IssuedAt:     time.Now().UnixMilli(),
+		Position:     pos,
+	})
+	if err != nil {
+		p.logger.Error("failed to marshal cursor, delivering event without a cursor", zap.Error(err))
+		return ""
+	}
+
+	return cursor
 }
 
 // Subscribe subscribes to the given topics and updates the subscription updater.
@@ -163,7 +172,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		zap.Strings("topics", subConf.Topics),
 	)
 
-	cursorPosition := make(cursorPosition)
+	trackedPosition := make(cursorPosition)
 
 	// Create a new client for the topic
 	// Copy opts to avoid data race when multiple goroutines call Subscribe concurrently
@@ -178,7 +187,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	)
 
 	if resumeCursor := subConf.ResumeCursor(); resumeCursor != "" {
-		assignOpts, err := p.buildResumeAssignment(ctx, resumeCursor, subConf, cursorPosition)
+		assignOpts, err := p.buildResumeOpts(ctx, resumeCursor, subConf, trackedPosition)
 		if err != nil {
 			log.Error("failed to resume subscription from cursor", zap.Error(err))
 			return err
@@ -187,9 +196,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	} else {
 		opts = append(opts,
 			kgo.ConsumeTopics(subConf.Topics...),
-			// We want to consume the events produced after the first subscription was created
-			// Messages are shared among all subscriptions, therefore old events are not redelivered
-			// This replicates a stateless publish-subscribe model
+			// Consume events produced after the first subscription was created => stateless pubsub
 			kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
 		)
 	}
@@ -218,7 +225,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		err := p.topicPoller(pollerCtx, client, updater, PollerOpts{
 			providerId:  conf.ProviderID(),
 			emitCursors: subConf.WantsCursors(),
-			position:    cursorPosition,
+			position:    trackedPosition,
 		})
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
@@ -239,44 +246,51 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	return nil
 }
 
-// buildResumeAssignment decodes and validates a client-presented resume cursor, enumerates
-// every partition of every subscribed topic, and returns kgo options that resume each known
-// partition right after its cursor offset and start any newly-seen partition at the cursor's
-// issue time. It also seeds tracker so cursors emitted after resume stay complete. franz-go's
-// direct consumer treats a topic named in ConsumePartitions as exactly those partitions -- any
-// partition left out would be silently dropped for the life of the resumed subscription, hence
-// the metadata enumeration.
-//
-// A topic that does not exist yet on the broker is not a fatal error here: a fresh (non-resume)
-// subscribe via ConsumeTopics tolerates this the same way, relying on franz-go's metadata
-// refresh loop to pick the topic up once it exists. To match that, such topics are logged as a
-// warning and consumed via ConsumeTopics instead of being assigned explicit partitions, with
-// ConsumeResetOffset set to the cursor's issue time so they start where a known partition
-// without a recorded position would.
-func (p *ProviderAdapter) buildResumeAssignment(
-	ctx context.Context,
-	resumeCursor string,
-	subConf *SubscriptionEventConfiguration,
-	tracker cursorPosition) ([]kgo.Opt, error) {
+// parseCursor decodes a client-presented resume cursor, verifies it was issued for this
+// Kafka provider, and validates that every topic named in its position belongs to subConf's
+// subscription.
+func parseCursor(resumeCursor string, subConf *SubscriptionEventConfiguration) (datasource.Cursor, cursorPosition, error) {
 	cur, err := datasource.UnmarshalCursor(resumeCursor)
 	if err != nil {
-		return nil, datasource.NewError("invalid resume cursor", err)
+		return datasource.Cursor{}, nil, datasource.NewError("invalid resume cursor", err)
 	}
 	if cur.ProviderType != datasource.ProviderTypeKafka {
-		return nil, datasource.NewError("resume cursor was not issued for a Kafka provider", nil)
+		return datasource.Cursor{}, nil, datasource.NewError("resume cursor was not issued for a Kafka provider", nil)
 	}
 	if cur.ProviderID != subConf.Provider {
-		return nil, datasource.NewError("resume cursor was issued for a different provider", nil)
+		return datasource.Cursor{}, nil, datasource.NewError("resume cursor was issued for a different provider", nil)
 	}
 
 	var pos cursorPosition
 	if err := json.Unmarshal(cur.Position, &pos); err != nil {
-		return nil, datasource.NewError("invalid resume cursor position", err)
+		return datasource.Cursor{}, nil, datasource.NewError("invalid resume cursor position", err)
 	}
 	for topic := range pos {
 		if !slices.Contains(subConf.Topics, topic) {
-			return nil, datasource.NewError(fmt.Sprintf("resume cursor names topic %q which is not part of this subscription", topic), nil)
+			return datasource.Cursor{}, nil, datasource.NewError(fmt.Sprintf("resume cursor names topic %q which is not part of this subscription", topic), nil)
 		}
+	}
+
+	return cur, pos, nil
+}
+
+// buildResumeOpts builds kgo config options to resume the topic from where the cursor left off.
+// The cursor position is a list of Kafka topics. Each topic contains a list of partitions.
+// For each partition the offset has been remembered. The returned kgo options instruct the Kafka
+// client to resume on all partitions on all topics described in it.
+//
+// Since the cursor is a snapshot of the past, new topics / partitions could have been
+// added or removed.
+// New topics/partitions resume from cursor.createdAt.
+// Deleted partitions/topics are ignored. In that case the client might not get all messages.
+func (p *ProviderAdapter) buildResumeOpts(
+	ctx context.Context,
+	cursor string,
+	subConf *SubscriptionEventConfiguration,
+	trackedPosition cursorPosition) ([]kgo.Opt, error) {
+	parsedCursor, positionFromCursor, err := parseCursor(cursor, subConf)
+	if err != nil {
+		return nil, err
 	}
 
 	allPartitions, missingTopics, err := p.fetchTopicPartitions(ctx, subConf.Topics)
@@ -294,25 +308,25 @@ func (p *ProviderAdapter) buildResumeAssignment(
 	for topic, partitions := range allPartitions {
 		partAssign := make(map[int32]kgo.Offset, len(partitions))
 		for _, partition := range partitions {
-			if po, ok := pos[topic][partition]; ok {
+			if po, ok := positionFromCursor[topic][partition]; ok {
 				// Records written with an old message format report LeaderEpoch == -1,
 				// which is exactly franz-go's "no epoch" value, so it passes through
 				// unchanged here.
 				partAssign[partition] = kgo.NewOffset().At(po.Offset + 1).WithEpoch(po.Epoch)
 			} else {
-				partAssign[partition] = kgo.NewOffset().AfterMilli(cur.IssuedAt)
+				partAssign[partition] = kgo.NewOffset().AfterMilli(parsedCursor.IssuedAt)
 			}
 		}
 		assign[topic] = partAssign
 	}
 
-	tracker.merge(pos)
+	trackedPosition.merge(positionFromCursor)
 
 	opts := []kgo.Opt{kgo.ConsumePartitions(assign)}
 	if len(missingTopics) > 0 {
 		opts = append(opts,
 			kgo.ConsumeTopics(missingTopics...),
-			kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(cur.IssuedAt)),
+			kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(parsedCursor.IssuedAt)),
 		)
 	}
 

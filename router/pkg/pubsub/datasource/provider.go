@@ -88,9 +88,9 @@ type StreamEvent interface {
 	GetData() []byte
 	// Clone returns a mutable copy of the event.
 	Clone() MutableStreamEvent
-	// Cursor returns the event's resume cursor, or an empty string if the
+	// GetCursor returns the event's resume cursor, or an empty string if the
 	// event does not support cursors.
-	Cursor() string
+	GetCursor() string
 }
 
 // A MutableStreamEvent is a stream event that can be modified.

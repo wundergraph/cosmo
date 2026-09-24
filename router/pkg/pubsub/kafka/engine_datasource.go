@@ -19,6 +19,7 @@ type Event struct {
 	evt *MutableEvent
 }
 
+// GetData implements datasource.StreamEvent.
 func (e *Event) GetData() []byte {
 	if e.evt == nil {
 		return nil
@@ -41,13 +42,14 @@ func (e *Event) GetHeaders() map[string][]byte {
 }
 
 // Cursor implements datasource.StreamEvent.
-func (e *Event) Cursor() string {
+func (e *Event) GetCursor() string {
 	if e.evt == nil {
 		return ""
 	}
-	return e.evt.ResumeCursor
+	return e.evt.Cursor
 }
 
+// Clone implements datasource.StreamEvent.
 func (e Event) Clone() datasource.MutableStreamEvent {
 	return e.evt.Clone()
 }
@@ -65,10 +67,10 @@ func cloneHeaders(src map[string][]byte) map[string][]byte {
 
 // MutableEvent implements datasource.MutableEvent
 type MutableEvent struct {
-	Key          []byte            `json:"key"`
-	Data         json.RawMessage   `json:"data"`
-	Headers      map[string][]byte `json:"headers"`
-	ResumeCursor string            `json:"-"`
+	Key     []byte            `json:"key"`
+	Data    json.RawMessage   `json:"data"`
+	Headers map[string][]byte `json:"headers"`
+	Cursor  string            `json:"-"`
 }
 
 func (e *MutableEvent) GetData() []byte {
@@ -93,11 +95,11 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 }
 
 // Cursor implements datasource.StreamEvent.
-func (e *MutableEvent) Cursor() string {
+func (e *MutableEvent) GetCursor() string {
 	if e == nil {
 		return ""
 	}
-	return e.ResumeCursor
+	return e.Cursor
 }
 
 // SubscriptionEventConfiguration is a public type that is used to allow access to custom fields
