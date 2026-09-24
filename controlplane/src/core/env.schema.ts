@@ -82,6 +82,7 @@ export const envVariables = z
     /**
      * Composition workers
      */
+    COMPOSITION_MIN_THREADS: z.coerce.number().int().min(0).default(0),
     COMPOSITION_MAX_THREADS: z.coerce.number().int().min(0).default(0),
     /**
      * Auth

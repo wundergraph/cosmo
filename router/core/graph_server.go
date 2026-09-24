@@ -1816,6 +1816,12 @@ func (s *graphServer) buildGraphMux(
 		handlerOpts.ResponseCache = s.responseCache
 		handlerOpts.ResponseCacheFallbackTTL = s.responseCacheConfig.FallbackTTL
 		handlerOpts.ResponseCacheInvalidation = s.responseCacheConfig.Invalidation
+		handlerOpts.ResponseCacheTagHeader = s.responseCacheConfig.TagHeader
+
+		handlerOpts.ResponseCachePrivateID, err = newResponseCachePrivateID(s.responseCacheConfig, exprManager)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if s.redisClient != nil {

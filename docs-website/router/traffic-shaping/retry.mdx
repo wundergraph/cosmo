@@ -4,7 +4,7 @@ description: "Configure retries to increase reliability."
 icon: "arrow-rotate-left"
 ---
 
-By default, the router retries GraphQL operations of type `query` on specific network errors and HTTP status codes (502, 503, 504). We don't retry after the body is consumed. The default retry strategy is `Backoff and Jitter`. You can read more about our default retry strategy on the [AWS Architecture Blog](https://aws.amazon.com/de/blogs/architecture/exponential-backoff-and-jitter/).
+By default, the router retries GraphQL operations of type `query` on specific network errors and HTTP status codes (500, 502, 503, 504). We don't retry after the body is consumed. The default retry strategy is `Backoff and Jitter`. You can read more about our default retry strategy on the [AWS Architecture Blog](https://aws.amazon.com/de/blogs/architecture/exponential-backoff-and-jitter/).
 
 <Note>
   Mutations won't be retried because they aren't idempotent.

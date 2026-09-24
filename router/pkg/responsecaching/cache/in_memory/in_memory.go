@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -14,8 +15,28 @@ import (
 const entryCost = 1
 const maxSize = 100_000
 
+// entry is what ristretto holds: the value and the surrogateKeys a hit hands back,
+// or the vary name sets of a record.
+type entry struct {
+	value         []byte
+	surrogateKeys []string
+	vary          [][]string
+}
+
+// cloneSets copies a record's name sets, inner slices included.
+func cloneSets(sets [][]string) [][]string {
+	if len(sets) == 0 {
+		return nil
+	}
+	out := make([][]string, len(sets))
+	for i, set := range sets {
+		out[i] = slices.Clone(set)
+	}
+	return out
+}
+
 type InMemoryCache struct {
-	cache *ristretto.Cache[string, []byte]
+	cache *ristretto.Cache[string, entry]
 	// tags indexes entries by the tags they were stored under, so they can be
 	// found again by something other than their key.
 	tags *tagIndex
@@ -36,7 +57,7 @@ func NewInMemoryCache(maxEntries int64) (*InMemoryCache, error) {
 		return nil, fmt.Errorf("in memory response cache size is too large: %d", maxEntries)
 	}
 
-	cache, err := ristretto.NewCache(&ristretto.Config[string, []byte]{
+	cache, err := ristretto.NewCache(&ristretto.Config[string, entry]{
 		MaxCost:            maxEntries,
 		NumCounters:        maxEntries * 10,
 		IgnoreInternalCost: true,
@@ -77,7 +98,13 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) (map[string]
 			continue
 		}
 
-		results[key] = enginecache.Item{Key: key, Value: bytes.Clone(value), TTL: ttl}
+		results[key] = enginecache.Item{
+			Key:           key,
+			Value:         bytes.Clone(value.value),
+			TTL:           ttl,
+			SurrogateKeys: slices.Clone(value.surrogateKeys),
+			Vary:          cloneSets(value.vary),
+		}
 	}
 
 	return results, nil
@@ -113,7 +140,8 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	for _, item := range last {
 		// A write ristretto turned away is not there to be found, so indexing
 		// it would leave the tag naming an entry that never existed.
-		if c.cache.SetWithTTL(item.Key, bytes.Clone(item.Value), entryCost, item.TTL) {
+		stored := entry{value: bytes.Clone(item.Value), surrogateKeys: slices.Clone(item.SurrogateKeys), vary: cloneSets(item.Vary)}
+		if c.cache.SetWithTTL(item.Key, stored, entryCost, item.TTL) {
 			c.tags.add(item.Key, item.Tags, now.Add(item.TTL))
 		}
 	}

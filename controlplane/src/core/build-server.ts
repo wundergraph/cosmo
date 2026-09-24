@@ -74,6 +74,7 @@ import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composit
 export interface BuildConfig {
   logger: LoggerOptions;
   composition?: {
+    minThreads: number;
     maxThreads: number;
   };
   database: {
@@ -193,6 +194,7 @@ const developmentLoggerOpts: LoggerOptions = {
 
 export default async function build(opts: BuildConfig) {
   configureComposeGraphsPool({
+    minThreads: opts.composition?.minThreads ?? 0,
     maxThreads: opts.composition?.maxThreads ?? 0,
   });
 
@@ -681,7 +683,7 @@ export default async function build(opts: BuildConfig) {
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests
     compressMinBytes: 1024,
-    maxTimeoutMs: 80_000,
+    maxTimeoutMs: 120_000,
     shutdownTimeoutMs: 30_000,
     // The default limit is the maximum supported value of ~4GiB
     // We go with 32MiB to avoid allocating too much memory for large requests

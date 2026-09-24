@@ -1473,7 +1473,7 @@ func (o *OperationKit) runComplexityComparisons(complexityLimitConfig *config.Co
 	}
 
 	for _, comparison := range testComparisons {
-		valid := comparison.field <= 0 || comparison.cachedField <= comparison.field
+		valid := comparison.field < 0 || comparison.cachedField <= comparison.field
 		if !valid {
 			return &httpGraphqlError{
 				message:    comparison.errorMessage,

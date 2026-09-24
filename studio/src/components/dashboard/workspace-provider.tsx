@@ -1,4 +1,5 @@
 import { useQuery } from '@connectrpc/connect-query';
+import { useParams } from 'next/navigation';
 import { create } from '@bufbuild/protobuf';
 import { getWorkspace } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
@@ -6,7 +7,6 @@ import {
   type WorkspaceNamespace,
   WorkspaceNamespaceSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { useRouter } from 'next/router';
 import { useApplyParams } from '@/components/analytics/use-apply-params';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useOnboardingNavigation } from '@/hooks/use-onboarding-navigation';
@@ -24,12 +24,11 @@ export interface WorkspaceContextType {
 export const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
 
 export function WorkspaceProvider({ children }: React.PropsWithChildren) {
-  const router = useRouter();
   const applyParams = useApplyParams();
   const { data, isLoading } = useQuery(getWorkspace, {});
 
   // Initialize the namespace
-  const namespaceParam = router.query.namespace as string;
+  const { namespace: namespaceParam } = useParams<{ namespace: string }>();
   const [storedNamespace, setStoredNamespace] = useLocalStorage('wg-namespace', DEFAULT_NAMESPACE_NAME);
   const [namespace, setNamespace] = useState(namespaceParam || storedNamespace || DEFAULT_NAMESPACE_NAME);
   const [namespaces, setNamespaces] = useState([DEFAULT_NAMESPACE_NAME]);
@@ -40,7 +39,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
       return;
     }
 
-    const actualNamespace = (router.query.namespace as string) || namespace;
+    const actualNamespace = namespaceParam || namespace;
     const currentNamespaces = data.namespaces.map((wns) => wns.name);
     if (!currentNamespaces.some((ns) => ns.toLowerCase() === actualNamespace.toLowerCase())) {
       // The authenticated user doesn't have access to the namespace, pick between the `default` or the
@@ -60,15 +59,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
     }
 
     setNamespaces(currentNamespaces);
-  }, [
-    applyParams,
-    data?.response?.code,
-    data?.namespaces,
-    router.query.namespace,
-    namespace,
-    namespaceParam,
-    setStoredNamespace,
-  ]);
+  }, [applyParams, data?.response?.code, data?.namespaces, namespace, namespaceParam, setStoredNamespace]);
 
   // Memoize context components
   const currentNamespace = useMemo(

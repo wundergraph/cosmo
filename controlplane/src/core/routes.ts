@@ -62,7 +62,7 @@ export interface RouterOptions {
   promptToQueryClient?: Client<typeof PromptToQueryService>;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
-  maxTimeoutMs: 80_000,
+  maxTimeoutMs: 120_000,
   jsonOptions: {
     alwaysEmitImplicit: true,
   },

@@ -68,6 +68,7 @@ const {
   STRIPE_WEBHOOK_SECRET,
   DEFAULT_PLAN,
   OPENAI_API_KEY,
+  COMPOSITION_MIN_THREADS,
   COMPOSITION_MAX_THREADS,
   REDIS_HOST,
   REDIS_PORT,
@@ -103,6 +104,7 @@ const options: BuildConfig = {
     level: LOG_LEVEL as pino.LevelWithSilent,
   },
   composition: {
+    minThreads: COMPOSITION_MIN_THREADS,
     maxThreads: COMPOSITION_MAX_THREADS,
   },
   openaiAPIKey: OPENAI_API_KEY,
