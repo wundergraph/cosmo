@@ -34,7 +34,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -49,15 +48,9 @@ jobs:
       - name: Generate next release (dry-run)
         run: |
           git checkout -b release-preview
-          pnpm run release-preview --yes --no-push --no-git-tag-version
+          pnpm run release-preview --yes --no-push --no-git-tag-version --no-changelog-include-commits-client-login
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Show release preview
-        run: |
-          {
-            echo '## Release preview'
-            echo '```diff'
-            git --no-pager diff -- './*/package.json' './*/CHANGELOG.md'
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Show CHANGELOG.md
+        run: echo -e "\`\`\`diff\n$(git --no-pager diff './*/CHANGELOG.md')\n\`\`\`" >> "$GITHUB_STEP_SUMMARY"
