@@ -21,7 +21,7 @@ import { OperationsRepository } from '../../repositories/OperationsRepository.js
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
-import { UnauthorizedError } from '../../errors/errors.js';
+import { PublicError, UnauthorizedError } from '../../errors/errors.js';
 import { createBlobStoragePath } from './utils.js';
 
 const MAX_PERSISTED_OPERATIONS = 100;
@@ -61,6 +61,18 @@ export function publishPersistedOperations(
         },
         operations: [],
       };
+    }
+
+    for (const operation of req.operations) {
+      if (operation.id.length < 1 || operation.id.length > 250 || /[^A-Za-z0-9_-]/.test(operation.id)) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: 'Operation ID must contain 1–250 ASCII letters, digits, underscores, or hyphens',
+          },
+          operations: [],
+        };
+      }
     }
 
     const userId = authContext.userId;
@@ -153,169 +165,194 @@ export function publishPersistedOperations(
       }
     }
 
-    const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
-    const clientId = await operationsRepo.registerClient(req.clientName, userId);
+    return opts.db.transaction(async (tx) => {
+      const operationsRepo = new OperationsRepository(tx as typeof opts.db, federatedGraph.id);
+      if (!(await operationsRepo.lockPersistedOperations())) {
+        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Federated graph '${req.fedGraphName}' does not exist`);
+      }
+      const clientId = await operationsRepo.registerClient(req.clientName, userId);
 
-    const operations: PublishedOperation[] = [];
-    const updatedOperations: UpdatedPersistedOperation[] = [];
-    // Retrieve the operations that have already been published
-    const operationsResult = await operationsRepo.getPersistedOperations(clientId);
-    const operationsByOperationId = new Map(
-      operationsResult.map((op) => [op.operationId, { hash: op.hash, operationNames: op.operationNames }]),
-    );
+      const operations: PublishedOperation[] = [];
+      const updatedOperations: UpdatedPersistedOperation[] = [];
+      // Retrieve the operations that have already been published
+      const operationsResult = await operationsRepo.getPersistedOperations(clientId);
+      const operationsByOperationId = new Map(
+        operationsResult.map((op) => [op.operationId, { hash: op.hash, operationNames: op.operationNames }]),
+      );
 
-    // Check if adding new operations would exceed the manifest limit
-    const allExistingOperations = await operationsRepo.getAllPersistedOperationsForGraph();
-    const existingHashes = new Set(allExistingOperations.map((op) => op.hash));
-    const newOperationCount = req.operations.filter((op) => {
-      const hash = crypto.createHash('sha256').update(op.contents).digest('hex');
-      return !existingHashes.has(hash);
-    }).length;
+      // Check if adding new operations would exceed the manifest limit
+      const allExistingOperations = await operationsRepo.getAllPersistedOperationsForGraph();
+      // Include legacy registrations without stored contents in conflict checks.
+      const graphIdentities = await operationsRepo.getPersistedOperationIdentitiesForGraph();
+      const identitiesById = new Map<string, Array<{ hash: string; operationNames: string[] }>>();
+      for (const op of graphIdentities) {
+        const identities = identitiesById.get(op.operationId) ?? [];
+        identities.push({ hash: op.hash, operationNames: op.operationNames ?? [] });
+        identitiesById.set(op.operationId, identities);
+      }
+      const existingHashes = new Set(allExistingOperations.map((op) => op.hash));
+      const newOperationCount = req.operations.filter((op) => {
+        const hash = crypto.createHash('sha256').update(op.contents).digest('hex');
+        return !existingHashes.has(hash);
+      }).length;
 
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-    const operationsFeature = await orgRepo.getFeature({
-      organizationId,
-      featureId: 'persisted-operations',
-    });
-    const maxManifestOperations = operationsFeature?.limit ?? DEFAULT_MAX_MANIFEST_OPERATIONS;
+      const orgRepo = new OrganizationRepository(logger, tx as typeof opts.db, opts.billingDefaultPlanId);
+      const operationsFeature = await orgRepo.getFeature({
+        organizationId,
+        featureId: 'persisted-operations',
+      });
+      const maxManifestOperations = operationsFeature?.limit ?? DEFAULT_MAX_MANIFEST_OPERATIONS;
 
-    if (allExistingOperations.length + newOperationCount > maxManifestOperations) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `Operation limit exceeded: adding ${newOperationCount} new operations would bring the total to ${allExistingOperations.length + newOperationCount}, which exceeds the maximum of ${maxManifestOperations} operations per graph`,
-        },
-        operations: [],
-      };
-    }
-
-    const processOperation = async (
-      operation: PersistedOperation,
-    ): Promise<{
-      publishedOperation: PublishedOperation | null;
-      updatedOp: UpdatedPersistedOperation | null;
-      error: { operationId: string; path: string } | null;
-    }> => {
-      const operationId = operation.id;
-      const operationHash = crypto.createHash('sha256').update(operation.contents).digest('hex');
-      const prev = operationsByOperationId.get(operationId);
-      if (prev !== undefined && prev.hash !== operationHash) {
-        // We're trying to update an operation with the same ID but different hash
+      if (allExistingOperations.length + newOperationCount > maxManifestOperations) {
         return {
-          publishedOperation: create(PublishedOperationSchema, {
-            id: operationId,
-            hash: prev.hash,
-            status: PublishedOperationStatus.CONFLICT,
-            operationNames: prev.operationNames,
-          }),
-          updatedOp: null,
-          error: null,
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `Operation limit exceeded: adding ${newOperationCount} new operations would bring the total to ${allExistingOperations.length + newOperationCount}, which exceeds the maximum of ${maxManifestOperations} operations per graph`,
+          },
+          operations: [],
         };
       }
-      const operationNames = extractOperationNames(operation.contents);
-      const clientName = encodeURIComponent(req.clientName);
-      const path = createBlobStoragePath({
-        organizationId,
-        fedGraphId: federatedGraph.id,
-        clientName,
-        operationId,
-      });
-      const updatedOp: UpdatedPersistedOperation = {
-        operationId,
-        hash: operationHash,
-        filePath: path,
-        contents: operation.contents,
-        operationNames,
-      };
 
-      if (prev === undefined) {
-        const data: PublishedOperationData = {
-          version: 1,
-          body: operation.contents,
-        };
-        // Deprecated: Uploading individual operations to blob storage is deprecated.
-        // The router now downloads all operations at once via the PQL manifest, avoiding
-        // per-request CDN latency. This upload is kept for backward compatibility with older routers.
-        try {
-          await opts.blobStorage.putObject({
-            key: path,
-            body: Buffer.from(JSON.stringify(data), 'utf8'),
-            contentType: 'application/json; charset=utf-8',
-          });
-        } catch (e) {
-          logger.error(e, `Could not store operation contents for ${operationId} at ${path}`);
+      const processOperation = async (
+        operation: PersistedOperation,
+      ): Promise<{
+        publishedOperation: PublishedOperation | null;
+        updatedOp: UpdatedPersistedOperation | null;
+        error: { operationId: string; path: string } | null;
+      }> => {
+        const operationId = operation.id;
+        const operationHash = crypto.createHash('sha256').update(operation.contents).digest('hex');
+        const prev = operationsByOperationId.get(operationId);
+        const conflict = identitiesById.get(operationId)?.find((op) => op.hash !== operationHash);
+        if (conflict) {
+          // Operation IDs identify one body across all clients in the graph.
           return {
-            publishedOperation: null,
+            publishedOperation: create(PublishedOperationSchema, {
+              id: operationId,
+              hash: conflict.hash,
+              status: PublishedOperationStatus.CONFLICT,
+              operationNames: conflict.operationNames,
+            }),
             updatedOp: null,
-            error: { operationId, path },
+            error: null,
           };
         }
+        const operationNames = extractOperationNames(operation.contents);
+        // Reserve before the first await, so conflicting entries in this batch
+        // cannot race each other through the parallel upload workers.
+        identitiesById.set(operationId, [{ hash: operationHash, operationNames }]);
+        const clientName = encodeURIComponent(req.clientName);
+        const path = createBlobStoragePath({
+          organizationId,
+          fedGraphId: federatedGraph.id,
+          clientName,
+          operationId,
+        });
+        const updatedOp: UpdatedPersistedOperation = {
+          operationId,
+          hash: operationHash,
+          filePath: path,
+          contents: operation.contents,
+          operationNames,
+        };
+
+        if (prev === undefined) {
+          const data: PublishedOperationData = {
+            version: 1,
+            body: operation.contents,
+          };
+          // Deprecated: Uploading individual operations to blob storage is deprecated.
+          // The router now downloads all operations at once via the PQL manifest, avoiding
+          // per-request CDN latency. This upload is kept for backward compatibility with older routers.
+          try {
+            await opts.blobStorage.putObject({
+              key: path,
+              body: Buffer.from(JSON.stringify(data), 'utf8'),
+              contentType: 'application/json; charset=utf-8',
+            });
+          } catch (e) {
+            logger.error(e, `Could not store operation contents for ${operationId} at ${path}`);
+            return {
+              publishedOperation: null,
+              updatedOp: null,
+              error: { operationId, path },
+            };
+          }
+          return {
+            publishedOperation: create(PublishedOperationSchema, {
+              id: operationId,
+              hash: operationHash,
+              status: PublishedOperationStatus.CREATED,
+              operationNames,
+            }),
+            updatedOp,
+            error: null,
+          };
+        }
+
         return {
           publishedOperation: create(PublishedOperationSchema, {
             id: operationId,
             hash: operationHash,
-            status: PublishedOperationStatus.CREATED,
+            status: PublishedOperationStatus.UP_TO_DATE,
             operationNames,
           }),
           updatedOp,
           error: null,
         };
+      };
+
+      const limit = pLimit(PARALLEL_PERSISTED_OPERATIONS_LIMIT);
+      // Keep the graph lock until every started upload has settled, even on failure.
+      const settled = await Promise.allSettled(req.operations.map((op) => limit(() => processOperation(op))));
+      const results = settled.map((result) => {
+        if (result.status === 'rejected') {
+          logger.error(result.reason, 'Failed to process persisted operation');
+          throw new PublicError(EnumStatusCode.ERR, 'Failed to process persisted operation');
+        }
+        return result.value;
+      });
+
+      const firstError = results.find((r) => r.error !== null);
+      if (firstError?.error) {
+        throw new PublicError(
+          EnumStatusCode.ERR,
+          `Could not store operation contents for ${firstError.error.operationId} at ${firstError.error.path}`,
+        );
       }
 
-      return {
-        publishedOperation: create(PublishedOperationSchema, {
-          id: operationId,
-          hash: operationHash,
-          status: PublishedOperationStatus.UP_TO_DATE,
-          operationNames,
-        }),
-        updatedOp,
-        error: null,
-      };
-    };
+      for (const r of results) {
+        operations.push(r.publishedOperation!);
+        if (r.updatedOp !== null) {
+          updatedOperations.push(r.updatedOp);
+        }
+      }
 
-    const limit = pLimit(PARALLEL_PERSISTED_OPERATIONS_LIMIT);
-    const results = await Promise.all(req.operations.map((op) => limit(() => processOperation(op))));
+      // Identical duplicates in a batch share one database registration.
+      const uniqueUpdates = [...new Map(updatedOperations.map((op) => [op.operationId, op])).values()];
+      await operationsRepo.updatePersistedOperations(clientId, userId, uniqueUpdates);
 
-    const firstError = results.find((r) => r.error !== null);
-    if (firstError?.error) {
+      try {
+        await operationsRepo.generateAndUploadManifest({
+          organizationId,
+          blobStorage: opts.blobStorage,
+          logger,
+        });
+      } catch (e) {
+        const error = e instanceof Error ? e : new Error('Unknown error');
+        logger.error(error, 'Failed to regenerate PQL manifest after publishing persisted operations', {
+          federatedGraphId: federatedGraph.id,
+          organizationId,
+        });
+        throw new PublicError(EnumStatusCode.ERR, 'Failed to publish persisted operations manifest', error);
+      }
+
       return {
         response: {
-          code: EnumStatusCode.ERR,
-          details: `Could not store operation contents for ${firstError.error.operationId} at ${firstError.error.path}`,
+          code: EnumStatusCode.OK,
         },
-        operations: [],
+        operations,
       };
-    }
-
-    for (const r of results) {
-      operations.push(r.publishedOperation!);
-      if (r.updatedOp !== null) {
-        updatedOperations.push(r.updatedOp);
-      }
-    }
-
-    await operationsRepo.updatePersistedOperations(clientId, userId, updatedOperations);
-
-    try {
-      await operationsRepo.generateAndUploadManifest({
-        organizationId,
-        blobStorage: opts.blobStorage,
-        logger,
-      });
-    } catch (e) {
-      const error = e instanceof Error ? e : new Error('Unknown error');
-      logger.error(error, 'Failed to regenerate PQL manifest after publishing persisted operations', {
-        federatedGraphId: federatedGraph.id,
-        organizationId,
-      });
-    }
-
-    return {
-      response: {
-        code: EnumStatusCode.OK,
-      },
-      operations,
-    };
+    });
   });
 }
