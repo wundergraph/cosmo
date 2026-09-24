@@ -16,7 +16,7 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} ./ocb --config otelcol-builder.yaml \
     && chmod +x /app/otelcol-dev/otelcol \
     && /app/otelcol-dev/otelcol --version
 
-FROM --platform=${TARGETPLATFORM} golang:1.26
+FROM golang:1.26
 
 COPY ./otel-config.yaml /etc/otel-config.yaml
 COPY --from=builder /app/otelcol-dev/otelcol /otelcol
