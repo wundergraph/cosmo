@@ -1767,6 +1767,7 @@ Configure WebSocket handlers, protocols, and more.
 | -------------------- | -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | WEBSOCKETS_ENABLED   | enabled                          | <Icon icon="square-check" iconType="solid" /> |                                                                                                                                              | true          |
 |                      | absinthe_protocol                | <Icon icon="square" />                        | [Absinthe Protocol Configuration](/router/configuration#absinthe-protocol-configuration)                                                     |               |
+|                      | default_subprotocol              | <Icon icon="square" />                        | The subprotocol to use when a client sends no `Sec-WebSocket-Protocol` header. One of `graphql-transport-ws` or `graphql-ws`. When empty, the router closes such connections. |               |
 |                      | forward_upgrade_headers          | <Icon icon="square" />                        | Forward all useful Headers from the Upgrade Request, like User-Agent or Authorization in the extensions field when subscribing on a Subgraph |               |
 |                      | forward_upgrade_query_params     | <Icon icon="square" />                        | Forward all query parameters from the Upgrade Request in the extensions field when subscribing on a Subgraph                                 |               |
 |                      | forward_initial_payload          | <Icon icon="square" />                        | Forward the initial payload from a client subscription in the extensions field when subscribing on a Subgraph                                | true          |
@@ -1810,6 +1811,8 @@ websocket:
   absinthe_protocol:
     enabled: true
     handler_path: /absinthe/socket
+  # used when a client sends no Sec-WebSocket-Protocol header
+  default_subprotocol: graphql-transport-ws
   forward_initial_payload: true
   forward_upgrade_headers:
     enabled: true
@@ -1895,6 +1898,7 @@ In addition to the above JWKS configuration flavours, you can define a list of a
 | YAML                | Required               | Description                                                                                                                   | Default Value |
 | ------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | scope_claim         | <Icon icon="square" /> | The JWT claim used to read scopes for authorization. Use this when your identity provider stores scopes in a claim other than `scope`. Only top level claims are supported. | scope         |
+| on_error | <Icon icon="square" /> | Handle invalid JWT credentials with `reject` (HTTP 401, or an error message and connection closure for WebSocket initial-payload authentication) or `continue` (ignore the credential). Required authentication and field authorization still apply. See [JWT validation error handling](/router/authentication-and-authorization#configuring-jwt-validation-error-handling). | reject |
 | header_name         | <Icon icon="square" /> | The name of the header. The header is used to extract the token from the request. The default value is 'Authorization'.       | Authorization |
 | header_value_prefix | <Icon icon="square" /> | The prefix of the header value. The prefix is used to extract the token from the header value. The default value is 'Bearer'. | Bearer        |
 

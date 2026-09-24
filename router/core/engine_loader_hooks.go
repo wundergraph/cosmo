@@ -129,10 +129,16 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 // ttlToCacheControl renders the life a cache hit has left. A TTL of zero is
 // valid and means stale as of now, which is no-cache: max-age=0 would be dropped by
 // the most restrictive algorithm and let a longer default win instead.
-func ttlToCacheControl(ttl time.Duration) string {
+func ttlToCacheControl(ttl time.Duration, private bool) string {
 	maxAge := cache.ToDeltaSeconds(ttl)
 	if maxAge <= 0 {
+		if private {
+			return "private, " + noCache
+		}
 		return noCache
+	}
+	if private {
+		return fmt.Sprintf("private, max-age=%d", maxAge)
 	}
 	cacheControl := cache.CacheControlResponse{Public: true, MaxAge: &maxAge}
 	return cacheControl.ToHeaderString()
@@ -144,7 +150,7 @@ func applyResponseCacheLifetime(headers http.Header, info *resolve.ResponseInfo)
 	if !info.ResponseCacheHit && info.ResponseCacheTTL <= 0 {
 		return
 	}
-	cached := ttlToCacheControl(info.ResponseCacheTTL)
+	cached := ttlToCacheControl(info.ResponseCacheTTL, info.ResponseCachePrivate)
 
 	origin := headers.Get(cacheControlKey)
 	if origin == "" {

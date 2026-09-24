@@ -97,6 +97,7 @@ type HandlerOptions struct {
 	ResponseCacheFallbackTTL  time.Duration
 	ResponseCacheInvalidation config.ResponseCacheInvalidationConfig
 	ResponseCacheTagHeader    config.ResponseCacheTagHeaderConfig
+	ResponseCachePrivateID    *responseCachePrivateID
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -124,6 +125,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		responseCacheFallbackTTL:                 opts.ResponseCacheFallbackTTL,
 		responseCacheInvalidation:                opts.ResponseCacheInvalidation,
 		responseCacheTagHeader:                   opts.ResponseCacheTagHeader,
+		responseCachePrivateID:                   opts.ResponseCachePrivateID,
 		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log),
 	}
 	return graphQLHandler
@@ -176,6 +178,7 @@ type GraphQLHandler struct {
 	responseCacheErrorHandler func(error)
 	responseCacheInvalidation config.ResponseCacheInvalidationConfig
 	responseCacheTagHeader    config.ResponseCacheTagHeaderConfig
+	responseCachePrivateID    *responseCachePrivateID
 
 	enableCacheResponseHeaders      bool
 	enableResponseHeaderPropagation bool
@@ -238,6 +241,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				Subgraph: h.responseCacheInvalidation.Subgraph,
 				Type:     h.responseCacheInvalidation.Type,
 			},
+			PrivateID: h.responseCachePrivateID.resolve(reqCtx.expressionContext, h.responseCacheErrorHandler),
 		})
 	}
 	if reqCtx.customFieldValueRenderer != nil {

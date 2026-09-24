@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.131.2](https://github.com/wundergraph/cosmo/compare/wgc@0.131.1...wgc@0.131.2) (2026-09-23)
+
+### Bug Fixes
+
+* increase timeout settings for client, build server, and routes ([#3274](https://github.com/wundergraph/cosmo/issues/3274)) ([1e77927](https://github.com/wundergraph/cosmo/commit/1e779279f0f1b677d164ee3deb55be16418ab415)) (@JivusAyrus)
+
 ## [0.131.1](https://github.com/wundergraph/cosmo/compare/wgc@0.131.0...wgc@0.131.1) (2026-09-16)
 
 **Note:** Version bump only for package wgc

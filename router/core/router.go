@@ -37,6 +37,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/exporter"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -1209,6 +1210,11 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 		return fmt.Errorf("response cache is enabled but its fallback_ttl is %s, which must be greater than zero", r.responseCacheConfig.FallbackTTL)
 	}
 	if err := validateResponseCacheTagHeader(r.responseCacheConfig.TagHeader); err != nil {
+		return err
+	}
+	// The graph server compiles private_id again with its own manager; this
+	// compile only refuses a bad expression before any store is built.
+	if _, err := newResponseCachePrivateID(r.responseCacheConfig, expr.CreateNewExprManager()); err != nil {
 		return err
 	}
 
