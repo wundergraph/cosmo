@@ -1089,6 +1089,12 @@ func (r *Router) bootstrap(ctx context.Context) error {
 }
 
 func (r *Router) setupTelemetry(ctx context.Context) error {
+	// Install the shared error handler for either signal, but don't change it in tests.
+	if (r.traceConfig.Enabled || r.metricConfig.OpenTelemetry.Enabled) &&
+		r.traceConfig.TestMemoryExporter == nil && r.metricConfig.OpenTelemetry.TestReader == nil {
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(rtrace.NewOtelErrorHandler(r.logger)))
+	}
+
 	if r.traceConfig.Enabled {
 		tp, err := rtrace.NewTracerProvider(ctx, &rtrace.ProviderConfig{
 			Logger:            r.logger,
