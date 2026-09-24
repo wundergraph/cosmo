@@ -26,9 +26,9 @@ func TestResponseCacheSettings(t *testing.T) {
 	failing := func(t *testing.T) func(error) {
 		return func(err error) { t.Errorf("unexpected error: %v", err) }
 	}
-	build := func(t *testing.T, cfg *config.ResponseCacheConfiguration) *responseCacheSettings {
+	build := func(t *testing.T, cfg *config.ResponseCacheConfiguration) *ResponseCacheSettings {
 		t.Helper()
-		s, err := newResponseCacheSettings(cfg, expr.CreateNewExprManager(), known, zap.NewNop())
+		s, err := NewResponseCacheSettings(cfg, expr.CreateNewExprManager(), known, zap.NewNop())
 		require.NoError(t, err)
 		return s
 	}
@@ -114,7 +114,7 @@ func TestResponseCacheSettings(t *testing.T) {
 
 	t.Run("a bad entry private_id is refused by name", func(t *testing.T) {
 		t.Parallel()
-		_, err := newResponseCacheSettings(&config.ResponseCacheConfiguration{
+		_, err := NewResponseCacheSettings(&config.ResponseCacheConfiguration{
 			All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute},
 			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{"mood": {Enabled: true, FallbackTTL: time.Minute, PrivateID: "request.nope"}},
 		}, expr.CreateNewExprManager(), known, zap.NewNop())
@@ -124,7 +124,7 @@ func TestResponseCacheSettings(t *testing.T) {
 	t.Run("a name the graph does not have is kept and logged", func(t *testing.T) {
 		t.Parallel()
 		core, logs := observer.New(zap.WarnLevel)
-		s, err := newResponseCacheSettings(&config.ResponseCacheConfiguration{
+		s, err := NewResponseCacheSettings(&config.ResponseCacheConfiguration{
 			All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute},
 			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{"nope": {Enabled: false}, "mood": {Enabled: false}},
 		}, expr.CreateNewExprManager(), known, zap.New(core))

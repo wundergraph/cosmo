@@ -48,9 +48,9 @@ func validateResponseCacheSubgraphs(cfg *config.ResponseCacheConfiguration, log 
 	return nil
 }
 
-// responseCacheSettings is the per-subgraph configuration compiled once per
+// ResponseCacheSettings is the per-subgraph configuration compiled once per
 // graph, and turned into the engine's options once per request.
-type responseCacheSettings struct {
+type ResponseCacheSettings struct {
 	defaultDisabled bool
 	fallbackTTL     time.Duration
 	// all is nil when all has no private_id.
@@ -67,11 +67,11 @@ type responseCacheSubgraphEntry struct {
 	privateID *responseCachePrivateID
 }
 
-// newResponseCacheSettings compiles every private_id once per distinct
+// NewResponseCacheSettings compiles every private_id once per distinct
 // expression. An entry naming a subgraph the graph does not have is kept and
 // logged: feature flag graphs have subgraph sets of their own.
-func newResponseCacheSettings(cfg *config.ResponseCacheConfiguration, mgr *expr.Manager, known []*nodev1.Subgraph, log *zap.Logger) (*responseCacheSettings, error) {
-	s := &responseCacheSettings{
+func NewResponseCacheSettings(cfg *config.ResponseCacheConfiguration, mgr *expr.Manager, known []*nodev1.Subgraph, log *zap.Logger) (*ResponseCacheSettings, error) {
+	s := &ResponseCacheSettings{
 		defaultDisabled: !cfg.All.Enabled,
 		fallbackTTL:     cfg.All.FallbackTTL,
 	}
@@ -127,7 +127,7 @@ func newResponseCacheSettings(cfg *config.ResponseCacheConfiguration, mgr *expr.
 
 // options is what the engine takes for one request. Store, OnError and
 // Invalidation are the caller's to fill in.
-func (s *responseCacheSettings) options(ctx expr.Context, onError func(error)) resolve.ResponseCacheOptions {
+func (s *ResponseCacheSettings) options(ctx expr.Context, onError func(error)) resolve.ResponseCacheOptions {
 	opts := resolve.ResponseCacheOptions{
 		DefaultTTL:      s.fallbackTTL,
 		DefaultDisabled: s.defaultDisabled,
@@ -141,7 +141,7 @@ func (s *responseCacheSettings) options(ctx expr.Context, onError func(error)) r
 	return opts
 }
 
-func (s *responseCacheSettings) subgraphs(ctx expr.Context, onError func(error)) map[string]resolve.ResponseCacheSubgraphOptions {
+func (s *ResponseCacheSettings) subgraphs(ctx expr.Context, onError func(error)) map[string]resolve.ResponseCacheSubgraphOptions {
 	out := make(map[string]resolve.ResponseCacheSubgraphOptions, len(s.entries))
 	// One evaluation per program, however many entries share it.
 	resolved := make(map[*responseCachePrivateID]string)

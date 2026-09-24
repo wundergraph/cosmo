@@ -1818,7 +1818,7 @@ func (s *graphServer) buildGraphMux(
 		handlerOpts.ResponseCacheTagHeader = s.responseCacheConfig.TagHeader
 
 		// Compiled with this mux's manager so what the expressions use is recorded.
-		handlerOpts.ResponseCacheSettings, err = newResponseCacheSettings(s.responseCacheConfig, exprManager, opts.ConfigSubgraphs, s.logger)
+		handlerOpts.ResponseCacheSettings, err = NewResponseCacheSettings(s.responseCacheConfig, exprManager, opts.ConfigSubgraphs, s.logger)
 		if err != nil {
 			return nil, err
 		}

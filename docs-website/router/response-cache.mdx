@@ -165,7 +165,7 @@ response_cache:
 
 `storage` is required when `enabled` is `true`.
 
-Environment variables bypass the config schema validation. A `fallback_ttl` of zero or less under `all`, or under an enabled subgraph entry, fails startup either way, as does a `private_id` that does not compile.
+Environment variables bypass the config schema validation. In each enabled scope, a `fallback_ttl` of zero or less fails startup, as does a `private_id` that does not compile.
 
 ## Per-subgraph configuration
 
@@ -225,7 +225,7 @@ With a `private_id` in place:
 * A `private` response is stored under a key that includes the id, so each context has an entry of its own. A lookup with one id never finds an entry stored under another.
 * A request for which the expression yields nothing, such as an anonymous request whose claim is `nil`, is not cached when the subgraph answers `private`. The subgraph is asked every time. This is not an error.
 * `public` responses are unaffected. They are stored under the shared key and served to every request, whatever the id.
-* A response served from a private entry reaches the client with `Cache-Control: private` and the entry's remaining lifetime, so a browser or CDN in front of the router does not share it either.
+* With [`cache_control_policy`](/router/proxy-capabilities/adjusting-cache-control) or a `most_restrictive_cache_control` response header rule in place, a response served from a private entry reaches the client with `Cache-Control: private` and the entry's remaining lifetime, so a browser or CDN in front of the router does not share it either. Without one, the router sends no `Cache-Control` for the hit.
 * Invalidation by subgraph, type, or cache tag drops private entries like any other.
 
 The id is digested with SHA-256 before it becomes part of the key, so raw ids never reach the store. The expression must evaluate to a string. A value of any other type is reported through the response cache warning described under [Observability](#observability) and treated as no id.
@@ -234,6 +234,8 @@ The id is digested with SHA-256 before it becomes part of the key, so raw ids ne
   `private_id` partitions the cache. It does not by itself guarantee that a response is served only to those it was meant for: two requests with the same id share an entry, whatever else differs between them. Propagated headers are not part of the key unless the subgraph names them in `Vary`, so a `private` answer that also depends on a header the id does not account for is served to every request with that id. Name the header in `Vary`, fold it into the expression, or have the subgraph answer `no-store`.
 
   An expression that yields the same value for different contexts, or one that can be set by the client itself, lets one context be served another's entry. Prefer a verified claim over a plain header.
+
+  A [`set` response header rule](/router/proxy-capabilities/subgraph-response-header-operations) on `Cache-Control` replaces what the subgraph sent, `private` included. A hit served from a private entry is treated the same as the origin response, so such a rule can hand the client a `public` policy for it.
 </Warning>
 
 ## Varying responses

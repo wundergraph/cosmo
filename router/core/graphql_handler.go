@@ -96,7 +96,7 @@ type HandlerOptions struct {
 	ResponseCache             caching.Cache
 	ResponseCacheInvalidation config.ResponseCacheInvalidationConfig
 	ResponseCacheTagHeader    config.ResponseCacheTagHeaderConfig
-	ResponseCacheSettings     *responseCacheSettings
+	ResponseCacheSettings     *ResponseCacheSettings
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -175,7 +175,7 @@ type GraphQLHandler struct {
 	responseCacheErrorHandler func(error)
 	responseCacheInvalidation config.ResponseCacheInvalidationConfig
 	responseCacheTagHeader    config.ResponseCacheTagHeaderConfig
-	responseCacheSettings     *responseCacheSettings
+	responseCacheSettings     *ResponseCacheSettings
 
 	enableCacheResponseHeaders      bool
 	enableResponseHeaderPropagation bool
