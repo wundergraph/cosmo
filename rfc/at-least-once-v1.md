@@ -721,6 +721,29 @@ configurable router setting so both thresholds can be matched.
 SSE's native `id:` / `Last-Event-ID` resumption is deliberately not used: graphql-sse does not
 define event ids, and it would introduce a second cursor channel that works on only one transport.
 
+### Custom Module Support
+
+Users of Custom Modules should be able to access Cursor information. Four hooks are relevant:
+`SubscriptionOnCreate`, `SubscriptionOnStart`, `StreamBeforeEventsDispatch` and `OnReceiveEvents`.
+
+These Custom Modules carry the event, coming either from a resubscribing client (incoming) or a
+broker (outgoing).
+
+To access the cursor, the `StreamEvent` interface is extended:
+
+```go
+// A StreamEvent is a single event coming from or going to an event provider.
+type StreamEvent interface {
+	// ...
+  Cursor() *datasource.Cursor // package place not final
+}
+```
+
+If the event has a cursor it returns a pointer to it, otherwise `nil`. The cursor is fully typed,
+so the implementation needs to ensure that decoding is done before a hook call and encoding is done
+after a hook call. The cursor is meant to be immutable on `StreamBeforeEventsDispatch` and
+`OnReceiveEvents`, so a copy must be returned on `Cursor()` call. For `SubscriptionOnCreate` and
+`SubscriptionOnStart` it's mutable.
 
 # Todos
 - [x] Goals / Non-Goals
@@ -729,3 +752,4 @@ define event ids, and it would introduce a second cursor channel that works on o
 - [x] Adapters
 - [x] Config
 - [x] Client Middleware
+- [ ] Custom Modules support
