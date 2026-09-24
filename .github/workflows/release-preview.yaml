@@ -1,6 +1,10 @@
 name: Release Preview
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    branches:
+      - main
   push:
     tags-ignore:
       - '**'
@@ -20,7 +24,56 @@ env:
   DO_NOT_TRACK: '1'
 
 jobs:
+  pull-request-preview:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Preview the squash commit that will land on main, including ! in the title.
+      - name: Simulate squash merge
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          git checkout -b release-preview
+          git reset --soft "$BASE_SHA"
+          git -c user.name='Release Preview' -c user.email='release-preview@localhost' \
+            -c core.hooksPath=/dev/null commit --allow-empty -m "$PR_TITLE" -m "$PR_BODY"
+
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
+        with:
+          cache: true
+          install: false
+
+      - name: Install
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter='wundergraph-cosmo'
+
+      - name: Generate next release (dry-run)
+        run: pnpm lerna version --ignore-scripts --dry-run --yes --no-push --no-git-tag-version
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Show release preview
+        run: |
+          {
+            echo '## Release preview'
+            echo 'Versions and changelogs after squash-merging this PR, including unreleased changes already on main.'
+            echo '```diff'
+            git --no-pager diff -- './*/package.json' './*/CHANGELOG.md'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   version:
+    if: github.event_name == 'push'
     timeout-minutes: 5
     runs-on: ubuntu-latest
     steps:

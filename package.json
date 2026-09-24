@@ -67,6 +67,7 @@
     "@lerna-lite/cli": "4.11.4",
     "@lerna-lite/publish": "4.11.4",
     "@lerna-lite/version": "4.11.4",
+    "conventional-changelog-conventionalcommits": "9.1.0",
     "husky": "^8.0.3",
     "lint-staged": "^15.2.10",
     "prettier": "catalog:",
