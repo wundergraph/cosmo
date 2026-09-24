@@ -61,6 +61,7 @@ const (
 	ExtCodeErrBatchSizeExceeded             = "BATCH_LIMIT_EXCEEDED"
 	ExtCodeErrBatchSubscriptionsUnsupported = "BATCHING_SUBSCRIPTION_UNSUPPORTED"
 	ExtCodeErrDeferMultipartNotAccepted     = "DEFER_BAD_HEADER"
+	ExtCodeErrDeferSpecNotSupported         = "DEFER_UNSUPPORTED_SPEC"
 )
 
 // isTerminalSubscriptionError reports whether the given error, when surfaced

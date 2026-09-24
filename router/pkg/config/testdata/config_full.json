@@ -893,7 +893,8 @@
       "Name": "Surrogate-Key",
       "Delimiter": " ",
       "MaxBytes": 1024
-    }
+    },
+    "PrivateID": "request.auth.claims.sub"
   },
   "RouterConfigPath": "latest.json",
   "RouterRegistration": true,

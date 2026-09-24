@@ -2642,7 +2642,18 @@ The configuration for adding a complexity limits for queries. We currently expos
 - **Root Fields in Query**
 - **Root Field Aliases in Query**
 
-A limit is not applied when its value is 0 or `enabled` is not true.
+All four limits enforce their configured value, including 0, when `enabled: true` in `enforce` mode. Set `enabled: false` to disable a limit.
+
+For `root_field_aliases`, a limit of 0 disallows root field aliases when enabled in `enforce` mode. Queries without root field aliases remain allowed. Nested field aliases are unaffected.
+
+```yaml
+security:
+  complexity_limits:
+    mode: enforce
+    root_field_aliases:
+      enabled: true
+      limit: 0
+```
 
 The `mode` field controls enforcement versus measurement:
 
@@ -2653,8 +2664,38 @@ The `mode` field controls enforcement versus measurement:
 | ------------------------ | --------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 |                          | mode                        | <Icon icon="square" /> | `measure` calculates complexity without rejecting; `enforce` rejects operations exceeding limits.                                                                                      | enforce       |
 |                          | enabled                     | <Icon icon="square" /> | Enable the specific limit. If the value is true (default: false), and a valid limit value is set, the limit will be applied.                                                           | false         |
-|                          | limit                       | <Icon icon="square" /> | The limit amount for query. If the limit is 0, this limit is not applied.                                                                                                              | 0             |
+|                          | limit                       | <Icon icon="square" /> | The maximum allowed value, including 0. Set `enabled: false` to disable the limit.                                                                                                     | 0             |
 |                          | ignore_persisted_operations | <Icon icon="square" /> | Disable the limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations. | false         |
+
+#### Migrating from zero as a disabled limit
+
+Previously, a limit of 0 disabled enforcement even with `enabled: true`. Enabled zero limits now reject operations whose measured value exceeds 0. Omitting `limit` has the same effect because its default is 0.
+
+This affects `security.complexity_limits.depth`, `total_fields`, `root_fields`, and `root_field_aliases` in `enforce` mode. Omitting `mode` also enforces limits. The deprecated `security.depth_limit` is affected when it supplies the depth limit. An explicit `security.complexity_limits.depth` takes precedence over that deprecated setting.
+
+Before upgrading the Router, set `enabled: false` on each limit that used zero to disable enforcement. This configuration works with both the previous and new behavior. For example:
+
+```yaml
+# Before: zero implicitly disabled this limit.
+security:
+  complexity_limits:
+    depth:
+      enabled: true
+      limit: 0
+```
+
+```yaml
+# After: explicitly disable this limit before upgrading.
+security:
+  complexity_limits:
+    depth:
+      enabled: false
+      limit: 0
+```
+
+Apply the same change to the other affected limits, including `security.depth_limit` if it is still used. To enforce a limit instead, set an appropriate positive value. Keep `root_field_aliases.enabled: true` with `limit: 0` only when root aliases should be rejected.
+
+Existing positive limits, disabled limits, and `measure` mode retain their behavior. Persisted operations remain exempt from a limit when its `ignore_persisted_operations` setting is true. No Control Plane, composition, or execution-configuration version change is required for this migration.
 
 ## File Upload
 
