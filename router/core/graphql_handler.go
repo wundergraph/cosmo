@@ -98,6 +98,7 @@ type HandlerOptions struct {
 	ResponseCacheInvalidation config.ResponseCacheInvalidationConfig
 	ResponseCacheTagHeader    config.ResponseCacheTagHeaderConfig
 	ResponseCachePrivateID    *responseCachePrivateID
+	GraphQLSubscriptionHooks  []graphqlSubscriptionLifecycleHandler
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -127,6 +128,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		responseCacheTagHeader:                   opts.ResponseCacheTagHeader,
 		responseCachePrivateID:                   opts.ResponseCachePrivateID,
 		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log),
+		graphqlSubscriptionHooks:                 opts.GraphQLSubscriptionHooks,
 	}
 	return graphQLHandler
 }
@@ -179,6 +181,7 @@ type GraphQLHandler struct {
 	responseCacheInvalidation config.ResponseCacheInvalidationConfig
 	responseCacheTagHeader    config.ResponseCacheTagHeaderConfig
 	responseCachePrivateID    *responseCachePrivateID
+	graphqlSubscriptionHooks  []graphqlSubscriptionLifecycleHandler
 
 	enableCacheResponseHeaders      bool
 	enableResponseHeaderPropagation bool
@@ -344,6 +347,19 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case *plan.SubscriptionResponsePlan:
 		h.setDebugCacheHeaders(w, reqCtx.operation)
 
+		if !resolveCtx.ExecutionOptions.SkipLoader {
+			end, startErr := h.startGraphQLSubscription(reqCtx, r, p.Response)
+			if startErr != nil {
+				trackFinalResponseError(r.Context(), startErr)
+				h.WriteError(resolveCtx, startErr, p.Response.Response, w)
+				return
+			}
+			if end != nil {
+				resolveCtx.OnSubscriptionEnd = end
+				defer end() // Also covers setup failures before resolver registration.
+			}
+		}
+
 		defer propagateSubgraphErrors(resolveCtx)
 		resolveCtx, writer, writerErr := GetSubscriptionResponseWriter(resolveCtx, r, w, h.apolloSubscriptionMultipartPrintBoundary, h.sseServerWriteTimeout)
 		if writerErr != nil {
@@ -473,6 +489,20 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			headerPropagation: h.headerPropagation,
 		})
 	}
+}
+
+func (h *GraphQLHandler) startGraphQLSubscription(reqCtx *requestContext, request *http.Request, subscription *resolve.GraphQLSubscription) (func(), error) {
+	if len(h.graphqlSubscriptionHooks) == 0 {
+		return nil, nil
+	}
+	ctx := &graphqlSubscriptionHookContext{
+		request:        request,
+		logger:         reqCtx.Logger(),
+		operation:      reqCtx.Operation(),
+		authentication: reqCtx.Authentication(),
+		rootFieldName:  subscriptionRootFieldName(subscription),
+	}
+	return startGraphQLSubscriptionHooks(h.graphqlSubscriptionHooks, ctx)
 }
 
 func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context, opType OperationType) *resolve.Context {

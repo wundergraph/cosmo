@@ -1,0 +1,121 @@
+package core
+
+import (
+	"fmt"
+	"net/http"
+	"sync"
+
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
+)
+
+// GraphQLSubscriptionHookContext describes one downstream GraphQL subscription.
+// It is independent of the upstream trigger, which may be shared by subscribers.
+// Request and Operation are read-only and must not be retained after the hook returns.
+type GraphQLSubscriptionHookContext interface {
+	Request() *http.Request
+	Logger() *zap.Logger
+	Operation() OperationContext
+	Authentication() authentication.Authentication
+	// RootFieldName is the schema field name, even if the client selected an alias.
+	RootFieldName() string
+}
+
+// GraphQLSubscriptionOnStartHandler runs once for each downstream GraphQL
+// subscription, before it is registered with the resolver. Returning an error
+// rejects only this subscription.
+type GraphQLSubscriptionOnStartHandler interface {
+	GraphQLSubscriptionOnStart(ctx GraphQLSubscriptionHookContext) error
+}
+
+// GraphQLSubscriptionOnEndHandler runs once for each downstream GraphQL
+// subscription after it is removed from the resolver. It also runs for a
+// successful start that fails during subsequent setup.
+type GraphQLSubscriptionOnEndHandler interface {
+	GraphQLSubscriptionOnEnd(ctx GraphQLSubscriptionHookContext)
+}
+
+type graphqlSubscriptionLifecycleHandler struct {
+	onStart func(GraphQLSubscriptionHookContext) error
+	onEnd   func(GraphQLSubscriptionHookContext)
+}
+
+type graphqlSubscriptionHookContext struct {
+	request        *http.Request
+	logger         *zap.Logger
+	operation      OperationContext
+	authentication authentication.Authentication
+	rootFieldName  string
+}
+
+func (c *graphqlSubscriptionHookContext) Request() *http.Request { return c.request }
+func (c *graphqlSubscriptionHookContext) Logger() *zap.Logger    { return c.logger }
+func (c *graphqlSubscriptionHookContext) Operation() OperationContext {
+	return c.operation
+}
+func (c *graphqlSubscriptionHookContext) Authentication() authentication.Authentication {
+	return c.authentication
+}
+func (c *graphqlSubscriptionHookContext) RootFieldName() string { return c.rootFieldName }
+
+func subscriptionRootFieldName(subscription *resolve.GraphQLSubscription) string {
+	if subscription == nil || subscription.Response == nil || subscription.Response.Data == nil || len(subscription.Response.Data.Fields) == 0 {
+		return ""
+	}
+	field := subscription.Response.Data.Fields[0]
+	if field == nil || field.Info == nil {
+		return ""
+	}
+	return field.Info.Name
+}
+
+// startGraphQLSubscriptionHooks returns an exactly-once end function. The
+// resolver calls it after removal; callers also call it on setup failure.
+func startGraphQLSubscriptionHooks(handlers []graphqlSubscriptionLifecycleHandler, ctx GraphQLSubscriptionHookContext) (end func(), err error) {
+	if len(handlers) == 0 {
+		return nil, nil
+	}
+
+	completed := make([]func(GraphQLSubscriptionHookContext), 0, len(handlers))
+	var once sync.Once
+	end = func() {
+		once.Do(func() {
+			for i := len(completed) - 1; i >= 0; i-- {
+				invokeGraphQLSubscriptionEnd(completed[i], ctx)
+			}
+		})
+	}
+
+	for _, handler := range handlers {
+		if handler.onStart != nil {
+			if err = invokeGraphQLSubscriptionStart(handler.onStart, ctx); err != nil {
+				end()
+				return nil, err
+			}
+		}
+		if handler.onEnd != nil {
+			completed = append(completed, handler.onEnd)
+		}
+	}
+
+	return end, nil
+}
+
+func invokeGraphQLSubscriptionStart(fn func(GraphQLSubscriptionHookContext) error, ctx GraphQLSubscriptionHookContext) (err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			err = fmt.Errorf("GraphQL subscription start hook panicked: %v", recovered)
+		}
+	}()
+	return fn(ctx)
+}
+
+func invokeGraphQLSubscriptionEnd(fn func(GraphQLSubscriptionHookContext), ctx GraphQLSubscriptionHookContext) {
+	defer func() {
+		if recovered := recover(); recovered != nil && ctx.Logger() != nil {
+			ctx.Logger().Error("GraphQL subscription end hook panicked", zap.Any("panic", recovered))
+		}
+	}()
+	fn(ctx)
+}
